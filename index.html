@@ -175,7 +175,8 @@
                 <h2 class="text-2xl font-bold text-gray-800">Aprovar Novos Usuários</h2>
                 <button id="close-admin-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
             </div>
-            <p class="mb-4 text-gray-600">Usuários listados abaixo criaram uma conta e aguardam sua aprovação para acessar o sistema.</p>
+            <p class="mb-2 text-gray-600">Usuários listados abaixo criaram uma conta e aguardam sua aprovação para acessar o sistema.</p>
+            <p class="mb-4 text-sm text-gray-500">Ao aprovar um usuário, seu programa de e-mail será aberto para que você possa enviar a notificação de aprovação.</p>
             <div id="pending-users-list" class="space-y-2 max-h-64 overflow-y-auto">
                 <!-- Lista de usuários pendentes será inserida aqui -->
             </div>
@@ -271,7 +272,12 @@
             // --- Lógica de Dados (Firestore) ---
             const saveDataToFirestore = async (data) => {
                 if (!currentPautaDocRef) return;
-                await updateDoc(currentPautaDocRef, { assistedList: data });
+                try {
+                    await updateDoc(currentPautaDocRef, { assistedList: data });
+                } catch (error) {
+                    console.error("Erro ao salvar dados: ", error);
+                    alert("Não foi possível salvar os dados. Verifique sua conexão e permissões.");
+                }
             };
 
             const setupFirestoreListener = (docRef) => {
@@ -283,6 +289,9 @@
                     if (!shareModal.classList.contains('hidden')) {
                          populateShareModal(data, auth.currentUser);
                     }
+                }, (error) => {
+                    console.error("Erro ao ouvir pauta:", error);
+                    pautaOwnerDisplay.textContent = "Erro ao carregar pauta.";
                 });
             };
             
@@ -306,12 +315,12 @@
                     const profile = userProfileSnap.data();
                     let canLogin = false;
                     
-                    if (profile.role === 'admin') {
+                    if (profile && profile.role === 'admin') {
                         canLogin = true;
                         adminBtn.classList.remove('hidden');
-                    } else if (profile.status === 'approved') {
+                    } else if (profile && profile.status === 'approved') {
                         canLogin = true;
-                    } else if (profile.status === 'pending') {
+                    } else if (profile && profile.status === 'pending') {
                         await signOut(auth);
                         authError.textContent = 'Sua conta aguarda aprovação.';
                         return;
@@ -334,7 +343,11 @@
                             pautaOwnerDisplay.textContent = `Minha Pauta (${user.email})`;
                             currentPautaDocRef = pautaDocRef;
                             if (!pautaDocSnap.exists()) {
-                                await setDoc(pautaDocRef, { assistedList: [], sharedWith: [], sharedWithUids: [] });
+                                try {
+                                    await setDoc(pautaDocRef, { assistedList: [], sharedWith: [], sharedWithUids: [] });
+                                } catch(error) {
+                                    console.error("Erro ao criar pauta inicial:", error);
+                                }
                             }
                         }
                         setupFirestoreListener(currentPautaDocRef);
@@ -388,7 +401,7 @@
                     await setDoc(userProfileRef, { email: user.email, uid: user.uid, status: 'pending' });
                     
                     await signOut(auth);
-                    authSuccess.textContent = 'Conta criada! Aguarde aprovação.';
+                    authSuccess.textContent = 'Conta criada com sucesso! Aguarde aprovação.';
 
                 } catch (error) {
                     console.error("Account creation failed:", error.code);
@@ -411,24 +424,28 @@
                 const appId = "acaopauta";
                 const usersRef = collection(db, 'artifacts', appId, 'user_profiles');
                 const q = query(usersRef, where("status", "==", "pending"));
-                const querySnapshot = await getDocs(q);
-
-                pendingUsersList.innerHTML = '';
-                if (querySnapshot.empty) {
-                    pendingUsersList.innerHTML = '<p class="text-gray-500">Nenhum usuário pendente.</p>';
-                } else {
-                    querySnapshot.forEach((userDoc) => {
-                        const userData = userDoc.data();
-                        const div = document.createElement('div');
-                        div.className = 'flex justify-between items-center bg-gray-100 p-3 rounded';
-                        div.innerHTML = `
-                            <span class="text-sm">${userData.email}</span>
-                            <button data-uid="${userData.uid}" class="approve-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600 transition text-xs">Aprovar</button>
-                        `;
-                        pendingUsersList.appendChild(div);
-                    });
+                try {
+                    const querySnapshot = await getDocs(q);
+                    pendingUsersList.innerHTML = '';
+                    if (querySnapshot.empty) {
+                        pendingUsersList.innerHTML = '<p class="text-gray-500">Nenhum usuário pendente.</p>';
+                    } else {
+                        querySnapshot.forEach((userDoc) => {
+                            const userData = userDoc.data();
+                            const div = document.createElement('div');
+                            div.className = 'flex justify-between items-center bg-gray-100 p-3 rounded';
+                            div.innerHTML = `
+                                <span class="text-sm">${userData.email}</span>
+                                <button data-uid="${userData.uid}" data-email="${userData.email}" class="approve-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600 transition text-xs">Aprovar</button>
+                            `;
+                            pendingUsersList.appendChild(div);
+                        });
+                    }
+                    adminModal.classList.remove('hidden');
+                } catch(error) {
+                    console.error("Erro ao buscar usuários pendentes:", error);
+                    alert("Não foi possível carregar a lista de usuários. Verifique as regras do Firestore.");
                 }
-                adminModal.classList.remove('hidden');
             });
 
             closeAdminModalBtn.addEventListener('click', () => adminModal.classList.add('hidden'));
@@ -436,21 +453,30 @@
             pendingUsersList.addEventListener('click', async (e) => {
                 if (e.target.classList.contains('approve-btn')) {
                     const targetUid = e.target.dataset.uid;
+                    const targetEmail = e.target.dataset.email;
                     const appId = "acaopauta";
                     const userProfileRef = doc(db, 'artifacts', appId, 'user_profiles', targetUid);
-                    await updateDoc(userProfileRef, { status: 'approved' });
-                    e.target.textContent = 'Aprovado!';
-                    e.target.disabled = true;
-                    e.target.classList.remove('bg-green-500', 'hover:bg-green-600');
-                    e.target.classList.add('bg-gray-400');
+                    try {
+                        await updateDoc(userProfileRef, { status: 'approved' });
+                        
+                        e.target.textContent = 'Aprovado!';
+                        e.target.disabled = true;
+                        e.target.classList.remove('bg-green-500', 'hover:bg-green-600');
+                        e.target.classList.add('bg-gray-400');
+                        
+                        const subject = "Sua conta no Sistema de Atendimento foi aprovada!";
+                        const body = `Olá,\n\nSua conta com o e-mail ${targetEmail} foi aprovada.\n\nVocê já pode acessar o sistema.\n\nAtenciosamente,\nAdministração do Sistema.`;
+                        const mailtoLink = `mailto:${targetEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                        window.open(mailtoLink, '_blank');
+                    } catch(error) {
+                        console.error("Erro ao aprovar usuário:", error);
+                        alert("Não foi possível aprovar o usuário. Verifique as regras do Firestore.");
+                    }
                 }
             });
 
-            // --- Lógica de Compartilhamento (sem alterações) ---
-            // ...
-
-            // --- O resto do código (renderização, etc) permanece o mesmo ---
-            // ...
+            // --- Lógica de Compartilhamento e Restante do Código ---
+            // Nenhuma alteração necessária no restante do código.
             
         });
     </script>
