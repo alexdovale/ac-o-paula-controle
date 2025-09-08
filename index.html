@@ -400,7 +400,38 @@
                 authSuccess.textContent = '';
                  try {
                     if (!email || !password) { authError.textContent = 'Preencha e-mail e senha.'; return; }
-                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    const userCredential = await <script>
+  import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // Função de cadastro
+  async function register(email, password, nome) {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Cria o perfil no Firestore
+      const userProfileRef = doc(db, "artifacts", "acaopauta", "user_profiles", user.uid);
+
+      await setDoc(userProfileRef, {
+        nome: nome,
+        email: user.email,
+        role: "user",        // padrão
+        status: "pending",   // precisa ser aprovado depois
+        createdAt: new Date()
+      });
+
+      alert("Conta criada! Aguarde aprovação do administrador.");
+    } catch (error) {
+      console.error("Erro no cadastro:", error);
+      alert(error.message);
+    }
+  }
+</script>
+;
                     const user = userCredential.user;
                     const appId = "acaopauta";
                     const userProfileRef = doc(db, 'artifacts', appId, 'user_profiles', user.uid);
@@ -584,4 +615,5 @@
     </script>
 </body>
 </html>
+
 
