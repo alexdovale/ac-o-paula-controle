@@ -68,38 +68,18 @@
     <div id="loading-spinner" class="loading-container hidden">
         <div class="loader"></div>
     </div>
-    <!-- Tela de Login -->
-    <div id="login-modal" class="fixed inset-0 bg-gray-100 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
-            <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Acesso ao Sistema</h2>
-            <div class="space-y-4">
-                <div>
-                    <label for="email-input" class="block mb-1 font-medium text-gray-600">E-mail</label>
-                    <input type="email" id="email-input" placeholder="seuemail@exemplo.com" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                </div>
-                <div>
-                    <label for="password-input" class="block mb-1 font-medium text-gray-600">Senha</label>
-                    <input type="password" id="password-input" placeholder="********" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                </div>
-            </div>
-            <p id="auth-error" class="text-red-500 text-sm mt-4 text-center h-4"></p>
-            <p id="auth-success" class="text-green-600 text-sm mt-4 text-center h-4"></p>
-            <div class="mt-6 space-y-3">
-                <button id="login-btn" class="w-full bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition">Entrar</button>
-                <button id="create-account-btn" class="w-full bg-gray-200 text-gray-800 font-bold py-3 px-6 rounded-lg hover:bg-gray-300 transition">Criar Conta</button>
-            </div>
-        </div>
-    </div>
+    <!-- Tela de Login (Removida para focar no sistema local) -->
+
     <!-- Conteúdo Principal da Aplicação -->
-    <div id="app-container" class="max-w-7xl mx-auto hidden">
+    <div id="app-container" class="max-w-7xl mx-auto">
         <header class="mb-6 text-center relative">
             <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Sistema de Gerenciamento de Atendimento</h1>
-            <p id="pauta-owner-display" class="text-gray-600 mt-2">Carregando...</p>
+            <p id="pauta-owner-display" class="text-gray-600 mt-2">Versão Local (Dados não salvos na nuvem)</p>
             <div class="absolute top-0 right-0 flex items-center gap-2">
                  <button id="admin-btn" class="hidden bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600 transition duration-300 shadow-md text-sm">Aprovar Usuários</button>
-                 <button id="share-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md text-sm">Compartilhar</button>
+                 <button id="share-btn" class="hidden bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md text-sm">Compartilhar</button>
                  <button id="reset-all-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition duration-300 shadow-md text-sm">Zerar Tudo</button>
-                 <button id="logout-btn" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 transition duration-300 shadow-md text-sm">Sair</button>
+                 <button id="logout-btn" class="hidden bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 transition duration-300 shadow-md text-sm">Sair</button>
             </div>
         </header>
         <div class="mb-6">
@@ -293,119 +273,89 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, query, where, getDocs, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
         document.addEventListener('DOMContentLoaded', () => {
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-            let db, auth, userId, userEmail;
-            let allAssisted = [];
+            let allAssisted = JSON.parse(localStorage.getItem('legalAttendanceSystemData')) || [];
             let assistedIdToCheckIn = null;
             let assistedIdToAttend = null;
-            let userIsAdmin = false;
-            const loadingSpinner = document.getElementById('loading-spinner');
-            const showLoading = () => loadingSpinner.classList.remove('hidden');
-            const hideLoading = () => loadingSpinner.classList.add('hidden');
+            
+            const tabAgendamento = document.getElementById('tab-agendamento');
+            const tabAvulso = document.getElementById('tab-avulso');
+            const formTitle = document.getElementById('form-title');
+            const scheduledTimeWrapper = document.getElementById('scheduled-time-wrapper');
+            const agendamentoActions = document.getElementById('agendamento-actions');
+            const pautaColumn = document.getElementById('pauta-column');
+            const mainContent = document.getElementById('main-content');
+            
+            let currentMode = 'agendamento';
 
-            if (firebaseConfig && Object.keys(firebaseConfig).length > 0) {
-                setLogLevel('debug');
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                if (initialAuthToken) {
-                    signInWithCustomToken(auth, initialAuthToken).catch(handleAuthError);
+            const setMode = (mode) => {
+                currentMode = mode;
+                tabAgendamento.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
+                tabAvulso.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
+                
+                if (mode === 'agendamento') {
+                    tabAgendamento.classList.add('tab-active');
+                    tabAvulso.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
+                    formTitle.textContent = 'Adicionar Novo Agendamento';
+                    scheduledTimeWrapper.style.display = 'flex';
+                    agendamentoActions.style.display = 'flex';
+                    pautaColumn.style.display = 'flex';
+                    mainContent.classList.remove('lg:grid-cols-2');
+                    mainContent.classList.add('lg:grid-cols-3');
                 } else {
-                    signInAnonymously(auth).catch(handleAuthError);
+                    tabAvulso.classList.add('tab-active');
+                    tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
+                    formTitle.textContent = 'Adicionar Atendimento Avulso';
+                    scheduledTimeWrapper.style.display = 'none';
+                    agendamentoActions.style.display = 'none';
+                    pautaColumn.style.display = 'none';
+                    mainContent.classList.remove('lg:grid-cols-3');
+                    mainContent.classList.add('lg:grid-cols-2');
                 }
-            } else {
-                console.error("Firebase config is missing or empty.");
-                document.getElementById('auth-error').textContent = "Erro de configuração do Firebase.";
+            };
+            
+            const getPriorityClass = (priority) => {
+                switch (priority) {
+                    case 'URGENTE': return 'priority-urgente';
+                    case 'Máxima': return 'priority-maxima';
+                    case 'Média': return 'priority-media';
+                    case 'Mínima': return 'priority-minima';
+                    default: return '';
+                }
+            };
+            
+            const getPriorityLabel = (priority) => {
+                 switch (priority) {
+                    case 'URGENTE': return '<span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-full">URGENTE</span>';
+                    case 'Máxima': return '<span class="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full">Máxima</span>';
+                    case 'Média': return '<span class="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-full">Média</span>';
+                    case 'Mínima': return '<span class="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded-full">Mínima</span>';
+                    default: return '';
+                }
             }
 
-            const showNotification = (message) => {
-                const notificationModal = document.createElement('div');
-                notificationModal.id = 'notification-modal';
-                notificationModal.className = 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50';
-                notificationModal.innerHTML = `
-                    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm text-center">
-                        <p class="text-xl font-bold text-gray-800">${message}</p>
-                        <button id="close-notification-btn" class="mt-4 bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700 transition">OK</button>
-                    </div>
-                `;
-                document.body.appendChild(notificationModal);
-                document.getElementById('close-notification-btn').addEventListener('click', () => {
-                    notificationModal.remove();
-                });
-            };
-
-            const handleAuthError = (error) => {
-                console.error("Authentication error:", error);
-                showNotification("Erro de autenticação. Por favor, tente recarregar a página.");
-            };
-
-            const checkAdminStatus = async (uid) => {
-                try {
-                    const adminRef = doc(db, `artifacts/${appId}/admin_roles`, uid);
-                    const docSnap = await getDoc(adminRef);
-                    return docSnap.exists() && docSnap.data().role === 'admin';
-                } catch (e) {
-                    console.error("Erro ao verificar status de administrador:", e);
-                    return false;
-                }
-            };
-
-            const setupUserPauta = (uid) => {
-                 const docRef = doc(db, `artifacts/${appId}/users/${uid}/data/assisted_list`);
-                 onSnapshot(docRef, (docSnap) => {
-                    if (docSnap.exists() && docSnap.data().data) {
-                        try {
-                            allAssisted = JSON.parse(docSnap.data().data);
-                        } catch (e) {
-                            console.error("Erro ao desserializar os dados:", e);
-                            allAssisted = [];
-                        }
-                    } else {
-                        allAssisted = [];
-                    }
-                    renderAssistedList();
-                }, (error) => {
-                    console.error("Erro no onSnapshot:", error);
-                    showNotification("Erro ao carregar dados em tempo real.");
-                });
-            };
-
-            const loadSharedPauta = (sharedUserId) => {
-                 const docRef = doc(db, `artifacts/${appId}/users/${sharedUserId}/data/assisted_list`);
-                 onSnapshot(docRef, (docSnap) => {
-                    if (docSnap.exists() && docSnap.data().data) {
-                        try {
-                            allAssisted = JSON.parse(docSnap.data().data);
-                        } catch (e) {
-                            console.error("Erro ao desserializar dados compartilhados:", e);
-                            allAssisted = [];
-                        }
-                    } else {
-                        allAssisted = [];
-                    }
-                    renderAssistedList();
-                }, (error) => {
-                    console.error("Erro ao carregar dados compartilhados:", error);
-                    showNotification("Erro ao carregar dados compartilhados em tempo real.");
-                });
+            const saveData = () => {
+                localStorage.setItem('legalAttendanceSystemData', JSON.stringify(allAssisted));
             };
 
             const renderAssistedList = () => {
                 const pautaList = document.getElementById('pauta-list');
                 const aguardandoList = document.getElementById('aguardando-list');
                 const atendidosList = document.getElementById('atendidos-list');
+                const pautaSearch = document.getElementById('pauta-search');
+                const aguardandoSearch = document.getElementById('aguardando-search');
+                const atendidosSearch = document.getElementById('atendidos-search');
                 [pautaList, aguardandoList, atendidosList].forEach(el => el.innerHTML = '');
-                const pauta = allAssisted.filter(a => a.status === 'pauta');
-                const aguardando = allAssisted.filter(a => a.status === 'aguardando');
-                const atendidos = allAssisted.filter(a => a.status === 'atendido');
+                
+                const pautaFilter = pautaSearch.value.toLowerCase();
+                const aguardandoFilter = aguardandoSearch.value.toLowerCase();
+                const atendidosFilter = atendidosSearch.value.toLowerCase();
+
+                const pauta = allAssisted.filter(a => a.status === 'pauta' && a.name.toLowerCase().includes(pautaFilter));
+                const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.name.toLowerCase().includes(aguardandoFilter));
+                const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.name.toLowerCase().includes(atendidosFilter));
+
                 aguardando.sort((a, b) => {
                     const priorityOrder = { 'URGENTE': 0, 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
                     if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
@@ -413,6 +363,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                     return new Date(a.arrivalTime) - new Date(b.arrivalTime);
                 });
+                
+                if (pauta.length === 0) pautaList.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum resultado encontrado.</p>`;
                 pauta.forEach(a => {
                     const card = document.createElement('div');
                     card.className = 'bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-200';
@@ -425,6 +377,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     `;
                     pautaList.appendChild(card);
                 });
+
+                if (aguardando.length === 0) aguardandoList.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum resultado encontrado.</p>`;
                 aguardando.forEach(a => {
                     const card = document.createElement('div');
                     card.className = `bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)}`;
@@ -448,6 +402,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     `;
                     aguardandoList.appendChild(card);
                 });
+
+                if (atendidos.length === 0) atendidosList.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum resultado encontrado.</p>`;
                 atendidos.forEach(a => {
                     const card = document.createElement('div');
                     card.className = 'bg-green-50 p-4 rounded-lg shadow-sm border border-green-200 opacity-80';
@@ -457,7 +413,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         <p class="text-gray-600 text-sm">Assunto: <strong>${a.subject}</strong></p>
                         <p class="text-gray-600 text-sm">Finalizado: <strong>${new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong></p>
                         <div class="flex justify-between items-center mt-1">
-                            <p class="text-gray-600 text-sm">Por: <strong data-attendant-id="${a.id}">${a.attendant}</strong></p>
+                            <p class="text-gray-600 text-sm">Por: <strong data-attendant-id="${a.id}">${a.attendant || 'Não informado'}</strong></p>
                             <button data-id="${a.id}" class="edit-attendant-btn text-indigo-600 hover:text-indigo-800 font-semibold text-xs py-1 px-2 rounded hover:bg-indigo-100 transition">Editar</button>
                             <button data-id="${a.id}" class="delete-attended-btn text-red-600 hover:text-red-800 font-semibold text-xs py-1 px-2 rounded hover:bg-red-100 transition">Deletar</button>
                         </div>
@@ -465,52 +421,377 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     atendidosList.appendChild(card);
                 });
             };
-            const getPriorityClass = (priority) => {
-                switch (priority) {
-                    case 'URGENTE': return 'priority-urgente';
-                    case 'Máxima': return 'priority-maxima';
-                    case 'Média': return 'priority-media';
-                    case 'Mínima': return 'priority-minima';
-                    default: return '';
-                }
+
+            const showNotification = (message) => {
+                const notificationModal = document.createElement('div');
+                notificationModal.id = 'notification-modal';
+                notificationModal.className = 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50';
+                notificationModal.innerHTML = `
+                    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm text-center">
+                        <p class="text-xl font-bold text-gray-800">${message}</p>
+                        <button id="close-notification-btn" class="mt-4 bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700 transition">OK</button>
+                    </div>
+                `;
+                document.body.appendChild(notificationModal);
+                document.getElementById('close-notification-btn').addEventListener('click', () => {
+                    notificationModal.remove();
+                });
             };
-            const getPriorityLabel = (priority) => {
-                 switch (priority) {
-                    case 'URGENTE': return '<span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-full">URGENTE</span>';
-                    case 'Máxima': return '<span class="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full">Máxima</span>';
-                    case 'Média': return '<span class="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-full">Média</span>';
-                    case 'Mínima': return '<span class="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded-full">Mínima</span>';
-                    default: return '';
-                }
-            }
-            const setMode = (mode) => {
-                const tabAgendamento = document.getElementById('tab-agendamento');
-                const tabAvulso = document.getElementById('tab-avulso');
-                const formTitle = document.getElementById('form-title');
-                const scheduledTimeWrapper = document.getElementById('scheduled-time-wrapper');
-                const agendamentoActions = document.getElementById('agendamento-actions');
-                const pautaColumn = document.getElementById('pauta-column');
-                const mainContent = document.getElementById('main-content');
-                tabAgendamento.classList.remove('tab-active');
-                tabAvulso.classList.remove('tab-active');
-                if (mode === 'agendamento') {
-                    tabAgendamento.classList.add('tab-active');
-                    formTitle.textContent = 'Adicionar Novo Agendamento';
-                    scheduledTimeWrapper.style.display = 'flex';
-                    agendamentoActions.style.display = 'flex';
-                    pautaColumn.style.display = 'flex';
-                    mainContent.classList.remove('lg:grid-cols-2');
-                    mainContent.classList.add('lg:grid-cols-3');
+
+            // Event Listeners
+            document.getElementById('tab-agendamento').addEventListener('click', () => setMode('agendamento'));
+            document.getElementById('tab-avulso').addEventListener('click', () => setMode('avulso'));
+            document.getElementById('pauta-search').addEventListener('input', renderAssistedList);
+            document.getElementById('aguardando-search').addEventListener('input', renderAssistedList);
+            document.getElementById('atendidos-search').addEventListener('input', renderAssistedList);
+
+            document.getElementById('assisted-cpf').addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\D/g, '');
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                e.target.value = value;
+            });
+
+            document.getElementById('add-assisted-btn').addEventListener('click', () => {
+                const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
+                const name = document.getElementById('assisted-name').value.trim();
+                const cpf = document.getElementById('assisted-cpf').value.trim();
+                const time = document.getElementById('scheduled-time').value;
+                const subject = document.getElementById('assisted-subject').value.trim();
+
+                const isAgendamentoValid = currentMode === 'agendamento' && name && time && subject;
+                const isAvulsoValid = currentMode === 'avulso' && name && subject;
+
+                if (isAgendamentoValid || isAvulsoValid) {
+                    const newAssisted = {
+                        id: crypto.randomUUID(),
+                        name: name,
+                        cpf: cpf || null,
+                        subject: subject,
+                        arrivalTime: null,
+                        attendedTime: null,
+                        attendant: null,
+                        priority: null,
+                        type: currentMode
+                    };
+                    if (currentMode === 'agendamento') {
+                        newAssisted.status = 'pauta';
+                        newAssisted.scheduledTime = time;
+                    } else {
+                        newAssisted.status = 'aguardando';
+                        newAssisted.arrivalTime = new Date().toISOString();
+                        newAssisted.priority = 'Média';
+                    }
+                    allAssisted.push(newAssisted);
+                    saveData();
+                    document.getElementById('assisted-name').value = '';
+                    document.getElementById('assisted-cpf').value = '';
+                    document.getElementById('scheduled-time').value = '';
+                    document.getElementById('assisted-subject').value = '';
+                    renderAssistedList();
                 } else {
-                    tabAvulso.classList.add('tab-active');
-                    formTitle.textContent = 'Adicionar Atendimento Avulso';
-                    scheduledTimeWrapper.style.display = 'none';
-                    agendamentoActions.style.display = 'none';
-                    pautaColumn.style.display = 'none';
-                    mainContent.classList.remove('lg:grid-cols-3');
-                    mainContent.classList.add('lg:grid-cols-2');
+                    const originalText = document.getElementById('add-assisted-btn').textContent;
+                    document.getElementById('add-assisted-btn').textContent = 'Preencha os campos obrigatórios!';
+                    document.getElementById('add-assisted-btn').classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                    document.getElementById('add-assisted-btn').classList.add('bg-red-500');
+                    setTimeout(() => {
+                        document.getElementById('add-assisted-btn').textContent = originalText;
+                        document.getElementById('add-assisted-btn').classList.remove('bg-red-500');
+                        document.getElementById('add-assisted-btn').classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                    }, 2500);
                 }
+            });
+
+            document.getElementById('download-pdf-btn').addEventListener('click', () => {
+                const { jsPDF } = window.jspdf;
+                const atendidos = allAssisted.filter(a => a.status === 'atendido');
+
+                if (atendidos.length === 0) {
+                    showNotification("Lista Vazia!");
+                    return;
+                }
+                const doc = new jsPDF();
+                const today = new Date().toLocaleDateString('pt-BR');
+                const totalAtendidos = atendidos.length;
+                
+                doc.setFontSize(18);
+                doc.text("Relatório de Atendidos", 105, 15, null, null, 'center');
+                doc.setFontSize(12);
+                doc.text(`Data de Emissão: ${today}`, 105, 22, null, null, 'center');
+                doc.setFont(undefined, 'bold');
+                doc.text(`Total de Atendidos: ${totalAtendidos}`, 105, 29, null, null, 'center');
+                doc.setFont(undefined, 'normal');
+
+                let yPos = 45;
+
+                atendidos.forEach((a) => {
+                    let yOffset = 0;
+                    if (yPos > 250) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                    
+                    doc.setFontSize(12);
+                    doc.setFont(undefined, 'bold');
+                    doc.text(`Assistido: ${a.name}`, 14, yPos);
+
+                    doc.setFontSize(10);
+                    doc.setFont(undefined, 'normal');
+                    if(a.cpf) {
+                        doc.text(`CPF: ${a.cpf}`, 14, yPos + 7);
+                        yOffset += 7;
+                    }
+                    doc.text(`Matéria - Assunto: ${a.subject}`, 14, yPos + 7 + yOffset);
+                    
+                    const arrivalInfo = a.type === 'agendamento' 
+                        ? `Horário Agendado: ${a.scheduledTime}`
+                        : `Atendimento Avulso`;
+                    doc.text(arrivalInfo, 14, yPos + 14 + yOffset);
+
+                    doc.text(`Horário de Comparecimento: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 14, yPos + 21 + yOffset);
+                    
+                    yPos += 30 + yOffset;
+                    if (yPos < 270) {
+                        doc.line(14, yPos - 5, 196, yPos - 5);
+                    }
+                });
+                
+                const fileName = `relatorio-atendidos-${today.replace(/\//g, '-')}.pdf`;
+                doc.save(fileName);
+            });
+
+            document.getElementById('file-upload').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file || !file.name.endsWith('.csv')) {
+                    showNotification('Por favor, selecione um arquivo CSV.');
+                    document.getElementById('file-upload').value = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    parseCsvText(e.target.result);
+                };
+                reader.readAsText(file);
+            });
+
+            const parseCsvText = (text) => {
+                let importedCount = 0;
+                const lines = text.split(/\r?\n/);
+
+                lines.forEach(line => {
+                    if (!line.trim()) return;
+                    const separator = line.includes(';') ? ';' : ',';
+                    const parts = line.split(separator);
+
+                    if (parts.length >= 3) {
+                        const name = parts[0].replace(/"/g, '').trim();
+                        const timeRaw = parts[1].replace(/"/g, '').trim();
+                        const subject = parts[2].replace(/"/g, '').trim();
+                        const cpf = parts.length >= 4 ? parts[3].replace(/"/g, '').trim() : '';
+                        const timeMatch = timeRaw.match(/\d{2}:\d{2}/);
+
+                        if (name && timeMatch && subject && name.toLowerCase() !== "nome completo do assistido" && name.toLowerCase() !== "nome") {
+                            const time = timeMatch[0];
+                            const exists = allAssisted.some(a => a.status === 'pauta' && a.name === name && a.scheduledTime === time && a.subject === subject);
+                            if (!exists) {
+                                allAssisted.push({
+                                    id: crypto.randomUUID(),
+                                    name: name, 
+                                    cpf: cpf || null,
+                                    scheduledTime: time, 
+                                    subject: subject,
+                                    arrivalTime: null, attendedTime: null, attendant: null,
+                                    status: 'pauta', priority: null, type: 'agendamento'
+                                });
+                                importedCount++;
+                            }
+                        }
+                    }
+                });
+                
+                if (importedCount > 0) {
+                    showNotification(`${importedCount} agendamento(s) importado(s) do arquivo com sucesso!`);
+                    saveData();
+                    renderAssistedList();
+                } else {
+                    showNotification(`Nenhum agendamento válido encontrado no arquivo.\n\nVerifique o formato do arquivo.`);
+                }
+                document.getElementById('file-upload').value = '';
             };
+
+            document.getElementById('format-help-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('format-help-modal').classList.remove('hidden');
+            });
+            document.getElementById('close-format-help-btn').addEventListener('click', () => {
+                document.getElementById('format-help-modal').classList.add('hidden');
+            });
+            document.getElementById('close-format-help-btn-x').addEventListener('click', () => {
+                document.getElementById('format-help-modal').classList.add('hidden');
+            });
+
+            document.getElementById('copy-instruction-btn').addEventListener('click', () => {
+                const textToCopy = document.getElementById('instruction-text').querySelector('code').textContent;
+                document.execCommand('copy');
+                const originalText = document.getElementById('copy-instruction-btn').textContent;
+                document.getElementById('copy-instruction-btn').textContent = 'Copiado!';
+                document.getElementById('copy-instruction-btn').disabled = true;
+                setTimeout(() => {
+                    document.getElementById('copy-instruction-btn').textContent = originalText;
+                    document.getElementById('copy-instruction-btn').disabled = false;
+                }, 2000);
+            });
+
+            document.getElementById('reset-all-btn').addEventListener('click', () => {
+                document.getElementById('reset-confirm-modal').classList.remove('hidden');
+            });
+
+            document.getElementById('cancel-reset-btn').addEventListener('click', () => {
+                document.getElementById('reset-confirm-modal').classList.add('hidden');
+            });
+
+            document.getElementById('confirm-reset-btn').addEventListener('click', () => {
+                allAssisted = [];
+                saveData();
+                renderAssistedList();
+                document.getElementById('reset-confirm-modal').classList.add('hidden');
+                showNotification("Todos os dados foram zerados.");
+            });
+            
+            document.getElementById('toggle-logic-btn').addEventListener('click', () => {
+                const logicExplanation = document.getElementById('logic-explanation');
+                logicExplanation.classList.toggle('hidden');
+                if (logicExplanation.classList.contains('hidden')) {
+                    document.getElementById('toggle-logic-btn').innerHTML = 'Por que esta ordem é justa? (Clique para expandir)';
+                } else {
+                    document.getElementById('toggle-logic-btn').innerHTML = 'Ocultar explicação (Clique para fechar)';
+                }
+            });
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('check-in-btn')) {
+                    assistedIdToCheckIn = e.target.dataset.id;
+                    const now = new Date();
+                    const hours = String(now.getHours()).padStart(2, '0');
+                    const minutes = String(now.getMinutes()).padStart(2, '0');
+                    document.getElementById('arrival-time-input').value = `${hours}:${minutes}`;
+                    document.getElementById('arrival-modal').classList.remove('hidden');
+                    document.getElementById('arrival-time-input').focus();
+                }
+
+                if (e.target.classList.contains('attend-btn')) {
+                    assistedIdToAttend = e.target.dataset.id;
+                    document.getElementById('attendant-modal').classList.remove('hidden');
+                    document.getElementById('attendant-name').focus();
+                }
+                 if (e.target.classList.contains('urgent-btn')) {
+                    const id = e.target.dataset.id;
+                    const assisted = allAssisted.find(a => a.id === id);
+                    if (assisted) {
+                        assisted.priority = 'URGENTE';
+                        saveData();
+                        renderAssistedList();
+                    }
+                }
+                if (e.target.classList.contains('edit-attendant-btn')) {
+                    const btn = e.target;
+                    const id = btn.dataset.id;
+                    const strongElement = document.querySelector(`strong[data-attendant-id="${id}"]`);
+                    
+                    if (strongElement) {
+                        const currentName = strongElement.textContent;
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.value = currentName === 'Não informado' ? '' : currentName;
+                        input.className = 'attendant-edit-input p-1 border rounded text-sm w-full';
+                        
+                        strongElement.parentElement.replaceWith(input);
+                        input.focus();
+                        input.select();
+
+                        btn.textContent = 'Salvar';
+                        btn.classList.remove('edit-attendant-btn', 'text-indigo-600', 'hover:text-indigo-800', 'hover:bg-indigo-100');
+                        btn.classList.add('save-attendant-btn', 'text-green-600', 'hover:text-green-800', 'hover:bg-green-100');
+                    }
+                }
+                 if (e.target.classList.contains('save-attendant-btn')) {
+                    const btn = e.target;
+                    const id = btn.dataset.id;
+                    const container = btn.parentElement;
+                    const inputElement = container.querySelector(`input.attendant-edit-input`);
+                    if (inputElement) {
+                        const assisted = allAssisted.find(a => a.id === id);
+                        if (assisted) {
+                            const newName = inputElement.value.trim();
+                            assisted.attendant = newName || 'Não informado';
+                            saveData();
+                            renderAssistedList();
+                        }
+                    }
+                }
+                 if (e.target.classList.contains('delete-attended-btn')) {
+                    const id = e.target.dataset.id;
+                    const assisted = allAssisted.find(a => a.id === id);
+                    if (window.confirm(`Tem certeza que deseja deletar o atendimento de ${assisted?.name}?`)) {
+                         allAssisted = allAssisted.filter(a => a.id !== id);
+                         saveData();
+                         renderAssistedList();
+                    }
+                }
+            });
+            document.getElementById('confirm-arrival-btn').addEventListener('click', () => {
+                const arrivalTimeValue = document.getElementById('arrival-time-input').value;
+                const assisted = allAssisted.find(a => a.id === assistedIdToCheckIn);
+                if (arrivalTimeValue && assisted) {
+                    const today = new Date();
+                    const [hours, minutes] = arrivalTimeValue.split(':');
+                    const arrivalDateTime = new Date(`${today.toISOString().split('T')[0]}T${hours}:${minutes}`);
+                    assisted.arrivalTime = arrivalDateTime.toISOString();
+                    assisted.status = 'aguardando';
+                    const scheduled = new Date(`${today.toISOString().split('T')[0]}T${assisted.scheduledTime}`);
+                    const diffMinutes = (arrivalDateTime - scheduled) / (1000 * 60);
+                    if (diffMinutes <= 0) {
+                        assisted.priority = 'Máxima';
+                    } else if (diffMinutes <= 20) {
+                        assisted.priority = 'Média';
+                    } else {
+                        assisted.priority = 'Mínima';
+                    }
+                    saveData();
+                    document.getElementById('arrival-modal').classList.add('hidden');
+                    assistedIdToCheckIn = null;
+                    renderAssistedList();
+                } else {
+                    showNotification("Horário inválido!");
+                }
+            });
+            document.getElementById('cancel-arrival-btn').addEventListener('click', () => {
+                document.getElementById('arrival-modal').classList.add('hidden');
+                assistedIdToCheckIn = null;
+            });
+            document.getElementById('confirm-attendant-btn').addEventListener('click', () => {
+                const attendantName = document.getElementById('attendant-name').value.trim();
+                const assisted = allAssisted.find(a => a.id === assistedIdToAttend);
+                if (assisted) {
+                    assisted.status = 'atendido';
+                    assisted.attendant = attendantName || 'Não informado';
+                    assisted.attendedTime = new Date().toISOString();
+                    saveData();
+                    document.getElementById('attendant-name').value = '';
+                    document.getElementById('attendant-modal').classList.add('hidden');
+                    assistedIdToAttend = null;
+                    renderAssistedList();
+                }
+            });
+            document.getElementById('cancel-attendant-btn').addEventListener('click', () => {
+                document.getElementById('attendant-name').value = '';
+                document.getElementById('attendant-modal').classList.add('hidden');
+                assistedIdToAttend = null;
+            });
+            // Inicialização
+            setMode('agendamento');
+            renderAssistedList();
         });
     </script>
 </body>
