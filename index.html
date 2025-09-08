@@ -117,6 +117,29 @@
                     <div id="atendidos-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
             </main>
+             <footer class="mt-12 bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold text-gray-800 mb-2 text-center">Entenda a Ordem de Atendimento</h3>
+                <div class="text-center mb-4">
+                    <button id="toggle-logic-btn" class="text-indigo-600 hover:text-indigo-800 text-sm hover:underline transition-colors duration-300">Por que esta ordem é justa? (Clique para expandir)</button>
+                </div>
+                <div id="logic-explanation" class="hidden mt-4 text-left p-4 bg-gray-50 rounded-lg border space-y-3">
+                    <p>A lógica foi pensada para balancear a <strong>pontualidade</strong> com a <strong>realidade</strong> do dia a dia, criando um sistema justo para todos.</p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700">
+                        <li><strong>Recompensa a Pontualidade:</strong> Valoriza quem chega no horário, atendendo-os primeiro.</li>
+                        <li><strong>Oferece Tolerância:</strong> Reconhece que imprevistos acontecem, com uma janela de 20 minutos para pequenos atrasos.</li>
+                        <li><strong>Gerencia Atrasos Maiores:</strong> Coloca quem se atrasou muito no fim da fila para não prejudicar os outros.</li>
+                        <li><strong>Permite Flexibilidade:</strong> O botão "Urgente" garante que casos graves sejam atendidos imediatamente.</li>
+                        <li><strong>Critério de Desempate:</strong> Para assistidos com a mesma prioridade, a ordem de chegada define quem será o primeiro a ser atendido.</li>
+                    </ul>
+                    <p class="font-semibold text-gray-800 pt-2">O resultado é uma fila transparente, previsível e justa tanto para os assistidos quanto para a equipe.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center mt-4">
+                    <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500"><p class="font-bold text-red-700">Prioridade Urgente</p><p class="text-sm text-gray-600 mt-1">Definida manualmente para casos que necessitam de atendimento imediato.</p></div>
+                    <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500"><p class="font-bold text-green-700">Prioridade Máxima</p><p class="text-sm text-gray-600 mt-1">Assistidos que chegaram no horário agendado ou adiantados.</p></div>
+                    <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500"><p class="font-bold text-orange-700">Prioridade Média</p><p class="text-sm text-gray-600 mt-1">Assistidos agendados com até 20 min de atraso ou atendimentos avulsos.</p></div>
+                    <div class="bg-gray-100 p-4 rounded-lg border-l-4 border-gray-500"><p class="font-bold text-gray-700">Prioridade Mínima</p><p class="text-sm text-gray-600 mt-1">Assistidos que chegaram com 30 minutos ou mais de atraso.</p></div>
+                </div>
+            </footer>
         </div>
     </div>
 
@@ -390,7 +413,7 @@
                 const id = e.target.dataset.id;
                 if (!id || !currentPautaId) return;
                 const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
-                if (e.target.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); }
+                if (e.target.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5); }
                 if (e.target.classList.contains('attend-btn')) { assistedIdToHandle = id; document.getElementById('attendant-modal').classList.remove('hidden'); }
                 if (e.target.classList.contains('urgent-btn')) { await updateDoc(doc(collectionRef, id), { priority: 'URGENTE' }); }
                 if (e.target.classList.contains('delete-attended-btn')) { if (confirm("Tem certeza?")) await deleteDoc(doc(collectionRef, id)); }
@@ -461,11 +484,15 @@
                 list.innerHTML = '';
                 const pautaDoc = await getDoc(doc(db, "pautas", currentPautaId));
                 const pautaData = pautaDoc.data();
+                const currentUserIsOwner = pautaData.owner === auth.currentUser.uid;
+                
+                document.getElementById('invite-member-btn').parentElement.parentElement.style.display = currentUserIsOwner ? 'block' : 'none';
+
                 pautaData.memberEmails.forEach(email => {
                     const div = document.createElement('div');
                     div.className = 'flex justify-between items-center p-2 rounded hover:bg-gray-100';
-                    const isOwner = pautaData.owner === auth.currentUser.uid;
-                    div.innerHTML = `<span>${email} ${pautaData.owner === auth.currentUser.uid && email === auth.currentUser.email ? '(Dono)' : ''}</span> ${isOwner && email !== auth.currentUser.email ? `<button data-email="${email}" class="remove-member-btn text-red-500 hover:text-red-700 font-semibold text-sm">Remover</button>` : ''}`;
+                    const isOwner = pautaData.owner === auth.currentUser.uid && email === auth.currentUser.email; // Simplified check
+                    div.innerHTML = `<span>${email} ${isOwner ? '<strong>(Dono)</strong>' : ''}</span> ${currentUserIsOwner && email !== auth.currentUser.email ? `<button data-email="${email}" class="remove-member-btn text-red-500 hover:text-red-700 font-semibold text-sm">Remover</button>` : ''}`;
                     list.appendChild(div);
                 });
                 document.getElementById('members-modal').classList.remove('hidden');
@@ -473,9 +500,9 @@
             document.getElementById('invite-member-btn').addEventListener('click', async () => {
                 const email = document.getElementById('invite-email-input').value.trim();
                 if(!email) return showNotification("Digite um email.", "error");
-                const q = query(collection(db, "users"), where("email", "==", email));
+                const q = query(collection(db, "users"), where("email", "==", email), where("status", "==", "approved"));
                 const snapshot = await getDocs(q);
-                if(snapshot.empty) return showNotification("Usuário não encontrado.", "error");
+                if(snapshot.empty) return showNotification("Usuário não encontrado ou não aprovado.", "error");
                 const userToInvite = snapshot.docs[0];
                 await updateDoc(doc(db, "pautas", currentPautaId), { members: arrayUnion(userToInvite.id), memberEmails: arrayUnion(email) });
                 showNotification("Usuário convidado!", "success");
