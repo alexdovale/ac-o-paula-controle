@@ -66,7 +66,6 @@
             <button id="back-to-pautas-btn" class="absolute top-0 left-0 bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
             <h1 id="pauta-title" class="text-3xl md:text-4xl font-bold text-gray-800"></h1>
             <div class="absolute top-0 right-0 flex items-center gap-2">
-                <button id="download-csv-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700">Exportar CSV</button>
                 <button id="download-pdf-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Exportar PDF</button>
                 <button id="manage-members-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700">Membros</button>
                 <button id="reset-all-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">Zerar Pauta</button>
@@ -318,6 +317,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.name.toLowerCase().includes(document.getElementById('aguardando-search').value.toLowerCase()));
             const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.name.toLowerCase().includes(document.getElementById('atendidos-search').value.toLowerCase()));
 
+            pauta.sort((a, b) => (a.order || 0) - (b.order || 0));
+            atendidos.sort((a, b) => new Date(a.attendedTime) - new Date(b.attendedTime));
+            
             aguardando.sort((a, b) => {
                 const order = { 'URGENTE': 0, 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
                 return order[a.priority] !== order[b.priority] ? order[a.priority] - order[b.priority] : new Date(a.arrivalTime) - new Date(b.arrivalTime);
@@ -458,7 +460,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const isAgendamento = document.getElementById('tab-agendamento').classList.contains('tab-active');
                 if(!name || !subject || (isAgendamento && !time)) return showNotification("Preencha os campos obrigatórios.", "error");
 
-                const newAssisted = { name, subject, cpf: document.getElementById('assisted-cpf').value.trim() || null, status: 'pauta', type: isAgendamento ? 'agendamento' : 'avulso', scheduledTime: time || null, arrivalTime: null, attendedTime: null, attendant: null, priority: null };
+                const newAssisted = { name, subject, cpf: document.getElementById('assisted-cpf').value.trim() || null, status: 'pauta', type: isAgendamento ? 'agendamento' : 'avulso', scheduledTime: time || null, arrivalTime: null, attendedTime: null, attendant: null, priority: null, order: allAssisted.length };
                 if (!isAgendamento) { newAssisted.status = 'aguardando'; newAssisted.arrivalTime = new Date().toISOString(); newAssisted.priority = 'Média'; }
 
                 await addDoc(collection(db, "pautas", currentPautaId, "attendances"), newAssisted);
@@ -485,6 +487,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const batch = writeBatch(db);
                     const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
                     let importedCount = 0;
+                    let orderIndex = allAssisted.length;
 
                     lines.forEach(line => {
                         const separator = line.includes(';') ? ';' : ',';
@@ -512,7 +515,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                                         attendant: null,
                                         status: 'pauta',
                                         priority: null,
-                                        type: 'agendamento'
+                                        type: 'agendamento',
+                                        order: orderIndex++
                                     });
                                     importedCount++;
                                 }
@@ -714,8 +718,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
             document.getElementById('close-members-modal-btn').addEventListener('click', () => document.getElementById('members-modal').classList.add('hidden'));
 
-            // --- NOVAS FUNÇÕES DE EXPORTAÇÃO ---
-
             document.getElementById('download-pdf-btn').addEventListener('click', () => {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
@@ -755,46 +757,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 doc.save(`relatorio_atendidos_${pautaTitle.replace(/\s+/g, '_')}.pdf`);
             });
-
-            document.getElementById('download-csv-btn').addEventListener('click', () => {
-                const pautaAgendada = allAssisted
-                    .filter(a => a.type === 'agendamento')
-                    .sort((a, b) => (a.scheduledTime || '').localeCompare(b.scheduledTime || ''));
-                
-                if (pautaAgendada.length === 0) {
-                    showNotification("Não há atendimentos agendados para exportar.", "info");
-                    return;
-                }
-
-                const pautaTitle = document.getElementById('pauta-title').textContent;
-                const headers = ['Horario Agendado', 'Nome', 'CPF', 'Assunto', 'Status', 'Atendente', 'Horario Chegada', 'Horario Atendido'];
-                let csvContent = "data:text/csv;charset=utf-8," + headers.join(";") + "\n";
-
-                pautaAgendada.forEach(item => {
-                    const arrivalTime = item.arrivalTime ? new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
-                    const attendedTime = item.attendedTime ? new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
-                    const row = [
-                        item.scheduledTime || '',
-                        item.name || '',
-                        item.cpf || '',
-                        item.subject || '',
-                        item.status || '',
-                        item.attendant || '',
-                        arrivalTime,
-                        attendedTime
-                    ];
-                    csvContent += row.join(";") + "\n";
-                });
-                
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", `pauta_completa_${pautaTitle.replace(/\s+/g, '_')}.csv`);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            });
         });
     </script>
 </body>
 </html>
+
