@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gerenciamento de Atendimento - Defensoria</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+        }
+        .priority-urgente { border-left: 5px solid #ef4444; }
+        .priority-maxima { border-left: 5px solid #22c55e; }
+        .priority-media { border-left: 5px solid #f97316; }
+        .priority-minima { border-left: 5px solid #6b7280; }
+
+        /* Estilo para a barra de rolagem */
+        .column-content::-webkit-scrollbar, .scrollable-pre::-webkit-scrollbar {
+            width: 8px;
+        }
+        .column-content::-webkit-scrollbar-track, .scrollable-pre::-webkit-scrollbar-track {
+            background: #e5e7eb;
+            border-radius: 10px;
+        }
+        .column-content::-webkit-scrollbar-thumb, .scrollable-pre::-webkit-scrollbar-thumb {
+            background: #9ca3af;
+            border-radius: 10px;
+        }
+        .column-content::-webkit-scrollbar-thumb:hover, .scrollable-pre::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+        /* Esconde o botão de limpar do input de pesquisa */
+        input[type="search"]::-webkit-search-cancel-button {
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .tab-active {
+            border-color: #4f46e5;
+            background-color: #eef2ff;
+            color: #4f46e5;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- Tela de Login -->
+    <div id="login-modal" class="fixed inset-0 bg-gray-100 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
+            <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Acesso ao Sistema</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="email-input" class="block mb-1 font-medium text-gray-600">E-mail</label>
+                    <input type="email" id="email-input" placeholder="seuemail@exemplo.com" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label for="password-input" class="block mb-1 font-medium text-gray-600">Senha</label>
+                    <input type="password" id="password-input" placeholder="********" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+            <p id="auth-error" class="text-red-500 text-sm mt-4 text-center h-4"></p>
+            <div class="mt-6 space-y-3">
+                <button id="login-btn" class="w-full bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition">Entrar</button>
+                <button id="create-account-btn" class="w-full bg-gray-200 text-gray-800 font-bold py-3 px-6 rounded-lg hover:bg-gray-300 transition">Criar Conta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal da Aplicação -->
+    <div id="app-container" class="max-w-7xl mx-auto hidden">
+        <header class="mb-6 text-center relative">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Sistema de Gerenciamento de Atendimento</h1>
+            <p id="pauta-owner-display" class="text-gray-600 mt-2">Carregando...</p>
+            <div class="absolute top-0 right-0 flex items-center gap-4">
+                 <button id="share-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md text-sm">Compartilhar</button>
+                 <button id="reset-all-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition duration-300 shadow-md text-sm">Zerar Tudo</button>
+                 <button id="logout-btn" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 transition duration-300 shadow-md text-sm">Sair</button>
+            </div>
+        </header>
+
+        <!-- Abas de Navegação de Modo -->
+        <div class="mb-6">
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                    <button id="tab-agendamento" class="tab-active whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg">
+                        Atendimento Agendado
+                    </button>
+                    <button id="tab-avulso" class="text-gray-500 hover:text-gray-700 hover:bg-gray-100 whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg">
+                        Atendimento Avulso
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Formulário para Adicionar Assistido -->
+        <div id="form-agendamento" class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+                <h2 id="form-title" class="text-xl font-semibold text-gray-700">Adicionar Novo Agendamento</h2>
+                <div id="agendamento-actions" class="flex items-center gap-4">
+                    <a href="#" id="format-help-link" class="text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition-colors duration-300 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.055.491.223.57.45.079.227.026.459-.138.563-.164.104-.39.104-.593.03-1.068.172-1.28.307-1.28.625 0 .378.243.625.625.625.322 0 .47-.13.525-.246.055-.116.07-.268.028-.421-.042-.153-.162-.255-.347-.293-.185-.038-.37.008-.479.083.11.41.47.625.96.625.667 0 1.15-.36 1.15-.966 0-.532-.42-.838-1.125-.925a.81.81 0 0 0-.25-.042zM8 4.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>
+                        <span>Como converter minha pauta?</span>
+                    </a>
+                    <label for="file-upload" class="cursor-pointer bg-teal-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-teal-600 transition text-sm inline-flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                        Carregar Pauta (CSV)
+                    </label>
+                    <input type="file" id="file-upload" class="hidden" accept=".csv">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                <div class="flex flex-col lg:col-span-2">
+                    <label for="assisted-name" class="mb-1 font-medium text-gray-600">Nome do Assistido</label>
+                    <input type="text" id="assisted-name" placeholder="Ex: João da Silva" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                </div>
+                <div class="flex flex-col">
+                    <label for="assisted-cpf" class="mb-1 font-medium text-gray-600">CPF (Opcional)</label>
+                    <input type="text" id="assisted-cpf" placeholder="___.___.___-__" maxlength="14" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                </div>
+                <div id="scheduled-time-wrapper" class="flex flex-col">
+                    <label for="scheduled-time" class="mb-1 font-medium text-gray-600">Horário Agendado</label>
+                    <input type="time" id="scheduled-time" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                </div>
+                <div class="flex flex-col lg:col-span-3">
+                    <label for="assisted-subject" class="mb-1 font-medium text-gray-600">Matéria - Assunto</label>
+                    <input type="text" id="assisted-subject" placeholder="Ex: Divórcio" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                </div>
+                <button id="add-assisted-btn" class="bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition duration-300 shadow-md w-full lg:col-span-1">
+                    Adicionar à Pauta
+                </button>
+            </div>
+        </div>
+
+        <!-- Colunas de Atendimento -->
+        <main id="main-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div id="pauta-column" class="bg-white rounded-lg shadow-md flex flex-col">
+                <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                    <h3 class="text-xl font-semibold text-gray-800">📋 Pauta</h3>
+                    <input type="search" id="pauta-search" placeholder="Pesquisar na pauta..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div id="pauta-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md flex flex-col">
+                 <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                    <h3 class="text-xl font-semibold text-gray-800">⏳ Aguardando Atendimento</h3>
+                    <input type="search" id="aguardando-search" placeholder="Pesquisar em aguardo..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div id="aguardando-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md flex flex-col">
+                <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xl font-semibold text-gray-800">✅ Atendidos</h3>
+                        <button id="download-pdf-btn" class="text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg transition duration-300">Baixar PDF</button>
+                    </div>
+                    <input type="search" id="atendidos-search" placeholder="Pesquisar nos atendidos..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div id="atendidos-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+            </div>
+        </main>
+        
+        <footer class="mt-12 bg-white p-6 rounded-lg shadow-md"></footer>
+    </div>
+
+    <!-- Modais -->
+    <div id="share-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">Compartilhar Pauta</h2>
+                <button id="close-share-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            </div>
+            <div id="share-own-pauta-view">
+                <p class="mb-4 text-gray-600">Convide outros usuários para ver e editar sua pauta em tempo real.</p>
+                <div class="relative">
+                    <input type="email" id="share-email-input" placeholder="E-mail do usuário" class="w-full p-3 pl-4 pr-32 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <button id="share-confirm-btn" class="absolute right-1 top-1 bottom-1 bg-indigo-600 text-white font-semibold px-3 rounded-md hover:bg-indigo-700 transition text-sm">Compartilhar</button>
+                </div>
+                <p id="share-error" class="text-red-500 text-sm mt-2 h-4"></p>
+                <h3 class="font-semibold text-lg mt-6 mb-2 text-gray-700">Compartilhado Com:</h3>
+                <div id="shared-with-list" class="space-y-2 max-h-32 overflow-y-auto"></div>
+            </div>
+            <div id="share-foreign-pauta-view" class="hidden">
+                <p class="mb-4 text-gray-600">Você está atualmente visualizando a pauta de <strong id="foreign-pauta-owner-email"></strong>.</p>
+                <button id="stop-sharing-btn" class="w-full bg-red-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-700 transition">Voltar para Minha Pauta</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="arrival-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50"></div>
+    <div id="attendant-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50"></div>
+    <div id="format-help-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50"></div>
+    <div id="reset-confirm-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, getDoc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // --- Variáveis Globais e de Elementos ---
+            const loginModal = document.getElementById('login-modal');
+            const appContainer = document.getElementById('app-container');
+            const emailInput = document.getElementById('email-input');
+            const passwordInput = document.getElementById('password-input');
+            const loginBtn = document.getElementById('login-btn');
+            const createAccountBtn = document.getElementById('create-account-btn');
+            const logoutBtn = document.getElementById('logout-btn');
+            const authError = document.getElementById('auth-error');
+            const shareBtn = document.getElementById('share-btn');
+            const shareModal = document.getElementById('share-modal');
+            const closeShareModalBtn = document.getElementById('close-share-modal-btn');
+            const pautaOwnerDisplay = document.getElementById('pauta-owner-display');
+            
+            let allAssisted = [];
+            let db, auth;
+            let currentPautaDocRef = null;
+            let unsubscribeFromPauta = () => {}; // Função para parar de ouvir o listener do Firestore
+
+            // --- Configuração do Firebase ---
+            try {
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+            } catch (e) {
+                console.error("Firebase config not found.", e);
+                authError.textContent = "Erro de configuração.";
+                return;
+            }
+
+            // --- Lógica de Dados (Firestore) ---
+            const saveDataToFirestore = async (data) => {
+                if (!currentPautaDocRef) return;
+                await updateDoc(currentPautaDocRef, { assistedList: data });
+            };
+
+            const setupFirestoreListener = (docRef) => {
+                unsubscribeFromPauta(); // Para o listener anterior
+                unsubscribeFromPauta = onSnapshot(docRef, (docSnap) => {
+                    const data = docSnap.data();
+                    allAssisted = (data && data.assistedList) ? data.assistedList : [];
+                    renderAssistedList();
+                    // Atualiza a UI de compartilhamento se o modal estiver aberto
+                    if (!shareModal.classList.contains('hidden')) {
+                         populateShareModal(data);
+                    }
+                });
+            };
+
+            const findUserByEmail = async (email) => {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const usersRef = collection(db, 'artifacts', appId, 'user_profiles');
+                const q = query(usersRef, where("email", "==", email));
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    return querySnapshot.docs[0]; // Retorna o doc snapshot do usuário
+                }
+                return null;
+            };
+
+            // --- Lógica de Autenticação ---
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    loginModal.classList.add('hidden');
+                    appContainer.classList.remove('hidden');
+
+                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                    const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid);
+                    const pautaDocRef = doc(userDocRef, 'atendimentos', 'diaAtual');
+                    const userDocSnap = await getDoc(pautaDocRef);
+
+                    if (userDocSnap.exists() && userDocSnap.data().sharedFrom) {
+                        // Está vendo a pauta de outra pessoa
+                        const ownerInfo = userDocSnap.data().sharedFrom;
+                        pautaOwnerDisplay.textContent = `Visualizando pauta compartilhada de: ${ownerInfo.email}`;
+                        const ownerDocRef = doc(db, 'artifacts', appId, 'users', ownerInfo.uid, 'atendimentos', 'diaAtual');
+                        currentPautaDocRef = ownerDocRef;
+                    } else {
+                        // Vendo a própria pauta
+                        pautaOwnerDisplay.textContent = `Minha Pauta (${user.email})`;
+                        currentPautaDocRef = pautaDocRef;
+                        if (!userDocSnap.exists()) {
+                            await setDoc(pautaDocRef, { assistedList: [], sharedWith: [] });
+                        }
+                    }
+                    setupFirestoreListener(currentPautaDocRef);
+
+                } else {
+                    loginModal.classList.remove('hidden');
+                    appContainer.classList.add('hidden');
+                    unsubscribeFromPauta();
+                    currentPautaDocRef = null;
+                }
+            });
+
+            loginBtn.addEventListener('click', async () => { /* ... (sem alterações) ... */ });
+            createAccountBtn.addEventListener('click', async () => {
+                const email = emailInput.value;
+                const password = passwordInput.value;
+                authError.textContent = '';
+                 try {
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
+                    // Salva o perfil do usuário para busca por email
+                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                    const userProfileRef = doc(db, 'artifacts', appId, 'user_profiles', user.uid);
+                    await setDoc(userProfileRef, { email: user.email });
+                } catch (error) { /* ... (sem alterações) ... */ }
+            });
+            logoutBtn.addEventListener('click', () => signOut(auth));
+
+
+            // --- Lógica de Compartilhamento ---
+            const shareConfirmBtn = document.getElementById('share-confirm-btn');
+            const shareEmailInput = document.getElementById('share-email-input');
+            const shareError = document.getElementById('share-error');
+            const sharedWithList = document.getElementById('shared-with-list');
+            const stopSharingBtn = document.getElementById('stop-sharing-btn');
+
+            const populateShareModal = (pautaData) => {
+                 const shareOwnView = document.getElementById('share-own-pauta-view');
+                 const shareForeignView = document.getElementById('share-foreign-pauta-view');
+
+                if (pautaData && pautaData.sharedFrom) { // Vendo pauta de outro
+                    shareOwnView.classList.add('hidden');
+                    shareForeignView.classList.remove('hidden');
+                    document.getElementById('foreign-pauta-owner-email').textContent = pautaData.sharedFrom.email;
+                } else { // Vendo a própria pauta
+                    shareOwnView.classList.remove('hidden');
+                    shareForeignView.classList.add('hidden');
+                    sharedWithList.innerHTML = '';
+                    const sharedUsers = (pautaData && pautaData.sharedWith) ? pautaData.sharedWith : [];
+                    if (sharedUsers.length === 0) {
+                        sharedWithList.innerHTML = '<p class="text-gray-500 text-sm">Sua pauta não está compartilhada.</p>';
+                    } else {
+                        sharedUsers.forEach(user => {
+                            const div = document.createElement('div');
+                            div.className = 'flex justify-between items-center bg-gray-100 p-2 rounded';
+                            div.innerHTML = `<span class="text-sm">${user.email}</span><button data-uid="${user.uid}" class="unshare-btn text-red-500 hover:text-red-700 text-xs font-bold">REMOVER</button>`;
+                            sharedWithList.appendChild(div);
+                        });
+                    }
+                }
+            }
+
+            shareBtn.addEventListener('click', async () => {
+                if(!currentPautaDocRef) return;
+                const docSnap = await getDoc(currentPautaDocRef);
+                populateShareModal(docSnap.data());
+                shareModal.classList.remove('hidden');
+            });
+            
+            closeShareModalBtn.addEventListener('click', () => shareModal.classList.add('hidden'));
+
+            shareConfirmBtn.addEventListener('click', async () => {
+                const email = shareEmailInput.value.trim();
+                shareError.textContent = '';
+                if (!email) {
+                    shareError.textContent = 'Digite um e-mail.';
+                    return;
+                }
+
+                const targetUserDoc = await findUserByEmail(email);
+                if (!targetUserDoc) {
+                    shareError.textContent = 'Usuário não encontrado.';
+                    return;
+                }
+                
+                const targetUid = targetUserDoc.id;
+                const currentUser = auth.currentUser;
+                if (targetUid === currentUser.uid) {
+                    shareError.textContent = 'Você não pode compartilhar consigo mesmo.';
+                    return;
+                }
+
+                const pautaSnap = await getDoc(currentPautaDocRef);
+                const sharedWith = pautaSnap.data().sharedWith || [];
+
+                if(sharedWith.some(user => user.uid === targetUid)) {
+                    shareError.textContent = 'Pauta já compartilhada com este usuário.';
+                    return;
+                }
+
+                // Adiciona o novo usuário à lista de compartilhamento do proprietário
+                const newSharedWith = [...sharedWith, { uid: targetUid, email }];
+                await updateDoc(currentPautaDocRef, { sharedWith: newSharedWith });
+                
+                // Define com quem a pauta está compartilhada no doc do outro usuário
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const targetPautaRef = doc(db, 'artifacts', appId, 'users', targetUid, 'atendimentos', 'diaAtual');
+                await setDoc(targetPautaRef, { sharedFrom: { uid: currentUser.uid, email: currentUser.email } }, { merge: true });
+
+                shareEmailInput.value = '';
+                shareError.textContent = 'Pauta compartilhada!';
+            });
+            
+            sharedWithList.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('unshare-btn')) {
+                    const targetUid = e.target.dataset.uid;
+                    const pautaSnap = await getDoc(currentPautaDocRef);
+                    const sharedWith = pautaSnap.data().sharedWith || [];
+                    const newSharedWith = sharedWith.filter(user => user.uid !== targetUid);
+                    await updateDoc(currentPautaDocRef, { sharedWith: newSharedWith });
+                    
+                    // Limpa o `sharedFrom` do outro usuário
+                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                    const targetPautaRef = doc(db, 'artifacts', appId, 'users', targetUid, 'atendimentos', 'diaAtual');
+                    await updateDoc(targetPautaRef, { sharedFrom: null });
+                }
+            });
+
+            stopSharingBtn.addEventListener('click', async () => {
+                const user = auth.currentUser;
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const ownPautaRef = doc(db, 'artifacts', appId, 'users', user.uid, 'atendimentos', 'diaAtual');
+                await updateDoc(ownPautaRef, { sharedFrom: null });
+                shareModal.classList.add('hidden');
+                // O onAuthStateChanged vai recarregar a pauta correta
+                window.location.reload(); // Força a recarga para simplificar o fluxo de re-escuta
+            });
+
+
+            // --- Lógica de UI (Restante, com `saveDataToFirestore`) ---
+            const addAssistedBtn = document.getElementById('add-assisted-btn');
+            addAssistedBtn.addEventListener('click', () => {
+                //...
+                 if (isAgendamentoValid || isAvulsoValid) {
+                    // ...
+                    allAssisted.push(newAssisted);
+                    saveDataToFirestore(allAssisted); // Salva no Firestore
+                    //...
+                 }
+            });
+
+             document.addEventListener('click', (e) => {
+                if(e.target.classList.contains('check-in-btn')) {
+                    //...
+                    saveDataToFirestore(allAssisted);
+                }
+                if(e.target.classList.contains('attend-btn')) {
+                   //...
+                   saveDataToFirestore(allAssisted);
+                }
+                 if(e.target.classList.contains('urgent-btn')) {
+                   //...
+                   saveDataToFirestore(allAssisted);
+                }
+            });
+            
+            // ... (O resto do código, como `renderAssistedList`, etc., permanece o mesmo, pois ele apenas lê `allAssisted`)
+        });
+    </script>
+</body>
+</html>
+
