@@ -292,7 +292,6 @@
             main();
             let assistedIdToHandle = null;
 
-            // --- Lógica de Autenticação ---
             const authErrorDiv = document.getElementById('auth-error');
             const showError = (message) => { authErrorDiv.textContent = message; authErrorDiv.classList.remove('hidden'); };
             
@@ -317,10 +316,25 @@
                 }
             });
             document.getElementById('logout-btn-main').addEventListener('click', () => signOut(auth));
-            document.getElementById('login-tab-btn').addEventListener('click', () => { document.getElementById('login-form').classList.remove('hidden'); document.getElementById('register-form').classList.add('hidden'); });
-            document.getElementById('register-tab-btn').addEventListener('click', () => { document.getElementById('login-form').classList.add('hidden'); document.getElementById('register-form').classList.remove('hidden'); });
+            
+            const loginTabBtn = document.getElementById('login-tab-btn');
+            const registerTabBtn = document.getElementById('register-tab-btn');
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
 
-            // --- Lógica de Pautas ---
+            loginTabBtn.addEventListener('click', () => { 
+                loginForm.classList.remove('hidden'); 
+                registerForm.classList.add('hidden'); 
+                loginTabBtn.classList.add('text-indigo-600', 'border-indigo-600');
+                registerTabBtn.classList.remove('text-indigo-600', 'border-indigo-600');
+            });
+            registerTabBtn.addEventListener('click', () => { 
+                loginForm.classList.add('hidden'); 
+                registerForm.classList.remove('hidden'); 
+                registerTabBtn.classList.add('text-indigo-600', 'border-indigo-600');
+                loginTabBtn.classList.remove('text-indigo-600', 'border-indigo-600');
+            });
+
             document.getElementById('back-to-pautas-btn').addEventListener('click', () => { unsubscribeFromAttendances(); currentPautaId = null; showPautaSelectionScreen(auth.currentUser.uid); });
             document.getElementById('create-pauta-btn').addEventListener('click', () => document.getElementById('create-pauta-modal').classList.remove('hidden'));
             document.getElementById('cancel-create-pauta-btn').addEventListener('click', () => document.getElementById('create-pauta-modal').classList.add('hidden'));
@@ -334,8 +348,26 @@
                 }
             });
 
-            // --- Lógica da Aplicação Principal ---
-            const setMode = (mode) => { /* ... Implementação do setMode ... */ };
+            const setMode = (mode) => {
+                const tabAgendamento = document.getElementById('tab-agendamento');
+                const tabAvulso = document.getElementById('tab-avulso');
+                const formTitle = document.getElementById('form-title');
+                const scheduledTimeWrapper = document.getElementById('scheduled-time-wrapper');
+                const agendamentoActions = document.getElementById('agendamento-actions');
+                const pautaColumn = document.getElementById('pauta-column');
+                const mainContent = document.getElementById('main-content');
+                
+                tabAgendamento.classList.toggle('tab-active', mode === 'agendamento');
+                tabAvulso.classList.toggle('tab-active', mode === 'avulso');
+                
+                const isAgendamento = mode === 'agendamento';
+                formTitle.textContent = isAgendamento ? 'Adicionar Novo Agendamento' : 'Adicionar Atendimento Avulso';
+                scheduledTimeWrapper.style.display = isAgendamento ? 'flex' : 'none';
+                agendamentoActions.style.display = isAgendamento ? 'flex' : 'none';
+                pautaColumn.style.display = isAgendamento ? 'flex' : 'none';
+                mainContent.classList.toggle('lg:grid-cols-3', isAgendamento);
+                mainContent.classList.toggle('lg:grid-cols-2', !isAgendamento);
+            };
             document.getElementById('tab-agendamento').addEventListener('click', () => setMode('agendamento'));
             document.getElementById('tab-avulso').addEventListener('click', () => setMode('avulso'));
             ['pauta-search', 'aguardando-search', 'atendidos-search'].forEach(id => document.getElementById(id).addEventListener('input', renderAssistedList));
@@ -343,10 +375,11 @@
             document.getElementById('add-assisted-btn').addEventListener('click', async () => {
                 const name = document.getElementById('assisted-name').value.trim();
                 const subject = document.getElementById('assisted-subject').value.trim();
+                const time = document.getElementById('scheduled-time').value;
                 const isAgendamento = document.getElementById('tab-agendamento').classList.contains('tab-active');
-                if(!name || !subject || (isAgendamento && !document.getElementById('scheduled-time').value)) return showNotification("Preencha os campos obrigatórios.", "error");
+                if(!name || !subject || (isAgendamento && !time)) return showNotification("Preencha os campos obrigatórios.", "error");
 
-                const newAssisted = { name, subject, cpf: document.getElementById('assisted-cpf').value.trim() || null, status: 'pauta', type: isAgendamento ? 'agendamento' : 'avulso', scheduledTime: document.getElementById('scheduled-time').value || null, arrivalTime: null, attendedTime: null, attendant: null, priority: null };
+                const newAssisted = { name, subject, cpf: document.getElementById('assisted-cpf').value.trim() || null, status: 'pauta', type: isAgendamento ? 'agendamento' : 'avulso', scheduledTime: time || null, arrivalTime: null, attendedTime: null, attendant: null, priority: null };
                 if (!isAgendamento) { newAssisted.status = 'aguardando'; newAssisted.arrivalTime = new Date().toISOString(); newAssisted.priority = 'Média'; }
 
                 await addDoc(collection(db, "pautas", currentPautaId, "attendances"), newAssisted);
@@ -355,7 +388,7 @@
 
             document.addEventListener('click', async (e) => {
                 const id = e.target.dataset.id;
-                if (!id) return;
+                if (!id || !currentPautaId) return;
                 const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
                 if (e.target.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); }
                 if (e.target.classList.contains('attend-btn')) { assistedIdToHandle = id; document.getElementById('attendant-modal').classList.remove('hidden'); }
@@ -368,11 +401,15 @@
                 const assisted = allAssisted.find(a => a.id === assistedIdToHandle);
                 if(arrivalTimeValue && assisted) {
                     const arrivalDateTime = new Date();
-                    arrivalDateTime.setHours(...arrivalTimeValue.split(':'));
+                    const [hours, minutes] = arrivalTimeValue.split(':');
+                    arrivalDateTime.setHours(hours, minutes, 0, 0);
+                    
                     const scheduled = new Date();
-                    scheduled.setHours(...(assisted.scheduledTime || '0:0').split(':'));
+                    const [scheduledHours, scheduledMinutes] = (assisted.scheduledTime || '0:0').split(':');
+                    scheduled.setHours(scheduledHours, scheduledMinutes, 0, 0);
+
                     const diffMinutes = (arrivalDateTime - scheduled) / 60000;
-                    const priority = diffMinutes <= 0 ? 'Máxima' : (diffMinutes <= 20 ? 'Média' : 'Mínima');
+                    const priority = diffMinutes <= 5 ? 'Máxima' : (diffMinutes <= 20 ? 'Média' : 'Mínima');
                     await updateDoc(doc(db, "pautas", currentPautaId, "attendances", assistedIdToHandle), { status: 'aguardando', arrivalTime: arrivalDateTime.toISOString(), priority });
                     document.getElementById('arrival-modal').classList.add('hidden');
                 }
@@ -385,7 +422,6 @@
                 }
             });
             
-            // --- Lógica dos Modais e Admin/Membros ---
             document.getElementById('cancel-arrival-btn').addEventListener('click', () => document.getElementById('arrival-modal').classList.add('hidden'));
             document.getElementById('cancel-attendant-btn').addEventListener('click', () => document.getElementById('attendant-modal').classList.add('hidden'));
             document.getElementById('reset-all-btn').addEventListener('click', () => document.getElementById('reset-confirm-modal').classList.remove('hidden'));
@@ -427,9 +463,9 @@
                 const pautaData = pautaDoc.data();
                 pautaData.memberEmails.forEach(email => {
                     const div = document.createElement('div');
-                    div.className = 'flex justify-between items-center';
-                    const isOwner = pautaData.owner === auth.currentUser.uid && email === auth.currentUser.email; // Simplified check
-                    div.innerHTML = `<span>${email} ${isOwner ? '(Dono)' : ''}</span> ${!isOwner ? `<button data-email="${email}" class="remove-member-btn text-red-500 hover:text-red-700 font-semibold text-sm">Remover</button>` : ''}`;
+                    div.className = 'flex justify-between items-center p-2 rounded hover:bg-gray-100';
+                    const isOwner = pautaData.owner === auth.currentUser.uid;
+                    div.innerHTML = `<span>${email} ${pautaData.owner === auth.currentUser.uid && email === auth.currentUser.email ? '(Dono)' : ''}</span> ${isOwner && email !== auth.currentUser.email ? `<button data-email="${email}" class="remove-member-btn text-red-500 hover:text-red-700 font-semibold text-sm">Remover</button>` : ''}`;
                     list.appendChild(div);
                 });
                 document.getElementById('members-modal').classList.remove('hidden');
