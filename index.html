@@ -66,7 +66,6 @@
             <button id="back-to-pautas-btn" class="absolute top-0 left-0 bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
             <h1 id="pauta-title" class="text-3xl md:text-4xl font-bold text-gray-800"></h1>
             <div class="absolute top-0 right-0 flex items-center gap-2">
-                <button id="download-pdf-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Exportar PDF dos Atendidos</button>
                 <button id="manage-members-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700">Membros</button>
                 <button id="reset-all-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">Zerar Pauta</button>
             </div>
@@ -117,8 +116,11 @@
                 </div>
                 <div class="bg-white rounded-lg shadow-md flex flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-                        <h3 class="text-xl font-semibold text-gray-800">✅ Atendidos</h3>
-                        <input type="search" id="atendidos-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-gray-800">✅ Atendidos</h3>
+                            <button id="download-pdf-btn" class="bg-blue-600 text-white font-bold py-1 px-3 rounded-lg hover:bg-blue-700 text-sm">Baixar PDF</button>
+                        </div>
+                        <input type="search" id="atendidos-search" placeholder="Pesquisar..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
                     </div>
                     <div id="atendidos-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
@@ -170,24 +172,24 @@
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg space-y-4"><h2 class="text-2xl font-bold text-gray-800">Zerar Pauta</h2><p class="text-gray-600">Tem certeza de que deseja apagar permanentemente todos os dados desta pauta?</p><div class="flex justify-end space-x-4 pt-4"><button id="cancel-reset-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button><button id="confirm-reset-btn" class="bg-red-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-800">Zerar Pauta</button></div></div>
     </div>
      <div id="format-help-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
-         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
-             <div class="flex justify-between items-center mb-4">
-                 <h2 class="text-2xl font-bold text-gray-800">Como Converter sua Pauta</h2>
-                 <button id="close-format-help-btn-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
-             </div>
-             <p class="mb-4 text-gray-600">Para converter uma pauta em PDF para o formato CSV, você pode me pedir diretamente. Use o texto abaixo e envie seu arquivo PDF.</p>
-             <h3 class="font-semibold text-lg mb-2 text-gray-700">Texto para usar na IA:</h3>
-             <pre id="instruction-text" class="bg-gray-100 p-4 rounded-md text-gray-800 mb-4 max-h-40 overflow-y-auto scrollable-content"><code>Olá! Por favor, converta o conteúdo do arquivo PDF que estou enviando para o formato CSV, usando ponto e vírgula (;) como separador. O resultado deve seguir este padrão:
+          <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
+               <div class="flex justify-between items-center mb-4">
+                   <h2 class="text-2xl font-bold text-gray-800">Como Converter sua Pauta</h2>
+                   <button id="close-format-help-btn-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+               </div>
+               <p class="mb-4 text-gray-600">Para converter uma pauta em PDF para o formato CSV, você pode me pedir diretamente. Use o texto abaixo e envie seu arquivo PDF.</p>
+               <h3 class="font-semibold text-lg mb-2 text-gray-700">Texto para usar na IA:</h3>
+               <pre id="instruction-text" class="bg-gray-100 p-4 rounded-md text-gray-800 mb-4 max-h-40 overflow-y-auto scrollable-content"><code>Olá! Por favor, converta o conteúdo do arquivo PDF que estou enviando para o formato CSV, usando ponto e vírgula (;) como separador. O resultado deve seguir este padrão:
 
 Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)
 
 Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .csv.</code></pre>
-              <p class="mb-4 text-gray-600 mt-4">Após a conversão, salve o texto recebido em um arquivo com a extensão <code class="bg-gray-200 text-sm p-1 rounded">.csv</code> e carregue-o no sistema.</p>
-             <div class="flex justify-end space-x-4 mt-6">
-                 <button id="copy-instruction-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Copiar Texto</button>
-                 <button id="close-format-help-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700 transition">Entendi</button>
-             </div>
-         </div>
+               <p class="mb-4 text-gray-600 mt-4">Após a conversão, salve o texto recebido em um arquivo com a extensão <code class="bg-gray-200 text-sm p-1 rounded">.csv</code> e carregue-o no sistema.</p>
+              <div class="flex justify-end space-x-4 mt-6">
+                   <button id="copy-instruction-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Copiar Texto</button>
+                   <button id="close-format-help-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700 transition">Entendi</button>
+               </div>
+          </div>
      </div>
     <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
@@ -755,6 +757,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     theme: 'striped',
                     headStyles: { fillColor: [79, 70, 229] }
                 });
+                
+                const finalY = doc.autoTable.previous.finalY;
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`Total de Atendidos: ${atendidos.length}`, 14, finalY + 10);
+
 
                 doc.save(`relatorio_atendidos_${pautaTitle.replace(/\s+/g, '_')}.pdf`);
             });
