@@ -186,6 +186,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
         </div>
     </div>
+    <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Editar Atendente</h2>
+            <input type="text" id="edit-attendant-name" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-edit-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-edit-attendant-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700">Salvar</button>
+            </div>
+        </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -320,7 +330,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             render(atendidosList, atendidos, a => {
                 const card = document.createElement('div');
                 card.className = 'bg-green-50 p-4 rounded-lg shadow-sm border-green-200 opacity-80';
-                card.innerHTML = `<p class="font-bold text-lg">${a.name}</p>${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}<p class="text-sm">Assunto: <strong>${a.subject}</strong></p><p class="text-sm">Finalizado: <strong>${new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong></p><div class="flex justify-between items-center mt-1"><p class="text-sm">Por: <strong>${a.attendant || 'Não informado'}</strong></p><button data-id="${a.id}" class="delete-attended-btn text-red-600 hover:text-red-800 font-semibold text-xs py-1 px-2 rounded hover:bg-red-100">Deletar</button></div>`;
+                card.innerHTML = `<p class="font-bold text-lg">${a.name}</p>${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}<p class="text-sm">Assunto: <strong>${a.subject}</strong></p><p class="text-sm">Finalizado: <strong>${new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong></p><div class="flex justify-between items-center mt-1"><p class="text-sm">Por: <strong>${a.attendant || 'Não informado'}</strong></p><div><button data-id="${a.id}" class="edit-attendant-btn text-indigo-600 hover:text-indigo-800 font-semibold text-xs py-1 px-2 rounded hover:bg-indigo-100">Editar</button><button data-id="${a.id}" class="delete-attended-btn text-red-600 hover:text-red-800 font-semibold text-xs py-1 px-2 rounded hover:bg-red-100">Deletar</button></div></div>`;
                 return card;
             });
         };
@@ -449,6 +459,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (e.target.classList.contains('attend-btn')) { assistedIdToHandle = id; document.getElementById('attendant-modal').classList.remove('hidden'); }
                 if (e.target.classList.contains('urgent-btn')) { await updateDoc(doc(collectionRef, id), { priority: 'URGENTE' }); }
                 if (e.target.classList.contains('delete-attended-btn')) { if (confirm("Tem certeza?")) await deleteDoc(doc(collectionRef, id)); }
+                if (e.target.classList.contains('edit-attendant-btn')) { 
+                    assistedIdToHandle = id;
+                    const assisted = allAssisted.find(a => a.id === id);
+                    document.getElementById('edit-attendant-name').value = assisted.attendant || '';
+                    document.getElementById('edit-attendant-modal').classList.remove('hidden');
+                }
             });
 
             document.getElementById('confirm-arrival-btn').addEventListener('click', async () => {
@@ -476,9 +492,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.getElementById('attendant-modal').classList.add('hidden');
                 }
             });
+             document.getElementById('confirm-edit-attendant-btn').addEventListener('click', async () => {
+                if (assistedIdToHandle) {
+                    await updateDoc(doc(db, "pautas", currentPautaId, "attendances", assistedIdToHandle), { attendant: document.getElementById('edit-attendant-name').value.trim() || 'Não informado' });
+                    document.getElementById('edit-attendant-modal').classList.add('hidden');
+                }
+            });
             
             document.getElementById('cancel-arrival-btn').addEventListener('click', () => document.getElementById('arrival-modal').classList.add('hidden'));
             document.getElementById('cancel-attendant-btn').addEventListener('click', () => document.getElementById('attendant-modal').classList.add('hidden'));
+            document.getElementById('cancel-edit-attendant-btn').addEventListener('click', () => document.getElementById('edit-attendant-modal').classList.add('hidden'));
+
             document.getElementById('reset-all-btn').addEventListener('click', () => document.getElementById('reset-confirm-modal').classList.remove('hidden'));
             document.getElementById('cancel-reset-btn').addEventListener('click', () => document.getElementById('reset-confirm-modal').classList.add('hidden'));
             document.getElementById('confirm-reset-btn').addEventListener('click', async () => {
