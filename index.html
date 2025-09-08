@@ -339,11 +339,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 card.innerHTML = `<p class="font-bold text-lg">${a.name}</p>${a.cpf ? `<p class="text-sm text-gray-500">CPF: <strong>${a.cpf}</strong></p>` : ''}<p>Assunto: <strong>${a.subject}</strong></p><p>Agendado: <strong>${a.scheduledTime}</strong></p><button data-id="${a.id}" class="check-in-btn mt-3 w-full bg-green-500 text-white font-semibold py-2 rounded-lg hover:bg-green-600">Marcar Chegada</button>`;
                 return card;
             });
-            render(aguardandoList, aguardando, a => {
+            render(aguardandoList, aguardando, (a, index) => {
                 const card = document.createElement('div');
                 card.className = `bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)}`;
                 const arrival = a.type === 'agendamento' ? `Agendado: ${a.scheduledTime} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : `Chegada Avulsa: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-                card.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-bold text-lg">${a.name}</p>${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}<p class="text-sm">Assunto: <strong>${a.subject}</strong></p><p class="text-sm text-gray-500">${arrival}</p></div>${getPriorityLabel(a.priority)}</div><div class="mt-4 flex space-x-2"><button data-id="${a.id}" class="attend-btn flex-1 bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="urgent-btn flex-1 bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Marcar Urgente</button>` : ''}</div>`;
+                card.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-bold text-lg">${index + 1}. ${a.name}</p>${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}<p class="text-sm">Assunto: <strong>${a.subject}</strong></p><p class="text-sm text-gray-500">${arrival}</p></div>${getPriorityLabel(a.priority)}</div><div class="mt-4 flex space-x-2"><button data-id="${a.id}" class="attend-btn flex-1 bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="urgent-btn flex-1 bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Marcar Urgente</button>` : ''}</div>`;
                 return card;
             });
             render(atendidosList, atendidos, a => {
@@ -770,3 +770,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+
