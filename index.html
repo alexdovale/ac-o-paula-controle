@@ -168,15 +168,22 @@
 
     <!-- Modais -->
     <div id="share-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl font-bold text-gray-800">Compartilhar Pauta</h2>
                 <button id="close-share-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
             </div>
             <div id="share-own-pauta-view">
-                <p class="mb-4 text-gray-600">Convide outros usuários para ver e editar sua pauta em tempo real.</p>
+                <div class="bg-indigo-50 p-3 rounded-lg mb-4">
+                    <p class="text-sm text-indigo-800"><strong>Seu ID de Usuário (para compartilhar):</strong></p>
+                    <div class="flex items-center gap-2 mt-1">
+                        <input type="text" id="user-id-display" readonly class="w-full bg-white p-2 border rounded-md text-xs text-gray-600">
+                        <button id="copy-user-id-btn" class="bg-indigo-600 text-white font-semibold px-3 py-2 rounded-md hover:bg-indigo-700 transition text-sm">Copiar</button>
+                    </div>
+                </div>
+                <p class="mb-4 text-gray-600">Peça o ID do usuário e cole abaixo para compartilhar sua pauta.</p>
                 <div class="relative">
-                    <input type="email" id="share-email-input" placeholder="E-mail do usuário" class="w-full p-3 pl-4 pr-32 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" id="share-id-input" placeholder="Cole o ID do usuário aqui" class="w-full p-3 pl-4 pr-32 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
                     <button id="share-confirm-btn" class="absolute right-1 top-1 bottom-1 bg-indigo-600 text-white font-semibold px-3 rounded-md hover:bg-indigo-700 transition text-sm">Compartilhar</button>
                 </div>
                 <p id="share-error" class="text-red-500 text-sm mt-2 h-4"></p>
@@ -246,7 +253,7 @@
                     renderAssistedList();
                     // Atualiza a UI de compartilhamento se o modal estiver aberto
                     if (!shareModal.classList.contains('hidden')) {
-                         populateShareModal(data);
+                         populateShareModal(data, auth.currentUser);
                     }
                 });
             };
@@ -284,7 +291,7 @@
                         pautaOwnerDisplay.textContent = `Minha Pauta (${user.email})`;
                         currentPautaDocRef = pautaDocRef;
                         if (!userDocSnap.exists()) {
-                            await setDoc(pautaDocRef, { assistedList: [], sharedWith: [] });
+                            await setDoc(pautaDocRef, { assistedList: [], sharedWith: [], sharedWithUids: [] });
                         }
                     }
                     setupFirestoreListener(currentPautaDocRef);
@@ -308,7 +315,7 @@
                     // Salva o perfil do usuário para busca por email
                     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
                     const userProfileRef = doc(db, 'artifacts', appId, 'user_profiles', user.uid);
-                    await setDoc(userProfileRef, { email: user.email });
+                    await setDoc(userProfileRef, { email: user.email, uid: user.uid });
                 } catch (error) { /* ... (sem alterações) ... */ }
             });
             logoutBtn.addEventListener('click', () => signOut(auth));
@@ -316,14 +323,19 @@
 
             // --- Lógica de Compartilhamento ---
             const shareConfirmBtn = document.getElementById('share-confirm-btn');
-            const shareEmailInput = document.getElementById('share-email-input');
+            const shareIdInput = document.getElementById('share-id-input');
             const shareError = document.getElementById('share-error');
             const sharedWithList = document.getElementById('shared-with-list');
             const stopSharingBtn = document.getElementById('stop-sharing-btn');
+            const userIdDisplay = document.getElementById('user-id-display');
+            const copyUserIdBtn = document.getElementById('copy-user-id-btn');
 
-            const populateShareModal = (pautaData) => {
+
+            const populateShareModal = (pautaData, currentUser) => {
                  const shareOwnView = document.getElementById('share-own-pauta-view');
                  const shareForeignView = document.getElementById('share-foreign-pauta-view');
+                 
+                 userIdDisplay.value = currentUser.uid;
 
                 if (pautaData && pautaData.sharedFrom) { // Vendo pauta de outro
                     shareOwnView.classList.add('hidden');
@@ -340,71 +352,95 @@
                         sharedUsers.forEach(user => {
                             const div = document.createElement('div');
                             div.className = 'flex justify-between items-center bg-gray-100 p-2 rounded';
-                            div.innerHTML = `<span class="text-sm">${user.email}</span><button data-uid="${user.uid}" class="unshare-btn text-red-500 hover:text-red-700 text-xs font-bold">REMOVER</button>`;
+                            div.innerHTML = `<span class="text-sm">${user.email || user.uid}</span><button data-uid="${user.uid}" class="unshare-btn text-red-500 hover:text-red-700 text-xs font-bold">REMOVER</button>`;
                             sharedWithList.appendChild(div);
                         });
                     }
                 }
             }
+            
+            copyUserIdBtn.addEventListener('click', () => {
+                userIdDisplay.select();
+                document.execCommand('copy');
+                copyUserIdBtn.textContent = 'Copiado!';
+                setTimeout(() => { copyUserIdBtn.textContent = 'Copiar'; }, 2000);
+            });
 
             shareBtn.addEventListener('click', async () => {
                 if(!currentPautaDocRef) return;
                 const docSnap = await getDoc(currentPautaDocRef);
-                populateShareModal(docSnap.data());
+                populateShareModal(docSnap.data(), auth.currentUser);
                 shareModal.classList.remove('hidden');
             });
             
             closeShareModalBtn.addEventListener('click', () => shareModal.classList.add('hidden'));
 
             shareConfirmBtn.addEventListener('click', async () => {
-                const email = shareEmailInput.value.trim();
+                const targetUid = shareIdInput.value.trim();
                 shareError.textContent = '';
-                if (!email) {
-                    shareError.textContent = 'Digite um e-mail.';
-                    return;
-                }
-
-                const targetUserDoc = await findUserByEmail(email);
-                if (!targetUserDoc) {
-                    shareError.textContent = 'Usuário não encontrado.';
+                if (!targetUid) {
+                    shareError.textContent = 'Digite um ID de usuário.';
                     return;
                 }
                 
-                const targetUid = targetUserDoc.id;
                 const currentUser = auth.currentUser;
                 if (targetUid === currentUser.uid) {
                     shareError.textContent = 'Você não pode compartilhar consigo mesmo.';
                     return;
                 }
 
-                const pautaSnap = await getDoc(currentPautaDocRef);
-                const sharedWith = pautaSnap.data().sharedWith || [];
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const targetUserProfileRef = doc(db, 'artifacts', appId, 'user_profiles', targetUid);
+                const targetUserDoc = await getDoc(targetUserProfileRef);
 
-                if(sharedWith.some(user => user.uid === targetUid)) {
+                if (!targetUserDoc.exists()) {
+                    shareError.textContent = 'Usuário com este ID não encontrado.';
+                    return;
+                }
+                
+                const targetEmail = targetUserDoc.data().email;
+                const pautaSnap = await getDoc(currentPautaDocRef);
+                const pautaData = pautaSnap.data();
+                const sharedWith = pautaData.sharedWith || [];
+                const sharedWithUids = pautaData.sharedWithUids || [];
+
+                if(sharedWithUids.includes(targetUid)) {
                     shareError.textContent = 'Pauta já compartilhada com este usuário.';
                     return;
                 }
 
-                // Adiciona o novo usuário à lista de compartilhamento do proprietário
-                const newSharedWith = [...sharedWith, { uid: targetUid, email }];
-                await updateDoc(currentPautaDocRef, { sharedWith: newSharedWith });
+                // Adiciona o novo usuário às listas de compartilhamento
+                const newSharedWith = [...sharedWith, { uid: targetUid, email: targetEmail }];
+                const newSharedWithUids = [...sharedWithUids, targetUid];
+                await updateDoc(currentPautaDocRef, { 
+                    sharedWith: newSharedWith,
+                    sharedWithUids: newSharedWithUids
+                });
                 
                 // Define com quem a pauta está compartilhada no doc do outro usuário
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
                 const targetPautaRef = doc(db, 'artifacts', appId, 'users', targetUid, 'atendimentos', 'diaAtual');
                 await setDoc(targetPautaRef, { sharedFrom: { uid: currentUser.uid, email: currentUser.email } }, { merge: true });
 
-                shareEmailInput.value = '';
+                shareIdInput.value = '';
                 shareError.textContent = 'Pauta compartilhada!';
+                 setTimeout(() => { shareError.textContent = ''; }, 3000);
             });
             
             sharedWithList.addEventListener('click', async (e) => {
                 if (e.target.classList.contains('unshare-btn')) {
                     const targetUid = e.target.dataset.uid;
                     const pautaSnap = await getDoc(currentPautaDocRef);
-                    const sharedWith = pautaSnap.data().sharedWith || [];
+                    const pautaData = pautaSnap.data();
+                    const sharedWith = pautaData.sharedWith || [];
+                    const sharedWithUids = pautaData.sharedWithUids || [];
+
                     const newSharedWith = sharedWith.filter(user => user.uid !== targetUid);
-                    await updateDoc(currentPautaDocRef, { sharedWith: newSharedWith });
+                    const newSharedWithUids = sharedWithUids.filter(uid => uid !== targetUid);
+                    
+                    await updateDoc(currentPautaDocRef, { 
+                        sharedWith: newSharedWith,
+                        sharedWithUids: newSharedWithUids
+                    });
                     
                     // Limpa o `sharedFrom` do outro usuário
                     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
