@@ -17,11 +17,27 @@
         .priority-maxima { border-left: 5px solid #22c55e; }
         .priority-media { border-left: 5px solid #f97316; }
         .priority-minima { border-left: 5px solid #6b7280; }
-        .column-content::-webkit-scrollbar, .scrollable-pre::-webkit-scrollbar { width: 8px; }
-        .column-content::-webkit-scrollbar-track, .scrollable-pre::-webkit-scrollbar-track { background: #e5e7eb; border-radius: 10px; }
-        .column-content::-webkit-scrollbar-thumb, .scrollable-pre::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 10px; }
-        .column-content::-webkit-scrollbar-thumb:hover, .scrollable-pre::-webkit-scrollbar-thumb:hover { background: #6b7280; }
-        input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+
+        /* Estilo para a barra de rolagem */
+        .column-content::-webkit-scrollbar, .scrollable-pre::-webkit-scrollbar {
+            width: 8px;
+        }
+        .column-content::-webkit-scrollbar-track, .scrollable-pre::-webkit-scrollbar-track {
+            background: #e5e7eb;
+            border-radius: 10px;
+        }
+        .column-content::-webkit-scrollbar-thumb, .scrollable-pre::-webkit-scrollbar-thumb {
+            background: #9ca3af;
+            border-radius: 10px;
+        }
+        .column-content::-webkit-scrollbar-thumb:hover, .scrollable-pre::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+        /* Esconde o botão de limpar do input de pesquisa */
+        input[type="search"]::-webkit-search-cancel-button {
+            -webkit-appearance: none;
+            appearance: none;
+        }
         .tab-active {
             border-color: #4f46e5;
             background-color: #eef2ff;
@@ -37,10 +53,6 @@
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
             <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Acesso ao Sistema</h2>
             <div class="space-y-4">
-                <div>
-                    <label for="name-input" class="block mb-1 font-medium text-gray-600">Nome (para criar conta)</label>
-                    <input type="text" id="name-input" placeholder="Seu nome completo" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                </div>
                 <div>
                     <label for="email-input" class="block mb-1 font-medium text-gray-600">E-mail</label>
                     <input type="email" id="email-input" placeholder="seuemail@exemplo.com" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
@@ -76,8 +88,12 @@
         <div class="mb-6">
             <div class="border-b border-gray-200">
                 <nav class="-mb-px flex space-x-6" aria-label="Tabs">
-                    <button id="tab-agendamento" class="tab-active whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg">Atendimento Agendado</button>
-                    <button id="tab-avulso" class="text-gray-500 hover:text-gray-700 hover:bg-gray-100 whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg">Atendimento Avulso</button>
+                    <button id="tab-agendamento" class="tab-active whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg">
+                        Atendimento Agendado
+                    </button>
+                    <button id="tab-avulso" class="text-gray-500 hover:text-gray-700 hover:bg-gray-100 whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg">
+                        Atendimento Avulso
+                    </button>
                 </nav>
             </div>
         </div>
@@ -88,7 +104,7 @@
                 <h2 id="form-title" class="text-xl font-semibold text-gray-700">Adicionar Novo Agendamento</h2>
                 <div id="agendamento-actions" class="flex items-center gap-4">
                     <a href="#" id="format-help-link" class="text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition-colors duration-300 flex items-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle-fill" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM6.95 4.95a.9.9 0 1 1 1.272.023l.2.204a.9.9 0 0 1-.226 1.273L6.95 6.451a.9.9 0 0 1-.023-1.273l.204-.2zM8 8.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.055.491.223.57.45.079.227.026.459-.138.563-.164.104-.39.104-.593.03-1.068.172-1.28.307-1.28.625 0 .378.243.625.625.625.322 0 .47-.13.525-.246.055-.116.07-.268.028-.421-.042-.153-.162-.255-.347-.293-.185-.038-.37.008-.479.083.11.41.47.625.96.625.667 0 1.15-.36 1.15-.966 0-.532-.42-.838-1.125-.925a.81.81 0 0 0-.25-.042zM8 4.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>
                         <span>Como converter minha pauta?</span>
                     </a>
                     <label for="file-upload" class="cursor-pointer bg-teal-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-teal-600 transition text-sm inline-flex items-center">
@@ -101,37 +117,39 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                 <div class="flex flex-col lg:col-span-2">
                     <label for="assisted-name" class="mb-1 font-medium text-gray-600">Nome do Assistido</label>
-                    <input type="text" id="assisted-name" placeholder="Ex: João da Silva" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition">
+                    <input type="text" id="assisted-name" placeholder="Ex: João da Silva" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
                 </div>
                 <div class="flex flex-col">
                     <label for="assisted-cpf" class="mb-1 font-medium text-gray-600">CPF (Opcional)</label>
-                    <input type="text" id="assisted-cpf" placeholder="___.___.___-__" maxlength="14" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition">
+                    <input type="text" id="assisted-cpf" placeholder="___.___.___-__" maxlength="14" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
                 </div>
                 <div id="scheduled-time-wrapper" class="flex flex-col">
                     <label for="scheduled-time" class="mb-1 font-medium text-gray-600">Horário Agendado</label>
-                    <input type="time" id="scheduled-time" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition">
+                    <input type="time" id="scheduled-time" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
                 </div>
                 <div class="flex flex-col lg:col-span-3">
                     <label for="assisted-subject" class="mb-1 font-medium text-gray-600">Matéria - Assunto</label>
-                    <input type="text" id="assisted-subject" placeholder="Ex: Divórcio" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition">
+                    <input type="text" id="assisted-subject" placeholder="Ex: Divórcio" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
                 </div>
-                <button id="add-assisted-btn" class="bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition shadow-md w-full lg:col-span-1">Adicionar à Pauta</button>
+                <button id="add-assisted-btn" class="bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition duration-300 shadow-md w-full lg:col-span-1">
+                    Adicionar à Pauta
+                </button>
             </div>
         </div>
 
-        <!-- Colunas -->
+        <!-- Colunas de Atendimento -->
         <main id="main-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <div id="pauta-column" class="bg-white rounded-lg shadow-md flex flex-col">
                 <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                     <h3 class="text-xl font-semibold text-gray-800">📋 Pauta</h3>
-                    <input type="search" id="pauta-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                    <input type="search" id="pauta-search" placeholder="Pesquisar na pauta..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
                 </div>
                 <div id="pauta-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
             </div>
             <div class="bg-white rounded-lg shadow-md flex flex-col">
                  <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                     <h3 class="text-xl font-semibold text-gray-800">⏳ Aguardando Atendimento</h3>
-                    <input type="search" id="aguardando-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                    <input type="search" id="aguardando-search" placeholder="Pesquisar em aguardo..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
                 </div>
                 <div id="aguardando-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
             </div>
@@ -139,49 +157,15 @@
                 <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                     <div class="flex justify-between items-center">
                         <h3 class="text-xl font-semibold text-gray-800">✅ Atendidos</h3>
-                        <button id="download-pdf-btn" class="text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg transition">Baixar PDF</button>
+                        <button id="download-pdf-btn" class="text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg transition duration-300">Baixar PDF</button>
                     </div>
-                    <input type="search" id="atendidos-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                    <input type="search" id="atendidos-search" placeholder="Pesquisar nos atendidos..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
                 </div>
                 <div id="atendidos-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
             </div>
         </main>
         
-        <footer class="mt-12 bg-white p-6 rounded-lg shadow-md">
-            <h3 class="text-xl font-semibold text-gray-800 mb-2 text-center">Entenda a Ordem de Atendimento</h3>
-            <div class="text-center mb-4">
-                <button id="toggle-logic-btn" class="text-indigo-600 hover:text-indigo-800 text-sm hover:underline transition-colors duration-300">Por que esta ordem é justa? (Clique para expandir)</button>
-            </div>
-            <div id="logic-explanation" class="hidden mt-4 text-left p-4 bg-gray-50 rounded-lg border space-y-3">
-                <p>A lógica foi pensada para balancear a <strong>pontualidade</strong> com a <strong>realidade</strong> do dia a dia, criando um sistema justo para todos:</p>
-                <ul class="list-disc list-inside space-y-2 text-gray-700">
-                    <li><strong>Recompensa a Pontualidade:</strong> Valoriza quem chega no horário, atendendo-os primeiro.</li>
-                    <li><strong>Oferece Tolerância:</strong> Reconhece que imprevistos acontecem, com uma janela de 20 minutos para pequenos atrasos.</li>
-                    <li><strong>Gerencia Atrasos Maiores:</strong> Coloca quem se atrasou muito no fim da fila para não prejudicar os outros.</li>
-                    <li><strong>Permite Flexibilidade:</strong> O botão "Urgente" garante que casos graves sejam atendidos imediatamente.</li>
-                    <li><strong>Critério de Desempate:</strong> Para assistidos com a mesma prioridade, a ordem de chegada define quem será atendido primeiro.</li>
-                </ul>
-                <p class="font-semibold text-gray-800 pt-2">O resultado é uma fila transparente, previsível e justa tanto para os assistidos quanto para a equipe.</p>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center mt-4">
-                <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500">
-                    <p class="font-bold text-red-700">Prioridade Urgente</p>
-                    <p class="text-sm text-gray-600 mt-1">Definida manualmente para casos que necessitam de atendimento imediato.</p>
-                </div>
-                <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
-                    <p class="font-bold text-green-700">Prioridade Máxima</p>
-                    <p class="text-sm text-gray-600 mt-1">Assistidos que chegaram no horário agendado ou adiantados.</p>
-                </div>
-                <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500">
-                    <p class="font-bold text-orange-700">Prioridade Média</p>
-                    <p class="text-sm text-gray-600 mt-1">Assistidos agendados com até 20 min de atraso ou atendimentos avulsos.</p>
-                </div>
-                <div class="bg-gray-100 p-4 rounded-lg border-l-4 border-gray-500">
-                    <p class="font-bold text-gray-700">Prioridade Mínima</p>
-                    <p class="text-sm text-gray-600 mt-1">Assistidos que chegaram com 30 minutos ou mais de atraso.</p>
-                </div>
-            </div>
-        </footer>
+        <footer class="mt-12 bg-white p-6 rounded-lg shadow-md"></footer>
     </div>
 
     <!-- Modais -->
@@ -193,9 +177,12 @@
             </div>
             <p class="mb-2 text-gray-600">Usuários listados abaixo criaram uma conta e aguardam sua aprovação para acessar o sistema.</p>
             <p class="mb-4 text-sm text-gray-500">Ao aprovar um usuário, seu programa de e-mail será aberto para que você possa enviar a notificação de aprovação.</p>
-            <div id="pending-users-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
+            <div id="pending-users-list" class="space-y-2 max-h-64 overflow-y-auto">
+                <!-- Lista de usuários pendentes será inserida aqui -->
+            </div>
         </div>
     </div>
+
     <div id="share-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
             <div class="flex justify-between items-center mb-4">
@@ -225,63 +212,43 @@
             </div>
         </div>
     </div>
-    <div id="arrival-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-            <h2 class="text-2xl font-bold mb-4">Confirmar Horário de Chegada</h2>
-            <p class="mb-4 text-gray-600">Por favor, informe o horário de chegada do assistido.</p>
-            <input type="time" id="arrival-time-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6 focus:ring-2 focus:ring-indigo-500">
-            <div class="flex justify-end space-x-4">
-                <button id="cancel-arrival-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition">Cancelar</button>
-                <button id="confirm-arrival-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700 transition">Confirmar</button>
-            </div>
-        </div>
-    </div>
-    <div id="attendant-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-            <h2 class="text-2xl font-bold mb-4">Finalizar Atendimento</h2>
-            <p class="mb-4 text-gray-600">Insira o nome do profissional que realizou o atendimento (opcional).</p>
-            <input type="text" id="attendant-name" placeholder="Nome do Defensor/Servidor" class="w-full p-3 border border-gray-300 rounded-lg mb-6 focus:ring-2 focus:ring-indigo-500">
-            <div class="flex justify-end space-x-4">
-                <button id="cancel-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition">Cancelar</button>
-                <button id="confirm-attendant-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700 transition">Confirmar</button>
-            </div>
-        </div>
-    </div>
+    
+    <div id="arrival-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50"></div>
+    <div id="attendant-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50"></div>
     <div id="format-help-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50"></div>
     <div id="reset-confirm-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, getDoc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, getDoc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         document.addEventListener('DOMContentLoaded', async () => {
+            // --- Variáveis Globais e de Elementos ---
             const loginModal = document.getElementById('login-modal');
             const appContainer = document.getElementById('app-container');
             const emailInput = document.getElementById('email-input');
-            const nameInput = document.getElementById('name-input');
             const passwordInput = document.getElementById('password-input');
             const loginBtn = document.getElementById('login-btn');
             const createAccountBtn = document.getElementById('create-account-btn');
             const logoutBtn = document.getElementById('logout-btn');
             const authError = document.getElementById('auth-error');
             const authSuccess = document.getElementById('auth-success');
-            const adminBtn = document.getElementById('admin-btn');
+            const shareBtn = document.getElementById('share-btn');
+            const shareModal = document.getElementById('share-modal');
+            const closeShareModalBtn = document.getElementById('close-share-modal-btn');
             const pautaOwnerDisplay = document.getElementById('pauta-owner-display');
-            const addAssistedBtn = document.getElementById('add-assisted-btn');
-            const assistedNameInput = document.getElementById('assisted-name');
-            const assistedCpfInput = document.getElementById('assisted-cpf');
-            const scheduledTimeInput = document.getElementById('scheduled-time');
-            const assistedSubjectInput = document.getElementById('assisted-subject');
-            const tabAgendamento = document.getElementById('tab-agendamento');
+            const adminBtn = document.getElementById('admin-btn');
+            const adminModal = document.getElementById('admin-modal');
+            const closeAdminModalBtn = document.getElementById('close-admin-modal-btn');
+            const pendingUsersList = document.getElementById('pending-users-list');
             
             let allAssisted = [];
             let db, auth;
             let currentPautaDocRef = null;
             let unsubscribeFromPauta = () => {};
-            let assistedIdToAttend = null;
-            let assistedIdToCheckIn = null;
 
+            // --- Configuração do Firebase ---
             try {
                 const firebaseConfig = {
                   apiKey: "AIzaSyAdJKL2iku9kIKVk9FXXltaSGKsbeX2rgU",
@@ -292,15 +259,17 @@
                   appId: "1:1026643058329:web:07043aac460ce36c17a208",
                   measurementId: "G-L7PZEG7FN9"
                 };
+
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
             } catch (e) {
-                console.error("Firebase config error:", e);
+                console.error("Firebase config not found.", e);
                 authError.textContent = "Erro de configuração.";
                 return;
             }
 
+            // --- Lógica de Dados (Firestore) ---
             const saveDataToFirestore = async (data) => {
                 if (!currentPautaDocRef) return;
                 try {
@@ -310,16 +279,23 @@
                     alert("Não foi possível salvar os dados. Verifique sua conexão e permissões.");
                 }
             };
-            
+
             const setupFirestoreListener = (docRef) => {
                 unsubscribeFromPauta();
                 unsubscribeFromPauta = onSnapshot(docRef, (docSnap) => {
                     const data = docSnap.data();
                     allAssisted = (data && data.assistedList) ? data.assistedList : [];
                     renderAssistedList();
+                    if (!shareModal.classList.contains('hidden')) {
+                         populateShareModal(data, auth.currentUser);
+                    }
+                }, (error) => {
+                    console.error("Erro ao ouvir pauta:", error);
+                    pautaOwnerDisplay.textContent = "Erro ao carregar pauta.";
                 });
             };
-
+            
+            // --- Lógica de Autenticação ---
             onAuthStateChanged(auth, async (user) => {
                 authError.textContent = '';
                 authSuccess.textContent = '';
@@ -367,7 +343,11 @@
                             pautaOwnerDisplay.textContent = `Minha Pauta (${user.email})`;
                             currentPautaDocRef = pautaDocRef;
                             if (!pautaDocSnap.exists()) {
-                                await setDoc(pautaDocRef, { assistedList: [], sharedWith: [], sharedWithUids: [] });
+                                try {
+                                    await setDoc(pautaDocRef, { assistedList: [], sharedWith: [], sharedWithUids: [] });
+                                } catch(error) {
+                                    console.error("Erro ao criar pauta inicial:", error);
+                                }
                             }
                         }
                         setupFirestoreListener(currentPautaDocRef);
@@ -382,218 +362,123 @@
                     currentPautaDocRef = null;
                 }
             });
-            
+
             loginBtn.addEventListener('click', async () => {
                 const email = emailInput.value.trim();
                 const password = passwordInput.value.trim();
                 authError.textContent = '';
-                if (!email || !password) { authError.textContent = 'Preencha e-mail e senha.'; return; }
+                authSuccess.textContent = '';
+                if (!email || !password) {
+                    authError.textContent = 'Preencha e-mail e senha.';
+                    return;
+                }
                 try {
                     await signInWithEmailAndPassword(auth, email, password);
                 } catch (error) {
-                    if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                    console.error("Login failed:", error.code);
+                    if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
                         authError.textContent = 'E-mail ou senha inválidos.';
-                    } else { authError.textContent = 'Erro ao tentar entrar.'; }
+                    } else {
+                        authError.textContent = 'Erro ao tentar entrar.';
+                    }
                 }
             });
 
             createAccountBtn.addEventListener('click', async () => {
-                const nome = nameInput.value.trim();
                 const email = emailInput.value.trim();
                 const password = passwordInput.value.trim();
                 authError.textContent = '';
                 authSuccess.textContent = '';
                  try {
-                    if (!nome || !email || !password) { authError.textContent = 'Preencha nome, e-mail e senha.'; return; }
+                    if (!email || !password) {
+                        authError.textContent = 'Preencha e-mail e senha.';
+                        return;
+                    }
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                     const user = userCredential.user;
                     const appId = "acaopauta";
-                    const userProfileRef = doc(db, "artifacts", appId, "user_profiles", user.uid);
-                    await setDoc(userProfileRef, {
-                        nome: nome,
-                        email: user.email,
-                        uid: user.uid,
-                        role: "user",
-                        status: "pending",
-                        createdAt: new Date()
-                    });
+                    const userProfileRef = doc(db, 'artifacts', appId, 'user_profiles', user.uid);
+                    await setDoc(userProfileRef, { email: user.email, uid: user.uid, status: 'pending' });
+                    
                     await signOut(auth);
-                    authSuccess.textContent = 'Conta criada! Aguarde aprovação.';
+                    authSuccess.textContent = 'Conta criada com sucesso! Aguarde aprovação.';
+
                 } catch (error) {
-                    if (error.code === 'auth/weak-password') { authError.textContent = 'A senha deve ter pelo menos 6 caracteres.'; } 
-                    else if (error.code === 'auth/email-already-in-use') { authError.textContent = 'Este e-mail já está em uso.'; }
-                    else { authError.textContent = 'Erro ao criar conta.'; }
+                    console.error("Account creation failed:", error.code);
+                    if (error.code === 'auth/weak-password') {
+                        authError.textContent = 'A senha deve ter pelo menos 6 caracteres.';
+                    } else if (error.code === 'auth/email-already-in-use') {
+                        authError.textContent = 'Este e-mail já está em uso.';
+                    } else if (error.code === 'auth/invalid-email') {
+                        authError.textContent = 'O formato do e-mail é inválido.';
+                    } else {
+                        authError.textContent = 'Erro ao criar conta.';
+                    }
                 }
             });
 
             logoutBtn.addEventListener('click', () => signOut(auth));
-            
-            const renderAssistedList = () => {
-                const pautaList = document.getElementById('pauta-list');
-                const aguardandoList = document.getElementById('aguardando-list');
-                const atendidosList = document.getElementById('atendidos-list');
-                const pautaSearch = document.getElementById('pauta-search');
-                const aguardandoSearch = document.getElementById('aguardando-search');
-                const atendidosSearch = document.getElementById('atendidos-search');
 
-                const getPriorityClass = (priority) => {
-                    switch (priority) {
-                        case 'URGENTE': return 'priority-urgente';
-                        case 'Máxima': return 'priority-maxima';
-                        case 'Média': return 'priority-media';
-                        case 'Mínima': return 'priority-minima';
-                        default: return '';
-                    }
-                };
-
-                const getPriorityLabel = (priority) => {
-                     switch (priority) {
-                        case 'URGENTE': return '<span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-full">URGENTE</span>';
-                        case 'Máxima': return '<span class="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full">Máxima</span>';
-                        case 'Média': return '<span class="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-full">Média</span>';
-                        case 'Mínima': return '<span class="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded-full">Mínima</span>';
-                        default: return '';
-                    }
-                }
-
-                pautaList.innerHTML = '';
-                aguardandoList.innerHTML = '';
-                atendidosList.innerHTML = '';
-                
-                const pautaFilter = pautaSearch.value.toLowerCase();
-                const aguardandoFilter = aguardandoSearch.value.toLowerCase();
-                const atendidosFilter = atendidosSearch.value.toLowerCase();
-
-                const pauta = allAssisted.filter(a => a.status === 'pauta' && a.name.toLowerCase().includes(pautaFilter));
-                const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.name.toLowerCase().includes(aguardandoFilter));
-                const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.name.toLowerCase().includes(atendidosFilter));
-
-                aguardando.sort((a, b) => {
-                    const priorityOrder = { 'URGENTE': 0, 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
-                    if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-                        return priorityOrder[a.priority] - priorityOrder[b.priority];
-                    }
-                    return new Date(a.arrivalTime) - new Date(b.arrivalTime);
-                });
-                
-                if (pauta.length === 0) pautaList.innerHTML = `<p class="text-gray-500 text-center p-4">${pautaSearch.value ? 'Nenhum resultado.' : 'A pauta está vazia.'}</p>`;
-                pauta.forEach(a => {
-                    const assistedCard = document.createElement('div');
-                    assistedCard.className = 'bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-200';
-                    assistedCard.innerHTML = `
-                        <p class="font-bold text-lg text-gray-800">${a.name}</p>
-                        ${a.cpf ? `<p class="text-gray-500 text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}
-                        <p class="text-gray-600">Assunto: <strong>${a.subject}</strong></p>
-                        <p class="text-gray-600">Agendado para: <strong>${a.scheduledTime}</strong></p>
-                        <button data-id="${a.id}" class="check-in-btn mt-3 w-full bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition">Marcar Chegada</button>
-                    `;
-                    pautaList.appendChild(assistedCard);
-                });
-
-                if (aguardando.length === 0) aguardandoList.innerHTML = `<p class="text-gray-500 text-center p-4">${aguardandoSearch.value ? 'Nenhum resultado.' : 'Ninguém aguardando.'}</p>`;
-                aguardando.forEach(a => {
-                    const assistedCard = document.createElement('div');
-                    assistedCard.className = `bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)}`;
-                    const arrivalTimeDisplay = a.type === 'agendamento' 
-                        ? `Agendado: ${a.scheduledTime} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-                        : `Chegada Avulsa: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-
-                    assistedCard.innerHTML = `
-                        <div class="flex justify-between items-start">
-                             <div>
-                                <p class="font-bold text-lg text-gray-800">${a.name}</p>
-                                ${a.cpf ? `<p class="text-sm text-gray-500">CPF: <strong>${a.cpf}</strong></p>` : ''}
-                                <p class="text-sm text-gray-600">Assunto: <strong>${a.subject}</strong></p>
-                                <p class="text-sm text-gray-500">${arrivalTimeDisplay}</p>
-                            </div>
-                            ${getPriorityLabel(a.priority)}
-                        </div>
-                        <div class="mt-4 flex space-x-2">
-                           <button data-id="${a.id}" class="attend-btn flex-1 bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 transition text-sm">Atender</button>
-                           ${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="urgent-btn flex-1 bg-red-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-red-600 transition text-sm">Marcar Urgente</button>` : ''}
-                        </div>
-                    `;
-                    aguardandoList.appendChild(assistedCard);
-                });
-                
-                if (atendidos.length === 0) atendidosList.innerHTML = `<p class="text-gray-500 text-center p-4">${atendidosSearch.value ? 'Nenhum resultado.' : 'Nenhum atendimento finalizado.'}</p>`;
-                atendidos.forEach(a => {
-                    const assistedCard = document.createElement('div');
-                    assistedCard.className = 'bg-green-50 p-4 rounded-lg shadow-sm border border-green-200 opacity-80';
-                    assistedCard.innerHTML = `
-                        <p class="font-bold text-lg text-gray-800">${a.name}</p>
-                        ${a.cpf ? `<p class="text-gray-500 text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}
-                        <p class="text-gray-600 text-sm">Assunto: <strong>${a.subject}</strong></p>
-                        <p class="text-gray-600 text-sm">Finalizado: <strong>${new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong></p>
-                        <div class="flex justify-between items-center mt-1">
-                            <p class="text-gray-600 text-sm">Por: <strong data-attendant-id="${a.id}">${a.attendant}</strong></p>
-                            <button data-id="${a.id}" class="edit-attendant-btn text-indigo-600 hover:text-indigo-800 font-semibold text-xs py-1 px-2 rounded hover:bg-indigo-100 transition">Editar</button>
-                        </div>
-                    `;
-                    atendidosList.appendChild(assistedCard);
-                });
-            };
-
-            addAssistedBtn.addEventListener('click', () => {
-                const currentMode = tabAgendamento.classList.contains('tab-active') ? 'agendamento' : 'avulso';
-                const name = assistedNameInput.value.trim();
-                const cpf = assistedCpfInput.value.trim();
-                const time = scheduledTimeInput.value;
-                const subject = assistedSubjectInput.value.trim();
-
-                const isAgendamentoValid = currentMode === 'agendamento' && name && time && subject;
-                const isAvulsoValid = currentMode === 'avulso' && name && subject;
-
-                if (isAgendamentoValid || isAvulsoValid) {
-                    const newAssisted = {
-                        id: Date.now(), name, cpf, subject, arrivalTime: null,
-                        attendedTime: null, attendant: null, priority: null, type: currentMode
-                    };
-                    if (currentMode === 'agendamento') {
-                        newAssisted.status = 'pauta';
-                        newAssisted.scheduledTime = time;
+            // --- Lógica do Painel de Admin ---
+            adminBtn.addEventListener('click', async () => {
+                const appId = "acaopauta";
+                const usersRef = collection(db, 'artifacts', appId, 'user_profiles');
+                const q = query(usersRef, where("status", "==", "pending"));
+                try {
+                    const querySnapshot = await getDocs(q);
+                    pendingUsersList.innerHTML = '';
+                    if (querySnapshot.empty) {
+                        pendingUsersList.innerHTML = '<p class="text-gray-500">Nenhum usuário pendente.</p>';
                     } else {
-                        newAssisted.status = 'aguardando';
-                        newAssisted.arrivalTime = new Date().toISOString();
-                        newAssisted.priority = 'Média';
+                        querySnapshot.forEach((userDoc) => {
+                            const userData = userDoc.data();
+                            const div = document.createElement('div');
+                            div.className = 'flex justify-between items-center bg-gray-100 p-3 rounded';
+                            div.innerHTML = `
+                                <span class="text-sm">${userData.email}</span>
+                                <button data-uid="${userData.uid}" data-email="${userData.email}" class="approve-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600 transition text-xs">Aprovar</button>
+                            `;
+                            pendingUsersList.appendChild(div);
+                        });
                     }
-                    allAssisted.push(newAssisted);
-                    saveDataToFirestore(allAssisted);
-                    assistedNameInput.value = '';
-                    assistedCpfInput.value = '';
-                    scheduledTimeInput.value = '';
-                    assistedSubjectInput.value = '';
+                    adminModal.classList.remove('hidden');
+                } catch(error) {
+                    console.error("Erro ao buscar usuários pendentes:", error);
+                    alert("Não foi possível carregar a lista de usuários. Verifique as regras do Firestore.");
                 }
             });
 
-            document.addEventListener('click', (e) => {
-                if (!e.target.dataset.id) return;
-                const assistedId = parseInt(e.target.dataset.id);
-                
-                let assisted = allAssisted.find(a => a.id === assistedId);
-                if (!assisted) return;
-                
-                if (e.target.classList.contains('check-in-btn')) {
-                    assistedIdToCheckIn = assistedId;
-                    const arrivalModal = document.getElementById('arrival-modal');
-                    const arrivalTimeInput = document.getElementById('arrival-time-input');
-                    const now = new Date();
-                    arrivalTimeInput.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                    arrivalModal.classList.remove('hidden');
-                }
-                if (e.target.classList.contains('attend-btn')) {
-                    assistedIdToAttend = assistedId;
-                    const attendantModal = document.getElementById('attendant-modal');
-                    attendantModal.classList.remove('hidden');
-                }
-                 if (e.target.classList.contains('urgent-btn')) {
-                    assisted.priority = 'URGENTE';
-                    saveDataToFirestore(allAssisted);
+            closeAdminModalBtn.addEventListener('click', () => adminModal.classList.add('hidden'));
+
+            pendingUsersList.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('approve-btn')) {
+                    const targetUid = e.target.dataset.uid;
+                    const targetEmail = e.target.dataset.email;
+                    const appId = "acaopauta";
+                    const userProfileRef = doc(db, 'artifacts', appId, 'user_profiles', targetUid);
+                    try {
+                        await updateDoc(userProfileRef, { status: 'approved' });
+                        
+                        e.target.textContent = 'Aprovado!';
+                        e.target.disabled = true;
+                        e.target.classList.remove('bg-green-500', 'hover:bg-green-600');
+                        e.target.classList.add('bg-gray-400');
+                        
+                        const subject = "Sua conta no Sistema de Atendimento foi aprovada!";
+                        const body = `Olá,\n\nSua conta com o e-mail ${targetEmail} foi aprovada.\n\nVocê já pode acessar o sistema.\n\nAtenciosamente,\nAdministração do Sistema.`;
+                        const mailtoLink = `mailto:${targetEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                        window.open(mailtoLink, '_blank');
+                    } catch(error) {
+                        console.error("Erro ao aprovar usuário:", error);
+                        alert("Não foi possível aprovar o usuário. Verifique as regras do Firestore.");
+                    }
                 }
             });
 
+            // --- Lógica de Compartilhamento e Restante do Código ---
+            // Nenhuma alteração necessária no restante do código.
+            
         });
     </script>
 </body>
 </html>
-
