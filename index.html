@@ -511,74 +511,89 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
         };
 
-        onAuthStateChanged(auth, async (user) => {
-            const loginModal = document.getElementById('login-modal');
-            const appContainer = document.getElementById('app-container');
-            const adminBtn = document.getElementById('admin-btn');
-            const pautaOwnerDisplay = document.getElementById('pauta-owner-display');
-            const authError = document.getElementById('auth-error');
-            const logoutBtn = document.getElementById('logout-btn');
-
-            if (user) {
-                userId = user.uid;
-                userEmail = user.email;
-
-                const userProfileRef = doc(db, 'artifacts', appId, 'user_profiles', userId);
-                const userProfileSnap = await getDoc(userProfileRef);
-
-                if (!userProfileSnap.exists()) {
-                    await signOut(auth);
-                    authError.textContent = 'Perfil não encontrado.';
-                    return;
-                }
-                const profile = userProfileSnap.data();
-
-                if (profile.status === 'pending') {
-                    await signOut(auth);
-                    authError.textContent = 'Sua conta aguarda aprovação.';
-                    return;
-                }
-
-                if (profile.status === 'approved') {
-                    const isAdmin = await checkAdminStatus(userId);
-                    userIsAdmin = isAdmin;
-                    if (isAdmin) {
-                        adminBtn.classList.remove('hidden');
-                    } else {
-                        adminBtn.classList.add('hidden');
-                    }
-                    
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const viewUserId = urlParams.get('viewUser');
-                    
-                    if (viewUserId) {
-                        loadSharedPauta(viewUserId);
-                        pautaOwnerDisplay.textContent = `Visualizando pauta compartilhada`;
-                        document.getElementById('add-assisted-btn').disabled = true;
-                        document.getElementById('file-upload').disabled = true;
-                        logoutBtn.disabled = true;
-                        document.getElementById('reset-all-btn').disabled = true;
-                    } else {
-                        setupUserPauta(userId);
-                        pautaOwnerDisplay.textContent = `Minha Pauta (${userEmail})`;
-                    }
-                    
-                    loginModal.classList.add('hidden');
-                    appContainer.classList.remove('hidden');
-
+        document.addEventListener('DOMContentLoaded', () => {
+            if (firebaseConfig && Object.keys(firebaseConfig).length > 0) {
+                setLogLevel('debug');
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                if (initialAuthToken) {
+                    signInWithCustomToken(auth, initialAuthToken).catch(handleAuthError);
                 } else {
-                    await signOut(auth);
-                    authError.textContent = 'Sua conta não tem permissão de acesso.';
+                    signInAnonymously(auth).catch(handleAuthError);
                 }
             } else {
-                userId = null;
-                userEmail = null;
-                loginModal.classList.remove('hidden');
-                appContainer.classList.add('hidden');
+                console.error("Firebase config is missing or empty.");
+                document.getElementById('auth-error').textContent = "Erro de configuração do Firebase.";
             }
-        });
 
-        document.addEventListener('DOMContentLoaded', () => {
+            onAuthStateChanged(auth, async (user) => {
+                const loginModal = document.getElementById('login-modal');
+                const appContainer = document.getElementById('app-container');
+                const adminBtn = document.getElementById('admin-btn');
+                const pautaOwnerDisplay = document.getElementById('pauta-owner-display');
+                const authError = document.getElementById('auth-error');
+                const logoutBtn = document.getElementById('logout-btn');
+
+                if (user) {
+                    userId = user.uid;
+                    userEmail = user.email;
+
+                    const userProfileRef = doc(db, 'artifacts', appId, 'user_profiles', userId);
+                    const userProfileSnap = await getDoc(userProfileRef);
+
+                    if (!userProfileSnap.exists()) {
+                        await signOut(auth);
+                        authError.textContent = 'Perfil não encontrado.';
+                        return;
+                    }
+                    const profile = userProfileSnap.data();
+
+                    if (profile.status === 'pending') {
+                        await signOut(auth);
+                        authError.textContent = 'Sua conta aguarda aprovação.';
+                        return;
+                    }
+
+                    if (profile.status === 'approved') {
+                        const isAdmin = await checkAdminStatus(userId);
+                        userIsAdmin = isAdmin;
+                        if (isAdmin) {
+                            adminBtn.classList.remove('hidden');
+                        } else {
+                            adminBtn.classList.add('hidden');
+                        }
+                        
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const viewUserId = urlParams.get('viewUser');
+                        
+                        if (viewUserId) {
+                            loadSharedPauta(viewUserId);
+                            pautaOwnerDisplay.textContent = `Visualizando pauta compartilhada`;
+                            document.getElementById('add-assisted-btn').disabled = true;
+                            document.getElementById('file-upload').disabled = true;
+                            logoutBtn.disabled = true;
+                            document.getElementById('reset-all-btn').disabled = true;
+                        } else {
+                            setupUserPauta(userId);
+                            pautaOwnerDisplay.textContent = `Minha Pauta (${userEmail})`;
+                        }
+                        
+                        loginModal.classList.add('hidden');
+                        appContainer.classList.remove('hidden');
+
+                    } else {
+                        await signOut(auth);
+                        authError.textContent = 'Sua conta não tem permissão de acesso.';
+                    }
+                } else {
+                    userId = null;
+                    userEmail = null;
+                    loginModal.classList.remove('hidden');
+                    appContainer.classList.add('hidden');
+                }
+            });
+
             const loginBtn = document.getElementById('login-btn');
             const createAccountBtn = document.getElementById('create-account-btn');
             const emailInput = document.getElementById('email-input');
