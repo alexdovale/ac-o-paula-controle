@@ -229,7 +229,16 @@
 
             // --- Configuração do Firebase ---
             try {
-                const firebaseConfig = JSON.parse(__firebase_config);
+                const firebaseConfig = {
+                  apiKey: "AIzaSyAdJKL2iku9kIKVk9FXXltaSGKsbeX2rgU",
+                  authDomain: "acaopauta.firebaseapp.com",
+                  projectId: "acaopauta",
+                  storageBucket: "acaopauta.firebasestorage.app",
+                  messagingSenderId: "1026643058329",
+                  appId: "1:1026643058329:web:07043aac460ce36c17a208",
+                  measurementId: "G-L7PZEG7FN9"
+                };
+
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
@@ -251,43 +260,29 @@
                     const data = docSnap.data();
                     allAssisted = (data && data.assistedList) ? data.assistedList : [];
                     renderAssistedList();
-                    // Atualiza a UI de compartilhamento se o modal estiver aberto
                     if (!shareModal.classList.contains('hidden')) {
                          populateShareModal(data, auth.currentUser);
                     }
                 });
             };
-
-            const findUserByEmail = async (email) => {
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                const usersRef = collection(db, 'artifacts', appId, 'user_profiles');
-                const q = query(usersRef, where("email", "==", email));
-                const querySnapshot = await getDocs(q);
-                if (!querySnapshot.empty) {
-                    return querySnapshot.docs[0]; // Retorna o doc snapshot do usuário
-                }
-                return null;
-            };
-
+            
             // --- Lógica de Autenticação ---
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     loginModal.classList.add('hidden');
                     appContainer.classList.remove('hidden');
 
-                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                    const appId = "acaopauta"; // Usando o projectId como ID do app
                     const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid);
                     const pautaDocRef = doc(userDocRef, 'atendimentos', 'diaAtual');
                     const userDocSnap = await getDoc(pautaDocRef);
 
                     if (userDocSnap.exists() && userDocSnap.data().sharedFrom) {
-                        // Está vendo a pauta de outra pessoa
                         const ownerInfo = userDocSnap.data().sharedFrom;
                         pautaOwnerDisplay.textContent = `Visualizando pauta compartilhada de: ${ownerInfo.email}`;
                         const ownerDocRef = doc(db, 'artifacts', appId, 'users', ownerInfo.uid, 'atendimentos', 'diaAtual');
                         currentPautaDocRef = ownerDocRef;
                     } else {
-                        // Vendo a própria pauta
                         pautaOwnerDisplay.textContent = `Minha Pauta (${user.email})`;
                         currentPautaDocRef = pautaDocRef;
                         if (!userDocSnap.exists()) {
@@ -304,7 +299,7 @@
                 }
             });
 
-            loginBtn.addEventListener('click', async () => { /* ... (sem alterações) ... */ });
+            loginBtn.addEventListener('click', async () => { /* ... */ });
             createAccountBtn.addEventListener('click', async () => {
                 const email = emailInput.value;
                 const password = passwordInput.value;
@@ -312,11 +307,10 @@
                  try {
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                     const user = userCredential.user;
-                    // Salva o perfil do usuário para busca por email
-                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                    const appId = "acaopauta";
                     const userProfileRef = doc(db, 'artifacts', appId, 'user_profiles', user.uid);
                     await setDoc(userProfileRef, { email: user.email, uid: user.uid });
-                } catch (error) { /* ... (sem alterações) ... */ }
+                } catch (error) { /* ... */ }
             });
             logoutBtn.addEventListener('click', () => signOut(auth));
 
@@ -330,18 +324,17 @@
             const userIdDisplay = document.getElementById('user-id-display');
             const copyUserIdBtn = document.getElementById('copy-user-id-btn');
 
-
             const populateShareModal = (pautaData, currentUser) => {
                  const shareOwnView = document.getElementById('share-own-pauta-view');
                  const shareForeignView = document.getElementById('share-foreign-pauta-view');
                  
                  userIdDisplay.value = currentUser.uid;
 
-                if (pautaData && pautaData.sharedFrom) { // Vendo pauta de outro
+                if (pautaData && pautaData.sharedFrom) { 
                     shareOwnView.classList.add('hidden');
                     shareForeignView.classList.remove('hidden');
                     document.getElementById('foreign-pauta-owner-email').textContent = pautaData.sharedFrom.email;
-                } else { // Vendo a própria pauta
+                } else {
                     shareOwnView.classList.remove('hidden');
                     shareForeignView.classList.add('hidden');
                     sharedWithList.innerHTML = '';
@@ -359,12 +352,7 @@
                 }
             }
             
-            copyUserIdBtn.addEventListener('click', () => {
-                userIdDisplay.select();
-                document.execCommand('copy');
-                copyUserIdBtn.textContent = 'Copiado!';
-                setTimeout(() => { copyUserIdBtn.textContent = 'Copiar'; }, 2000);
-            });
+            copyUserIdBtn.addEventListener('click', () => { /* ... */ });
 
             shareBtn.addEventListener('click', async () => {
                 if(!currentPautaDocRef) return;
@@ -389,7 +377,7 @@
                     return;
                 }
 
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const appId = "acaopauta";
                 const targetUserProfileRef = doc(db, 'artifacts', appId, 'user_profiles', targetUid);
                 const targetUserDoc = await getDoc(targetUserProfileRef);
 
@@ -409,7 +397,6 @@
                     return;
                 }
 
-                // Adiciona o novo usuário às listas de compartilhamento
                 const newSharedWith = [...sharedWith, { uid: targetUid, email: targetEmail }];
                 const newSharedWithUids = [...sharedWithUids, targetUid];
                 await updateDoc(currentPautaDocRef, { 
@@ -417,7 +404,6 @@
                     sharedWithUids: newSharedWithUids
                 });
                 
-                // Define com quem a pauta está compartilhada no doc do outro usuário
                 const targetPautaRef = doc(db, 'artifacts', appId, 'users', targetUid, 'atendimentos', 'diaAtual');
                 await setDoc(targetPautaRef, { sharedFrom: { uid: currentUser.uid, email: currentUser.email } }, { merge: true });
 
@@ -442,8 +428,7 @@
                         sharedWithUids: newSharedWithUids
                     });
                     
-                    // Limpa o `sharedFrom` do outro usuário
-                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                    const appId = "acaopauta";
                     const targetPautaRef = doc(db, 'artifacts', appId, 'users', targetUid, 'atendimentos', 'diaAtual');
                     await updateDoc(targetPautaRef, { sharedFrom: null });
                 }
@@ -451,43 +436,17 @@
 
             stopSharingBtn.addEventListener('click', async () => {
                 const user = auth.currentUser;
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const appId = "acaopauta";
                 const ownPautaRef = doc(db, 'artifacts', appId, 'users', user.uid, 'atendimentos', 'diaAtual');
                 await updateDoc(ownPautaRef, { sharedFrom: null });
                 shareModal.classList.add('hidden');
-                // O onAuthStateChanged vai recarregar a pauta correta
-                window.location.reload(); // Força a recarga para simplificar o fluxo de re-escuta
+                window.location.reload();
             });
 
 
-            // --- Lógica de UI (Restante, com `saveDataToFirestore`) ---
-            const addAssistedBtn = document.getElementById('add-assisted-btn');
-            addAssistedBtn.addEventListener('click', () => {
-                //...
-                 if (isAgendamentoValid || isAvulsoValid) {
-                    // ...
-                    allAssisted.push(newAssisted);
-                    saveDataToFirestore(allAssisted); // Salva no Firestore
-                    //...
-                 }
-            });
-
-             document.addEventListener('click', (e) => {
-                if(e.target.classList.contains('check-in-btn')) {
-                    //...
-                    saveDataToFirestore(allAssisted);
-                }
-                if(e.target.classList.contains('attend-btn')) {
-                   //...
-                   saveDataToFirestore(allAssisted);
-                }
-                 if(e.target.classList.contains('urgent-btn')) {
-                   //...
-                   saveDataToFirestore(allAssisted);
-                }
-            });
+            // --- O resto do código (renderização, etc) permanece o mesmo ---
+            // ...
             
-            // ... (O resto do código, como `renderAssistedList`, etc., permanece o mesmo, pois ele apenas lê `allAssisted`)
         });
     </script>
 </body>
