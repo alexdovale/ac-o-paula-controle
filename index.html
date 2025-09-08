@@ -487,7 +487,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (button && button.classList.contains('delete-pauta-btn')) {
                     const pautaId = button.dataset.id;
                     if (confirm("Tem certeza que deseja excluir esta pauta? Todos os seus dados serão perdidos permanentemente.")) {
-                        // Deletar subcoleção primeiro
                         const attendancesRef = collection(db, "pautas", pautaId, "attendances");
                         const attendancesSnapshot = await getDocs(attendancesRef);
                         const batch = writeBatch(db);
@@ -495,8 +494,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             batch.delete(doc.ref);
                         });
                         await batch.commit();
-
-                        // Deletar o documento da pauta
                         await deleteDoc(doc(db, "pautas", pautaId));
                         showNotification("Pauta excluída com sucesso.", "success");
                     }
@@ -645,4 +642,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
-
