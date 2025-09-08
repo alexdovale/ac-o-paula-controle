@@ -6,7 +6,7 @@
     <title>Sistema de Gerenciamento de Atendimento - Defensoria</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -17,23 +17,17 @@
         .priority-maxima { border-left: 5px solid #22c55e; }
         .priority-media { border-left: 5px solid #f97316; }
         .priority-minima { border-left: 5px solid #6b7280; }
-
-        /* Estilo para a barra de rolagem */
-        .column-content::-webkit-scrollbar, .scrollable-pre::-webkit-scrollbar {
+        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar {
             width: 8px;
         }
-        .column-content::-webkit-scrollbar-track, .scrollable-pre::-webkit-scrollbar-track {
-            background: #e5e7eb;
+        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track {
+            background: #e2e8f0;
             border-radius: 10px;
         }
-        .column-content::-webkit-scrollbar-thumb, .scrollable-pre::-webkit-scrollbar-thumb {
-            background: #9ca3af;
+        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb {
+            background: #94a3b8;
             border-radius: 10px;
         }
-        .column-content::-webkit-scrollbar-thumb:hover, .scrollable-pre::-webkit-scrollbar-thumb:hover {
-            background: #6b7280;
-        }
-        /* Esconde o botão de limpar do input de pesquisa */
         input[type="search"]::-webkit-search-cancel-button {
             -webkit-appearance: none;
             appearance: none;
@@ -44,10 +38,36 @@
             color: #4f46e5;
             font-weight: 600;
         }
+        .loading-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .loader {
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #4f46e5;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
-
+    <div id="loading-spinner" class="loading-container hidden">
+        <div class="loader"></div>
+    </div>
     <!-- Tela de Login -->
     <div id="login-modal" class="fixed inset-0 bg-gray-100 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
@@ -70,7 +90,6 @@
             </div>
         </div>
     </div>
-
     <!-- Conteúdo Principal da Aplicação -->
     <div id="app-container" class="max-w-7xl mx-auto hidden">
         <header class="mb-6 text-center relative">
@@ -83,28 +102,20 @@
                  <button id="logout-btn" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 transition duration-300 shadow-md text-sm">Sair</button>
             </div>
         </header>
-
-        <!-- Abas de Navegação de Modo -->
         <div class="mb-6">
             <div class="border-b border-gray-200">
                 <nav class="-mb-px flex space-x-6" aria-label="Tabs">
-                    <button id="tab-agendamento" class="tab-active whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg">
-                        Atendimento Agendado
-                    </button>
-                    <button id="tab-avulso" class="text-gray-500 hover:text-gray-700 hover:bg-gray-100 whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg">
-                        Atendimento Avulso
-                    </button>
+                    <button id="tab-agendamento" class="tab-active whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg">Atendimento Agendado</button>
+                    <button id="tab-avulso" class="text-gray-500 hover:text-gray-700 hover:bg-gray-100 whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg">Atendimento Avulso</button>
                 </nav>
             </div>
         </div>
-
-        <!-- Formulário para Adicionar Assistido -->
         <div id="form-agendamento" class="bg-white p-6 rounded-lg shadow-md mb-8">
             <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
                 <h2 id="form-title" class="text-xl font-semibold text-gray-700">Adicionar Novo Agendamento</h2>
                 <div id="agendamento-actions" class="flex items-center gap-4">
                     <a href="#" id="format-help-link" class="text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition-colors duration-300 flex items-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.055.491.223.57.45.079.227.026.459-.138.563-.164.104-.39.104-.593.03-1.068.172-1.28.307-1.28.625 0 .378.243.625.625.625.322 0 .47-.13.525-.246.055-.116.07-.268.028-.421-.042-.153-.162-.255-.347-.293-.185-.038-.37.008-.479.083.11.41.47.625.96.625.667 0 1.15-.36 1.15-.966 0-.532-.42-.838-1.125-.925a.81.81 0 0 0-.25-.042zM8 4.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle-fill" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM6.95 4.95a.9.9 0 1 1 1.272.023l.2.204a.9.9 0 0 1-.226 1.273L6.95 6.451a.9.9 0 0 1-.023-1.273l.204-.2zM8 8.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
                         <span>Como converter minha pauta?</span>
                     </a>
                     <label for="file-upload" class="cursor-pointer bg-teal-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-teal-600 transition text-sm inline-flex items-center">
@@ -117,39 +128,35 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                 <div class="flex flex-col lg:col-span-2">
                     <label for="assisted-name" class="mb-1 font-medium text-gray-600">Nome do Assistido</label>
-                    <input type="text" id="assisted-name" placeholder="Ex: João da Silva" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                    <input type="text" id="assisted-name" placeholder="Ex: João da Silva" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition">
                 </div>
                 <div class="flex flex-col">
                     <label for="assisted-cpf" class="mb-1 font-medium text-gray-600">CPF (Opcional)</label>
-                    <input type="text" id="assisted-cpf" placeholder="___.___.___-__" maxlength="14" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                    <input type="text" id="assisted-cpf" placeholder="___.___.___-__" maxlength="14" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition">
                 </div>
                 <div id="scheduled-time-wrapper" class="flex flex-col">
                     <label for="scheduled-time" class="mb-1 font-medium text-gray-600">Horário Agendado</label>
-                    <input type="time" id="scheduled-time" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                    <input type="time" id="scheduled-time" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition">
                 </div>
                 <div class="flex flex-col lg:col-span-3">
                     <label for="assisted-subject" class="mb-1 font-medium text-gray-600">Matéria - Assunto</label>
-                    <input type="text" id="assisted-subject" placeholder="Ex: Divórcio" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                    <input type="text" id="assisted-subject" placeholder="Ex: Divórcio" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition">
                 </div>
-                <button id="add-assisted-btn" class="bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition duration-300 shadow-md w-full lg:col-span-1">
-                    Adicionar à Pauta
-                </button>
+                <button id="add-assisted-btn" class="bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition shadow-md w-full lg:col-span-1">Adicionar à Pauta</button>
             </div>
         </div>
-
-        <!-- Colunas de Atendimento -->
         <main id="main-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <div id="pauta-column" class="bg-white rounded-lg shadow-md flex flex-col">
                 <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                     <h3 class="text-xl font-semibold text-gray-800">📋 Pauta</h3>
-                    <input type="search" id="pauta-search" placeholder="Pesquisar na pauta..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                    <input type="search" id="pauta-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
                 </div>
                 <div id="pauta-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
             </div>
             <div class="bg-white rounded-lg shadow-md flex flex-col">
                  <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                     <h3 class="text-xl font-semibold text-gray-800">⏳ Aguardando Atendimento</h3>
-                    <input type="search" id="aguardando-search" placeholder="Pesquisar em aguardo..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                    <input type="search" id="aguardando-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
                 </div>
                 <div id="aguardando-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
             </div>
@@ -157,327 +164,970 @@
                 <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                     <div class="flex justify-between items-center">
                         <h3 class="text-xl font-semibold text-gray-800">✅ Atendidos</h3>
-                        <button id="download-pdf-btn" class="text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg transition duration-300">Baixar PDF</button>
+                        <button id="download-pdf-btn" class="text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg transition">Baixar PDF</button>
                     </div>
-                    <input type="search" id="atendidos-search" placeholder="Pesquisar nos atendidos..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                    <input type="search" id="atendidos-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
                 </div>
                 <div id="atendidos-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
             </div>
         </main>
         
-        <footer class="mt-12 bg-white p-6 rounded-lg shadow-md"></footer>
+        <footer class="mt-12 bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-xl font-semibold text-gray-800 mb-2 text-center">Entenda a Ordem de Atendimento</h3>
+            <div class="text-center mb-4">
+                <button id="toggle-logic-btn" class="text-indigo-600 hover:text-indigo-800 text-sm hover:underline transition-colors duration-300">Por que esta ordem é justa? (Clique para expandir)</button>
+            </div>
+            <div id="logic-explanation" class="hidden mt-4 text-left p-4 bg-gray-50 rounded-lg border space-y-3">
+                <p>A lógica foi pensada para balancear a <strong>pontualidade</strong> com a <strong>realidade</strong> do dia a dia, criando um sistema justo para todos:</p>
+                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                    <li><strong>Recompensa a Pontualidade:</strong> Valoriza quem chega no horário, atendendo-os primeiro.</li>
+                    <li><strong>Oferece Tolerância:</strong> Reconhece que imprevistos acontecem, com uma janela de 20 minutos para pequenos atrasos.</li>
+                    <li><strong>Gerencia Atrasos Maiores:</strong> Coloca quem se atrasou muito no fim da fila para não prejudicar os outros.</li>
+                    <li><strong>Permite Flexibilidade:</strong> O botão "Urgente" garante que casos graves sejam atendidos imediatamente.</li>
+                    <li><strong>Critério de Desempate:</strong> Para assistidos com a mesma prioridade, a ordem de chegada define quem será o primeiro a ser atendido.</li>
+                </ul>
+                <p class="font-semibold text-gray-800 pt-2">O resultado é uma fila transparente, previsível e justa tanto para os assistidos quanto para a equipe.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center mt-4">
+                <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500"><p class="font-bold text-red-700">Prioridade Urgente</p><p class="text-sm text-gray-600 mt-1">Definida manualmente para casos que necessitam de atendimento imediato.</p></div>
+                <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500"><p class="font-bold text-green-700">Prioridade Máxima</p><p class="text-sm text-gray-600 mt-1">Assistidos que chegaram no horário agendado ou adiantados.</p></div>
+                <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500"><p class="font-bold text-orange-700">Prioridade Média</p><p class="text-sm text-gray-600 mt-1">Assistidos agendados com até 20 min de atraso ou atendimentos avulsos.</p></div>
+                <div class="bg-gray-100 p-4 rounded-lg border-l-4 border-gray-500"><p class="font-bold text-gray-700">Prioridade Mínima</p><p class="text-sm text-gray-600 mt-1">Assistidos que chegaram com 30 minutos ou mais de atraso.</p></div>
+            </div>
+        </footer>
     </div>
-
     <!-- Modais -->
     <div id="admin-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-gray-800">Aprovar Novos Usuários</h2>
-                <button id="close-admin-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">Aprovar Novos Usuários</h2>
+            <div class="flex justify-center items-center mb-4">
+                <input type="search" id="admin-search-input" placeholder="Buscar por email..." class="w-full p-2 border border-gray-300 rounded-lg text-sm">
             </div>
-            <p class="mb-2 text-gray-600">Usuários listados abaixo criaram uma conta e aguardam sua aprovação para acessar o sistema.</p>
-            <p class="mb-4 text-sm text-gray-500">Ao aprovar um usuário, seu programa de e-mail será aberto para que você possa enviar a notificação de aprovação.</p>
-            <div id="pending-users-list" class="space-y-2 max-h-64 overflow-y-auto">
-                <!-- Lista de usuários pendentes será inserida aqui -->
+            <div id="pending-users-list" class="space-y-4 max-h-80 overflow-y-auto">
+                 <p class="text-center text-gray-500">Nenhum usuário pendente encontrado.</p>
+            </div>
+            <div class="flex justify-end mt-6">
+                <button id="close-admin-modal-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition">Fechar</button>
             </div>
         </div>
     </div>
-
     <div id="share-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-gray-800">Compartilhar Pauta</h2>
-                <button id="close-share-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">Compartilhar Pauta</h2>
+            <p class="text-gray-600 mb-4">Envie este link para que outro usuário possa visualizar sua pauta em tempo real.</p>
+            <div class="flex items-center space-x-2">
+                <input type="text" id="share-link-input" readonly class="flex-1 p-3 border border-gray-300 rounded-lg text-sm bg-gray-100 cursor-pointer" onclick="this.select();">
+                <button id="copy-share-btn" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition">Copiar</button>
             </div>
-            <div id="share-own-pauta-view">
-                <div class="bg-indigo-50 p-3 rounded-lg mb-4">
-                    <p class="text-sm text-indigo-800"><strong>Seu ID de Usuário (para compartilhar):</strong></p>
-                    <div class="flex items-center gap-2 mt-1">
-                        <input type="text" id="user-id-display" readonly class="w-full bg-white p-2 border rounded-md text-xs text-gray-600">
-                        <button id="copy-user-id-btn" class="bg-indigo-600 text-white font-semibold px-3 py-2 rounded-md hover:bg-indigo-700 transition text-sm">Copiar</button>
-                    </div>
-                </div>
-                <p class="mb-4 text-gray-600">Peça o ID do usuário e cole abaixo para compartilhar sua pauta.</p>
-                <div class="relative">
-                    <input type="text" id="share-id-input" placeholder="Cole o ID do usuário aqui" class="w-full p-3 pl-4 pr-32 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                    <button id="share-confirm-btn" class="absolute right-1 top-1 bottom-1 bg-indigo-600 text-white font-semibold px-3 rounded-md hover:bg-indigo-700 transition text-sm">Compartilhar</button>
-                </div>
-                <p id="share-error" class="text-red-500 text-sm mt-2 h-4"></p>
-                <h3 class="font-semibold text-lg mt-6 mb-2 text-gray-700">Compartilhado Com:</h3>
-                <div id="shared-with-list" class="space-y-2 max-h-32 overflow-y-auto"></div>
-            </div>
-            <div id="share-foreign-pauta-view" class="hidden">
-                <p class="mb-4 text-gray-600">Você está atualmente visualizando a pauta de <strong id="foreign-pauta-owner-email"></strong>.</p>
-                <button id="stop-sharing-btn" class="w-full bg-red-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-700 transition">Voltar para Minha Pauta</button>
+            <p class="text-gray-500 text-sm mt-2">A pauta compartilhada é somente leitura para o convidado.</p>
+            <div class="flex justify-end mt-6">
+                <button id="close-share-modal-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition">Fechar</button>
             </div>
         </div>
     </div>
-    
-    <div id="arrival-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50"></div>
-    <div id="attendant-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50"></div>
-    <div id="format-help-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50"></div>
-    <div id="reset-confirm-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50"></div>
+    <div id="arrival-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Confirmar Horário de Chegada</h2>
+            <p class="mb-4 text-gray-600">Por favor, informe o horário de chegada do assistido.</p>
+            <input type="time" id="arrival-time-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6 focus:ring-2 focus:ring-indigo-500">
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-arrival-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition">Cancelar</button>
+                <button id="confirm-arrival-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700 transition">Confirmar Chegada</button>
+            </div>
+        </div>
+    </div>
+    <div id="attendant-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Finalizar Atendimento</h2>
+            <p class="mb-4 text-gray-600">Por favor, insira o nome do profissional que realizou o atendimento (opcional).</p>
+            <input type="text" id="attendant-name" placeholder="Nome do Defensor/Servidor" class="w-full p-3 border border-gray-300 rounded-lg mb-6 focus:ring-2 focus:ring-indigo-500">
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition">Cancelar</button>
+                <button id="confirm-attendant-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700 transition">Confirmar</button>
+            </div>
+        </div>
+    </div>
+    <div id="format-help-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
+            <div class="flex justify-between items-center mb-4">
+                 <h2 class="text-2xl font-bold text-gray-800">Como Converter sua Pauta</h2>
+                 <button id="close-format-help-btn-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            </div>
+            <p class="mb-4 text-gray-600">Para converter uma pauta em PDF para o formato CSV, você pode me pedir diretamente. Use o texto abaixo e envie seu arquivo PDF.</p>
+            <h3 class="font-semibold text-lg mb-2 text-gray-700">Texto para usar na IA:</h3>
+            <pre id="instruction-text" class="bg-gray-100 p-4 rounded-md text-gray-800 mb-4 max-h-40 overflow-y-auto scrollable-content"><code>Olá! Por favor, converta o conteúdo do arquivo PDF que estou enviando para o formato CSV, usando ponto e vírgula (;) como separador. O resultado deve seguir este padrão:
 
+Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)
+
+Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .csv.</code></pre>
+             <p class="mb-4 text-gray-600 mt-4">Após a conversão, salve o texto recebido em um arquivo com a extensão <code class="bg-gray-200 text-sm p-1 rounded">.csv</code> e carregue-o no sistema.</p>
+            <div class="flex justify-end space-x-4 mt-6">
+                <button id="copy-instruction-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Copiar Texto</button>
+                <button id="close-format-help-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700 transition">Entendi</button>
+            </div>
+        </div>
+    </div>
+    <div id="reset-confirm-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg space-y-4">
+            <h2 class="text-2xl font-bold text-gray-800">Salvar Histórico e Zerar Dados</h2>
+            <p class="text-gray-600">Antes de apagar todos os dados, você pode salvar um registro completo de todos os assistidos do dia.</p>
+            <div class="space-y-3 pt-2">
+                <button id="download-history-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+                    Baixar Histórico em PDF
+                </button>
+                <div class="relative">
+                    <input type="email" id="history-email-input" placeholder="Digite seu e-mail para enviar o histórico" class="w-full p-3 pl-4 pr-32 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <button id="send-history-email-btn" class="absolute right-1 top-1 bottom-1 bg-teal-500 text-white font-semibold px-3 rounded-md hover:bg-teal-600 transition text-sm">Enviar E-mail</button>
+                </div>
+                 <p class="text-xs text-gray-500 text-center">O envio por e-mail abrirá seu programa/aplicativo de e-mail padrão.</p>
+            </div>
+            <hr class="my-4 border-gray-300">
+            <div class="text-center">
+                 <p class="mb-4 text-sm font-medium text-red-700">A ação abaixo apagará permanentemente todos os dados do sistema.</p>
+                 <div class="flex justify-end space-x-4">
+                    <button id="cancel-reset-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition">Cancelar</button>
+                    <button id="confirm-reset-btn" class="bg-red-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-800 transition">Zerar Tudo Agora</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, getDoc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, query, where, getDocs, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            // --- Variáveis Globais e de Elementos ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        let db, auth, userId, userEmail;
+        let allAssisted = [];
+        let assistedIdToCheckIn = null;
+        let assistedIdToAttend = null;
+        let userIsAdmin = false;
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const showLoading = () => loadingSpinner.classList.remove('hidden');
+        const hideLoading = () => loadingSpinner.classList.add('hidden');
+
+        if (firebaseConfig && Object.keys(firebaseConfig).length > 0) {
+            setLogLevel('debug');
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            if (initialAuthToken) {
+                signInWithCustomToken(auth, initialAuthToken).catch(handleAuthError);
+            } else {
+                signInAnonymously(auth).catch(handleAuthError);
+            }
+        } else {
+            console.error("Firebase config is missing or empty.");
+            document.getElementById('auth-error').textContent = "Erro de configuração do Firebase.";
+        }
+
+        const showNotification = (message) => {
+            const notificationModal = document.createElement('div');
+            notificationModal.id = 'notification-modal';
+            notificationModal.className = 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50';
+            notificationModal.innerHTML = `
+                <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm text-center">
+                    <p class="text-xl font-bold text-gray-800">${message}</p>
+                    <button id="close-notification-btn" class="mt-4 bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700 transition">OK</button>
+                </div>
+            `;
+            document.body.appendChild(notificationModal);
+            document.getElementById('close-notification-btn').addEventListener('click', () => {
+                notificationModal.remove();
+            });
+        };
+
+        const handleAuthError = (error) => {
+            console.error("Authentication error:", error);
+            showNotification("Erro de autenticação. Por favor, tente recarregar a página.");
+        };
+
+        const checkAdminStatus = async (uid) => {
+            try {
+                const adminRef = doc(db, `artifacts/${appId}/admin_roles`, uid);
+                const docSnap = await getDoc(adminRef);
+                return docSnap.exists() && docSnap.data().role === 'admin';
+            } catch (e) {
+                console.error("Erro ao verificar status de administrador:", e);
+                return false;
+            }
+        };
+
+        const setupUserPauta = (uid) => {
+             const docRef = doc(db, `artifacts/${appId}/users/${uid}/data/assisted_list`);
+             onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists() && docSnap.data().data) {
+                    try {
+                        allAssisted = JSON.parse(docSnap.data().data);
+                    } catch (e) {
+                        console.error("Erro ao desserializar os dados:", e);
+                        allAssisted = [];
+                    }
+                } else {
+                    allAssisted = [];
+                }
+                renderAssistedList();
+            }, (error) => {
+                console.error("Erro no onSnapshot:", error);
+                showNotification("Erro ao carregar dados em tempo real.");
+            });
+        };
+
+        const loadSharedPauta = (sharedUserId) => {
+             const docRef = doc(db, `artifacts/${appId}/users/${sharedUserId}/data/assisted_list`);
+             onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists() && docSnap.data().data) {
+                    try {
+                        allAssisted = JSON.parse(docSnap.data().data);
+                    } catch (e) {
+                        console.error("Erro ao desserializar dados compartilhados:", e);
+                        allAssisted = [];
+                    }
+                } else {
+                    allAssisted = [];
+                }
+                renderAssistedList();
+            }, (error) => {
+                console.error("Erro ao carregar dados compartilhados:", error);
+                showNotification("Erro ao carregar dados compartilhados em tempo real.");
+            });
+        };
+
+        const renderAssistedList = () => {
+            const pautaList = document.getElementById('pauta-list');
+            const aguardandoList = document.getElementById('aguardando-list');
+            const atendidosList = document.getElementById('atendidos-list');
+            [pautaList, aguardandoList, atendidosList].forEach(el => el.innerHTML = '');
+            const pauta = allAssisted.filter(a => a.status === 'pauta');
+            const aguardando = allAssisted.filter(a => a.status === 'aguardando');
+            const atendidos = allAssisted.filter(a => a.status === 'atendido');
+            aguardando.sort((a, b) => {
+                const priorityOrder = { 'URGENTE': 0, 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
+                if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+                    return priorityOrder[a.priority] - priorityOrder[b.priority];
+                }
+                return new Date(a.arrivalTime) - new Date(b.arrivalTime);
+            });
+            pauta.forEach(a => {
+                const card = document.createElement('div');
+                card.className = 'bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-200';
+                card.innerHTML = `
+                    <p class="font-bold text-lg text-gray-800">${a.name}</p>
+                    ${a.cpf ? `<p class="text-gray-500 text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}
+                    <p class="text-gray-600">Assunto: <strong>${a.subject}</strong></p>
+                    <p class="text-gray-600">Agendado para: <strong>${a.scheduledTime}</strong></p>
+                    <button data-id="${a.id}" class="check-in-btn mt-3 w-full bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition">Marcar Chegada</button>
+                `;
+                pautaList.appendChild(card);
+            });
+            aguardando.forEach(a => {
+                const card = document.createElement('div');
+                card.className = `bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)}`;
+                const arrivalTimeDisplay = a.type === 'agendamento' 
+                    ? `Agendado: ${a.scheduledTime} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                    : `Chegada Avulsa: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                         <div>
+                            <p class="font-bold text-lg text-gray-800">${a.name}</p>
+                            ${a.cpf ? `<p class="text-sm text-gray-500">CPF: <strong>${a.cpf}</strong></p>` : ''}
+                            <p class="text-sm text-gray-600">Assunto: <strong>${a.subject}</strong></p>
+                            <p class="text-sm text-gray-500">${arrivalTimeDisplay}</p>
+                        </div>
+                        ${getPriorityLabel(a.priority)}
+                    </div>
+                    <div class="mt-4 flex space-x-2">
+                       <button data-id="${a.id}" class="attend-btn flex-1 bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 transition text-sm">Atender</button>
+                       ${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="urgent-btn flex-1 bg-red-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-red-600 transition text-sm">Marcar Urgente</button>` : ''}
+                    </div>
+                `;
+                aguardandoList.appendChild(card);
+            });
+            atendidos.forEach(a => {
+                const card = document.createElement('div');
+                card.className = 'bg-green-50 p-4 rounded-lg shadow-sm border border-green-200 opacity-80';
+                card.innerHTML = `
+                    <p class="font-bold text-lg text-gray-800">${a.name}</p>
+                    ${a.cpf ? `<p class="text-gray-500 text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}
+                    <p class="text-gray-600 text-sm">Assunto: <strong>${a.subject}</strong></p>
+                    <p class="text-gray-600 text-sm">Finalizado: <strong>${new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong></p>
+                    <div class="flex justify-between items-center mt-1">
+                        <p class="text-gray-600 text-sm">Por: <strong data-attendant-id="${a.id}">${a.attendant}</strong></p>
+                        <button data-id="${a.id}" class="edit-attendant-btn text-indigo-600 hover:text-indigo-800 font-semibold text-xs py-1 px-2 rounded hover:bg-indigo-100 transition">Editar</button>
+                        <button data-id="${a.id}" class="delete-attended-btn text-red-600 hover:text-red-800 font-semibold text-xs py-1 px-2 rounded hover:bg-red-100 transition">Deletar</button>
+                    </div>
+                `;
+                atendidosList.appendChild(card);
+            });
+        };
+        const getPriorityClass = (priority) => {
+            switch (priority) {
+                case 'URGENTE': return 'priority-urgente';
+                case 'Máxima': return 'priority-maxima';
+                case 'Média': return 'priority-media';
+                case 'Mínima': return 'priority-minima';
+                default: return '';
+            }
+        };
+        const getPriorityLabel = (priority) => {
+             switch (priority) {
+                case 'URGENTE': return '<span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-full">URGENTE</span>';
+                case 'Máxima': return '<span class="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full">Máxima</span>';
+                case 'Média': return '<span class="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-full">Média</span>';
+                case 'Mínima': return '<span class="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded-full">Mínima</span>';
+                default: return '';
+            }
+        }
+        const setMode = (mode) => {
+            const tabAgendamento = document.getElementById('tab-agendamento');
+            const tabAvulso = document.getElementById('tab-avulso');
+            const formTitle = document.getElementById('form-title');
+            const scheduledTimeWrapper = document.getElementById('scheduled-time-wrapper');
+            const agendamentoActions = document.getElementById('agendamento-actions');
+            const pautaColumn = document.getElementById('pauta-column');
+            const mainContent = document.getElementById('main-content');
+            tabAgendamento.classList.remove('tab-active');
+            tabAvulso.classList.remove('tab-active');
+            if (mode === 'agendamento') {
+                tabAgendamento.classList.add('tab-active');
+                formTitle.textContent = 'Adicionar Novo Agendamento';
+                scheduledTimeWrapper.style.display = 'flex';
+                agendamentoActions.style.display = 'flex';
+                pautaColumn.style.display = 'flex';
+                mainContent.classList.remove('lg:grid-cols-2');
+                mainContent.classList.add('lg:grid-cols-3');
+            } else {
+                tabAvulso.classList.add('tab-active');
+                formTitle.textContent = 'Adicionar Atendimento Avulso';
+                scheduledTimeWrapper.style.display = 'none';
+                agendamentoActions.style.display = 'none';
+                pautaColumn.style.display = 'none';
+                mainContent.classList.remove('lg:grid-cols-3');
+                mainContent.classList.add('lg:grid-cols-2');
+            }
+        };
+
+        onAuthStateChanged(auth, async (user) => {
             const loginModal = document.getElementById('login-modal');
             const appContainer = document.getElementById('app-container');
-            const emailInput = document.getElementById('email-input');
-            const passwordInput = document.getElementById('password-input');
+            const adminBtn = document.getElementById('admin-btn');
+            const pautaOwnerDisplay = document.getElementById('pauta-owner-display');
+            const authError = document.getElementById('auth-error');
+            const logoutBtn = document.getElementById('logout-btn');
+
+            if (user) {
+                userId = user.uid;
+                userEmail = user.email;
+
+                const userProfileRef = doc(db, 'artifacts', appId, 'user_profiles', userId);
+                const userProfileSnap = await getDoc(userProfileRef);
+
+                if (!userProfileSnap.exists()) {
+                    await signOut(auth);
+                    authError.textContent = 'Perfil não encontrado.';
+                    return;
+                }
+                const profile = userProfileSnap.data();
+
+                if (profile.status === 'pending') {
+                    await signOut(auth);
+                    authError.textContent = 'Sua conta aguarda aprovação.';
+                    return;
+                }
+
+                if (profile.status === 'approved') {
+                    const isAdmin = await checkAdminStatus(userId);
+                    userIsAdmin = isAdmin;
+                    if (isAdmin) {
+                        adminBtn.classList.remove('hidden');
+                    } else {
+                        adminBtn.classList.add('hidden');
+                    }
+                    
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const viewUserId = urlParams.get('viewUser');
+                    
+                    if (viewUserId) {
+                        loadSharedPauta(viewUserId);
+                        pautaOwnerDisplay.textContent = `Visualizando pauta compartilhada`;
+                        document.getElementById('add-assisted-btn').disabled = true;
+                        document.getElementById('file-upload').disabled = true;
+                        logoutBtn.disabled = true;
+                        document.getElementById('reset-all-btn').disabled = true;
+                    } else {
+                        setupUserPauta(userId);
+                        pautaOwnerDisplay.textContent = `Minha Pauta (${userEmail})`;
+                    }
+                    
+                    loginModal.classList.add('hidden');
+                    appContainer.classList.remove('hidden');
+
+                } else {
+                    await signOut(auth);
+                    authError.textContent = 'Sua conta não tem permissão de acesso.';
+                }
+            } else {
+                userId = null;
+                userEmail = null;
+                loginModal.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
             const loginBtn = document.getElementById('login-btn');
             const createAccountBtn = document.getElementById('create-account-btn');
-            const logoutBtn = document.getElementById('logout-btn');
+            const emailInput = document.getElementById('email-input');
+            const passwordInput = document.getElementById('password-input');
             const authError = document.getElementById('auth-error');
             const authSuccess = document.getElementById('auth-success');
+            const addAssistedBtn = document.getElementById('add-assisted-btn');
+            const assistedNameInput = document.getElementById('assisted-name');
+            const assistedCpfInput = document.getElementById('assisted-cpf');
+            const scheduledTimeInput = document.getElementById('scheduled-time');
+            const assistedSubjectInput = document.getElementById('assisted-subject');
+            const tabAgendamento = document.getElementById('tab-agendamento');
+            const tabAvulso = document.getElementById('tab-avulso');
+            const downloadPdfBtn = document.getElementById('download-pdf-btn');
+            const fileUploadInput = document.getElementById('file-upload');
+            const formatHelpLink = document.getElementById('format-help-link');
+            const formatHelpModal = document.getElementById('format-help-modal');
+            const closeFormatHelpBtn = document.getElementById('close-format-help-btn');
+            const closeFormatHelpBtnX = document.getElementById('close-format-help-btn-x');
+            const copyInstructionBtn = document.getElementById('copy-instruction-btn');
+            const instructionText = document.getElementById('instruction-text');
+            const resetAllBtn = document.getElementById('reset-all-btn');
+            const resetConfirmModal = document.getElementById('reset-confirm-modal');
+            const cancelResetBtn = document.getElementById('cancel-reset-btn');
+            const confirmResetBtn = document.getElementById('confirm-reset-btn');
+            const downloadHistoryBtn = document.getElementById('download-history-btn');
+            const historyEmailInput = document.getElementById('history-email-input');
+            const sendHistoryEmailBtn = document.getElementById('send-history-email-btn');
+            const toggleLogicBtn = document.getElementById('toggle-logic-btn');
+            const logicExplanation = document.getElementById('logic-explanation');
+            const arrivalModal = document.getElementById('arrival-modal');
+            const arrivalTimeInput = document.getElementById('arrival-time-input');
+            const cancelArrivalBtn = document.getElementById('cancel-arrival-btn');
+            const confirmArrivalBtn = document.getElementById('confirm-arrival-btn');
+            const attendantModal = document.getElementById('attendant-modal');
+            const attendantNameInput = document.getElementById('attendant-name');
+            const cancelAttendantBtn = document.getElementById('cancel-attendant-btn');
+            const confirmAttendantBtn = document.getElementById('confirm-attendant-btn');
+            const pautaSearch = document.getElementById('pauta-search');
+            const aguardandoSearch = document.getElementById('aguardando-search');
+            const atendidosSearch = document.getElementById('atendidos-search');
             const shareBtn = document.getElementById('share-btn');
             const shareModal = document.getElementById('share-modal');
             const closeShareModalBtn = document.getElementById('close-share-modal-btn');
-            const pautaOwnerDisplay = document.getElementById('pauta-owner-display');
+            const shareLinkInput = document.getElementById('share-link-input');
+            const copyShareBtn = document.getElementById('copy-share-btn');
             const adminBtn = document.getElementById('admin-btn');
             const adminModal = document.getElementById('admin-modal');
             const closeAdminModalBtn = document.getElementById('close-admin-modal-btn');
             const pendingUsersList = document.getElementById('pending-users-list');
-            
-            let allAssisted = [];
-            let db, auth;
-            let currentPautaDocRef = null;
-            let unsubscribeFromPauta = () => {};
-
-            // --- Configuração do Firebase ---
-            try {
-                const firebaseConfig = {
-                  apiKey: "AIzaSyAdJKL2iku9kIKVk9FXXltaSGKsbeX2rgU",
-                  authDomain: "acaopauta.firebaseapp.com",
-                  projectId: "acaopauta",
-                  storageBucket: "acaopauta.firebasestorage.app",
-                  messagingSenderId: "1026643058329",
-                  appId: "1:1026643058329:web:07043aac460ce36c17a208",
-                  measurementId: "G-L7PZEG7FN9"
-                };
-
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-            } catch (e) {
-                console.error("Firebase config not found.", e);
-                authError.textContent = "Erro de configuração.";
-                return;
-            }
-
-            // --- Lógica de Dados (Firestore) ---
-            const saveDataToFirestore = async (data) => {
-                if (!currentPautaDocRef) return;
-                try {
-                    await updateDoc(currentPautaDocRef, { assistedList: data });
-                } catch (error) {
-                    console.error("Erro ao salvar dados: ", error);
-                    alert("Não foi possível salvar os dados. Verifique sua conexão e permissões.");
-                }
-            };
-
-            const setupFirestoreListener = (docRef) => {
-                unsubscribeFromPauta();
-                unsubscribeFromPauta = onSnapshot(docRef, (docSnap) => {
-                    const data = docSnap.data();
-                    allAssisted = (data && data.assistedList) ? data.assistedList : [];
-                    renderAssistedList();
-                    if (!shareModal.classList.contains('hidden')) {
-                         populateShareModal(data, auth.currentUser);
-                    }
-                }, (error) => {
-                    console.error("Erro ao ouvir pauta:", error);
-                    pautaOwnerDisplay.textContent = "Erro ao carregar pauta.";
-                });
-            };
-            
-            // --- Lógica de Autenticação ---
-            onAuthStateChanged(auth, async (user) => {
-                authError.textContent = '';
-                authSuccess.textContent = '';
-                adminBtn.classList.add('hidden');
-
-                if (user) {
-                    const appId = "acaopauta";
-                    const userProfileRef = doc(db, 'artifacts', appId, 'user_profiles', user.uid);
-                    const userProfileSnap = await getDoc(userProfileRef);
-
-                    if (!userProfileSnap.exists()) {
-                        await signOut(auth);
-                        authError.textContent = 'Perfil não encontrado.';
-                        return;
-                    }
-                    
-                    const profile = userProfileSnap.data();
-                    let canLogin = false;
-                    
-                    if (profile && profile.role === 'admin') {
-                        canLogin = true;
-                        adminBtn.classList.remove('hidden');
-                    } else if (profile && profile.status === 'approved') {
-                        canLogin = true;
-                    } else if (profile && profile.status === 'pending') {
-                        await signOut(auth);
-                        authError.textContent = 'Sua conta aguarda aprovação.';
-                        return;
-                    }
-
-                    if (canLogin) {
-                        loginModal.classList.add('hidden');
-                        appContainer.classList.remove('hidden');
-
-                        const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid);
-                        const pautaDocRef = doc(userDocRef, 'atendimentos', 'diaAtual');
-                        const pautaDocSnap = await getDoc(pautaDocRef);
-
-                        if (pautaDocSnap.exists() && pautaDocSnap.data().sharedFrom) {
-                            const ownerInfo = pautaDocSnap.data().sharedFrom;
-                            pautaOwnerDisplay.textContent = `Visualizando pauta de: ${ownerInfo.email}`;
-                            const ownerDocRef = doc(db, 'artifacts', appId, 'users', ownerInfo.uid, 'atendimentos', 'diaAtual');
-                            currentPautaDocRef = ownerDocRef;
-                        } else {
-                            pautaOwnerDisplay.textContent = `Minha Pauta (${user.email})`;
-                            currentPautaDocRef = pautaDocRef;
-                            if (!pautaDocSnap.exists()) {
-                                try {
-                                    await setDoc(pautaDocRef, { assistedList: [], sharedWith: [], sharedWithUids: [] });
-                                } catch(error) {
-                                    console.error("Erro ao criar pauta inicial:", error);
-                                }
-                            }
-                        }
-                        setupFirestoreListener(currentPautaDocRef);
-                    } else {
-                         await signOut(auth);
-                         authError.textContent = 'Sua conta não tem permissão de acesso.';
-                    }
-                } else {
-                    loginModal.classList.remove('hidden');
-                    appContainer.classList.add('hidden');
-                    unsubscribeFromPauta();
-                    currentPautaDocRef = null;
-                }
-            });
+            const logoutBtn = document.getElementById('logout-btn');
 
             loginBtn.addEventListener('click', async () => {
                 const email = emailInput.value.trim();
                 const password = passwordInput.value.trim();
                 authError.textContent = '';
-                authSuccess.textContent = '';
-                if (!email || !password) {
-                    authError.textContent = 'Preencha e-mail e senha.';
-                    return;
-                }
+                if (!email || !password) { authError.textContent = 'Preencha e-mail e senha.'; return; }
+                showLoading();
                 try {
                     await signInWithEmailAndPassword(auth, email, password);
                 } catch (error) {
-                    console.error("Login failed:", error.code);
-                    if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+                    if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
                         authError.textContent = 'E-mail ou senha inválidos.';
-                    } else {
-                        authError.textContent = 'Erro ao tentar entrar.';
-                    }
+                    } else { authError.textContent = 'Erro ao tentar entrar.'; }
+                } finally {
+                    hideLoading();
                 }
             });
-
             createAccountBtn.addEventListener('click', async () => {
                 const email = emailInput.value.trim();
                 const password = passwordInput.value.trim();
                 authError.textContent = '';
                 authSuccess.textContent = '';
                  try {
-                    if (!email || !password) {
-                        authError.textContent = 'Preencha e-mail e senha.';
-                        return;
-                    }
+                    if (!email || !password) { authError.textContent = 'Preencha e-mail e senha.'; return; }
+                    showLoading();
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                     const user = userCredential.user;
-                    const appId = "acaopauta";
-                    const userProfileRef = doc(db, 'artifacts', appId, 'user_profiles', user.uid);
-                    await setDoc(userProfileRef, { email: user.email, uid: user.uid, status: 'pending' });
-                    
+                    const userProfileRef = doc(db, "artifacts", appId, "user_profiles", user.uid);
+                    await setDoc(userProfileRef, {
+                        email: user.email,
+                        uid: user.uid,
+                        role: "user",
+                        status: "pending",
+                        createdAt: new Date()
+                    });
                     await signOut(auth);
-                    authSuccess.textContent = 'Conta criada com sucesso! Aguarde aprovação.';
-
+                    authSuccess.textContent = 'Conta criada! Aguarde aprovação.';
                 } catch (error) {
-                    console.error("Account creation failed:", error.code);
-                    if (error.code === 'auth/weak-password') {
-                        authError.textContent = 'A senha deve ter pelo menos 6 caracteres.';
-                    } else if (error.code === 'auth/email-already-in-use') {
-                        authError.textContent = 'Este e-mail já está em uso.';
-                    } else if (error.code === 'auth/invalid-email') {
-                        authError.textContent = 'O formato do e-mail é inválido.';
+                    if (error.code === 'auth/weak-password') { authError.textContent = 'A senha deve ter pelo menos 6 caracteres.'; } 
+                    else if (error.code === 'auth/email-already-in-use') { authError.textContent = 'Este e-mail já está em uso.'; }
+                    else { authError.textContent = 'Erro ao criar conta.'; }
+                } finally {
+                    hideLoading();
+                }
+            });
+            logoutBtn.addEventListener('click', () => signOut(auth));
+            tabAgendamento.addEventListener('click', () => setMode('agendamento'));
+            tabAvulso.addEventListener('click', () => setMode('avulso'));
+            pautaSearch.addEventListener('input', renderAssistedList);
+            aguardandoSearch.addEventListener('input', renderAssistedList);
+            atendidosSearch.addEventListener('input', renderAssistedList);
+            assistedCpfInput.addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\D/g, '');
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                e.target.value = value;
+            });
+            addAssistedBtn.addEventListener('click', async () => {
+                const currentMode = tabAgendamento.classList.contains('tab-active') ? 'agendamento' : 'avulso';
+                const name = assistedNameInput.value.trim();
+                const cpf = assistedCpfInput.value.trim();
+                const time = scheduledTimeInput.value;
+                const subject = assistedSubjectInput.value.trim();
+                const isAgendamentoValid = currentMode === 'agendamento' && name && time && subject;
+                const isAvulsoValid = currentMode === 'avulso' && name && subject;
+                if (isAgendamentoValid || isAvulsoValid) {
+                    const newAssisted = {
+                        id: Date.now().toString(),
+                        name: name,
+                        cpf: cpf || null,
+                        subject: subject,
+                        arrivalTime: null,
+                        attendedTime: null,
+                        attendant: null,
+                        priority: null,
+                        type: currentMode
+                    };
+                    if (currentMode === 'agendamento') {
+                        newAssisted.status = 'pauta';
+                        newAssisted.scheduledTime = time;
                     } else {
-                        authError.textContent = 'Erro ao criar conta.';
+                        newAssisted.status = 'aguardando';
+                        newAssisted.arrivalTime = new Date().toISOString();
+                        newAssisted.priority = 'Média';
+                    }
+                    const newAllAssisted = [...allAssisted, newAssisted];
+                    await setDoc(doc(db, `artifacts/${appId}/users/${userId}/data/assisted_list`), { data: JSON.stringify(newAllAssisted) });
+                    assistedNameInput.value = '';
+                    assistedCpfInput.value = '';
+                    scheduledTimeInput.value = '';
+                    assistedSubjectInput.value = '';
+                } else {
+                    const originalText = addAssistedBtn.textContent;
+                    addAssistedBtn.textContent = 'Preencha os campos obrigatórios!';
+                    addAssistedBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                    addAssistedBtn.classList.add('bg-red-500');
+                    setTimeout(() => {
+                        addAssistedBtn.textContent = originalText;
+                        addAssistedBtn.classList.remove('bg-red-500');
+                        addAssistedBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                    }, 2500);
+                }
+            });
+            document.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('check-in-btn')) {
+                    assistedIdToCheckIn = e.target.dataset.id;
+                    const now = new Date();
+                    const hours = String(now.getHours()).padStart(2, '0');
+                    const minutes = String(now.getMinutes()).padStart(2, '0');
+                    arrivalTimeInput.value = `${hours}:${minutes}`;
+                    arrivalModal.classList.remove('hidden');
+                }
+                if (e.target.classList.contains('attend-btn')) {
+                    assistedIdToAttend = e.target.dataset.id;
+                    attendantModal.classList.remove('hidden');
+                }
+                 if (e.target.classList.contains('urgent-btn')) {
+                    const id = e.target.dataset.id;
+                    const assisted = allAssisted.find(a => a.id === id);
+                    if (assisted) {
+                        assisted.priority = 'URGENTE';
+                        await setDoc(doc(db, `artifacts/${appId}/users/${userId}/data/assisted_list`), { data: JSON.stringify(allAssisted) });
+                    }
+                }
+                if (e.target.classList.contains('edit-attendant-btn')) {
+                    const btn = e.target;
+                    const id = btn.dataset.id;
+                    const strongElement = document.querySelector(`strong[data-attendant-id="${id}"]`);
+                    if (strongElement) {
+                        const currentName = strongElement.textContent;
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.value = currentName === 'Não informado' ? '' : currentName;
+                        input.className = 'attendant-edit-input p-1 border rounded text-sm w-full';
+                        strongElement.parentElement.replaceWith(input);
+                        input.focus();
+                        input.select();
+                        btn.textContent = 'Salvar';
+                        btn.classList.remove('edit-attendant-btn', 'text-indigo-600', 'hover:text-indigo-800', 'hover:bg-indigo-100');
+                        btn.classList.add('save-attendant-btn', 'text-green-600', 'hover:text-green-800', 'hover:bg-green-100');
+                    }
+                }
+                if (e.target.classList.contains('save-attendant-btn')) {
+                    const btn = e.target;
+                    const id = btn.dataset.id;
+                    const container = btn.parentElement;
+                    const inputElement = container.querySelector(`input.attendant-edit-input`);
+                    if (inputElement) {
+                        const assisted = allAssisted.find(a => a.id === id);
+                        if (assisted) {
+                            const newName = inputElement.value.trim();
+                            assisted.attendant = newName || 'Não informado';
+                            await setDoc(doc(db, `artifacts/${appId}/users/${userId}/data/assisted_list`), { data: JSON.stringify(allAssisted) });
+                        }
+                    }
+                }
+                if (e.target.classList.contains('delete-attended-btn')) {
+                    const id = e.target.dataset.id;
+                    const assisted = allAssisted.find(a => a.id === id);
+                    const confirmAction = window.confirm(`Tem certeza que deseja deletar o atendimento de ${assisted?.name}?`);
+                    if (confirmAction) {
+                        allAssisted = allAssisted.filter(a => a.id !== id);
+                        await setDoc(doc(db, `artifacts/${appId}/users/${userId}/data/assisted_list`), { data: JSON.stringify(allAssisted) });
                     }
                 }
             });
-
-            logoutBtn.addEventListener('click', () => signOut(auth));
-
-            // --- Lógica do Painel de Admin ---
-            adminBtn.addEventListener('click', async () => {
-                const appId = "acaopauta";
-                const usersRef = collection(db, 'artifacts', appId, 'user_profiles');
-                const q = query(usersRef, where("status", "==", "pending"));
+            confirmArrivalBtn.addEventListener('click', async () => {
+                const arrivalTimeValue = arrivalTimeInput.value;
+                const assisted = allAssisted.find(a => a.id === assistedIdToCheckIn);
+                if (arrivalTimeValue && assisted) {
+                    const today = new Date();
+                    const [hours, minutes] = arrivalTimeValue.split(':');
+                    const arrivalDateTime = new Date(`${today.toISOString().split('T')[0]}T${hours}:${minutes}`);
+                    assisted.arrivalTime = arrivalDateTime.toISOString();
+                    assisted.status = 'aguardando';
+                    const scheduled = new Date(`${today.toISOString().split('T')[0]}T${assisted.scheduledTime}`);
+                    const diffMinutes = (arrivalDateTime - scheduled) / (1000 * 60);
+                    if (diffMinutes <= 0) {
+                        assisted.priority = 'Máxima';
+                    } else if (diffMinutes <= 20) {
+                        assisted.priority = 'Média';
+                    } else {
+                        assisted.priority = 'Mínima';
+                    }
+                    await setDoc(doc(db, `artifacts/${appId}/users/${userId}/data/assisted_list`), { data: JSON.stringify(allAssisted) });
+                    arrivalModal.classList.add('hidden');
+                    assistedIdToCheckIn = null;
+                } else {
+                    showNotification("Horário inválido!");
+                }
+            });
+            cancelArrivalBtn.addEventListener('click', () => {
+                arrivalModal.classList.add('hidden');
+                assistedIdToCheckIn = null;
+            });
+            confirmAttendantBtn.addEventListener('click', async () => {
+                const attendantName = attendantNameInput.value.trim();
+                const assisted = allAssisted.find(a => a.id === assistedIdToAttend);
+                if (assisted) {
+                    assisted.status = 'atendido';
+                    assisted.attendant = attendantName || 'Não informado';
+                    assisted.attendedTime = new Date().toISOString();
+                    await setDoc(doc(db, `artifacts/${appId}/users/${userId}/data/assisted_list`), { data: JSON.stringify(allAssisted) });
+                    attendantNameInput.value = '';
+                    attendantModal.classList.add('hidden');
+                    assistedIdToAttend = null;
+                }
+            });
+            cancelAttendantBtn.addEventListener('click', () => {
+                attendantNameInput.value = '';
+                attendantModal.classList.add('hidden');
+                assistedIdToAttend = null;
+            });
+            downloadPdfBtn.addEventListener('click', () => {
+                const { jsPDF } = window.jspdf;
+                const atendidos = allAssisted.filter(a => a.status === 'atendido');
+                if (atendidos.length === 0) {
+                    downloadPdfBtn.textContent = 'Lista Vazia!';
+                    downloadPdfBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                    downloadPdfBtn.classList.add('bg-red-500');
+                    setTimeout(() => {
+                        downloadPdfBtn.textContent = 'Baixar PDF';
+                        downloadPdfBtn.classList.remove('bg-red-500');
+                        downloadPdfBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+                    }, 2000);
+                    return;
+                }
+                const doc = new jsPDF();
+                const today = new Date().toLocaleDateString('pt-BR');
+                const totalAtendidos = atendidos.length;
+                doc.setFontSize(18);
+                doc.text("Relatório de Atendidos", 105, 15, null, null, 'center');
+                doc.setFontSize(12);
+                doc.text(`Data de Emissão: ${today}`, 105, 22, null, null, 'center');
+                doc.setFont(undefined, 'bold');
+                doc.text(`Total de Atendidos: ${totalAtendidos}`, 105, 29, null, null, 'center');
+                doc.setFont(undefined, 'normal');
+                let yPos = 45;
+                atendidos.forEach((a) => {
+                    let yOffset = 0;
+                    if (yPos > 250) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                    doc.setFontSize(12);
+                    doc.setFont(undefined, 'bold');
+                    doc.text(`Assistido: ${a.name}`, 14, yPos);
+                    doc.setFontSize(10);
+                    doc.setFont(undefined, 'normal');
+                    if(a.cpf) {
+                        doc.text(`CPF: ${a.cpf}`, 14, yPos + 7);
+                        yOffset += 7;
+                    }
+                    doc.text(`Matéria - Assunto: ${a.subject}`, 14, yPos + 7 + yOffset);
+                    const arrivalInfo = a.type === 'agendamento' 
+                        ? `Horário Agendado: ${a.scheduledTime}`
+                        : `Atendimento Avulso`;
+                    doc.text(arrivalInfo, 14, yPos + 14 + yOffset);
+                    doc.text(`Horário de Comparecimento: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 14, yPos + 21 + yOffset);
+                    yPos += 30 + yOffset;
+                    if (yPos < 270) {
+                        doc.line(14, yPos - 5, 196, yPos - 5);
+                    }
+                });
+                const fileName = `relatorio-atendidos-${today.replace(/\//g, '-')}.pdf`;
+                doc.save(fileName);
+            });
+            fileUploadInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file || !file.name.endsWith('.csv')) {
+                    showNotification('Por favor, selecione um arquivo CSV.');
+                    fileUploadInput.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    await parseCsvText(e.target.result);
+                };
+                reader.readAsText(file);
+            });
+            const parseCsvText = async (text) => {
+                let importedCount = 0;
+                const lines = text.split(/\r?\n/);
+                const newAssistedList = [...allAssisted];
+                lines.forEach(line => {
+                    if (!line.trim()) return;
+                    const separator = line.includes(';') ? ';' : ',';
+                    const parts = line.split(separator);
+                    if (parts.length >= 3) {
+                        const name = parts[0].replace(/"/g, '').trim();
+                        const timeRaw = parts[1].replace(/"/g, '').trim();
+                        const subject = parts[2].replace(/"/g, '').trim();
+                        const cpf = parts.length >= 4 ? parts[3].replace(/"/g, '').trim() : '';
+                        const timeMatch = timeRaw.match(/\d{2}:\d{2}/);
+                        if (name && timeMatch && subject && name.toLowerCase() !== "nome completo do assistido" && name.toLowerCase() !== "nome") {
+                            const time = timeMatch[0];
+                            const exists = newAssistedList.some(a => a.name === name && a.scheduledTime === time && a.subject === subject);
+                            if (!exists) {
+                                newAssistedList.push({
+                                    id: crypto.randomUUID(),
+                                    name: name,
+                                    cpf: cpf || null,
+                                    scheduledTime: time,
+                                    subject: subject,
+                                    arrivalTime: null, attendedTime: null, attendant: null,
+                                    status: 'pauta', priority: null, type: 'agendamento'
+                                });
+                                importedCount++;
+                            }
+                        }
+                    }
+                });
+                await setDoc(doc(db, `artifacts/${appId}/users/${userId}/data/assisted_list`), { data: JSON.stringify(newAssistedList) });
+                if (importedCount > 0) {
+                    showNotification(`${importedCount} agendamento(s) importado(s) com sucesso!`);
+                } else {
+                    showNotification(`Nenhum agendamento válido encontrado no arquivo. Verifique o formato.`);
+                }
+                fileUploadInput.value = '';
+            };
+            formatHelpLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                formatHelpModal.classList.remove('hidden');
+            });
+            const closeHelpModal = () => formatHelpModal.classList.add('hidden');
+            closeFormatHelpBtn.addEventListener('click', closeHelpModal);
+            closeFormatHelpBtnX.addEventListener('click', closeHelpModal);
+            copyInstructionBtn.addEventListener('click', () => {
+                const textToCopy = instructionText.querySelector('code').textContent;
+                document.execCommand('copy');
+                const originalText = copyInstructionBtn.textContent;
+                copyInstructionBtn.textContent = 'Copiado!';
+                copyInstructionBtn.disabled = true;
+                setTimeout(() => {
+                    copyInstructionBtn.textContent = originalText;
+                    copyInstructionBtn.disabled = false;
+                }, 2000);
+            });
+            const generateFullHistoryText = () => {
+                const atendidos = allAssisted.filter(a => a.status === 'atendido');
+                let text = `Resumo do Dia - Gerado em: ${new Date().toLocaleString('pt-BR')}\n`;
+                text += "==================================================\n\n";
+                text += `✅ ATENDIDOS (${atendidos.length})\n`;
+                text += "---------------------------------\n";
+                if (atendidos.length > 0) {
+                    atendidos.forEach(a => {
+                        text += `Nome: ${a.name}\n`;
+                        if (a.cpf) text += `CPF: ${a.cpf}\n`;
+                        text += `Assunto: ${a.subject}\n`;
+                        const arrivalInfo = a.type === 'agendamento' 
+                            ? `Horário Agendado: ${a.scheduledTime}`
+                            : 'Atendimento Avulso';
+                        text += `${arrivalInfo} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}\n`;
+                        text += `Atendido por: ${a.attendant} às ${new Date(a.attendedTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}\n\n`;
+                    });
+                } else {
+                    text += "Nenhum assistido atendido hoje.\n\n";
+                }
+                return text;
+            };
+            downloadHistoryBtn.addEventListener('click', () => {
+                const { jsPDF } = window.jspdf;
+                if (allAssisted.length === 0) {
+                    showNotification("Não há histórico para baixar, as listas estão vazias.");
+                    return;
+                }
+                const doc = new jsPDF();
+                const today = new Date();
+                doc.setFontSize(18);
+                doc.text("Resumo do Dia de Atendimentos", 105, 15, null, null, 'center');
+                doc.setFontSize(12);
+                doc.text(`Gerado em: ${today.toLocaleString('pt-BR')}`, 105, 22, null, null, 'center');
+                const fullText = generateFullHistoryText();
+                const textWithoutHeader = fullText.substring(fullText.indexOf("===") + "===\n\n".length);
+                const lines = doc.splitTextToSize(textWithoutHeader, 180);
+                doc.text(lines, 14, 35);
+                doc.save(`resumo-do-dia-${today.toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`);
+            });
+            sendHistoryEmailBtn.addEventListener('click', () => {
+                const email = historyEmailInput.value.trim();
+                if (!email) {
+                    showNotification("Por favor, insira um endereço de e-mail válido.");
+                    historyEmailInput.focus();
+                    return;
+                }
+                if (allAssisted.length === 0) {
+                    showNotification("Não há histórico para enviar, as listas estão vazias.");
+                    return;
+                }
+                const subject = "Resumo do Dia de Atendimento - Defensoria";
+                const body = generateFullHistoryText();
+                const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                window.location.href = mailtoLink;
+                const originalText = sendHistoryEmailBtn.textContent;
+                sendHistoryEmailBtn.textContent = 'Abrindo...';
+                sendHistoryEmailBtn.disabled = true;
+                setTimeout(() => {
+                    sendHistoryEmailBtn.textContent = originalText;
+                    sendHistoryEmailBtn.disabled = false;
+                }, 3000);
+            });
+            resetAllBtn.addEventListener('click', () => {
+                resetConfirmModal.classList.remove('hidden');
+            });
+            cancelResetBtn.addEventListener('click', () => {
+                resetConfirmModal.classList.add('hidden');
+            });
+            confirmResetBtn.addEventListener('click', async () => {
+                if (!userId) {
+                    showNotification("Acesso negado. Por favor, recarregue a página.");
+                    resetConfirmModal.classList.add('hidden');
+                    return;
+                }
                 try {
+                    await setDoc(doc(db, `artifacts/${appId}/users/${userId}/data/assisted_list`), { data: JSON.stringify([]) });
+                    showNotification("Dados zerados com sucesso!");
+                } catch (error) {
+                    console.error("Erro ao zerar dados:", error);
+                    showNotification("Erro ao zerar os dados. Verifique sua conexão ou permissões.");
+                } finally {
+                    resetConfirmModal.classList.add('hidden');
+                }
+            });
+            toggleLogicBtn.addEventListener('click', () => {
+                logicExplanation.classList.toggle('hidden');
+                if (logicExplanation.classList.contains('hidden')) {
+                    toggleLogicBtn.innerHTML = 'Por que esta ordem é justa? (Clique para expandir)';
+                } else {
+                    toggleLogicBtn.innerHTML = 'Ocultar explicação (Clique para fechar)';
+                }
+            });
+            shareBtn.addEventListener('click', () => {
+                const shareLink = `${window.location.origin}${window.location.pathname}?viewUser=${userId}`;
+                shareLinkInput.value = shareLink;
+                shareModal.classList.remove('hidden');
+            });
+            closeShareModalBtn.addEventListener('click', () => {
+                shareModal.classList.add('hidden');
+            });
+            copyShareBtn.addEventListener('click', () => {
+                shareLinkInput.select();
+                document.execCommand('copy');
+                showNotification('Link copiado!');
+            });
+            adminBtn.addEventListener('click', async () => {
+                adminModal.classList.remove('hidden');
+                const pendingUsersList = document.getElementById('pending-users-list');
+                pendingUsersList.innerHTML = '<p class="text-center text-gray-500">Carregando...</p>';
+                try {
+                    const usersRef = collection(db, 'artifacts', appId, 'user_profiles');
+                    const q = query(usersRef, where('status', '==', 'pending'));
                     const querySnapshot = await getDocs(q);
                     pendingUsersList.innerHTML = '';
                     if (querySnapshot.empty) {
-                        pendingUsersList.innerHTML = '<p class="text-gray-500">Nenhum usuário pendente.</p>';
+                        pendingUsersList.innerHTML = '<p class="text-center text-gray-500">Nenhum usuário pendente.</p>';
                     } else {
-                        querySnapshot.forEach((userDoc) => {
-                            const userData = userDoc.data();
-                            const div = document.createElement('div');
-                            div.className = 'flex justify-between items-center bg-gray-100 p-3 rounded';
-                            div.innerHTML = `
-                                <span class="text-sm">${userData.email}</span>
-                                <button data-uid="${userData.uid}" data-email="${userData.email}" class="approve-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600 transition text-xs">Aprovar</button>
+                        querySnapshot.forEach(docSnap => {
+                            const user = docSnap.data();
+                            const userCard = document.createElement('div');
+                            userCard.className = 'bg-gray-100 p-4 rounded-lg flex justify-between items-center';
+                            userCard.innerHTML = `
+                                <div>
+                                    <p class="font-bold">${user.email}</p>
+                                    <p class="text-xs text-gray-500">UID: ${user.uid}</p>
+                                </div>
+                                <div>
+                                    <button data-uid="${user.uid}" class="approve-user-btn bg-green-500 text-white text-xs px-3 py-1 rounded-lg hover:bg-green-600 transition">Aprovar</button>
+                                </div>
                             `;
-                            pendingUsersList.appendChild(div);
+                            pendingUsersList.appendChild(userCard);
                         });
                     }
-                    adminModal.classList.remove('hidden');
-                } catch(error) {
-                    console.error("Erro ao buscar usuários pendentes:", error);
-                    alert("Não foi possível carregar a lista de usuários. Verifique as regras do Firestore.");
+                } catch (error) {
+                    console.error("Erro ao carregar usuários pendentes:", error);
+                    showNotification("Erro ao carregar usuários. Verifique as regras de segurança.");
                 }
             });
-
-            closeAdminModalBtn.addEventListener('click', () => adminModal.classList.add('hidden'));
-
+            closeAdminModalBtn.addEventListener('click', () => {
+                adminModal.classList.add('hidden');
+            });
             pendingUsersList.addEventListener('click', async (e) => {
-                if (e.target.classList.contains('approve-btn')) {
-                    const targetUid = e.target.dataset.uid;
-                    const targetEmail = e.target.dataset.email;
-                    const appId = "acaopauta";
-                    const userProfileRef = doc(db, 'artifacts', appId, 'user_profiles', targetUid);
-                    try {
-                        await updateDoc(userProfileRef, { status: 'approved' });
-                        
-                        e.target.textContent = 'Aprovado!';
-                        e.target.disabled = true;
-                        e.target.classList.remove('bg-green-500', 'hover:bg-green-600');
-                        e.target.classList.add('bg-gray-400');
-                        
-                        const subject = "Sua conta no Sistema de Atendimento foi aprovada!";
-                        const body = `Olá,\n\nSua conta com o e-mail ${targetEmail} foi aprovada.\n\nVocê já pode acessar o sistema.\n\nAtenciosamente,\nAdministração do Sistema.`;
-                        const mailtoLink = `mailto:${targetEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                        window.open(mailtoLink, '_blank');
-                    } catch(error) {
-                        console.error("Erro ao aprovar usuário:", error);
-                        alert("Não foi possível aprovar o usuário. Verifique as regras do Firestore.");
+                if (e.target.classList.contains('approve-user-btn')) {
+                    const uid = e.target.dataset.uid;
+                    const confirmAction = window.confirm("Tem certeza que deseja aprovar este usuário?");
+                    if (confirmAction) {
+                        try {
+                            const userProfileRef = doc(db, 'artifacts', appId, 'user_profiles', uid);
+                            await updateDoc(userProfileRef, { status: 'approved' });
+                            showNotification("Usuário aprovado com sucesso!");
+                            adminBtn.click();
+                        } catch (error) {
+                            console.error("Erro ao aprovar usuário:", error);
+                            showNotification("Erro ao aprovar usuário.");
+                        }
                     }
                 }
             });
-
-            // --- Lógica de Compartilhamento e Restante do Código ---
-            // Nenhuma alteração necessária no restante do código.
-            
         });
     </script>
 </body>
