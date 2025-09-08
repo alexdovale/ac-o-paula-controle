@@ -462,6 +462,77 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 ['assisted-name', 'assisted-subject', 'assisted-cpf', 'scheduled-time'].forEach(id => document.getElementById(id).value = '');
             });
 
+            document.getElementById('file-upload').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file || !file.name.endsWith('.csv')) {
+                    return showNotification('Por favor, selecione um arquivo CSV.', 'error');
+                }
+                if (!currentPautaId) {
+                    return showNotification('Selecione uma pauta antes de carregar um arquivo.', 'error');
+                }
+
+                const reader = new FileReader();
+                reader.onload = async function(event) {
+                    const text = event.target.result;
+                    const lines = text.split(/\r?\n/).filter(line => line.trim());
+                    if (lines.length === 0) {
+                        return showNotification('Arquivo CSV vazio ou em formato inválido.', 'error');
+                    }
+
+                    const batch = writeBatch(db);
+                    const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
+                    let importedCount = 0;
+
+                    lines.forEach(line => {
+                        const separator = line.includes(';') ? ';' : ',';
+                        const parts = line.split(separator);
+
+                        if (parts.length >= 3) {
+                            const name = parts[0].replace(/"/g, '').trim();
+                            const timeRaw = parts[1].replace(/"/g, '').trim();
+                            const subject = parts[2].replace(/"/g, '').trim();
+                            const cpf = parts.length >= 4 ? parts[3].replace(/"/g, '').trim() : null;
+                            const timeMatch = timeRaw.match(/\d{2}:\d{2}/);
+
+                            if (name && timeMatch && subject && name.toLowerCase() !== "nome completo do assistido" && name.toLowerCase() !== "nome") {
+                                const time = timeMatch[0];
+                                const exists = allAssisted.some(a => a.name === name && a.scheduledTime === time && a.subject === subject);
+                                if (!exists) {
+                                    const newDocRef = doc(collectionRef);
+                                    batch.set(newDocRef, {
+                                        name,
+                                        cpf,
+                                        scheduledTime: time,
+                                        subject,
+                                        arrivalTime: null,
+                                        attendedTime: null,
+                                        attendant: null,
+                                        status: 'pauta',
+                                        priority: null,
+                                        type: 'agendamento'
+                                    });
+                                    importedCount++;
+                                }
+                            }
+                        }
+                    });
+                    
+                    if (importedCount > 0) {
+                        try {
+                            await batch.commit();
+                            showNotification(`${importedCount} agendamento(s) importado(s) com sucesso!`, 'success');
+                        } catch(error) {
+                            console.error("Erro ao importar pauta: ", error);
+                            showNotification("Erro ao salvar pauta no banco de dados.", "error");
+                        }
+                    } else {
+                        showNotification('Nenhum agendamento novo encontrado no arquivo para importar.', 'info');
+                    }
+                };
+                reader.readAsText(file, 'UTF-8');
+                e.target.value = '';
+            });
+
             document.addEventListener('click', async (e) => {
                 const button = e.target.closest('button');
                 if (!button || !currentPautaId) return;
