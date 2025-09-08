@@ -134,7 +134,6 @@
     <div id="admin-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50"></div>
     <div id="share-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50"></div>
     
-    <!-- Modal de Chegada -->
     <div id="arrival-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
             <h3 class="text-xl font-semibold mb-4">Confirmar Horário de Chegada</h3>
@@ -149,7 +148,6 @@
         </div>
     </div>
 
-    <!-- Modal de Atendente -->
     <div id="attendant-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
             <h3 class="text-xl font-semibold mb-4">Informar Atendente</h3>
@@ -173,7 +171,6 @@
         import { getFirestore, doc, setDoc, onSnapshot, getDoc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firestore.js";
 
         document.addEventListener('DOMContentLoaded', async () => {
-            // --- Variáveis Globais ---
             let allAssisted = [];
             let db, auth;
             let currentPautaDocRef = null;
@@ -181,7 +178,6 @@
             let assistedIdToAttend = null;
             let assistedIdToCheckIn = null;
 
-            // --- Seletores de Elementos ---
             const loginModal = document.getElementById('login-modal');
             const appContainer = document.getElementById('app-container');
             const emailInput = document.getElementById('email-input');
@@ -202,7 +198,6 @@
             const tabAvulso = document.getElementById('tab-avulso');
             const scheduledTimeWrapper = document.getElementById('scheduled-time-wrapper');
 
-            // --- Modais e seus botões ---
             const arrivalModal = document.getElementById('arrival-modal');
             const arrivalTimeInput = document.getElementById('arrival-time-input');
             const confirmArrivalBtn = document.getElementById('confirm-arrival-btn');
@@ -212,7 +207,6 @@
             const attendantNameInput = document.getElementById('attendant-name-input');
             const confirmAttendantBtn = document.getElementById('confirm-attendant-btn');
             const cancelAttendantBtn = document.getElementById('cancel-attendant-btn');
-
 
             try {
                 const firebaseConfig = {
@@ -360,9 +354,19 @@
                     await signOut(auth);
                     authSuccess.textContent = 'Conta criada! Aguarde aprovação.';
                 } catch (error) {
-                    if (error.code === 'auth/weak-password') { authError.textContent = 'A senha deve ter pelo menos 6 caracteres.'; } 
-                    else if (error.code === 'auth/email-already-in-use') { authError.textContent = 'Este e-mail já está em uso.'; }
-                    else { authError.textContent = 'Erro ao criar conta.'; }
+                    // Log detalhado para depuração
+                    console.error("Erro ao criar conta:", error.code, error.message);
+
+                    if (error.code === 'auth/weak-password') { 
+                        authError.textContent = 'A senha deve ter pelo menos 6 caracteres.'; 
+                    } else if (error.code === 'auth/email-already-in-use') { 
+                        authError.textContent = 'Este e-mail já está em uso.'; 
+                    } else if (error.code === 'auth/operation-not-allowed') {
+                        authError.textContent = 'Login por E-mail/Senha não está ativado no Firebase.';
+                    }
+                    else { 
+                        authError.textContent = 'Erro ao criar conta. Verifique o console para detalhes.'; 
+                    }
                 }
             });
 
@@ -486,7 +490,6 @@
                 assistedSubjectInput.value = '';
             });
 
-            // --- Lógica dos Modais ---
             cancelArrivalBtn.addEventListener('click', () => arrivalModal.classList.add('hidden'));
             cancelAttendantBtn.addEventListener('click', () => attendantModal.classList.add('hidden'));
 
@@ -541,7 +544,6 @@
                 attendantNameInput.value = '';
             });
 
-            // --- Delegação de Eventos para botões dinâmicos ---
             document.addEventListener('click', (e) => {
                 const target = e.target.closest('button');
                 if (!target || !target.dataset.id) return;
@@ -564,7 +566,6 @@
                 }
             });
 
-            // --- Lógica das abas ---
             function switchTab(activeTab) {
                 const isAgendamento = activeTab === tabAgendamento;
                 tabAgendamento.classList.toggle('tab-active', isAgendamento);
@@ -576,9 +577,10 @@
             }
             tabAgendamento.addEventListener('click', () => switchTab(tabAgendamento));
             tabAvulso.addEventListener('click', () => switchTab(tabAvulso));
-            switchTab(tabAgendamento); // Inicia na aba correta
+            switchTab(tabAgendamento);
 
         });
     </script>
 </body>
 </html>
+
