@@ -6,6 +6,7 @@
     <title>Sistema de Gerenciamento de Atendimento - Defensoria</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
@@ -52,8 +53,8 @@
         <div class="flex justify-between items-center mb-6">
              <h2 class="text-3xl font-bold text-gray-800">Minhas Pautas</h2>
              <div>
-                <button id="admin-btn-main" class="hidden bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600">Aprovar Usuários</button>
-                <button id="logout-btn-main" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Sair</button>
+                 <button id="admin-btn-main" class="hidden bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600">Aprovar Usuários</button>
+                 <button id="logout-btn-main" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Sair</button>
              </div>
         </div>
         <div id="pautas-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
@@ -65,27 +66,29 @@
             <button id="back-to-pautas-btn" class="absolute top-0 left-0 bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
             <h1 id="pauta-title" class="text-3xl md:text-4xl font-bold text-gray-800"></h1>
             <div class="absolute top-0 right-0 flex items-center gap-2">
-                <button id="manage-members-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Gerenciar Membros</button>
+                <button id="download-csv-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700">Exportar CSV</button>
+                <button id="download-pdf-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Exportar PDF</button>
+                <button id="manage-members-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700">Membros</button>
                 <button id="reset-all-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">Zerar Pauta</button>
             </div>
         </header>
         <div id="app-content">
              <div class="mb-6">
-                <div class="border-b border-gray-200">
-                    <nav class="-mb-px flex space-x-6" aria-label="Tabs">
-                        <button id="tab-agendamento" class="tab-active whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg">Atendimento Agendado</button>
-                        <button id="tab-avulso" class="text-gray-500 hover:text-gray-700 hover:bg-gray-100 whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg">Atendimento Avulso</button>
-                    </nav>
-                </div>
-            </div>
+                 <div class="border-b border-gray-200">
+                     <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                         <button id="tab-agendamento" class="tab-active whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg">Atendimento Agendado</button>
+                         <button id="tab-avulso" class="text-gray-500 hover:text-gray-700 hover:bg-gray-100 whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg">Atendimento Avulso</button>
+                     </nav>
+                 </div>
+             </div>
             <div id="form-agendamento" class="bg-white p-6 rounded-lg shadow-md mb-8">
                 <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
                     <h2 id="form-title" class="text-xl font-semibold text-gray-700">Adicionar Novo Agendamento</h2>
                     <div id="agendamento-actions" class="flex items-center gap-4">
                          <a href="#" id="format-help-link" class="text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition-colors duration-300 flex items-center gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle-fill" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM6.95 4.95a.9.9 0 1 1 1.272.023l.2.204a.9.9 0 0 1-.226 1.273L6.95 6.451a.9.9 0 0 1-.023-1.273l.204-.2zM8 8.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
-                            <span>Como converter minha pauta?</span>
-                        </a>
+                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle-fill" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM6.95 4.95a.9.9 0 1 1 1.272.023l.2.204a.9.9 0 0 1-.226 1.273L6.95 6.451a.9.9 0 0 1-.023-1.273l.204-.2zM8 8.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+                             <span>Como converter minha pauta?</span>
+                         </a>
                         <label for="file-upload" class="cursor-pointer bg-teal-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-teal-600 transition text-sm inline-flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                             Carregar Pauta (CSV)
@@ -115,35 +118,35 @@
                 </div>
                 <div class="bg-white rounded-lg shadow-md flex flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-                        <div class="flex justify-between items-center"><h3 class="text-xl font-semibold text-gray-800">✅ Atendidos</h3><button id="download-pdf-btn" class="text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg transition">Baixar PDF</button></div>
+                        <h3 class="text-xl font-semibold text-gray-800">✅ Atendidos</h3>
                         <input type="search" id="atendidos-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
                     </div>
                     <div id="atendidos-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
             </main>
              <footer class="mt-12 bg-white p-6 rounded-lg shadow-md">
-                <h3 class="text-xl font-semibold text-gray-800 mb-2 text-center">Entenda a Ordem de Atendimento</h3>
-                <div class="text-center mb-4">
-                    <button id="toggle-logic-btn" class="text-indigo-600 hover:text-indigo-800 text-sm hover:underline transition-colors duration-300">Por que esta ordem é justa? (Clique para expandir)</button>
-                </div>
-                <div id="logic-explanation" class="hidden mt-4 text-left p-4 bg-gray-50 rounded-lg border space-y-3">
-                    <p>A lógica foi pensada para balancear a <strong>pontualidade</strong> com a <strong>realidade</strong> do dia a dia, criando um sistema justo para todos.</p>
-                    <ul class="list-disc list-inside space-y-2 text-gray-700">
-                        <li><strong>Recompensa a Pontualidade:</strong> Valoriza quem chega no horário, atendendo-os primeiro.</li>
-                        <li><strong>Oferece Tolerância:</strong> Reconhece que imprevistos acontecem, com uma janela de 20 minutos para pequenos atrasos.</li>
-                        <li><strong>Gerencia Atrasos Maiores:</strong> Coloca quem se atrasou muito no fim da fila para não prejudicar os outros.</li>
-                        <li><strong>Permite Flexibilidade:</strong> O botão "Urgente" garante que casos graves sejam atendidos imediatamente.</li>
-                        <li><strong>Critério de Desempate:</strong> Para assistidos com a mesma prioridade, a ordem de chegada define quem será o primeiro a ser atendido.</li>
-                    </ul>
-                    <p class="font-semibold text-gray-800 pt-2">O resultado é uma fila transparente, previsível e justa tanto para os assistidos quanto para a equipe.</p>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center mt-4">
-                    <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500"><p class="font-bold text-red-700">Prioridade Urgente</p><p class="text-sm text-gray-600 mt-1">Definida manualmente para casos que necessitam de atendimento imediato.</p></div>
-                    <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500"><p class="font-bold text-green-700">Prioridade Máxima</p><p class="text-sm text-gray-600 mt-1">Assistidos que chegaram no horário agendado ou adiantados.</p></div>
-                    <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500"><p class="font-bold text-orange-700">Prioridade Média</p><p class="text-sm text-gray-600 mt-1">Assistidos agendados com até 20 min de atraso ou atendimentos avulsos.</p></div>
-                    <div class="bg-gray-100 p-4 rounded-lg border-l-4 border-gray-500"><p class="font-bold text-gray-700">Prioridade Mínima</p><p class="text-sm text-gray-600 mt-1">Assistidos que chegaram com 30 minutos ou mais de atraso.</p></div>
-                </div>
-            </footer>
+                 <h3 class="text-xl font-semibold text-gray-800 mb-2 text-center">Entenda a Ordem de Atendimento</h3>
+                 <div class="text-center mb-4">
+                     <button id="toggle-logic-btn" class="text-indigo-600 hover:text-indigo-800 text-sm hover:underline transition-colors duration-300">Por que esta ordem é justa? (Clique para expandir)</button>
+                 </div>
+                 <div id="logic-explanation" class="hidden mt-4 text-left p-4 bg-gray-50 rounded-lg border space-y-3">
+                     <p>A lógica foi pensada para balancear a <strong>pontualidade</strong> com a <strong>realidade</strong> do dia a dia, criando um sistema justo para todos.</p>
+                     <ul class="list-disc list-inside space-y-2 text-gray-700">
+                         <li><strong>Recompensa a Pontualidade:</strong> Valoriza quem chega no horário, atendendo-os primeiro.</li>
+                         <li><strong>Oferece Tolerância:</strong> Reconhece que imprevistos acontecem, com uma janela de 20 minutos para pequenos atrasos.</li>
+                         <li><strong>Gerencia Atrasos Maiores:</strong> Coloca quem se atrasou muito no fim da fila para não prejudicar os outros.</li>
+                         <li><strong>Permite Flexibilidade:</strong> O botão "Urgente" garante que casos graves sejam atendidos imediatamente.</li>
+                         <li><strong>Critério de Desempate:</strong> Para assistidos com a mesma prioridade, a ordem de chegada define quem será o primeiro a ser atendido.</li>
+                     </ul>
+                     <p class="font-semibold text-gray-800 pt-2">O resultado é uma fila transparente, previsível e justa tanto para os assistidos quanto para a equipe.</p>
+                 </div>
+                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center mt-4">
+                     <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500"><p class="font-bold text-red-700">Prioridade Urgente</p><p class="text-sm text-gray-600 mt-1">Definida manualmente para casos que necessitam de atendimento imediato.</p></div>
+                     <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500"><p class="font-bold text-green-700">Prioridade Máxima</p><p class="text-sm text-gray-600 mt-1">Assistidos que chegaram no horário agendado ou adiantados.</p></div>
+                     <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500"><p class="font-bold text-orange-700">Prioridade Média</p><p class="text-sm text-gray-600 mt-1">Assistidos agendados com até 20 min de atraso ou atendimentos avulsos.</p></div>
+                     <div class="bg-gray-100 p-4 rounded-lg border-l-4 border-gray-500"><p class="font-bold text-gray-700">Prioridade Mínima</p><p class="text-sm text-gray-600 mt-1">Assistidos que chegaram com 30 minutos ou mais de atraso.</p></div>
+                 </div>
+             </footer>
         </div>
     </div>
 
@@ -167,25 +170,25 @@
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg space-y-4"><h2 class="text-2xl font-bold text-gray-800">Zerar Pauta</h2><p class="text-gray-600">Tem certeza de que deseja apagar permanentemente todos os dados desta pauta?</p><div class="flex justify-end space-x-4 pt-4"><button id="cancel-reset-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button><button id="confirm-reset-btn" class="bg-red-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-800">Zerar Pauta</button></div></div>
     </div>
      <div id="format-help-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-gray-800">Como Converter sua Pauta</h2>
-                <button id="close-format-help-btn-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
-            </div>
-            <p class="mb-4 text-gray-600">Para converter uma pauta em PDF para o formato CSV, você pode me pedir diretamente. Use o texto abaixo e envie seu arquivo PDF.</p>
-            <h3 class="font-semibold text-lg mb-2 text-gray-700">Texto para usar na IA:</h3>
-            <pre id="instruction-text" class="bg-gray-100 p-4 rounded-md text-gray-800 mb-4 max-h-40 overflow-y-auto scrollable-content"><code>Olá! Por favor, converta o conteúdo do arquivo PDF que estou enviando para o formato CSV, usando ponto e vírgula (;) como separador. O resultado deve seguir este padrão:
+         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
+             <div class="flex justify-between items-center mb-4">
+                 <h2 class="text-2xl font-bold text-gray-800">Como Converter sua Pauta</h2>
+                 <button id="close-format-help-btn-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+             </div>
+             <p class="mb-4 text-gray-600">Para converter uma pauta em PDF para o formato CSV, você pode me pedir diretamente. Use o texto abaixo e envie seu arquivo PDF.</p>
+             <h3 class="font-semibold text-lg mb-2 text-gray-700">Texto para usar na IA:</h3>
+             <pre id="instruction-text" class="bg-gray-100 p-4 rounded-md text-gray-800 mb-4 max-h-40 overflow-y-auto scrollable-content"><code>Olá! Por favor, converta o conteúdo do arquivo PDF que estou enviando para o formato CSV, usando ponto e vírgula (;) como separador. O resultado deve seguir este padrão:
 
 Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)
 
 Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .csv.</code></pre>
-             <p class="mb-4 text-gray-600 mt-4">Após a conversão, salve o texto recebido em um arquivo com a extensão <code class="bg-gray-200 text-sm p-1 rounded">.csv</code> e carregue-o no sistema.</p>
-            <div class="flex justify-end space-x-4 mt-6">
-                <button id="copy-instruction-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Copiar Texto</button>
-                <button id="close-format-help-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700 transition">Entendi</button>
-            </div>
-        </div>
-    </div>
+              <p class="mb-4 text-gray-600 mt-4">Após a conversão, salve o texto recebido em um arquivo com a extensão <code class="bg-gray-200 text-sm p-1 rounded">.csv</code> e carregue-o no sistema.</p>
+             <div class="flex justify-end space-x-4 mt-6">
+                 <button id="copy-instruction-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Copiar Texto</button>
+                 <button id="close-format-help-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700 transition">Entendi</button>
+             </div>
+         </div>
+     </div>
     <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Editar Atendente</h2>
@@ -594,6 +597,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (assistedIdToHandle) {
                     await updateDoc(doc(db, "pautas", currentPautaId, "attendances", assistedIdToHandle), { status: 'atendido', attendant: document.getElementById('attendant-name').value.trim() || 'Não informado', attendedTime: new Date().toISOString() });
                     document.getElementById('attendant-modal').classList.add('hidden');
+                    document.getElementById('attendant-name').value = '';
                 }
             });
              document.getElementById('confirm-edit-attendant-btn').addEventListener('click', async () => {
@@ -709,6 +713,87 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
             document.getElementById('close-members-modal-btn').addEventListener('click', () => document.getElementById('members-modal').classList.add('hidden'));
+
+            // --- NOVAS FUNÇÕES DE EXPORTAÇÃO ---
+
+            document.getElementById('download-pdf-btn').addEventListener('click', () => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const pautaTitle = document.getElementById('pauta-title').textContent;
+
+                const atendidos = allAssisted
+                    .filter(a => a.status === 'atendido')
+                    .sort((a, b) => new Date(a.attendedTime) - new Date(b.attendedTime));
+                
+                if (atendidos.length === 0) {
+                    showNotification("Não há atendimentos finalizados para exportar.", "info");
+                    return;
+                }
+
+                const head = [['Nome do Assistido', 'CPF', 'Assunto', 'Atendente', 'Finalizado']];
+                const body = atendidos.map(a => [
+                    a.name,
+                    a.cpf || 'N/A',
+                    a.subject,
+                    a.attendant || 'N/A',
+                    new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                ]);
+                
+                doc.setFontSize(18);
+                doc.text(`Relatório de Atendimentos - ${pautaTitle}`, 14, 22);
+                doc.setFontSize(11);
+                doc.setTextColor(100);
+                doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`, 14, 29);
+
+                doc.autoTable({
+                    startY: 35,
+                    head: head,
+                    body: body,
+                    theme: 'striped',
+                    headStyles: { fillColor: [79, 70, 229] }
+                });
+
+                doc.save(`relatorio_atendidos_${pautaTitle.replace(/\s+/g, '_')}.pdf`);
+            });
+
+            document.getElementById('download-csv-btn').addEventListener('click', () => {
+                const pautaAgendada = allAssisted
+                    .filter(a => a.type === 'agendamento')
+                    .sort((a, b) => (a.scheduledTime || '').localeCompare(b.scheduledTime || ''));
+                
+                if (pautaAgendada.length === 0) {
+                    showNotification("Não há atendimentos agendados para exportar.", "info");
+                    return;
+                }
+
+                const pautaTitle = document.getElementById('pauta-title').textContent;
+                const headers = ['Horario Agendado', 'Nome', 'CPF', 'Assunto', 'Status', 'Atendente', 'Horario Chegada', 'Horario Atendido'];
+                let csvContent = "data:text/csv;charset=utf-8," + headers.join(";") + "\n";
+
+                pautaAgendada.forEach(item => {
+                    const arrivalTime = item.arrivalTime ? new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+                    const attendedTime = item.attendedTime ? new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+                    const row = [
+                        item.scheduledTime || '',
+                        item.name || '',
+                        item.cpf || '',
+                        item.subject || '',
+                        item.status || '',
+                        item.attendant || '',
+                        arrivalTime,
+                        attendedTime
+                    ];
+                    csvContent += row.join(";") + "\n";
+                });
+                
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `pauta_completa_${pautaTitle.replace(/\s+/g, '_')}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
         });
     </script>
 </body>
