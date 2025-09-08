@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
@@ -85,7 +86,7 @@
                     <div id="agendamento-actions" class="flex items-center gap-4">
                         <a href="#" id="format-help-link" class="text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition-colors duration-300 flex items-center gap-1">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle-fill" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM6.95 4.95a.9.9 0 1 1 1.272.023l.2.204a.9.9 0 0 1-.226 1.273L6.95 6.451a.9.9 0 0 1-.023-1.273l.204-.2zM8 8.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
-                            <span>Como converter minha pauta?</span>
+                            <span>Converter Pauta PDF</span>
                         </a>
                         <label for="file-upload" class="cursor-pointer bg-teal-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-teal-600 transition text-sm inline-flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
@@ -171,26 +172,34 @@
     <div id="reset-confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg space-y-4"><h2 class="text-2xl font-bold text-gray-800">Zerar Pauta</h2><p class="text-gray-600">Tem certeza de que deseja apagar permanentemente todos os dados desta pauta?</p><div class="flex justify-end space-x-4 pt-4"><button id="cancel-reset-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button><button id="confirm-reset-btn" class="bg-red-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-800">Zerar Pauta</button></div></div>
     </div>
-     <div id="format-help-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
-          <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
-               <div class="flex justify-between items-center mb-4">
-                   <h2 class="text-2xl font-bold text-gray-800">Como Converter sua Pauta</h2>
-                   <button id="close-format-help-btn-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
-               </div>
-               <p class="mb-4 text-gray-600">Para converter uma pauta em PDF para o formato CSV, você pode me pedir diretamente. Use o texto abaixo e envie seu arquivo PDF.</p>
-               <h3 class="font-semibold text-lg mb-2 text-gray-700">Texto para usar na IA:</h3>
-               <pre id="instruction-text" class="bg-gray-100 p-4 rounded-md text-gray-800 mb-4 max-h-40 overflow-y-auto scrollable-content"><code>Olá! Por favor, converta o conteúdo do arquivo PDF que estou enviando para o formato CSV, usando ponto e vírgula (;) como separador. O resultado deve seguir este padrão:
+    <div id="pdf-converter-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">Conversor de Pauta (PDF para CSV)</h2>
+                <button id="close-converter-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            </div>
+            <p class="mb-4 text-gray-600">Envie o arquivo PDF da sua pauta e o sistema tentará extrair os dados automaticamente. A extração funciona melhor com pautas que seguem o padrão da Defensoria.</p>
+            
+            <div class="bg-gray-50 p-4 rounded-lg border">
+                <label for="pdf-upload" class="block text-sm font-medium text-gray-700 mb-2">Selecione o arquivo PDF:</label>
+                <input type="file" id="pdf-upload" accept=".pdf" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"/>
+                <div id="pdf-processing-status" class="mt-3 text-sm text-gray-600"></div>
+            </div>
 
-Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)
+            <div id="conversion-results" class="hidden mt-6">
+                <p class="font-semibold mb-2">Resultados da Extração (<span id="record-count">0</span> registros encontrados):</p>
+                <textarea id="csv-output" rows="8" class="w-full p-2 border border-gray-300 rounded-md bg-gray-50 font-mono text-xs" readonly></textarea>
+                <div class="flex justify-end space-x-4 mt-4">
+                    <button id="copy-csv-result-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Copiar CSV</button>
+                    <button id="download-csv-result-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition">Baixar .csv</button>
+                </div>
+            </div>
 
-Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .csv.</code></pre>
-               <p class="mb-4 text-gray-600 mt-4">Após a conversão, salve o texto recebido em um arquivo com a extensão <code class="bg-gray-200 text-sm p-1 rounded">.csv</code> e carregue-o no sistema.</p>
-             <div class="flex justify-end space-x-4 mt-6">
-                 <button id="copy-instruction-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Copiar Texto</button>
-                 <button id="close-format-help-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700 transition">Entendi</button>
-             </div>
-          </div>
-     </div>
+            <div class="flex justify-end mt-6">
+                <button id="close-converter-modal-btn-bottom" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
+            </div>
+        </div>
+    </div>
     <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Editar Atendente</h2>
@@ -561,7 +570,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.getElementById('edit-attendant-name').value = assisted.attendant || '';
                     document.getElementById('edit-attendant-modal').classList.remove('hidden');
                 }
-                if (button.classList.contains('return-to-pauta-btn')) {
+                 if (button.classList.contains('return-to-pauta-btn')) {
                     await updateDoc(doc(collectionRef, id), { status: 'pauta', arrivalTime: null, priority: null });
                 }
                 if (button.classList.contains('return-to-aguardando-btn')) {
@@ -637,28 +646,124 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('logic-explanation').classList.toggle('hidden');
                 e.target.textContent = document.getElementById('logic-explanation').classList.contains('hidden') ? 'Por que esta ordem é justa? (Clique para expandir)' : 'Ocultar explicação (Clique para fechar)';
             });
-             document.getElementById('format-help-link').addEventListener('click', (e) => { e.preventDefault(); document.getElementById('format-help-modal').classList.remove('hidden'); });
-            document.getElementById('close-format-help-btn-x').addEventListener('click', () => document.getElementById('format-help-modal').classList.add('hidden'));
-            document.getElementById('close-format-help-btn').addEventListener('click', () => document.getElementById('format-help-modal').classList.add('hidden'));
-             document.getElementById('copy-instruction-btn').addEventListener('click', (e) => {
-                const textToCopy = document.getElementById('instruction-text').querySelector('code').textContent;
-                const textArea = document.createElement("textarea");
-                textArea.value = textToCopy;
-                textArea.style.position = "fixed";
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                try {
-                    document.execCommand('copy');
-                    const btn = e.target;
-                    const originalText = btn.textContent;
-                    btn.textContent = 'Copiado!';
-                    setTimeout(() => { btn.textContent = originalText; }, 2000);
-                } catch (err) {
-                    showNotification('Falha ao copiar.', 'error');
-                }
-                document.body.removeChild(textArea);
+
+            // --- PDF CONVERTER LOGIC ---
+            const formatHelpLink = document.getElementById('format-help-link');
+            const pdfConverterModal = document.getElementById('pdf-converter-modal');
+            const closeConverterModalBtn = document.getElementById('close-converter-modal-btn');
+            const closeConverterModalBtnBottom = document.getElementById('close-converter-modal-btn-bottom');
+            const pdfUpload = document.getElementById('pdf-upload');
+            const pdfStatus = document.getElementById('pdf-processing-status');
+            const conversionResults = document.getElementById('conversion-results');
+            const recordCountEl = document.getElementById('record-count');
+            const csvOutputEl = document.getElementById('csv-output');
+            const copyCsvBtn = document.getElementById('copy-csv-result-btn');
+            const downloadCsvBtn = document.getElementById('download-csv-result-btn');
+
+            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
+
+            formatHelpLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                pdfConverterModal.classList.remove('hidden');
             });
+
+            [closeConverterModalBtn, closeConverterModalBtnBottom].forEach(btn => {
+                btn.addEventListener('click', () => pdfConverterModal.classList.add('hidden'));
+            });
+
+            pdfUpload.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file && file.type === 'application/pdf') {
+                    processPdf(file);
+                } else if(file) {
+                    pdfStatus.textContent = 'Por favor, selecione um arquivo PDF.';
+                    conversionResults.classList.add('hidden');
+                }
+            });
+
+            const processPdf = async (file) => {
+                try {
+                    pdfStatus.textContent = 'Processando PDF... Por favor, aguarde.';
+                    conversionResults.classList.add('hidden');
+                    csvOutputEl.value = '';
+
+                    const reader = new FileReader();
+                    reader.readAsArrayBuffer(file);
+                    reader.onload = async (e) => {
+                        const pdfData = new Uint8Array(e.target.result);
+                        const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+                        let fullText = '';
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+                        }
+                        
+                        const lines = fullText.split('\n');
+                        const records = [];
+                        let currentRecord = {};
+
+                        lines.forEach(line => {
+                            const trimmedLine = line.trim();
+                            if (!trimmedLine) return;
+
+                            if (trimmedLine.includes('Assistido')) {
+                                if (currentRecord.name) records.push(currentRecord);
+                                currentRecord = { name: trimmedLine.replace(/Assistido/g, '').trim() };
+                            } else if (trimmedLine.match(/(\d{2}:\d{2})/)) {
+                                const timeMatch = trimmedLine.match(/(\d{2}:\d{2})/);
+                                if (timeMatch && currentRecord.name && !currentRecord.hora) {
+                                    currentRecord.hora = timeMatch[1];
+                                }
+                            } else if (currentRecord.name && !currentRecord.assunto) {
+                                // Assume a line with several capitalized words is the subject
+                                if (trimmedLine.match(/([A-ZÁÉÍÓÚÇÃÕ]{3,}\s?){2,}/) && !trimmedLine.includes("DEFENSORIA")) {
+                                   currentRecord.assunto = trimmedLine;
+                                }
+                            }
+                        });
+                        if (currentRecord.name) records.push(currentRecord);
+
+                        const validRecords = records.filter(r => r.name && r.hora && r.assunto);
+                        
+                        let csv = 'Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)\n';
+                        validRecords.forEach(record => {
+                            csv += `${record.name};${record.hora};${record.assunto};\n`;
+                        });
+
+                        csvOutputEl.value = csv;
+                        recordCountEl.textContent = validRecords.length;
+                        pdfStatus.textContent = `Processamento concluído. ${validRecords.length > 0 ? 'Verifique os resultados abaixo.' : 'Nenhum registro válido foi encontrado. Tente um PDF com formatação diferente.'}`;
+                        conversionResults.classList.remove('hidden');
+                    };
+
+                } catch (error) {
+                    console.error('Erro ao processar PDF:', error);
+                    pdfStatus.textContent = 'Ocorreu um erro ao processar o arquivo PDF.';
+                    conversionResults.classList.add('hidden');
+                }
+            };
+            
+            copyCsvBtn.addEventListener('click', () => {
+                if(!csvOutputEl.value) return;
+                navigator.clipboard.writeText(csvOutputEl.value).then(() => {
+                    showNotification('CSV copiado para a área de transferência!', 'success');
+                }).catch(() => showNotification('Falha ao copiar.', 'error'));
+            });
+
+            downloadCsvBtn.addEventListener('click', () => {
+                if(!csvOutputEl.value) return;
+                const blob = new Blob([csvOutputEl.value], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'pauta_convertida.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+            // --- END PDF CONVERTER LOGIC ---
 
             document.getElementById('admin-btn-main').addEventListener('click', async () => {
                 const list = document.getElementById('pending-users-list');
@@ -776,3 +881,5 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+
+
