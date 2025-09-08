@@ -146,7 +146,7 @@
         import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, getDoc, setDoc, query, where, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {};
-        const ADMIN_UID = "25r7dYqEV3Y4d1IqfXs8c22gvvv2";
+        const ADMIN_UID = "COLE_AQUI_O_UID_DO_SEU_USUARIO_ADMIN"; // IMPORTANTE: Substituir
 
         const loadingContainer = document.getElementById('loading-container');
         const loginContainer = document.getElementById('login-container');
@@ -176,7 +176,7 @@
                 if (user) {
                     const userDoc = await getDoc(doc(db, "users", user.uid));
                     if (!userDoc.exists() || userDoc.data().status !== 'approved') {
-                        loadingText.innerHTML = `Olá! Sua conta está pendente de aprovação por um administrador.<br>Por favor, aguarde.`;
+                        loadingText.innerHTML = `Olá! Sua conta está pendente de aprovação.<br>Por favor, aguarde.`;
                         document.querySelector('.loader').style.display = 'none';
                         const logoutBtn = document.createElement('button');
                         logoutBtn.id = 'logout-pending-btn';
@@ -236,18 +236,94 @@
             });
         };
         
-        const renderAssistedList = () => { /* ... Implementação da renderAssistedList ... */ };
-        const showNotification = (message) => { /* ... Implementação da showNotification ... */ };
+        const getPriorityClass = (priority) => ({'URGENTE':'priority-urgente','Máxima':'priority-maxima','Média':'priority-media','Mínima':'priority-minima'}[priority]||'');
+        const getPriorityLabel = (priority) => ({'URGENTE':'<span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-full">URGENTE</span>','Máxima':'<span class="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full">Máxima</span>','Média':'<span class="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-full">Média</span>','Mínima':'<span class="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded-full">Mínima</span>'}[priority]||'');
+
+        const renderAssistedList = () => {
+            const pautaList = document.getElementById('pauta-list'), aguardandoList = document.getElementById('aguardando-list'), atendidosList = document.getElementById('atendidos-list');
+            [pautaList, aguardandoList, atendidosList].forEach(el => el.innerHTML = '');
+
+            const pauta = allAssisted.filter(a => a.status === 'pauta' && a.name.toLowerCase().includes(document.getElementById('pauta-search').value.toLowerCase()));
+            const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.name.toLowerCase().includes(document.getElementById('aguardando-search').value.toLowerCase()));
+            const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.name.toLowerCase().includes(document.getElementById('atendidos-search').value.toLowerCase()));
+
+            aguardando.sort((a, b) => {
+                const order = { 'URGENTE': 0, 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
+                return order[a.priority] !== order[b.priority] ? order[a.priority] - order[b.priority] : new Date(a.arrivalTime) - new Date(b.arrivalTime);
+            });
+            
+            const render = (el, data, generator) => {
+                if(data.length === 0) el.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum resultado encontrado.</p>`;
+                else data.forEach(item => el.appendChild(generator(item)));
+            };
+
+            render(pautaList, pauta, a => {
+                const card = document.createElement('div');
+                card.className = 'bg-gray-50 p-4 rounded-lg shadow-sm border';
+                card.innerHTML = `<p class="font-bold text-lg">${a.name}</p>${a.cpf ? `<p class="text-sm text-gray-500">CPF: <strong>${a.cpf}</strong></p>` : ''}<p>Assunto: <strong>${a.subject}</strong></p><p>Agendado: <strong>${a.scheduledTime}</strong></p><button data-id="${a.id}" class="check-in-btn mt-3 w-full bg-green-500 text-white font-semibold py-2 rounded-lg hover:bg-green-600">Marcar Chegada</button>`;
+                return card;
+            });
+            render(aguardandoList, aguardando, a => {
+                const card = document.createElement('div');
+                card.className = `bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)}`;
+                const arrival = a.type === 'agendamento' ? `Agendado: ${a.scheduledTime} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : `Chegada Avulsa: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+                card.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-bold text-lg">${a.name}</p>${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}<p class="text-sm">Assunto: <strong>${a.subject}</strong></p><p class="text-sm text-gray-500">${arrival}</p></div>${getPriorityLabel(a.priority)}</div><div class="mt-4 flex space-x-2"><button data-id="${a.id}" class="attend-btn flex-1 bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="urgent-btn flex-1 bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Marcar Urgente</button>` : ''}</div>`;
+                return card;
+            });
+            render(atendidosList, atendidos, a => {
+                const card = document.createElement('div');
+                card.className = 'bg-green-50 p-4 rounded-lg shadow-sm border-green-200 opacity-80';
+                card.innerHTML = `<p class="font-bold text-lg">${a.name}</p>${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}<p class="text-sm">Assunto: <strong>${a.subject}</strong></p><p class="text-sm">Finalizado: <strong>${new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong></p><div class="flex justify-between items-center mt-1"><p class="text-sm">Por: <strong>${a.attendant || 'Não informado'}</strong></p><button data-id="${a.id}" class="delete-attended-btn text-red-600 hover:text-red-800 font-semibold text-xs py-1 px-2 rounded hover:bg-red-100">Deletar</button></div>`;
+                return card;
+            });
+        };
+
+        const showNotification = (message, type = 'info') => {
+            const colors = { info: 'indigo', error: 'red', success: 'green' };
+            const color = colors[type];
+            const notification = document.createElement('div');
+            notification.className = `fixed top-5 right-5 bg-${color}-500 text-white py-3 px-6 rounded-lg shadow-lg animate-pulse`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        };
         
         document.addEventListener('DOMContentLoaded', () => {
             main();
+            let assistedIdToHandle = null;
+
+            // --- Lógica de Autenticação ---
+            const authErrorDiv = document.getElementById('auth-error');
+            const showError = (message) => { authErrorDiv.textContent = message; authErrorDiv.classList.remove('hidden'); };
             
-            document.getElementById('back-to-pautas-btn').addEventListener('click', () => {
-                unsubscribeFromAttendances();
-                currentPautaId = null;
-                showPautaSelectionScreen(auth.currentUser.uid);
+            document.getElementById('login-form').addEventListener('submit', async e => {
+                e.preventDefault();
+                authErrorDiv.classList.add('hidden');
+                try { await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value); }
+                catch (error) { showError("Email ou senha inválidos."); }
             });
-            
+            document.getElementById('register-form').addEventListener('submit', async e => {
+                e.preventDefault();
+                authErrorDiv.classList.add('hidden');
+                try {
+                    const cred = await createUserWithEmailAndPassword(auth, document.getElementById('register-email').value, document.getElementById('register-password').value);
+                    await setDoc(doc(db, "users", cred.user.uid), { email: cred.user.email, status: "pending" });
+                    showError("Conta criada! Aguarde a aprovação de um administrador.");
+                    await signOut(auth);
+                } catch (error) {
+                    if (error.code === 'auth/email-already-in-use') showError("Este email já está em uso.");
+                    else if (error.code === 'auth/weak-password') showError("A senha precisa ter no mínimo 6 caracteres.");
+                    else showError("Ocorreu um erro ao criar a conta.");
+                }
+            });
+            document.getElementById('logout-btn-main').addEventListener('click', () => signOut(auth));
+            document.getElementById('login-tab-btn').addEventListener('click', () => { document.getElementById('login-form').classList.remove('hidden'); document.getElementById('register-form').classList.add('hidden'); });
+            document.getElementById('register-tab-btn').addEventListener('click', () => { document.getElementById('login-form').classList.add('hidden'); document.getElementById('register-form').classList.remove('hidden'); });
+
+            // --- Lógica de Pautas ---
+            document.getElementById('back-to-pautas-btn').addEventListener('click', () => { unsubscribeFromAttendances(); currentPautaId = null; showPautaSelectionScreen(auth.currentUser.uid); });
+            document.getElementById('create-pauta-btn').addEventListener('click', () => document.getElementById('create-pauta-modal').classList.remove('hidden'));
+            document.getElementById('cancel-create-pauta-btn').addEventListener('click', () => document.getElementById('create-pauta-modal').classList.add('hidden'));
             document.getElementById('confirm-create-pauta-btn').addEventListener('click', async () => {
                 const name = document.getElementById('new-pauta-name').value.trim();
                 if (name && auth.currentUser) {
@@ -257,7 +333,133 @@
                     document.getElementById('new-pauta-name').value = '';
                 }
             });
-            // ... (Restante dos event listeners)
+
+            // --- Lógica da Aplicação Principal ---
+            const setMode = (mode) => { /* ... Implementação do setMode ... */ };
+            document.getElementById('tab-agendamento').addEventListener('click', () => setMode('agendamento'));
+            document.getElementById('tab-avulso').addEventListener('click', () => setMode('avulso'));
+            ['pauta-search', 'aguardando-search', 'atendidos-search'].forEach(id => document.getElementById(id).addEventListener('input', renderAssistedList));
+
+            document.getElementById('add-assisted-btn').addEventListener('click', async () => {
+                const name = document.getElementById('assisted-name').value.trim();
+                const subject = document.getElementById('assisted-subject').value.trim();
+                const isAgendamento = document.getElementById('tab-agendamento').classList.contains('tab-active');
+                if(!name || !subject || (isAgendamento && !document.getElementById('scheduled-time').value)) return showNotification("Preencha os campos obrigatórios.", "error");
+
+                const newAssisted = { name, subject, cpf: document.getElementById('assisted-cpf').value.trim() || null, status: 'pauta', type: isAgendamento ? 'agendamento' : 'avulso', scheduledTime: document.getElementById('scheduled-time').value || null, arrivalTime: null, attendedTime: null, attendant: null, priority: null };
+                if (!isAgendamento) { newAssisted.status = 'aguardando'; newAssisted.arrivalTime = new Date().toISOString(); newAssisted.priority = 'Média'; }
+
+                await addDoc(collection(db, "pautas", currentPautaId, "attendances"), newAssisted);
+                ['assisted-name', 'assisted-subject', 'assisted-cpf', 'scheduled-time'].forEach(id => document.getElementById(id).value = '');
+            });
+
+            document.addEventListener('click', async (e) => {
+                const id = e.target.dataset.id;
+                if (!id) return;
+                const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
+                if (e.target.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); }
+                if (e.target.classList.contains('attend-btn')) { assistedIdToHandle = id; document.getElementById('attendant-modal').classList.remove('hidden'); }
+                if (e.target.classList.contains('urgent-btn')) { await updateDoc(doc(collectionRef, id), { priority: 'URGENTE' }); }
+                if (e.target.classList.contains('delete-attended-btn')) { if (confirm("Tem certeza?")) await deleteDoc(doc(collectionRef, id)); }
+            });
+
+            document.getElementById('confirm-arrival-btn').addEventListener('click', async () => {
+                const arrivalTimeValue = document.getElementById('arrival-time-input').value;
+                const assisted = allAssisted.find(a => a.id === assistedIdToHandle);
+                if(arrivalTimeValue && assisted) {
+                    const arrivalDateTime = new Date();
+                    arrivalDateTime.setHours(...arrivalTimeValue.split(':'));
+                    const scheduled = new Date();
+                    scheduled.setHours(...(assisted.scheduledTime || '0:0').split(':'));
+                    const diffMinutes = (arrivalDateTime - scheduled) / 60000;
+                    const priority = diffMinutes <= 0 ? 'Máxima' : (diffMinutes <= 20 ? 'Média' : 'Mínima');
+                    await updateDoc(doc(db, "pautas", currentPautaId, "attendances", assistedIdToHandle), { status: 'aguardando', arrivalTime: arrivalDateTime.toISOString(), priority });
+                    document.getElementById('arrival-modal').classList.add('hidden');
+                }
+            });
+
+            document.getElementById('confirm-attendant-btn').addEventListener('click', async () => {
+                if (assistedIdToHandle) {
+                    await updateDoc(doc(db, "pautas", currentPautaId, "attendances", assistedIdToHandle), { status: 'atendido', attendant: document.getElementById('attendant-name').value.trim() || 'Não informado', attendedTime: new Date().toISOString() });
+                    document.getElementById('attendant-modal').classList.add('hidden');
+                }
+            });
+            
+            // --- Lógica dos Modais e Admin/Membros ---
+            document.getElementById('cancel-arrival-btn').addEventListener('click', () => document.getElementById('arrival-modal').classList.add('hidden'));
+            document.getElementById('cancel-attendant-btn').addEventListener('click', () => document.getElementById('attendant-modal').classList.add('hidden'));
+            document.getElementById('reset-all-btn').addEventListener('click', () => document.getElementById('reset-confirm-modal').classList.remove('hidden'));
+            document.getElementById('cancel-reset-btn').addEventListener('click', () => document.getElementById('reset-confirm-modal').classList.add('hidden'));
+            document.getElementById('confirm-reset-btn').addEventListener('click', async () => {
+                const batch = writeBatch(db);
+                allAssisted.forEach(a => batch.delete(doc(db, "pautas", currentPautaId, "attendances", a.id)));
+                await batch.commit();
+                showNotification("Pauta zerada com sucesso.", "success");
+                document.getElementById('reset-confirm-modal').classList.add('hidden');
+            });
+
+            document.getElementById('admin-btn-main').addEventListener('click', async () => {
+                const list = document.getElementById('pending-users-list');
+                list.innerHTML = '';
+                const q = query(collection(db, "users"), where("status", "==", "pending"));
+                const snapshot = await getDocs(q);
+                if(snapshot.empty) list.innerHTML = '<p class="text-center">Nenhum usuário pendente.</p>';
+                else snapshot.forEach(userDoc => {
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center p-3 bg-gray-100 rounded-lg';
+                    div.innerHTML = `<span>${userDoc.data().email}</span><button data-uid="${userDoc.id}" class="approve-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600">Aprovar</button>`;
+                    list.appendChild(div);
+                });
+                document.getElementById('admin-modal').classList.remove('hidden');
+            });
+            document.getElementById('pending-users-list').addEventListener('click', async (e) => {
+                if(e.target.classList.contains('approve-btn')) {
+                    await updateDoc(doc(db, "users", e.target.dataset.uid), { status: 'approved' });
+                    e.target.parentElement.remove();
+                }
+            });
+            document.getElementById('close-admin-modal-btn').addEventListener('click', () => document.getElementById('admin-modal').classList.add('hidden'));
+
+            document.getElementById('manage-members-btn').addEventListener('click', async () => {
+                const list = document.getElementById('current-members-list');
+                list.innerHTML = '';
+                const pautaDoc = await getDoc(doc(db, "pautas", currentPautaId));
+                const pautaData = pautaDoc.data();
+                pautaData.memberEmails.forEach(email => {
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center';
+                    const isOwner = pautaData.owner === auth.currentUser.uid && email === auth.currentUser.email; // Simplified check
+                    div.innerHTML = `<span>${email} ${isOwner ? '(Dono)' : ''}</span> ${!isOwner ? `<button data-email="${email}" class="remove-member-btn text-red-500 hover:text-red-700 font-semibold text-sm">Remover</button>` : ''}`;
+                    list.appendChild(div);
+                });
+                document.getElementById('members-modal').classList.remove('hidden');
+            });
+            document.getElementById('invite-member-btn').addEventListener('click', async () => {
+                const email = document.getElementById('invite-email-input').value.trim();
+                if(!email) return showNotification("Digite um email.", "error");
+                const q = query(collection(db, "users"), where("email", "==", email));
+                const snapshot = await getDocs(q);
+                if(snapshot.empty) return showNotification("Usuário não encontrado.", "error");
+                const userToInvite = snapshot.docs[0];
+                await updateDoc(doc(db, "pautas", currentPautaId), { members: arrayUnion(userToInvite.id), memberEmails: arrayUnion(email) });
+                showNotification("Usuário convidado!", "success");
+                document.getElementById('invite-email-input').value = '';
+                document.getElementById('members-modal').classList.add('hidden');
+            });
+            document.getElementById('current-members-list').addEventListener('click', async (e) => {
+                if(e.target.classList.contains('remove-member-btn')) {
+                    const email = e.target.dataset.email;
+                    const q = query(collection(db, "users"), where("email", "==", email));
+                    const snapshot = await getDocs(q);
+                    if(!snapshot.empty) {
+                        const userToRemove = snapshot.docs[0];
+                        await updateDoc(doc(db, "pautas", currentPautaId), { members: arrayRemove(userToRemove.id), memberEmails: arrayRemove(email) });
+                        showNotification("Membro removido.", "success");
+                        document.getElementById('members-modal').classList.add('hidden');
+                    }
+                }
+            });
+            document.getElementById('close-members-modal-btn').addEventListener('click', () => document.getElementById('members-modal').classList.add('hidden'));
         });
     </script>
 </body>
