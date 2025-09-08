@@ -269,9 +269,20 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 snapshot.forEach((doc) => {
                     const pauta = doc.data();
                     const card = document.createElement('div');
-                    card.className = "bg-white p-6 rounded-lg shadow-md cursor-pointer hover:shadow-xl transition-shadow";
-                    card.innerHTML = `<h3 class="font-bold text-xl mb-2">${pauta.name}</h3><p class="text-gray-600">Membros: ${pauta.memberEmails.length}</p>`;
-                    card.addEventListener('click', () => loadPauta(doc.id, pauta.name));
+                    card.className = "relative bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow";
+                    
+                    let cardContent = `<div class="cursor-pointer"><h3 class="font-bold text-xl mb-2">${pauta.name}</h3><p class="text-gray-600">Membros: ${pauta.memberEmails.length}</p></div>`;
+
+                    if (pauta.owner === userId) {
+                        cardContent += `<button data-id="${doc.id}" class="delete-pauta-btn absolute top-2 right-2 text-gray-400 hover:text-red-500 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-x-circle-fill" viewBox="0 0 16 16">
+                                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z"/>
+                            </svg>
+                        </button>`;
+                    }
+
+                    card.innerHTML = cardContent;
+                    card.querySelector('div.cursor-pointer').addEventListener('click', () => loadPauta(doc.id, pauta.name));
                     pautasList.appendChild(card);
                 });
             });
@@ -452,18 +463,43 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
 
             document.addEventListener('click', async (e) => {
-                const id = e.target.dataset.id;
-                if (!id || !currentPautaId) return;
+                const button = e.target.closest('button');
+                if (!button || !currentPautaId) return;
+
+                const id = button.dataset.id;
+                if (!id) return;
+                
                 const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
-                if (e.target.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5); }
-                if (e.target.classList.contains('attend-btn')) { assistedIdToHandle = id; document.getElementById('attendant-modal').classList.remove('hidden'); }
-                if (e.target.classList.contains('urgent-btn')) { await updateDoc(doc(collectionRef, id), { priority: 'URGENTE' }); }
-                if (e.target.classList.contains('delete-attended-btn')) { if (confirm("Tem certeza?")) await deleteDoc(doc(collectionRef, id)); }
-                if (e.target.classList.contains('edit-attendant-btn')) { 
+                if (button.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5); }
+                if (button.classList.contains('attend-btn')) { assistedIdToHandle = id; document.getElementById('attendant-modal').classList.remove('hidden'); }
+                if (button.classList.contains('urgent-btn')) { await updateDoc(doc(collectionRef, id), { priority: 'URGENTE' }); }
+                if (button.classList.contains('delete-attended-btn')) { if (confirm("Tem certeza?")) await deleteDoc(doc(collectionRef, id)); }
+                if (button.classList.contains('edit-attendant-btn')) { 
                     assistedIdToHandle = id;
                     const assisted = allAssisted.find(a => a.id === id);
                     document.getElementById('edit-attendant-name').value = assisted.attendant || '';
                     document.getElementById('edit-attendant-modal').classList.remove('hidden');
+                }
+            });
+            
+             document.getElementById('pautas-list').addEventListener('click', async (e) => {
+                const button = e.target.closest('button');
+                if (button && button.classList.contains('delete-pauta-btn')) {
+                    const pautaId = button.dataset.id;
+                    if (confirm("Tem certeza que deseja excluir esta pauta? Todos os seus dados serão perdidos permanentemente.")) {
+                        // Deletar subcoleção primeiro
+                        const attendancesRef = collection(db, "pautas", pautaId, "attendances");
+                        const attendancesSnapshot = await getDocs(attendancesRef);
+                        const batch = writeBatch(db);
+                        attendancesSnapshot.forEach(doc => {
+                            batch.delete(doc.ref);
+                        });
+                        await batch.commit();
+
+                        // Deletar o documento da pauta
+                        await deleteDoc(doc(db, "pautas", pautaId));
+                        showNotification("Pauta excluída com sucesso.", "success");
+                    }
                 }
             });
 
@@ -519,6 +555,25 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
              document.getElementById('format-help-link').addEventListener('click', (e) => { e.preventDefault(); document.getElementById('format-help-modal').classList.remove('hidden'); });
             document.getElementById('close-format-help-btn-x').addEventListener('click', () => document.getElementById('format-help-modal').classList.add('hidden'));
             document.getElementById('close-format-help-btn').addEventListener('click', () => document.getElementById('format-help-modal').classList.add('hidden'));
+             document.getElementById('copy-instruction-btn').addEventListener('click', (e) => {
+                const textToCopy = document.getElementById('instruction-text').querySelector('code').textContent;
+                const textArea = document.createElement("textarea");
+                textArea.value = textToCopy;
+                textArea.style.position = "fixed";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    const btn = e.target;
+                    const originalText = btn.textContent;
+                    btn.textContent = 'Copiado!';
+                    setTimeout(() => { btn.textContent = originalText; }, 2000);
+                } catch (err) {
+                    showNotification('Falha ao copiar.', 'error');
+                }
+                document.body.removeChild(textArea);
+            });
 
             document.getElementById('admin-btn-main').addEventListener('click', async () => {
                 const list = document.getElementById('pending-users-list');
