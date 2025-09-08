@@ -249,7 +249,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, getDoc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, getDoc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firestore.js";
 
         document.addEventListener('DOMContentLoaded', async () => {
             const loginModal = document.getElementById('login-modal');
@@ -263,6 +263,7 @@
             const authSuccess = document.getElementById('auth-success');
             const adminBtn = document.getElementById('admin-btn');
             const pautaOwnerDisplay = document.getElementById('pauta-owner-display');
+            const addAssistedBtn = document.getElementById('add-assisted-btn');
 
             let allAssisted = [];
             let db, auth;
@@ -303,10 +304,7 @@
                 unsubscribeFromPauta = onSnapshot(docRef, (docSnap) => {
                     const data = docSnap.data();
                     allAssisted = (data && data.assistedList) ? data.assistedList : [];
-                    renderAll();
-                }, (error) => {
-                    console.error("Erro ao ouvir pauta:", error);
-                    pautaOwnerDisplay.textContent = "Erro ao carregar pauta.";
+                    renderAssistedList();
                 });
             };
 
@@ -372,23 +370,18 @@
                     currentPautaDocRef = null;
                 }
             });
-
+            
             loginBtn.addEventListener('click', async () => {
                 const email = emailInput.value.trim();
                 const password = passwordInput.value.trim();
                 authError.textContent = '';
-                if (!email || !password) {
-                    authError.textContent = 'Preencha e-mail e senha.';
-                    return;
-                }
+                if (!email || !password) { authError.textContent = 'Preencha e-mail e senha.'; return; }
                 try {
                     await signInWithEmailAndPassword(auth, email, password);
                 } catch (error) {
                     if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
                         authError.textContent = 'E-mail ou senha inválidos.';
-                    } else {
-                        authError.textContent = 'Erro ao tentar entrar.';
-                    }
+                    } else { authError.textContent = 'Erro ao tentar entrar.'; }
                 }
             });
 
@@ -398,39 +391,25 @@
                 authError.textContent = '';
                 authSuccess.textContent = '';
                  try {
-                    if (!email || !password) {
-                        authError.textContent = 'Preencha e-mail e senha.';
-                        return;
-                    }
+                    if (!email || !password) { authError.textContent = 'Preencha e-mail e senha.'; return; }
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                     const user = userCredential.user;
                     const appId = "acaopauta";
                     const userProfileRef = doc(db, 'artifacts', appId, 'user_profiles', user.uid);
                     await setDoc(userProfileRef, { email: user.email, uid: user.uid, status: 'pending' });
-                    
                     await signOut(auth);
                     authSuccess.textContent = 'Conta criada! Aguarde aprovação.';
                 } catch (error) {
-                    if (error.code === 'auth/weak-password') {
-                        authError.textContent = 'A senha deve ter pelo menos 6 caracteres.';
-                    } else if (error.code === 'auth/email-already-in-use') {
-                        authError.textContent = 'Este e-mail já está em uso.';
-                    } else {
-                        authError.textContent = 'Erro ao criar conta.';
-                    }
+                    if (error.code === 'auth/weak-password') { authError.textContent = 'A senha deve ter pelo menos 6 caracteres.'; } 
+                    else if (error.code === 'auth/email-already-in-use') { authError.textContent = 'Este e-mail já está em uso.'; }
+                    else { authError.textContent = 'Erro ao criar conta.'; }
                 }
             });
 
             logoutBtn.addEventListener('click', () => signOut(auth));
-
-            function renderAll() {
-                // Função wrapper para chamar todas as funções de renderização
-                renderAssistedList();
-                // Adicione outras funções de renderização aqui se necessário
-            }
-
-            function renderAssistedList() {
-                // A lógica completa de renderização das listas
+            
+            const renderAssistedList = () => {
+                // Conteúdo completo da função renderAssistedList
                 const pautaList = document.getElementById('pauta-list');
                 const aguardandoList = document.getElementById('aguardando-list');
                 const atendidosList = document.getElementById('atendidos-list');
@@ -534,23 +513,65 @@
                     `;
                     atendidosList.appendChild(assistedCard);
                 });
-            }
+            };
 
-            // --- Event Listeners e Lógica da Aplicação ---
-            document.addEventListener('click', (e) => {
-                const assistedId = e.target.dataset.id ? parseInt(e.target.dataset.id) : null;
+            addAssistedBtn.addEventListener('click', () => {
+                const assistedNameInput = document.getElementById('assisted-name');
+                const assistedCpfInput = document.getElementById('assisted-cpf');
+                const scheduledTimeInput = document.getElementById('scheduled-time');
+                const assistedSubjectInput = document.getElementById('assisted-subject');
+                const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
+
+                const name = assistedNameInput.value.trim();
+                const cpf = assistedCpfInput.value.trim();
+                const time = scheduledTimeInput.value;
+                const subject = assistedSubjectInput.value.trim();
+
+                const isAgendamentoValid = currentMode === 'agendamento' && name && time && subject;
+                const isAvulsoValid = currentMode === 'avulso' && name && subject;
+
+                if (isAgendamentoValid || isAvulsoValid) {
+                    const newAssisted = {
+                        id: Date.now(), name, cpf, subject, arrivalTime: null,
+                        attendedTime: null, attendant: null, priority: null, type: currentMode
+                    };
+                    if (currentMode === 'agendamento') {
+                        newAssisted.status = 'pauta';
+                        newAssisted.scheduledTime = time;
+                    } else {
+                        newAssisted.status = 'aguardando';
+                        newAssisted.arrivalTime = new Date().toISOString();
+                        newAssisted.priority = 'Média';
+                    }
+                    allAssisted.push(newAssisted);
+                    saveDataToFirestore(allAssisted);
+                    assistedNameInput.value = '';
+                    assistedCpfInput.value = '';
+                    scheduledTimeInput.value = '';
+                    assistedSubjectInput.value = '';
+                }
+            });
+
+             document.addEventListener('click', (e) => {
+                const assistedId = parseInt(e.target.dataset.id);
                 if (!assistedId) return;
 
                 let assisted = allAssisted.find(a => a.id === assistedId);
+                if (!assisted) return;
                 
                 if (e.target.classList.contains('check-in-btn')) {
-                    // Lógica para marcar chegada
+                    const arrivalModal = document.getElementById('arrival-modal');
+                    arrivalModal.classList.remove('hidden');
+                    // Lógica para preencher e confirmar o modal de chegada...
                 }
                 if (e.target.classList.contains('attend-btn')) {
-                    // Lógica para atender
+                    const attendantModal = document.getElementById('attendant-modal');
+                    attendantModal.classList.remove('hidden');
+                    // Lógica para preencher e confirmar o modal de atendimento...
                 }
-                if (e.target.classList.contains('urgent-btn')) {
-                    // Lógica para marcar urgente
+                 if (e.target.classList.contains('urgent-btn')) {
+                    assisted.priority = 'URGENTE';
+                    saveDataToFirestore(allAssisted);
                 }
             });
 
