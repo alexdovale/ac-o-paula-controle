@@ -252,6 +252,7 @@
         import { getFirestore, doc, setDoc, onSnapshot, getDoc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firestore.js";
 
         document.addEventListener('DOMContentLoaded', async () => {
+            // --- Variáveis Globais e de Elementos ---
             const loginModal = document.getElementById('login-modal');
             const appContainer = document.getElementById('app-container');
             const emailInput = document.getElementById('email-input');
@@ -264,6 +265,11 @@
             const adminBtn = document.getElementById('admin-btn');
             const pautaOwnerDisplay = document.getElementById('pauta-owner-display');
             const addAssistedBtn = document.getElementById('add-assisted-btn');
+            const assistedNameInput = document.getElementById('assisted-name');
+            const assistedCpfInput = document.getElementById('assisted-cpf');
+            const scheduledTimeInput = document.getElementById('scheduled-time');
+            const assistedSubjectInput = document.getElementById('assisted-subject');
+            const tabAgendamento = document.getElementById('tab-agendamento');
             
             let allAssisted = [];
             let db, auth;
@@ -517,12 +523,7 @@
             };
 
             addAssistedBtn.addEventListener('click', () => {
-                const assistedNameInput = document.getElementById('assisted-name');
-                const assistedCpfInput = document.getElementById('assisted-cpf');
-                const scheduledTimeInput = document.getElementById('scheduled-time');
-                const assistedSubjectInput = document.getElementById('assisted-subject');
-                const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-
+                const currentMode = tabAgendamento.classList.contains('tab-active') ? 'agendamento' : 'avulso';
                 const name = assistedNameInput.value.trim();
                 const cpf = assistedCpfInput.value.trim();
                 const time = scheduledTimeInput.value;
@@ -554,24 +555,24 @@
             });
 
             document.addEventListener('click', (e) => {
-                const assistedId = parseInt(e.target.dataset.id);
                 if (!e.target.dataset.id) return;
+                const assistedId = parseInt(e.target.dataset.id);
                 
                 let assisted = allAssisted.find(a => a.id === assistedId);
                 if (!assisted) return;
                 
                 if (e.target.classList.contains('check-in-btn')) {
+                    assistedIdToCheckIn = assistedId;
                     const arrivalModal = document.getElementById('arrival-modal');
                     const arrivalTimeInput = document.getElementById('arrival-time-input');
                     const now = new Date();
                     arrivalTimeInput.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
                     arrivalModal.classList.remove('hidden');
-                    assistedIdToCheckIn = assistedId;
                 }
                 if (e.target.classList.contains('attend-btn')) {
+                    assistedIdToAttend = assistedId;
                     const attendantModal = document.getElementById('attendant-modal');
                     attendantModal.classList.remove('hidden');
-                    assistedIdToAttend = assistedId;
                 }
                  if (e.target.classList.contains('urgent-btn')) {
                     assisted.priority = 'URGENTE';
