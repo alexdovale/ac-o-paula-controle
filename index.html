@@ -264,11 +264,13 @@
             const adminBtn = document.getElementById('admin-btn');
             const pautaOwnerDisplay = document.getElementById('pauta-owner-display');
             const addAssistedBtn = document.getElementById('add-assisted-btn');
-
+            
             let allAssisted = [];
             let db, auth;
             let currentPautaDocRef = null;
             let unsubscribeFromPauta = () => {};
+            let assistedIdToAttend = null;
+            let assistedIdToCheckIn = null;
 
             try {
                 const firebaseConfig = {
@@ -409,7 +411,6 @@
             logoutBtn.addEventListener('click', () => signOut(auth));
             
             const renderAssistedList = () => {
-                // Conteúdo completo da função renderAssistedList
                 const pautaList = document.getElementById('pauta-list');
                 const aguardandoList = document.getElementById('aguardando-list');
                 const atendidosList = document.getElementById('atendidos-list');
@@ -552,22 +553,25 @@
                 }
             });
 
-             document.addEventListener('click', (e) => {
+            document.addEventListener('click', (e) => {
                 const assistedId = parseInt(e.target.dataset.id);
-                if (!assistedId) return;
-
+                if (!e.target.dataset.id) return;
+                
                 let assisted = allAssisted.find(a => a.id === assistedId);
                 if (!assisted) return;
                 
                 if (e.target.classList.contains('check-in-btn')) {
                     const arrivalModal = document.getElementById('arrival-modal');
+                    const arrivalTimeInput = document.getElementById('arrival-time-input');
+                    const now = new Date();
+                    arrivalTimeInput.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
                     arrivalModal.classList.remove('hidden');
-                    // Lógica para preencher e confirmar o modal de chegada...
+                    assistedIdToCheckIn = assistedId;
                 }
                 if (e.target.classList.contains('attend-btn')) {
                     const attendantModal = document.getElementById('attendant-modal');
                     attendantModal.classList.remove('hidden');
-                    // Lógica para preencher e confirmar o modal de atendimento...
+                    assistedIdToAttend = assistedId;
                 }
                  if (e.target.classList.contains('urgent-btn')) {
                     assisted.priority = 'URGENTE';
