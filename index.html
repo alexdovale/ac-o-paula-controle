@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Gerenciamento de Pauta - SIGEP</title>
     
-    <!-- Ícone do Navegador (Favicon) -->
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ac-o-paula-controle/imagem.png">
 
-    <!-- Metatags para PWA -->
     <meta name="theme-color" content="#16a34a"/>
     <link rel="apple-touch-icon" href="https://alexdovale.github.io/ac-o-paula-controle/imagem.png">
     <link rel="manifest" href="data:application/manifest+json,{
@@ -77,6 +75,9 @@
                 <div><label for="register-password" class="block text-sm font-medium text-gray-700">Senha (mínimo 6 caracteres)</label><input type="password" id="register-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"></div>
                 <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">Criar Conta</button>
             </form>
+             <a href="#" id="privacy-policy-link" class="block mt-4 text-center text-sm text-gray-500 hover:underline">
+                 Política de Privacidade
+             </a>
         </div>
     </div>
 
@@ -88,7 +89,6 @@
                  <button id="logout-btn-main" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Sair</button>
              </div>
         </div>
-        <!-- Botão de Instalação do PWA -->
         <div id="install-container" class="hidden my-4 p-3 bg-green-100 border border-green-200 rounded-lg text-center">
             <p class="text-sm text-green-800">Leve o gerenciador de pautas com você!</p>
             <button id="install-button" class="mt-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 text-sm rounded-lg shadow-md hover:shadow-lg transition-all">
@@ -184,16 +184,30 @@
                      <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500"><p class="font-bold text-green-700">Prioridade Máxima</p><p class="text-sm text-gray-600 mt-1">Assistidos que chegaram no horário agendado ou adiantados.</p></div>
                      <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500"><p class="font-bold text-orange-700">Prioridade Média</p><p class="text-sm text-gray-600 mt-1">Assistidos agendados com até 20 min de atraso ou atendimentos avulsos.</p></div>
                      <div class="bg-gray-100 p-4 rounded-lg border-l-4 border-gray-500"><p class="font-bold text-gray-700">Prioridade Mínima</p><p class="text-sm text-gray-600 mt-1">Assistidos que chegaram com 30 minutos ou mais de atraso.</p></div>
-                 </div>
+               </div>
                  <p class="text-center text-sm text-gray-500 mt-8">Desenvolvido por Alex do Vale e o Gemini</p>
              </footer>
         </div>
     </div>
 
-    <!-- Modais -->
     <div id="create-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold mb-4">Criar Nova Pauta</h2><label for="new-pauta-name" class="block text-sm font-medium text-gray-700 mb-2">Nome da Pauta</label><input type="text" id="new-pauta-name" placeholder="Ex: Pauta Cível - 08/09/2025" class="w-full p-3 border border-gray-300 rounded-lg mb-6"><div class="flex justify-end space-x-4"><button id="cancel-create-pauta-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button><button id="confirm-create-pauta-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Criar</button></div></div>
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Criar Nova Pauta</h2>
+            <label for="new-pauta-name" class="block text-sm font-medium text-gray-700 mb-2">Nome da Pauta</label>
+            <input type="text" id="new-pauta-name" placeholder="Ex: Pauta Cível - 08/09/2025" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
+            
+            <div class="bg-gray-100 border border-gray-200 p-4 rounded-lg mb-6">
+                <p class="text-sm text-gray-700 font-semibold">Atenção:</p>
+                <p class="text-sm text-gray-600 mt-1">Os dados desta pauta serão eliminados do SIGEP automaticamente 2 dias após a sua realização. Para armazenamento permanente, eles serão enviados ao sistema Verde da DPERJ.</p>
+            </div>
+            
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-create-pauta-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-create-pauta-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Criar</button>
+            </div>
+        </div>
     </div>
+    
     <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg"><h2 class="text-2xl font-bold mb-4">Gerenciar Membros</h2><div class="space-y-2 mb-4"><label for="invite-email-input" class="block text-sm font-medium text-gray-700">Convidar por email</label><div class="flex gap-2"><input type="email" id="invite-email-input" class="flex-1 p-2 border border-gray-300 rounded-lg" placeholder="email@exemplo.com"><button id="invite-member-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Convidar</button></div></div><h3 class="font-semibold mt-6 mb-2">Membros Atuais</h3><div id="current-members-list" class="space-y-2 max-h-40 overflow-y-auto"></div><div class="flex justify-end mt-6"><button id="close-members-modal-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button></div></div>
     </div>
@@ -209,7 +223,7 @@
     <div id="reset-confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg space-y-4"><h2 class="text-2xl font-bold text-gray-800">Zerar Pauta</h2><p class="text-gray-600">Tem certeza de que deseja apagar permanentemente todos os dados desta pauta?</p><div class="flex justify-end space-x-4 pt-4"><button id="cancel-reset-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button><button id="confirm-reset-btn" class="bg-red-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-800">Zerar Pauta</button></div></div>
     </div>
-     <div id="format-help-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
+      <div id="format-help-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
           <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
                <div class="flex justify-between items-center mb-4">
                    <h2 class="text-2xl font-bold text-gray-800">Como Converter sua Pauta</h2>
@@ -249,12 +263,37 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     <input type="number" id="demands-quantity" min="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500">
                 </div>
                 <div id="demands-descriptions-container" class="space-y-2 max-h-60 overflow-y-auto scrollable-content pr-2">
-                    <!-- Textareas will be dynamically inserted here -->
-                </div>
+                    </div>
             </div>
             <div class="flex justify-end space-x-4 mt-6">
                 <button id="cancel-demands-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
                 <button id="confirm-demands-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar Demandas</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg max-h-4/5 overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">Política de Privacidade</h2>
+                <button id="close-policy-modal-btn-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            </div>
+            <div id="policy-content" class="text-gray-700 space-y-4">
+                <p><strong>1. Natureza do Sistema e Ciclo de Vida dos Dados</strong></p>
+                <p>O Sistema de Gerenciamento de Pauta (SIGEP) é uma interface de controle para a gestão de atendimentos. Ele coleta e armazena os dados pessoais de assistidos, como nome, CPF (opcional), assunto e demanda, por um período de <strong>dois dias após a finalização da ação</strong>. Após esse prazo, os dados são permanentemente excluídos do SIGEP.</p>
+                <p>Para o armazenamento permanente, todos os dados são enviados e salvos no sistema <strong>Verde</strong>, que é de responsabilidade da <strong>Defensoria Pública do Estado do Rio de Janeiro (DPERJ)</strong> e está em total conformidade com a LGPD.</p>
+                
+                <p><strong>2. Dados Coletados pelo SIGEP</strong></p>
+                <p>Para permitir o uso da interface, o SIGEP coleta apenas os dados de <strong>autenticação dos usuários (profissionais)</strong>: <strong>e-mail e senha</strong>.</p>
+                
+                <p><strong>3. Tratamento e Proteção de Dados (dentro do SIGEP)</strong></p>
+                <p>Os dados de autenticação são utilizados para garantir o acesso restrito e seguro ao sistema. Os dados de assistidos são armazenados por apenas dois dias, tempo necessário para a conclusão da ação, e são protegidos por medidas de segurança para evitar acesso não autorizado.</p>
+                
+                <p><strong>4. Direitos dos Titulares dos Dados</strong></p>
+                <p>Os direitos dos assistidos, como acesso, correção e exclusão de dados, são garantidos e exercidos diretamente por meio do sistema <strong>Verde</strong>, que é o responsável pelo armazenamento final. Os usuários do SIGEP podem gerenciar a pauta e solicitar alterações no sistema <strong>Verde</strong> conforme as normas da DPERJ.</p>
+            </div>
+            <div class="flex justify-end mt-6">
+                <button id="close-policy-modal-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Fechar</button>
             </div>
         </div>
     </div>
@@ -334,7 +373,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const card = document.createElement('div');
                     card.className = "relative bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow";
                     
-                    let cardContent = `<div class="cursor-pointer"><h3 class="font-bold text-xl mb-2">${pauta.name}</h3><p class="text-gray-600">Membros: ${pauta.memberEmails.length}</p></div>`;
+                    const dataPauta = pauta.dataDaPauta ? new Date(pauta.dataDaPauta).toLocaleDateString('pt-BR') : 'N/A';
+                    const dataEliminacao = pauta.dataDeEliminacao ? new Date(pauta.dataDeEliminacao).toLocaleDateString('pt-BR') : 'N/A';
+                    
+                    let cardContent = `
+                        <div class="cursor-pointer">
+                            <h3 class="font-bold text-xl mb-2">${pauta.name}</h3>
+                            <p class="text-gray-600">Membros: ${pauta.memberEmails.length}</p>
+                            <p class="text-sm text-gray-500 mt-2"><strong>Data da Pauta:</strong> ${dataPauta}</p>
+                            <p class="text-sm text-gray-500"><strong>Dados serão eliminados em:</strong> ${dataEliminacao}</p>
+                        </div>
+                    `;
 
                     if (pauta.owner === userId) {
                         cardContent += `<button data-id="${doc.id}" class="delete-pauta-btn absolute top-2 right-2 text-gray-400 hover:text-red-500 transition-colors">
@@ -526,7 +575,18 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const name = document.getElementById('new-pauta-name').value.trim();
                 if (name && auth.currentUser) {
                     const { uid, email } = auth.currentUser;
-                    await addDoc(collection(db, "pautas"), { name, owner: uid, members: [uid], memberEmails: [email] });
+                    const dataDaPauta = new Date();
+                    const dataDeEliminacao = new Date(dataDaPauta);
+                    dataDeEliminacao.setDate(dataDeEliminacao.getDate() + 2);
+
+                    await addDoc(collection(db, "pautas"), {
+                        name,
+                        owner: uid,
+                        members: [uid],
+                        memberEmails: [email],
+                        dataDaPauta: dataDaPauta.toISOString(),
+                        dataDeEliminacao: dataDeEliminacao.toISOString()
+                    });
                     document.getElementById('create-pauta-modal').classList.add('hidden');
                     document.getElementById('new-pauta-name').value = '';
                 }
@@ -704,7 +764,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
             
-             document.getElementById('pautas-list').addEventListener('click', async (e) => {
+            document.getElementById('pautas-list').addEventListener('click', async (e) => {
                 const button = e.target.closest('button');
                 if (button && button.classList.contains('delete-pauta-btn')) {
                     const pautaId = button.dataset.id;
@@ -753,7 +813,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.getElementById('attendant-name').value = '';
                 }
             });
-             document.getElementById('confirm-edit-attendant-btn').addEventListener('click', async () => {
+            document.getElementById('confirm-edit-attendant-btn').addEventListener('click', async () => {
                 if (assistedIdToHandle) {
                     await updateDoc(doc(db, "pautas", currentPautaId, "attendances", assistedIdToHandle), { attendant: document.getElementById('edit-attendant-name').value.trim() || 'Não informado' });
                     document.getElementById('edit-attendant-modal').classList.add('hidden');
@@ -803,10 +863,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('logic-explanation').classList.toggle('hidden');
                 e.target.textContent = document.getElementById('logic-explanation').classList.contains('hidden') ? 'Por que esta ordem é justa? (Clique para expandir)' : 'Ocultar explicação (Clique para fechar)';
             });
-             document.getElementById('format-help-link').addEventListener('click', (e) => { e.preventDefault(); document.getElementById('format-help-modal').classList.remove('hidden'); });
-             document.getElementById('close-format-help-btn-x').addEventListener('click', () => document.getElementById('format-help-modal').classList.add('hidden'));
-             document.getElementById('close-format-help-btn').addEventListener('click', () => document.getElementById('format-help-modal').classList.add('hidden'));
-             document.getElementById('copy-instruction-btn').addEventListener('click', (e) => {
+            document.getElementById('format-help-link').addEventListener('click', (e) => { e.preventDefault(); document.getElementById('format-help-modal').classList.remove('hidden'); });
+            document.getElementById('close-format-help-btn-x').addEventListener('click', () => document.getElementById('format-help-modal').classList.add('hidden'));
+            document.getElementById('close-format-help-btn').addEventListener('click', () => document.getElementById('format-help-modal').classList.add('hidden'));
+            document.getElementById('copy-instruction-btn').addEventListener('click', (e) => {
                 const textToCopy = document.getElementById('instruction-text').querySelector('code').textContent;
                 const textArea = document.createElement("textarea");
                 textArea.value = textToCopy;
@@ -920,7 +980,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         const additionalSubjects = a.demandas.descricoes.map(d => `- ${d.trim()}`).filter(d => d !== '-');
                          if(additionalSubjects.length > 0) {
                              allSubjects = allSubjects.concat(additionalSubjects);
-                         }
+                           }
                     }
                     return [
                         a.name,
@@ -956,7 +1016,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         });
     </script>
     
-    <!-- Script para PWA (Service Worker e Lógica de Instalação) -->
     <script>
         if ('serviceWorker' in navigator) {
             const swContent = `
@@ -1030,7 +1089,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (deferredPrompt) {
                     deferredPrompt.prompt();
                     const { outcome } = await deferredPrompt.userChoice;
-                    console.log(\`Resposta do usuário ao prompt: \${outcome}\`);
+                    console.log(`Resposta do usuário ao prompt: ${outcome}`);
                     deferredPrompt = null;
                 }
             });
@@ -1041,6 +1100,20 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             if(installContainer) installContainer.classList.add('hidden');
             deferredPrompt = null;
             console.log('PWA foi instalado');
+        });
+
+        // Lógica do Modal da Política de Privacidade
+        document.getElementById('privacy-policy-link').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('privacy-policy-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('close-policy-modal-btn-x').addEventListener('click', () => {
+            document.getElementById('privacy-policy-modal').classList.add('hidden');
+        });
+
+        document.getElementById('close-policy-modal-btn').addEventListener('click', () => {
+            document.getElementById('privacy-policy-modal').classList.add('hidden');
         });
     </script>
 </body>
