@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Gerenciamento de Atendimento - Defensoria</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -336,9 +336,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const pautaList = document.getElementById('pauta-list'), aguardandoList = document.getElementById('aguardando-list'), atendidosList = document.getElementById('atendidos-list');
             [pautaList, aguardandoList, atendidosList].forEach(el => el.innerHTML = '');
 
-            const pauta = allAssisted.filter(a => a.status === 'pauta' && a.name.toLowerCase().includes(document.getElementById('pauta-search').value.toLowerCase()));
-            const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.name.toLowerCase().includes(document.getElementById('aguardando-search').value.toLowerCase()));
-            const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.name.toLowerCase().includes(document.getElementById('atendidos-search').value.toLowerCase()));
+            const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
+
+            // Filter lists based on the current mode
+            const pauta = allAssisted.filter(a => a.type === 'agendamento' && a.status === 'pauta' && a.name.toLowerCase().includes(document.getElementById('pauta-search').value.toLowerCase()));
+            const aguardando = allAssisted.filter(a => a.type === currentMode && a.status === 'aguardando' && a.name.toLowerCase().includes(document.getElementById('aguardando-search').value.toLowerCase()));
+            const atendidos = allAssisted.filter(a => a.type === currentMode && a.status === 'atendido' && a.name.toLowerCase().includes(document.getElementById('atendidos-search').value.toLowerCase()));
 
             pauta.sort((a, b) => (a.order || 0) - (b.order || 0));
             atendidos.sort((a, b) => new Date(a.attendedTime) - new Date(b.attendedTime));
@@ -511,6 +514,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 mainContent.classList.toggle('lg:grid-cols-3', isAgendamento);
                 mainContent.classList.toggle('lg:grid-cols-2', !isAgendamento);
                 ['assisted-name', 'assisted-subject', 'assisted-cpf', 'scheduled-time'].forEach(id => document.getElementById(id).value = '');
+                renderAssistedList();
             };
             document.getElementById('tab-agendamento').addEventListener('click', () => setMode('agendamento'));
             document.getElementById('tab-avulso').addEventListener('click', () => setMode('avulso'));
