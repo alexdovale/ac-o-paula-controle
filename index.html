@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Gerenciamento de Atendimento - Defensoria</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -201,6 +201,25 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
         </div>
     </div>
+    <div id="demands-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
+            <h2 class="text-2xl font-bold mb-4">Editar Demandas para <span id="demands-assisted-name" class="text-indigo-600"></span></h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="demands-quantity" class="block text-sm font-medium text-gray-700">Quantidade de Demandas</label>
+                    <input type="number" id="demands-quantity" min="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div id="demands-descriptions-container" class="space-y-2 max-h-60 overflow-y-auto scrollable-content pr-2">
+                    <!-- Textareas will be dynamically inserted here -->
+                </div>
+            </div>
+            <div class="flex justify-end space-x-4 mt-6">
+                <button id="cancel-demands-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-demands-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700">Salvar Demandas</button>
+            </div>
+        </div>
+    </div>
+
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -324,18 +343,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             atendidos.sort((a, b) => new Date(a.attendedTime) - new Date(b.attendedTime));
             
             aguardando.sort((a, b) => {
-                // 1. Sort by priority
                 const order = { 'URGENTE': 0, 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
                 const priorityDiff = order[a.priority] - order[b.priority];
                 if (priorityDiff !== 0) return priorityDiff;
-
-                // 2. Sort by manually input arrival time
                 const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : 0;
                 const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : 0;
                 const arrivalDiff = arrivalA - arrivalB;
                 if (arrivalDiff !== 0) return arrivalDiff;
-
-                // 3. Tie-breaker: sort by check-in timestamp (when the button was clicked)
                 const checkInA = a.checkInTimestamp ? new Date(a.checkInTimestamp).getTime() : 0;
                 const checkInB = b.checkInTimestamp ? new Date(b.checkInTimestamp).getTime() : 0;
                 return checkInA - checkInB;
@@ -362,7 +376,27 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             render(atendidosList, atendidos, a => {
                 const card = document.createElement('div');
                 card.className = 'bg-green-50 p-4 rounded-lg shadow-sm border-green-200 opacity-80';
-                card.innerHTML = `<p class="font-bold text-lg">${a.name}</p>${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}<p class="text-sm">Assunto: <strong>${a.subject}</strong></p><p class="text-sm">Finalizado: <strong>${new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong></p><div class="flex justify-between items-center mt-1"><p class="text-sm">Por: <strong>${a.attendant || 'Não informado'}</strong></p><div><button data-id="${a.id}" class="edit-attendant-btn text-indigo-600 hover:text-indigo-800 font-semibold text-xs py-1 px-2 rounded hover:bg-indigo-100">Editar</button><button data-id="${a.id}" class="delete-attended-btn text-red-600 hover:text-red-800 font-semibold text-xs py-1 px-2 rounded hover:bg-red-100">Deletar</button></div></div><button data-id="${a.id}" class="return-to-aguardando-btn mt-2 w-full bg-yellow-500 text-white font-semibold py-1 rounded-lg hover:bg-yellow-600 text-xs">Voltar p/ Aguardando</button>`;
+
+                const demandasInfo = a.demandas && a.demandas.descricoes && a.demandas.descricoes.length > 0 ?
+                    `<div class="mt-2 text-xs bg-gray-100 p-2 rounded">
+                        <strong class="text-gray-700">Demandas (${a.demandas.quantidade || 0}):</strong>
+                        <ul class="list-disc list-inside pl-2 text-gray-600">${a.demandas.descricoes.map(d => `<li>${d}</li>`).join('')}</ul>
+                     </div>` : '';
+
+                card.innerHTML = `<p class="font-bold text-lg">${a.name} ${a.demandas && a.demandas.quantidade > 0 ? `<span class="text-sm font-medium text-indigo-600">(${a.demandas.quantidade} demanda${a.demandas.quantidade > 1 ? 's' : ''})</span>` : ''}</p>
+                    ${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}
+                    <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
+                    <p class="text-sm">Finalizado: <strong>${new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong></p>
+                    ${demandasInfo}
+                    <div class="flex justify-between items-center mt-2">
+                        <p class="text-sm">Por: <strong>${a.attendant || 'Não informado'}</strong></p>
+                        <div class="flex items-center gap-1">
+                            <button data-id="${a.id}" class="edit-demands-btn text-purple-600 hover:text-purple-800 font-semibold text-xs py-1 px-2 rounded hover:bg-purple-100">Demandas</button>
+                            <button data-id="${a.id}" class="edit-attendant-btn text-indigo-600 hover:text-indigo-800 font-semibold text-xs py-1 px-2 rounded hover:bg-indigo-100">Editar</button>
+                            <button data-id="${a.id}" class="delete-attended-btn text-red-600 hover:text-red-800 font-semibold text-xs py-1 px-2 rounded hover:bg-red-100">Deletar</button>
+                        </div>
+                    </div>
+                    <button data-id="${a.id}" class="return-to-aguardando-btn mt-2 w-full bg-yellow-500 text-white font-semibold py-1 rounded-lg hover:bg-yellow-600 text-xs">Voltar p/ Aguardando</button>`;
                 return card;
             });
         };
@@ -377,6 +411,24 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             setTimeout(() => notification.remove(), 3000);
         };
         
+        const updateDemandDescriptions = (quantity, descriptions = []) => {
+            const container = document.getElementById('demands-descriptions-container');
+            container.innerHTML = '';
+            for (let i = 0; i < quantity; i++) {
+                const div = document.createElement('div');
+                const label = document.createElement('label');
+                label.textContent = `Descrição da Demanda ${i + 1}`;
+                label.className = "block text-sm font-medium text-gray-600 mb-1";
+                const textarea = document.createElement('textarea');
+                textarea.className = "demand-description-input mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500";
+                textarea.rows = 2;
+                textarea.value = descriptions[i] || '';
+                div.appendChild(label);
+                div.appendChild(textarea);
+                container.appendChild(div);
+            }
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
             main();
             let assistedIdToHandle = null;
@@ -476,7 +528,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const isAgendamento = document.getElementById('tab-agendamento').classList.contains('tab-active');
                 if(!name || !subject || (isAgendamento && !time)) return showNotification("Preencha os campos obrigatórios.", "error");
 
-                const newAssisted = { name, subject, cpf: document.getElementById('assisted-cpf').value.trim() || null, status: 'pauta', type: isAgendamento ? 'agendamento' : 'avulso', scheduledTime: time || null, arrivalTime: null, attendedTime: null, attendant: null, priority: null, order: allAssisted.length, checkInTimestamp: null };
+                const newAssisted = { name, subject, cpf: document.getElementById('assisted-cpf').value.trim() || null, status: 'pauta', type: isAgendamento ? 'agendamento' : 'avulso', scheduledTime: time || null, arrivalTime: null, attendedTime: null, attendant: null, priority: null, order: allAssisted.length, checkInTimestamp: null, demandas: null };
                 if (!isAgendamento) { 
                     const now = new Date().toISOString();
                     newAssisted.status = 'aguardando'; 
@@ -539,7 +591,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                                         priority: null,
                                         type: 'agendamento',
                                         order: orderIndex++,
-                                        checkInTimestamp: null
+                                        checkInTimestamp: null,
+                                        demandas: null
                                     });
                                     importedCount++;
                                 }
@@ -580,6 +633,22 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const assisted = allAssisted.find(a => a.id === id);
                     document.getElementById('edit-attendant-name').value = assisted.attendant || '';
                     document.getElementById('edit-attendant-modal').classList.remove('hidden');
+                }
+                if (button.classList.contains('edit-demands-btn')) {
+                    assistedIdToHandle = id;
+                    const assisted = allAssisted.find(a => a.id === id);
+                    document.getElementById('demands-assisted-name').textContent = assisted.name;
+                    const quantityInput = document.getElementById('demands-quantity');
+                    
+                    if (assisted.demandas) {
+                        quantityInput.value = assisted.demandas.quantidade || 0;
+                        updateDemandDescriptions(assisted.demandas.quantidade || 0, assisted.demandas.descricoes || []);
+                    } else {
+                        quantityInput.value = 0;
+                        updateDemandDescriptions(0, []);
+                    }
+                    
+                    document.getElementById('demands-modal').classList.remove('hidden');
                 }
                 if (button.classList.contains('return-to-pauta-btn')) {
                     await updateDoc(doc(collectionRef, id), { status: 'pauta', arrivalTime: null, priority: null, checkInTimestamp: null });
@@ -645,6 +714,32 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
             
+            document.getElementById('demands-quantity').addEventListener('input', (e) => {
+                const quantity = parseInt(e.target.value, 10) || 0;
+                const existingTextareas = document.querySelectorAll('.demand-description-input');
+                const existingDescriptions = Array.from(existingTextareas).map(ta => ta.value);
+                updateDemandDescriptions(quantity, existingDescriptions);
+            });
+
+            document.getElementById('confirm-demands-btn').addEventListener('click', async () => {
+                if (assistedIdToHandle) {
+                    const quantidade = parseInt(document.getElementById('demands-quantity').value, 10) || 0;
+                    const descriptionTextareas = document.querySelectorAll('#demands-descriptions-container textarea');
+                    const descricoes = Array.from(descriptionTextareas).map(ta => ta.value.trim()).filter(d => d);
+                    
+                    const demandasData = { quantidade, descricoes };
+                    
+                    await updateDoc(doc(db, "pautas", currentPautaId, "attendances", assistedIdToHandle), { demandas: demandasData });
+                    document.getElementById('demands-modal').classList.add('hidden');
+                    assistedIdToHandle = null;
+                }
+            });
+
+            document.getElementById('cancel-demands-btn').addEventListener('click', () => {
+                document.getElementById('demands-modal').classList.add('hidden');
+                assistedIdToHandle = null;
+            });
+            
             document.getElementById('cancel-arrival-btn').addEventListener('click', () => document.getElementById('arrival-modal').classList.add('hidden'));
             document.getElementById('cancel-attendant-btn').addEventListener('click', () => document.getElementById('attendant-modal').classList.add('hidden'));
             document.getElementById('cancel-edit-attendant-btn').addEventListener('click', () => document.getElementById('edit-attendant-modal').classList.add('hidden'));
@@ -663,8 +758,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 e.target.textContent = document.getElementById('logic-explanation').classList.contains('hidden') ? 'Por que esta ordem é justa? (Clique para expandir)' : 'Ocultar explicação (Clique para fechar)';
             });
              document.getElementById('format-help-link').addEventListener('click', (e) => { e.preventDefault(); document.getElementById('format-help-modal').classList.remove('hidden'); });
-            document.getElementById('close-format-help-btn-x').addEventListener('click', () => document.getElementById('format-help-modal').classList.add('hidden'));
-            document.getElementById('close-format-help-btn').addEventListener('click', () => document.getElementById('format-help-modal').classList.add('hidden'));
+             document.getElementById('close-format-help-btn-x').addEventListener('click', () => document.getElementById('format-help-modal').classList.add('hidden'));
+             document.getElementById('close-format-help-btn').addEventListener('click', () => document.getElementById('format-help-modal').classList.add('hidden'));
              document.getElementById('copy-instruction-btn').addEventListener('click', (e) => {
                 const textToCopy = document.getElementById('instruction-text').querySelector('code').textContent;
                 const textArea = document.createElement("textarea");
@@ -802,4 +897,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
-
