@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
     <title>Sistema de Gerenciamento de Atendimento - Defensoria</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -137,7 +137,7 @@
                          <li><strong>Oferece Tolerância:</strong> Reconhece que imprevistos acontecem, com uma janela de 20 minutos para pequenos atrasos.</li>
                          <li><strong>Gerencia Atrasos Maiores:</strong> Coloca quem se atrasou muito no fim da fila para não prejudicar os outros.</li>
                          <li><strong>Permite Flexibilidade:</strong> O botão "Urgente" garante que casos graves sejam atendidos imediatamente.</li>
-                         <li><strong>Critério de Desempate:</strong> Para assistidos com a mesma prioridade, a ordem é definida pelo horário de chegada. No caso específico de múltiplos assistidos agendados para o <strong>mesmo horário</strong>, a preferência é de quem teve a chegada registrada primeiro no sistema, independentemente do horário de chegada informado.</li>
+                         <li><strong>Critério de Desempate:</strong> Para assistidos com a mesma prioridade, a ordem é definida pelo <strong>horário de chegada informado</strong> (quem chegou mais cedo é atendido primeiro). Se dois ou mais assistidos chegarem exatamente no mesmo horário, a preferência é de quem teve a chegada <strong>registrada primeiro</strong> no sistema.</li>
                      </ul>
                      <p class="font-semibold text-gray-800 pt-2">O resultado é uma fila transparente, previsível e justa tanto para os assistidos quanto para a equipe.</p>
                  </div>
@@ -329,20 +329,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const priorityDiff = order[a.priority] - order[b.priority];
                 if (priorityDiff !== 0) return priorityDiff;
 
-                // Priorities are the same. Now, implement the new rule.
-                // Check if they are both scheduled appointments and have the same scheduled time.
-                if (a.type === 'agendamento' && b.type === 'agendamento' && a.scheduledTime === b.scheduledTime) {
-                    // 2. If scheduled time is the same, order by who was checked in first.
-                    const checkInA = a.checkInTimestamp ? new Date(a.checkInTimestamp).getTime() : 0;
-                    const checkInB = b.checkInTimestamp ? new Date(b.checkInTimestamp).getTime() : 0;
-                    return checkInA - checkInB;
-                }
-                
-                // 3. For all other cases (different scheduled times, walk-ins, etc.), sort by arrival time.
-                const arrivalDiff = new Date(a.arrivalTime) - new Date(b.arrivalTime);
+                // 2. Sort by manually input arrival time
+                const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : 0;
+                const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : 0;
+                const arrivalDiff = arrivalA - arrivalB;
                 if (arrivalDiff !== 0) return arrivalDiff;
 
-                // 4. Final tie-breaker is the check-in timestamp.
+                // 3. Tie-breaker: sort by check-in timestamp (when the button was clicked)
                 const checkInA = a.checkInTimestamp ? new Date(a.checkInTimestamp).getTime() : 0;
                 const checkInB = b.checkInTimestamp ? new Date(b.checkInTimestamp).getTime() : 0;
                 return checkInA - checkInB;
@@ -809,3 +802,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
