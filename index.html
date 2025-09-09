@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -112,7 +111,7 @@
                     <div id="pauta-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
                 <div class="bg-white rounded-lg shadow-md flex flex-col">
-                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg"><h3 class="text-xl font-semibold text-gray-800">⏳ Aguardando Atendimento</h3><input type="search" id="aguardando-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"></div>
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg"><h3 class="text-xl font-semibold text-gray-800">⏳ Aguardando Atendimento</h3><input type="search" id="aguardando-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"></div>
                     <div id="aguardando-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
                 <div class="bg-white rounded-lg shadow-md flex flex-col">
@@ -138,7 +137,7 @@
                          <li><strong>Oferece Tolerância:</strong> Reconhece que imprevistos acontecem, com uma janela de 20 minutos para pequenos atrasos.</li>
                          <li><strong>Gerencia Atrasos Maiores:</strong> Coloca quem se atrasou muito no fim da fila para não prejudicar os outros.</li>
                          <li><strong>Permite Flexibilidade:</strong> O botão "Urgente" garante que casos graves sejam atendidos imediatamente.</li>
-                         <li><strong>Critério de Desempate:</strong> A ordem de chegada define quem será atendido primeiro. Se dois assistidos chegarem no mesmo horário, a preferência é de quem teve a chegada registrada primeiro no sistema.</li>
+                         <li><strong>Critério de Desempate:</strong> Para assistidos com a mesma prioridade, a ordem é definida pelo horário de chegada. No caso específico de múltiplos assistidos agendados para o <strong>mesmo horário</strong>, a preferência é de quem teve a chegada registrada primeiro no sistema, independentemente do horário de chegada informado.</li>
                      </ul>
                      <p class="font-semibold text-gray-800 pt-2">O resultado é uma fila transparente, previsível e justa tanto para os assistidos quanto para a equipe.</p>
                  </div>
@@ -325,14 +324,25 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             atendidos.sort((a, b) => new Date(a.attendedTime) - new Date(b.attendedTime));
             
             aguardando.sort((a, b) => {
+                // 1. Sort by priority
                 const order = { 'URGENTE': 0, 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
                 const priorityDiff = order[a.priority] - order[b.priority];
-                if (priorityDiff) return priorityDiff;
-                
-                const arrivalDiff = new Date(a.arrivalTime) - new Date(b.arrivalTime);
-                if (arrivalDiff) return arrivalDiff;
+                if (priorityDiff !== 0) return priorityDiff;
 
-                // Desempate: quem teve a chegada marcada primeiro
+                // Priorities are the same. Now, implement the new rule.
+                // Check if they are both scheduled appointments and have the same scheduled time.
+                if (a.type === 'agendamento' && b.type === 'agendamento' && a.scheduledTime === b.scheduledTime) {
+                    // 2. If scheduled time is the same, order by who was checked in first.
+                    const checkInA = a.checkInTimestamp ? new Date(a.checkInTimestamp).getTime() : 0;
+                    const checkInB = b.checkInTimestamp ? new Date(b.checkInTimestamp).getTime() : 0;
+                    return checkInA - checkInB;
+                }
+                
+                // 3. For all other cases (different scheduled times, walk-ins, etc.), sort by arrival time.
+                const arrivalDiff = new Date(a.arrivalTime) - new Date(b.arrivalTime);
+                if (arrivalDiff !== 0) return arrivalDiff;
+
+                // 4. Final tie-breaker is the check-in timestamp.
                 const checkInA = a.checkInTimestamp ? new Date(a.checkInTimestamp).getTime() : 0;
                 const checkInB = b.checkInTimestamp ? new Date(b.checkInTimestamp).getTime() : 0;
                 return checkInA - checkInB;
@@ -799,4 +809,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
-
