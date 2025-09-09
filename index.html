@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Gerenciamento de Pauta - SIGEP</title>
     
+    <!-- Ícone do Navegador (Favicon) -->
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ac-o-paula-controle/imagem.png">
 
+    <!-- Metatags para PWA -->
     <meta name="theme-color" content="#16a34a"/>
     <link rel="apple-touch-icon" href="https://alexdovale.github.io/ac-o-paula-controle/imagem.png">
     <link rel="manifest" href="data:application/manifest+json,{
@@ -75,6 +77,7 @@
                 <div><label for="register-password" class="block text-sm font-medium text-gray-700">Senha (mínimo 6 caracteres)</label><input type="password" id="register-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"></div>
                 <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">Criar Conta</button>
             </form>
+             <!-- Link para a Política de Privacidade -->
              <a href="#" id="privacy-policy-link" class="block mt-4 text-center text-sm text-gray-500 hover:underline">
                  Política de Privacidade
              </a>
@@ -89,6 +92,7 @@
                  <button id="logout-btn-main" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Sair</button>
              </div>
         </div>
+        <!-- Botão de Instalação do PWA -->
         <div id="install-container" class="hidden my-4 p-3 bg-green-100 border border-green-200 rounded-lg text-center">
             <p class="text-sm text-green-800">Leve o gerenciador de pautas com você!</p>
             <button id="install-button" class="mt-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 text-sm rounded-lg shadow-md hover:shadow-lg transition-all">
@@ -190,12 +194,14 @@
         </div>
     </div>
 
+    <!-- Modais -->
     <div id="create-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Criar Nova Pauta</h2>
             <label for="new-pauta-name" class="block text-sm font-medium text-gray-700 mb-2">Nome da Pauta</label>
             <input type="text" id="new-pauta-name" placeholder="Ex: Pauta Cível - 08/09/2025" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
             
+            <!-- Mensagem de transparência -->
             <div class="bg-gray-100 border border-gray-200 p-4 rounded-lg mb-6">
                 <p class="text-sm text-gray-700 font-semibold">Atenção:</p>
                 <p class="text-sm text-gray-600 mt-1">Os dados desta pauta serão eliminados do SIGEP automaticamente 2 dias após a sua realização. Para armazenamento permanente, eles serão enviados ao sistema Verde da DPERJ.</p>
@@ -263,7 +269,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     <input type="number" id="demands-quantity" min="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500">
                 </div>
                 <div id="demands-descriptions-container" class="space-y-2 max-h-60 overflow-y-auto scrollable-content pr-2">
-                    </div>
+                    <!-- Textareas will be dynamically inserted here -->
+                </div>
             </div>
             <div class="flex justify-end space-x-4 mt-6">
                 <button id="cancel-demands-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
@@ -272,6 +279,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
     
+    <!-- Modal da Política de Privacidade -->
     <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg max-h-4/5 overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
@@ -472,7 +480,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const demandasInfo = a.demandas && a.demandas.descricoes && a.demandas.descricoes.length > 0 ?
                     `<div class="mt-2 text-xs bg-gray-100 p-2 rounded">
                         <strong class="text-gray-700">Demandas Adicionais (${a.demandas.quantidade || 0}):</strong>
-                        <ul class="list-disc list-inside pl-2 text-gray-600">${a.demandas.descricoes.map(d => `<li>${d}</li>`).join('')}</ul>
+                        <ul class="list-disc list-inside pl-2 text-gray-600">${a.demandas.descricoes.map(d => `- ${d}`).join('')}</ul>
                     </div>` : '';
 
                 card.innerHTML = `<p class="font-bold text-lg">${a.name} ${totalAssuntos > 1 ? `<span class="text-sm font-medium text-green-600">(${totalAssuntos} assuntos)</span>` : ''}</p>
@@ -1016,6 +1024,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         });
     </script>
     
+    <!-- Script para PWA (Service Worker e Lógica de Instalação) -->
     <script>
         if ('serviceWorker' in navigator) {
             const swContent = `
