@@ -206,7 +206,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             <h2 class="text-2xl font-bold mb-4">Editar Demandas para <span id="demands-assisted-name" class="text-indigo-600"></span></h2>
             <div class="space-y-4">
                 <div>
-                    <label for="demands-quantity" class="block text-sm font-medium text-gray-700">Quantidade de Demandas</label>
+                    <label for="demands-quantity" class="block text-sm font-medium text-gray-700">Quantidade de Demandas <strong class="font-semibold">Adicionais</strong></label>
+                    <p class="text-xs text-gray-500 -mt-1 mb-1">O assunto principal (<span id="demands-main-subject" class="font-semibold"></span>) já está contado.</p>
                     <input type="number" id="demands-quantity" min="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div id="demands-descriptions-container" class="space-y-2 max-h-60 overflow-y-auto scrollable-content pr-2">
@@ -376,16 +377,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             render(atendidosList, atendidos, a => {
                 const card = document.createElement('div');
                 card.className = 'bg-green-50 p-4 rounded-lg shadow-sm border-green-200 opacity-80';
-
+                
+                const totalAssuntos = 1 + (a.demandas && a.demandas.quantidade ? Number(a.demandas.quantidade) : 0);
                 const demandasInfo = a.demandas && a.demandas.descricoes && a.demandas.descricoes.length > 0 ?
                     `<div class="mt-2 text-xs bg-gray-100 p-2 rounded">
-                        <strong class="text-gray-700">Demandas (${a.demandas.quantidade || 0}):</strong>
+                        <strong class="text-gray-700">Demandas Adicionais (${a.demandas.quantidade || 0}):</strong>
                         <ul class="list-disc list-inside pl-2 text-gray-600">${a.demandas.descricoes.map(d => `<li>${d}</li>`).join('')}</ul>
-                     </div>` : '';
+                    </div>` : '';
 
-                card.innerHTML = `<p class="font-bold text-lg">${a.name} ${a.demandas && a.demandas.quantidade > 0 ? `<span class="text-sm font-medium text-indigo-600">(${a.demandas.quantidade} demanda${a.demandas.quantidade > 1 ? 's' : ''})</span>` : ''}</p>
+                card.innerHTML = `<p class="font-bold text-lg">${a.name} ${totalAssuntos > 1 ? `<span class="text-sm font-medium text-indigo-600">(${totalAssuntos} assuntos)</span>` : ''}</p>
                     ${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}
-                    <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
+                    <p class="text-sm">Assunto Principal: <strong>${a.subject}</strong></p>
                     <p class="text-sm">Finalizado: <strong>${new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong></p>
                     ${demandasInfo}
                     <div class="flex justify-between items-center mt-2">
@@ -417,7 +419,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             for (let i = 0; i < quantity; i++) {
                 const div = document.createElement('div');
                 const label = document.createElement('label');
-                label.textContent = `Descrição da Demanda ${i + 1}`;
+                label.textContent = `Descrição da Demanda Adicional ${i + 1}`;
                 label.className = "block text-sm font-medium text-gray-600 mb-1";
                 const textarea = document.createElement('textarea');
                 textarea.className = "demand-description-input mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500";
@@ -638,6 +640,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     assistedIdToHandle = id;
                     const assisted = allAssisted.find(a => a.id === id);
                     document.getElementById('demands-assisted-name').textContent = assisted.name;
+                    document.getElementById('demands-main-subject').textContent = assisted.subject;
                     const quantityInput = document.getElementById('demands-quantity');
                     
                     if (assisted.demandas) {
@@ -861,14 +864,29 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     return;
                 }
 
-                const head = [['Nome do Assistido', 'CPF', 'Assunto', 'Atendente', 'Finalizado']];
-                const body = atendidos.map(a => [
-                    a.name,
-                    a.cpf || 'N/A',
-                    a.subject,
-                    a.attendant || 'N/A',
-                    new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-                ]);
+                const totalPorPessoas = atendidos.length;
+                const totalPorAssunto = atendidos.reduce((total, a) => {
+                    const demandasAdicionais = (a.demandas && a.demandas.quantidade) ? Number(a.demandas.quantidade) : 0;
+                    return total + 1 + demandasAdicionais;
+                }, 0);
+
+                const head = [['Nome do Assistido', 'CPF', 'Assuntos/Demandas', 'Atendente', 'Finalizado']];
+                const body = atendidos.map(a => {
+                    let allSubjects = [`- ${a.subject}`];
+                    if (a.demandas && a.demandas.descricoes && a.demandas.descricoes.length > 0) {
+                        const additionalSubjects = a.demandas.descricoes.map(d => `- ${d.trim()}`).filter(d => d !== '-');
+                         if(additionalSubjects.length > 0) {
+                            allSubjects = allSubjects.concat(additionalSubjects);
+                        }
+                    }
+                    return [
+                        a.name,
+                        a.cpf || 'N/A',
+                        allSubjects.join('\n'),
+                        a.attendant || 'N/A',
+                        new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                    ];
+                });
                 
                 doc.setFontSize(18);
                 doc.text(`Relatório de Atendimentos - ${pautaTitle}`, 14, 22);
@@ -884,11 +902,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     headStyles: { fillColor: [79, 70, 229] }
                 });
                 
-                const finalY = doc.autoTable.previous.finalY;
+                const finalY = doc.autoTable.previous.finalY || 35;
                 doc.setFontSize(12);
                 doc.setFont('helvetica', 'bold');
-                doc.text(`Total de Atendidos: ${atendidos.length}`, 14, finalY + 10);
-
+                doc.text(`Total por Pessoas Atendidas: ${totalPorPessoas}`, 14, finalY + 10);
+                doc.text(`Total por Assuntos/Demandas: ${totalPorAssunto}`, 14, finalY + 17);
 
                 doc.save(`relatorio_atendidos_${pautaTitle.replace(/\s+/g, '_')}.pdf`);
             });
