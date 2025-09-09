@@ -4,6 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Gerenciamento de Atendimento - Defensoria</title>
+    
+    <!-- Metatags para PWA -->
+    <meta name="theme-color" content="#16a34a"/>
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/16a34a/ffffff?text=Pauta">
+    <link rel="manifest" href="data:application/manifest+json,{
+        &quot;name&quot;: &quot;Gerenciador de Pautas - Defensoria&quot;,
+        &quot;short_name&quot;: &quot;Pautas&quot;,
+        &quot;start_url&quot;: &quot;.&quot;,
+        &quot;display&quot;: &quot;standalone&quot;,
+        &quot;background_color&quot;: &quot;#f0f2f5&quot;,
+        &quot;theme_color&quot;: &quot;#16a34a&quot;,
+        &quot;description&quot;: &quot;Sistema para gerenciar pautas de atendimento da Defensoria.&quot;,
+        &quot;icons&quot;: [
+            {
+                &quot;src&quot;: &quot;https://placehold.co/192x192/16a34a/ffffff?text=Pauta&quot;,
+                &quot;sizes&quot;: &quot;192x192&quot;,
+                &quot;type&quot;: &quot;image/png&quot;,
+                &quot;purpose&quot;: &quot;any maskable&quot;
+            },
+            {
+                &quot;src&quot;: &quot;https://placehold.co/512x512/16a34a/ffffff?text=Pauta&quot;,
+                &quot;sizes&quot;: &quot;512x512&quot;,
+                &quot;type&quot;: &quot;image/png&quot;,
+                &quot;purpose&quot;: &quot;any maskable&quot;
+            }
+        ]
+    }">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
@@ -56,6 +84,13 @@
                  <button id="admin-btn-main" class="hidden bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600">Aprovar Usuários</button>
                  <button id="logout-btn-main" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Sair</button>
              </div>
+        </div>
+        <!-- Botão de Instalação do PWA -->
+        <div id="install-container" class="hidden my-4 p-3 bg-green-100 border border-green-200 rounded-lg text-center">
+            <p class="text-sm text-green-800">Leve o gerenciador de pautas com você!</p>
+            <button id="install-button" class="mt-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 text-sm rounded-lg shadow-md hover:shadow-lg transition-all">
+                Instalar App
+            </button>
         </div>
         <div id="pautas-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         <div class="mt-6"><button id="create-pauta-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Criar Nova Pauta</button></div>
@@ -881,8 +916,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (a.demandas && a.demandas.descricoes && a.demandas.descricoes.length > 0) {
                         const additionalSubjects = a.demandas.descricoes.map(d => `- ${d.trim()}`).filter(d => d !== '-');
                          if(additionalSubjects.length > 0) {
-                            allSubjects = allSubjects.concat(additionalSubjects);
-                        }
+                             allSubjects = allSubjects.concat(additionalSubjects);
+                         }
                     }
                     return [
                         a.name,
@@ -917,7 +952,94 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
         });
     </script>
+    
+    <!-- Script para PWA (Service Worker e Lógica de Instalação) -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            const swContent = `
+                const CACHE_NAME = 'pauta-defensoria-cache-v1';
+                const urlsToCache = [
+                    '/',
+                    'https://cdn.tailwindcss.com',
+                    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+                    'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js',
+                    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
+                ];
 
+                self.addEventListener('install', event => {
+                    event.waitUntil(
+                        caches.open(CACHE_NAME)
+                            .then(cache => {
+                                console.log('Cache aberto');
+                                const cachePromises = urlsToCache.map(urlToCache => {
+                                    return fetch(new Request(urlToCache, {mode: 'no-cors'}))
+                                        .then(response => cache.put(urlToCache, response))
+                                        .catch(err => console.warn('Falha ao armazenar em cache:', urlToCache, err));
+                                });
+                                return Promise.all(cachePromises);
+                            })
+                    );
+                });
+
+                self.addEventListener('fetch', event => {
+                    // Não interceptamos requisições para o Firebase
+                    if (event.request.url.includes('firestore.googleapis.com') || event.request.url.includes('firebaseapp.com')) {
+                        return; // Deixa a requisição passar direto para a rede
+                    }
+                    event.respondWith(
+                        caches.match(event.request)
+                            .then(response => {
+                                // Se o recurso estiver no cache, retorna ele
+                                if (response) {
+                                    return response;
+                                }
+                                // Se não, busca na rede
+                                return fetch(event.request);
+                            })
+                    );
+                });
+            `;
+
+            const swBlob = new Blob([swContent], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(swBlob);
+
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register(swUrl)
+                    .then(registration => console.log('ServiceWorker registrado com sucesso:', registration.scope))
+                    .catch(error => console.log('Falha ao registrar o ServiceWorker:', error));
+            });
+        }
+
+        // Lógica para o prompt de instalação
+        let deferredPrompt;
+        const installContainer = document.getElementById('install-container');
+        const installButton = document.getElementById('install-button');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if(installContainer) installContainer.classList.remove('hidden');
+        });
+
+        if(installButton) {
+            installButton.addEventListener('click', async () => {
+                if(installContainer) installContainer.classList.add('hidden');
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(\`Resposta do usuário ao prompt: \${outcome}\`);
+                    deferredPrompt = null;
+                }
+            });
+        }
+
+
+        window.addEventListener('appinstalled', () => {
+            if(installContainer) installContainer.classList.add('hidden');
+            deferredPrompt = null;
+            console.log('PWA foi instalado');
+        });
+    </script>
 </body>
 </html>
 
