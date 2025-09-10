@@ -1097,7 +1097,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 // Fetch pending users
                 const q = query(collection(db, "users"), where("status", "==", "pending"));
                 const pendingSnapshot = await getDocs(q);
-                pendingList.innerHTML = ''; // Clear loading
+                pendingList.innerHTML = '';
                 if(pendingSnapshot.empty) pendingList.innerHTML = '<p class="text-center text-gray-500">Nenhum usuário pendente.</p>';
                 else pendingSnapshot.forEach(userDoc => {
                     const userData = userDoc.data();
@@ -1108,9 +1108,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 });
 
                 // Fetch pauta report
-                // ATENÇÃO: Para isto funcionar, as regras de segurança do Firestore devem permitir que o admin leia todas as pautas.
-                // Exemplo: match /pautas/{pautaId} { allow read: if request.auth.uid in resource.data.members || request.auth.uid == 'SEU_ADMIN_UID'; }
-                statsContainer.innerHTML = ''; // Clear loading
+                statsContainer.innerHTML = ''; 
 
                 const usersSnapshot = await getDocs(collection(db, "users"));
                 const userMap = new Map();
@@ -1129,17 +1127,50 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     pautasSnapshot.forEach(pautaDoc => {
                         const pautaData = pautaDoc.data();
                         const ownerName = userMap.get(pautaData.owner) || 'Usuário Desconhecido';
+                        
+                        const dataCriacao = new Date(pautaData.dataDaPauta).toLocaleDateString('pt-BR');
+                        const dataEliminacao = new Date(pautaData.dataDeEliminacao).toLocaleDateString('pt-BR');
+                        
+                        const hoje = new Date();
+                        hoje.setHours(0, 0, 0, 0);
+                        const eliminacaoDate = new Date(pautaData.dataDeEliminacao);
+                        eliminacaoDate.setHours(0, 0, 0, 0);
+                        
+                        const diffTime = eliminacaoDate - hoje;
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                        let countdownText, countdownColor;
+                        if (diffDays > 1) {
+                            countdownText = `em ${diffDays} dias`;
+                            countdownColor = 'text-green-600';
+                        } else if (diffDays === 1) {
+                            countdownText = `em 1 dia`;
+                            countdownColor = 'text-yellow-600';
+                        } else if (diffDays === 0) {
+                            countdownText = `Hoje`;
+                            countdownColor = 'text-orange-600';
+                        } else {
+                            countdownText = `Expirou`;
+                            countdownColor = 'text-red-600';
+                        }
+                        
                         const div = document.createElement('div');
                         div.className = 'p-3 bg-gray-50 border rounded-lg mb-2';
                         div.innerHTML = `
                             <p class="font-semibold text-gray-800">${pautaData.name}</p>
-                            <p class="text-sm text-gray-600">Criada por: ${ownerName}</p>
+                            <p class="text-sm text-gray-600"><strong>Criada por:</strong> ${ownerName}</p>
+                            <p class="text-sm text-gray-500"><strong>Criação:</strong> ${dataCriacao}</p>
+                            <div class="flex justify-between items-center mt-1">
+                                <p class="text-sm text-gray-500"><strong>Eliminação:</strong> ${dataEliminacao}</p>
+                                <p class="text-sm font-bold ${countdownColor}">${countdownText}</p>
+                            </div>
                         `;
                         pautasListEl.appendChild(div);
                     });
-                     statsContainer.appendChild(pautasListEl);
+                    statsContainer.appendChild(pautasListEl);
                 }
             });
+
 
             document.getElementById('pending-users-list').addEventListener('click', async (e) => {
                 if(e.target.classList.contains('approve-btn')) {
