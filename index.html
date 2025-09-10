@@ -74,6 +74,7 @@
                 <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">Entrar</button>
             </form>
             <form id="register-form" class="hidden space-y-4">
+                <div><label for="register-name" class="block text-sm font-medium text-gray-700">Nome Completo</label><input type="text" id="register-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"></div>
                 <div><label for="register-email" class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="register-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"></div>
                 <div><label for="register-password" class="block text-sm font-medium text-gray-700">Senha (mínimo 6 caracteres)</label><input type="password" id="register-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"></div>
                 <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">Criar Conta</button>
@@ -322,7 +323,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, getDoc, setDoc, query, where, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {};
+        let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '';
         const ADMIN_UID = "COLE_AQUI_O_UID_DO_SEU_USUARIO_ADMIN"; // IMPORTANTE: Substituir
 
         const loadingContainer = document.getElementById('loading-container');
@@ -362,11 +363,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         logoutBtn.onclick = () => signOut(auth);
                         if(!loadingContainer.querySelector('#logout-pending-btn')) loadingContainer.appendChild(logoutBtn);
                         showScreen('loading');
+                        currentUserName = '';
                         return;
                     }
+                    currentUserName = userDoc.data().name || '';
                     document.getElementById('admin-btn-main').classList.toggle('hidden', user.uid !== ADMIN_UID);
                     showPautaSelectionScreen(user.uid);
                 } else {
+                    currentUserName = '';
                     showScreen('login');
                 }
             });
@@ -555,9 +559,18 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.getElementById('register-form').addEventListener('submit', async e => {
                 e.preventDefault();
                 authErrorDiv.classList.add('hidden');
+                const name = document.getElementById('register-name').value.trim();
+                if (!name) {
+                    showError("Por favor, insira seu nome completo.");
+                    return;
+                }
                 try {
                     const cred = await createUserWithEmailAndPassword(auth, document.getElementById('register-email').value, document.getElementById('register-password').value);
-                    await setDoc(doc(db, "users", cred.user.uid), { email: cred.user.email, status: "pending" });
+                    await setDoc(doc(db, "users", cred.user.uid), { 
+                        name: name, 
+                        email: cred.user.email, 
+                        status: "pending" 
+                    });
                     showError("Conta criada! Aguarde a aprovação de um administrador.");
                     await signOut(auth);
                 } catch (error) {
@@ -748,7 +761,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 
                 const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
                 if (button.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5); }
-                if (button.classList.contains('attend-btn')) { assistedIdToHandle = id; document.getElementById('attendant-modal').classList.remove('hidden'); }
+                if (button.classList.contains('attend-btn')) { 
+                    assistedIdToHandle = id; 
+                    document.getElementById('attendant-name').value = currentUserName;
+                    document.getElementById('attendant-modal').classList.remove('hidden'); 
+                }
                 if (button.classList.contains('urgent-btn')) { await updateDoc(doc(collectionRef, id), { priority: 'URGENTE' }); }
                 if (button.classList.contains('delete-attended-btn')) { if (confirm("Tem certeza?")) await deleteDoc(doc(collectionRef, id)); }
                 if (button.classList.contains('edit-attendant-btn')) { 
@@ -911,9 +928,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const snapshot = await getDocs(q);
                 if(snapshot.empty) list.innerHTML = '<p class="text-center">Nenhum usuário pendente.</p>';
                 else snapshot.forEach(userDoc => {
+                    const userData = userDoc.data();
                     const div = document.createElement('div');
                     div.className = 'flex justify-between items-center p-3 bg-gray-100 rounded-lg';
-                    div.innerHTML = `<span>${userDoc.data().email}</span><button data-uid="${userDoc.id}" class="approve-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600">Aprovar</button>`;
+                    div.innerHTML = `<div><p class="font-semibold">${userData.name}</p><p class="text-sm text-gray-600">${userData.email}</p></div><button data-uid="${userDoc.id}" class="approve-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600">Aprovar</button>`;
                     list.appendChild(div);
                 });
                 document.getElementById('admin-modal').classList.remove('hidden');
