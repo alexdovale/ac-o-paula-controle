@@ -1,0 +1,58 @@
+const CACHE_NAME = 'pauta-defensoria-cache-v2';
+const urlsToCache = [
+    '/',
+    '/index.html',
+    '/pautas.html',
+    '/app.html',
+    '/css/style.css',
+    '/js/auth.js',
+    '/js/pautas.js',
+    '/js/app.js',
+    '/js/utils.js',
+    '/js/firebase-config.js',
+    'https://alexdovale.github.io/ac-o-paula-controle/imagem.png',
+    'https://cdn.tailwindcss.com',
+    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
+];
+
+self.addEventListener('install', event => {
+    event.waitUntil(
+        caches.open(CACHE_NAME)
+            .then(cache => {
+                console.log('Cache aberto');
+                return cache.addAll(urlsToCache);
+            })
+    );
+});
+
+self.addEventListener('fetch', event => {
+    if (event.request.url.includes('firestore.googleapis.com') || event.request.url.includes('firebaseapp.com')) {
+        return;
+    }
+
+    event.respondWith(
+        caches.match(event.request)
+            .then(response => {
+                if (response) {
+                    return response;
+                }
+                return fetch(event.request);
+            })
+    );
+});
+
+self.addEventListener('activate', event => {
+  const cacheWhitelist = [CACHE_NAME];
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cacheName => {
+          if (cacheWhitelist.indexOf(cacheName) === -1) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+});
+
