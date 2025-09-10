@@ -104,6 +104,11 @@
                 Instalar App
             </button>
         </div>
+        
+        <div id="invitations-container" class="hidden mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Convites Pendentes</h2>
+            <div id="pending-invitations-list" class="space-y-4"></div>
+        </div>
         <div id="pautas-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         <div class="mt-6"><button id="create-pauta-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Criar Nova Pauta</button></div>
     </div>
@@ -111,7 +116,15 @@
     <div id="app-container" class="max-w-7xl mx-auto hidden">
         <header class="mb-6 text-center relative">
             <button id="back-to-pautas-btn" class="absolute top-0 left-0 bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
-            <h1 id="pauta-title" class="text-3xl md:text-4xl font-bold text-gray-800"></h1>
+            <div class="flex justify-center items-center">
+                 <h1 id="pauta-title" class="text-3xl md:text-4xl font-bold text-gray-800"></h1>
+                 <button id="edit-pauta-name-btn" title="Editar nome da pauta" class="hidden ml-3 p-2 rounded-full hover:bg-gray-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                        <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                        <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5h6a.5.5 0 0 0 0-1h-6A1.5 1.5 0 0 0 1 2.5v11z"/>
+                    </svg>
+                </button>
+            </div>
             <div class="absolute top-0 right-0 flex items-center gap-2">
                 <button id="manage-members-btn" class="bg-lime-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-lime-700">Membros</button>
                 <button id="reset-all-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">Zerar Pauta</button>
@@ -237,6 +250,8 @@
             </div>
             <h3 class="font-semibold mt-6 mb-2">Membros Atuais da Pauta</h3>
             <div id="current-members-list" class="space-y-2 max-h-40 overflow-y-auto border p-3 rounded-lg bg-gray-50 scrollable-content"></div>
+             <h3 class="font-semibold mt-6 mb-2">Convites Pendentes</h3>
+            <div id="pending-invites-members-modal-list" class="space-y-2 max-h-40 overflow-y-auto border p-3 rounded-lg bg-gray-100 scrollable-content"></div>
             <div class="flex justify-end mt-6">
                 <button id="close-members-modal-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
             </div>
@@ -251,7 +266,7 @@
                     <div id="pending-users-list" class="space-y-4"></div>
                 </div>
                 <div>
-                    <h3 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Estatísticas de Pautas Criadas</h3>
+                    <h3 id="pautas-report-title" class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Relatório de Pautas do Sistema</h3>
                     <div id="pauta-stats-container" class="space-y-3"></div>
                 </div>
             </div>
@@ -268,6 +283,17 @@
     </div>
     <div id="reset-confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg space-y-4"><h2 class="text-2xl font-bold text-gray-800">Zerar Pauta</h2><p class="text-gray-600">Tem certeza de que deseja apagar permanentemente todos os dados desta pauta?</p><div class="flex justify-end space-x-4 pt-4"><button id="cancel-reset-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button><button id="confirm-reset-btn" class="bg-red-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-800">Zerar Pauta</button></div></div>
+    </div>
+    <div id="edit-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Editar Nome da Pauta</h2>
+            <label for="edit-pauta-name-input" class="block text-sm font-medium text-gray-700 mb-2">Novo nome</label>
+            <input type="text" id="edit-pauta-name-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-edit-pauta-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-edit-pauta-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar</button>
+            </div>
+        </div>
     </div>
       <div id="format-help-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
           <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
@@ -359,7 +385,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, getDoc, setDoc, query, where, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '';
-        const ADMIN_UID = "COLE_AQUI_O_UID_DO_SEU_USUARIO_ADMIN"; // IMPORTANTE: Substituir
+        const ADMIN_UID = "j7EqtDazdGVQPNeclkKyM7IHHBh2"; // IMPORTANTE: Substituir
 
         const loadingContainer = document.getElementById('loading-container');
         const loginContainer = document.getElementById('login-container');
@@ -418,7 +444,53 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             appContainer.classList.toggle('hidden', screenName !== 'app');
         };
 
-        const showPautaSelectionScreen = (userId) => {
+        const showPautaSelectionScreen = async (userId) => {
+            // Render Pending Invitations
+            const invitationsList = document.getElementById('pending-invitations-list');
+            const invitationsContainer = document.getElementById('invitations-container');
+            invitationsContainer.classList.add('hidden');
+            invitationsList.innerHTML = '';
+
+            if (auth.currentUser) {
+                const invQuery = query(collection(db, "pautas"), where("pendingInvites", "array-contains", auth.currentUser.email));
+                const invSnapshot = await getDocs(invQuery);
+
+                if (!invSnapshot.empty) {
+                    invitationsContainer.classList.remove('hidden');
+                    
+                    const ownerIds = invSnapshot.docs.map(doc => doc.data().owner).filter(id => id);
+                    const uniqueOwnerIds = [...new Set(ownerIds)];
+                    const ownerNames = {};
+
+                    if (uniqueOwnerIds.length > 0) {
+                         const ownerDocs = await Promise.all(uniqueOwnerIds.map(id => getDoc(doc(db, "users", id))));
+                         ownerDocs.forEach(doc => {
+                            if (doc.exists()) ownerNames[doc.id] = doc.data().name;
+                        });
+                    }
+
+                    invSnapshot.forEach(pautaDoc => {
+                        const pauta = pautaDoc.data();
+                        const ownerName = ownerNames[pauta.owner] || 'Desconhecido';
+                        const card = document.createElement('div');
+                        card.className = "bg-white p-4 rounded-lg shadow-md flex justify-between items-center";
+                        card.innerHTML = `
+                            <div>
+                                <h4 class="font-bold">${pauta.name}</h4>
+                                <p class="text-sm text-gray-600">Convidado por: ${ownerName}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button data-pauta-id="${pautaDoc.id}" class="accept-invite-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600 text-sm">Aceitar</button>
+                                <button data-pauta-id="${pautaDoc.id}" class="decline-invite-btn bg-red-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-red-600 text-sm">Recusar</button>
+                            </div>
+                        `;
+                        invitationsList.appendChild(card);
+                    });
+                }
+            }
+
+
+            // Render "Minhas Pautas"
             const pautasList = document.getElementById('pautas-list');
             pautasList.innerHTML = '<p class="col-span-full text-center">Carregando pautas...</p>';
             const q = query(collection(db, "pautas"), where("members", "array-contains", userId));
@@ -458,9 +530,18 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             showScreen('pautaSelection');
         };
 
-        const loadPauta = (pautaId, pautaName) => {
+        const loadPauta = async (pautaId, pautaName) => {
             currentPautaId = pautaId;
             document.getElementById('pauta-title').textContent = pautaName;
+
+            const editBtn = document.getElementById('edit-pauta-name-btn');
+            const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
+            if (pautaDoc.exists() && pautaDoc.data().owner === auth.currentUser.uid) {
+                editBtn.classList.remove('hidden');
+            } else {
+                editBtn.classList.add('hidden');
+            }
+
             setupRealtimeListener(pautaId);
             showScreen('app');
         };
@@ -650,6 +731,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         owner: uid,
                         members: [uid],
                         memberEmails: [email],
+                        pendingInvites: [],
                         dataDaPauta: dataDaPauta.toISOString(),
                         dataDeEliminacao: dataDeEliminacao.toISOString()
                     });
@@ -852,6 +934,35 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
 
+            document.getElementById('pauta-selection-container').addEventListener('click', async (e) => {
+                const button = e.target.closest('button');
+                if (!button) return;
+                
+                const pautaId = button.dataset.pautaId;
+                if (!pautaId || !auth.currentUser) return;
+
+                const { uid, email } = auth.currentUser;
+                const pautaRef = doc(db, "pautas", pautaId);
+
+                if (button.classList.contains('accept-invite-btn')) {
+                    await updateDoc(pautaRef, {
+                        pendingInvites: arrayRemove(email),
+                        members: arrayUnion(uid),
+                        memberEmails: arrayUnion(email)
+                    });
+                    showNotification("Convite aceito!", "success");
+                    showPautaSelectionScreen(uid); 
+                }
+
+                if (button.classList.contains('decline-invite-btn')) {
+                     await updateDoc(pautaRef, {
+                        pendingInvites: arrayRemove(email)
+                    });
+                    showNotification("Convite recusado.", "info");
+                    showPautaSelectionScreen(uid);
+                }
+            });
+
             document.getElementById('confirm-arrival-btn').addEventListener('click', async () => {
                 const arrivalTimeValue = document.getElementById('arrival-time-input').value;
                 const assisted = allAssisted.find(a => a.id === assistedIdToHandle);
@@ -956,15 +1067,37 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.body.removeChild(textArea);
             });
 
+            // Edit Pauta Name Modal Logic
+            const editPautaModal = document.getElementById('edit-pauta-modal');
+            document.getElementById('edit-pauta-name-btn').addEventListener('click', () => {
+                const currentName = document.getElementById('pauta-title').textContent;
+                document.getElementById('edit-pauta-name-input').value = currentName;
+                editPautaModal.classList.remove('hidden');
+            });
+            document.getElementById('cancel-edit-pauta-btn').addEventListener('click', () => {
+                editPautaModal.classList.add('hidden');
+            });
+            document.getElementById('confirm-edit-pauta-btn').addEventListener('click', async () => {
+                const newName = document.getElementById('edit-pauta-name-input').value.trim();
+                if (newName && currentPautaId) {
+                    await updateDoc(doc(db, "pautas", currentPautaId), { name: newName });
+                    showNotification("Nome da pauta atualizado!", "success");
+                    editPautaModal.classList.add('hidden');
+                    document.getElementById('pauta-title').textContent = newName;
+                }
+            });
+
             document.getElementById('admin-btn-main').addEventListener('click', async () => {
                 const pendingList = document.getElementById('pending-users-list');
                 const statsContainer = document.getElementById('pauta-stats-container');
-                pendingList.innerHTML = '';
-                statsContainer.innerHTML = '';
+                pendingList.innerHTML = '<p class="text-center text-gray-500">Carregando...</p>';
+                statsContainer.innerHTML = '<p class="text-center text-gray-500">Carregando...</p>';
+                document.getElementById('admin-modal').classList.remove('hidden');
 
                 // Fetch pending users
                 const q = query(collection(db, "users"), where("status", "==", "pending"));
                 const pendingSnapshot = await getDocs(q);
+                pendingList.innerHTML = ''; // Clear loading
                 if(pendingSnapshot.empty) pendingList.innerHTML = '<p class="text-center text-gray-500">Nenhum usuário pendente.</p>';
                 else pendingSnapshot.forEach(userDoc => {
                     const userData = userDoc.data();
@@ -974,33 +1107,40 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     pendingList.appendChild(div);
                 });
 
-                // Fetch pauta statistics
+                // Fetch pauta report
+                // ATENÇÃO: Para isto funcionar, as regras de segurança do Firestore devem permitir que o admin leia todas as pautas.
+                // Exemplo: match /pautas/{pautaId} { allow read: if request.auth.uid in resource.data.members || request.auth.uid == 'SEU_ADMIN_UID'; }
+                statsContainer.innerHTML = ''; // Clear loading
+
                 const usersSnapshot = await getDocs(collection(db, "users"));
                 const userMap = new Map();
                 usersSnapshot.forEach(doc => userMap.set(doc.id, doc.data().name));
 
                 const pautasSnapshot = await getDocs(collection(db, "pautas"));
-                const pautaCounts = {};
-                pautasSnapshot.forEach(doc => {
-                    const ownerId = doc.data().owner;
-                    const ownerName = userMap.get(ownerId) || 'Usuário Desconhecido';
-                    pautaCounts[ownerName] = (pautaCounts[ownerName] || 0) + 1;
-                });
+                const totalPautas = pautasSnapshot.size;
+                
+                const titleEl = document.getElementById('pautas-report-title');
+                titleEl.innerHTML = `Relatório de Pautas do Sistema <span class="text-base font-normal text-gray-500">(${totalPautas} total)</span>`;
 
-                if (Object.keys(pautaCounts).length === 0) {
+                if (pautasSnapshot.empty) {
                     statsContainer.innerHTML = '<p class="text-center text-gray-500">Nenhuma pauta foi criada ainda.</p>';
                 } else {
-                    const sortedOwners = Object.entries(pautaCounts).sort(([, a], [, b]) => b - a);
-                    sortedOwners.forEach(([name, count]) => {
+                    const pautasListEl = document.createElement('div');
+                    pautasSnapshot.forEach(pautaDoc => {
+                        const pautaData = pautaDoc.data();
+                        const ownerName = userMap.get(pautaData.owner) || 'Usuário Desconhecido';
                         const div = document.createElement('div');
-                        div.className = 'flex justify-between items-center p-3 bg-gray-100 rounded-lg';
-                        div.innerHTML = `<p class="font-semibold">${name}</p><p class="text-lg font-bold text-green-600">${count} ${count > 1 ? 'pautas' : 'pauta'}</p>`;
-                        statsContainer.appendChild(div);
+                        div.className = 'p-3 bg-gray-50 border rounded-lg mb-2';
+                        div.innerHTML = `
+                            <p class="font-semibold text-gray-800">${pautaData.name}</p>
+                            <p class="text-sm text-gray-600">Criada por: ${ownerName}</p>
+                        `;
+                        pautasListEl.appendChild(div);
                     });
+                     statsContainer.appendChild(pautasListEl);
                 }
-
-                document.getElementById('admin-modal').classList.remove('hidden');
             });
+
             document.getElementById('pending-users-list').addEventListener('click', async (e) => {
                 if(e.target.classList.contains('approve-btn')) {
                     await updateDoc(doc(db, "users", e.target.dataset.uid), { status: 'approved' });
@@ -1015,8 +1155,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.getElementById('manage-members-btn').addEventListener('click', async () => {
                 const currentMembersList = document.getElementById('current-members-list');
                 const registeredUsersList = document.getElementById('registered-users-list');
+                const pendingListModal = document.getElementById('pending-invites-members-modal-list');
                 currentMembersList.innerHTML = '';
                 registeredUsersList.innerHTML = '<p class="text-center text-sm text-gray-500">Carregando...</p>';
+                pendingListModal.innerHTML = '';
 
                 const pautaDoc = await getDoc(doc(db, "pautas", currentPautaId));
                 const pautaData = pautaDoc.data();
@@ -1036,6 +1178,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     currentMembersList.innerHTML = '<p class="text-center text-sm text-gray-500">Nenhum membro adicionado.</p>';
                 }
 
+                // Populate pending invites
+                const pendingInvites = pautaData.pendingInvites || [];
+                if (pendingInvites.length > 0) {
+                    pendingInvites.forEach(email => {
+                        const div = document.createElement('div');
+                        div.className = 'flex justify-between items-center p-2 rounded';
+                        div.innerHTML = `<span>${email}</span> <button data-email="${email}" class="cancel-invite-btn text-xs text-red-500 hover:underline">Cancelar Convite</button>`;
+                        pendingListModal.appendChild(div);
+                    });
+                } else {
+                    pendingListModal.innerHTML = '<p class="text-center text-sm text-gray-500">Nenhum convite pendente.</p>';
+                }
+
 
                 // Populate all registered users for inviting
                  if (currentUserIsOwner) {
@@ -1047,17 +1202,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         const userData = userDoc.data();
                         const userUid = userDoc.id;
 
-                        // Don't show users who are already members
-                        if (!pautaData.members.includes(userUid)) {
+                        if (!pautaData.members.includes(userUid) && !pendingInvites.includes(userData.email)) {
                              const div = document.createElement('div');
                             div.className = 'flex justify-between items-center p-2 rounded hover:bg-gray-200';
                             div.innerHTML = `<div><p class="font-semibold text-sm">${userData.name}</p><p class="text-xs text-gray-600">${userData.email}</p></div>
-                                           <button data-uid="${userUid}" data-email="${userData.email}" class="invite-registered-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600 text-xs">Convidar</button>`;
+                                           <button data-email="${userData.email}" class="invite-registered-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600 text-xs">Convidar</button>`;
                             registeredUsersList.appendChild(div);
                         }
                     });
                     if (registeredUsersList.children.length === 0) {
-                        registeredUsersList.innerHTML = '<p class="text-center text-sm text-gray-500">Todos os usuários já são membros.</p>';
+                        registeredUsersList.innerHTML = '<p class="text-center text-sm text-gray-500">Todos os usuários já são membros ou foram convidados.</p>';
                     }
                  }
 
@@ -1070,24 +1224,29 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const q = query(collection(db, "users"), where("email", "==", email), where("status", "==", "approved"));
                 const snapshot = await getDocs(q);
                 if(snapshot.empty) return showNotification("Usuário não encontrado ou não aprovado.", "error");
-                const userToInvite = snapshot.docs[0];
-                await updateDoc(doc(db, "pautas", currentPautaId), { members: arrayUnion(userToInvite.id), memberEmails: arrayUnion(email) });
-                showNotification("Usuário convidado!", "success");
+
+                await updateDoc(doc(db, "pautas", currentPautaId), { pendingInvites: arrayUnion(email) });
+                showNotification("Convite enviado!", "success");
                 document.getElementById('invite-email-input').value = '';
                 document.getElementById('members-modal').classList.add('hidden');
             });
 
             document.getElementById('registered-users-list').addEventListener('click', async (e) => {
                  if(e.target.classList.contains('invite-registered-btn')) {
-                    const userUid = e.target.dataset.uid;
                     const userEmail = e.target.dataset.email;
-                     await updateDoc(doc(db, "pautas", currentPautaId), { members: arrayUnion(userUid), memberEmails: arrayUnion(userEmail) });
-                    showNotification(`${userEmail} foi convidado(a)!`, "success");
-                    e.target.parentElement.remove();
-                    if (document.getElementById('registered-users-list').children.length === 0) {
-                        document.getElementById('registered-users-list').innerHTML = '<p class="text-center text-sm text-gray-500">Todos os usuários já são membros.</p>';
-                    }
+                     await updateDoc(doc(db, "pautas", currentPautaId), { pendingInvites: arrayUnion(userEmail) });
+                    showNotification(`Convite enviado para ${userEmail}!`, "success");
+                    document.getElementById('members-modal').classList.add('hidden');
                  }
+            });
+
+             document.getElementById('pending-invites-members-modal-list').addEventListener('click', async (e) => {
+                if (e.target.classList.contains('cancel-invite-btn')) {
+                    const email = e.target.dataset.email;
+                    await updateDoc(doc(db, "pautas", currentPautaId), { pendingInvites: arrayRemove(email) });
+                    showNotification("Convite cancelado.", "success");
+                    document.getElementById('members-modal').classList.add('hidden');
+                }
             });
 
             document.getElementById('current-members-list').addEventListener('click', async (e) => {
@@ -1281,3 +1440,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+
