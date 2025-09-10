@@ -11,7 +11,7 @@
     <!-- Metatags para PWA -->
     <meta name="theme-color" content="#16a34a"/>
     <link rel="apple-touch-icon" href="https://alexdovale.github.io/ac-o-paula-controle/imagem.png">
-    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Sistema%20de%20Gerenciamento%20de%20Pauta%20-%20SIGEP%22,%22short_name%22:%22SIGEP%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#f0f2f5%22,%22theme_color%22:%22#16a34a%22,%22description%22:%22Sistema%20para%20gerenciar%20pautas%20de%20atendimento%20da%20Defensoria.%22,%22icons%22:[{%22src%22:%22https://alexdovale.github.io/ac-o-paula-controle/imagem.png%22,%22sizes%22:%22192x192%22,%22type%22:%22image/png%22,%22purpose%22:%22any%20maskable%22},{%22src%22:%22https://alexdovale.github.io/ac-o-paula-controle/imagem.png%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22,%22purpose%22:%22any%20maskable%22}]}">
+    <link rel="manifest" href="data:application/manifest+json,{&quot;name&quot;:&quot;Sistema de Gerenciamento de Pauta - SIGEP&quot;,&quot;short_name&quot;:&quot;SIGEP&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;#f0f2f5&quot;,&quot;theme_color&quot;:&quot;#16a34a&quot;,&quot;description&quot;:&quot;Sistema para gerenciar pautas de atendimento da Defensoria.&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;https://alexdovale.github.io/ac-o-paula-controle/imagem.png&quot;,&quot;sizes&quot;:&quot;192x192&quot;,&quot;type&quot;:&quot;image/png&quot;,&quot;purpose&quot;:&quot;any maskable&quot;},{&quot;src&quot;:&quot;https://alexdovale.github.io/ac-o-paula-controle/imagem.png&quot;,&quot;sizes&quot;:&quot;512x512&quot;,&quot;type&quot;:&quot;image/png&quot;,&quot;purpose&quot;:&quot;any maskable&quot;}]}">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -57,10 +57,10 @@
                 <div><label for="register-password" class="block text-sm font-medium text-gray-700">Senha (mínimo 6 caracteres)</label><input type="password" id="register-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"></div>
                 <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">Criar Conta</button>
             </form>
-                                <!-- Link para a Política de Privacidade -->
-                                <a href="#" id="privacy-policy-link" class="block mt-4 text-center text-sm text-gray-500 hover:underline">
-                                      Política de Privacidade
-                                </a>
+                      <!-- Link para a Política de Privacidade -->
+                      <a href="#" id="privacy-policy-link" class="block mt-4 text-center text-sm text-gray-500 hover:underline">
+                              Política de Privacidade
+                      </a>
         </div>
     </div>
 
@@ -97,11 +97,11 @@
             <div class="flex justify-center items-center">
                  <h1 id="pauta-title" class="text-3xl md:text-4xl font-bold text-gray-800"></h1>
                  <button id="edit-pauta-name-btn" title="Editar nome da pauta" class="hidden ml-3 p-2 rounded-full hover:bg-gray-200 transition">
-                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
-                         <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
-                         <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5h6a.5.5 0 0 0 0-1h-6A1.5 1.5 0 0 0 1 2.5v11z"/>
-                     </svg>
-                 </button>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                        <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                        <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5h6a.5.5 0 0 0 0-1h-6A1.5 1.5 0 0 0 1 2.5v11z"/>
+                    </svg>
+                </button>
             </div>
             <div class="absolute top-0 right-0 flex items-center gap-2">
                 <button id="manage-members-btn" class="bg-lime-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-lime-700">Membros</button>
@@ -215,16 +215,16 @@
             <h2 class="text-2xl font-bold mb-4">Gerenciar Membros</h2>
             <div id="invite-container" class="space-y-4 mb-6">
                  <div class="space-y-2">
-                     <label for="invite-email-input" class="block text-sm font-medium text-gray-700">Convidar por email (caso não esteja na lista abaixo)</label>
-                     <div class="flex gap-2">
-                         <input type="email" id="invite-email-input" class="flex-1 p-2 border border-gray-300 rounded-lg" placeholder="email@exemplo.com">
-                         <button id="invite-member-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Convidar</button>
-                     </div>
-                 </div>
+                    <label for="invite-email-input" class="block text-sm font-medium text-gray-700">Convidar por email (caso não esteja na lista abaixo)</label>
+                    <div class="flex gap-2">
+                        <input type="email" id="invite-email-input" class="flex-1 p-2 border border-gray-300 rounded-lg" placeholder="email@exemplo.com">
+                        <button id="invite-member-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Convidar</button>
+                    </div>
+                </div>
                  <div class="mt-4">
-                     <h3 class="font-semibold text-gray-800 mb-2">Usuários cadastrados no SIGEP</h3>
-                     <div id="registered-users-list" class="space-y-2 max-h-48 overflow-y-auto border p-3 rounded-lg bg-gray-50 scrollable-content"></div>
-                 </div>
+                    <h3 class="font-semibold text-gray-800 mb-2">Usuários cadastrados no SIGEP</h3>
+                    <div id="registered-users-list" class="space-y-2 max-h-48 overflow-y-auto border p-3 rounded-lg bg-gray-50 scrollable-content"></div>
+                </div>
             </div>
             <h3 class="font-semibold mt-6 mb-2">Membros Atuais da Pauta</h3>
             <div id="current-members-list" class="space-y-2 max-h-40 overflow-y-auto border p-3 rounded-lg bg-gray-50 scrollable-content"></div>
@@ -363,7 +363,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, getDoc, setDoc, query, where, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '';
-        // -- REMOVIDO: ADMIN_UID não é mais necessário --
+        const ADMIN_UID = "j7EqtDazdGVQPNeclkKyM7IHHBh2"; // IMPORTANTE: Substituir
 
         const loadingContainer = document.getElementById('loading-container');
         const loginContainer = document.getElementById('login-container');
@@ -371,36 +371,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         const appContainer = document.getElementById('app-container');
         const loadingText = document.getElementById('loading-text');
 
-        // ++ FUNÇÃO DE VALIDAÇÃO DE CPF ADICIONADA AQUI ++
-        const isValidCPF = (cpf) => {
-            if (typeof cpf !== 'string') return false;
-            cpf = cpf.replace(/[^\d]+/g, '');
-            if (cpf.length !== 11 || !!cpf.match(/(\d)\1{10}/)) return false;
-            const cpfDigits = cpf.split('').map(el => +el);
-            const getVerifier = (digits) => {
-                const sum = digits.reduce((acc, val, i) => acc + val * (digits.length + 1 - i), 0);
-                const rest = (sum * 10) % 11;
-                return rest === 10 ? 0 : rest;
-            };
-            const verifier1 = getVerifier(cpfDigits.slice(0, 9));
-            if (verifier1 !== cpfDigits[9]) return false;
-            const verifier2 = getVerifier(cpfDigits.slice(0, 10));
-            if (verifier2 !== cpfDigits[10]) return false;
-            return true;
-        }
-
         const main = () => {
             try {
                 let firebaseConfig;
-                if (typeof __firebase_config !== 'undefined' && __firebase_config && __firebase_config !== '{}') {
-                    firebaseConfig = JSON.parse(__firebase_config);
-                } else {
-                    // IMPORTANTE PARA SEGURANÇA:
-                    // Substitua os valores abaixo com as chaves do seu projeto Firebase.
-                    // NÃO ENVIE ESTE ARQUIVO COM AS CHAVES REAIS PARA UM REPOSITÓRIO PÚBLICO NO GITHUB.
-                    firebaseConfig = {
-                        apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.firebasestorage.app", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
-                }
+                if (typeof __firebase_config !== 'undefined' && __firebase_config && __firebase_config !== '{}') firebaseConfig = JSON.parse(__firebase_config);
+                else firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.firebasestorage.app", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
                 
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
@@ -417,6 +392,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 try {
                     unsubscribeFromAttendances();
                     if (user) {
+                        // Show initial connecting state
                         loadingText.textContent = 'Verificando sua conta...';
                         showScreen('loading');
 
@@ -431,6 +407,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             logoutBtn.className = 'mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700';
                             logoutBtn.onclick = () => signOut(auth);
                             
+                            // Ensure the logout button is not added multiple times
                             const existingBtn = loadingContainer.querySelector('#logout-pending-btn');
                             if (existingBtn) existingBtn.remove();
                             loadingContainer.appendChild(logoutBtn);
@@ -440,18 +417,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             return;
                         }
 
+                        // User is approved, reset loading screen and proceed
                         document.querySelector('.loader').style.display = 'block';
                         const pendingLogoutBtn = loadingContainer.querySelector('#logout-pending-btn');
                         if (pendingLogoutBtn) pendingLogoutBtn.remove();
                         
                         currentUserName = userDoc.data().name || '';
-                        
-                        // ++ VERIFICAÇÃO DE ADMIN BASEADA EM 'ROLE' ++
-                        const isAdmin = userDoc.data().role === 'admin';
-                        document.getElementById('admin-btn-main').classList.toggle('hidden', !isAdmin);
-
+                        document.getElementById('admin-btn-main').classList.toggle('hidden', user.uid !== ADMIN_UID);
                         showPautaSelectionScreen(user.uid);
                     } else {
+                        // User is not logged in, show login screen
                         currentUserName = '';
                         showScreen('login');
                     }
@@ -459,6 +434,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     console.error("Erro na verificação de autenticação:", error);
                     loadingText.textContent = 'Ocorreu um erro ao verificar sua conta. Verifique sua conexão e tente novamente.';
                     document.querySelector('.loader').style.display = 'none';
+                    // Optionally add a reload button here as well
                     const reloadBtn = document.createElement('button');
                     reloadBtn.textContent = 'Tentar Novamente';
                     reloadBtn.className = 'mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700';
@@ -499,7 +475,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (uniqueOwnerIds.length > 0) {
                          const ownerDocs = await Promise.all(uniqueOwnerIds.map(id => getDoc(doc(db, "users", id))));
                          ownerDocs.forEach(doc => {
-                             if (doc.exists()) ownerNames[doc.id] = doc.data().name;
+                            if (doc.exists()) ownerNames[doc.id] = doc.data().name;
                         });
                     }
 
@@ -800,56 +776,22 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.getElementById('tab-avulso').addEventListener('click', () => setMode('avulso'));
             ['pauta-search', 'aguardando-search', 'atendidos-search'].forEach(id => document.getElementById(id).addEventListener('input', renderAssistedList));
 
-            // ++ LISTENER DO CPF ATUALIZADO COM VALIDAÇÃO EM TEMPO REAL ++
             document.getElementById('assisted-cpf').addEventListener('input', (e) => {
-                const cpfField = e.target;
-                let value = cpfField.value.replace(/\D/g, '');
-                
-                // Aplica a máscara
+                let value = e.target.value.replace(/\D/g, '');
                 value = value.replace(/(\d{3})(\d)/, '$1.$2');
                 value = value.replace(/(\d{3})(\d)/, '$1.$2');
                 value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-                cpfField.value = value;
-                
-                const cleanCpf = value.replace(/\D/g, '');
-                
-                // Limpa a validação se o campo estiver vazio
-                if (cleanCpf.length === 0) {
-                    cpfField.classList.remove('border-red-500', 'focus:ring-red-500', 'border-green-500', 'focus:ring-green-500');
-                    cpfField.classList.add('border-gray-300', 'focus:ring-green-500');
-                    return;
-                }
-                
-                // Valida quando o CPF está completo
-                if (cleanCpf.length === 11) {
-                    if (isValidCPF(cleanCpf)) {
-                        cpfField.classList.remove('border-red-500', 'focus:ring-red-500', 'border-gray-300');
-                        cpfField.classList.add('border-green-500', 'focus:ring-green-500');
-                    } else {
-                        cpfField.classList.remove('border-green-500', 'focus:ring-green-500', 'border-gray-300');
-                        cpfField.classList.add('border-red-500', 'focus:ring-red-500');
-                    }
-                } else {
-                     // Mantém o estilo padrão enquanto digita
-                    cpfField.classList.remove('border-red-500', 'focus:ring-red-500', 'border-green-500', 'focus:ring-green-500');
-                    cpfField.classList.add('border-gray-300', 'focus:ring-green-500');
-                }
+                e.target.value = value;
             });
 
             document.getElementById('add-assisted-btn').addEventListener('click', async () => {
                 const name = document.getElementById('assisted-name').value.trim();
                 const subject = document.getElementById('assisted-subject').value.trim();
-                const cpf = document.getElementById('assisted-cpf').value.trim();
                 const time = document.getElementById('scheduled-time').value;
                 const isAgendamento = document.getElementById('tab-agendamento').classList.contains('tab-active');
                 if(!name || !subject || (isAgendamento && !time)) return showNotification("Preencha os campos obrigatórios.", "error");
-                
-                // ++ VERIFICAÇÃO DO CPF ANTES DE ADICIONAR ++
-                if (cpf && !isValidCPF(cpf)) {
-                    return showNotification("O CPF informado não tem uma estrutura válida.", "error");
-                }
 
-                const newAssisted = { name, subject, cpf: cpf || null, status: 'pauta', type: isAgendamento ? 'agendamento' : 'avulso', scheduledTime: time || null, arrivalTime: null, attendedTime: null, attendant: null, priority: null, order: allAssisted.length, checkInTimestamp: null, demandas: null };
+                const newAssisted = { name, subject, cpf: document.getElementById('assisted-cpf').value.trim() || null, status: 'pauta', type: isAgendamento ? 'agendamento' : 'avulso', scheduledTime: time || null, arrivalTime: null, attendedTime: null, attendant: null, priority: null, order: allAssisted.length, checkInTimestamp: null, demandas: null };
                 if (!isAgendamento) { 
                     const now = new Date().toISOString();
                     newAssisted.status = 'aguardando'; 
@@ -860,10 +802,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 await addDoc(collection(db, "pautas", currentPautaId, "attendances"), newAssisted);
                 ['assisted-name', 'assisted-subject', 'assisted-cpf', 'scheduled-time'].forEach(id => document.getElementById(id).value = '');
-                 // Limpa o estilo de validação do campo CPF
-                const cpfField = document.getElementById('assisted-cpf');
-                cpfField.classList.remove('border-red-500', 'focus:ring-red-500', 'border-green-500', 'focus:ring-green-500');
-                cpfField.classList.add('border-gray-300', 'focus:ring-green-500');
             });
 
             document.getElementById('file-upload').addEventListener('change', (e) => {
@@ -1034,7 +972,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (button.classList.contains('decline-invite-btn')) {
                     try {
                          await updateDoc(pautaRef, {
-                             pendingInvites: arrayRemove(email)
+                            pendingInvites: arrayRemove(email)
                         });
                         showNotification("Convite recusado.", "info");
                         showPautaSelectionScreen(uid);
@@ -1275,11 +1213,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             document.getElementById('pending-users-list').addEventListener('click', async (e) => {
                 if(e.target.classList.contains('approve-btn')) {
-                    // ++ ADICIONA 'ROLE: USER' AO APROVAR ++
-                    await updateDoc(doc(db, "users", e.target.dataset.uid), { status: 'approved', role: 'user' });
+                    await updateDoc(doc(db, "users", e.target.dataset.uid), { status: 'approved' });
                     e.target.parentElement.remove();
                      if (document.getElementById('pending-users-list').children.length === 0) {
-                         document.getElementById('pending-users-list').innerHTML = '<p class="text-center text-gray-500">Nenhum usuário pendente.</p>';
+                        document.getElementById('pending-users-list').innerHTML = '<p class="text-center text-gray-500">Nenhum usuário pendente.</p>';
                     }
                 }
             });
@@ -1308,7 +1245,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     currentMembersList.appendChild(div);
                 });
                  if (pautaData.memberEmails.length === 0) {
-                     currentMembersList.innerHTML = '<p class="text-center text-sm text-gray-500">Nenhum membro adicionado.</p>';
+                    currentMembersList.innerHTML = '<p class="text-center text-sm text-gray-500">Nenhum membro adicionado.</p>';
                 }
 
                 // Populate pending invites
@@ -1327,25 +1264,25 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 // Populate all registered users for inviting
                  if (currentUserIsOwner) {
-                     const q = query(collection(db, "users"), where("status", "==", "approved"));
-                     const allUsersSnapshot = await getDocs(q);
-                     registeredUsersList.innerHTML = '';
+                    const q = query(collection(db, "users"), where("status", "==", "approved"));
+                    const allUsersSnapshot = await getDocs(q);
+                    registeredUsersList.innerHTML = '';
 
-                     allUsersSnapshot.forEach(userDoc => {
-                         const userData = userDoc.data();
-                         const userUid = userDoc.id;
+                    allUsersSnapshot.forEach(userDoc => {
+                        const userData = userDoc.data();
+                        const userUid = userDoc.id;
 
-                         if (!pautaData.members.includes(userUid) && !pendingInvites.includes(userData.email)) {
-                              const div = document.createElement('div');
-                             div.className = 'flex justify-between items-center p-2 rounded hover:bg-gray-200';
-                             div.innerHTML = `<div><p class="font-semibold text-sm">${userData.name}</p><p class="text-xs text-gray-600">${userData.email}</p></div>
-                                             <button data-email="${userData.email}" class="invite-registered-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600 text-xs">Convidar</button>`;
-                             registeredUsersList.appendChild(div);
-                         }
-                     });
-                     if (registeredUsersList.children.length === 0) {
-                         registeredUsersList.innerHTML = '<p class="text-center text-sm text-gray-500">Todos os usuários já são membros ou foram convidados.</p>';
-                     }
+                        if (!pautaData.members.includes(userUid) && !pendingInvites.includes(userData.email)) {
+                             const div = document.createElement('div');
+                            div.className = 'flex justify-between items-center p-2 rounded hover:bg-gray-200';
+                            div.innerHTML = `<div><p class="font-semibold text-sm">${userData.name}</p><p class="text-xs text-gray-600">${userData.email}</p></div>
+                                           <button data-email="${userData.email}" class="invite-registered-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600 text-xs">Convidar</button>`;
+                            registeredUsersList.appendChild(div);
+                        }
+                    });
+                    if (registeredUsersList.children.length === 0) {
+                        registeredUsersList.innerHTML = '<p class="text-center text-sm text-gray-500">Todos os usuários já são membros ou foram convidados.</p>';
+                    }
                  }
 
                 document.getElementById('members-modal').classList.remove('hidden');
@@ -1366,21 +1303,21 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             document.getElementById('registered-users-list').addEventListener('click', async (e) => {
                  if(e.target.classList.contains('invite-registered-btn')) {
-                     const userEmail = e.target.dataset.email;
-                      await updateDoc(doc(db, "pautas", currentPautaId), { pendingInvites: arrayUnion(userEmail) });
-                     showNotification(`Convite enviado para ${userEmail}!`, "success");
-                     document.getElementById('members-modal').classList.add('hidden');
+                    const userEmail = e.target.dataset.email;
+                     await updateDoc(doc(db, "pautas", currentPautaId), { pendingInvites: arrayUnion(userEmail) });
+                    showNotification(`Convite enviado para ${userEmail}!`, "success");
+                    document.getElementById('members-modal').classList.add('hidden');
                  }
             });
 
              document.getElementById('pending-invites-members-modal-list').addEventListener('click', async (e) => {
-                 if (e.target.classList.contains('cancel-invite-btn')) {
-                     const email = e.target.dataset.email;
-                     await updateDoc(doc(db, "pautas", currentPautaId), { pendingInvites: arrayRemove(email) });
-                     showNotification("Convite cancelado.", "success");
-                     document.getElementById('members-modal').classList.add('hidden');
-                 }
-             });
+                if (e.target.classList.contains('cancel-invite-btn')) {
+                    const email = e.target.dataset.email;
+                    await updateDoc(doc(db, "pautas", currentPautaId), { pendingInvites: arrayRemove(email) });
+                    showNotification("Convite cancelado.", "success");
+                    document.getElementById('members-modal').classList.add('hidden');
+                }
+            });
 
             document.getElementById('current-members-list').addEventListener('click', async (e) => {
                 if(e.target.classList.contains('remove-member-btn')) {
@@ -1423,8 +1360,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (a.demandas && a.demandas.descricoes && a.demandas.descricoes.length > 0) {
                         const additionalSubjects = a.demandas.descricoes.map(d => `- ${d.trim()}`).filter(d => d !== '-');
                          if(additionalSubjects.length > 0) {
-                             allSubjects = allSubjects.concat(additionalSubjects);
-                            }
+                              allSubjects = allSubjects.concat(additionalSubjects);
+                           }
                     }
                     return [
                         a.name,
