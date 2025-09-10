@@ -411,28 +411,60 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
         const handleAuthState = () => {
             onAuthStateChanged(auth, async (user) => {
-                unsubscribeFromAttendances();
-                if (user) {
-                    const userDoc = await getDoc(doc(db, "users", user.uid));
-                    if (!userDoc.exists() || userDoc.data().status !== 'approved') {
-                        loadingText.innerHTML = `Olá! Sua conta está pendente de aprovação.<br>Por favor, aguarde.`;
-                        document.querySelector('.loader').style.display = 'none';
-                        const logoutBtn = document.createElement('button');
-                        logoutBtn.id = 'logout-pending-btn';
-                        logoutBtn.textContent = 'Sair';
-                        logoutBtn.className = 'mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700';
-                        logoutBtn.onclick = () => signOut(auth);
-                        if(!loadingContainer.querySelector('#logout-pending-btn')) loadingContainer.appendChild(logoutBtn);
+                try {
+                    unsubscribeFromAttendances();
+                    if (user) {
+                        // Show initial connecting state
+                        loadingText.textContent = 'Verificando sua conta...';
                         showScreen('loading');
+
+                        const userDoc = await getDoc(doc(db, "users", user.uid));
+
+                        if (!userDoc.exists() || userDoc.data().status !== 'approved') {
+                            loadingText.innerHTML = `Olá! Sua conta está pendente de aprovação.<br>Por favor, aguarde.`;
+                            document.querySelector('.loader').style.display = 'none';
+                            const logoutBtn = document.createElement('button');
+                            logoutBtn.id = 'logout-pending-btn';
+                            logoutBtn.textContent = 'Sair';
+                            logoutBtn.className = 'mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700';
+                            logoutBtn.onclick = () => signOut(auth);
+                            
+                            // Ensure the logout button is not added multiple times
+                            const existingBtn = loadingContainer.querySelector('#logout-pending-btn');
+                            if (existingBtn) existingBtn.remove();
+                            loadingContainer.appendChild(logoutBtn);
+                            
+                            showScreen('loading');
+                            currentUserName = '';
+                            return;
+                        }
+
+                        // User is approved, reset loading screen and proceed
+                        document.querySelector('.loader').style.display = 'block';
+                        const pendingLogoutBtn = loadingContainer.querySelector('#logout-pending-btn');
+                        if (pendingLogoutBtn) pendingLogoutBtn.remove();
+                        
+                        currentUserName = userDoc.data().name || '';
+                        document.getElementById('admin-btn-main').classList.toggle('hidden', user.uid !== ADMIN_UID);
+                        showPautaSelectionScreen(user.uid);
+                    } else {
+                        // User is not logged in, show login screen
                         currentUserName = '';
-                        return;
+                        showScreen('login');
                     }
-                    currentUserName = userDoc.data().name || '';
-                    document.getElementById('admin-btn-main').classList.toggle('hidden', user.uid !== ADMIN_UID);
-                    showPautaSelectionScreen(user.uid);
-                } else {
-                    currentUserName = '';
-                    showScreen('login');
+                } catch (error) {
+                    console.error("Erro na verificação de autenticação:", error);
+                    loadingText.textContent = 'Ocorreu um erro ao verificar sua conta. Verifique sua conexão e tente novamente.';
+                    document.querySelector('.loader').style.display = 'none';
+                    // Optionally add a reload button here as well
+                    const reloadBtn = document.createElement('button');
+                    reloadBtn.textContent = 'Tentar Novamente';
+                    reloadBtn.className = 'mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700';
+                    reloadBtn.onclick = () => window.location.reload();
+                    
+                    const existingBtn = loadingContainer.querySelector('button');
+                    if(existingBtn) existingBtn.remove();
+                    loadingContainer.appendChild(reloadBtn);
                 }
             });
         };
