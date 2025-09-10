@@ -955,21 +955,31 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const pautaRef = doc(db, "pautas", pautaId);
 
                 if (button.classList.contains('accept-invite-btn')) {
-                    await updateDoc(pautaRef, {
-                        pendingInvites: arrayRemove(email),
-                        members: arrayUnion(uid),
-                        memberEmails: arrayUnion(email)
-                    });
-                    showNotification("Convite aceito!", "success");
-                    showPautaSelectionScreen(uid); 
+                    try {
+                        await updateDoc(pautaRef, {
+                            pendingInvites: arrayRemove(email),
+                            members: arrayUnion(uid),
+                            memberEmails: arrayUnion(email)
+                        });
+                        showNotification("Convite aceito!", "success");
+                        showPautaSelectionScreen(uid); 
+                    } catch (error) {
+                        console.error("Erro ao aceitar convite:", error);
+                        showNotification("Não foi possível aceitar o convite.", "error");
+                    }
                 }
 
                 if (button.classList.contains('decline-invite-btn')) {
-                     await updateDoc(pautaRef, {
-                        pendingInvites: arrayRemove(email)
-                    });
-                    showNotification("Convite recusado.", "info");
-                    showPautaSelectionScreen(uid);
+                    try {
+                         await updateDoc(pautaRef, {
+                            pendingInvites: arrayRemove(email)
+                        });
+                        showNotification("Convite recusado.", "info");
+                        showPautaSelectionScreen(uid);
+                    } catch (error) {
+                        console.error("Erro ao recusar convite:", error);
+                        showNotification("Não foi possível recusar o convite.", "error");
+                    }
                 }
             });
 
@@ -1134,8 +1144,20 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     statsContainer.innerHTML = '<p class="text-center text-gray-500">Nenhuma pauta foi criada ainda.</p>';
                 } else {
                     const pautasListEl = document.createElement('div');
-                    pautasSnapshot.forEach(pautaDoc => {
-                        const pautaData = pautaDoc.data();
+
+                    const pautaDataPromises = pautasSnapshot.docs.map(async (pautaDoc) => {
+                        const attendancesRef = collection(db, "pautas", pautaDoc.id, "attendances");
+                        const attendancesSnapshot = await getDocs(attendancesRef);
+                        return {
+                            ...pautaDoc.data(),
+                            id: pautaDoc.id,
+                            totalAtendimentos: attendancesSnapshot.size
+                        };
+                    });
+
+                    const pautasComContagem = await Promise.all(pautaDataPromises);
+
+                    pautasComContagem.forEach(pautaData => {
                         const ownerName = userMap.get(pautaData.owner) || 'Usuário Desconhecido';
                         
                         const dataCriacao = new Date(pautaData.dataDaPauta).toLocaleDateString('pt-BR');
@@ -1169,6 +1191,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         div.innerHTML = `
                             <p class="font-semibold text-gray-800">${pautaData.name}</p>
                             <p class="text-sm text-gray-600"><strong>Criada por:</strong> ${ownerName}</p>
+                            <p class="text-sm text-gray-600"><strong>Total de Atendimentos:</strong> ${pautaData.totalAtendimentos}</p>
                             <p class="text-sm text-gray-500"><strong>Criação:</strong> ${dataCriacao}</p>
                             <div class="flex justify-between items-center mt-1">
                                 <p class="text-sm text-gray-500"><strong>Eliminação:</strong> ${dataEliminacao}</p>
@@ -1481,4 +1504,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+
+
 
