@@ -1114,93 +1114,99 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 statsContainer.innerHTML = '<p class="text-center text-gray-500">Carregando...</p>';
                 document.getElementById('admin-modal').classList.remove('hidden');
 
-                // Fetch pending users
-                const q = query(collection(db, "users"), where("status", "==", "pending"));
-                const pendingSnapshot = await getDocs(q);
-                pendingList.innerHTML = '';
-                if(pendingSnapshot.empty) pendingList.innerHTML = '<p class="text-center text-gray-500">Nenhum usuário pendente.</p>';
-                else pendingSnapshot.forEach(userDoc => {
-                    const userData = userDoc.data();
-                    const div = document.createElement('div');
-                    div.className = 'flex justify-between items-center p-3 bg-gray-100 rounded-lg';
-                    div.innerHTML = `<div><p class="font-semibold">${userData.name}</p><p class="text-sm text-gray-600">${userData.email}</p></div><button data-uid="${userDoc.id}" class="approve-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600">Aprovar</button>`;
-                    pendingList.appendChild(div);
-                });
-
-                // Fetch pauta report
-                statsContainer.innerHTML = ''; 
-
-                const usersSnapshot = await getDocs(collection(db, "users"));
-                const userMap = new Map();
-                usersSnapshot.forEach(doc => userMap.set(doc.id, doc.data().name));
-
-                const pautasSnapshot = await getDocs(collection(db, "pautas"));
-                const totalPautas = pautasSnapshot.size;
-                
-                const titleEl = document.getElementById('pautas-report-title');
-                titleEl.innerHTML = `Relatório de Pautas do Sistema <span class="text-base font-normal text-gray-500">(${totalPautas} total)</span>`;
-
-                if (pautasSnapshot.empty) {
-                    statsContainer.innerHTML = '<p class="text-center text-gray-500">Nenhuma pauta foi criada ainda.</p>';
-                } else {
-                    const pautasListEl = document.createElement('div');
-
-                    const pautaDataPromises = pautasSnapshot.docs.map(async (pautaDoc) => {
-                        const attendancesRef = collection(db, "pautas", pautaDoc.id, "attendances");
-                        const attendancesSnapshot = await getDocs(attendancesRef);
-                        return {
-                            ...pautaDoc.data(),
-                            id: pautaDoc.id,
-                            totalAtendimentos: attendancesSnapshot.size
-                        };
-                    });
-
-                    const pautasComContagem = await Promise.all(pautaDataPromises);
-
-                    pautasComContagem.forEach(pautaData => {
-                        const ownerName = userMap.get(pautaData.owner) || 'Usuário Desconhecido';
-                        
-                        const dataCriacao = new Date(pautaData.dataDaPauta).toLocaleDateString('pt-BR');
-                        const dataEliminacao = new Date(pautaData.dataDeEliminacao).toLocaleDateString('pt-BR');
-                        
-                        const hoje = new Date();
-                        hoje.setHours(0, 0, 0, 0);
-                        const eliminacaoDate = new Date(pautaData.dataDeEliminacao);
-                        eliminacaoDate.setHours(0, 0, 0, 0);
-                        
-                        const diffTime = eliminacaoDate - hoje;
-                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-                        let countdownText, countdownColor;
-                        if (diffDays > 1) {
-                            countdownText = `em ${diffDays} dias`;
-                            countdownColor = 'text-green-600';
-                        } else if (diffDays === 1) {
-                            countdownText = `em 1 dia`;
-                            countdownColor = 'text-yellow-600';
-                        } else if (diffDays === 0) {
-                            countdownText = `Hoje`;
-                            countdownColor = 'text-orange-600';
-                        } else {
-                            countdownText = `Expirou`;
-                            countdownColor = 'text-red-600';
-                        }
-                        
+                try {
+                    // Fetch pending users
+                    const q = query(collection(db, "users"), where("status", "==", "pending"));
+                    const pendingSnapshot = await getDocs(q);
+                    pendingList.innerHTML = '';
+                    if(pendingSnapshot.empty) pendingList.innerHTML = '<p class="text-center text-gray-500">Nenhum usuário pendente.</p>';
+                    else pendingSnapshot.forEach(userDoc => {
+                        const userData = userDoc.data();
                         const div = document.createElement('div');
-                        div.className = 'p-3 bg-gray-50 border rounded-lg mb-2';
-                        div.innerHTML = `
-                            <p class="font-semibold text-gray-800">${pautaData.name}</p>
-                            <p class="text-sm text-gray-600"><strong>Criada por:</strong> ${ownerName}</p>
-                            <p class="text-sm text-gray-600"><strong>Total de Atendimentos:</strong> ${pautaData.totalAtendimentos}</p>
-                            <p class="text-sm text-gray-500"><strong>Criação:</strong> ${dataCriacao}</p>
-                            <div class="flex justify-between items-center mt-1">
-                                <p class="text-sm text-gray-500"><strong>Eliminação:</strong> ${dataEliminacao}</p>
-                                <p class="text-sm font-bold ${countdownColor}">${countdownText}</p>
-                            </div>
-                        `;
-                        pautasListEl.appendChild(div);
+                        div.className = 'flex justify-between items-center p-3 bg-gray-100 rounded-lg';
+                        div.innerHTML = `<div><p class="font-semibold">${userData.name}</p><p class="text-sm text-gray-600">${userData.email}</p></div><button data-uid="${userDoc.id}" class="approve-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600">Aprovar</button>`;
+                        pendingList.appendChild(div);
                     });
-                    statsContainer.appendChild(pautasListEl);
+
+                    // Fetch pauta report
+                    statsContainer.innerHTML = ''; 
+
+                    const usersSnapshot = await getDocs(collection(db, "users"));
+                    const userMap = new Map();
+                    usersSnapshot.forEach(doc => userMap.set(doc.id, doc.data().name));
+
+                    const pautasSnapshot = await getDocs(collection(db, "pautas"));
+                    const totalPautas = pautasSnapshot.size;
+                    
+                    const titleEl = document.getElementById('pautas-report-title');
+                    titleEl.innerHTML = `Relatório de Pautas do Sistema <span class="text-base font-normal text-gray-500">(${totalPautas} total)</span>`;
+
+                    if (pautasSnapshot.empty) {
+                        statsContainer.innerHTML = '<p class="text-center text-gray-500">Nenhuma pauta foi criada ainda.</p>';
+                    } else {
+                        const pautasListEl = document.createElement('div');
+
+                        const pautaDataPromises = pautasSnapshot.docs.map(async (pautaDoc) => {
+                            const attendancesRef = collection(db, "pautas", pautaDoc.id, "attendances");
+                            const attendancesSnapshot = await getDocs(attendancesRef);
+                            return {
+                                ...pautaDoc.data(),
+                                id: pautaDoc.id,
+                                totalAtendimentos: attendancesSnapshot.size
+                            };
+                        });
+
+                        const pautasComContagem = await Promise.all(pautaDataPromises);
+
+                        pautasComContagem.forEach(pautaData => {
+                            const ownerName = userMap.get(pautaData.owner) || 'Usuário Desconhecido';
+                            
+                            const dataCriacao = new Date(pautaData.dataDaPauta).toLocaleDateString('pt-BR');
+                            const dataEliminacao = new Date(pautaData.dataDeEliminacao).toLocaleDateString('pt-BR');
+                            
+                            const hoje = new Date();
+                            hoje.setHours(0, 0, 0, 0);
+                            const eliminacaoDate = new Date(pautaData.dataDeEliminacao);
+                            eliminacaoDate.setHours(0, 0, 0, 0);
+                            
+                            const diffTime = eliminacaoDate - hoje;
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                            let countdownText, countdownColor;
+                            if (diffDays > 1) {
+                                countdownText = `em ${diffDays} dias`;
+                                countdownColor = 'text-green-600';
+                            } else if (diffDays === 1) {
+                                countdownText = `em 1 dia`;
+                                countdownColor = 'text-yellow-600';
+                            } else if (diffDays === 0) {
+                                countdownText = `Hoje`;
+                                countdownColor = 'text-orange-600';
+                            } else {
+                                countdownText = `Expirou`;
+                                countdownColor = 'text-red-600';
+                            }
+                            
+                            const div = document.createElement('div');
+                            div.className = 'p-3 bg-gray-50 border rounded-lg mb-2';
+                            div.innerHTML = `
+                                <p class="font-semibold text-gray-800">${pautaData.name}</p>
+                                <p class="text-sm text-gray-600"><strong>Criada por:</strong> ${ownerName}</p>
+                                <p class="text-sm text-gray-600"><strong>Total de Atendimentos:</strong> ${pautaData.totalAtendimentos}</p>
+                                <p class="text-sm text-gray-500"><strong>Criação:</strong> ${dataCriacao}</p>
+                                <div class="flex justify-between items-center mt-1">
+                                    <p class="text-sm text-gray-500"><strong>Eliminação:</strong> ${dataEliminacao}</p>
+                                    <p class="text-sm font-bold ${countdownColor}">${countdownText}</p>
+                                </div>
+                            `;
+                            pautasListEl.appendChild(div);
+                        });
+                        statsContainer.appendChild(pautasListEl);
+                    }
+                } catch (error) {
+                    console.error("Erro ao carregar o painel do administrador:", error);
+                    statsContainer.innerHTML = '<p class="text-center text-red-500">Ocorreu um erro ao carregar o relatório. Verifique as permissões do banco de dados e a sua conexão.</p>';
+                    pendingList.innerHTML = '<p class="text-center text-red-500">Erro ao carregar usuários.</p>'
                 }
             });
 
@@ -1504,6 +1510,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
-
-
 
