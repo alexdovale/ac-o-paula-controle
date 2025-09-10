@@ -79,10 +79,10 @@
                 <div><label for="register-password" class="block text-sm font-medium text-gray-700">Senha (mínimo 6 caracteres)</label><input type="password" id="register-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"></div>
                 <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">Criar Conta</button>
             </form>
-              <!-- Link para a Política de Privacidade -->
-              <a href="#" id="privacy-policy-link" class="block mt-4 text-center text-sm text-gray-500 hover:underline">
-                    Política de Privacidade
-              </a>
+                      <!-- Link para a Política de Privacidade -->
+                      <a href="#" id="privacy-policy-link" class="block mt-4 text-center text-sm text-gray-500 hover:underline">
+                              Política de Privacidade
+                      </a>
         </div>
     </div>
 
@@ -93,7 +93,7 @@
         <div class="flex justify-between items-center mb-6">
               <h2 class="text-3xl font-bold text-gray-800">Minhas Pautas</h2>
               <div>
-                  <button id="admin-btn-main" class="hidden bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600">Aprovar Usuários</button>
+                  <button id="admin-btn-main" class="hidden bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600">Painel do Admin</button>
                   <button id="logout-btn-main" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Sair</button>
               </div>
         </div>
@@ -220,10 +220,45 @@
     </div>
     
     <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg"><h2 class="text-2xl font-bold mb-4">Gerenciar Membros</h2><div class="space-y-2 mb-4"><label for="invite-email-input" class="block text-sm font-medium text-gray-700">Convidar por email</label><div class="flex gap-2"><input type="email" id="invite-email-input" class="flex-1 p-2 border border-gray-300 rounded-lg" placeholder="email@exemplo.com"><button id="invite-member-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Convidar</button></div></div><h3 class="font-semibold mt-6 mb-2">Membros Atuais</h3><div id="current-members-list" class="space-y-2 max-h-40 overflow-y-auto"></div><div class="flex justify-end mt-6"><button id="close-members-modal-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button></div></div>
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl">
+            <h2 class="text-2xl font-bold mb-4">Gerenciar Membros</h2>
+            <div id="invite-container" class="space-y-4 mb-6">
+                 <div class="space-y-2">
+                    <label for="invite-email-input" class="block text-sm font-medium text-gray-700">Convidar por email (caso não esteja na lista abaixo)</label>
+                    <div class="flex gap-2">
+                        <input type="email" id="invite-email-input" class="flex-1 p-2 border border-gray-300 rounded-lg" placeholder="email@exemplo.com">
+                        <button id="invite-member-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Convidar</button>
+                    </div>
+                </div>
+                 <div class="mt-4">
+                    <h3 class="font-semibold text-gray-800 mb-2">Usuários cadastrados no SIGEP</h3>
+                    <div id="registered-users-list" class="space-y-2 max-h-48 overflow-y-auto border p-3 rounded-lg bg-gray-50 scrollable-content"></div>
+                </div>
+            </div>
+            <h3 class="font-semibold mt-6 mb-2">Membros Atuais da Pauta</h3>
+            <div id="current-members-list" class="space-y-2 max-h-40 overflow-y-auto border p-3 rounded-lg bg-gray-50 scrollable-content"></div>
+            <div class="flex justify-end mt-6">
+                <button id="close-members-modal-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
+            </div>
+        </div>
     </div>
-    <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl"><h2 class="text-2xl font-bold mb-4 text-gray-800">Aprovar Novos Usuários</h2><div id="pending-users-list" class="space-y-4 max-h-80 overflow-y-auto"></div><div class="flex justify-end mt-6"><button id="close-admin-modal-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition">Fechar</button></div></div>
+    <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Painel do Administrador</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 overflow-y-auto scrollable-content pr-4 flex-grow">
+                <div>
+                    <h3 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Aprovar Novos Usuários</h3>
+                    <div id="pending-users-list" class="space-y-4"></div>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Estatísticas de Pautas Criadas</h3>
+                    <div id="pauta-stats-container" class="space-y-3"></div>
+                </div>
+            </div>
+            <div class="flex justify-end mt-6 border-t pt-4">
+                <button id="close-admin-modal-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition">Fechar</button>
+            </div>
+        </div>
     </div>
     <div id="arrival-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold mb-4">Confirmar Horário de Chegada</h2><p class="mb-4 text-gray-600">Por favor, informe o horário de chegada do assistido.</p><input type="time" id="arrival-time-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6"><div class="flex justify-end space-x-4"><button id="cancel-arrival-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button><button id="confirm-arrival-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button></div></div>
@@ -922,46 +957,113 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
 
             document.getElementById('admin-btn-main').addEventListener('click', async () => {
-                const list = document.getElementById('pending-users-list');
-                list.innerHTML = '';
+                const pendingList = document.getElementById('pending-users-list');
+                const statsContainer = document.getElementById('pauta-stats-container');
+                pendingList.innerHTML = '';
+                statsContainer.innerHTML = '';
+
+                // Fetch pending users
                 const q = query(collection(db, "users"), where("status", "==", "pending"));
-                const snapshot = await getDocs(q);
-                if(snapshot.empty) list.innerHTML = '<p class="text-center">Nenhum usuário pendente.</p>';
-                else snapshot.forEach(userDoc => {
+                const pendingSnapshot = await getDocs(q);
+                if(pendingSnapshot.empty) pendingList.innerHTML = '<p class="text-center text-gray-500">Nenhum usuário pendente.</p>';
+                else pendingSnapshot.forEach(userDoc => {
                     const userData = userDoc.data();
                     const div = document.createElement('div');
                     div.className = 'flex justify-between items-center p-3 bg-gray-100 rounded-lg';
                     div.innerHTML = `<div><p class="font-semibold">${userData.name}</p><p class="text-sm text-gray-600">${userData.email}</p></div><button data-uid="${userDoc.id}" class="approve-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600">Aprovar</button>`;
-                    list.appendChild(div);
+                    pendingList.appendChild(div);
                 });
+
+                // Fetch pauta statistics
+                const usersSnapshot = await getDocs(collection(db, "users"));
+                const userMap = new Map();
+                usersSnapshot.forEach(doc => userMap.set(doc.id, doc.data().name));
+
+                const pautasSnapshot = await getDocs(collection(db, "pautas"));
+                const pautaCounts = {};
+                pautasSnapshot.forEach(doc => {
+                    const ownerId = doc.data().owner;
+                    const ownerName = userMap.get(ownerId) || 'Usuário Desconhecido';
+                    pautaCounts[ownerName] = (pautaCounts[ownerName] || 0) + 1;
+                });
+
+                if (Object.keys(pautaCounts).length === 0) {
+                    statsContainer.innerHTML = '<p class="text-center text-gray-500">Nenhuma pauta foi criada ainda.</p>';
+                } else {
+                    const sortedOwners = Object.entries(pautaCounts).sort(([, a], [, b]) => b - a);
+                    sortedOwners.forEach(([name, count]) => {
+                        const div = document.createElement('div');
+                        div.className = 'flex justify-between items-center p-3 bg-gray-100 rounded-lg';
+                        div.innerHTML = `<p class="font-semibold">${name}</p><p class="text-lg font-bold text-green-600">${count} ${count > 1 ? 'pautas' : 'pauta'}</p>`;
+                        statsContainer.appendChild(div);
+                    });
+                }
+
                 document.getElementById('admin-modal').classList.remove('hidden');
             });
             document.getElementById('pending-users-list').addEventListener('click', async (e) => {
                 if(e.target.classList.contains('approve-btn')) {
                     await updateDoc(doc(db, "users", e.target.dataset.uid), { status: 'approved' });
                     e.target.parentElement.remove();
+                     if (document.getElementById('pending-users-list').children.length === 0) {
+                        document.getElementById('pending-users-list').innerHTML = '<p class="text-center text-gray-500">Nenhum usuário pendente.</p>';
+                    }
                 }
             });
             document.getElementById('close-admin-modal-btn').addEventListener('click', () => document.getElementById('admin-modal').classList.add('hidden'));
 
             document.getElementById('manage-members-btn').addEventListener('click', async () => {
-                const list = document.getElementById('current-members-list');
-                list.innerHTML = '';
+                const currentMembersList = document.getElementById('current-members-list');
+                const registeredUsersList = document.getElementById('registered-users-list');
+                currentMembersList.innerHTML = '';
+                registeredUsersList.innerHTML = '<p class="text-center text-sm text-gray-500">Carregando...</p>';
+
                 const pautaDoc = await getDoc(doc(db, "pautas", currentPautaId));
                 const pautaData = pautaDoc.data();
                 const currentUserIsOwner = pautaData.owner === auth.currentUser.uid;
                 
-                document.getElementById('invite-member-btn').parentElement.parentElement.style.display = currentUserIsOwner ? 'block' : 'none';
+                document.getElementById('invite-container').style.display = currentUserIsOwner ? 'block' : 'none';
 
+                // Populate current members
                 pautaData.memberEmails.forEach(email => {
                     const div = document.createElement('div');
-                    div.className = 'flex justify-between items-center p-2 rounded hover:bg-gray-100';
-                    const isOwner = pautaData.owner === auth.currentUser.uid && email === auth.currentUser.email;
-                    div.innerHTML = `<span>${email} ${isOwner ? '<strong>(Dono)</strong>' : ''}</span> ${currentUserIsOwner && email !== auth.currentUser.email ? `<button data-email="${email}" class="remove-member-btn text-red-500 hover:text-red-700 font-semibold text-sm">Remover</button>` : ''}`;
-                    list.appendChild(div);
+                    div.className = 'flex justify-between items-center p-2 rounded';
+                    const isCurrentUser = email === auth.currentUser.email;
+                    div.innerHTML = `<span>${email} ${isCurrentUser ? '<span class="text-xs font-bold text-green-700">(Você)</span>' : ''}</span> ${currentUserIsOwner && !isCurrentUser ? `<button data-email="${email}" class="remove-member-btn text-red-500 hover:text-red-700 font-semibold text-sm">Remover</button>` : ''}`;
+                    currentMembersList.appendChild(div);
                 });
+                 if (pautaData.memberEmails.length === 0) {
+                    currentMembersList.innerHTML = '<p class="text-center text-sm text-gray-500">Nenhum membro adicionado.</p>';
+                }
+
+
+                // Populate all registered users for inviting
+                 if (currentUserIsOwner) {
+                    const q = query(collection(db, "users"), where("status", "==", "approved"));
+                    const allUsersSnapshot = await getDocs(q);
+                    registeredUsersList.innerHTML = '';
+
+                    allUsersSnapshot.forEach(userDoc => {
+                        const userData = userDoc.data();
+                        const userUid = userDoc.id;
+
+                        // Don't show users who are already members
+                        if (!pautaData.members.includes(userUid)) {
+                             const div = document.createElement('div');
+                            div.className = 'flex justify-between items-center p-2 rounded hover:bg-gray-200';
+                            div.innerHTML = `<div><p class="font-semibold text-sm">${userData.name}</p><p class="text-xs text-gray-600">${userData.email}</p></div>
+                                           <button data-uid="${userUid}" data-email="${userData.email}" class="invite-registered-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600 text-xs">Convidar</button>`;
+                            registeredUsersList.appendChild(div);
+                        }
+                    });
+                    if (registeredUsersList.children.length === 0) {
+                        registeredUsersList.innerHTML = '<p class="text-center text-sm text-gray-500">Todos os usuários já são membros.</p>';
+                    }
+                 }
+
                 document.getElementById('members-modal').classList.remove('hidden');
             });
+
             document.getElementById('invite-member-btn').addEventListener('click', async () => {
                 const email = document.getElementById('invite-email-input').value.trim();
                 if(!email) return showNotification("Digite um email.", "error");
@@ -974,6 +1076,20 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('invite-email-input').value = '';
                 document.getElementById('members-modal').classList.add('hidden');
             });
+
+            document.getElementById('registered-users-list').addEventListener('click', async (e) => {
+                 if(e.target.classList.contains('invite-registered-btn')) {
+                    const userUid = e.target.dataset.uid;
+                    const userEmail = e.target.dataset.email;
+                     await updateDoc(doc(db, "pautas", currentPautaId), { members: arrayUnion(userUid), memberEmails: arrayUnion(userEmail) });
+                    showNotification(`${userEmail} foi convidado(a)!`, "success");
+                    e.target.parentElement.remove();
+                    if (document.getElementById('registered-users-list').children.length === 0) {
+                        document.getElementById('registered-users-list').innerHTML = '<p class="text-center text-sm text-gray-500">Todos os usuários já são membros.</p>';
+                    }
+                 }
+            });
+
             document.getElementById('current-members-list').addEventListener('click', async (e) => {
                 if(e.target.classList.contains('remove-member-btn')) {
                     const email = e.target.dataset.email;
@@ -991,7 +1107,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             document.getElementById('download-pdf-btn').addEventListener('click', () => {
                 const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
+                const pdfDoc = new jsPDF();
                 const pautaTitle = document.getElementById('pauta-title').textContent;
 
                 const atendidos = allAssisted
@@ -1015,8 +1131,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (a.demandas && a.demandas.descricoes && a.demandas.descricoes.length > 0) {
                         const additionalSubjects = a.demandas.descricoes.map(d => `- ${d.trim()}`).filter(d => d !== '-');
                          if(additionalSubjects.length > 0) {
-                             allSubjects = allSubjects.concat(additionalSubjects);
-                            }
+                              allSubjects = allSubjects.concat(additionalSubjects);
+                           }
                     }
                     return [
                         a.name,
@@ -1027,13 +1143,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     ];
                 });
                 
-                doc.setFontSize(18);
-                doc.text(`Relatório de Atendimentos - ${pautaTitle}`, 14, 22);
-                doc.setFontSize(11);
-                doc.setTextColor(100);
-                doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`, 14, 29);
+                pdfDoc.setFontSize(18);
+                pdfDoc.text(`Relatório de Atendimentos - ${pautaTitle}`, 14, 22);
+                pdfDoc.setFontSize(11);
+                pdfDoc.setTextColor(100);
+                pdfDoc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`, 14, 29);
 
-                doc.autoTable({
+                pdfDoc.autoTable({
                     startY: 35,
                     head: head,
                     body: body,
@@ -1041,13 +1157,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     headStyles: { fillColor: [22, 163, 74] }
                 });
                 
-                const finalY = doc.autoTable.previous.finalY || 35;
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text(`Total por Pessoas Atendidas: ${totalPorPessoas}`, 14, finalY + 10);
-                doc.text(`Total por Assuntos/Demandas: ${totalPorAssunto}`, 14, finalY + 17);
+                const finalY = pdfDoc.autoTable.previous.finalY || 35;
+                pdfDoc.setFontSize(12);
+                pdfDoc.setFont('helvetica', 'bold');
+                pdfDoc.text(`Total por Pessoas Atendidas: ${totalPorPessoas}`, 14, finalY + 10);
+                pdfDoc.text(`Total por Assuntos/Demandas: ${totalPorAssunto}`, 14, finalY + 17);
 
-                doc.save(`relatorio_atendidos_${pautaTitle.replace(/\s+/g, '_')}.pdf`);
+                pdfDoc.save(`relatorio_atendidos_${pautaTitle.replace(/\s+/g, '_')}.pdf`);
             });
         });
     </script>
@@ -1165,6 +1281,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
-
-
-
