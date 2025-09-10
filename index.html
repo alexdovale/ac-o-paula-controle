@@ -11,29 +11,7 @@
     <!-- Metatags para PWA -->
     <meta name="theme-color" content="#16a34a"/>
     <link rel="apple-touch-icon" href="https://alexdovale.github.io/ac-o-paula-controle/imagem.png">
-    <link rel="manifest" href="data:application/manifest+json,{
-        &quot;name&quot;: &quot;Sistema de Gerenciamento de Pauta - SIGEP&quot;,
-        &quot;short_name&quot;: &quot;SIGEP&quot;,
-        &quot;start_url&quot;: &quot;.&quot;,
-        &quot;display&quot;: &quot;standalone&quot;,
-        &quot;background_color&quot;: &quot;#f0f2f5&quot;,
-        &quot;theme_color&quot;: &quot;#16a34a&quot;,
-        &quot;description&quot;: &quot;Sistema para gerenciar pautas de atendimento da Defensoria.&quot;,
-        &quot;icons&quot;: [
-            {
-                &quot;src&quot;: &quot;https://alexdovale.github.io/ac-o-paula-controle/imagem.png&quot;,
-                &quot;sizes&quot;: &quot;192x192&quot;,
-                &quot;type&quot;: &quot;image/png&quot;,
-                &quot;purpose&quot;: &quot;any maskable&quot;
-            },
-            {
-                &quot;src&quot;: &quot;https://alexdovale.github.io/ac-o-paula-controle/imagem.png&quot;,
-                &quot;sizes&quot;: &quot;512x512&quot;,
-                &quot;type&quot;: &quot;image/png&quot;,
-                &quot;purpose&quot;: &quot;any maskable&quot;
-            }
-        ]
-    }">
+    <link rel="manifest" href="data:application/manifest+json,{&quot;name&quot;:&quot;Sistema de Gerenciamento de Pauta - SIGEP&quot;,&quot;short_name&quot;:&quot;SIGEP&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;#f0f2f5&quot;,&quot;theme_color&quot;:&quot;#16a34a&quot;,&quot;description&quot;:&quot;Sistema para gerenciar pautas de atendimento da Defensoria.&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;https://alexdovale.github.io/ac-o-paula-controle/imagem.png&quot;,&quot;sizes&quot;:&quot;192x192&quot;,&quot;type&quot;:&quot;image/png&quot;,&quot;purpose&quot;:&quot;any maskable&quot;},{&quot;src&quot;:&quot;https://alexdovale.github.io/ac-o-paula-controle/imagem.png&quot;,&quot;sizes&quot;:&quot;512x512&quot;,&quot;type&quot;:&quot;image/png&quot;,&quot;purpose&quot;:&quot;any maskable&quot;}]}">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1493,7 +1471,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             privacyModal.classList.add('hidden');
         });
 
-        // Fecha o modal se clicar fora dele
+        // Fecha o modal se clicar fora -dele
         privacyModal.addEventListener('click', (e) => {
             if (e.target === privacyModal) {
                 privacyModal.classList.add('hidden');
