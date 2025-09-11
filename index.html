@@ -11,7 +11,7 @@
     <!-- Metatags para PWA -->
     <meta name="theme-color" content="#16a34a"/>
     <link rel="apple-touch-icon" href="https://alexdovale.github.io/ac-o-paula-controle/imagem.png">
-    <link rel="manifest" href="data:application/manifest+json,{&quot;name&quot;:&quot;Sistema de Gerenciamento de Pauta - SIGEP&quot;,&quot;short_name&quot;:&quot;SIGEP&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;#f0f2f5&quot;,&quot;theme_color&quot;:&quot;#16a34a&quot;,&quot;description&quot;:&quot;Sistema para gerenciar pautas de atendimento da Defensoria.&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;https://alexdovale.github.io/ac-o-paula-controle/imagem.png&quot;,&quot;sizes&quot;:&quot;192x192&quot;,&quot;type&quot;:&quot;image/png&quot;,&quot;purpose&quot;:&quot;any maskable&quot;},{&quot;src&quot;:&quot;https://alexdovale.github.io/ac-o-paula-controle/imagem.png&quot;,&quot;sizes&quot;:&quot;512x512&quot;,&quot;type&quot;:&quot;image/png&quot;,&quot;purpose&quot;:&quot;any maskable&quot;}]}">
+    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Sistema%20de%20Gerenciamento%20de%20Pauta%20-%20SIGEP%22,%22short_name%22:%22SIGEP%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#f0f2f5%22,%22theme_color%22:%22#16a34a%22,%22description%22:%22Sistema%20para%20gerenciar%20pautas%20de%20atendimento%20da%20Defensoria.%22,%22icons%22:[{%22src%22:%22https://alexdovale.github.io/ac-o-paula-controle/imagem.png%22,%22sizes%22:%22192x192%22,%22type%22:%22image/png%22,%22purpose%22:%22any%20maskable%22},{%22src%22:%22https://alexdovale.github.io/ac-o-paula-controle/imagem.png%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22,%22purpose%22:%22any%20maskable%22}]}">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -57,10 +57,9 @@
                 <div><label for="register-password" class="block text-sm font-medium text-gray-700">Senha (mínimo 6 caracteres)</label><input type="password" id="register-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"></div>
                 <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">Criar Conta</button>
             </form>
-                      <!-- Link para a Política de Privacidade -->
-                      <a href="#" id="privacy-policy-link" class="block mt-4 text-center text-sm text-gray-500 hover:underline">
-                              Política de Privacidade
-                      </a>
+            <a href="#" id="privacy-policy-link" class="block mt-4 text-center text-sm text-gray-500 hover:underline">
+                  Política de Privacidade
+            </a>
         </div>
     </div>
 
@@ -75,7 +74,6 @@
                   <button id="logout-btn-main" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Sair</button>
               </div>
         </div>
-        <!-- Botão de Instalação do PWA -->
         <div id="install-container" class="hidden my-4 p-3 bg-green-100 border border-green-200 rounded-lg text-center">
             <p class="text-sm text-green-800">Leve o gerenciador de pautas com você!</p>
             <button id="install-button" class="mt-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 text-sm rounded-lg shadow-md hover:shadow-lg transition-all">
@@ -97,11 +95,11 @@
             <div class="flex justify-center items-center">
                  <h1 id="pauta-title" class="text-3xl md:text-4xl font-bold text-gray-800"></h1>
                  <button id="edit-pauta-name-btn" title="Editar nome da pauta" class="hidden ml-3 p-2 rounded-full hover:bg-gray-200 transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
-                        <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
-                        <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5h6a.5.5 0 0 0 0-1h-6A1.5 1.5 0 0 0 1 2.5v11z"/>
-                    </svg>
-                </button>
+                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                         <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                         <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5h6a.5.5 0 0 0 0-1h-6A1.5 1.5 0 0 0 1 2.5v11z"/>
+                     </svg>
+                 </button>
             </div>
             <div class="absolute top-0 right-0 flex items-center gap-2">
                 <button id="manage-members-btn" class="bg-lime-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-lime-700">Membros</button>
@@ -145,11 +143,11 @@
             </div>
             <main id="main-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <div id="pauta-column" class="bg-white rounded-lg shadow-md flex flex-col">
-                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg"><h3 class="text-xl font-semibold text-gray-800">📋 Pauta</h3><input type="search" id="pauta-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"></div>
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg"><h3 class="text-xl font-semibold text-gray-800">📋 Pauta</h3><input type="search" id="pauta-search" placeholder="Pesquisar por nome, CPF, assunto..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"></div>
                     <div id="pauta-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
                 <div class="bg-white rounded-lg shadow-md flex flex-col">
-                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg"><h3 class="text-xl font-semibold text-gray-800">⏳ Aguardando Atendimento</h3><input type="search" id="aguardando-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"></div>
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg"><h3 class="text-xl font-semibold text-gray-800">⏳ Aguardando Atendimento</h3><input type="search" id="aguardando-search" placeholder="Pesquisar por nome, CPF, assunto..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"></div>
                     <div id="aguardando-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
                 <div class="bg-white rounded-lg shadow-md flex flex-col">
@@ -158,7 +156,7 @@
                             <h3 class="text-xl font-semibold text-gray-800">✅ Atendidos</h3>
                             <button id="download-pdf-btn" class="bg-blue-600 text-white font-bold py-1 px-3 rounded-lg hover:bg-blue-700 text-sm">Baixar PDF</button>
                         </div>
-                        <input type="search" id="atendidos-search" placeholder="Pesquisar..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                        <input type="search" id="atendidos-search" placeholder="Pesquisar por nome, CPF, assunto..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
                     <div id="atendidos-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
@@ -197,7 +195,6 @@
             <label for="new-pauta-name" class="block text-sm font-medium text-gray-700 mb-2">Nome da Pauta</label>
             <input type="text" id="new-pauta-name" placeholder="Ex: Pauta Cível - 08/09/2025" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
             
-            <!-- Mensagem de transparência -->
             <div class="bg-gray-100 border border-gray-200 p-4 rounded-lg mb-6">
                 <p class="text-sm text-gray-700 font-semibold">Atenção:</p>
                 <p class="text-sm text-gray-600 mt-1">Os dados desta pauta serão eliminados do SIGEP automaticamente 7 dias após a sua realização. Para armazenamento permanente, eles serão enviados ao sistema Verde da DPERJ.</p>
@@ -215,16 +212,16 @@
             <h2 class="text-2xl font-bold mb-4">Gerenciar Membros</h2>
             <div id="invite-container" class="space-y-4 mb-6">
                  <div class="space-y-2">
-                    <label for="invite-email-input" class="block text-sm font-medium text-gray-700">Convidar por email (caso não esteja na lista abaixo)</label>
-                    <div class="flex gap-2">
-                        <input type="email" id="invite-email-input" class="flex-1 p-2 border border-gray-300 rounded-lg" placeholder="email@exemplo.com">
-                        <button id="invite-member-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Convidar</button>
-                    </div>
-                </div>
+                     <label for="invite-email-input" class="block text-sm font-medium text-gray-700">Convidar por email (caso não esteja na lista abaixo)</label>
+                     <div class="flex gap-2">
+                         <input type="email" id="invite-email-input" class="flex-1 p-2 border border-gray-300 rounded-lg" placeholder="email@exemplo.com">
+                         <button id="invite-member-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Convidar</button>
+                     </div>
+                 </div>
                  <div class="mt-4">
-                    <h3 class="font-semibold text-gray-800 mb-2">Usuários cadastrados no SIGEP</h3>
-                    <div id="registered-users-list" class="space-y-2 max-h-48 overflow-y-auto border p-3 rounded-lg bg-gray-50 scrollable-content"></div>
-                </div>
+                     <h3 class="font-semibold text-gray-800 mb-2">Usuários cadastrados no SIGEP</h3>
+                     <div id="registered-users-list" class="space-y-2 max-h-48 overflow-y-auto border p-3 rounded-lg bg-gray-50 scrollable-content"></div>
+                 </div>
             </div>
             <h3 class="font-semibold mt-6 mb-2">Membros Atuais da Pauta</h3>
             <div id="current-members-list" class="space-y-2 max-h-40 overflow-y-auto border p-3 rounded-lg bg-gray-50 scrollable-content"></div>
@@ -313,7 +310,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     <input type="number" id="demands-quantity" min="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500">
                 </div>
                 <div id="demands-descriptions-container" class="space-y-2 max-h-60 overflow-y-auto scrollable-content pr-2">
-                    <!-- Textareas will be dynamically inserted here -->
                 </div>
             </div>
             <div class="flex justify-end space-x-4 mt-6">
@@ -323,7 +319,35 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
     
-    <!-- Modal da Política de Privacidade -->
+    <!-- ++ NOVO: Modal para Editar Dados do Assistido ++ -->
+    <div id="edit-assisted-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
+            <h2 class="text-2xl font-bold mb-6">Editar Dados do Assistido</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label for="edit-assisted-name" class="block text-sm font-medium text-gray-700">Nome Completo</label>
+                    <input type="text" id="edit-assisted-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500">
+                </div>
+                <div>
+                    <label for="edit-assisted-cpf" class="block text-sm font-medium text-gray-700">CPF (Opcional)</label>
+                    <input type="text" id="edit-assisted-cpf" placeholder="___.___.___-__" maxlength="14" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500">
+                </div>
+                <div id="edit-scheduled-time-wrapper">
+                    <label for="edit-scheduled-time" class="block text-sm font-medium text-gray-700">Horário Agendado</label>
+                    <input type="time" id="edit-scheduled-time" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500">
+                </div>
+                <div class="md:col-span-2">
+                    <label for="edit-assisted-subject" class="block text-sm font-medium text-gray-700">Matéria - Assunto</label>
+                    <input type="text" id="edit-assisted-subject" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-4 mt-8">
+                <button id="cancel-edit-assisted-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-edit-assisted-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
     <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 80vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -363,7 +387,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, getDoc, setDoc, query, where, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '';
-        const ADMIN_UID = "j7EqtDazdGVQPNeclkKyM7IHHBh2"; // IMPORTANTE: Substituir
 
         const loadingContainer = document.getElementById('loading-container');
         const loginContainer = document.getElementById('login-container');
@@ -371,11 +394,50 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         const appContainer = document.getElementById('app-container');
         const loadingText = document.getElementById('loading-text');
 
+        // ++ MELHORIA: Função para normalizar texto (remover acentos e minúsculas) para a pesquisa ++
+        const normalizeText = (str) => {
+            if (!str) return '';
+            return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        };
+
+        const isValidCPF = (cpf) => {
+            if (typeof cpf !== 'string') return false;
+            cpf = cpf.replace(/[^\d]+/g, '');
+            if (cpf.length !== 11 || !!cpf.match(/(\d)\1{10}/)) return false;
+            const cpfDigits = cpf.split('').map(el => +el);
+            const getVerifier = (digits) => {
+                const sum = digits.reduce((acc, val, i) => acc + val * (digits.length + 1 - i), 0);
+                const rest = (sum * 10) % 11;
+                return rest === 10 ? 0 : rest;
+            };
+            const verifier1 = getVerifier(cpfDigits.slice(0, 9));
+            if (verifier1 !== cpfDigits[9]) return false;
+            const verifier2 = getVerifier(cpfDigits.slice(0, 10));
+            if (verifier2 !== cpfDigits[10]) return false;
+            return true;
+        }
+        
+        // ++ MELHORIA: Função para validar formato do e-mail ++
+        const isValidEmail = (email) => {
+            const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+            return re.test(String(email).toLowerCase());
+        }
+
         const main = () => {
             try {
                 let firebaseConfig;
-                if (typeof __firebase_config !== 'undefined' && __firebase_config && __firebase_config !== '{}') firebaseConfig = JSON.parse(__firebase_config);
-                else firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.firebasestorage.app", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
+                if (typeof __firebase_config !== 'undefined' && __firebase_config && __firebase_config !== '{}') {
+                    firebaseConfig = JSON.parse(__firebase_config);
+                } else {
+                    firebaseConfig = {
+                        apiKey: "SUA_API_KEY",
+                        authDomain: "SEU_AUTH_DOMAIN",
+                        projectId: "SEU_PROJECT_ID",
+                        storageBucket: "SEU_STORAGE_BUCKET",
+                        messagingSenderId: "SEU_MESSAGING_SENDER_ID",
+                        appId: "SEU_APP_ID"
+                    };
+                }
                 
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
@@ -392,7 +454,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 try {
                     unsubscribeFromAttendances();
                     if (user) {
-                        // Show initial connecting state
                         loadingText.textContent = 'Verificando sua conta...';
                         showScreen('loading');
 
@@ -407,7 +468,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             logoutBtn.className = 'mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700';
                             logoutBtn.onclick = () => signOut(auth);
                             
-                            // Ensure the logout button is not added multiple times
                             const existingBtn = loadingContainer.querySelector('#logout-pending-btn');
                             if (existingBtn) existingBtn.remove();
                             loadingContainer.appendChild(logoutBtn);
@@ -417,16 +477,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             return;
                         }
 
-                        // User is approved, reset loading screen and proceed
                         document.querySelector('.loader').style.display = 'block';
                         const pendingLogoutBtn = loadingContainer.querySelector('#logout-pending-btn');
                         if (pendingLogoutBtn) pendingLogoutBtn.remove();
                         
                         currentUserName = userDoc.data().name || '';
-                        document.getElementById('admin-btn-main').classList.toggle('hidden', user.uid !== ADMIN_UID);
+                        
+                        const isAdmin = userDoc.data().role === 'admin';
+                        document.getElementById('admin-btn-main').classList.toggle('hidden', !isAdmin);
+
                         showPautaSelectionScreen(user.uid);
                     } else {
-                        // User is not logged in, show login screen
                         currentUserName = '';
                         showScreen('login');
                     }
@@ -434,7 +495,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     console.error("Erro na verificação de autenticação:", error);
                     loadingText.textContent = 'Ocorreu um erro ao verificar sua conta. Verifique sua conexão e tente novamente.';
                     document.querySelector('.loader').style.display = 'none';
-                    // Optionally add a reload button here as well
                     const reloadBtn = document.createElement('button');
                     reloadBtn.textContent = 'Tentar Novamente';
                     reloadBtn.className = 'mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700';
@@ -455,7 +515,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         };
 
         const showPautaSelectionScreen = async (userId) => {
-            // Render Pending Invitations
             const invitationsList = document.getElementById('pending-invitations-list');
             const invitationsContainer = document.getElementById('invitations-container');
             invitationsContainer.classList.add('hidden');
@@ -475,7 +534,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (uniqueOwnerIds.length > 0) {
                          const ownerDocs = await Promise.all(uniqueOwnerIds.map(id => getDoc(doc(db, "users", id))));
                          ownerDocs.forEach(doc => {
-                            if (doc.exists()) ownerNames[doc.id] = doc.data().name;
+                             if (doc.exists()) ownerNames[doc.id] = doc.data().name;
                         });
                     }
 
@@ -499,8 +558,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             }
 
-
-            // Render "Minhas Pautas"
             const pautasList = document.getElementById('pautas-list');
             pautasList.innerHTML = '<p class="col-span-full text-center">Carregando pautas...</p>';
             const q = query(collection(db, "pautas"), where("members", "array-contains", userId));
@@ -572,11 +629,22 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             [pautaList, aguardandoList, atendidosList].forEach(el => el.innerHTML = '');
 
             const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
+            
+            // ++ MELHORIA: Pesquisa abrangente e sem distinção de acentos ++
+            const pautaSearchTerm = normalizeText(document.getElementById('pauta-search').value);
+            const aguardandoSearchTerm = normalizeText(document.getElementById('aguardando-search').value);
+            const atendidosSearchTerm = normalizeText(document.getElementById('atendidos-search').value);
+            
+            const searchFilter = (assisted, term) => {
+                if (!term) return true;
+                return normalizeText(assisted.name).includes(term) ||
+                       normalizeText(assisted.cpf).includes(term) ||
+                       normalizeText(assisted.subject).includes(term);
+            };
 
-            // Filter lists based on the current mode
-            const pauta = allAssisted.filter(a => a.type === 'agendamento' && a.status === 'pauta' && a.name.toLowerCase().includes(document.getElementById('pauta-search').value.toLowerCase()));
-            const aguardando = allAssisted.filter(a => a.type === currentMode && a.status === 'aguardando' && a.name.toLowerCase().includes(document.getElementById('aguardando-search').value.toLowerCase()));
-            const atendidos = allAssisted.filter(a => a.type === currentMode && a.status === 'atendido' && a.name.toLowerCase().includes(document.getElementById('atendidos-search').value.toLowerCase()));
+            const pauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && searchFilter(a, pautaSearchTerm));
+            const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm));
+            const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && searchFilter(a, atendidosSearchTerm));
 
             pauta.sort((a, b) => (a.order || 0) - (b.order || 0));
             atendidos.sort((a, b) => new Date(a.attendedTime) - new Date(b.attendedTime));
@@ -598,18 +666,27 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if(data.length === 0) el.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum resultado encontrado.</p>`;
                 else data.forEach((item, index) => el.appendChild(generator(item, index)));
             };
-
+            
+            // ++ MELHORIA: Adicionado botão "Editar Dados" nos cards ++
+            const createCardActions = (assistedId, showCheckIn = false, showAttend = false) => `
+                <div class="mt-3 flex flex-wrap gap-2 text-sm">
+                    ${showCheckIn ? `<button data-id="${assistedId}" class="check-in-btn flex-grow bg-green-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-600">Marcar Chegada</button>` : ''}
+                    ${showAttend ? `<button data-id="${assistedId}" class="attend-btn flex-grow bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600">Atender</button>` : ''}
+                    <button data-id="${assistedId}" class="edit-assisted-btn flex-grow bg-gray-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-600">Editar Dados</button>
+                </div>
+            `;
+            
             render(pautaList, pauta, a => {
                 const card = document.createElement('div');
                 card.className = 'bg-gray-50 p-4 rounded-lg shadow-sm border';
-                card.innerHTML = `<p class="font-bold text-lg">${a.name}</p>${a.cpf ? `<p class="text-sm text-gray-500">CPF: <strong>${a.cpf}</strong></p>` : ''}<p>Assunto: <strong>${a.subject}</strong></p><p>Agendado: <strong>${a.scheduledTime}</strong></p><button data-id="${a.id}" class="check-in-btn mt-3 w-full bg-green-500 text-white font-semibold py-2 rounded-lg hover:bg-green-600">Marcar Chegada</button>`;
+                card.innerHTML = `<p class="font-bold text-lg">${a.name}</p>${a.cpf ? `<p class="text-sm text-gray-500">CPF: <strong>${a.cpf}</strong></p>` : ''}<p>Assunto: <strong>${a.subject}</strong></p><p>Agendado: <strong>${a.scheduledTime}</strong></p>${createCardActions(a.id, true, false)}`;
                 return card;
             });
             render(aguardandoList, aguardando, (a, index) => {
                 const card = document.createElement('div');
                 card.className = `bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)}`;
                 const arrival = a.type === 'agendamento' ? `Agendado: ${a.scheduledTime} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : `Chegada Avulsa: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-                card.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-bold text-lg">${index + 1}. ${a.name}</p>${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}<p class="text-sm">Assunto: <strong>${a.subject}</strong></p><p class="text-sm text-gray-500">${arrival}</p></div>${getPriorityLabel(a.priority)}</div><div class="mt-4 flex flex-wrap gap-2"><button data-id="${a.id}" class="attend-btn flex-grow bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="urgent-btn flex-grow bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Marcar Urgente</button>` : ''}<button data-id="${a.id}" class="return-to-pauta-btn w-full bg-gray-400 text-white font-semibold py-1 rounded-lg hover:bg-gray-500 text-xs mt-1">Voltar p/ Pauta</button></div>`;
+                card.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-bold text-lg">${index + 1}. ${a.name}</p>${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}<p class="text-sm">Assunto: <strong>${a.subject}</strong></p><p class="text-sm text-gray-500">${arrival}</p></div>${getPriorityLabel(a.priority)}</div><div class="mt-4 flex flex-wrap gap-2"><button data-id="${a.id}" class="attend-btn flex-grow bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="urgent-btn flex-grow bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Marcar Urgente</button>` : ''}<button data-id="${a.id}" class="edit-assisted-btn flex-grow bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar Dados</button><button data-id="${a.id}" class="return-to-pauta-btn w-full bg-gray-400 text-white font-semibold py-1 rounded-lg hover:bg-gray-500 text-xs mt-1">Voltar p/ Pauta</button></div>`;
                 return card;
             });
             render(atendidosList, atendidos, a => {
@@ -620,7 +697,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const demandasInfo = a.demandas && a.demandas.descricoes && a.demandas.descricoes.length > 0 ?
                     `<div class="mt-2 text-xs bg-gray-100 p-2 rounded">
                         <strong class="text-gray-700">Demandas Adicionais (${a.demandas.quantidade || 0}):</strong>
-                        <ul class="list-disc list-inside pl-2 text-gray-600">${a.demandas.descricoes.map(d => `- ${d}`).join('')}</ul>
+                        <ul class="list-disc list-inside pl-2 text-gray-600">${a.demandas.descricoes.map(d => `<li>${d}</li>`).join('')}</ul>
                     </div>` : '';
 
                 card.innerHTML = `<p class="font-bold text-lg">${a.name} ${totalAssuntos > 1 ? `<span class="text-sm font-medium text-green-600">(${totalAssuntos} assuntos)</span>` : ''}</p>
@@ -631,8 +708,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     <div class="flex justify-between items-center mt-2">
                         <p class="text-sm">Por: <strong>${a.attendant || 'Não informado'}</strong></p>
                         <div class="flex items-center gap-1">
+                            <button data-id="${a.id}" class="edit-assisted-btn text-gray-600 hover:text-gray-800 font-semibold text-xs py-1 px-2 rounded hover:bg-gray-100">Dados</button>
                             <button data-id="${a.id}" class="edit-demands-btn text-lime-600 hover:text-lime-800 font-semibold text-xs py-1 px-2 rounded hover:bg-lime-100">Demandas</button>
-                            <button data-id="${a.id}" class="edit-attendant-btn text-green-600 hover:text-green-800 font-semibold text-xs py-1 px-2 rounded hover:bg-green-100">Editar</button>
+                            <button data-id="${a.id}" class="edit-attendant-btn text-green-600 hover:text-green-800 font-semibold text-xs py-1 px-2 rounded hover:bg-green-100">Atendente</button>
                             <button data-id="${a.id}" class="delete-attended-btn text-red-600 hover:text-red-800 font-semibold text-xs py-1 px-2 rounded hover:bg-red-100">Deletar</button>
                         </div>
                     </div>
@@ -668,6 +746,35 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 container.appendChild(div);
             }
         };
+        
+        const applyCpfMaskAndValidation = (cpfField) => {
+            let value = cpfField.value.replace(/\D/g, '');
+            value = value.replace(/(\d{3})(\d)/, '$1.$2');
+            value = value.replace(/(\d{3})(\d)/, '$1.$2');
+            value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            cpfField.value = value;
+            
+            const cleanCpf = value.replace(/\D/g, '');
+            
+            if (cleanCpf.length === 0) {
+                cpfField.classList.remove('border-red-500', 'focus:ring-red-500', 'border-green-500', 'focus:ring-green-500');
+                cpfField.classList.add('border-gray-300', 'focus:ring-green-500');
+                return;
+            }
+            
+            if (cleanCpf.length === 11) {
+                if (isValidCPF(cleanCpf)) {
+                    cpfField.classList.remove('border-red-500', 'focus:ring-red-500', 'border-gray-300');
+                    cpfField.classList.add('border-green-500', 'focus:ring-green-500');
+                } else {
+                    cpfField.classList.remove('border-green-500', 'focus:ring-green-500', 'border-gray-300');
+                    cpfField.classList.add('border-red-500', 'focus:ring-red-500');
+                }
+            } else {
+                cpfField.classList.remove('border-red-500', 'focus:ring-red-500', 'border-green-500', 'focus:ring-green-500');
+                cpfField.classList.add('border-gray-300', 'focus:ring-green-500');
+            }
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             main();
@@ -682,16 +789,23 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 try { await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value); }
                 catch (error) { showError("Email ou senha inválidos."); }
             });
+
+            // ++ MELHORIA: Validação de e-mail no cadastro ++
             document.getElementById('register-form').addEventListener('submit', async e => {
                 e.preventDefault();
                 authErrorDiv.classList.add('hidden');
                 const name = document.getElementById('register-name').value.trim();
+                const email = document.getElementById('register-email').value.trim();
                 if (!name) {
                     showError("Por favor, insira seu nome completo.");
                     return;
                 }
+                if (!isValidEmail(email)) {
+                    showError("Por favor, insira um formato de e-mail válido.");
+                    return;
+                }
                 try {
-                    const cred = await createUserWithEmailAndPassword(auth, document.getElementById('register-email').value, document.getElementById('register-password').value);
+                    const cred = await createUserWithEmailAndPassword(auth, email, document.getElementById('register-password').value);
                     await setDoc(doc(db, "users", cred.user.uid), { 
                         name: name, 
                         email: cred.user.email, 
@@ -705,6 +819,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     else showError("Ocorreu um erro ao criar a conta.");
                 }
             });
+
             document.getElementById('logout-btn-main').addEventListener('click', () => signOut(auth));
             
             const loginTabBtn = document.getElementById('login-tab-btn');
@@ -776,22 +891,24 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.getElementById('tab-avulso').addEventListener('click', () => setMode('avulso'));
             ['pauta-search', 'aguardando-search', 'atendidos-search'].forEach(id => document.getElementById(id).addEventListener('input', renderAssistedList));
 
-            document.getElementById('assisted-cpf').addEventListener('input', (e) => {
-                let value = e.target.value.replace(/\D/g, '');
-                value = value.replace(/(\d{3})(\d)/, '$1.$2');
-                value = value.replace(/(\d{3})(\d)/, '$1.$2');
-                value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-                e.target.value = value;
-            });
+            document.getElementById('assisted-cpf').addEventListener('input', (e) => applyCpfMaskAndValidation(e.target));
+            // ++ MELHORIA: Aplica a mesma validação para o modal de edição ++
+            document.getElementById('edit-assisted-cpf').addEventListener('input', (e) => applyCpfMaskAndValidation(e.target));
+
 
             document.getElementById('add-assisted-btn').addEventListener('click', async () => {
                 const name = document.getElementById('assisted-name').value.trim();
                 const subject = document.getElementById('assisted-subject').value.trim();
+                const cpf = document.getElementById('assisted-cpf').value.trim();
                 const time = document.getElementById('scheduled-time').value;
                 const isAgendamento = document.getElementById('tab-agendamento').classList.contains('tab-active');
                 if(!name || !subject || (isAgendamento && !time)) return showNotification("Preencha os campos obrigatórios.", "error");
+                
+                if (cpf && !isValidCPF(cpf)) {
+                    return showNotification("O CPF informado não tem uma estrutura válida.", "error");
+                }
 
-                const newAssisted = { name, subject, cpf: document.getElementById('assisted-cpf').value.trim() || null, status: 'pauta', type: isAgendamento ? 'agendamento' : 'avulso', scheduledTime: time || null, arrivalTime: null, attendedTime: null, attendant: null, priority: null, order: allAssisted.length, checkInTimestamp: null, demandas: null };
+                const newAssisted = { name, subject, cpf: cpf || null, status: 'pauta', type: isAgendamento ? 'agendamento' : 'avulso', scheduledTime: time || null, arrivalTime: null, attendedTime: null, attendant: null, priority: null, order: allAssisted.length, checkInTimestamp: null, demandas: null };
                 if (!isAgendamento) { 
                     const now = new Date().toISOString();
                     newAssisted.status = 'aguardando'; 
@@ -802,6 +919,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 await addDoc(collection(db, "pautas", currentPautaId, "attendances"), newAssisted);
                 ['assisted-name', 'assisted-subject', 'assisted-cpf', 'scheduled-time'].forEach(id => document.getElementById(id).value = '');
+                const cpfField = document.getElementById('assisted-cpf');
+                cpfField.classList.remove('border-red-500', 'focus:ring-red-500', 'border-green-500', 'focus:ring-green-500');
+                cpfField.classList.add('border-gray-300', 'focus:ring-green-500');
             });
 
             document.getElementById('file-upload').addEventListener('change', (e) => {
@@ -881,49 +1001,106 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             document.addEventListener('click', async (e) => {
                 const button = e.target.closest('button');
-                if (!button || !currentPautaId) return;
+                if (!button) return;
 
                 const id = button.dataset.id;
-                if (!id) return;
                 
-                const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
-                if (button.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5); }
-                if (button.classList.contains('attend-btn')) { 
-                    assistedIdToHandle = id; 
-                    document.getElementById('attendant-name').value = currentUserName;
-                    document.getElementById('attendant-modal').classList.remove('hidden'); 
+                const collectionRef = currentPautaId ? collection(db, "pautas", currentPautaId, "attendances") : null;
+                
+                if (id && collectionRef) {
+                    if (button.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5); }
+                    if (button.classList.contains('attend-btn')) { 
+                        assistedIdToHandle = id; 
+                        document.getElementById('attendant-name').value = currentUserName;
+                        document.getElementById('attendant-modal').classList.remove('hidden'); 
+                    }
+                    if (button.classList.contains('urgent-btn')) { await updateDoc(doc(collectionRef, id), { priority: 'URGENTE' }); }
+                    if (button.classList.contains('delete-attended-btn')) { if (confirm("Tem certeza?")) await deleteDoc(doc(collectionRef, id)); }
+                    if (button.classList.contains('edit-attendant-btn')) { 
+                        assistedIdToHandle = id;
+                        const assisted = allAssisted.find(a => a.id === id);
+                        document.getElementById('edit-attendant-name').value = assisted.attendant || '';
+                        document.getElementById('edit-attendant-modal').classList.remove('hidden');
+                    }
+                    // ++ MELHORIA: Lógica para abrir e popular o modal de edição de dados ++
+                    if (button.classList.contains('edit-assisted-btn')) {
+                        assistedIdToHandle = id;
+                        const assisted = allAssisted.find(a => a.id === id);
+                        if (assisted) {
+                            document.getElementById('edit-assisted-name').value = assisted.name || '';
+                            document.getElementById('edit-assisted-cpf').value = assisted.cpf || '';
+                            document.getElementById('edit-assisted-subject').value = assisted.subject || '';
+                            
+                            const timeWrapper = document.getElementById('edit-scheduled-time-wrapper');
+                            if (assisted.type === 'agendamento') {
+                                timeWrapper.style.display = 'block';
+                                document.getElementById('edit-scheduled-time').value = assisted.scheduledTime || '';
+                            } else {
+                                timeWrapper.style.display = 'none';
+                            }
+                            
+                            // Forçar a re-aplicação da máscara e validação
+                            applyCpfMaskAndValidation(document.getElementById('edit-assisted-cpf'));
+
+                            document.getElementById('edit-assisted-modal').classList.remove('hidden');
+                        }
+                    }
+                    if (button.classList.contains('edit-demands-btn')) {
+                        assistedIdToHandle = id;
+                        const assisted = allAssisted.find(a => a.id === id);
+                        document.getElementById('demands-assisted-name').textContent = assisted.name;
+                        document.getElementById('demands-main-subject').textContent = assisted.subject;
+                        const quantityInput = document.getElementById('demands-quantity');
+                        
+                        if (assisted.demandas) {
+                            quantityInput.value = assisted.demandas.quantidade || 0;
+                            updateDemandDescriptions(assisted.demandas.quantidade || 0, assisted.demandas.descricoes || []);
+                        } else {
+                            quantityInput.value = 0;
+                            updateDemandDescriptions(0, []);
+                        }
+                        
+                        document.getElementById('demands-modal').classList.remove('hidden');
+                    }
+                    if (button.classList.contains('return-to-pauta-btn')) {
+                        await updateDoc(doc(collectionRef, id), { status: 'pauta', arrivalTime: null, priority: null, checkInTimestamp: null });
+                    }
+                    if (button.classList.contains('return-to-aguardando-btn')) {
+                        await updateDoc(doc(collectionRef, id), { status: 'aguardando', attendedTime: null, attendant: null });
+                    }
                 }
-                if (button.classList.contains('urgent-btn')) { await updateDoc(doc(collectionRef, id), { priority: 'URGENTE' }); }
-                if (button.classList.contains('delete-attended-btn')) { if (confirm("Tem certeza?")) await deleteDoc(doc(collectionRef, id)); }
-                if (button.classList.contains('edit-attendant-btn')) { 
-                    assistedIdToHandle = id;
-                    const assisted = allAssisted.find(a => a.id === id);
-                    document.getElementById('edit-attendant-name').value = assisted.attendant || '';
-                    document.getElementById('edit-attendant-modal').classList.remove('hidden');
-                }
-                if (button.classList.contains('edit-demands-btn')) {
-                    assistedIdToHandle = id;
-                    const assisted = allAssisted.find(a => a.id === id);
-                    document.getElementById('demands-assisted-name').textContent = assisted.name;
-                    document.getElementById('demands-main-subject').textContent = assisted.subject;
-                    const quantityInput = document.getElementById('demands-quantity');
-                    
-                    if (assisted.demandas) {
-                        quantityInput.value = assisted.demandas.quantidade || 0;
-                        updateDemandDescriptions(assisted.demandas.quantidade || 0, assisted.demandas.descricoes || []);
-                    } else {
-                        quantityInput.value = 0;
-                        updateDemandDescriptions(0, []);
+            });
+
+            // ++ MELHORIA: Lógica para salvar os dados editados do assistido ++
+            document.getElementById('confirm-edit-assisted-btn').addEventListener('click', async () => {
+                if (assistedIdToHandle) {
+                    const name = document.getElementById('edit-assisted-name').value.trim();
+                    const cpf = document.getElementById('edit-assisted-cpf').value.trim();
+                    const subject = document.getElementById('edit-assisted-subject').value.trim();
+                    const scheduledTime = document.getElementById('edit-scheduled-time').value;
+
+                    if (!name || !subject) {
+                        return showNotification("Nome e Assunto são obrigatórios.", "error");
+                    }
+                    if (cpf && !isValidCPF(cpf)) {
+                        return showNotification("O CPF informado não tem uma estrutura válida.", "error");
+                    }
+
+                    const updatedData = { name, subject, cpf: cpf || null };
+                    const assisted = allAssisted.find(a => a.id === assistedIdToHandle);
+                    if (assisted && assisted.type === 'agendamento') {
+                        updatedData.scheduledTime = scheduledTime;
                     }
                     
-                    document.getElementById('demands-modal').classList.remove('hidden');
+                    await updateDoc(doc(db, "pautas", currentPautaId, "attendances", assistedIdToHandle), updatedData);
+                    showNotification("Dados atualizados com sucesso!", "success");
+                    document.getElementById('edit-assisted-modal').classList.add('hidden');
+                    assistedIdToHandle = null;
                 }
-                if (button.classList.contains('return-to-pauta-btn')) {
-                    await updateDoc(doc(collectionRef, id), { status: 'pauta', arrivalTime: null, priority: null, checkInTimestamp: null });
-                }
-                if (button.classList.contains('return-to-aguardando-btn')) {
-                    await updateDoc(doc(collectionRef, id), { status: 'aguardando', attendedTime: null, attendant: null });
-                }
+            });
+            document.getElementById('cancel-edit-assisted-btn').addEventListener('click', () => {
+                document.getElementById('edit-assisted-modal').classList.add('hidden');
+                assistedIdToHandle = null;
             });
             
             document.getElementById('pautas-list').addEventListener('click', async (e) => {
@@ -972,7 +1149,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (button.classList.contains('decline-invite-btn')) {
                     try {
                          await updateDoc(pautaRef, {
-                            pendingInvites: arrayRemove(email)
+                             pendingInvites: arrayRemove(email)
                         });
                         showNotification("Convite recusado.", "info");
                         showPautaSelectionScreen(uid);
@@ -1213,10 +1390,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             document.getElementById('pending-users-list').addEventListener('click', async (e) => {
                 if(e.target.classList.contains('approve-btn')) {
-                    await updateDoc(doc(db, "users", e.target.dataset.uid), { status: 'approved' });
+                    await updateDoc(doc(db, "users", e.target.dataset.uid), { status: 'approved', role: 'user' });
                     e.target.parentElement.remove();
                      if (document.getElementById('pending-users-list').children.length === 0) {
-                        document.getElementById('pending-users-list').innerHTML = '<p class="text-center text-gray-500">Nenhum usuário pendente.</p>';
+                         document.getElementById('pending-users-list').innerHTML = '<p class="text-center text-gray-500">Nenhum usuário pendente.</p>';
                     }
                 }
             });
@@ -1236,7 +1413,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 
                 document.getElementById('invite-container').style.display = currentUserIsOwner ? 'block' : 'none';
 
-                // Populate current members
                 pautaData.memberEmails.forEach(email => {
                     const div = document.createElement('div');
                     div.className = 'flex justify-between items-center p-2 rounded';
@@ -1245,10 +1421,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     currentMembersList.appendChild(div);
                 });
                  if (pautaData.memberEmails.length === 0) {
-                    currentMembersList.innerHTML = '<p class="text-center text-sm text-gray-500">Nenhum membro adicionado.</p>';
+                     currentMembersList.innerHTML = '<p class="text-center text-sm text-gray-500">Nenhum membro adicionado.</p>';
                 }
 
-                // Populate pending invites
                 const pendingInvites = pautaData.pendingInvites || [];
                 if (pendingInvites.length > 0) {
                     pendingInvites.forEach(email => {
@@ -1261,28 +1436,26 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     pendingListModal.innerHTML = '<p class="text-center text-sm text-gray-500">Nenhum convite pendente.</p>';
                 }
 
-
-                // Populate all registered users for inviting
                  if (currentUserIsOwner) {
-                    const q = query(collection(db, "users"), where("status", "==", "approved"));
-                    const allUsersSnapshot = await getDocs(q);
-                    registeredUsersList.innerHTML = '';
+                     const q = query(collection(db, "users"), where("status", "==", "approved"));
+                     const allUsersSnapshot = await getDocs(q);
+                     registeredUsersList.innerHTML = '';
 
-                    allUsersSnapshot.forEach(userDoc => {
-                        const userData = userDoc.data();
-                        const userUid = userDoc.id;
+                     allUsersSnapshot.forEach(userDoc => {
+                         const userData = userDoc.data();
+                         const userUid = userDoc.id;
 
-                        if (!pautaData.members.includes(userUid) && !pendingInvites.includes(userData.email)) {
-                             const div = document.createElement('div');
-                            div.className = 'flex justify-between items-center p-2 rounded hover:bg-gray-200';
-                            div.innerHTML = `<div><p class="font-semibold text-sm">${userData.name}</p><p class="text-xs text-gray-600">${userData.email}</p></div>
-                                           <button data-email="${userData.email}" class="invite-registered-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600 text-xs">Convidar</button>`;
-                            registeredUsersList.appendChild(div);
-                        }
-                    });
-                    if (registeredUsersList.children.length === 0) {
-                        registeredUsersList.innerHTML = '<p class="text-center text-sm text-gray-500">Todos os usuários já são membros ou foram convidados.</p>';
-                    }
+                         if (!pautaData.members.includes(userUid) && !pendingInvites.includes(userData.email)) {
+                              const div = document.createElement('div');
+                             div.className = 'flex justify-between items-center p-2 rounded hover:bg-gray-200';
+                             div.innerHTML = `<div><p class="font-semibold text-sm">${userData.name}</p><p class="text-xs text-gray-600">${userData.email}</p></div>
+                                             <button data-email="${userData.email}" class="invite-registered-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600 text-xs">Convidar</button>`;
+                             registeredUsersList.appendChild(div);
+                         }
+                     });
+                     if (registeredUsersList.children.length === 0) {
+                         registeredUsersList.innerHTML = '<p class="text-center text-sm text-gray-500">Todos os usuários já são membros ou foram convidados.</p>';
+                     }
                  }
 
                 document.getElementById('members-modal').classList.remove('hidden');
@@ -1303,21 +1476,21 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             document.getElementById('registered-users-list').addEventListener('click', async (e) => {
                  if(e.target.classList.contains('invite-registered-btn')) {
-                    const userEmail = e.target.dataset.email;
-                     await updateDoc(doc(db, "pautas", currentPautaId), { pendingInvites: arrayUnion(userEmail) });
-                    showNotification(`Convite enviado para ${userEmail}!`, "success");
-                    document.getElementById('members-modal').classList.add('hidden');
+                     const userEmail = e.target.dataset.email;
+                      await updateDoc(doc(db, "pautas", currentPautaId), { pendingInvites: arrayUnion(userEmail) });
+                     showNotification(`Convite enviado para ${userEmail}!`, "success");
+                     document.getElementById('members-modal').classList.add('hidden');
                  }
             });
 
              document.getElementById('pending-invites-members-modal-list').addEventListener('click', async (e) => {
-                if (e.target.classList.contains('cancel-invite-btn')) {
-                    const email = e.target.dataset.email;
-                    await updateDoc(doc(db, "pautas", currentPautaId), { pendingInvites: arrayRemove(email) });
-                    showNotification("Convite cancelado.", "success");
-                    document.getElementById('members-modal').classList.add('hidden');
-                }
-            });
+                 if (e.target.classList.contains('cancel-invite-btn')) {
+                     const email = e.target.dataset.email;
+                     await updateDoc(doc(db, "pautas", currentPautaId), { pendingInvites: arrayRemove(email) });
+                     showNotification("Convite cancelado.", "success");
+                     document.getElementById('members-modal').classList.add('hidden');
+                 }
+             });
 
             document.getElementById('current-members-list').addEventListener('click', async (e) => {
                 if(e.target.classList.contains('remove-member-btn')) {
@@ -1334,8 +1507,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
             document.getElementById('close-members-modal-btn').addEventListener('click', () => document.getElementById('members-modal').classList.add('hidden'));
 
+            // ++ MELHORIA: Suporte a caracteres especiais no PDF ++
             document.getElementById('download-pdf-btn').addEventListener('click', () => {
                 const { jsPDF } = window.jspdf;
+                // Inicializa com a fonte 'helvetica' que tem melhor suporte a caracteres latinos
                 const pdfDoc = new jsPDF();
                 const pautaTitle = document.getElementById('pauta-title').textContent;
 
@@ -1360,8 +1535,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (a.demandas && a.demandas.descricoes && a.demandas.descricoes.length > 0) {
                         const additionalSubjects = a.demandas.descricoes.map(d => `- ${d.trim()}`).filter(d => d !== '-');
                          if(additionalSubjects.length > 0) {
-                              allSubjects = allSubjects.concat(additionalSubjects);
-                           }
+                             allSubjects = allSubjects.concat(additionalSubjects);
+                            }
                     }
                     return [
                         a.name,
@@ -1383,7 +1558,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     head: head,
                     body: body,
                     theme: 'striped',
-                    headStyles: { fillColor: [22, 163, 74] }
+                    headStyles: { fillColor: [22, 163, 74] },
+                    // Garante que o PDF renderize corretamente
+                    styles: { font: 'helvetica' }, 
+                    columnStyles: { 0: { fontStyle: 'bold' } }
                 });
                 
                 const finalY = pdfDoc.autoTable.previous.finalY || 35;
@@ -1397,7 +1575,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         });
     </script>
     
-    <!-- Script para PWA (Service Worker e Lógica de Instalação) -->
     <script>
         if ('serviceWorker' in navigator) {
             const swContent = `
@@ -1426,18 +1603,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 });
 
                 self.addEventListener('fetch', event => {
-                    // Não interceptamos requisições para o Firebase
                     if (event.request.url.includes('firestore.googleapis.com') || event.request.url.includes('firebaseapp.com')) {
-                        return; // Deixa a requisição passar direto para a rede
+                        return; 
                     }
                     event.respondWith(
                         caches.match(event.request)
                             .then(response => {
-                                // Se o recurso estiver no cache, retorna ele
                                 if (response) {
                                     return response;
                                 }
-                                // Se não, busca na rede
                                 return fetch(event.request);
                             })
                     );
@@ -1454,7 +1628,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
         }
 
-        // Lógica para o prompt de instalação
         let deferredPrompt;
         const installContainer = document.getElementById('install-container');
         const installButton = document.getElementById('install-button');
@@ -1484,7 +1657,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             console.log('PWA foi instalado');
         });
 
-        // Lógica do Modal da Política de Privacidade
         const privacyModal = document.getElementById('privacy-policy-modal');
         
         document.getElementById('privacy-policy-link').addEventListener('click', (e) => {
@@ -1500,7 +1672,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             privacyModal.classList.add('hidden');
         });
 
-        // Fecha o modal se clicar fora -dele
         privacyModal.addEventListener('click', (e) => {
             if (e.target === privacyModal) {
                 privacyModal.classList.add('hidden');
@@ -1510,4 +1681,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
-
