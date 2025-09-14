@@ -140,7 +140,6 @@
                     <div class="flex flex-col lg:col-span-3"><label for="assisted-subject" class="mb-1 font-medium text-gray-600">Matéria - Assunto</label><input type="text" id="assisted-subject" placeholder="Ex: Divórcio" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition"></div>
                     <button id="add-assisted-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition shadow-md w-full lg:col-span-1">Adicionar à Pauta</button>
                 </div>
-                 <!-- ++ NOVO: Opção para adicionar direto na fila de espera ++ -->
                 <div id="form-agendamento-extras" class="border-t mt-4 pt-4">
                     <div class="flex items-center space-x-3">
                         <input id="already-arrived-checkbox" type="checkbox" class="h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500">
@@ -198,7 +197,7 @@
                           <li><strong>Recompensa a Pontualidade:</strong> Valoriza quem chega no horário, atendendo-os primeiro.</li>
                           <li><strong>Oferece Tolerância:</strong> Reconhece que imprevistos acontecem, com uma janela de 20 minutos para pequenos atrasos.</li>
                           <li><strong>Gerencia Atrasos Maiores:</strong> Coloca quem se atrasou muito no fim da fila para não prejudicar os outros.</li>
-                          <li><strong>Permite Flexibilidade:</strong> O botão "Urgente" garante que casos graves sejam atendidos imediatamente.</li>
+                          <li><strong>Permite Flexibilidade:</strong> O botão "Prioridade" garante que casos graves sejam atendidos imediatamente.</li>
                           <li><strong>Critério de Desempate:</strong> Para assistidos com a mesma prioridade, a ordem é definida pelo <strong>horário de chegada informado</strong> (quem chegou mais cedo é atendido primeiro). Se dois ou mais assistidos chegarem exatamente no mesmo horário, a preferência é de quem teve a chegada <strong>registrada primeiro</strong> no sistema.</li>
                       </ul>
                       <p class="font-semibold text-gray-800 pt-2">O resultado é uma fila transparente, previsível e justa tanto para os assistidos quanto para a equipe.</p>
@@ -345,7 +344,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
     
-    <!-- ++ NOVO: Modal para Editar Dados do Assistido ++ -->
     <div id="edit-assisted-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
             <h2 class="text-2xl font-bold mb-6">Editar Dados do Assistido</h2>
@@ -370,6 +368,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             <div class="flex justify-end space-x-4 mt-8">
                 <button id="cancel-edit-assisted-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
                 <button id="confirm-edit-assisted-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ++ NOVO: Modal para Motivo da Prioridade ++ -->
+    <div id="priority-reason-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Definir como Prioritário</h2>
+            <p class="mb-4 text-gray-600">Por favor, informe o motivo para dar prioridade a este atendimento.</p>
+            <textarea id="priority-reason-input" placeholder="Motivo da prioridade..." class="w-full p-3 border border-gray-300 rounded-lg mb-6" rows="3"></textarea>
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-priority-reason-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-priority-reason-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button>
             </div>
         </div>
     </div>
@@ -420,7 +431,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         const appContainer = document.getElementById('app-container');
         const loadingText = document.getElementById('loading-text');
 
-        // ++ MELHORIA: Função para normalizar texto (remover acentos e minúsculas) para a pesquisa ++
         const normalizeText = (str) => {
             if (!str) return '';
             return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -443,7 +453,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             return true;
         }
         
-        // ++ MELHORIA: Função para validar formato do e-mail ++
         const isValidEmail = (email) => {
             const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
             return re.test(String(email).toLowerCase());
@@ -643,7 +652,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         };
         
         const getPriorityClass = (priority) => ({'URGENTE':'priority-urgente','Máxima':'priority-maxima','Média':'priority-media','Mínima':'priority-minima'}[priority]||'');
-        const getPriorityLabel = (priority) => ({'URGENTE':'<span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-full">URGENTE</span>','Máxima':'<span class="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full">Máxima</span>','Média':'<span class="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-full">Média</span>','Mínima':'<span class="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded-full">Mínima</span>'}[priority]||'');
+        const getPriorityLabel = (priority) => ({'URGENTE':'<span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-full">PRIORIDADE</span>','Máxima':'<span class="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full">Máxima</span>','Média':'<span class="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-full">Média</span>','Mínima':'<span class="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded-full">Mínima</span>'}[priority]||'');
 
         const renderAssistedList = () => {
             const pautaList = document.getElementById('pauta-list'), aguardandoList = document.getElementById('aguardando-list'), atendidosList = document.getElementById('atendidos-list');
@@ -651,7 +660,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
             
-            // ++ MELHORIA: Pesquisa abrangente e sem distinção de acentos ++
             const pautaSearchTerm = normalizeText(document.getElementById('pauta-search').value);
             const aguardandoSearchTerm = normalizeText(document.getElementById('aguardando-search').value);
             const atendidosSearchTerm = normalizeText(document.getElementById('atendidos-search').value);
@@ -683,7 +691,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 return checkInA - checkInB;
             });
             
-            // ++ NOVO: Atualiza contadores de totais
             document.getElementById('pauta-count').textContent = pauta.length;
             document.getElementById('aguardando-count').textContent = aguardando.length;
             document.getElementById('atendidos-count').textContent = atendidos.length;
@@ -710,12 +717,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 card.className = `bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)}`;
                 const arrival = a.type === 'agendamento' ? `Agendado: ${a.scheduledTime} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : `Chegada Avulsa: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
                 const lastActionInfo = a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : '';
-                card.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-bold text-lg">${index + 1}. ${a.name}</p>${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}<p class="text-sm">Assunto: <strong>${a.subject}</strong></p><p class="text-sm text-gray-500">${arrival}</p></div>${getPriorityLabel(a.priority)}</div><div class="mt-4 flex flex-wrap gap-2"><button data-id="${a.id}" class="attend-btn flex-grow bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="urgent-btn flex-grow bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Marcar Urgente</button>` : ''}<button data-id="${a.id}" class="edit-assisted-btn flex-grow bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar Dados</button><button data-id="${a.id}" class="return-to-pauta-btn w-full bg-gray-400 text-white font-semibold py-1 rounded-lg hover:bg-gray-500 text-xs mt-1">Voltar p/ Pauta</button></div>${lastActionInfo}`;
+                const priorityReasonInfo = a.priority === 'URGENTE' && a.priorityReason ? `<p class="text-xs text-red-600 mt-1 italic"><strong>Motivo:</strong> ${a.priorityReason}</p>` : '';
+                card.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-bold text-lg">${index + 1}. ${a.name}</p>${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}<p class="text-sm">Assunto: <strong>${a.subject}</strong></p><p class="text-sm text-gray-500">${arrival}</p></div>${getPriorityLabel(a.priority)}</div>${priorityReasonInfo}<div class="mt-4 flex flex-wrap gap-2"><button data-id="${a.id}" class="attend-btn flex-grow bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="priority-btn flex-grow bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : ''}<button data-id="${a.id}" class="edit-assisted-btn flex-grow bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar Dados</button><button data-id="${a.id}" class="return-to-pauta-btn w-full bg-gray-400 text-white font-semibold py-1 rounded-lg hover:bg-gray-500 text-xs mt-1">Voltar p/ Pauta</button></div>${lastActionInfo}`;
                 return card;
             });
             render(atendidosList, atendidos, a => {
                 const card = document.createElement('div');
-                card.className = 'bg-green-50 p-4 rounded-lg shadow-sm border-green-200 opacity-80';
+                card.className = 'bg-green-50 p-4 rounded-lg shadow-sm border-green-200';
                 
                 const totalAssuntos = 1 + (a.demandas && a.demandas.quantidade ? Number(a.demandas.quantidade) : 0);
                 const demandasInfo = a.demandas && a.demandas.descricoes && a.demandas.descricoes.length > 0 ?
@@ -729,7 +737,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 card.innerHTML = `<p class="font-bold text-lg">${a.name} ${totalAssuntos > 1 ? `<span class="text-sm font-medium text-green-600">(${totalAssuntos} assuntos)</span>` : ''}</p>
                     ${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}
                     <p class="text-sm">Assunto Principal: <strong>${a.subject}</strong></p>
-                    <p class="text-sm">Finalizado: <strong>${new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong></p>
+                     <div class="text-xs text-gray-600 mt-2 grid grid-cols-3 gap-2 text-center border-y py-2">
+                        <div><strong>Agendado:</strong><br>${a.scheduledTime || 'N/A'}</div>
+                        <div><strong>Chegou:</strong><br>${a.arrivalTime ? new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</div>
+                        <div><strong>Finalizado:</strong><br>${a.attendedTime ? new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</div>
+                     </div>
                     ${demandasInfo}
                     <div class="flex justify-between items-center mt-2">
                         <p class="text-sm">Por: <strong>${a.attendant || 'Não informado'}</strong></p>
@@ -775,6 +787,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 container.appendChild(div);
             }
         };
+
+        const formatMinutesDuration = (ms) => {
+            if (ms < 0 || isNaN(ms) || ms === null) return 'N/A';
+            const minutes = Math.floor(ms / 60000);
+            return `${minutes} min`;
+        };
         
         const applyCpfMaskAndValidation = (cpfField) => {
             let value = cpfField.value.replace(/\D/g, '');
@@ -819,7 +837,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 catch (error) { showError("Email ou senha inválidos."); }
             });
 
-            // ++ MELHORIA: Validação de e-mail no cadastro ++
             document.getElementById('register-form').addEventListener('submit', async e => {
                 e.preventDefault();
                 authErrorDiv.classList.add('hidden');
@@ -902,7 +919,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const agendamentoActions = document.getElementById('agendamento-actions');
                 const pautaColumn = document.getElementById('pauta-column');
                 const mainContent = document.getElementById('main-content');
-                // ++ NOVO: Seletor para os extras do formulário de agendamento
                 const formAgendamentoExtras = document.getElementById('form-agendamento-extras');
 
                 tabAgendamento.classList.toggle('tab-active', mode === 'agendamento');
@@ -913,11 +929,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 scheduledTimeWrapper.style.display = isAgendamento ? 'flex' : 'none';
                 agendamentoActions.style.display = isAgendamento ? 'flex' : 'none';
                 pautaColumn.style.display = isAgendamento ? 'flex' : 'none';
-                formAgendamentoExtras.style.display = isAgendamento ? 'block' : 'none'; // ++ NOVO: Controla a visibilidade
+                formAgendamentoExtras.style.display = isAgendamento ? 'block' : 'none';
                 mainContent.classList.toggle('lg:grid-cols-3', isAgendamento);
                 mainContent.classList.toggle('lg:grid-cols-2', !isAgendamento);
 
-                if (!isAgendamento) { // ++ NOVO: Reseta o formulário extra ao trocar de aba
+                if (!isAgendamento) {
                     document.getElementById('already-arrived-checkbox').checked = false;
                     document.getElementById('direct-arrival-time-wrapper').classList.add('hidden');
                 }
@@ -930,18 +946,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             ['pauta-search', 'aguardando-search', 'atendidos-search'].forEach(id => document.getElementById(id).addEventListener('input', renderAssistedList));
 
             document.getElementById('assisted-cpf').addEventListener('input', (e) => applyCpfMaskAndValidation(e.target));
-            // ++ MELHORIA: Aplica a mesma validação para o modal de edição ++
             document.getElementById('edit-assisted-cpf').addEventListener('input', (e) => applyCpfMaskAndValidation(e.target));
 
 
-            // ++ NOVO: Listener para a checkbox de "Já chegou?"
             const arrivalCheckbox = document.getElementById('already-arrived-checkbox');
             const arrivalTimeWrapper = document.getElementById('direct-arrival-time-wrapper');
             const arrivalTimeInput = document.getElementById('direct-arrival-time');
             arrivalCheckbox.addEventListener('change', () => {
                 if (arrivalCheckbox.checked) {
                     arrivalTimeWrapper.classList.remove('hidden');
-                    // Preenche com a hora atual para facilitar
                     arrivalTimeInput.value = new Date().toTimeString().slice(0, 5);
                 } else {
                     arrivalTimeWrapper.classList.add('hidden');
@@ -949,7 +962,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
 
 
-            // ++ REFEITO: Lógica de adicionar unificada para o novo formulário
             document.getElementById('add-assisted-btn').addEventListener('click', async () => {
                 const name = document.getElementById('assisted-name').value.trim();
                 const subject = document.getElementById('assisted-subject').value.trim();
@@ -964,7 +976,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 let newAssisted;
                 
-                // NOVO: Caso de agendamento que já chegou
                 if (isAgendamento && alreadyArrived) {
                     const arrivalTimeValue = document.getElementById('direct-arrival-time').value;
                     if (!name || !subject || !scheduledTime || !arrivalTimeValue) {
@@ -992,7 +1003,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         lastActionTimestamp: new Date().toISOString()
                     };
 
-                } else { // Casos originais (Agendamento para Pauta e Avulso para Aguardando)
+                } else {
                     if (!name || !subject || (isAgendamento && !scheduledTime)) {
                         return showNotification("Preencha os campos obrigatórios.", "error");
                     }
@@ -1014,16 +1025,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 }
 
-                // Adicionar campos padrão
                 Object.assign(newAssisted, {
                     attendedTime: null, attendant: null,
-                    order: allAssisted.length, demandas: null
+                    order: allAssisted.length, demandas: null, priorityReason: null
                 });
 
                 await addDoc(collection(db, "pautas", currentPautaId, "attendances"), newAssisted);
                 showNotification(isAgendamento && alreadyArrived ? "Adicionado direto na fila de espera!" : "Adicionado à pauta com sucesso!", "success");
 
-                // Limpar todos os campos do formulário
                 ['assisted-name', 'assisted-subject', 'assisted-cpf', 'scheduled-time', 'direct-arrival-time'].forEach(id => document.getElementById(id).value = '');
                 arrivalCheckbox.checked = false;
                 arrivalTimeWrapper.classList.add('hidden');
@@ -1074,9 +1083,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                                         name, cpf, scheduledTime: time, subject,
                                         status: 'pauta', type: 'agendamento',
                                         order: orderIndex++,
-                                        lastActionBy: 'Importação', // ++ NOVO: Rastreamento
-                                        lastActionTimestamp: new Date().toISOString(), // ++ NOVO: Rastreamento
-                                        arrivalTime: null, attendedTime: null, attendant: null, priority: null, checkInTimestamp: null, demandas: null
+                                        lastActionBy: 'Importação',
+                                        lastActionTimestamp: new Date().toISOString(),
+                                        arrivalTime: null, attendedTime: null, attendant: null, priority: null, priorityReason: null, checkInTimestamp: null, demandas: null
                                     });
                                     importedCount++;
                                 }
@@ -1112,10 +1121,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (button.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5); }
                     if (button.classList.contains('attend-btn')) { 
                         assistedIdToHandle = id; 
-                        document.getElementById('attendant-name').value = currentUserName;
+                        document.getElementById('attendant-name').value = '';
                         document.getElementById('attendant-modal').classList.remove('hidden'); 
                     }
-                    if (button.classList.contains('urgent-btn')) { await updateDoc(doc(collectionRef, id), { priority: 'URGENTE', lastActionBy: currentUserName, lastActionTimestamp: new Date().toISOString() }); }
+                    if (button.classList.contains('priority-btn')) { 
+                        assistedIdToHandle = id;
+                        document.getElementById('priority-reason-modal').classList.remove('hidden');
+                    }
                     if (button.classList.contains('delete-attended-btn')) { if (confirm("Tem certeza?")) await deleteDoc(doc(collectionRef, id)); }
                     if (button.classList.contains('edit-attendant-btn')) { 
                         assistedIdToHandle = id;
@@ -1161,7 +1173,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         document.getElementById('demands-modal').classList.remove('hidden');
                     }
                     if (button.classList.contains('return-to-pauta-btn')) {
-                        await updateDoc(doc(collectionRef, id), { status: 'pauta', arrivalTime: null, priority: null, checkInTimestamp: null, lastActionBy: currentUserName, lastActionTimestamp: new Date().toISOString() });
+                        await updateDoc(doc(collectionRef, id), { status: 'pauta', arrivalTime: null, priority: null, priorityReason: null, checkInTimestamp: null, lastActionBy: currentUserName, lastActionTimestamp: new Date().toISOString() });
                     }
                     if (button.classList.contains('return-to-aguardando-btn')) {
                         await updateDoc(doc(collectionRef, id), { status: 'aguardando', attendedTime: null, attendant: null, lastActionBy: currentUserName, lastActionTimestamp: new Date().toISOString() });
@@ -1326,6 +1338,28 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.getElementById('cancel-arrival-btn').addEventListener('click', () => document.getElementById('arrival-modal').classList.add('hidden'));
             document.getElementById('cancel-attendant-btn').addEventListener('click', () => document.getElementById('attendant-modal').classList.add('hidden'));
             document.getElementById('cancel-edit-attendant-btn').addEventListener('click', () => document.getElementById('edit-attendant-modal').classList.add('hidden'));
+
+            // ++ NOVO: Lógica do modal de prioridade
+            document.getElementById('cancel-priority-reason-btn').addEventListener('click', () => document.getElementById('priority-reason-modal').classList.add('hidden'));
+            document.getElementById('confirm-priority-reason-btn').addEventListener('click', async () => {
+                 if (assistedIdToHandle) {
+                    const reason = document.getElementById('priority-reason-input').value.trim();
+                    if (!reason) {
+                        showNotification("O motivo da prioridade é obrigatório.", "error");
+                        return;
+                    }
+                    await updateDoc(doc(db, "pautas", currentPautaId, "attendances", assistedIdToHandle), { 
+                        priority: 'URGENTE', 
+                        priorityReason: reason,
+                        lastActionBy: currentUserName, 
+                        lastActionTimestamp: new Date().toISOString() 
+                    });
+                    document.getElementById('priority-reason-modal').classList.add('hidden');
+                    document.getElementById('priority-reason-input').value = '';
+                    assistedIdToHandle = null;
+                }
+            });
+
 
             document.getElementById('reset-all-btn').addEventListener('click', () => document.getElementById('reset-confirm-modal').classList.remove('hidden'));
             document.getElementById('cancel-reset-btn').addEventListener('click', () => document.getElementById('reset-confirm-modal').classList.add('hidden'));
@@ -1606,14 +1640,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
             document.getElementById('close-members-modal-btn').addEventListener('click', () => document.getElementById('members-modal').classList.add('hidden'));
 
-            // ++ MELHORIA: Suporte a caracteres especiais no PDF ++
             document.getElementById('download-pdf-btn').addEventListener('click', () => {
                 const { jsPDF } = window.jspdf;
                 const pdfDoc = new jsPDF();
                 const pautaTitle = document.getElementById('pauta-title').textContent;
 
                 const atendidos = allAssisted
-                    .filter(a => a.status === 'atendido')
+                    .filter(a => a.status === 'atendido' && a.type === (document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso'))
                     .sort((a, b) => new Date(a.attendedTime) - new Date(b.attendedTime));
                 
                 if (atendidos.length === 0) {
@@ -1627,21 +1660,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     return total + 1 + demandasAdicionais;
                 }, 0);
 
-                const head = [['Nome do Assistido', 'CPF', 'Assuntos/Demandas', 'Atendente', 'Finalizado']];
+                const head = [['Assistido', 'CPF', 'Agendado', 'Chegada', 'Finalizado', 'Tempo Total', 'Atendente']];
                 const body = atendidos.map(a => {
-                    let allSubjects = [`- ${a.subject}`];
-                    if (a.demandas && a.demandas.descricoes && a.demandas.descricoes.length > 0) {
-                        const additionalSubjects = a.demandas.descricoes.map(d => `- ${d.trim()}`).filter(d => d !== '-');
-                         if(additionalSubjects.length > 0) {
-                             allSubjects = allSubjects.concat(additionalSubjects);
-                            }
-                    }
+                    const totalTime = formatMinutesDuration(new Date(a.attendedTime) - new Date(a.arrivalTime));
                     return [
                         a.name,
                         a.cpf || 'N/A',
-                        allSubjects.join('\n'),
-                        a.attendant || 'N/A',
-                        new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                        a.scheduledTime || 'N/A',
+                        a.arrivalTime ? new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+                        a.attendedTime ? new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+                        totalTime,
+                        a.attendant || 'N/A'
                     ];
                 });
                 
@@ -1778,3 +1807,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+
