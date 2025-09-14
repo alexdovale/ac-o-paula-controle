@@ -111,6 +111,7 @@
             <div class="flex items-center gap-2 flex-shrink-0">
                 <button id="manage-members-btn" class="bg-lime-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-lime-700">Membros</button>
                 <button id="reset-all-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">Zerar</button>
+                <button id="toggle-faltosos-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700">Mostrar Faltosos</button>
                 <button id="logout-btn-app" title="Sair" class="bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
                       <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
@@ -181,7 +182,7 @@
                 </div>
             </div>
             <main id="main-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <div id="pauta-column" class="bg-white rounded-lg shadow-md flex flex-col">
+                <div id="pauta-column" class="bg-white rounded-lg shadow-md flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
                             <span>📋 Pauta</span>
@@ -213,6 +214,19 @@
                         <input type="search" id="atendidos-search" placeholder="Pesquisar por nome, CPF, assunto..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
                     <div id="atendidos-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                </div>
+                 <div id="faltosos-column" class="bg-white rounded-lg shadow-md flex-col hidden">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                                🚫 Faltosos
+                                <span id="faltosos-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                            </h3>
+                            <button id="download-faltosos-pdf-btn" class="bg-blue-600 text-white font-bold py-1 px-3 rounded-lg hover:bg-blue-700 text-sm">Baixar PDF</button>
+                        </div>
+                        <input type="search" id="faltosos-search" placeholder="Pesquisar..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div id="faltosos-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
             </main>
               <footer class="mt-12 bg-white p-6 rounded-lg shadow-md">
@@ -711,14 +725,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         const getPriorityLabel = (priority) => ({'URGENTE':'<span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-full">PRIORIDADE</span>','Máxima':'<span class="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full">Máxima</span>','Média':'<span class="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-full">Média</span>','Mínima':'<span class="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded-full">Mínima</span>'}[priority]||'');
 
         const renderAssistedList = () => {
-            const pautaList = document.getElementById('pauta-list'), aguardandoList = document.getElementById('aguardando-list'), atendidosList = document.getElementById('atendidos-list');
-            [pautaList, aguardandoList, atendidosList].forEach(el => el.innerHTML = '');
+            const pautaList = document.getElementById('pauta-list');
+            const aguardandoList = document.getElementById('aguardando-list');
+            const atendidosList = document.getElementById('atendidos-list');
+            const faltososList = document.getElementById('faltosos-list');
+            [pautaList, aguardandoList, atendidosList, faltososList].forEach(el => el.innerHTML = '');
 
             const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
             
             const pautaSearchTerm = normalizeText(document.getElementById('pauta-search').value);
             const aguardandoSearchTerm = normalizeText(document.getElementById('aguardando-search').value);
             const atendidosSearchTerm = normalizeText(document.getElementById('atendidos-search').value);
+            const faltososSearchTerm = normalizeText(document.getElementById('faltosos-search').value);
+
             
             const searchFilter = (assisted, term) => {
                 if (!term) return true;
@@ -730,9 +749,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const pauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && searchFilter(a, pautaSearchTerm));
             const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm));
             const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && searchFilter(a, atendidosSearchTerm));
+            const faltosos = allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento' && searchFilter(a, faltososSearchTerm));
 
             pauta.sort((a, b) => (a.order || 0) - (b.order || 0));
             atendidos.sort((a, b) => new Date(a.attendedTime) - new Date(b.attendedTime));
+            faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
             
             aguardando.sort((a, b) => {
                 const order = { 'URGENTE': 0, 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
@@ -760,6 +781,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.getElementById('pauta-count').textContent = pauta.length;
             document.getElementById('aguardando-count').textContent = aguardando.length;
             document.getElementById('atendidos-count').textContent = atendidos.length;
+            document.getElementById('faltosos-count').textContent = faltosos.length;
+
 
             const render = (el, data, generator) => {
                 if(data.length === 0) el.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum resultado encontrado.</p>`;
@@ -771,9 +794,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 card.className = 'bg-gray-50 p-4 rounded-lg shadow-sm border';
                 const lastActionInfo = a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : '';
                 card.innerHTML = `<p class="font-bold text-lg">${a.name}</p>${a.cpf ? `<p class="text-sm text-gray-500">CPF: <strong>${a.cpf}</strong></p>` : ''}<p>Assunto: <strong>${a.subject}</strong></p><p>Agendado: <strong>${a.scheduledTime}</strong></p>
-                <div class="mt-3 flex flex-wrap gap-2 text-sm">
-                    <button data-id="${a.id}" class="check-in-btn flex-grow bg-green-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-600">Marcar Chegada</button>
-                    <button data-id="${a.id}" class="edit-assisted-btn flex-grow bg-gray-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-600">Editar Dados</button>
+                <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+                    <button data-id="${a.id}" class="check-in-btn bg-green-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-600">Marcar Chegada</button>
+                    <button data-id="${a.id}" class="faltou-btn bg-yellow-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-yellow-600">Faltou</button>
+                    <button data-id="${a.id}" class="edit-assisted-btn col-span-2 bg-gray-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-600">Editar Dados</button>
                 </div>
                 ${lastActionInfo}`;
                 return card;
@@ -781,10 +805,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             render(aguardandoList, aguardando, (a, index) => {
                 const card = document.createElement('div');
                 card.className = `bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)}`;
-                const arrival = a.type === 'agendamento' ? `Agendado: ${a.scheduledTime} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : `Chegada Avulsa: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+                const arrival = a.type === 'agendamento' && a.scheduledTime ? `Agendado: ${a.scheduledTime} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : `Chegada: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
                 const lastActionInfo = a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : '';
                 const priorityReasonInfo = a.priority === 'URGENTE' && a.priorityReason ? `<p class="text-xs text-red-600 mt-1 italic"><strong>Motivo:</strong> ${a.priorityReason}</p>` : '';
-                card.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-bold text-lg">${index + 1}. ${a.name}</p>${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}<p class="text-sm">Assunto: <strong>${a.subject}</strong></p><p class="text-sm text-gray-500">${arrival}</p></div>${getPriorityLabel(a.priority)}</div>${priorityReasonInfo}<div class="mt-4 flex flex-wrap gap-2"><button data-id="${a.id}" class="attend-btn flex-grow bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="priority-btn flex-grow bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : ''}<button data-id="${a.id}" class="edit-assisted-btn flex-grow bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar Dados</button><button data-id="${a.id}" class="return-to-pauta-btn w-full bg-gray-400 text-white font-semibold py-1 rounded-lg hover:bg-gray-500 text-xs mt-1">Voltar p/ Pauta</button></div>${lastActionInfo}`;
+                const returnToPautaBtn = a.type === 'agendamento' ? `<button data-id="${a.id}" class="return-to-pauta-btn w-full bg-gray-400 text-white font-semibold py-1 rounded-lg hover:bg-gray-500 text-xs mt-1">Voltar p/ Pauta</button>` : '';
+
+                card.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-bold text-lg">${index + 1}. ${a.name}</p>${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}<p class="text-sm">Assunto: <strong>${a.subject}</strong></p><p class="text-sm text-gray-500">${arrival}</p></div>${getPriorityLabel(a.priority)}</div>${priorityReasonInfo}<div class="mt-4 flex flex-wrap gap-2"><button data-id="${a.id}" class="attend-btn flex-grow bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="priority-btn flex-grow bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : ''}<button data-id="${a.id}" class="edit-assisted-btn flex-grow bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar Dados</button>${returnToPautaBtn}</div>${lastActionInfo}`;
                 return card;
             });
             render(atendidosList, atendidos, a => {
@@ -822,6 +848,20 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         ${lastActionInfo}
                         <button data-id="${a.id}" class="return-to-aguardando-btn bg-yellow-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-yellow-600 text-xs">Voltar p/ Aguardando</button>
                      </div>`;
+                return card;
+            });
+            render(faltososList, faltosos, a => {
+                const card = document.createElement('div');
+                card.className = 'bg-red-50 p-4 rounded-lg shadow-sm border-red-200';
+                const lastActionInfo = a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : '';
+                card.innerHTML = `<p class="font-bold text-lg">${a.name}</p>
+                    ${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}
+                    <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
+                    <p class="text-sm">Agendado: <strong>${a.scheduledTime}</strong></p>
+                    <div class="mt-3">
+                        <button data-id="${a.id}" class="return-to-pauta-from-faltoso-btn w-full bg-gray-500 text-white font-semibold py-1 rounded-lg hover:bg-gray-600 text-xs">Reverter para Pauta</button>
+                    </div>
+                    ${lastActionInfo}`;
                 return card;
             });
         };
@@ -1045,6 +1085,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const pautaColumn = document.getElementById('pauta-column');
                 const mainContent = document.getElementById('main-content');
                 const formOptionsContainer = document.getElementById('form-options-container');
+                const faltososColumn = document.getElementById('faltosos-column');
+                const toggleFaltososBtn = document.getElementById('toggle-faltosos-btn');
+
 
                 tabAgendamento.classList.toggle('tab-active', mode === 'agendamento');
                 tabAvulso.classList.toggle('tab-active', mode === 'avulso');
@@ -1054,8 +1097,22 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 agendamentoActions.style.display = isAgendamento ? 'flex' : 'none';
                 pautaColumn.style.display = isAgendamento ? 'flex' : 'none';
                 formOptionsContainer.style.display = isAgendamento ? 'grid' : 'none';
-                mainContent.classList.toggle('lg:grid-cols-3', isAgendamento);
-                mainContent.classList.toggle('lg:grid-cols-2', !isAgendamento);
+                toggleFaltososBtn.style.display = isAgendamento ? 'block' : 'none';
+
+
+                mainContent.classList.remove('lg:grid-cols-2', 'lg:grid-cols-3', 'lg:grid-cols-4');
+                if (!isAgendamento) {
+                    mainContent.classList.add('lg:grid-cols-2');
+                    faltososColumn.classList.add('hidden');
+                    faltososColumn.classList.remove('flex');
+                    toggleFaltososBtn.textContent = 'Mostrar Faltosos';
+                } else {
+                    if (faltososColumn.classList.contains('hidden')) {
+                        mainContent.classList.add('lg:grid-cols-3');
+                    } else {
+                        mainContent.classList.add('lg:grid-cols-4');
+                    }
+                }
 
                 ['assisted-name', 'assisted-subject', 'assisted-cpf', 'scheduled-time', 'arrival-time'].forEach(id => document.getElementById(id).value = '');
                 document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
@@ -1068,7 +1125,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             document.getElementById('tab-agendamento').addEventListener('click', () => setMode('agendamento'));
             document.getElementById('tab-avulso').addEventListener('click', () => setMode('avulso'));
-            ['pauta-search', 'aguardando-search', 'atendidos-search'].forEach(id => document.getElementById(id).addEventListener('input', renderAssistedList));
+            ['pauta-search', 'aguardando-search', 'atendidos-search', 'faltosos-search'].forEach(id => document.getElementById(id).addEventListener('input', renderAssistedList));
 
             document.getElementById('assisted-cpf').addEventListener('input', (e) => applyCpfMaskAndValidation(e.target));
             document.getElementById('edit-assisted-cpf').addEventListener('input', (e) => applyCpfMaskAndValidation(e.target));
@@ -1297,6 +1354,22 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (button.classList.contains('return-to-aguardando-btn')) {
                         await updateDoc(doc(collectionRef, id), { status: 'aguardando', attendedTime: null, attendant: null, lastActionBy: currentUserName, lastActionTimestamp: new Date().toISOString() });
                     }
+                     if (button.classList.contains('faltou-btn')) {
+                        if (confirm("Marcar este assistido como faltoso?")) {
+                            await updateDoc(doc(collectionRef, id), { 
+                                status: 'faltoso',
+                                lastActionBy: currentUserName,
+                                lastActionTimestamp: new Date().toISOString()
+                            });
+                        }
+                    }
+                    if (button.classList.contains('return-to-pauta-from-faltoso-btn')) {
+                        await updateDoc(doc(collectionRef, id), { 
+                            status: 'pauta',
+                            lastActionBy: currentUserName,
+                            lastActionTimestamp: new Date().toISOString()
+                        });
+                    }
                 }
             });
 
@@ -1513,6 +1586,65 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     showNotification('Falha ao copiar.', 'error');
                 }
                 document.body.removeChild(textArea);
+            });
+
+            const toggleFaltososBtn = document.getElementById('toggle-faltosos-btn');
+            const faltososColumn = document.getElementById('faltosos-column');
+            const mainContent = document.getElementById('main-content');
+
+            toggleFaltososBtn.addEventListener('click', () => {
+                const isHidden = faltososColumn.classList.toggle('hidden');
+                faltososColumn.classList.toggle('flex');
+                
+                mainContent.classList.remove('lg:grid-cols-3', 'lg:grid-cols-4');
+                if (isHidden) {
+                    toggleFaltososBtn.textContent = 'Mostrar Faltosos';
+                    mainContent.classList.add('lg:grid-cols-3');
+                } else {
+                    toggleFaltososBtn.textContent = 'Ocultar Faltosos';
+                    mainContent.classList.add('lg:grid-cols-4');
+                }
+            });
+
+            document.getElementById('download-faltosos-pdf-btn').addEventListener('click', () => {
+                const { jsPDF } = window.jspdf;
+                const pdfDoc = new jsPDF();
+                const pautaTitle = document.getElementById('pauta-title').textContent;
+
+                const faltosos = allAssisted
+                    .filter(a => a.status === 'faltoso' && a.type === 'agendamento')
+                    .sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
+                
+                if (faltosos.length === 0) {
+                    showNotification("Não há faltosos para exportar.", "info");
+                    return;
+                }
+
+                const head = [['Nome do Assistido', 'CPF', 'Assunto', 'Horário Agendado']];
+                const body = faltosos.map(a => [
+                    a.name,
+                    a.cpf || 'N/A',
+                    a.subject,
+                    a.scheduledTime
+                ]);
+                
+                pdfDoc.setFontSize(18);
+                pdfDoc.text(`Relatório de Faltosos - ${pautaTitle}`, 14, 22);
+                pdfDoc.setFontSize(11);
+                pdfDoc.setTextColor(100);
+                pdfDoc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`, 14, 29);
+
+                pdfDoc.autoTable({
+                    startY: 35,
+                    head: head,
+                    body: body,
+                    theme: 'striped',
+                    headStyles: { fillColor: [128, 90, 213] }, 
+                    styles: { font: 'helvetica' }, 
+                    columnStyles: { 0: { fontStyle: 'bold' } }
+                });
+                
+                pdfDoc.save(`relatorio_faltosos_${pautaTitle.replace(/\s+/g, '_')}.pdf`);
             });
 
             // Edit Pauta Name Modal Logic
@@ -1757,65 +1889,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
             document.getElementById('close-members-modal-btn').addEventListener('click', () => document.getElementById('members-modal').classList.add('hidden'));
-
-            document.getElementById('download-pdf-btn').addEventListener('click', () => {
-                const { jsPDF } = window.jspdf;
-                const pdfDoc = new jsPDF();
-                const pautaTitle = document.getElementById('pauta-title').textContent;
-
-                const atendidos = allAssisted
-                    .filter(a => a.status === 'atendido' && a.type === (document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso'))
-                    .sort((a, b) => new Date(a.attendedTime) - new Date(b.attendedTime));
-                
-                if (atendidos.length === 0) {
-                    showNotification("Não há atendimentos finalizados para exportar.", "info");
-                    return;
-                }
-
-                const totalPorPessoas = atendidos.length;
-                const totalPorAssunto = atendidos.reduce((total, a) => {
-                    const demandasAdicionais = (a.demandas && a.demandas.quantidade) ? Number(a.demandas.quantidade) : 0;
-                    return total + 1 + demandasAdicionais;
-                }, 0);
-
-                const head = [['Assistido', 'CPF', 'Agendado', 'Chegada', 'Finalizado', 'Tempo Total', 'Atendente']];
-                const body = atendidos.map(a => {
-                    const totalTime = formatMinutesDuration(new Date(a.attendedTime) - new Date(a.arrivalTime));
-                    return [
-                        a.name,
-                        a.cpf || 'N/A',
-                        a.scheduledTime || 'N/A',
-                        a.arrivalTime ? new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-                        a.attendedTime ? new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-                        totalTime,
-                        a.attendant || 'N/A'
-                    ];
-                });
-                
-                pdfDoc.setFontSize(18);
-                pdfDoc.text(`Relatório de Atendimentos - ${pautaTitle}`, 14, 22);
-                pdfDoc.setFontSize(11);
-                pdfDoc.setTextColor(100);
-                pdfDoc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`, 14, 29);
-
-                pdfDoc.autoTable({
-                    startY: 35,
-                    head: head,
-                    body: body,
-                    theme: 'striped',
-                    headStyles: { fillColor: [22, 163, 74] },
-                    styles: { font: 'helvetica' }, 
-                    columnStyles: { 0: { fontStyle: 'bold' } }
-                });
-                
-                const finalY = pdfDoc.autoTable.previous.finalY || 35;
-                pdfDoc.setFontSize(12);
-                pdfDoc.setFont('helvetica', 'bold');
-                pdfDoc.text(`Total por Pessoas Atendidas: ${totalPorPessoas}`, 14, finalY + 10);
-                pdfDoc.text(`Total por Assuntos/Demandas: ${totalPorAssunto}`, 14, finalY + 17);
-
-                pdfDoc.save(`relatorio_atendidos_${pautaTitle.replace(/\s+/g, '_')}.pdf`);
-            });
         });
     </script>
     
