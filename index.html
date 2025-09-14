@@ -104,7 +104,7 @@
                  </button>
             </div>
             <div class="bg-white p-4 rounded-lg shadow-sm space-y-4">
-                 <div class="flex justify-center items-center">
+                 <div class="flex justify-center items-center border-b pb-4">
                      <h2 id="pauta-title" class="text-2xl md:text-3xl font-bold text-gray-800"></h2>
                       <button id="edit-pauta-name-btn" title="Editar nome da pauta" class="hidden ml-3 p-2 rounded-full hover:bg-gray-200 transition flex-shrink-0">
                           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
@@ -113,7 +113,7 @@
                           </svg>
                      </button>
                  </div>
-                 <div class="flex justify-between items-center w-full gap-4">
+                 <div class="flex justify-between items-center w-full gap-4 pt-4">
                      <div class="flex-shrink-0">
                          <button id="back-to-pautas-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
                      </div>
@@ -227,9 +227,8 @@
                                 🚫 Faltosos
                                 <span id="faltosos-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
                             </h3>
-                            <button id="download-faltosos-pdf-btn" class="bg-blue-600 text-white font-bold py-1 px-3 rounded-lg hover:bg-blue-700 text-sm">Baixar PDF</button>
                         </div>
-                        <input type="search" id="faltosos-search" placeholder="Pesquisar..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                        <input type="search" id="faltosos-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
                     <div id="faltosos-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
@@ -1611,6 +1610,67 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
 
+            document.getElementById('download-pdf-btn').addEventListener('click', () => {
+                const { jsPDF } = window.jspdf;
+                const pdfDoc = new jsPDF();
+                const pautaTitle = document.getElementById('pauta-title').textContent;
+
+                const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
+
+                const atendidos = allAssisted
+                    .filter(a => a.status === 'atendido' && a.type === currentMode)
+                    .sort((a, b) => new Date(a.attendedTime) - new Date(b.attendedTime));
+                
+                if (atendidos.length === 0) {
+                    showNotification("Não há atendimentos finalizados para exportar.", "info");
+                    return;
+                }
+
+                const totalPorPessoas = atendidos.length;
+                const totalPorAssunto = atendidos.reduce((total, a) => {
+                    const demandasAdicionais = (a.demandas && a.demandas.quantidade) ? Number(a.demandas.quantidade) : 0;
+                    return total + 1 + demandasAdicionais;
+                }, 0);
+
+                const head = [['Assistido', 'CPF', 'Agendado', 'Chegada', 'Finalizado', 'Tempo Total', 'Atendente']];
+                const body = atendidos.map(a => {
+                    const totalTime = (a.attendedTime && a.arrivalTime) ? formatMinutesDuration(new Date(a.attendedTime) - new Date(a.arrivalTime)) : 'N/A';
+                    return [
+                        a.name,
+                        a.cpf || 'N/A',
+                        a.scheduledTime || 'N/A',
+                        a.arrivalTime ? new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+                        a.attendedTime ? new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+                        totalTime,
+                        a.attendant || 'N/A'
+                    ];
+                });
+                
+                pdfDoc.setFontSize(18);
+                pdfDoc.text(`Relatório de Atendimentos - ${pautaTitle}`, 14, 22);
+                pdfDoc.setFontSize(11);
+                pdfDoc.setTextColor(100);
+                pdfDoc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`, 14, 29);
+
+                pdfDoc.autoTable({
+                    startY: 35,
+                    head: head,
+                    body: body,
+                    theme: 'striped',
+                    headStyles: { fillColor: [22, 163, 74] },
+                    styles: { font: 'helvetica' }, 
+                    columnStyles: { 0: { fontStyle: 'bold' } }
+                });
+                
+                const finalY = pdfDoc.autoTable.previous.finalY || 35;
+                pdfDoc.setFontSize(12);
+                pdfDoc.setFont('helvetica', 'bold');
+                pdfDoc.text(`Total por Pessoas Atendidas: ${totalPorPessoas}`, 14, finalY + 10);
+                pdfDoc.text(`Total por Assuntos/Demandas: ${totalPorAssunto}`, 14, finalY + 17);
+
+                pdfDoc.save(`relatorio_atendidos_${pautaTitle.replace(/\s+/g, '_')}.pdf`);
+            });
+
             document.getElementById('download-faltosos-pdf-btn').addEventListener('click', () => {
                 const { jsPDF } = window.jspdf;
                 const pdfDoc = new jsPDF();
@@ -2003,4 +2063,5 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+"
 
