@@ -95,33 +95,34 @@
     <div id="app-container" class="max-w-full mx-auto hidden">
         <header class="mb-6 space-y-4">
             <div class="flex justify-center items-center w-full relative">
-                <h1 class="text-xl font-semibold text-gray-600 text-center">Sistema de Gerenciamento de Pauta - SIGAP</h1>
-                <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
-                      <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
-                      <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
-                    </svg>
-                </button>
+                 <h1 class="text-xl font-semibold text-gray-600 text-center">Sistema de Gerenciamento de Pauta - SIGAP</h1>
+                 <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
+                       <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                       <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                     </svg>
+                 </button>
             </div>
-            <div class="bg-white p-4 rounded-lg shadow-sm flex justify-between items-center w-full gap-4">
-                <div class="flex-shrink-0">
-                    <button id="back-to-pautas-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
-                </div>
-                <div class="flex-grow text-center min-w-0">
-                    <div class="flex justify-center items-center">
-                        <h2 id="pauta-title" class="text-2xl md:text-3xl font-bold text-gray-800 truncate"></h2>
-                        <button id="edit-pauta-name-btn" title="Editar nome da pauta" class="hidden ml-3 p-2 rounded-full hover:bg-gray-200 transition flex-shrink-0">
-                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
-                                 <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
-                                 <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5h6a.5.5 0 0 0 0-1h-6A1.5 1.5 0 0 0 1 2.5v11z"/>
-                             </svg>
-                        </button>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2 flex-shrink-0">
-                    <button id="manage-members-btn" class="bg-lime-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-lime-700">Membros</button>
-                    <button id="reset-all-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">Zerar</button>
-                </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm space-y-4">
+                 <div class="flex justify-center items-center">
+                     <h2 id="pauta-title" class="text-2xl md:text-3xl font-bold text-gray-800"></h2>
+                      <button id="edit-pauta-name-btn" title="Editar nome da pauta" class="hidden ml-3 p-2 rounded-full hover:bg-gray-200 transition flex-shrink-0">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                              <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                              <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5h6a.5.5 0 0 0 0-1h-6A1.5 1.5 0 0 0 1 2.5v11z"/>
+                          </svg>
+                     </button>
+                 </div>
+                 <div class="flex justify-between items-center w-full gap-4">
+                     <div class="flex-shrink-0">
+                         <button id="back-to-pautas-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
+                     </div>
+                     <div class="flex items-center gap-2 flex-shrink-0">
+                         <button id="manage-members-btn" class="bg-lime-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-lime-700">Membros</button>
+                         <button id="reset-all-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">Zerar</button>
+                         <button id="toggle-faltosos-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700" style="display: none;">Mostrar Faltosos</button>
+                     </div>
+                 </div>
             </div>
         </header>
         <div id="app-content">
@@ -233,9 +234,6 @@
                     <div id="faltosos-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
             </main>
-            <div id="faltosos-toggle-container" class="my-4 text-center" style="display: none;">
-                <button id="toggle-faltosos-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700">Mostrar Faltosos</button>
-            </div>
               <footer class="mt-12 bg-white p-6 rounded-lg shadow-md">
                   <h3 class="text-xl font-semibold text-gray-800 mb-2 text-center">Entenda a Ordem de Atendimento</h3>
                   <div class="text-center mb-4">
@@ -1093,7 +1091,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const mainContent = document.getElementById('main-content');
                 const formOptionsContainer = document.getElementById('form-options-container');
                 const faltososColumn = document.getElementById('faltosos-column');
-                const faltososToggleContainer = document.getElementById('faltosos-toggle-container');
+                const toggleFaltososBtn = document.getElementById('toggle-faltosos-btn');
 
 
                 tabAgendamento.classList.toggle('tab-active', mode === 'agendamento');
@@ -1104,7 +1102,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 agendamentoActions.style.display = isAgendamento ? 'flex' : 'none';
                 pautaColumn.style.display = isAgendamento ? 'flex' : 'none';
                 formOptionsContainer.style.display = isAgendamento ? 'grid' : 'none';
-                faltososToggleContainer.style.display = isAgendamento ? 'block' : 'none';
+                toggleFaltososBtn.style.display = isAgendamento ? 'inline-flex' : 'none';
 
 
                 mainContent.classList.remove('lg:grid-cols-2', 'lg:grid-cols-3', 'lg:grid-cols-4');
@@ -1112,7 +1110,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     mainContent.classList.add('lg:grid-cols-2');
                     faltososColumn.classList.add('hidden');
                     faltososColumn.classList.remove('flex');
-                    document.getElementById('toggle-faltosos-btn').textContent = 'Mostrar Faltosos';
+                    toggleFaltososBtn.textContent = 'Mostrar Faltosos';
                 } else {
                     if (faltososColumn.classList.contains('hidden')) {
                         mainContent.classList.add('lg:grid-cols-3');
