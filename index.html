@@ -448,6 +448,7 @@ const renderAssistedList = () => {
                     <p class="text-sm text-gray-500">${arrival}</p>
                 </div>
             </div>
+            <div class="mt-2"><button data-id="${a.id}" class="view-documents-btn text-indigo-600 hover:text-indigo-800 text-sm hover:underline font-semibold py-1">Ver Documentos</button></div>
             <div class="mt-3 grid grid-cols-2 lg:grid-cols-3 gap-2">
                 <button data-id="${a.id}" class="attend-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>
                 ${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : ''}
@@ -466,7 +467,7 @@ const renderAssistedList = () => {
             <div class="flex justify-between items-start">
                 <p class="font-bold text-lg">${a.name} ${totalAssuntos > 1 ? `<span class="text-sm font-medium text-green-600">(${totalAssuntos} assuntos)</span>` : ''}</p>
             </div>
-            <div class="card-details hidden mt-2 space-y-2">
+            <div class="card-details mt-2 space-y-2">
                 ${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}
                 <p class="text-sm">Assunto Principal: <strong>${a.subject}</strong></p>
                 <div class="text-xs text-gray-600 grid grid-cols-3 gap-2 text-center border-y py-2">
@@ -489,7 +490,7 @@ const renderAssistedList = () => {
             </div>
             <div class="text-right mt-1">
                  <button class="toggle-details-btn text-gray-500 hover:text-gray-800 p-1">
-                    <svg class="pointer-events-none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
+                    <svg class="pointer-events-none" style="transform: rotate(180deg);" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
                  </button>
             </div>`;
         return card;
@@ -810,6 +811,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('edit-attendant-modal').classList.remove('hidden');
                 }
             }
+            if (button.classList.contains('view-documents-btn')) {
+                assistedIdToHandle = id;
+                const modal = document.getElementById('documents-modal');
+                modal.innerHTML = `
+                    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl relative">
+                        <button id="cancel-documents-btn" class="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>
+                        </button>
+                        <h2 class="text-2xl font-bold mb-4">Documentos</h2>
+                        <p class="text-gray-600">Esta área será usada para visualizar e fazer upload de documentos do assistido.</p>
+                        <!-- O conteúdo de upload e listagem de documentos será implementado aqui -->
+                    </div>
+                `;
+                modal.classList.remove('hidden');
+            }
         }
 
         // Botão principal de adicionar
@@ -818,7 +834,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!name) { showNotification("O nome é obrigatório.", "error"); return; }
             
             const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-            let isScheduled, hasArrived, scheduledTimeValue, arrivalTimeValue;
+            let isScheduled, hasArrived, scheduledTimeValue;
 
             if (currentMode === 'agendamento') {
                 isScheduled = document.querySelector('input[name="is-scheduled"]:checked').value === 'yes';
@@ -916,3 +932,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
+
