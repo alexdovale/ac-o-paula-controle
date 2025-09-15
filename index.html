@@ -21,7 +21,6 @@
         .priority-maxima { border-left: 5px solid #22c55e; }
         .priority-media { border-left: 5px solid #f97316; }
         .priority-minima { border-left: 5px solid #6b7280; }
-        /* CORREÇÃO: Adicionada a regra de scroll para o #checklist-container */
         .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar { width: 8px; }
         .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
         .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb, #checklist-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
@@ -449,6 +448,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     <button data-action="divorcio_consensual" class="document-action-btn w-full text-left p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition">
                         <span class="font-semibold text-gray-800">4. Ação de Divórcio Consensual</span>
                     </button>
+                    <button data-action="outros" class="document-action-btn w-full text-left p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition">
+                        <span class="font-semibold text-gray-800">5. Outros (Personalizado)</span>
+                    </button>
                 </div>
             </div>
 
@@ -457,9 +459,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     <h3 id="checklist-title" class="text-xl font-bold text-gray-800"></h3>
                     <button id="change-action-btn" class="text-sm bg-yellow-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-yellow-600">Trocar Ação</button>
                 </div>
+                <div id="custom-doc-adder" class="hidden flex gap-2 mb-4 p-3 bg-gray-100 rounded-lg border">
+                    <input type="text" id="custom-doc-input" placeholder="Digite o nome do documento" class="flex-grow p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition">
+                    <button id="add-custom-doc-btn" class="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 transition">Adicionar</button>
+                </div>
                 <div id="checklist-container" class="space-y-4 overflow-y-auto pr-2 flex-grow max-h-[60vh]">
-                    </div>
-                 <div class="flex justify-end space-x-4 mt-6 pt-4 border-t flex-shrink-0">
+                </div>
+                 <div class="flex justify-center space-x-4 mt-6 pt-4 border-t flex-shrink-0">
                     <button id="cancel-checklist-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
                     <button id="save-checklist-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar</button>
                 </div>
@@ -474,9 +480,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, getDoc, setDoc, query, where, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ... (código JS principal que já estava aqui, com as novas lógicas adicionadas abaixo) ...
-        // Este código é longo, então o colei inteiro para garantir. As mudanças estão comentadas.
         let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '';
-        let currentChecklistAction = null; // Váriavel global para saber qual checklist está ativo
+        let assistedIdToHandle = null; // Mova a declaração para o escopo global do script
+        let currentChecklistAction = null; 
         
         const loadingContainer = document.getElementById('loading-container');
         const loginContainer = document.getElementById('login-container');
@@ -627,8 +633,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const ownerIds = [...new Set(invSnapshot.docs.map(doc => doc.data().owner).filter(id => id))];
                     const ownerNames = {};
 
-                    if (uniqueOwnerIds.length > 0) {
-                         const ownerDocs = await Promise.all(uniqueOwnerIds.map(id => getDoc(doc(db, "users", id))));
+                    if (ownerIds.length > 0) {
+                         const ownerDocs = await Promise.all(ownerIds.map(id => getDoc(doc(db, "users", id))));
                          ownerDocs.forEach(doc => { if (doc.exists()) ownerNames[doc.id] = doc.data().name; });
                     }
 
@@ -945,11 +951,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
         document.addEventListener('DOMContentLoaded', () => {
             main();
-            let assistedIdToHandle = null;
-
-            // ... (código dos formulários de login/registro, etc, que já estava funcionando) ...
             
-            // LÓGICA DO MODAL DE DOCUMENTOS ATUALIZADA
+            // --- INÍCIO DAS MUDANÇAS PARA O MODAL DE DOCUMENTOS ---
+
             const documentsData = {
                 alimentos_fixacao: {
                     title: 'Ação de Alimentos (Fixação)',
@@ -966,6 +970,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 divorcio_consensual: {
                     title: 'Ação de Divórcio Consensual',
                     sections: [ { title: 'De Ambos os Cônjuges (Requerentes) - Atenção: Documentos de AMBOS:', docs: ['Carteira de Identidade e CPF de ambos.','Comprovante de residência de ambos.','Certidão de Casamento atualizada.','Carteira de Trabalho, contracheque ou extratos bancários dos últimos três meses de ambos.'] }, { title: 'Dos Filhos (se houver):', docs: ['Certidão de Nascimento ou Casamento dos filhos.'] }, { title: 'Dos Bens (se houver partilha):', docs: ['Documentos relacionados aos bens adquiridos durante o casamento (ex: registro de imóveis, documento de veículos, extratos de contas).','Informar o valor de mercado dos bens a partilhar.','Apresentar um esboço de como será feita a divisão dos bens.'] } ]
+                },
+                outros: {
+                    title: 'Outros Documentos (Personalizado)',
+                    sections: [] // Vazio, pois será preenchido pelo usuário
                 }
             };
             
@@ -974,46 +982,75 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const checklistView = document.getElementById('document-checklist-view');
             const checklistContainer = document.getElementById('checklist-container');
             const checklistTitle = document.getElementById('checklist-title');
+            const customDocAdder = document.getElementById('custom-doc-adder');
+            
+            const renderCustomDocItem = (docText, isChecked = false) => {
+                const listItem = document.createElement('li');
+                listItem.className = 'custom-doc-item flex items-center justify-between p-2 bg-white rounded-lg border animate-fade-in';
+                const escapedDocText = docText.replace(/"/g, '&quot;'); // Escapa aspas
+                listItem.innerHTML = `
+                    <label class="flex items-center text-gray-800 cursor-pointer flex-grow break-all">
+                        <input type="checkbox" class="h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500 mr-3 flex-shrink-0" value="${escapedDocText}" ${isChecked ? 'checked' : ''}>
+                        <span class="doc-text">${docText}</span>
+                    </label>
+                    <button class="remove-custom-doc-btn text-gray-400 hover:text-red-500 ml-2 p-1 flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-x-circle" viewBox="0 0 16 16">
+                           <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                           <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                        </svg>
+                    </button>
+                `;
+                return listItem;
+            };
 
             const generateChecklist = (actionKey, savedData = {}) => {
                 const data = documentsData[actionKey];
                 currentChecklistAction = actionKey;
                 checklistTitle.textContent = data.title;
                 checklistContainer.innerHTML = '';
-                
-                const checkedDocs = savedData.checkedDocs || [];
+                customDocAdder.classList.add('hidden');
 
-                data.sections.forEach(section => {
-                    const sectionDiv = document.createElement('div');
-                    const sectionTitle = document.createElement('h4');
-                    sectionTitle.className = 'font-bold text-md text-gray-700 mb-2 mt-3 border-b pb-1';
-                    sectionTitle.textContent = section.title;
-                    sectionDiv.appendChild(sectionTitle);
-
+                if (actionKey === 'outros') {
+                    customDocAdder.classList.remove('hidden');
+                    const customDocs = savedData.customDocs || [];
+                    const checkedDocs = savedData.checkedDocs || [];
+                    
                     const list = document.createElement('ul');
                     list.className = 'space-y-2';
-                    section.docs.forEach((docText) => {
-                        const listItem = document.createElement('li');
-                        const label = document.createElement('label');
-                        label.className = 'flex items-center text-gray-800 cursor-pointer';
-                        
-                        const checkbox = document.createElement('input');
-                        checkbox.type = 'checkbox';
-                        checkbox.className = 'h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500 mr-3 flex-shrink-0';
-                        checkbox.value = docText;
-                        if (checkedDocs.includes(docText)) {
-                            checkbox.checked = true;
-                        }
-
-                        label.appendChild(checkbox);
-                        label.appendChild(document.createTextNode(docText));
-                        listItem.appendChild(label);
-                        list.appendChild(listItem);
+                    customDocs.forEach(docText => {
+                        const isChecked = checkedDocs.includes(docText);
+                        list.appendChild(renderCustomDocItem(docText, isChecked));
                     });
+                    checklistContainer.appendChild(list);
+                } else {
+                    const checkedDocs = savedData.checkedDocs || [];
+                    data.sections.forEach(section => {
+                        const sectionDiv = document.createElement('div');
+                        const sectionTitle = document.createElement('h4');
+                        sectionTitle.className = 'font-bold text-md text-gray-700 mb-2 mt-3 border-b pb-1';
+                        sectionTitle.textContent = section.title;
+                        sectionDiv.appendChild(sectionTitle);
 
-                    sectionDiv.appendChild(list);
-                    checklistContainer.appendChild(sectionDiv);
-                });
+                        const list = document.createElement('ul');
+                        list.className = 'space-y-2';
+                        section.docs.forEach((docText) => {
+                            const listItem = document.createElement('li');
+                            const label = document.createElement('label');
+                            label.className = 'flex items-center text-gray-800 cursor-pointer';
+                            const checkbox = document.createElement('input');
+                            checkbox.type = 'checkbox';
+                            checkbox.className = 'h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500 mr-3 flex-shrink-0';
+                            checkbox.value = docText;
+                            if (checkedDocs.includes(docText)) checkbox.checked = true;
+                            label.appendChild(checkbox);
+                            label.appendChild(document.createTextNode(docText));
+                            listItem.appendChild(label);
+                            list.appendChild(listItem);
+                        });
+                        sectionDiv.appendChild(list);
+                        checklistContainer.appendChild(sectionDiv);
+                    });
+                }
             };
             
             document.addEventListener('click', async (e) => {
@@ -1030,30 +1067,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         document.getElementById('documents-assisted-name').textContent = assisted.name;
                         
                         if (assisted.documentChecklist && assisted.documentChecklist.actionType) {
-                            // Se já tem um checklist salvo, mostra ele direto
                             generateChecklist(assisted.documentChecklist.actionType, assisted.documentChecklist);
                             actionSelectionView.classList.add('hidden');
                             checklistView.classList.remove('hidden');
                             checklistView.classList.add('flex');
                         } else {
-                            // Senão, mostra a tela de seleção de ação
                             actionSelectionView.classList.remove('hidden');
                             checklistView.classList.add('hidden');
                             checklistView.classList.remove('flex');
                         }
                         documentsModal.classList.remove('hidden');
                     }
-                }
-                
-                // ... (aqui entraria o resto do seu event listener gigante, que já está funcionando)
-                 if (id && collectionRef) {
-                    if (button.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5); }
-                    if (button.classList.contains('attend-btn')) { 
-                        assistedIdToHandle = id; 
-                        document.getElementById('attendant-name').value = '';
-                        document.getElementById('attendant-modal').classList.remove('hidden'); 
-                    }
-                    // ... (e assim por diante para todos os outros botões)
                 }
             });
 
@@ -1063,13 +1087,37 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 if (button.classList.contains('document-action-btn')) {
                     const actionKey = button.dataset.action;
-                    generateChecklist(actionKey); // Gera com dados vazios
+                    const assisted = allAssisted.find(a => a.id === assistedIdToHandle);
+                    const savedData = (assisted && assisted.documentChecklist && assisted.documentChecklist.actionType === actionKey) 
+                        ? assisted.documentChecklist 
+                        : {};
+                    generateChecklist(actionKey, savedData);
                     actionSelectionView.classList.add('hidden');
                     checklistView.classList.remove('hidden');
                     checklistView.classList.add('flex');
                 }
 
-                if (button.id === 'change-action-btn' || button.id === 'back-to-action-selection-btn') {
+                if (button.id === 'add-custom-doc-btn') {
+                    const input = document.getElementById('custom-doc-input');
+                    const docText = input.value.trim();
+                    if (docText) {
+                        let list = checklistContainer.querySelector('ul');
+                        if (!list) {
+                            list = document.createElement('ul');
+                            list.className = 'space-y-2';
+                            checklistContainer.appendChild(list);
+                        }
+                        list.appendChild(renderCustomDocItem(docText));
+                        input.value = '';
+                        input.focus();
+                    }
+                }
+
+                if (button.classList.contains('remove-custom-doc-btn')) {
+                    button.closest('.custom-doc-item').remove();
+                }
+
+                if (button.id === 'change-action-btn') {
                     checklistView.classList.add('hidden');
                     checklistView.classList.remove('flex');
                     actionSelectionView.classList.remove('hidden');
@@ -1080,15 +1128,18 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         const checkedInputs = checklistContainer.querySelectorAll('input[type="checkbox"]:checked');
                         const checkedDocs = Array.from(checkedInputs).map(input => input.value);
                         
-                        const checklistData = {
+                        let checklistData = {
                             actionType: currentChecklistAction,
                             checkedDocs: checkedDocs
                         };
 
+                        if (currentChecklistAction === 'outros') {
+                            const customDocItems = checklistContainer.querySelectorAll('.doc-text');
+                            checklistData.customDocs = Array.from(customDocItems).map(span => span.textContent);
+                        }
+
                         const docRef = doc(db, "pautas", currentPautaId, "attendances", assistedIdToHandle);
-                        await updateDoc(docRef, {
-                            documentChecklist: checklistData
-                        });
+                        await updateDoc(docRef, { documentChecklist: checklistData });
                         
                         showNotification("Checklist salvo com sucesso!", "success");
                         documentsModal.classList.add('hidden');
@@ -1099,15 +1150,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     documentsModal.classList.add('hidden');
                 }
             });
-
+             // --- FIM DAS MUDANÇAS PARA O MODAL DE DOCUMENTOS ---
         });
     </script>
     
     <script>
-        // Lógica do PWA e outros scripts menores
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js') // CORREÇÃO: Apontar para o arquivo externo
+                navigator.serviceWorker.register('./sw.js')
                     .then(registration => console.log('ServiceWorker registrado com sucesso:', registration.scope))
                     .catch(error => console.log('Falha ao registrar o ServiceWorker:', error));
             });
