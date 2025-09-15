@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Gerenciamento de Pauta - SIGAP</title>
     
-    <!-- Ícone do Navegador (Favicon) -->
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ac-o-paula-controle/imagem.png">
 
-    <!-- Metatags para PWA -->
     <meta name="theme-color" content="#16a34a"/>
     <link rel="apple-touch-icon" href="https://alexdovale.github.io/ac-o-paula-controle/imagem.png">
     <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Sistema%20de%20Gerenciamento%20de%20Pauta%20-%20SIGAP%22,%22short_name%22:%22SIGAP%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#f0f2f5%22,%22theme_color%22:%22#16a34a%22,%22description%22:%22Sistema%20para%20gerenciar%20pautas%20de%20atendimento%20da%20Defensoria.%22,%22icons%22:[{%22src%22:%22https://alexdovale.github.io/ac-o-paula-controle/imagem.png%22,%22sizes%22:%22192x192%22,%22type%22:%22image/png%22,%22purpose%22:%22any%20maskable%22},{%22src%22:%22https://alexdovale.github.io/ac-o-paula-controle/imagem.png%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22,%22purpose%22:%22any%20maskable%22}]}">
@@ -23,9 +21,9 @@
         .priority-maxima { border-left: 5px solid #22c55e; }
         .priority-media { border-left: 5px solid #f97316; }
         .priority-minima { border-left: 5px solid #6b7280; }
-        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar { width: 8px; }
-        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
-        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar { width: 8px; }
+        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
+        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb, #checklist-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
         input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
         .tab-active { border-color: #16a34a; background-color: #f0fdf4; color: #16a34a; font-weight: 600; }
         .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
@@ -260,7 +258,6 @@
         </div>
     </div>
 
-    <!-- Modais -->
     <div id="create-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Criar Nova Pauta</h2>
@@ -474,8 +471,44 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
         </div>
     </div>
+    
+    <div id="documents-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 90vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">
+                    Documentos para <span id="documents-assisted-name" class="text-green-600"></span>
+                </h2>
+                <button id="close-documents-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            </div>
 
+            <div id="document-action-selection" class="flex-grow">
+                <p class="text-gray-600 mb-4">Selecione o tipo de ação para ver a lista de documentos necessários:</p>
+                <div class="space-y-3">
+                    <button data-action="alimentos_fixacao" class="w-full text-left p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition">
+                        <span class="font-semibold text-gray-800">1. Ação de Alimentos (Fixação ou Pedido de Pensão)</span>
+                    </button>
+                    <button data-action="alimentos_oferta" class="w-full text-left p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition">
+                        <span class="font-semibold text-gray-800">2. Ação de Oferta de Alimentos</span>
+                    </button>
+                    <button data-action="divorcio_litigioso" class="w-full text-left p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition">
+                        <span class="font-semibold text-gray-800">3. Ação de Divórcio Litigioso</span>
+                    </button>
+                    <button data-action="divorcio_consensual" class="w-full text-left p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition">
+                        <span class="font-semibold text-gray-800">4. Ação de Divórcio Consensual</span>
+                    </button>
+                </div>
+            </div>
 
+            <div id="document-checklist-view" class="hidden flex-grow flex flex-col">
+                <div class="flex items-center gap-4 mb-4 flex-shrink-0">
+                    <button id="back-to-action-selection-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
+                    <h3 id="checklist-title" class="text-xl font-bold text-gray-800"></h3>
+                </div>
+                <div id="checklist-container" class="space-y-4 overflow-y-auto pr-2 flex-grow">
+                    </div>
+            </div>
+        </div>
+    </div>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -814,7 +847,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const priorityReasonInfo = a.priority === 'URGENTE' && a.priorityReason ? `<p class="text-xs text-red-600 mt-1 italic"><strong>Motivo:</strong> ${a.priorityReason}</p>` : '';
                 const returnToPautaBtn = a.type === 'agendamento' ? `<button data-id="${a.id}" class="return-to-pauta-btn w-full bg-gray-400 text-white font-semibold py-1 rounded-lg hover:bg-gray-500 text-xs mt-1">Voltar p/ Pauta</button>` : '';
 
-                card.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-bold text-lg">${index + 1}. ${a.name}</p>${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}<p class="text-sm">Assunto: <strong>${a.subject}</strong></p><p class="text-sm text-gray-500">${arrival}</p></div>${getPriorityLabel(a.priority)}</div>${priorityReasonInfo}<div class="mt-4 flex flex-wrap gap-2"><button data-id="${a.id}" class="attend-btn flex-grow bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="priority-btn flex-grow bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : ''}<button data-id="${a.id}" class="edit-assisted-btn flex-grow bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar Dados</button>${returnToPautaBtn}</div>${lastActionInfo}`;
+                card.innerHTML = `<div class="flex justify-between items-start"><div><p class="font-bold text-lg">${index + 1}. ${a.name}</p>${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}<p class="text-sm">Assunto: <strong>${a.subject}</strong></p><p class="text-sm text-gray-500">${arrival}</p></div>${getPriorityLabel(a.priority)}</div>${priorityReasonInfo}
+                <div class="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-2">
+                    <button data-id="${a.id}" class="attend-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>
+                    ${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : ''}
+                    <button data-id="${a.id}" class="edit-assisted-btn bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar</button>
+                    <button data-id="${a.id}" class="view-details-btn bg-indigo-500 text-white font-semibold py-2 rounded-lg hover:bg-indigo-600 text-sm">Ver Detalhes</button>
+                </div>
+                ${returnToPautaBtn ? `<div class="mt-2">${returnToPautaBtn}</div>` : ''}
+                ${lastActionInfo}`;
                 return card;
             });
             render(atendidosList, atendidos, a => {
@@ -1374,6 +1415,18 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             lastActionTimestamp: new Date().toISOString()
                         });
                     }
+                    // INÍCIO: LÓGICA PARA O BOTÃO "VER DETALHES"
+                    if (button.classList.contains('view-details-btn')) {
+                        assistedIdToHandle = id;
+                        const assisted = allAssisted.find(a => a.id === id);
+                        if (assisted) {
+                            document.getElementById('documents-assisted-name').textContent = assisted.name;
+                            document.getElementById('document-checklist-view').classList.add('hidden');
+                            document.getElementById('document-action-selection').classList.remove('hidden');
+                            document.getElementById('documents-modal').classList.remove('hidden');
+                        }
+                    }
+                    // FIM: LÓGICA PARA O BOTÃO "VER DETALHES"
                 }
             });
 
@@ -1954,6 +2007,183 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
             document.getElementById('close-members-modal-btn').addEventListener('click', () => document.getElementById('members-modal').classList.add('hidden'));
+
+            // INÍCIO: LÓGICA DO NOVO MODAL DE DOCUMENTOS
+            const documentsData = {
+                alimentos_fixacao: {
+                    title: 'Ação de Alimentos (Fixação)',
+                    sections: [
+                        {
+                            title: 'Do(a) Representante Legal (quem pede a pensão):',
+                            docs: [
+                                'Carteira de Identidade e CPF.',
+                                'Comprovante de residência.',
+                                'Certidão de nascimento ou casamento.',
+                                'Carteira de Trabalho ou contracheque.',
+                                'Extratos bancários dos últimos três meses ou a última declaração de Imposto de Renda (se houver).',
+                                'Dados bancários para o depósito da pensão.'
+                            ]
+                        },
+                        {
+                            title: 'Do(a) Filho(a) (Alimentando):',
+                            docs: [
+                                'Certidão de Nascimento.',
+                                'Comprovantes de despesas da criança/adolescente (escola, saúde, lazer, etc.) e de eventuais necessidades especiais.'
+                            ]
+                        },
+                        {
+                            title: 'Informações sobre o Réu (quem vai pagar):',
+                            docs: [
+                                'Endereço completo para citação.',
+                                'Nome e endereço do local de trabalho (se souber).',
+                                'Dados da empregadora (se souber).'
+                            ]
+                        }
+                    ]
+                },
+                alimentos_oferta: {
+                    title: 'Ação de Oferta de Alimentos',
+                    sections: [
+                         {
+                            title: 'Do Requerente (quem oferece a pensão):',
+                            docs: [
+                                'Carteira de Identidade e CPF.',
+                                'Comprovante de residência.',
+                                'Carteira de Trabalho, contracheque, extratos bancários dos últimos três meses ou a última declaração de Imposto de Renda para comprovar os rendimentos.'
+                            ]
+                        },
+                        {
+                            title: 'Do(a) Filho(a) (Beneficiário):',
+                            docs: ['Certidão de Nascimento.']
+                        },
+                        {
+                            title: 'Informações sobre a Representante Legal (a outra parte):',
+                            docs: [
+                                'Nome completo e endereço para citação.',
+                                'Dados bancários para o depósito da pensão (se souber).'
+                            ]
+                        }
+                    ]
+                },
+                divorcio_litigioso: {
+                    title: 'Ação de Divórcio Litigioso',
+                    sections: [
+                        {
+                            title: 'Do Requerente (quem entra com a ação):',
+                            docs: [
+                                'Carteira de Identidade e CPF.',
+                                'Comprovante de residência.',
+                                'Certidão de Casamento atualizada.',
+                                'Carteira de Trabalho, contracheque ou extratos bancários dos últimos três meses.'
+                            ]
+                        },
+                        {
+                            title: 'Dos Filhos (se houver):',
+                            docs: ['Certidão de Nascimento ou Casamento dos filhos.']
+                        },
+                        {
+                            title: 'Dos Bens (se houver partilha):',
+                            docs: [
+                                'Documentos relacionados aos bens adquiridos durante o casamento (ex: registro de imóveis, documento de veículos, extratos de contas).',
+                                'Informar o valor de mercado dos bens a partilhar.'
+                            ]
+                        },
+                        {
+                            title: 'Informações sobre o Réu (a outra parte):',
+                            docs: ['Endereço completo para citação.']
+                        }
+                    ]
+                },
+                divorcio_consensual: {
+                    title: 'Ação de Divórcio Consensual',
+                    sections: [
+                         {
+                            title: 'De Ambos os Cônjuges (Requerentes) - Atenção: Documentos de AMBOS:',
+                            docs: [
+                                'Carteira de Identidade e CPF de ambos.',
+                                'Comprovante de residência de ambos.',
+                                'Certidão de Casamento atualizada.',
+                                'Carteira de Trabalho, contracheque ou extratos bancários dos últimos três meses de ambos.'
+                            ]
+                        },
+                        {
+                            title: 'Dos Filhos (se houver):',
+                            docs: ['Certidão de Nascimento ou Casamento dos filhos.']
+                        },
+                         {
+                            title: 'Dos Bens (se houver partilha):',
+                            docs: [
+                                'Documentos relacionados aos bens adquiridos durante o casamento (ex: registro de imóveis, documento de veículos, extratos de contas).',
+                                'Informar o valor de mercado dos bens a partilhar.',
+                                'Apresentar um esboço de como será feita a divisão dos bens.'
+                            ]
+                        }
+                    ]
+                }
+            };
+            
+            const documentsModal = document.getElementById('documents-modal');
+            const actionSelectionView = document.getElementById('document-action-selection');
+            const checklistView = document.getElementById('document-checklist-view');
+            const checklistContainer = document.getElementById('checklist-container');
+            const checklistTitle = document.getElementById('checklist-title');
+
+            actionSelectionView.addEventListener('click', (e) => {
+                const actionButton = e.target.closest('button[data-action]');
+                if (!actionButton) return;
+
+                const actionKey = actionButton.dataset.action;
+                const data = documentsData[actionKey];
+
+                checklistTitle.textContent = data.title;
+                checklistContainer.innerHTML = ''; 
+
+                data.sections.forEach(section => {
+                    const sectionDiv = document.createElement('div');
+                    
+                    const sectionTitle = document.createElement('h4');
+                    sectionTitle.className = 'font-bold text-md text-gray-700 mb-2 mt-3 border-b pb-1';
+                    sectionTitle.textContent = section.title;
+                    sectionDiv.appendChild(sectionTitle);
+
+                    const list = document.createElement('ul');
+                    list.className = 'space-y-2';
+                    section.docs.forEach((docText, index) => {
+                        const listItem = document.createElement('li');
+                        const label = document.createElement('label');
+                        label.className = 'flex items-center text-gray-800 cursor-pointer';
+                        
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.className = 'h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500 mr-3';
+                        checkbox.id = `doc-${actionKey}-${index}`;
+
+                        label.appendChild(checkbox);
+                        label.appendChild(document.createTextNode(docText));
+                        listItem.appendChild(label);
+                        list.appendChild(listItem);
+                    });
+
+                    sectionDiv.appendChild(list);
+                    checklistContainer.appendChild(sectionDiv);
+                });
+
+                actionSelectionView.classList.add('hidden');
+                checklistView.classList.remove('hidden');
+                checklistView.classList.add('flex');
+            });
+
+            document.getElementById('back-to-action-selection-btn').addEventListener('click', () => {
+                checklistView.classList.add('hidden');
+                checklistView.classList.remove('flex');
+                actionSelectionView.classList.remove('hidden');
+            });
+            
+            document.getElementById('close-documents-modal-btn').addEventListener('click', () => {
+                documentsModal.classList.add('hidden');
+            });
+            // FIM: LÓGICA DO NOVO MODAL DE DOCUMENTOS
+
         });
     </script>
     
@@ -2063,5 +2293,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
-"
-
