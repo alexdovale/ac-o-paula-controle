@@ -842,6 +842,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    // Botão de expandir explicação da lógica
+    document.getElementById('toggle-logic-btn').addEventListener('click', (e) => {
+        const explanationDiv = document.getElementById('logic-explanation');
+        const isHidden = explanationDiv.classList.toggle('hidden');
+        e.target.textContent = isHidden ? 'Por que esta ordem é justa? (Clique para expandir)' : 'Ocultar explicação';
+    });
+
     // Opções do formulário
     document.querySelectorAll('input[name="is-scheduled"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
