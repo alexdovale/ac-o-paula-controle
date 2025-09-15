@@ -370,6 +370,9 @@
                     <button id="back-to-action-selection-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
                     <h3 id="checklist-title" class="text-xl font-bold text-gray-800"></h3>
                 </div>
+                 <div class="mb-4 flex-shrink-0">
+                    <input type="search" id="checklist-search" placeholder="Pesquisar documento..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                </div>
                 <div id="checklist-container" class="space-y-4 overflow-y-auto pr-2 flex-grow border rounded-lg p-4 bg-gray-50" style="max-height: 55vh;">
                     <!-- O checklist será renderizado aqui -->
                 </div>
@@ -728,6 +731,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Abas de atendimento
     document.getElementById('tab-agendamento').addEventListener('click', () => switchTab('agendamento'));
     document.getElementById('tab-avulso').addEventListener('click', () => switchTab('avulso'));
+
+    // Pesquisa nos cards
+    ['pauta-search', 'aguardando-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
+        document.getElementById(id).addEventListener('input', renderAssistedList);
+    });
 
     // Carregar pauta de arquivo
     document.getElementById('file-upload').addEventListener('change', async (event) => {
@@ -1156,6 +1164,20 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Erro ao salvar o checklist: ", error);
             showNotification("Erro ao salvar o checklist.", "error");
         }
+    });
+
+    // Pesquisa no checklist de documentos
+    document.getElementById('checklist-search').addEventListener('input', (e) => {
+        const searchTerm = normalizeText(e.target.value);
+        const allDocs = checklistContainer.querySelectorAll('li');
+        allDocs.forEach(li => {
+            const labelText = normalizeText(li.textContent);
+            if (labelText.includes(searchTerm)) {
+                li.style.display = 'block';
+            } else {
+                li.style.display = 'none';
+            }
+        });
     });
 
 });
