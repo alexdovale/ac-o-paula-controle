@@ -210,7 +210,10 @@
                         <div class="flex justify-between items-center mb-3">
                             <h3 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
                                 ✅ Atendidos
-                                <span id="atendidos-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                                <div class="flex items-center gap-2 text-sm font-normal">
+                                    <span id="atendidos-person-count" class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full" title="Total de pessoas"></span>
+                                    <span id="atendidos-subject-count" class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full" title="Total de assuntos"></span>
+                                </div>
                             </h3>
                             <button id="download-pdf-btn" class="bg-blue-600 text-white font-bold py-1 px-3 rounded-lg hover:bg-blue-700 text-sm">Baixar PDF</button>
                         </div>
@@ -316,7 +319,34 @@
             </div>
         </div>
     </div>
-    <div id="demands-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50"></div>
+    <div id="demands-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg flex flex-col" style="max-height: 90vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Gerenciar Demandas Adicionais</h2>
+                <button id="close-demands-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+            </div>
+            <div class="flex-grow overflow-y-auto pr-2">
+                <p class="mb-4">Assistido: <strong id="demands-assisted-name-modal" class="text-green-600"></strong></p>
+                <div class="space-y-2">
+                    <label for="new-demand-input" class="block text-sm font-medium text-gray-700">Adicionar nova demanda:</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="new-demand-input" placeholder="Ex: Ação de Partilha de Bens" class="flex-grow p-2 border border-gray-300 rounded-lg">
+                        <button id="add-demand-btn" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 flex-shrink-0">Adicionar</button>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Demandas Adicionais Registradas:</h3>
+                    <div id="demands-list-container" class="space-y-2 max-h-60 overflow-y-auto bg-gray-50 p-3 rounded-lg border">
+                        <p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-4 mt-6 flex-shrink-0 border-t pt-4">
+                <button id="cancel-demands-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
+                <button id="save-demands-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
     <div id="edit-assisted-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
          <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
             <h2 class="text-2xl font-bold mb-6">Editar Dados do Assistido</h2>
@@ -509,8 +539,18 @@ const renderAssistedList = () => {
     
     document.getElementById('pauta-count').textContent = pauta.length;
     document.getElementById('aguardando-count').textContent = aguardando.length;
-    document.getElementById('atendidos-count').textContent = atendidos.length;
     document.getElementById('faltosos-count').textContent = faltosos.length;
+
+    let totalSubjects = 0;
+    atendidos.forEach(a => {
+        totalSubjects += 1; // Assunto principal
+        if (a.demandas && a.demandas.quantidade) {
+            totalSubjects += Number(a.demandas.quantidade);
+        }
+    });
+
+    document.getElementById('atendidos-person-count').textContent = `${atendidos.length} Pessoas`;
+    document.getElementById('atendidos-subject-count').textContent = `${totalSubjects} Assuntos`;
 
     const render = (el, data, generator) => {
         if(data.length === 0) el.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum resultado.</p>`;
@@ -582,7 +622,8 @@ const renderAssistedList = () => {
                 ${demandasInfo}
                 <div class="flex justify-between items-center mt-2">
                     <p class="text-sm">Por: <strong>${a.attendant || 'Não informado'}</strong></p>
-                    <div class="flex items-center gap-1">
+                    <div class="flex items-center gap-1 flex-wrap">
+                        <button data-id="${a.id}" class="manage-demands-btn text-blue-600 hover:text-blue-800 font-semibold text-xs py-1 px-2 rounded hover:bg-blue-100">Demandas</button>
                         <button data-id="${a.id}" class="edit-assisted-btn text-gray-600 hover:text-gray-800 font-semibold text-xs py-1 px-2 rounded hover:bg-gray-100">Dados</button>
                         <button data-id="${a.id}" class="edit-attendant-btn text-green-600 hover:text-green-800 font-semibold text-xs py-1 px-2 rounded hover:bg-green-100">Atendente</button>
                         <button data-id="${a.id}" class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs py-1 px-2 rounded hover:bg-red-100">Deletar</button>
@@ -765,7 +806,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Logout error", error);
             showNotification("Erro ao tentar sair.", "error");
         });
-        // onAuthStateChanged irá para a tela de login
     };
     document.getElementById('logout-btn-main').addEventListener('click', handleLogout);
     document.getElementById('logout-btn-app').addEventListener('click', handleLogout);
@@ -840,23 +880,37 @@ document.addEventListener('DOMContentLoaded', () => {
         docPDF.text(`Relatório de Atendidos - ${pautaName}`, 14, 22);
         docPDF.setFontSize(11);
         docPDF.setTextColor(100);
-        docPDF.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
 
-        const tableColumn = ["#", "Nome", "Assunto", "Atendente", "Finalizado"];
+        const totalSubjects = atendidos.reduce((acc, a) => acc + 1 + (a.demandas?.quantidade || 0), 0);
+        docPDF.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
+        docPDF.text(`Total de Atendidos: ${atendidos.length}`, 14, 36);
+        docPDF.text(`Total de Assuntos: ${totalSubjects}`, 100, 36);
+
+
+        const tableColumn = ["#", "Nome", "Assunto Principal", "Atendente", "Finalizado", "Duração"];
         const tableRows = [];
 
         atendidos.forEach((item, index) => {
+            let duration = 'N/A';
+            if (item.arrivalTime && item.attendedTime) {
+                const diffMs = new Date(item.attendedTime) - new Date(item.arrivalTime);
+                const diffMins = Math.round(diffMs / 60000);
+                 if (!isNaN(diffMins) && diffMins >= 0) {
+                    duration = `${diffMins} min`;
+                }
+            }
             const rowData = [
                 index + 1,
                 item.name,
                 item.subject,
                 item.attendant || 'N/A',
-                new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                duration
             ];
             tableRows.push(rowData);
         });
 
-        docPDF.autoTable(tableColumn, tableRows, { startY: 35 });
+        docPDF.autoTable(tableColumn, tableRows, { startY: 42 });
         docPDF.save(`relatorio_${pautaName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
     });
 
@@ -928,6 +982,33 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     };
+    
+    const showDemandsModal = (assistedId) => {
+        const modal = document.getElementById('demands-modal');
+        const assisted = allAssisted.find(a => a.id === assistedId);
+        if (!assisted) return;
+
+        document.getElementById('demands-assisted-name-modal').textContent = assisted.name;
+        const demandsListContainer = document.getElementById('demands-list-container');
+        demandsListContainer.innerHTML = ''; 
+
+        const demands = assisted.demandas?.descricoes || [];
+        if (demands.length === 0) {
+            demandsListContainer.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
+        } else {
+            demands.forEach(demandText => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-2 bg-white rounded-md';
+                li.textContent = demandText;
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-demand-item-btn text-red-500 hover:text-red-700 text-xs';
+                removeBtn.textContent = 'Remover';
+                li.appendChild(removeBtn);
+                demandsListContainer.appendChild(li);
+            });
+        }
+        modal.classList.remove('hidden');
+    };
 
 
     // LÓGICA DE CLIQUE GERAL (DELEGAÇÃO DE EVENTOS)
@@ -977,6 +1058,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('document-action-selection').classList.remove('hidden');
                     document.getElementById('documents-modal').classList.remove('hidden');
                 }
+            }
+            if (button.classList.contains('manage-demands-btn')) {
+                assistedIdToHandle = id;
+                showDemandsModal(id);
             }
         }
 
@@ -1132,7 +1217,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             statusDiv.textContent = `Usuário ${email} convidado!`;
             document.getElementById('invite-email-input').value = '';
-            await showMembersModal(); // Refresh member list
+            await showMembersModal();
         }
         if(button.classList.contains('remove-member-btn')) {
             const email = button.dataset.email;
@@ -1148,11 +1233,53 @@ document.addEventListener('DOMContentLoaded', () => {
                         memberEmails: arrayRemove(email)
                     });
                     showNotification(`Membro ${email} removido.`);
-                    await showMembersModal(); // Refresh
+                    await showMembersModal();
                 }
             }
         }
         
+        // --- LOGICA MODAL DE DEMANDAS ---
+        if (button.id === 'add-demand-btn') {
+            const input = document.getElementById('new-demand-input');
+            const text = input.value.trim();
+            if(text) {
+                const demandsListContainer = document.getElementById('demands-list-container');
+                if(demandsListContainer.querySelector('p')) {
+                    demandsListContainer.innerHTML = ''; // Limpa a msg "nenhuma demanda"
+                }
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-2 bg-white rounded-md text-sm';
+                li.textContent = text;
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-demand-item-btn text-red-500 hover:text-red-700 text-xs font-semibold ml-2';
+                removeBtn.textContent = 'Remover';
+                li.appendChild(removeBtn);
+                demandsListContainer.appendChild(li);
+                input.value = '';
+            }
+        }
+        if (button.classList.contains('remove-demand-item-btn')) {
+            const li = button.parentElement;
+            li.remove();
+            const demandsListContainer = document.getElementById('demands-list-container');
+            if (!demandsListContainer.hasChildNodes()) {
+                 demandsListContainer.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
+            }
+        }
+        if (button.id === 'save-demands-btn') {
+            const demandsListContainer = document.getElementById('demands-list-container');
+            const items = demandsListContainer.querySelectorAll('li');
+            const descricoes = Array.from(items).map(li => li.firstChild.textContent);
+            const demandsData = {
+                quantidade: descricoes.length,
+                descricoes: descricoes
+            };
+            const docRef = doc(collectionRef, assistedIdToHandle);
+            await updateDoc(docRef, getUpdatePayload({ demandas: demandsData }));
+            showNotification("Demandas salvas com sucesso!");
+            document.getElementById('demands-modal').classList.add('hidden');
+        }
+
         // Botões de cancelar dos modais
         if (button.id.startsWith('cancel-') || button.id.startsWith('close-')) {
             button.closest('.fixed').classList.add('hidden');
@@ -1347,3 +1474,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
+
