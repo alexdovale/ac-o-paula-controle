@@ -262,7 +262,17 @@
     </div>
 
     <!-- MODAIS -->
-    <div id="create-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50"></div>
+    <div id="create-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Criar Nova Pauta</h2>
+            <label for="create-pauta-name-input" class="block text-sm font-medium text-gray-700 mb-2">Nome da Pauta</label>
+            <input type="text" id="create-pauta-name-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-create-pauta-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-create-pauta-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Criar</button>
+            </div>
+        </div>
+    </div>
     <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh; display: flex; flex-direction: column;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -732,8 +742,8 @@ const handleAuthState = () => {
                 currentUserName = userDoc.data().name || user.email;
                 showPautaSelectionScreen(user.uid);
             } else {
-                loadingText.innerHTML = 'Sua conta está pendente de aprovação. <br> Por favor, aguarde.';
-                document.querySelector('.loader').style.display = 'none';
+                 loadingText.innerHTML = 'Sua conta está pendente de aprovação. <br> Por favor, aguarde.';
+                 document.querySelector('.loader').style.display = 'none';
             }
         } else {
             showScreen('login');
@@ -769,7 +779,6 @@ const switchTab = (tabName) => {
         pautaColumn.classList.add('hidden');
         formTitle.textContent = "Adicionar Atendimento Avulso";
         
-        // No avulso, sempre chegou e não é agendado
         document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
         document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
         document.getElementById('scheduled-time-wrapper').classList.add('hidden');
@@ -794,13 +803,134 @@ const main = () => {
 document.addEventListener('DOMContentLoaded', () => {
     main();
     
+    // --- LÓGICA DE LOGIN/CADASTRO ---
+    const loginTabBtn = document.getElementById('login-tab-btn');
+    const registerTabBtn = document.getElementById('register-tab-btn');
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    
+    loginTabBtn.addEventListener('click', () => {
+        loginTabBtn.classList.add('border-green-600', 'text-green-600');
+        loginTabBtn.classList.remove('text-gray-500');
+        registerTabBtn.classList.remove('border-green-600', 'text-green-600');
+        registerTabBtn.classList.add('text-gray-500');
+        loginForm.classList.remove('hidden');
+        registerForm.classList.add('hidden');
+    });
+
+    registerTabBtn.addEventListener('click', () => {
+        registerTabBtn.classList.add('border-green-600', 'text-green-600');
+        registerTabBtn.classList.remove('text-gray-500');
+        loginTabBtn.classList.remove('border-green-600', 'text-green-600');
+        loginTabBtn.classList.add('text-gray-500');
+        registerForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+    });
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        const errorDiv = document.getElementById('auth-error');
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            errorDiv.classList.add('hidden');
+        } catch (error) {
+            console.error("Login failed:", error);
+            errorDiv.textContent = 'Email ou senha inválidos.';
+            errorDiv.classList.remove('hidden');
+        }
+    });
+
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('register-name').value;
+        const email = document.getElementById('register-email').value;
+        const password = document.getElementById('register-password').value;
+        const errorDiv = document.getElementById('auth-error');
+
+        if (password.length < 6) {
+            errorDiv.textContent = 'A senha deve ter pelo menos 6 caracteres.';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            await setDoc(doc(db, "users", user.uid), {
+                name: name,
+                email: email,
+                uid: user.uid,
+                status: 'approved',
+                createdAt: new Date().toISOString()
+            });
+            
+            errorDiv.classList.add('hidden');
+            showNotification('Conta criada com sucesso! Agora você pode fazer o login.', 'success');
+            loginTabBtn.click();
+            
+        } catch (error) {
+            console.error("Registration failed:", error);
+            errorDiv.textContent = error.code === 'auth/email-already-in-use' ? 'Este email já está em uso.' : 'Ocorreu um erro ao criar a conta.';
+            errorDiv.classList.remove('hidden');
+        }
+    });
+
+    document.getElementById('forgot-password-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        const email = prompt("Por favor, digite seu email para redefinir a senha:");
+        if (email) {
+            sendPasswordResetEmail(auth, email)
+                .then(() => showNotification("Email de redefinição de senha enviado!", "success"))
+                .catch((error) => {
+                    console.error("Password reset error:", error);
+                    showNotification("Erro ao enviar email. Verifique se o email está correto.", "error");
+                });
+        }
+    });
+
+    document.getElementById('create-pauta-btn').addEventListener('click', () => {
+        document.getElementById('create-pauta-modal').classList.remove('hidden');
+    });
+    document.getElementById('cancel-create-pauta-btn').addEventListener('click', () => {
+        document.getElementById('create-pauta-modal').classList.add('hidden');
+    });
+    document.getElementById('confirm-create-pauta-btn').addEventListener('click', async () => {
+        const pautaName = document.getElementById('create-pauta-name-input').value.trim();
+        if (!pautaName) {
+            showNotification("O nome da pauta não pode ser vazio.", "error");
+            return;
+        }
+        const user = auth.currentUser;
+        if (!user) {
+             showNotification("Você precisa estar logado para criar uma pauta.", "error");
+            return;
+        }
+        try {
+            await addDoc(collection(db, "pautas"), {
+                name: pautaName,
+                owner: user.uid,
+                ownerEmail: user.email,
+                members: [user.uid],
+                memberEmails: [user.email],
+                createdAt: new Date().toISOString()
+            });
+            showNotification("Pauta criada com sucesso!");
+            document.getElementById('create-pauta-name-input').value = '';
+            document.getElementById('create-pauta-modal').classList.add('hidden');
+        } catch (error) {
+            console.error("Error creating pauta:", error);
+            showNotification("Erro ao criar pauta.", "error");
+        }
+    });
+
     // --- LÓGICA DOS EVENTOS ---
     
-    // Abas de atendimento
     document.getElementById('tab-agendamento').addEventListener('click', () => switchTab('agendamento'));
     document.getElementById('tab-avulso').addEventListener('click', () => switchTab('avulso'));
 
-    // Logout
     const handleLogout = () => {
         signOut(auth).catch(error => {
             console.error("Logout error", error);
@@ -810,12 +940,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('logout-btn-main').addEventListener('click', handleLogout);
     document.getElementById('logout-btn-app').addEventListener('click', handleLogout);
 
-    // Pesquisa nos cards
     ['pauta-search', 'aguardando-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
         document.getElementById(id).addEventListener('input', renderAssistedList);
     });
 
-    // Carregar pauta de arquivo
     document.getElementById('file-upload').addEventListener('change', async (event) => {
         const file = event.target.files[0];
         if (!file) return;
@@ -860,7 +988,6 @@ document.addEventListener('DOMContentLoaded', () => {
         event.target.value = ''; 
     });
 
-    // Botão de download PDF
     document.getElementById('download-pdf-btn').addEventListener('click', () => {
         const { jsPDF } = window.jspdf;
         const docPDF = new jsPDF();
@@ -914,7 +1041,6 @@ document.addEventListener('DOMContentLoaded', () => {
         docPDF.save(`relatorio_${pautaName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
     });
 
-    // Botão de ver faltosos
     document.getElementById('toggle-faltosos-btn').addEventListener('click', (e) => {
         const btn = e.currentTarget;
         const pautaColumn = document.getElementById('pauta-column');
@@ -934,14 +1060,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Botão de expandir explicação da lógica
     document.getElementById('toggle-logic-btn').addEventListener('click', (e) => {
         const explanationDiv = document.getElementById('logic-explanation');
         const isHidden = explanationDiv.classList.toggle('hidden');
         e.target.textContent = isHidden ? 'Por que esta ordem é justa? (Clique para expandir)' : 'Ocultar explicação';
     });
 
-    // Opções do formulário
     document.querySelectorAll('input[name="is-scheduled"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
             document.getElementById('scheduled-time-wrapper').classList.toggle('hidden', e.target.value === 'no');
@@ -1010,8 +1134,6 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.classList.remove('hidden');
     };
 
-
-    // LÓGICA DE CLIQUE GERAL (DELEGAÇÃO DE EVENTOS)
     document.body.addEventListener('click', async (e) => {
         const button = e.target.closest('button');
         if (!button) return;
@@ -1019,7 +1141,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = button.dataset.id;
         const collectionRef = currentPautaId ? collection(db, "pautas", currentPautaId, "attendances") : null;
         
-        // Botões dos cards
         if (id && collectionRef) {
             const docRef = doc(collectionRef, id);
             if (button.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5); }
@@ -1065,7 +1186,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Botões do cabeçalho do APP
         if (button.id === 'back-to-pautas-btn') {
             if (unsubscribeFromAttendances) unsubscribeFromAttendances();
             currentPautaId = null;
@@ -1084,7 +1204,6 @@ document.addEventListener('DOMContentLoaded', () => {
             await showMembersModal();
         }
 
-        // Botão principal de adicionar
         if (button.id === 'add-assisted-btn') {
             const name = document.getElementById('assisted-name').value.trim();
             if (!name) { showNotification("O nome é obrigatório.", "error"); return; }
@@ -1096,7 +1215,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 isScheduled = document.querySelector('input[name="is-scheduled"]:checked').value === 'yes';
                 hasArrived = document.querySelector('input[name="has-arrived"]:checked').value === 'yes';
                 scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time').value : null;
-            } else { // avulso
+            } else { 
                 isScheduled = false;
                 hasArrived = true;
                 scheduledTimeValue = null;
@@ -1128,7 +1247,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('arrival-time-wrapper').classList.add('hidden');
         }
 
-        // Botões de confirmação dos modais
         if (button.id === 'confirm-arrival-btn') {
             const arrivalTimeInput = document.getElementById('arrival-time-input').value;
             if (!arrivalTimeInput) { showNotification("Por favor, informe o horário.", "error"); return; }
@@ -1238,14 +1356,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // --- LOGICA MODAL DE DEMANDAS ---
         if (button.id === 'add-demand-btn') {
             const input = document.getElementById('new-demand-input');
             const text = input.value.trim();
             if(text) {
                 const demandsListContainer = document.getElementById('demands-list-container');
                 if(demandsListContainer.querySelector('p')) {
-                    demandsListContainer.innerHTML = ''; // Limpa a msg "nenhuma demanda"
+                    demandsListContainer.innerHTML = '';
                 }
                 const li = document.createElement('li');
                 li.className = 'flex justify-between items-center p-2 bg-white rounded-md text-sm';
@@ -1262,7 +1379,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const li = button.parentElement;
             li.remove();
             const demandsListContainer = document.getElementById('demands-list-container');
-            if (!demandsListContainer.hasChildNodes()) {
+            if (demandsListContainer.children.length === 0) {
                  demandsListContainer.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
             }
         }
@@ -1280,7 +1397,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('demands-modal').classList.add('hidden');
         }
 
-        // Botões de cancelar dos modais
         if (button.id.startsWith('cancel-') || button.id.startsWith('close-')) {
             button.closest('.fixed').classList.add('hidden');
         }
@@ -1288,7 +1404,6 @@ document.addEventListener('DOMContentLoaded', () => {
              document.getElementById('documents-modal').classList.add('hidden');
         }
 
-        // Botão de expandir/ocultar
         if (button.classList.contains('toggle-details-btn')) {
             const card = button.closest('div.p-4');
             const details = card.querySelector('.card-details');
@@ -1298,7 +1413,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // LÓGICA DO MODAL DE DETALHES/DOCUMENTOS
     const documentsData = {
         alimentos_fixacao: {
             title: 'Ação de Alimentos (Fixação)',
@@ -1454,7 +1568,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Pesquisa no checklist de documentos
     document.getElementById('checklist-search').addEventListener('input', (e) => {
         const searchTerm = normalizeText(e.target.value);
         const allDocs = checklistContainer.querySelectorAll('li');
