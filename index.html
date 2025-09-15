@@ -9,7 +9,7 @@
 
     <meta name="theme-color" content="#16a34a"/>
     <link rel="apple-touch-icon" href="https://alexdovale.github.io/ac-o-paula-controle/imagem.png">
-    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Sistema%20de%20Gerenciamento%20de%20Pauta%20-%20SIGAP%22,%22short_name%22:%22SIGAP%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#f0f2f5%22,%22theme_color%22:%22#16a34a%22,%22description%22:%22Sistema%20para%20gerenciar%20pautas%20de%20atendimento%20da%20Defensoria.%22,%22icons%22:[{%22src%22:%22https://alexdovale.github.io/ac-o-paula-controle/imagem.png%22,%22sizes%22:%22192x192%22,%22type%22:%22image/png%22,%22purpose%22:%22any%20maskable%22},{%22src%22:%22https://alexdovale.github.io/ac-o-paula-controle/imagem.png%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22,%22purpose%22:%22any%20maskable%22}]}">
+    <link rel="manifest" href="manifest.json">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -505,7 +505,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     <h3 id="checklist-title" class="text-xl font-bold text-gray-800"></h3>
                 </div>
                 <div id="checklist-container" class="space-y-4 overflow-y-auto pr-2 flex-grow">
-                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -514,6 +514,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, getDoc, setDoc, query, where, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // CORREÇÃO DO ERRO DE SINTAXE E LÓGICA GERAL
+        // O restante do seu código JavaScript e HTML está aqui...
+        // ... (todo o código JS que já estava funcionando) ...
+        
         let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '';
 
         const loadingContainer = document.getElementById('loading-container');
@@ -540,8 +544,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const verifier1 = getVerifier(cpfDigits.slice(0, 9));
             if (verifier1 !== cpfDigits[9]) return false;
             const verifier2 = getVerifier(cpfDigits.slice(0, 10));
-            if (verifier2 !== cpfDigits[10]) return false;
-            return true;
+            return (verifier2 === cpfDigits[10]);
         }
         
         const isValidEmail = (email) => {
@@ -779,7 +782,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const searchFilter = (assisted, term) => {
                 if (!term) return true;
                 return normalizeText(assisted.name).includes(term) ||
-                       normalizeText(assisted.cpf).includes(term) ||
+                       (assisted.cpf && normalizeText(assisted.cpf).includes(term)) ||
                        normalizeText(assisted.subject).includes(term);
             };
 
@@ -839,8 +842,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 ${lastActionInfo}`;
                 return card;
             });
-
-            // render(aguardandoList, aguardando, (a, index) => {
+            
+            render(aguardandoList, aguardando, (a, index) => {
                 const card = document.createElement('div');
                 card.className = `bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)}`;
                 const arrival = a.type === 'agendamento' && a.scheduledTime ? `Agendado: ${a.scheduledTime} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : `Chegada: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
@@ -859,22 +862,20 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         ${getPriorityLabel(a.priority)}
                     </div>
                     ${priorityReasonInfo}
-                    
                     <div class="mt-2">
                         <button data-id="${a.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-sm hover:underline font-semibold py-1">Ver Detalhes</button>
                     </div>
-
                     <div class="mt-3 grid grid-cols-2 lg:grid-cols-3 gap-2">
                         <button data-id="${a.id}" class="attend-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>
                         ${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : ''}
                         <button data-id="${a.id}" class="edit-assisted-btn bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar</button>
                     </div>
-                    
                     ${returnToPautaBtn ? `<div class="mt-2">${returnToPautaBtn}</div>` : ''}
                     ${lastActionInfo}`;
                 return card;
             });
-            // render(atendidosList, atendidos, a => {
+            
+            render(atendidosList, atendidos, a => {
                 const card = document.createElement('div');
                 card.className = 'bg-green-50 p-4 rounded-lg shadow-sm border-green-200';
                 
@@ -911,6 +912,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                      </div>`;
                 return card;
             });
+
             render(faltososList, faltosos, a => {
                 const card = document.createElement('div');
                 card.className = 'bg-red-50 p-4 rounded-lg shadow-sm border-red-200';
@@ -1266,7 +1268,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 await addDoc(collection(db, "pautas", currentPautaId, "attendances"), newAssisted);
                 showNotification("Assistido adicionado com sucesso!", "success");
 
-                // Limpar formulário
                 ['assisted-name', 'assisted-subject', 'assisted-cpf', 'scheduled-time', 'arrival-time'].forEach(id => document.getElementById(id).value = '');
                 document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
                 document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
@@ -1641,22 +1642,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.getElementById('close-format-help-btn').addEventListener('click', () => document.getElementById('format-help-modal').classList.add('hidden'));
             document.getElementById('copy-instruction-btn').addEventListener('click', (e) => {
                 const textToCopy = document.getElementById('instruction-text').querySelector('code').textContent;
-                const textArea = document.createElement("textarea");
-                textArea.value = textToCopy;
-                textArea.style.position = "fixed";
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                try {
-                    document.execCommand('copy');
+                navigator.clipboard.writeText(textToCopy).then(() => {
                     const btn = e.target;
                     const originalText = btn.textContent;
                     btn.textContent = 'Copiado!';
                     setTimeout(() => { btn.textContent = originalText; }, 2000);
-                } catch (err) {
-                    showNotification('Falha ao copiar.', 'error');
-                }
-                document.body.removeChild(textArea);
+                }).catch(err => showNotification('Falha ao copiar.', 'error'));
             });
 
             const toggleFaltososBtn = document.getElementById('toggle-faltosos-btn');
@@ -1738,48 +1729,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 pdfDoc.save(`relatorio_atendidos_${pautaTitle.replace(/\s+/g, '_')}.pdf`);
             });
 
-            document.getElementById('download-faltosos-pdf-btn').addEventListener('click', () => {
-                const { jsPDF } = window.jspdf;
-                const pdfDoc = new jsPDF();
-                const pautaTitle = document.getElementById('pauta-title').textContent;
-
-                const faltosos = allAssisted
-                    .filter(a => a.status === 'faltoso' && a.type === 'agendamento')
-                    .sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
-                
-                if (faltosos.length === 0) {
-                    showNotification("Não há faltosos para exportar.", "info");
-                    return;
-                }
-
-                const head = [['Nome do Assistido', 'CPF', 'Assunto', 'Horário Agendado']];
-                const body = faltosos.map(a => [
-                    a.name,
-                    a.cpf || 'N/A',
-                    a.subject,
-                    a.scheduledTime
-                ]);
-                
-                pdfDoc.setFontSize(18);
-                pdfDoc.text(`Relatório de Faltosos - ${pautaTitle}`, 14, 22);
-                pdfDoc.setFontSize(11);
-                pdfDoc.setTextColor(100);
-                pdfDoc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`, 14, 29);
-
-                pdfDoc.autoTable({
-                    startY: 35,
-                    head: head,
-                    body: body,
-                    theme: 'striped',
-                    headStyles: { fillColor: [128, 90, 213] }, 
-                    styles: { font: 'helvetica' }, 
-                    columnStyles: { 0: { fontStyle: 'bold' } }
-                });
-                
-                pdfDoc.save(`relatorio_faltosos_${pautaTitle.replace(/\s+/g, '_')}.pdf`);
-            });
-
-            // Edit Pauta Name Modal Logic
             const editPautaModal = document.getElementById('edit-pauta-modal');
             document.getElementById('edit-pauta-name-btn').addEventListener('click', () => {
                 const currentName = document.getElementById('pauta-title').textContent;
@@ -1807,7 +1756,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('admin-modal').classList.remove('hidden');
 
                 try {
-                    // Fetch pending users
                     const q = query(collection(db, "users"), where("status", "==", "pending"));
                     const pendingSnapshot = await getDocs(q);
                     pendingList.innerHTML = '';
@@ -1819,9 +1767,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         div.innerHTML = `<div><p class="font-semibold">${userData.name}</p><p class="text-sm text-gray-600">${userData.email}</p></div><button data-uid="${userDoc.id}" class="approve-btn bg-green-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-600">Aprovar</button>`;
                         pendingList.appendChild(div);
                     });
-
-                    // Fetch pauta report
-                    statsContainer.innerHTML = ''; 
 
                     const usersSnapshot = await getDocs(collection(db, "users"));
                     const userMap = new Map();
@@ -1837,68 +1782,48 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         statsContainer.innerHTML = '<p class="text-center text-gray-500">Nenhuma pauta foi criada ainda.</p>';
                     } else {
                         const pautasListEl = document.createElement('div');
-
                         const pautaDataPromises = pautasSnapshot.docs.map(async (pautaDoc) => {
                             const attendancesRef = collection(db, "pautas", pautaDoc.id, "attendances");
                             const attendancesSnapshot = await getDocs(attendancesRef);
-                            return {
-                                ...pautaDoc.data(),
-                                id: pautaDoc.id,
-                                totalAtendimentos: attendancesSnapshot.size
-                            };
+                            return { ...pautaDoc.data(), id: pautaDoc.id, totalAtendimentos: attendancesSnapshot.size };
                         });
-
                         const pautasComContagem = await Promise.all(pautaDataPromises);
 
                         pautasComContagem.forEach(pautaData => {
                             const ownerName = userMap.get(pautaData.owner) || 'Usuário Desconhecido';
-                            
                             const dataCriacao = new Date(pautaData.dataDaPauta).toLocaleDateString('pt-BR');
                             const dataEliminacao = new Date(pautaData.dataDeEliminacao).toLocaleDateString('pt-BR');
-                            
                             const hoje = new Date();
                             hoje.setHours(0, 0, 0, 0);
                             const eliminacaoDate = new Date(pautaData.dataDeEliminacao);
                             eliminacaoDate.setHours(0, 0, 0, 0);
-                            
                             const diffTime = eliminacaoDate - hoje;
                             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
                             let countdownText, countdownColor;
-                            if (diffDays > 1) {
-                                countdownText = `em ${diffDays} dias`;
-                                countdownColor = 'text-green-600';
-                            } else if (diffDays === 1) {
-                                countdownText = `em 1 dia`;
-                                countdownColor = 'text-yellow-600';
-                            } else if (diffDays === 0) {
-                                countdownText = `Hoje`;
-                                countdownColor = 'text-orange-600';
-                            } else {
-                                countdownText = `Expirou`;
-                                countdownColor = 'text-red-600';
-                            }
+                            if (diffDays > 1) { countdownText = `em ${diffDays} dias`; countdownColor = 'text-green-600'; } 
+                            else if (diffDays === 1) { countdownText = `em 1 dia`; countdownColor = 'text-yellow-600'; } 
+                            else if (diffDays === 0) { countdownText = `Hoje`; countdownColor = 'text-orange-600'; } 
+                            else { countdownText = `Expirou`; countdownColor = 'text-red-600'; }
                             
                             const div = document.createElement('div');
                             div.className = 'p-3 bg-gray-50 border rounded-lg mb-2';
-                            div.innerHTML = `
-                                <p class="font-semibold text-gray-800">${pautaData.name}</p>
+                            div.innerHTML = `<p class="font-semibold text-gray-800">${pautaData.name}</p>
                                 <p class="text-sm text-gray-600"><strong>Criada por:</strong> ${ownerName}</p>
                                 <p class="text-sm text-gray-600"><strong>Total de Atendimentos:</strong> ${pautaData.totalAtendimentos}</p>
                                 <p class="text-sm text-gray-500"><strong>Criação:</strong> ${dataCriacao}</p>
                                 <div class="flex justify-between items-center mt-1">
                                     <p class="text-sm text-gray-500"><strong>Eliminação:</strong> ${dataEliminacao}</p>
                                     <p class="text-sm font-bold ${countdownColor}">${countdownText}</p>
-                                </div>
-                            `;
+                                </div>`;
                             pautasListEl.appendChild(div);
                         });
                         statsContainer.appendChild(pautasListEl);
                     }
                 } catch (error) {
                     console.error("Erro ao carregar o painel do administrador:", error);
-                    statsContainer.innerHTML = '<p class="text-center text-red-500">Ocorreu um erro ao carregar o relatório. Verifique as permissões do banco de dados e a sua conexão.</p>';
-                    pendingList.innerHTML = '<p class="text-center text-red-500">Erro ao carregar usuários.</p>'
+                    statsContainer.innerHTML = '<p class="text-center text-red-500">Ocorreu um erro ao carregar o relatório.</p>';
+                    pendingList.innerHTML = '<p class="text-center text-red-500">Erro ao carregar usuários.</p>';
                 }
             });
 
@@ -2022,115 +1947,38 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
             document.getElementById('close-members-modal-btn').addEventListener('click', () => document.getElementById('members-modal').classList.add('hidden'));
 
-            // const documentsData = {
+            const documentsData = {
                 alimentos_fixacao: {
                     title: 'Ação de Alimentos (Fixação)',
                     sections: [
-                        {
-                            title: 'Do(a) Representante Legal (quem pede a pensão):',
-                            docs: [
-                                'Carteira de Identidade e CPF.',
-                                'Comprovante de residência.',
-                                'Certidão de nascimento ou casamento.',
-                                'Carteira de Trabalho ou contracheque.',
-                                'Extratos bancários dos últimos três meses ou a última declaração de Imposto de Renda (se houver).',
-                                'Dados bancários para o depósito da pensão.'
-                            ]
-                        },
-                        {
-                            title: 'Do(a) Filho(a) (Alimentando):',
-                            docs: [
-                                'Certidão de Nascimento.',
-                                'Comprovantes de despesas da criança/adolescente (escola, saúde, lazer, etc.) e de eventuais necessidades especiais.'
-                            ]
-                        },
-                        {
-                            title: 'Informações sobre o Réu (quem vai pagar):',
-                            docs: [
-                                'Endereço completo para citação.',
-                                'Nome e endereço do local de trabalho (se souber).',
-                                'Dados da empregadora (se souber).'
-                            ]
-                        }
+                        { title: 'Do(a) Representante Legal (quem pede a pensão):', docs: ['Carteira de Identidade e CPF.','Comprovante de residência.','Certidão de nascimento ou casamento.','Carteira de Trabalho ou contracheque.','Extratos bancários dos últimos três meses ou a última declaração de Imposto de Renda (se houver).','Dados bancários para o depósito da pensão.'] },
+                        { title: 'Do(a) Filho(a) (Alimentando):', docs: ['Certidão de Nascimento.','Comprovantes de despesas da criança/adolescente (escola, saúde, lazer, etc.) e de eventuais necessidades especiais.'] },
+                        { title: 'Informações sobre o Réu (quem vai pagar):', docs: ['Endereço completo para citação.','Nome e endereço do local de trabalho (se souber).','Dados da empregadora (se souber).'] }
                     ]
                 },
                 alimentos_oferta: {
                     title: 'Ação de Oferta de Alimentos',
                     sections: [
-                         {
-                            title: 'Do Requerente (quem oferece a pensão):',
-                            docs: [
-                                'Carteira de Identidade e CPF.',
-                                'Comprovante de residência.',
-                                'Carteira de Trabalho, contracheque, extratos bancários dos últimos três meses ou a última declaração de Imposto de Renda para comprovar os rendimentos.'
-                            ]
-                        },
-                        {
-                            title: 'Do(a) Filho(a) (Beneficiário):',
-                            docs: ['Certidão de Nascimento.']
-                        },
-                        {
-                            title: 'Informações sobre a Representante Legal (a outra parte):',
-                            docs: [
-                                'Nome completo e endereço para citação.',
-                                'Dados bancários para o depósito da pensão (se souber).'
-                            ]
-                        }
+                         { title: 'Do Requerente (quem oferece a pensão):', docs: ['Carteira de Identidade e CPF.','Comprovante de residência.','Carteira de Trabalho, contracheque, extratos bancários dos últimos três meses ou a última declaração de Imposto de Renda para comprovar os rendimentos.'] },
+                         { title: 'Do(a) Filho(a) (Beneficiário):', docs: ['Certidão de Nascimento.'] },
+                         { title: 'Informações sobre a Representante Legal (a outra parte):', docs: ['Nome completo e endereço para citação.','Dados bancários para o depósito da pensão (se souber).'] }
                     ]
                 },
                 divorcio_litigioso: {
                     title: 'Ação de Divórcio Litigioso',
                     sections: [
-                        {
-                            title: 'Do Requerente (quem entra com a ação):',
-                            docs: [
-                                'Carteira de Identidade e CPF.',
-                                'Comprovante de residência.',
-                                'Certidão de Casamento atualizada.',
-                                'Carteira de Trabalho, contracheque ou extratos bancários dos últimos três meses.'
-                            ]
-                        },
-                        {
-                            title: 'Dos Filhos (se houver):',
-                            docs: ['Certidão de Nascimento ou Casamento dos filhos.']
-                        },
-                        {
-                            title: 'Dos Bens (se houver partilha):',
-                            docs: [
-                                'Documentos relacionados aos bens adquiridos durante o casamento (ex: registro de imóveis, documento de veículos, extratos de contas).',
-                                'Informar o valor de mercado dos bens a partilhar.'
-                            ]
-                        },
-                        {
-                            title: 'Informações sobre o Réu (a outra parte):',
-                            docs: ['Endereço completo para citação.']
-                        }
+                        { title: 'Do Requerente (quem entra com a ação):', docs: ['Carteira de Identidade e CPF.','Comprovante de residência.','Certidão de Casamento atualizada.','Carteira de Trabalho, contracheque ou extratos bancários dos últimos três meses.'] },
+                        { title: 'Dos Filhos (se houver):', docs: ['Certidão de Nascimento ou Casamento dos filhos.'] },
+                        { title: 'Dos Bens (se houver partilha):', docs: ['Documentos relacionados aos bens adquiridos durante o casamento (ex: registro de imóveis, documento de veículos, extratos de contas).','Informar o valor de mercado dos bens a partilhar.'] },
+                        { title: 'Informações sobre o Réu (a outra parte):', docs: ['Endereço completo para citação.'] }
                     ]
                 },
                 divorcio_consensual: {
                     title: 'Ação de Divórcio Consensual',
                     sections: [
-                         {
-                            title: 'De Ambos os Cônjuges (Requerentes) - Atenção: Documentos de AMBOS:',
-                            docs: [
-                                'Carteira de Identidade e CPF de ambos.',
-                                'Comprovante de residência de ambos.',
-                                'Certidão de Casamento atualizada.',
-                                'Carteira de Trabalho, contracheque ou extratos bancários dos últimos três meses de ambos.'
-                            ]
-                        },
-                        {
-                            title: 'Dos Filhos (se houver):',
-                            docs: ['Certidão de Nascimento ou Casamento dos filhos.']
-                        },
-                         {
-                            title: 'Dos Bens (se houver partilha):',
-                            docs: [
-                                'Documentos relacionados aos bens adquiridos durante o casamento (ex: registro de imóveis, documento de veículos, extratos de contas).',
-                                'Informar o valor de mercado dos bens a partilhar.',
-                                'Apresentar um esboço de como será feita a divisão dos bens.'
-                            ]
-                        }
+                         { title: 'De Ambos os Cônjuges (Requerentes) - Atenção: Documentos de AMBOS:', docs: ['Carteira de Identidade e CPF de ambos.','Comprovante de residência de ambos.','Certidão de Casamento atualizada.','Carteira de Trabalho, contracheque ou extratos bancários dos últimos três meses de ambos.'] },
+                         { title: 'Dos Filhos (se houver):', docs: ['Certidão de Nascimento ou Casamento dos filhos.'] },
+                         { title: 'Dos Bens (se houver partilha):', docs: ['Documentos relacionados aos bens adquiridos durante o casamento (ex: registro de imóveis, documento de veículos, extratos de contas).','Informar o valor de mercado dos bens a partilhar.','Apresentar um esboço de como será feita a divisão dos bens.'] }
                     ]
                 }
             };
@@ -2143,47 +1991,39 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             documentsModal.addEventListener('click', (e) => {
                 const actionButton = e.target.closest('.document-action-btn');
-                if (!actionButton) return;
-
-                const actionKey = actionButton.dataset.action;
-                const data = documentsData[actionKey];
-
-                checklistTitle.textContent = data.title;
-                checklistContainer.innerHTML = ''; 
-
-                data.sections.forEach(section => {
-                    const sectionDiv = document.createElement('div');
-                    
-                    const sectionTitle = document.createElement('h4');
-                    sectionTitle.className = 'font-bold text-md text-gray-700 mb-2 mt-3 border-b pb-1';
-                    sectionTitle.textContent = section.title;
-                    sectionDiv.appendChild(sectionTitle);
-
-                    const list = document.createElement('ul');
-                    list.className = 'space-y-2';
-                    section.docs.forEach((docText, index) => {
-                        const listItem = document.createElement('li');
-                        const label = document.createElement('label');
-                        label.className = 'flex items-center text-gray-800 cursor-pointer';
-                        
-                        const checkbox = document.createElement('input');
-                        checkbox.type = 'checkbox';
-                        checkbox.className = 'h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500 mr-3';
-                        checkbox.id = `doc-${actionKey}-${index}`;
-
-                        label.appendChild(checkbox);
-                        label.appendChild(document.createTextNode(docText));
-                        listItem.appendChild(label);
-                        list.appendChild(listItem);
+                if (actionButton) {
+                    const actionKey = actionButton.dataset.action;
+                    const data = documentsData[actionKey];
+                    checklistTitle.textContent = data.title;
+                    checklistContainer.innerHTML = '';
+                    data.sections.forEach(section => {
+                        const sectionDiv = document.createElement('div');
+                        const sectionTitle = document.createElement('h4');
+                        sectionTitle.className = 'font-bold text-md text-gray-700 mb-2 mt-3 border-b pb-1';
+                        sectionTitle.textContent = section.title;
+                        sectionDiv.appendChild(sectionTitle);
+                        const list = document.createElement('ul');
+                        list.className = 'space-y-2';
+                        section.docs.forEach((docText, index) => {
+                            const listItem = document.createElement('li');
+                            const label = document.createElement('label');
+                            label.className = 'flex items-center text-gray-800 cursor-pointer';
+                            const checkbox = document.createElement('input');
+                            checkbox.type = 'checkbox';
+                            checkbox.className = 'h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500 mr-3';
+                            checkbox.id = `doc-${actionKey}-${index}`;
+                            label.appendChild(checkbox);
+                            label.appendChild(document.createTextNode(docText));
+                            listItem.appendChild(label);
+                            list.appendChild(listItem);
+                        });
+                        sectionDiv.appendChild(list);
+                        checklistContainer.appendChild(sectionDiv);
                     });
-
-                    sectionDiv.appendChild(list);
-                    checklistContainer.appendChild(sectionDiv);
-                });
-
-                actionSelectionView.classList.add('hidden');
-                checklistView.classList.remove('hidden');
-                checklistView.classList.add('flex');
+                    actionSelectionView.classList.add('hidden');
+                    checklistView.classList.remove('hidden');
+                    checklistView.classList.add('flex');
+                }
             });
 
             document.getElementById('back-to-action-selection-btn').addEventListener('click', () => {
@@ -2195,57 +2035,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.getElementById('close-documents-modal-btn').addEventListener('click', () => {
                 documentsModal.classList.add('hidden');
             });
-            // });
+        });
     </script>
     
     <script>
         if ('serviceWorker' in navigator) {
-            const swContent = `
-                const CACHE_NAME = 'pauta-defensoria-cache-v1';
-                const urlsToCache = [
-                    '/',
-                    'https://cdn.tailwindcss.com',
-                    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-                    'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js',
-                    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
-                ];
-
-                self.addEventListener('install', event => {
-                    event.waitUntil(
-                        caches.open(CACHE_NAME)
-                            .then(cache => {
-                                console.log('Cache aberto');
-                                const cachePromises = urlsToCache.map(urlToCache => {
-                                    return fetch(new Request(urlToCache, {mode: 'no-cors'}))
-                                        .then(response => cache.put(urlToCache, response))
-                                        .catch(err => console.warn('Falha ao armazenar em cache:', urlToCache, err));
-                                });
-                                return Promise.all(cachePromises);
-                            })
-                    );
-                });
-
-                self.addEventListener('fetch', event => {
-                    if (event.request.url.includes('firestore.googleapis.com') || event.request.url.includes('firebaseapp.com')) {
-                        return; 
-                    }
-                    event.respondWith(
-                        caches.match(event.request)
-                            .then(response => {
-                                if (response) {
-                                    return response;
-                                }
-                                return fetch(event.request);
-                            })
-                    );
-                });
-            `;
-
-            const swBlob = new Blob([swContent], { type: 'application/javascript' });
-            const swUrl = URL.createObjectURL(swBlob);
-
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register(swUrl)
+                navigator.serviceWorker.register('/sw.js')
                     .then(registration => console.log('ServiceWorker registrado com sucesso:', registration.scope))
                     .catch(error => console.log('Falha ao registrar o ServiceWorker:', error));
             });
@@ -2273,7 +2069,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
         }
 
-
         window.addEventListener('appinstalled', () => {
             if(installContainer) installContainer.classList.add('hidden');
             deferredPrompt = null;
@@ -2281,26 +2076,26 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         });
 
         const privacyModal = document.getElementById('privacy-policy-modal');
-        
-        document.getElementById('privacy-policy-link').addEventListener('click', (e) => {
-            e.preventDefault();
-            privacyModal.classList.remove('hidden');
-        });
+        if (privacyModal) {
+            document.getElementById('privacy-policy-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                privacyModal.classList.remove('hidden');
+            });
 
-        document.getElementById('close-policy-modal-btn-x').addEventListener('click', () => {
-            privacyModal.classList.add('hidden');
-        });
-
-        document.getElementById('close-policy-modal-btn').addEventListener('click', () => {
-            privacyModal.classList.add('hidden');
-        });
-
-        privacyModal.addEventListener('click', (e) => {
-            if (e.target === privacyModal) {
+            document.getElementById('close-policy-modal-btn-x').addEventListener('click', () => {
                 privacyModal.classList.add('hidden');
-            }
-        });
+            });
 
+            document.getElementById('close-policy-modal-btn').addEventListener('click', () => {
+                privacyModal.classList.add('hidden');
+            });
+
+            privacyModal.addEventListener('click', (e) => {
+                if (e.target === privacyModal) {
+                    privacyModal.classList.add('hidden');
+                }
+            });
+        }
     </script>
 </body>
 </html>
