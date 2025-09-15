@@ -21,9 +21,9 @@
         .priority-maxima { border-left: 5px solid #22c55e; }
         .priority-media { border-left: 5px solid #f97316; }
         .priority-minima { border-left: 5px solid #6b7280; }
-        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar { width: 8px; }
-        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
-        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb, #checklist-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar, #members-list-container::-webkit-scrollbar { width: 8px; }
+        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
+        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
         input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
         .tab-active { border-color: #16a34a; background-color: #f0fdf4; color: #16a34a; font-weight: 600; }
         .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
@@ -95,32 +95,32 @@
             <div class="flex justify-center items-center w-full relative">
                  <h1 class="text-xl font-semibold text-gray-600 text-center">Sistema de Gerenciamento de Pauta - SIGAP</h1>
                  <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700">
-                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
-                       <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
-                       <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
-                     </svg>
+                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
+                           <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                           <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                       </svg>
                  </button>
             </div>
             <div class="bg-white p-4 rounded-lg shadow-sm space-y-4">
-                 <div class="flex justify-center items-center border-b pb-4">
-                     <h2 id="pauta-title" class="text-2xl md:text-3xl font-bold text-gray-800"></h2>
-                      <button id="edit-pauta-name-btn" title="Editar nome da pauta" class="hidden ml-3 p-2 rounded-full hover:bg-gray-200 transition flex-shrink-0">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
-                              <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
-                              <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5h6a.5.5 0 0 0 0-1h-6A1.5 1.5 0 0 0 1 2.5v11z"/>
-                          </svg>
-                     </button>
-                 </div>
-                 <div class="flex justify-between items-center w-full gap-4 pt-4">
-                     <div class="flex-shrink-0">
-                         <button id="back-to-pautas-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
-                     </div>
-                     <div class="flex items-center gap-2 flex-shrink-0">
-                         <button id="manage-members-btn" class="bg-lime-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-lime-700">Membros</button>
-                         <button id="reset-all-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">Zerar</button>
-                         <button id="toggle-faltosos-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700">Ver Faltosos</button>
-                     </div>
-                 </div>
+                <div class="relative flex justify-center items-center border-b pb-4">
+                    <h2 id="pauta-title" class="text-2xl md:text-3xl font-bold text-gray-800 text-center px-8 truncate"></h2>
+                    <button id="edit-pauta-name-btn" title="Editar nome da pauta" class="hidden absolute right-0 top-1/2 transform -translate-y-1/2 p-2 rounded-full hover:bg-gray-200 transition flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                            <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                            <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5h6a.5.5 0 0 0 0-1h-6A1.5 1.5 0 0 0 1 2.5v11z"/>
+                        </svg>
+                   </button>
+                </div>
+                <div class="flex flex-col sm:flex-row justify-between items-center w-full gap-4 pt-4">
+                    <div class="flex-shrink-0">
+                        <button id="back-to-pautas-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap justify-center">
+                        <button id="manage-members-btn" class="bg-lime-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-lime-700">Membros</button>
+                        <button id="reset-all-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">Zerar</button>
+                        <button id="toggle-faltosos-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700">Ver Faltosos</button>
+                    </div>
+                </div>
             </div>
         </header>
         <div id="app-content">
@@ -260,7 +260,30 @@
 
     <!-- MODAIS -->
     <div id="create-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50"></div>
-    <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50"></div>
+    <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Gerenciar Membros</h2>
+                <button id="close-members-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+            </div>
+            <div class="overflow-y-auto">
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-700">Convidar Novo Membro</h3>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="email" id="invite-email-input" placeholder="email@exemplo.com" class="flex-grow p-2 border border-gray-300 rounded-lg">
+                        <button id="invite-member-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 flex-shrink-0">Convidar</button>
+                    </div>
+                    <div id="invite-status" class="text-sm h-4"></div>
+                </div>
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Membros Atuais</h3>
+                    <div id="members-list-container" class="space-y-2 max-h-64 overflow-y-auto">
+                        <!-- Member list will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4"></div>
     <div id="arrival-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold mb-4">Confirmar Horário de Chegada</h2><p class="mb-4 text-gray-600">Por favor, informe o horário de chegada do assistido.</p><input type="time" id="arrival-time-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6"><div class="flex justify-end space-x-4"><button id="cancel-arrival-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button><button id="confirm-arrival-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button></div></div>
@@ -391,7 +414,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, getDoc, setDoc, query, where, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Variáveis Globais
-let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '';
+let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '', currentPautaOwnerId = null;
 let assistedIdToHandle = null;
 let currentChecklistAction = null;
 
@@ -566,7 +589,7 @@ const renderAssistedList = () => {
                     </div>
                 </div>
                 <div class="mt-2 pt-2 border-t flex justify-between items-center">
-                     ${a.lastActionBy ? `<p class="text-xs text-gray-500">Última ação por: <strong>${a.lastActionBy}</strong></p>` : '<div></div>'}
+                    ${a.lastActionBy ? `<p class="text-xs text-gray-500">Última ação por: <strong>${a.lastActionBy}</strong></p>` : '<div></div>'}
                     <button data-id="${a.id}" class="return-to-aguardando-btn bg-yellow-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-yellow-600 text-xs">Voltar p/ Aguardando</button>
                 </div>
             </div>
@@ -628,10 +651,14 @@ const loadPauta = async (pautaId, pautaName) => {
     currentPautaId = pautaId;
     document.getElementById('pauta-title').textContent = pautaName;
     const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
-    if (pautaDoc.exists() && pautaDoc.data().owner === auth.currentUser.uid) {
-        document.getElementById('edit-pauta-name-btn').classList.remove('hidden');
-    } else {
-        document.getElementById('edit-pauta-name-btn').classList.add('hidden');
+    if (pautaDoc.exists()) {
+        const pautaData = pautaDoc.data();
+        currentPautaOwnerId = pautaData.owner;
+        if (pautaData.owner === auth.currentUser.uid) {
+            document.getElementById('edit-pauta-name-btn').classList.remove('hidden');
+        } else {
+            document.getElementById('edit-pauta-name-btn').classList.add('hidden');
+        }
     }
     setupRealtimeListener(pautaId);
     showScreen('app');
@@ -664,7 +691,7 @@ const handleAuthState = () => {
                 currentUserName = userDoc.data().name || user.email;
                 showPautaSelectionScreen(user.uid);
             } else {
-                 loadingText.innerHTML = 'Sua conta está pendente de aprovação. <br> Por favor, aguarde.';
+                loadingText.innerHTML = 'Sua conta está pendente de aprovação. <br> Por favor, aguarde.';
                 document.querySelector('.loader').style.display = 'none';
             }
         } else {
@@ -732,6 +759,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('tab-agendamento').addEventListener('click', () => switchTab('agendamento'));
     document.getElementById('tab-avulso').addEventListener('click', () => switchTab('avulso'));
 
+    // Logout
+    const handleLogout = () => {
+        signOut(auth).catch(error => {
+            console.error("Logout error", error);
+            showNotification("Erro ao tentar sair.", "error");
+        });
+        // onAuthStateChanged irá para a tela de login
+    };
+    document.getElementById('logout-btn-main').addEventListener('click', handleLogout);
+    document.getElementById('logout-btn-app').addEventListener('click', handleLogout);
+
     // Pesquisa nos cards
     ['pauta-search', 'aguardando-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
         document.getElementById(id).addEventListener('input', renderAssistedList);
@@ -785,7 +823,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Botão de download PDF
     document.getElementById('download-pdf-btn').addEventListener('click', () => {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        const docPDF = new jsPDF();
         
         const pautaName = document.getElementById('pauta-title').textContent;
         const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
@@ -798,11 +836,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        doc.setFontSize(18);
-        doc.text(`Relatório de Atendidos - ${pautaName}`, 14, 22);
-        doc.setFontSize(11);
-        doc.setTextColor(100);
-        doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
+        docPDF.setFontSize(18);
+        docPDF.text(`Relatório de Atendidos - ${pautaName}`, 14, 22);
+        docPDF.setFontSize(11);
+        docPDF.setTextColor(100);
+        docPDF.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
 
         const tableColumn = ["#", "Nome", "Assunto", "Atendente", "Finalizado"];
         const tableRows = [];
@@ -818,8 +856,8 @@ document.addEventListener('DOMContentLoaded', () => {
             tableRows.push(rowData);
         });
 
-        doc.autoTable(tableColumn, tableRows, { startY: 35 });
-        doc.save(`relatorio_${pautaName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+        docPDF.autoTable(tableColumn, tableRows, { startY: 35 });
+        docPDF.save(`relatorio_${pautaName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
     });
 
     // Botão de ver faltosos
@@ -864,6 +902,33 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+    
+    const showMembersModal = async () => {
+        if (!currentPautaId) return;
+        const modal = document.getElementById('members-modal');
+        const container = document.getElementById('members-list-container');
+        container.innerHTML = 'Carregando...';
+        modal.classList.remove('hidden');
+
+        const pautaRef = doc(db, "pautas", currentPautaId);
+        const pautaSnap = await getDoc(pautaRef);
+        if (pautaSnap.exists()) {
+            const pautaData = pautaSnap.data();
+            currentPautaOwnerId = pautaData.owner;
+            container.innerHTML = '';
+            pautaData.memberEmails.forEach(email => {
+                const isOwner = pautaData.ownerEmail === email;
+                const memberEl = document.createElement('div');
+                memberEl.className = 'flex justify-between items-center bg-gray-100 p-2 rounded';
+                memberEl.innerHTML = `
+                    <span>${email} ${isOwner ? '<span class="text-xs text-yellow-600 font-bold">(dono)</span>' : ''}</span>
+                    ${!isOwner ? `<button data-email="${email}" class="remove-member-btn text-red-500 hover:text-red-700 text-sm font-semibold">Remover</button>` : ''}
+                `;
+                container.appendChild(memberEl);
+            });
+        }
+    };
+
 
     // LÓGICA DE CLIQUE GERAL (DELEGAÇÃO DE EVENTOS)
     document.body.addEventListener('click', async (e) => {
@@ -882,7 +947,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (button.classList.contains('return-to-pauta-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'pauta', arrivalTime: null, priority: null })); showNotification("Retornado para a pauta."); }
             if (button.classList.contains('return-to-pauta-from-faltoso-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'pauta' })); showNotification("Revertido para a pauta."); }
             if (button.classList.contains('return-to-aguardando-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', attendant: null, attendedTime: null })); showNotification("Retornado para aguardando."); }
-            if (button.classList.contains('delete-btn')) { if(window.confirm("Tem certeza que deseja apagar este registro permanentemente?")) { await deleteDoc(docRef); showNotification("Registro apagado."); }}
+            if (button.classList.contains('delete-btn')) { if(confirm("Tem certeza que deseja apagar este registro permanentemente?")) { await deleteDoc(docRef); showNotification("Registro apagado."); }}
             if (button.classList.contains('priority-btn')) { assistedIdToHandle = id; document.getElementById('priority-reason-modal').classList.remove('hidden'); }
             if (button.classList.contains('edit-assisted-btn')) { 
                 assistedIdToHandle = id; 
@@ -913,6 +978,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('documents-modal').classList.remove('hidden');
                 }
             }
+        }
+
+        // Botões do cabeçalho do APP
+        if (button.id === 'back-to-pautas-btn') {
+            if (unsubscribeFromAttendances) unsubscribeFromAttendances();
+            currentPautaId = null;
+            allAssisted = [];
+            showPautaSelectionScreen(auth.currentUser.uid);
+        }
+        if (button.id === 'reset-all-btn') {
+            document.getElementById('reset-confirm-modal').classList.remove('hidden');
+        }
+        if (button.id === 'edit-pauta-name-btn') {
+            const currentName = document.getElementById('pauta-title').textContent;
+            document.getElementById('edit-pauta-name-input').value = currentName;
+            document.getElementById('edit-pauta-modal').classList.remove('hidden');
+        }
+        if (button.id === 'manage-members-btn') {
+            await showMembersModal();
         }
 
         // Botão principal de adicionar
@@ -998,9 +1082,79 @@ document.addEventListener('DOMContentLoaded', () => {
             await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ attendant: attendantName }));
             button.closest('.fixed').classList.add('hidden');
         }
+        if (button.id === 'confirm-reset-btn') {
+            const attendanceCollectionRef = collection(db, "pautas", currentPautaId, "attendances");
+            const snapshot = await getDocs(attendanceCollectionRef);
+            if(snapshot.empty) {
+                showNotification("A pauta já está vazia.", "info");
+                button.closest('.fixed').classList.add('hidden');
+                return;
+            }
+            const batch = writeBatch(db);
+            snapshot.docs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+            showNotification("Pauta zerada com sucesso.", "success");
+            button.closest('.fixed').classList.add('hidden');
+        }
+        if (button.id === 'confirm-edit-pauta-btn') {
+            const newName = document.getElementById('edit-pauta-name-input').value.trim();
+            if (newName && currentPautaId) {
+                await updateDoc(doc(db, "pautas", currentPautaId), { name: newName });
+                document.getElementById('pauta-title').textContent = newName;
+                showNotification("Nome da pauta atualizado.");
+                button.closest('.fixed').classList.add('hidden');
+            } else {
+                showNotification("O nome não pode ser vazio.", "error");
+            }
+        }
+        if(button.id === 'invite-member-btn') {
+            const email = document.getElementById('invite-email-input').value.trim().toLowerCase();
+            const statusDiv = document.getElementById('invite-status');
+            if (!email) { statusDiv.textContent = 'Por favor, insira um email.'; return; }
+            
+            statusDiv.textContent = 'Verificando...';
+            const usersRef = collection(db, "users");
+            const q = query(usersRef, where("email", "==", email));
+            const querySnapshot = await getDocs(q);
+            
+            if (querySnapshot.empty) {
+                statusDiv.textContent = 'Usuário não encontrado.';
+                return;
+            }
+            
+            const userDoc = querySnapshot.docs[0];
+            const pautaRef = doc(db, "pautas", currentPautaId);
+
+            await updateDoc(pautaRef, {
+                members: arrayUnion(userDoc.id),
+                memberEmails: arrayUnion(email)
+            });
+            
+            statusDiv.textContent = `Usuário ${email} convidado!`;
+            document.getElementById('invite-email-input').value = '';
+            await showMembersModal(); // Refresh member list
+        }
+        if(button.classList.contains('remove-member-btn')) {
+            const email = button.dataset.email;
+            if (confirm(`Tem certeza que deseja remover ${email}?`)) {
+                const usersRef = collection(db, "users");
+                const q = query(usersRef, where("email", "==", email));
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    const userId = querySnapshot.docs[0].id;
+                    const pautaRef = doc(db, "pautas", currentPautaId);
+                    await updateDoc(pautaRef, {
+                        members: arrayRemove(userId),
+                        memberEmails: arrayRemove(email)
+                    });
+                    showNotification(`Membro ${email} removido.`);
+                    await showMembersModal(); // Refresh
+                }
+            }
+        }
         
         // Botões de cancelar dos modais
-        if (button.id.startsWith('cancel-')) {
+        if (button.id.startsWith('cancel-') || button.id.startsWith('close-')) {
             button.closest('.fixed').classList.add('hidden');
         }
         if (button.id === 'close-documents-modal-btn' || button.id === 'cancel-checklist-btn') {
@@ -1110,10 +1264,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         data.sections.forEach((section, sectionIndex) => {
             const sectionDiv = document.createElement('div');
-            const sectionTitle = document.createElement('h4');
-            sectionTitle.className = 'font-bold text-md text-gray-700 mb-2 mt-3 border-b pb-1';
-            sectionTitle.textContent = section.title;
-            sectionDiv.appendChild(sectionTitle);
+            const sectionTitleEl = document.createElement('h4');
+            sectionTitleEl.className = 'font-bold text-md text-gray-700 mb-2 mt-3 border-b pb-1';
+            sectionTitleEl.textContent = section.title;
+            sectionDiv.appendChild(sectionTitleEl);
 
             const list = document.createElement('ul');
             list.className = 'space-y-2';
@@ -1193,4 +1347,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
-
