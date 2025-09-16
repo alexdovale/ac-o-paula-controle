@@ -5,8 +5,8 @@ from flask_cors import CORS # Necessário para permitir requisições do seu sit
 
 # --- Configuração da API do Gemini ---
 # Pega a chave da variável de ambiente com o NOME "API_KEY"
-API_KEY = os.getenv("API_KEY") 
-genai.configure(api_key=API_KEY)
+API_KEY = os.getenv("AIzaSyAWYcCfZ8P_vVlbLPSvpupsyLYT6GNF1Mg") 
+genai.configure(api_key=AIzaSyAWYcCfZ8P_vVlbLPSvpupsyLYT6GNF1Mg)
 
 # Defina o modelo que você quer usar
 MODELO_IA = "gemini-1.5-pro-latest"
