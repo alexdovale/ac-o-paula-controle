@@ -260,7 +260,6 @@
         </div>
     </div>
 
-    <!-- MODAIS -->
     <div id="create-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Criar Nova Pauta</h2>
@@ -290,8 +289,7 @@
                 <div class="mt-6">
                     <h3 class="text-lg font-semibold text-gray-700 mb-2">Membros Atuais</h3>
                     <div id="members-list-container" class="space-y-2 max-h-64 overflow-y-auto">
-                        <!-- Member list will be populated here -->
-                    </div>
+                        </div>
                 </div>
             </div>
         </div>
@@ -441,35 +439,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             <div id="document-action-selection" class="flex-grow overflow-y-auto scrollable-content pr-2">
                 <p class="text-gray-600 mb-4">Selecione o tipo de ação para ver a lista de documentos necessários:</p>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <button data-action="alimentos_fixacao" class="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition">
-                        <span class="font-semibold text-gray-800">1. Ação de Alimentos (Fixação)</span>
-                    </button>
-                    <button data-action="alimentos_oferta" class="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition">
-                        <span class="font-semibold text-gray-800">2. Ação de Oferta de Alimentos</span>
-                    </button>
-                    <button data-action="alimentos_exoneracao" class="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition">
-                        <span class="font-semibold text-gray-800">3. Exoneração de Alimentos</span>
-                    </button>
-                    <button data-action="alimentos_revisional" class="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition">
-                        <span class="font-semibold text-gray-800">4. Revisional de Alimentos</span>
-                    </button>
-                    <button data-action="divorcio_litigioso" class="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition">
-                        <span class="font-semibold text-gray-800">5. Ação de Divórcio Litigioso</span>
-                    </button>
-                    <button data-action="divorcio_consensual" class="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition">
-                        <span class="font-semibold text-gray-800">6. Ação de Divórcio Consensual</span>
-                    </button>
-                     <button data-action="guarda_visitas" class="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition">
-                        <span class="font-semibold text-gray-800">7. Guarda e Regul. de Visitas</span>
-                    </button>
-                    <button data-action="paternidade" class="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition">
-                        <span class="font-semibold text-gray-800">8. Investigação de Paternidade</span>
-                    </button>
-                    <button data-action="uniao_estavel" class="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition">
-                        <span class="font-semibold text-gray-800">9. União Estável (Rec./Diss.)</span>
-                    </button>
-                </div>
+                <div id="dynamic-actions-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    </div>
             </div>
 
             <div id="document-checklist-view" class="hidden flex-grow flex flex-col">
@@ -487,8 +458,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     <input type="search" id="checklist-search" placeholder="Pesquisar documento..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                 </div>
                 <div id="checklist-container" class="space-y-4 overflow-y-auto pr-2 flex-grow border rounded-lg p-4 bg-gray-50" style="max-height: 55vh;">
-                    <!-- O checklist será renderizado aqui -->
-                </div>
+                    </div>
             </div>
         </div>
     </div>
@@ -503,6 +473,8 @@ import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc
 let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '', currentPautaOwnerId = null;
 let assistedIdToHandle = null;
 let currentChecklistAction = null;
+// Armazenará as ações carregadas do banco de dados
+let dynamicDocumentsData = null; 
 
 const loadingContainer = document.getElementById('loading-container');
 const loginContainer = document.getElementById('login-container');
@@ -692,7 +664,7 @@ const renderAssistedList = () => {
         const card = document.createElement('div');
         card.className = 'relative bg-red-50 p-4 rounded-lg shadow-sm border-red-200';
         card.innerHTML = `
-            <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5zM6 6.5a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm3 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm-5 1a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1h-6z"/></svg></button>
+            <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5zM6 6.5a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5.5zm3 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5.5zm-5 1a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1h-6z"/></svg></button>
             <p class="font-bold text-lg">${a.name}</p>
             <div class="mt-2 space-y-2">
                 ${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}
@@ -762,8 +734,22 @@ const showPautaSelectionScreen = (userId) => {
             const pauta = docSnap.data();
             const card = document.createElement('div');
             card.className = "relative bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer";
-            card.innerHTML = `<h3 class="font-bold text-xl mb-2">${pauta.name}</h3><p class="text-gray-600">Membros: ${pauta.memberEmails?.length || 1}</p>`;
-            card.addEventListener('click', () => loadPauta(docSnap.id, pauta.name));
+            // *** ALTERAÇÃO AQUI: Adiciona o botão de excluir se o usuário for o dono ***
+            const isOwner = pauta.owner === userId;
+            const deleteButtonHTML = isOwner ? `
+                <button data-id="${docSnap.id}" data-name="${pauta.name}" class="delete-pauta-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full z-10" title="Excluir pauta">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg>
+                </button>` : '';
+
+            card.innerHTML = `${deleteButtonHTML}<h3 class="font-bold text-xl mb-2">${pauta.name}</h3><p class="text-gray-600">Membros: ${pauta.memberEmails?.length || 1}</p>`;
+            
+            // Adiciona o evento de clique para carregar a pauta (apenas se não clicar no botão de deletar)
+            card.addEventListener('click', (e) => {
+                if (!e.target.closest('.delete-pauta-btn')) {
+                    loadPauta(docSnap.id, pauta.name)
+                }
+            });
+
             pautasList.appendChild(card);
         });
     });
@@ -1255,6 +1241,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = button.dataset.id;
         const collectionRef = currentPautaId ? collection(db, "pautas", currentPautaId, "attendances") : null;
         
+        // *** ALTERAÇÃO AQUI: Lógica para o novo botão de excluir pauta ***
+        if (button.classList.contains('delete-pauta-btn')) {
+            const pautaId = button.dataset.id;
+            const pautaName = button.dataset.name;
+            if (confirm(`Tem certeza que deseja excluir a pauta "${pautaName}"?\nEsta ação é irreversível e todos os seus dados serão apagados.`)) {
+                try {
+                    // ATENÇÃO: Isso deleta o documento da pauta, mas não a subcoleção 'attendances'.
+                    // Para uma exclusão completa, seria necessária uma Cloud Function no Firebase para apagar subcoleções.
+                    // Por enquanto, isso removerá a pauta da lista.
+                    await deleteDoc(doc(db, "pautas", pautaId));
+                    showNotification(`Pauta "${pautaName}" excluída.`, 'success');
+                } catch (error) {
+                    console.error("Erro ao excluir pauta: ", error);
+                    showNotification("Ocorreu um erro ao excluir a pauta.", "error");
+                }
+            }
+        }
+
         if (id && collectionRef) {
             const docRef = doc(collectionRef, id);
             if (button.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5); }
@@ -1289,6 +1293,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const assisted = allAssisted.find(a => a.id === id);
                 if (assisted) {
                     document.getElementById('documents-assisted-name').textContent = assisted.name;
+                    await loadAndRenderDynamicActions(); // Carrega as ações do banco de dados
                     document.getElementById('document-checklist-view').classList.add('hidden');
                     document.getElementById('document-action-selection').classList.remove('hidden');
                     document.getElementById('documents-modal').classList.remove('hidden');
@@ -1527,76 +1532,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const documentsData = {
-        alimentos_fixacao: {
-            title: 'Ação de Alimentos (Fixação)',
-            sections: [
-                { title: 'Do Representante Legal:', docs: ['ID e CPF', 'Comprovante de residência', 'Certidão de nascimento/casamento', 'Comprovante de renda', 'Dados bancários'] },
-                { title: 'Do Filho(a):', docs: ['Certidão de Nascimento', 'Comprovantes de despesas (escola, saúde)'] },
-                { title: 'Sobre o Réu:', docs: ['Endereço completo', 'Local de trabalho (se souber)'] }
-            ]
-        },
-        alimentos_oferta: {
-            title: 'Oferta de Alimentos',
-            sections: [
-                { title: 'Do Ofertante:', docs: ['ID e CPF', 'Comprovante de residência', 'Comprovante de renda'] },
-                { title: 'Do Filho(a):', docs: ['Certidão de Nascimento'] },
-                { title: 'Sobre o Representante Legal:', docs: ['Nome e endereço completo', 'Dados bancários (se souber)'] }
-            ]
-        },
-        alimentos_exoneracao: {
-            title: 'Exoneração de Alimentos',
-            sections: [
-                { title: 'Do Requerente (quem paga):', docs: ['ID e CPF', 'Comprovante de residência', 'Sentença que fixou os alimentos'] },
-                { title: 'Do Filho(a) (maior de idade):', docs: ['Nome e endereço completo', 'Comprovante de que não estuda mais ou pode se sustentar (se houver)'] }
-            ]
-        },
-        alimentos_revisional: {
-            title: 'Revisional de Alimentos',
-            sections: [
-                { title: 'Do Requerente:', docs: ['ID e CPF', 'Comprovante de residência', 'Sentença que fixou os alimentos', 'Prova da mudança da situação financeira (desemprego, nova prole, etc.)'] },
-                { title: 'Da Outra Parte:', docs: ['Nome e endereço completo'] }
-            ]
-        },
-        divorcio_litigioso: {
-            title: 'Divórcio Litigioso',
-            sections: [
-                { title: 'Do Requerente:', docs: ['ID e CPF', 'Comprovante de residência', 'Certidão de Casamento atualizada'] },
-                { title: 'Dos Filhos (se houver):', docs: ['Certidão de Nascimento dos filhos'] },
-                { title: 'Dos Bens (se houver):', docs: ['Documentos de propriedade de imóveis, veículos, etc.'] },
-                { title: 'Do Cônjuge:', docs: ['Endereço completo para citação'] }
-            ]
-        },
-        divorcio_consensual: {
-            title: 'Divórcio Consensual',
-            sections: [
-                { title: 'De Ambos os Cônjuges:', docs: ['ID e CPF de ambos', 'Comprovante de residência de ambos', 'Certidão de Casamento atualizada', 'Pacto antenupcial (se houver)'] },
-                { title: 'Acordo:', docs: ['Definição sobre partilha de bens', 'Definição sobre pensão (se houver)', 'Definição sobre guarda dos filhos (se houver)'] }
-            ]
-        },
-        guarda_visitas: {
-            title: 'Guarda e Regul. de Visitas',
-            sections: [
-                { title: 'Do Requerente:', docs: ['ID e CPF', 'Comprovante de residência'] },
-                { title: 'Do Filho(a):', docs: ['Certidão de Nascimento'] },
-                { title: 'Da Outra Parte:', docs: ['Nome e endereço completo'] }
-            ]
-        },
-        paternidade: {
-            title: 'Investigação de Paternidade',
-            sections: [
-                { title: 'Do Representante Legal:', docs: ['ID e CPF', 'Comprovante de residência'] },
-                { title: 'Do Filho(a):', docs: ['Certidão de Nascimento'] },
-                { title: 'Do Suposto Pai:', docs: ['Nome e endereço completo', 'Qualquer prova que indique a paternidade (fotos, mensagens, etc.)'] }
-            ]
-        },
-        uniao_estavel: {
-            title: 'União Estável (Rec./Diss.)',
-            sections: [
-                { title: 'De Ambos os Companheiros:', docs: ['ID e CPF de ambos', 'Comprovante de residência'] },
-                { title: 'Provas da União:', docs: ['Fotos do casal', 'Declaração de testemunhas', 'Contas conjuntas', 'Filhos em comum (Certidão de Nascimento)'] }
-            ]
+    // *** ALTERAÇÃO AQUI: Lógica do modal de documentos agora é dinâmica ***
+    const loadAndRenderDynamicActions = async () => {
+        const actionsGrid = document.getElementById('dynamic-actions-grid');
+        actionsGrid.innerHTML = '<p class="text-gray-500">Carregando ações...</p>';
+
+        // Busca os dados apenas uma vez para não sobrecarregar
+        if (!dynamicDocumentsData) {
+            try {
+                const actionsCollection = collection(db, 'legalActions'); // Nome da sua coleção no Firestore
+                const querySnapshot = await getDocs(actionsCollection);
+                dynamicDocumentsData = {};
+                querySnapshot.forEach(doc => {
+                    dynamicDocumentsData[doc.id] = doc.data();
+                });
+            } catch (error) {
+                console.error("Erro ao buscar ações do Firestore:", error);
+                actionsGrid.innerHTML = '<p class="text-red-500">Erro ao carregar ações. Verifique se a coleção "legalActions" existe no Firestore.</p>';
+                return;
+            }
         }
+        
+        actionsGrid.innerHTML = '';
+        const actionKeys = Object.keys(dynamicDocumentsData);
+
+        if (actionKeys.length === 0) {
+            actionsGrid.innerHTML = '<p class="text-gray-500">Nenhuma ação encontrada. Adicione ações no painel do administrador.</p>';
+            return;
+        }
+
+        actionKeys.forEach((key, index) => {
+            const action = dynamicDocumentsData[key];
+            const button = document.createElement('button');
+            button.dataset.action = key;
+            button.className = "w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition";
+            button.innerHTML = `<span class="font-semibold text-gray-800">${index + 1}. ${action.title}</span>`;
+            actionsGrid.appendChild(button);
+        });
     };
 
     const actionSelectionView = document.getElementById('document-action-selection');
@@ -1609,15 +1581,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!actionButton) return;
 
         const actionKey = actionButton.dataset.action;
+        // Usa o objeto dinâmico em vez do estático
+        if (!dynamicDocumentsData || !dynamicDocumentsData[actionKey]) return;
+
         currentChecklistAction = actionKey;
-        const data = documentsData[actionKey];
+        const data = dynamicDocumentsData[actionKey];
         const assisted = allAssisted.find(a => a.id === assistedIdToHandle);
         const savedChecklist = assisted?.documentChecklist;
 
         checklistTitle.textContent = data.title;
         checklistContainer.innerHTML = '';
 
-        data.sections.forEach((section, sectionIndex) => {
+        (data.sections || []).forEach((section, sectionIndex) => {
             const sectionDiv = document.createElement('div');
             const sectionTitleEl = document.createElement('h4');
             sectionTitleEl.className = 'font-bold text-md text-gray-700 mb-2 mt-3 border-b pb-1';
@@ -1626,7 +1601,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const list = document.createElement('ul');
             list.className = 'space-y-2';
-            section.docs.forEach((docText, docIndex) => {
+            (section.docs || []).forEach((docText, docIndex) => {
                 const listItem = document.createElement('li');
                 const label = document.createElement('label');
                 label.className = 'flex items-center text-gray-800 cursor-pointer';
@@ -1701,5 +1676,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
-
-
