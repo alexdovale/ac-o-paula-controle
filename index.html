@@ -328,22 +328,36 @@
                  <button id="copy-csv-format-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Formato</button>
             </div>
             <div class="bg-gray-100 p-4 rounded-lg text-sm mb-4">
-                <code id="csv-format-code">NOME_COMPLETO,CPF,ASSUNTO,HORARIO_AGENDADO</code>
+                <code id="csv-format-code">Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code>
             </div>
             
             <div class="flex justify-between items-center mb-2">
                 <h3 class="text-lg font-semibold">Exemplo:</h3>
                 <button id="copy-csv-example-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Exemplo</button>
             </div>
-            <pre class="bg-gray-100 p-4 rounded-lg text-sm"><code id="csv-example-code">Maria Joaquina de Amaral Pereira,111.222.333-44,Divórcio Consensual,09:00
-João da Silva,,"Ação de Alimentos",09:30
-Fulano de Tal,444.555.666-77,Curatela,10:00</code></pre>
+            <pre class="bg-gray-100 p-4 rounded-lg text-sm"><code id="csv-example-code">Maria Joaquina de Amaral Pereira;09:00;Divórcio Consensual;111.222.333-44
+João da Silva;09:30;Ação de Alimentos;
+Fulano de Tal;10:00;Curatela;444.555.666-77</code></pre>
             <ul class="list-disc list-inside mt-4 space-y-2 text-gray-700">
                 <li>A primeira linha (cabeçalho) é <strong>opcional</strong>. O sistema a ignorará se presente.</li>
-                <li>O campo <strong>CPF</strong> é opcional. Se não houver CPF, deixe o espaço em branco entre as vírgulas (<code>,,</code>).</li>
+                <li>O campo <strong>CPF</strong> é opcional. Se não houver CPF, deixe o espaço em branco (ou não coloque nada após o último ponto e vírgula).</li>
                 <li>O <strong>horário</strong> deve estar no formato <strong>HH:MM</strong> (Ex: 09:00, 14:30).</li>
                 <li>Salve o arquivo com a extensão <strong>.csv</strong>.</li>
             </ul>
+
+            <div class="mt-6 pt-4 border-t">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-lg font-semibold">Prompt para IA (Ex: ChatGPT, Gemini):</h3>
+                    <button id="copy-ai-prompt-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Prompt</button>
+                </div>
+                <p class="text-sm text-gray-600 mb-2">Se sua pauta está em um PDF, copie o texto abaixo e cole junto com o conteúdo do seu PDF em uma IA para formatá-lo corretamente.</p>
+                <pre class="bg-gray-100 p-4 rounded-lg text-sm"><code id="ai-prompt-code">Olá! Por favor, converta o conteúdo do arquivo PDF que estou enviando para o formato CSV, usando ponto e vírgula (;) como separador. O resultado deve seguir este padrão:
+
+Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)
+
+Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .csv.</code></pre>
+            </div>
+
         </div>
     </div>
     <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
@@ -986,6 +1000,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (buttonId === 'copy-csv-example-btn') {
             const text = document.getElementById('csv-example-code').innerText;
             copyToClipboard(text, 'Exemplo copiado!');
+        } else if (buttonId === 'copy-ai-prompt-btn') {
+            const text = document.getElementById('ai-prompt-code').innerText;
+            copyToClipboard(text, 'Prompt para IA copiado!');
         }
     });
 
@@ -1018,9 +1035,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const firstLineParts = lines[0].split(',');
-            if (firstLineParts.length >= 4) {
-                 const potentialTime = firstLineParts[3].trim();
+            const firstLineParts = lines[0].split(';');
+            if (firstLineParts.length >= 3) {
+                 const potentialTime = firstLineParts[1].trim();
                  if (!/^\d{1,2}:\d{2}$/.test(potentialTime)) {
                     lines.shift();
                  }
@@ -1037,19 +1054,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 let processedCount = 0;
                 
                 lines.forEach(line => {
-                    const [name, cpf, subject, scheduledTime] = line.split(',').map(item => item.trim());
-                    if (name && subject && scheduledTime && /^\d{1,2}:\d{2}$/.test(scheduledTime)) {
-                        const newDocRef = doc(collectionRef);
-                        batch.set(newDocRef, getUpdatePayload({
-                            name,
-                            cpf: cpf || null,
-                            subject,
-                            scheduledTime,
-                            status: 'pauta',
-                            type: 'agendamento',
-                            createdAt: new Date().toISOString()
-                        }));
-                        processedCount++;
+                    const parts = line.split(';').map(item => item.trim());
+                     if (parts.length >= 3) {
+                        const name = parts[0];
+                        const scheduledTime = parts[1];
+                        const subject = parts[2];
+                        const cpf = parts.length > 3 ? parts[3] : '';
+
+                        if (name && subject && scheduledTime && /^\d{1,2}:\d{2}$/.test(scheduledTime)) {
+                            const newDocRef = doc(collectionRef);
+                            batch.set(newDocRef, getUpdatePayload({
+                                name,
+                                cpf: cpf || null,
+                                subject,
+                                scheduledTime,
+                                status: 'pauta',
+                                type: 'agendamento',
+                                createdAt: new Date().toISOString()
+                            }));
+                            processedCount++;
+                        }
                     }
                 });
 
@@ -1058,7 +1082,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const skippedCount = lines.length - processedCount;
                     showNotification(`${processedCount} registros adicionados.` + (skippedCount > 0 ? ` ${skippedCount} linhas foram ignoradas.` : ''));
                 } else {
-                    showNotification("Nenhum registro válido encontrado no arquivo. Verifique o formato.", "error");
+                    showNotification("Nenhum registro válido encontrado no arquivo. Verifique o formato (Nome;HH:MM;Assunto;CPF).", "error");
                 }
             } catch (err) {
                 console.error("Erro ao carregar pauta:", err);
