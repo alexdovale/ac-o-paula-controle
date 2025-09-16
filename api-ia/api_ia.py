@@ -3,7 +3,7 @@ import google.generativeai as genai
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-# Pega a chave da variável de ambiente com o NOME "API_KEY"
+# --- Configuração da API do Gemini ---
 API_KEY = os.getenv("API_KEY") 
 genai.configure(api_key=API_KEY)
 
