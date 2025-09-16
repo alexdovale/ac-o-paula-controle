@@ -95,10 +95,10 @@
             <div class="flex justify-center items-center w-full relative">
                  <h1 class="text-xl font-semibold text-gray-600 text-center">Sistema de Gerenciamento de Pauta - SIGAP</h1>
                  <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700">
-                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
-                           <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
-                           <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
-                       </svg>
+                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
+                             <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                             <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                         </svg>
                  </button>
             </div>
             <div class="bg-white p-4 rounded-lg shadow-sm space-y-4">
@@ -118,7 +118,6 @@
                     <div class="flex items-center gap-2 flex-wrap justify-center">
                         <button id="manage-members-btn" class="bg-lime-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-lime-700">Membros</button>
                         <button id="reset-all-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">Zerar</button>
-                        <button id="toggle-faltosos-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700">Ver Faltosos</button>
                     </div>
                 </div>
             </div>
@@ -137,7 +136,7 @@
                     <h2 id="form-title" class="text-xl font-semibold text-gray-700">Adicionar Novo Agendamento</h2>
                     <div id="agendamento-actions" class="flex items-center gap-4">
                         <a href="#" id="format-help-link" class="text-sm text-green-600 hover:text-green-800 hover:underline transition-colors duration-300 flex items-center gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle-fill" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM6.95 4.95a.9.9 0 1 1 1.272.023l.2.204a.9.9 0 0 1-.226 1.273L6.95 6.451a.9.9 0 0 1-.023-1.273l.204-.2zM8 8.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle-fill" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.95-11.05a.9.9 0 0 1 .023 1.272l-.2.204a.9.9 0 0 1-1.273-.226L6.451 4.95a.9.9 0 0 1 1.273-.023l.204.2zM8 8.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
                             <span>Como converter minha pauta?</span>
                         </a>
                         <label for="file-upload" class="cursor-pointer bg-teal-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-teal-600 transition text-sm inline-flex items-center">
@@ -208,14 +207,11 @@
                 <div class="bg-white rounded-lg shadow-md flex flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <div class="flex justify-between items-center mb-3">
-                            <h3 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                                ✅ Atendidos
-                                <div class="flex items-center gap-2 text-sm font-normal">
-                                    <span id="atendidos-person-count" class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full" title="Total de pessoas"></span>
-                                    <span id="atendidos-subject-count" class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full" title="Total de assuntos"></span>
-                                </div>
+                             <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center w-full">
+                                <span>✅ Atendidos</span>
+                                <span id="atendidos-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
                             </h3>
-                            <button id="download-pdf-btn" class="bg-blue-600 text-white font-bold py-1 px-3 rounded-lg hover:bg-blue-700 text-sm">Baixar PDF</button>
+                            <button id="download-pdf-btn" class="ml-4 flex-shrink-0 bg-blue-600 text-white font-bold py-1 px-3 rounded-lg hover:bg-blue-700 text-sm">Baixar PDF</button>
                         </div>
                         <input type="search" id="atendidos-search" placeholder="Pesquisar por nome, CPF, assunto..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
@@ -234,6 +230,9 @@
                     <div id="faltosos-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
             </main>
+            <div class="mt-8 flex justify-center">
+                <button id="toggle-faltosos-btn" class="w-full sm:w-auto bg-purple-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-purple-700">Ver Faltosos</button>
+            </div>
               <footer class="mt-12 bg-white p-6 rounded-lg shadow-md">
                   <h3 class="text-xl font-semibold text-gray-800 mb-2 text-center">Entenda a Ordem de Atendimento</h3>
                   <div class="text-center mb-4">
@@ -318,7 +317,27 @@
             </div>
         </div>
     </div>
-      <div id="format-help-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50"></div>
+    <div id="format-help-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl relative">
+            <button id="close-format-help-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+            <h2 class="text-2xl font-bold mb-4">Como Preparar sua Pauta para Importação</h2>
+            <p class="mb-4 text-gray-600">Para importar seus agendamentos de uma vez, crie um arquivo <strong>.csv</strong> (Valores Separados por Vírgula). Você pode criar este arquivo usando o Bloco de Notas, Excel, Google Sheets ou similar.</p>
+            <p class="mb-2 font-semibold">O arquivo deve seguir o formato abaixo, com 4 colunas, nesta ordem:</p>
+            <div class="bg-gray-100 p-4 rounded-lg text-sm mb-4">
+                <code>NOME_COMPLETO,CPF,ASSUNTO,HORARIO_AGENDADO</code>
+            </div>
+            <h3 class="text-lg font-semibold mb-2">Exemplo:</h3>
+            <pre class="bg-gray-100 p-4 rounded-lg text-sm"><code>Maria Joaquina de Amaral Pereira,111.222.333-44,Divórcio Consensual,09:00
+João da Silva,,"Ação de Alimentos",09:30
+Fulano de Tal,444.555.666-77,Curatela,10:00</code></pre>
+            <ul class="list-disc list-inside mt-4 space-y-2 text-gray-700">
+                <li>A primeira linha (cabeçalho) é <strong>opcional</strong>. O sistema a ignorará se presente.</li>
+                <li>O campo <strong>CPF</strong> é opcional. Se não houver CPF, deixe o espaço em branco entre as vírgulas (<code>,,</code>).</li>
+                <li>O <strong>horário</strong> deve estar no formato <strong>HH:MM</strong> (Ex: 09:00, 14:30).</li>
+                <li>Salve o arquivo com a extensão <strong>.csv</strong>.</li>
+            </ul>
+        </div>
+    </div>
     <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Editar Atendente</h2>
@@ -550,17 +569,7 @@ const renderAssistedList = () => {
     document.getElementById('pauta-count').textContent = pauta.length;
     document.getElementById('aguardando-count').textContent = aguardando.length;
     document.getElementById('faltosos-count').textContent = faltosos.length;
-
-    let totalSubjects = 0;
-    atendidos.forEach(a => {
-        totalSubjects += 1; // Assunto principal
-        if (a.demandas && a.demandas.quantidade) {
-            totalSubjects += Number(a.demandas.quantidade);
-        }
-    });
-
-    document.getElementById('atendidos-person-count').textContent = `${atendidos.length} Pessoas`;
-    document.getElementById('atendidos-subject-count').textContent = `${totalSubjects} Assuntos`;
+    document.getElementById('atendidos-count').textContent = atendidos.length;
 
     const render = (el, data, generator) => {
         if(data.length === 0) el.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum resultado.</p>`;
@@ -646,7 +655,7 @@ const renderAssistedList = () => {
             </div>
             <div class="text-right mt-1">
                  <button class="toggle-details-btn text-gray-500 hover:text-gray-800 p-1">
-                    <svg class="pointer-events-none" style="transform: rotate(180deg);" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
+                     <svg class="pointer-events-none" style="transform: rotate(180deg);" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
                  </button>
             </div>`;
         return card;
@@ -928,6 +937,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- LÓGICA DOS EVENTOS ---
     
+    document.getElementById('format-help-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('format-help-modal').classList.remove('hidden');
+    });
+    
     document.getElementById('tab-agendamento').addEventListener('click', () => switchTab('agendamento'));
     document.getElementById('tab-avulso').addEventListener('click', () => switchTab('avulso'));
 
@@ -951,9 +965,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
         reader.onload = async (e) => {
             const text = e.target.result;
-            const lines = text.split('\n').filter(line => line.trim() !== '');
+            let lines = text.split('\n').filter(line => line.trim() !== '');
             if (lines.length === 0) {
                 showNotification("Arquivo vazio ou em formato inválido.", "error");
+                return;
+            }
+
+            // Pula a primeira linha se parecer um cabeçalho
+            const firstLineParts = lines[0].split(',');
+            if (firstLineParts.length >= 4) {
+                 const potentialTime = firstLineParts[3].trim();
+                 if (!/^\d{1,2}:\d{2}$/.test(potentialTime)) {
+                    lines.shift(); // Remove a linha do cabeçalho
+                 }
+            }
+           
+            if (lines.length === 0) {
+                showNotification("O arquivo CSV contém apenas um cabeçalho ou está vazio.", "error");
                 return;
             }
 
@@ -1587,4 +1615,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
-
