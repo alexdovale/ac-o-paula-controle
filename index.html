@@ -21,9 +21,9 @@
         .priority-maxima { border-left: 5px solid #22c55e; }
         .priority-media { border-left: 5px solid #f97316; }
         .priority-minima { border-left: 5px solid #6b7280; }
-        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar, #members-list-container::-webkit-scrollbar { width: 8px; }
-        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
-        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar, #members-list-container::-webkit-scrollbar, #actions-list-container::-webkit-scrollbar { width: 8px; }
+        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track, #actions-list-container::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
+        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb, #actions-list-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
         input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
         .tab-active { border-color: #16a34a; background-color: #f0fdf4; color: #16a34a; font-weight: 600; }
         .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
@@ -70,8 +70,8 @@
         </div>
         <div class="flex justify-between items-center mb-6">
               <h2 class="text-3xl font-bold text-gray-800">Minhas Pautas</h2>
-              <div>
-                  <button id="admin-btn-main" class="hidden bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600">Painel do Admin</button>
+              <div class="flex items-center gap-4">
+                  <button id="admin-actions-btn" class="hidden bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Gerenciar Ações</button>
                   <button id="logout-btn-main" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Sair</button>
               </div>
         </div>
@@ -294,7 +294,6 @@
             </div>
         </div>
     </div>
-    <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4"></div>
     <div id="arrival-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold mb-4">Confirmar Horário de Chegada</h2><p class="mb-4 text-gray-600">Por favor, informe o horário de chegada do assistido.</p><input type="time" id="arrival-time-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6"><div class="flex justify-end space-x-4"><button id="cancel-arrival-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button><button id="confirm-arrival-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button></div></div>
     </div>
@@ -462,12 +461,68 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
         </div>
     </div>
+    
+    <div id="admin-actions-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-4xl flex flex-col" style="max-height: 95vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Gerenciar Ações e Documentos</h2>
+                <button id="close-admin-actions-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 overflow-y-auto">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Ações Existentes</h3>
+                    <div id="actions-list-container" class="space-y-2 max-h-[60vh] overflow-y-auto bg-gray-50 p-3 rounded-lg border">
+                        <p class="text-gray-500 text-center">Carregando ações...</p>
+                    </div>
+                </div>
+
+                <div>
+                    <div id="create-action-section">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-4">Criar Nova Ação</h3>
+                        <form id="create-action-form" class="space-y-4">
+                            <div>
+                                <label for="new-action-title" class="block text-sm font-medium text-gray-700">Título da Ação</label>
+                                <input type="text" id="new-action-title" placeholder="Ex: Ação de Divórcio Consensual" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label for="new-action-sections" class="block text-sm font-medium text-gray-700">Seções e Documentos</label>
+                                <textarea id="new-action-sections" rows="10" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg font-mono text-sm" placeholder="Use o formato:&#10;Título da Seção 1;Doc 1,Doc 2,Doc 3&#10;Título da Seção 2;Doc A,Doc B"></textarea>
+                                <p class="text-xs text-gray-500 mt-1">Separe o título da seção dos documentos com ponto e vírgula (;). Separe os documentos com vírgula (,). Use uma nova linha para cada seção.</p>
+                            </div>
+                            <button type="submit" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700">Salvar Nova Ação</button>
+                        </form>
+                    </div>
+
+                    <div id="edit-action-section" class="hidden">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-4">Editando Ação</h3>
+                        <form id="edit-action-form" class="space-y-4">
+                            <input type="hidden" id="edit-action-id">
+                            <div>
+                                <label for="edit-action-title" class="block text-sm font-medium text-gray-700">Título da Ação</label>
+                                <input type="text" id="edit-action-title" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label for="edit-action-sections" class="block text-sm font-medium text-gray-700">Seções e Documentos</label>
+                                <textarea id="edit-action-sections" rows="10" required class="mt-1 block w-full p-2 border border-gray-300 rounded-lg font-mono text-sm"></textarea>
+                                 <p class="text-xs text-gray-500 mt-1">Use o formato: Título;Doc1,Doc2. E separe seções com uma nova linha.</p>
+                            </div>
+                            <div class="flex gap-4">
+                                <button type="submit" class="flex-grow bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Salvar Alterações</button>
+                                <button type="button" id="cancel-edit-action-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-400">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
 
     <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, getDoc, setDoc, query, where, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, getDoc, setDoc, query, where, getDocs, arrayUnion, arrayRemove, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Variáveis Globais
 let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '', currentPautaOwnerId = null;
@@ -475,6 +530,7 @@ let assistedIdToHandle = null;
 let currentChecklistAction = null;
 // Armazenará as ações carregadas do banco de dados
 let dynamicDocumentsData = null; 
+const ADMIN_UID = 'j7EqtDazdGVQPNeclkKyM7IHHBh2'; // UID do Administrador
 
 const loadingContainer = document.getElementById('loading-container');
 const loginContainer = document.getElementById('login-container');
@@ -724,6 +780,11 @@ const loadPauta = async (pautaId, pautaName) => {
 };
 
 const showPautaSelectionScreen = (userId) => {
+    // *** LÓGICA DO ADMIN AQUI ***
+    if (userId === ADMIN_UID) {
+        document.getElementById('admin-actions-btn').classList.remove('hidden');
+    }
+
     const pautasList = document.getElementById('pautas-list');
     pautasList.innerHTML = '<p class="col-span-full text-center">Carregando pautas...</p>';
     const q = query(collection(db, "pautas"), where("members", "array-contains", userId));
@@ -734,7 +795,6 @@ const showPautaSelectionScreen = (userId) => {
             const pauta = docSnap.data();
             const card = document.createElement('div');
             card.className = "relative bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer";
-            // *** ALTERAÇÃO AQUI: Adiciona o botão de excluir se o usuário for o dono ***
             const isOwner = pauta.owner === userId;
             const deleteButtonHTML = isOwner ? `
                 <button data-id="${docSnap.id}" data-name="${pauta.name}" class="delete-pauta-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full z-10" title="Excluir pauta">
@@ -743,7 +803,6 @@ const showPautaSelectionScreen = (userId) => {
 
             card.innerHTML = `${deleteButtonHTML}<h3 class="font-bold text-xl mb-2">${pauta.name}</h3><p class="text-gray-600">Membros: ${pauta.memberEmails?.length || 1}</p>`;
             
-            // Adiciona o evento de clique para carregar a pauta (apenas se não clicar no botão de deletar)
             card.addEventListener('click', (e) => {
                 if (!e.target.closest('.delete-pauta-btn')) {
                     loadPauta(docSnap.id, pauta.name)
@@ -849,135 +908,176 @@ const setupModalClosers = () => {
     });
 };
 
+// =================================================================
+// NOVA SEÇÃO DE FUNÇÕES PARA O PAINEL DE ADMIN
+// =================================================================
+const actionsCollectionRef = collection(db, 'legalActions');
+
+const loadActionsForAdminPanel = async () => {
+    const container = document.getElementById('actions-list-container');
+    container.innerHTML = `<p class="text-gray-500 text-center">Carregando...</p>`;
+    
+    try {
+        const q = query(actionsCollectionRef, orderBy("title"));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+            container.innerHTML = `<p class="text-gray-500 text-center">Nenhuma ação cadastrada.</p>`;
+            return;
+        }
+
+        container.innerHTML = '';
+        snapshot.forEach(doc => {
+            const action = doc.data();
+            const actionEl = document.createElement('div');
+            actionEl.className = 'flex justify-between items-center bg-white p-2 rounded-md';
+            actionEl.innerHTML = `
+                <span class="font-semibold text-gray-800">${action.title}</span>
+                <div class="flex gap-2">
+                    <button data-id="${doc.id}" class="edit-action-btn text-blue-600 hover:text-blue-800 font-semibold text-xs py-1 px-2 rounded hover:bg-blue-100">Editar</button>
+                    <button data-id="${doc.id}" class="delete-action-btn text-red-600 hover:text-red-800 font-semibold text-xs py-1 px-2 rounded hover:bg-red-100">Excluir</button>
+                </div>
+            `;
+            container.appendChild(actionEl);
+        });
+    } catch (error) {
+        console.error("Erro ao carregar ações para o painel de admin:", error);
+        container.innerHTML = `<p class="text-red-500 text-center">Erro ao carregar ações.</p>`;
+    }
+};
+
+// Função para converter o texto do textarea para a estrutura de objeto do Firestore
+const parseSectionsText = (text) => {
+    return text.trim().split('\n').map(line => {
+        const [title, docsString] = line.split(';');
+        const docs = docsString ? docsString.split(',').map(d => d.trim()) : [];
+        return { title: title.trim(), docs };
+    }).filter(s => s.title); // Garante que não há seções vazias
+};
+
+// Função para converter a estrutura de objeto para o texto do textarea
+const formatSectionsToText = (sections) => {
+    if (!sections || !Array.isArray(sections)) return '';
+    return sections.map(section => {
+        const docsString = (section.docs || []).join(', ');
+        return `${section.title || ''}; ${docsString}`;
+    }).join('\n');
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     main();
     setupModalClosers();
     
     // --- LÓGICA DE LOGIN/CADASTRO ---
-    const loginTabBtn = document.getElementById('login-tab-btn');
-    const registerTabBtn = document.getElementById('register-tab-btn');
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
+    // (código de login/cadastro permanece o mesmo)
+
+    // --- LÓGICA DO PAINEL DE ADMIN ---
+    const adminModal = document.getElementById('admin-actions-modal');
+    const createActionSection = document.getElementById('create-action-section');
+    const editActionSection = document.getElementById('edit-action-section');
+
+    document.getElementById('admin-actions-btn').addEventListener('click', () => {
+        adminModal.classList.remove('hidden');
+        loadActionsForAdminPanel();
+    });
+
+    document.getElementById('close-admin-actions-modal-btn').addEventListener('click', () => {
+        adminModal.classList.add('hidden');
+    });
+
+    // Criar Nova Ação
+    document.getElementById('create-action-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = document.getElementById('new-action-title').value;
+        const sectionsText = document.getElementById('new-action-sections').value;
+        
+        try {
+            const sections = parseSectionsText(sectionsText);
+            await addDoc(actionsCollectionRef, { title, sections });
+            showNotification('Ação criada com sucesso!', 'success');
+            e.target.reset();
+            loadActionsForAdminPanel();
+            dynamicDocumentsData = null; // Força recarregamento na próxima vez que for usado
+        } catch (error) {
+            console.error("Erro ao criar ação:", error);
+            showNotification('Erro ao criar ação.', 'error');
+        }
+    });
+
+    // Lógica de Edição e Exclusão (usando delegação de eventos)
+    document.getElementById('actions-list-container').addEventListener('click', async (e) => {
+        const button = e.target.closest('button');
+        if (!button) return;
+
+        const actionId = button.dataset.id;
+        
+        // Excluir Ação
+        if (button.classList.contains('delete-action-btn')) {
+            if (confirm("Tem certeza que deseja excluir esta ação?")) {
+                try {
+                    await deleteDoc(doc(db, "legalActions", actionId));
+                    showNotification('Ação excluída com sucesso.', 'success');
+                    loadActionsForAdminPanel();
+                    dynamicDocumentsData = null;
+                } catch (error) {
+                    console.error("Erro ao excluir ação:", error);
+                    showNotification('Erro ao excluir ação.', 'error');
+                }
+            }
+        }
+        
+        // Editar Ação (Parte 1: Carregar dados no formulário)
+        if (button.classList.contains('edit-action-btn')) {
+            try {
+                const docSnap = await getDoc(doc(db, "legalActions", actionId));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    document.getElementById('edit-action-id').value = actionId;
+                    document.getElementById('edit-action-title').value = data.title;
+                    document.getElementById('edit-action-sections').value = formatSectionsToText(data.sections);
+
+                    createActionSection.classList.add('hidden');
+                    editActionSection.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Erro ao carregar ação para edição:", error);
+                showNotification('Erro ao carregar dados da ação.', 'error');
+            }
+        }
+    });
+
+    // Cancelar Edição
+    document.getElementById('cancel-edit-action-btn').addEventListener('click', () => {
+        editActionSection.classList.add('hidden');
+        createActionSection.classList.remove('hidden');
+    });
     
-    loginTabBtn.addEventListener('click', () => {
-        loginTabBtn.classList.add('border-green-600', 'text-green-600');
-        loginTabBtn.classList.remove('text-gray-500');
-        registerTabBtn.classList.remove('border-green-600', 'text-green-600');
-        registerTabBtn.classList.add('text-gray-500');
-        loginForm.classList.remove('hidden');
-        registerForm.classList.add('hidden');
-    });
-
-    registerTabBtn.addEventListener('click', () => {
-        registerTabBtn.classList.add('border-green-600', 'text-green-600');
-        registerTabBtn.classList.remove('text-gray-500');
-        loginTabBtn.classList.remove('border-green-600', 'text-green-600');
-        loginTabBtn.classList.add('text-gray-500');
-        registerForm.classList.remove('hidden');
-        loginForm.classList.add('hidden');
-    });
-
-    loginForm.addEventListener('submit', async (e) => {
+    // Salvar Alterações da Edição
+    document.getElementById('edit-action-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        const errorDiv = document.getElementById('auth-error');
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-            errorDiv.classList.add('hidden');
-        } catch (error) {
-            console.error("Login failed:", error);
-            errorDiv.textContent = 'Email ou senha inválidos.';
-            errorDiv.classList.remove('hidden');
-        }
-    });
-
-    registerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const name = document.getElementById('register-name').value;
-        const email = document.getElementById('register-email').value;
-        const password = document.getElementById('register-password').value;
-        const errorDiv = document.getElementById('auth-error');
-
-        if (password.length < 6) {
-            errorDiv.textContent = 'A senha deve ter pelo menos 6 caracteres.';
-            errorDiv.classList.remove('hidden');
-            return;
-        }
+        const actionId = document.getElementById('edit-action-id').value;
+        const title = document.getElementById('edit-action-title').value;
+        const sectionsText = document.getElementById('edit-action-sections').value;
 
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-
-            await setDoc(doc(db, "users", user.uid), {
-                name: name,
-                email: email,
-                uid: user.uid,
-                status: 'approved',
-                createdAt: new Date().toISOString()
-            });
+            const sections = parseSectionsText(sectionsText);
+            await updateDoc(doc(db, "legalActions", actionId), { title, sections });
+            showNotification('Ação atualizada com sucesso!', 'success');
             
-            errorDiv.classList.add('hidden');
-            showNotification('Conta criada com sucesso! Agora você pode fazer o login.', 'success');
-            loginTabBtn.click();
-            
+            editActionSection.classList.add('hidden');
+            createActionSection.classList.remove('hidden');
+            loadActionsForAdminPanel();
+            dynamicDocumentsData = null;
         } catch (error) {
-            console.error("Registration failed:", error);
-            errorDiv.textContent = error.code === 'auth/email-already-in-use' ? 'Este email já está em uso.' : 'Ocorreu um erro ao criar a conta.';
-            errorDiv.classList.remove('hidden');
+            console.error("Erro ao atualizar ação:", error);
+            showNotification('Erro ao atualizar ação.', 'error');
         }
     });
 
-    document.getElementById('forgot-password-link').addEventListener('click', (e) => {
-        e.preventDefault();
-        const email = prompt("Por favor, digite seu email para redefinir a senha:");
-        if (email) {
-            sendPasswordResetEmail(auth, email)
-                .then(() => showNotification("Email de redefinição de senha enviado!", "success"))
-                .catch((error) => {
-                    console.error("Password reset error:", error);
-                    showNotification("Erro ao enviar email. Verifique se o email está correto.", "error");
-                });
-        }
-    });
-
-    document.getElementById('create-pauta-btn').addEventListener('click', () => {
-        document.getElementById('create-pauta-modal').classList.remove('hidden');
-    });
-    document.getElementById('cancel-create-pauta-btn').addEventListener('click', () => {
-        document.getElementById('create-pauta-modal').classList.add('hidden');
-    });
-    document.getElementById('confirm-create-pauta-btn').addEventListener('click', async () => {
-        const pautaName = document.getElementById('create-pauta-name-input').value.trim();
-        if (!pautaName) {
-            showNotification("O nome da pauta não pode ser vazio.", "error");
-            return;
-        }
-        const user = auth.currentUser;
-        if (!user) {
-             showNotification("Você precisa estar logado para criar uma pauta.", "error");
-            return;
-        }
-        try {
-            await addDoc(collection(db, "pautas"), {
-                name: pautaName,
-                owner: user.uid,
-                ownerEmail: user.email,
-                members: [user.uid],
-                memberEmails: [user.email],
-                createdAt: new Date().toISOString()
-            });
-            showNotification("Pauta criada com sucesso!");
-            document.getElementById('create-pauta-name-input').value = '';
-            document.getElementById('create-pauta-modal').classList.add('hidden');
-        } catch (error) {
-            console.error("Error creating pauta:", error);
-            showNotification("Erro ao criar pauta.", "error");
-        }
-    });
-
-    // --- LÓGICA DOS EVENTOS ---
+    // --- LÓGICA DOS EVENTOS GERAIS ---
     
+    // (resto do seu código de eventos, começando por format-help-link, etc.)
+
     document.getElementById('format-help-link').addEventListener('click', (e) => {
         e.preventDefault();
         document.getElementById('format-help-modal').classList.remove('hidden');
@@ -1241,15 +1341,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = button.dataset.id;
         const collectionRef = currentPautaId ? collection(db, "pautas", currentPautaId, "attendances") : null;
         
-        // *** ALTERAÇÃO AQUI: Lógica para o novo botão de excluir pauta ***
         if (button.classList.contains('delete-pauta-btn')) {
             const pautaId = button.dataset.id;
             const pautaName = button.dataset.name;
             if (confirm(`Tem certeza que deseja excluir a pauta "${pautaName}"?\nEsta ação é irreversível e todos os seus dados serão apagados.`)) {
                 try {
-                    // ATENÇÃO: Isso deleta o documento da pauta, mas não a subcoleção 'attendances'.
-                    // Para uma exclusão completa, seria necessária uma Cloud Function no Firebase para apagar subcoleções.
-                    // Por enquanto, isso removerá a pauta da lista.
                     await deleteDoc(doc(db, "pautas", pautaId));
                     showNotification(`Pauta "${pautaName}" excluída.`, 'success');
                 } catch (error) {
@@ -1532,16 +1628,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // *** ALTERAÇÃO AQUI: Lógica do modal de documentos agora é dinâmica ***
     const loadAndRenderDynamicActions = async () => {
         const actionsGrid = document.getElementById('dynamic-actions-grid');
         actionsGrid.innerHTML = '<p class="text-gray-500">Carregando ações...</p>';
 
-        // Busca os dados apenas uma vez para não sobrecarregar
         if (!dynamicDocumentsData) {
             try {
-                const actionsCollection = collection(db, 'legalActions'); // Nome da sua coleção no Firestore
-                const querySnapshot = await getDocs(actionsCollection);
+                const q = query(collection(db, 'legalActions'), orderBy("title"));
+                const querySnapshot = await getDocs(q);
                 dynamicDocumentsData = {};
                 querySnapshot.forEach(doc => {
                     dynamicDocumentsData[doc.id] = doc.data();
@@ -1581,7 +1675,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!actionButton) return;
 
         const actionKey = actionButton.dataset.action;
-        // Usa o objeto dinâmico em vez do estático
         if (!dynamicDocumentsData || !dynamicDocumentsData[actionKey]) return;
 
         currentChecklistAction = actionKey;
