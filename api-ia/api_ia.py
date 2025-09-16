@@ -4,9 +4,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS # Necessário para permitir requisições do seu site
 
 # --- Configuração da API do Gemini ---
-API_KEY = "SUA_API_KEY_AQUI"
-genai.configure(AIzaSyAWYcCfZ8P_vVlbLPSvpupsyLYT6GNF1Mg)
-
+API_KEY = os.getenv("AIzaSyAWYcCfZ8P_vVlbLPSvpupsyLYT6GNF1Mg") # Pega a chave da variável de ambiente
+genai.configure(api_key="AIzaSyAWYcCfZ8P_vVlbLPSvpupsyLYT6GNF1M")
 # Defina o modelo que você quer usar
 MODELO_IA = "gemini-1.5-pro-latest" 
 
