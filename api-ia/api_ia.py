@@ -3,17 +3,16 @@ import google.generativeai as genai
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-# --- Configuração da API do Gemini ---
 # Pega a chave da variável de ambiente com o NOME "API_KEY"
 API_KEY = os.getenv("API_KEY") 
 genai.configure(api_key=API_KEY)
 
-# Defina o modelo que você quer usar
+# Define o modelo que você quer usar
 MODELO_IA = "gemini-1.5-pro-latest"
 
 # Configuração do Flask
 app = Flask(__name__)
-CORS(app) # Habilita CORS para o seu frontend poder acessar
+CORS(app) # Habilita CORS para seu frontend poder acessar a API
 
 @app.route('/perguntar_ia', methods=['POST'])
 def perguntar_ia():
@@ -24,7 +23,7 @@ def perguntar_ia():
         if not pergunta_do_usuario:
             return jsonify({"erro": "Nenhuma pergunta foi enviada."}), 400
 
-        # --- Conexão e processamento com o Gemini ---
+        # Conexão e processamento com o Gemini
         model = genai.GenerativeModel(MODELO_IA)
         response = model.generate_content(pergunta_do_usuario)
 
