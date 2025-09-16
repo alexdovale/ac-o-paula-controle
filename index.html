@@ -318,46 +318,49 @@
         </div>
     </div>
     <div id="format-help-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl relative">
-            <button id="close-format-help-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
-            <h2 class="text-2xl font-bold mb-4">Como Preparar sua Pauta para Importação</h2>
-            <p class="mb-4 text-gray-600">Para importar seus agendamentos de uma vez, crie um arquivo <strong>.csv</strong> (Valores Separados por Vírgula). Você pode criar este arquivo usando o Bloco de Notas, Excel, Google Sheets ou similar.</p>
-            
-            <div class="flex justify-between items-center mb-2">
-                 <p class="font-semibold">O arquivo deve seguir o formato abaixo, com 4 colunas, nesta ordem:</p>
-                 <button id="copy-csv-format-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Formato</button>
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl relative flex flex-col" style="max-height: 90vh;">
+            <div class="flex-shrink-0">
+                <button id="close-format-help-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+                <h2 class="text-2xl font-bold mb-4">Como Preparar sua Pauta para Importação</h2>
             </div>
-            <div class="bg-gray-100 p-4 rounded-lg text-sm mb-4">
-                <code id="csv-format-code">Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code>
-            </div>
-            
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="text-lg font-semibold">Exemplo:</h3>
-                <button id="copy-csv-example-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Exemplo</button>
-            </div>
-            <pre class="bg-gray-100 p-4 rounded-lg text-sm"><code id="csv-example-code">Maria Joaquina de Amaral Pereira;09:00;Divórcio Consensual;111.222.333-44
+            <div class="flex-grow overflow-y-auto scrollable-content pr-4">
+                <p class="mb-4 text-gray-600">Para importar seus agendamentos de uma vez, crie um arquivo <strong>.csv</strong> (Valores Separados por Vírgula). Você pode criar este arquivo usando o Bloco de Notas, Excel, Google Sheets ou similar.</p>
+                
+                <div class="flex justify-between items-center mb-2">
+                     <p class="font-semibold">O arquivo deve seguir o formato abaixo, com 4 colunas, nesta ordem:</p>
+                     <button id="copy-csv-format-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Formato</button>
+                </div>
+                <div class="bg-gray-100 p-4 rounded-lg text-sm mb-4">
+                    <code id="csv-format-code">Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code>
+                </div>
+                
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-lg font-semibold">Exemplo:</h3>
+                    <button id="copy-csv-example-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Exemplo</button>
+                </div>
+                <pre class="bg-gray-100 p-4 rounded-lg text-sm"><code id="csv-example-code">Maria Joaquina de Amaral Pereira;09:00;Divórcio Consensual;111.222.333-44
 João da Silva;09:30;Ação de Alimentos;
 Fulano de Tal;10:00;Curatela;444.555.666-77</code></pre>
-            <ul class="list-disc list-inside mt-4 space-y-2 text-gray-700">
-                <li>A primeira linha (cabeçalho) é <strong>opcional</strong>. O sistema a ignorará se presente.</li>
-                <li>O campo <strong>CPF</strong> é opcional. Se não houver CPF, deixe o espaço em branco (ou não coloque nada após o último ponto e vírgula).</li>
-                <li>O <strong>horário</strong> deve estar no formato <strong>HH:MM</strong> (Ex: 09:00, 14:30).</li>
-                <li>Salve o arquivo com a extensão <strong>.csv</strong>.</li>
-            </ul>
+                <ul class="list-disc list-inside mt-4 space-y-2 text-gray-700">
+                    <li>A primeira linha (cabeçalho) é <strong>opcional</strong>. O sistema a ignorará se presente.</li>
+                    <li>O campo <strong>CPF</strong> é opcional. Se não houver CPF, deixe o espaço em branco (ou não coloque nada após o último ponto e vírgula).</li>
+                    <li>O <strong>horário</strong> deve estar no formato <strong>HH:MM</strong> (Ex: 09:00, 14:30).</li>
+                    <li>Salve o arquivo com a extensão <strong>.csv</strong>.</li>
+                </ul>
 
-            <div class="mt-6 pt-4 border-t">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="text-lg font-semibold">Prompt para IA (Ex: ChatGPT, Gemini):</h3>
-                    <button id="copy-ai-prompt-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Prompt</button>
-                </div>
-                <p class="text-sm text-gray-600 mb-2">Se sua pauta está em um PDF, copie o texto abaixo e cole junto com o conteúdo do seu PDF em uma IA para formatá-lo corretamente.</p>
-                <pre class="bg-gray-100 p-4 rounded-lg text-sm"><code id="ai-prompt-code">Olá! Por favor, converta o conteúdo do arquivo PDF que estou enviando para o formato CSV, usando ponto e vírgula (;) como separador. O resultado deve seguir este padrão:
+                <div class="mt-6 pt-4 border-t">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-lg font-semibold">Prompt para IA (Ex: ChatGPT, Gemini):</h3>
+                        <button id="copy-ai-prompt-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Prompt</button>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-2">Se sua pauta está em um PDF, copie o texto abaixo e cole junto com o conteúdo do seu PDF em uma IA para formatá-lo corretamente.</p>
+                    <pre class="bg-gray-100 p-4 rounded-lg text-sm"><code id="ai-prompt-code">Olá! Por favor, converta o conteúdo do arquivo PDF que estou enviando para o formato CSV, usando ponto e vírgula (;) como separador. O resultado deve seguir este padrão:
 
 Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)
 
 Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .csv.</code></pre>
+                </div>
             </div>
-
         </div>
     </div>
     <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
@@ -1119,7 +1122,7 @@ document.addEventListener('DOMContentLoaded', () => {
         docPDF.text(`Total de Assuntos: ${totalSubjects}`, 100, 36);
 
 
-        const tableColumn = ["#", "Nome", "Assunto Principal", "Atendente", "Finalizado", "Duração"];
+        const tableColumn = ["#", "Nome", "CPF", "Assunto Principal", "Atendente", "Finalizado", "Duração"];
         const tableRows = [];
 
         atendidos.forEach((item, index) => {
@@ -1133,7 +1136,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const rowData = [
                 index + 1,
-                item.name,
+                String(item.name || '').replace(/"/g, ''),
+                item.cpf || '',
                 item.subject,
                 item.attendant || 'N/A',
                 new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
@@ -1692,4 +1696,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
+
 
