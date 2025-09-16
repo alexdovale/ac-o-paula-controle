@@ -1779,7 +1779,117 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 </body>
+    // ... (código anterior) ...
+
+        }); // Fim do addEventListener 'DOMContentLoaded' do seu script principal
+
+    </script> <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleIaBtn = document.getElementById('toggle-ia-btn');
+            const iaContainer = document.getElementById('ia-container');
+            const askIaBtn = document.getElementById('botao-ia');
+            const iaQuestionInput = document.getElementById('input-pergunta');
+            const iaResponseDiv = document.getElementById('resposta-ia');
+            const iaSpinner = document.getElementById('ia-spinner');
+            const iaButtonText = document.getElementById('ia-button-text');
+
+            // Lógica para mostrar/esconder o painel da IA
+            if(toggleIaBtn) {
+                toggleIaBtn.addEventListener('click', () => {
+                    iaContainer.classList.toggle('hidden');
+                });
+            }
+
+            // Lógica para perguntar à IA
+            if(askIaBtn) {
+                askIaBtn.addEventListener('click', async () => {
+                    const userQuestion = iaQuestionInput.value.trim();
+                    if (!userQuestion) {
+                        iaResponseDiv.innerText = 'Por favor, digite uma pergunta.';
+                        return;
+                    }
+
+                    // Mostrar estado de carregamento
+                    iaResponseDiv.innerHTML = 'Analisando a pauta e pensando...';
+                    askIaBtn.disabled = true;
+                    iaSpinner.classList.remove('hidden');
+                    iaButtonText.innerText = 'Processando...';
+
+                    try {
+                        // 1. Coletar o contexto da pauta atual
+                        // A variável `allAssisted` já existe no seu script do Firebase
+                        let context = "Resumo da pauta de atendimentos:\n";
+                        if (typeof allAssisted !== 'undefined' && allAssisted.length > 0) {
+                            const pautaItems = allAssisted.filter(a => a.status === 'pauta');
+                            const aguardandoItems = allAssisted.filter(a => a.status === 'aguardando');
+                            const atendidosItems = allAssisted.filter(a => a.status === 'atendido');
+
+                            context += `- ${pautaItems.length} assistido(s) na pauta para chegar.\n`;
+                            context += `- ${aguardandoItems.length} assistido(s) aguardando atendimento.\n`;
+                            context += `- ${atendidosItems.length} assistido(s) já atendido(s).\n\n`;
+
+                            if(aguardandoItems.length > 0) {
+                                context += "Lista de quem está aguardando atendimento (em ordem de prioridade):\n";
+                                aguardandoItems
+                                .sort((a, b) => { // Ordena para garantir a ordem correta no contexto
+                                    const order = { 'URGENTE': 0, 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
+                                    return order[a.priority] - order[b.priority];
+                                })
+                                .forEach((p, i) => {
+                                    context += `${i + 1}. Nome: ${p.name}, Assunto: ${p.subject}, Prioridade: ${p.priority}\n`;
+                                });
+                            }
+
+                        } else {
+                            context += "A pauta está vazia no momento.\n";
+                        }
+
+                        // 2. Montar o prompt final
+                        const finalPrompt = `
+                            Você é um assistente inteligente analisando uma pauta de atendimentos jurídicos.
+                            Com base no contexto fornecido abaixo, responda à pergunta do usuário de forma clara e concisa.
+
+                            ---
+                            CONTEXTO ATUAL DA PAUTA:
+                            ${context}
+                            ---
+
+                            PERGUNTA DO USUÁRIO:
+                            "${userQuestion}"
+                        `;
+
+                        // 3. Enviar para o back-end (lembre-se de criar o server.js)
+                        const response = await fetch('/ask-ai', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ prompt: finalPrompt })
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error || 'A resposta do servidor não foi bem-sucedida.');
+                        }
+                        
+                        const data = await response.json();
+                        iaResponseDiv.innerText = data.response;
+
+                    } catch (error) {
+                        console.error("Erro ao chamar a IA:", error);
+                        iaResponseDiv.innerText = `Ocorreu um erro: ${error.message}`;
+                    } finally {
+                        // Resetar estado de carregamento
+                        askIaBtn.disabled = false;
+                        iaSpinner.classList.add('hidden');
+                        iaButtonText.innerText = 'Enviar Pergunta';
+                    }
+                });
+            }
+        });
+    </script>
+</body>
 </html>
+</html>
+
 
 
 
