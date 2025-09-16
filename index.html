@@ -338,7 +338,7 @@
                     <h3 class="text-lg font-semibold">Exemplo:</h3>
                     <button id="copy-csv-example-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Exemplo</button>
                 </div>
-                <pre class="bg-gray-100 p-4 rounded-lg text-sm"><code id="csv-example-code">Maria Joaquina de Amaral Pereira;09:00;Divórcio Consensual;111.222.333-44
+                <pre class="bg-gray-100 p-4 rounded-lg text-sm" style="white-space: pre-wrap; word-break: break-all;"><code id="csv-example-code">Maria Joaquina de Amaral Pereira;09:00;Divórcio Consensual;111.222.333-44
 João da Silva;09:30;Ação de Alimentos;
 Fulano de Tal;10:00;Curatela;444.555.666-77</code></pre>
                 <ul class="list-disc list-inside mt-4 space-y-2 text-gray-700">
@@ -354,7 +354,7 @@ Fulano de Tal;10:00;Curatela;444.555.666-77</code></pre>
                         <button id="copy-ai-prompt-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Prompt</button>
                     </div>
                     <p class="text-sm text-gray-600 mb-2">Se sua pauta está em um PDF, copie o texto abaixo e cole junto com o conteúdo do seu PDF em uma IA para formatá-lo corretamente.</p>
-                    <pre class="bg-gray-100 p-4 rounded-lg text-sm"><code id="ai-prompt-code">Olá! Por favor, converta o conteúdo do arquivo PDF que estou enviando para o formato CSV, usando ponto e vírgula (;) como separador. O resultado deve seguir este padrão:
+                    <pre class="bg-gray-100 p-4 rounded-lg text-sm" style="white-space: pre-wrap; word-break: break-all;"><code id="ai-prompt-code">Olá! Por favor, converta o conteúdo do arquivo PDF que estou enviando para o formato CSV, usando ponto e vírgula (;) como separador. O resultado deve seguir este padrão:
 
 Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)
 
@@ -1136,12 +1136,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     duration = `${diffMins} min`;
                 }
             }
+            
+            const cleanString = (str) => String(str || '').replace(/"/g, '');
+
             const rowData = [
                 index + 1,
-                String(item.name || '').replace(/"/g, ''),
-                item.cpf || '',
-                item.subject,
-                item.attendant || 'N/A',
+                cleanString(item.name),
+                cleanString(item.cpf),
+                cleanString(item.subject),
+                cleanString(item.attendant) || 'N/A',
                 new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
                 duration
             ];
@@ -1698,4 +1701,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
+
 
