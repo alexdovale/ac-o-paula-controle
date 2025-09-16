@@ -322,12 +322,20 @@
             <button id="close-format-help-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
             <h2 class="text-2xl font-bold mb-4">Como Preparar sua Pauta para Importação</h2>
             <p class="mb-4 text-gray-600">Para importar seus agendamentos de uma vez, crie um arquivo <strong>.csv</strong> (Valores Separados por Vírgula). Você pode criar este arquivo usando o Bloco de Notas, Excel, Google Sheets ou similar.</p>
-            <p class="mb-2 font-semibold">O arquivo deve seguir o formato abaixo, com 4 colunas, nesta ordem:</p>
-            <div class="bg-gray-100 p-4 rounded-lg text-sm mb-4">
-                <code>NOME_COMPLETO,CPF,ASSUNTO,HORARIO_AGENDADO</code>
+            
+            <div class="flex justify-between items-center mb-2">
+                 <p class="font-semibold">O arquivo deve seguir o formato abaixo, com 4 colunas, nesta ordem:</p>
+                 <button id="copy-csv-format-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Formato</button>
             </div>
-            <h3 class="text-lg font-semibold mb-2">Exemplo:</h3>
-            <pre class="bg-gray-100 p-4 rounded-lg text-sm"><code>Maria Joaquina de Amaral Pereira,111.222.333-44,Divórcio Consensual,09:00
+            <div class="bg-gray-100 p-4 rounded-lg text-sm mb-4">
+                <code id="csv-format-code">NOME_COMPLETO,CPF,ASSUNTO,HORARIO_AGENDADO</code>
+            </div>
+            
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="text-lg font-semibold">Exemplo:</h3>
+                <button id="copy-csv-example-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Exemplo</button>
+            </div>
+            <pre class="bg-gray-100 p-4 rounded-lg text-sm"><code id="csv-example-code">Maria Joaquina de Amaral Pereira,111.222.333-44,Divórcio Consensual,09:00
 João da Silva,,"Ação de Alimentos",09:30
 Fulano de Tal,444.555.666-77,Curatela,10:00</code></pre>
             <ul class="list-disc list-inside mt-4 space-y-2 text-gray-700">
@@ -809,8 +817,36 @@ const main = () => {
     }
 };
 
+const copyToClipboard = (text, message) => {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+        document.execCommand('copy');
+        showNotification(message, 'info');
+    } catch (err) {
+        showNotification('Erro ao copiar.', 'error');
+    }
+    document.body.removeChild(textArea);
+};
+
+const setupModalClosers = () => {
+    document.querySelectorAll('.fixed.inset-0').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.add('hidden');
+            }
+        });
+    });
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     main();
+    setupModalClosers();
     
     // --- LÓGICA DE LOGIN/CADASTRO ---
     const loginTabBtn = document.getElementById('login-tab-btn');
@@ -942,6 +978,17 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('format-help-modal').classList.remove('hidden');
     });
     
+    document.getElementById('format-help-modal').addEventListener('click', e => {
+        const buttonId = e.target.id;
+        if (buttonId === 'copy-csv-format-btn') {
+            const text = document.getElementById('csv-format-code').innerText;
+            copyToClipboard(text, 'Formato copiado!');
+        } else if (buttonId === 'copy-csv-example-btn') {
+            const text = document.getElementById('csv-example-code').innerText;
+            copyToClipboard(text, 'Exemplo copiado!');
+        }
+    });
+
     document.getElementById('tab-agendamento').addEventListener('click', () => switchTab('agendamento'));
     document.getElementById('tab-avulso').addEventListener('click', () => switchTab('avulso'));
 
@@ -965,18 +1012,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
         reader.onload = async (e) => {
             const text = e.target.result;
-            let lines = text.split('\n').filter(line => line.trim() !== '');
+            let lines = text.split(/\r\n|\n|\r/).filter(line => line.trim() !== '');
             if (lines.length === 0) {
                 showNotification("Arquivo vazio ou em formato inválido.", "error");
                 return;
             }
 
-            // Pula a primeira linha se parecer um cabeçalho
             const firstLineParts = lines[0].split(',');
             if (firstLineParts.length >= 4) {
                  const potentialTime = firstLineParts[3].trim();
                  if (!/^\d{1,2}:\d{2}$/.test(potentialTime)) {
-                    lines.shift(); // Remove a linha do cabeçalho
+                    lines.shift();
                  }
             }
            
@@ -988,10 +1034,11 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const batch = writeBatch(db);
                 const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
+                let processedCount = 0;
                 
                 lines.forEach(line => {
                     const [name, cpf, subject, scheduledTime] = line.split(',').map(item => item.trim());
-                    if (name && subject && scheduledTime) {
+                    if (name && subject && scheduledTime && /^\d{1,2}:\d{2}$/.test(scheduledTime)) {
                         const newDocRef = doc(collectionRef);
                         batch.set(newDocRef, getUpdatePayload({
                             name,
@@ -1002,11 +1049,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             type: 'agendamento',
                             createdAt: new Date().toISOString()
                         }));
+                        processedCount++;
                     }
                 });
 
-                await batch.commit();
-                showNotification(`Pauta carregada com sucesso! ${lines.length} registros adicionados.`);
+                if (processedCount > 0) {
+                    await batch.commit();
+                    const skippedCount = lines.length - processedCount;
+                    showNotification(`${processedCount} registros adicionados.` + (skippedCount > 0 ? ` ${skippedCount} linhas foram ignoradas.` : ''));
+                } else {
+                    showNotification("Nenhum registro válido encontrado no arquivo. Verifique o formato.", "error");
+                }
             } catch (err) {
                 console.error("Erro ao carregar pauta:", err);
                 showNotification("Erro ao processar o arquivo.", "error");
@@ -1615,3 +1668,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
+
