@@ -86,6 +86,14 @@
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Convites Pendentes</h2>
             <div id="pending-invitations-list" class="space-y-4"></div>
         </div>
+        <div id="admin-panel" class="hidden my-8 p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <h3 class="text-2xl font-bold text-yellow-800 mb-4">Painel do Administrador</h3>
+            <p class="text-gray-700 mb-2">Total de pautas criadas no sistema: <strong id="admin-total-pautas">0</strong></p>
+            <h4 class="font-semibold text-gray-800 mt-4 mb-2">Pautas Ativas e Datas de Expiração:</h4>
+            <div id="admin-pautas-list" class="space-y-2 max-h-60 overflow-y-auto scrollable-content pr-2">
+                <!-- A lista de pautas para o admin será populada aqui -->
+            </div>
+        </div>
         <div id="pautas-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         <div class="mt-6"><button id="create-pauta-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Criar Nova Pauta</button></div>
     </div>
@@ -503,6 +511,8 @@ import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc
 let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '', currentPautaOwnerId = null;
 let assistedIdToHandle = null;
 let currentChecklistAction = null;
+// IMPORTANTE: Substitua o valor abaixo pelo UID do usuário administrador do Firebase.
+const ADMIN_UID = "COLOQUE_O_UID_DO_ADMIN_AQUI"; 
 
 const loadingContainer = document.getElementById('loading-container');
 const loginContainer = document.getElementById('login-container');
@@ -751,6 +761,43 @@ const loadPauta = async (pautaId, pautaName) => {
     showScreen('app');
 };
 
+const loadAdminPanel = () => {
+    const adminPanel = document.getElementById('admin-panel');
+    const totalPautasEl = document.getElementById('admin-total-pautas');
+    const pautasListEl = document.getElementById('admin-pautas-list');
+
+    adminPanel.classList.remove('hidden');
+
+    const allPautasQuery = query(collection(db, "pautas"));
+    onSnapshot(allPautasQuery, (snapshot) => {
+        totalPautasEl.textContent = snapshot.size;
+        pautasListEl.innerHTML = '';
+        if (snapshot.empty) {
+            pautasListEl.innerHTML = '<p class="text-gray-500 text-center text-sm">Nenhuma pauta no sistema.</p>';
+            return;
+        }
+
+        snapshot.docs.forEach(docSnap => {
+            const pauta = docSnap.data();
+            const creationDate = new Date(pauta.createdAt);
+            const expirationDate = new Date(creationDate);
+            expirationDate.setDate(creationDate.getDate() + 7); // 7 dias para expirar
+            const formattedExpirationDate = expirationDate.toLocaleDateString('pt-BR');
+
+            const pautaEl = document.createElement('div');
+            pautaEl.className = 'flex justify-between items-center text-sm bg-white p-2 rounded shadow-sm';
+            pautaEl.innerHTML = `
+                <div>
+                    <span class="font-semibold">${pauta.name}</span>
+                    <span class="text-gray-500 text-xs ml-2">(por ${pauta.ownerEmail})</span>
+                </div>
+                <span class="text-red-600 font-semibold">Expira em: ${formattedExpirationDate}</span>
+            `;
+            pautasListEl.appendChild(pautaEl);
+        });
+    });
+};
+
 const showPautaSelectionScreen = (userId) => {
     const pautasList = document.getElementById('pautas-list');
     pautasList.innerHTML = '<p class="col-span-full text-center">Carregando pautas...</p>';
@@ -761,8 +808,25 @@ const showPautaSelectionScreen = (userId) => {
         snapshot.docs.forEach((docSnap) => {
             const pauta = docSnap.data();
             const card = document.createElement('div');
-            card.className = "relative bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer";
-            card.innerHTML = `<h3 class="font-bold text-xl mb-2">${pauta.name}</h3><p class="text-gray-600">Membros: ${pauta.memberEmails?.length || 1}</p>`;
+            card.className = "relative bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer flex flex-col justify-between h-full";
+            
+            const creationDate = new Date(pauta.createdAt);
+            const expirationDate = new Date(creationDate);
+            expirationDate.setDate(creationDate.getDate() + 7); // 7 dias para expirar
+
+            const formattedCreationDate = creationDate.toLocaleDateString('pt-BR');
+            const formattedExpirationDate = expirationDate.toLocaleDateString('pt-BR');
+
+            card.innerHTML = `
+                <div>
+                    <h3 class="font-bold text-xl mb-2">${pauta.name}</h3>
+                    <p class="text-gray-600">Membros: ${pauta.memberEmails?.length || 1}</p>
+                </div>
+                <div class="mt-4 pt-2 border-t border-gray-200">
+                    <p class="text-xs text-gray-500">Criada em: <strong>${formattedCreationDate}</strong></p>
+                    <p class="text-xs text-red-600">Será eliminada em: <strong>${formattedExpirationDate}</strong></p>
+                </div>
+            `;
             card.addEventListener('click', () => loadPauta(docSnap.id, pauta.name));
             pautasList.appendChild(card);
         });
@@ -773,6 +837,10 @@ const showPautaSelectionScreen = (userId) => {
 const handleAuthState = () => {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
+            if (user.uid === ADMIN_UID) {
+                loadAdminPanel();
+            }
+
             const userDoc = await getDoc(doc(db, "users", user.uid));
             if (userDoc.exists() && userDoc.data().status === 'approved') {
                 currentUserName = userDoc.data().name || user.email;
@@ -1701,5 +1769,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
+
 
 
