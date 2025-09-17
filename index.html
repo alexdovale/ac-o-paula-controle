@@ -427,72 +427,38 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
         </div>
     </div>
-    <div id="forgot-password-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50"></div>
-    <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 80vh;">
-             <div class="flex justify-between items-center mb-4 flex-shrink-0">
-           <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+     <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 80vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Política de Privacidade</h2>
+                <button id="close-policy-modal-btn-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            </div>
+            <div id="policy-content" class="text-gray-700 space-y-4 overflow-y-auto pr-2">
+                <p><strong>1. Natureza do Sistema e Ciclo de Vida dos Dados</strong></p>
+                <p>O Sistema de Gerenciamento de Pauta (SIGAP) é uma interface de controle para a gestão de atendimentos. Ele coleta e armazena os dados pessoais de assistidos, como nome, CPF (opcional), assunto e demanda, por um período de sete dias após a finalização da ação. Após esse prazo, os dados são permanentemente excluídos do SIGAP.</p>
+                <p>Para o armazenamento permanente, todos os dados são enviados e salvos no sistema Verde, que é de responsabilidade da Defensoria Pública do Estado do Rio de Janeiro (DPERJ) e está em total conformidade com a LGPD.</p>
+                
+                <p><strong>2. Dados Coletados pelo SIGAP</strong></p>
+                <p>Para permitir o uso da interface, o SIGAP coleta apenas os dados de autenticação dos usuários (profissionais): e-mail e senha.</p>
+                
+                <p><strong>3. Tratamento e Proteção de Dados (dentro do SIGAP)</strong></p>
+                <p>Os dados de autenticação são utilizados para garantir o acesso restrito e seguro ao sistema. Os dados de assistidos são armazenados por apenas sete dias, tempo necessário para a conclusão da ação, e são protegidos por medidas de segurança para evitar acesso não autorizado.</p>
+                
+                <p><strong>4. Direitos dos Titulares dos Dados</strong></p>
+                <p>Os direitos dos assistidos, como acesso, correção e exclusão de dados, são garantidos e exercidos diretamente por meio do sistema Verde, que é o responsável pelo armazenamento final. Os usuários do SIGAP podem gerenciar a pauta e solicitar alterações no sistema Verde conforme as normas da DPERJ.</p>
 
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 80vh;">
+                <p><strong>5. Origem e Transferência de Dados dos Assistidos</strong></p>
+                <p>Os dados dos assistidos gerenciados no SIGAP podem ter duas origens:</p>
+                <p><strong>Importação do Sistema Verde:</strong> A maior parte dos dados (nome, horário, assunto) é transferida manualmente do sistema oficial Verde (DPERJ) através de um processo de exportação e importação. Neste fluxo, o CPF do assistido não é transferido.</p>
+                <p><strong>Cadastro Direto no SIGAP:</strong> Novos atendimentos, como os avulsos, podem ser registrados diretamente na plataforma. Nesses casos, o campo CPF é opcional e pode ser preenchido pelo profissional responsável pelo cadastro (criador ou membro da pauta).</p>
+                <p>O processo de transferência manual consiste na exportação da pauta do sistema Verde, quando houver pauta previamente cadastrada, sua conversão para um formato compatível e a importação do arquivo final no SIGAP. Cabe ao usuário responsável pela transferência garantir a segurança dos dados durante este processo, incluindo a exclusão segura dos arquivos intermediários (como PDFs e CSVs) de seus dispositivos locais após a importação bem-sucedida. O SIGAP não se responsabiliza pelo manuseio dos dados fora de sua plataforma, mas orienta todos os usuários a seguirem as melhores práticas de segurança para proteger a privacidade dos assistidos.</p>
+            </div>
+            <div class="flex justify-end mt-6 flex-shrink-0">
+                <button id="close-policy-modal-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Fechar</button>
+            </div>
+        </div>
+    </div>
 
-            <div class="flex justify-between items-center mb-4 flex-shrink-0">
-
-                <h2 class="text-2xl font-bold text-gray-800">Política de Privacidade</h2>
-
-                <button id="close-policy-modal-btn-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
-
-            </div>
-
-            <div id="policy-content" class="text-gray-700 space-y-4 overflow-y-auto pr-2">
-
-                <p><strong>1. Natureza do Sistema e Ciclo de Vida dos Dados</strong></p>
-
-                <p>O Sistema de Gerenciamento de Pauta (SIGAP) é uma interface de controle para a gestão de atendimentos. Ele coleta e armazena os dados pessoais de assistidos, como nome, CPF (opcional), assunto e demanda, por um período de sete dias após a finalização da ação. Após esse prazo, os dados são permanentemente excluídos do SIGAP.</p>
-
-                <p>Para o armazenamento permanente, todos os dados são enviados e salvos no sistema Verde, que é de responsabilidade da Defensoria Pública do Estado do Rio de Janeiro (DPERJ) e está em total conformidade com a LGPD.</p>
-
-                
-
-                <p><strong>2. Dados Coletados pelo SIGAP</strong></p>
-
-                <p>Para permitir o uso da interface, o SIGAP coleta apenas os dados de autenticação dos usuários (profissionais): e-mail e senha.</p>
-
-                
-
-                <p><strong>3. Tratamento e Proteção de Dados (dentro do SIGAP)</strong></p>
-
-                <p>Os dados de autenticação são utilizados para garantir o acesso restrito e seguro ao sistema. Os dados de assistidos são armazenados por apenas sete dias, tempo necessário para a conclusão da ação, e são protegidos por medidas de segurança para evitar acesso não autorizado.</p>
-
-                
-
-                <p><strong>4. Direitos dos Titulares dos Dados</strong></p>
-
-                <p>Os direitos dos assistidos, como acesso, correção e exclusão de dados, são garantidos e exercidos diretamente por meio do sistema Verde, que é o responsável pelo armazenamento final. Os usuários do SIGAP podem gerenciar a pauta e solicitar alterações no sistema Verde conforme as normas da DPERJ.</p>
-
-
-
-                <p><strong>5. Origem e Transferência de Dados dos Assistidos</strong></p>
-
-                <p>Os dados dos assistidos gerenciados no SIGAP podem ter duas origens:</p>
-
-                <p><strong>Importação do Sistema Verde:</strong> A maior parte dos dados (nome, horário, assunto) é transferida manualmente do sistema oficial Verde (DPERJ) através de um processo de exportação e importação. Neste fluxo, o CPF do assistido não é transferido.</p>
-
-                <p><strong>Cadastro Direto no SIGAP:</strong> Novos atendimentos, como os avulsos, podem ser registrados diretamente na plataforma. Nesses casos, o campo CPF é opcional e pode ser preenchido pelo profissional responsável pelo cadastro (criador ou membro da pauta).</p>
-
-                <p>O processo de transferência manual consiste na exportação da pauta do sistema Verde, quando houver pauta previamente cadastrada, sua conversão para um formato compatível e a importação do arquivo final no SIGAP. Cabe ao usuário responsável pela transferência garantir a segurança dos dados durante este processo, incluindo a exclusão segura dos arquivos intermediários (como PDFs e CSVs) de seus dispositivos locais após a importação bem-sucedida. O SIGAP não se responsabiliza pelo manuseio dos dados fora de sua plataforma, mas orienta todos os usuários a seguirem as melhores práticas de segurança para proteger a privacidade dos assistidos.</p>
-
-            </div>
-
-            <div class="flex justify-end mt-6 flex-shrink-0">
-
-                <button id="close-policy-modal-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Fechar</button>
-
-            </div>
-
-        </div>
-
-    </div>
-    
     <div id="documents-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl flex flex-col" style="max-height: 90vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -1829,4 +1795,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
+
 
