@@ -10,17 +10,22 @@
             background-color: #f4f4f4;
             display: flex;
             justify-content: center;
-            align-items: center;
-            height: 100vh;
+            align-items: flex-start; /* Alinha no topo para a lista não ficar no meio da tela */
+            padding: 20px;
             margin: 0;
+            gap: 40px;
+            flex-wrap: wrap; /* Permite que os blocos quebrem a linha em telas menores */
         }
-        .container {
+        .container, .list-container {
             background-color: #fff;
             padding: 30px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             width: 90%;
             max-width: 500px;
+        }
+        .list-container {
+            max-width: 700px;
         }
         h1 {
             text-align: center;
@@ -64,16 +69,31 @@
         button:hover {
             background-color: #218838;
         }
+        
+        /* Estilo da Tabela */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
         .whatsapp-link {
-            display: block;
-            margin-top: 15px;
-            text-align: center;
-            padding: 10px;
+            display: inline-block;
+            padding: 8px 12px;
             background-color: #25D366;
             color: #fff;
             text-decoration: none;
             border-radius: 4px;
             font-weight: bold;
+            font-size: 14px;
+            transition: background-color 0.3s;
         }
         .whatsapp-link:hover {
             background-color: #128C7E;
@@ -85,7 +105,6 @@
 <div class="container">
     <h1>Gerenciar Colaboradores</h1>
     <form id="colaborador-form">
-        
         <div class="form-group">
             <label for="nome">Nome do Colaborador:</label>
             <input type="text" id="nome" name="nome" required>
@@ -131,69 +150,82 @@
             <textarea id="observacao" name="observacao" rows="3"></textarea>
         </div>
 
-        <button type="submit">Salvar Informações</button>
+        <button type="submit">Adicionar Colaborador</button>
     </form>
-    
-    <div class="form-group" id="whatsapp-link-container" style="margin-top: 25px;">
-        <a id="whatsapp-link" href="#" class="whatsapp-link hidden">Enviar Mensagem via WhatsApp</a>
-    </div>
+</div>
 
+<div class="list-container">
+    <h2>Lista de Colaboradores</h2>
+    <table id="colaboradores-list">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Presença</th>
+                <th>Transporte</th>
+                <th>Local</th>
+                <th>Ação</th>
+            </tr>
+        </thead>
+        <tbody>
+            </tbody>
+    </table>
 </div>
 
 <script>
-    const transporteOptions = document.querySelectorAll('input[name="transporte"]');
+    const form = document.getElementById('colaborador-form');
     const localEncontroGroup = document.getElementById('local-encontro-group');
     const observacaoGroup = document.getElementById('observacao-group');
-    
+    const transporteOptions = document.querySelectorAll('input[name="transporte"]');
+    const colaboradoresList = document.querySelector('#colaboradores-list tbody');
+
+    // Lógica para mostrar/esconder campos do formulário
     transporteOptions.forEach(option => {
         option.addEventListener('change', (event) => {
-            if (event.target.value === 'Com a Empresa') {
-                localEncontroGroup.classList.remove('hidden');
-            } else {
-                localEncontroGroup.classList.add('hidden');
-                observacaoGroup.classList.add('hidden');
-            }
+            localEncontroGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
+            observacaoGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa' || !document.getElementById('meio-caminho').checked);
         });
     });
 
-    const localEncontroOptions = document.querySelectorAll('input[name="localEncontro"]');
-    
-    localEncontroOptions.forEach(option => {
+    document.querySelectorAll('input[name="localEncontro"]').forEach(option => {
         option.addEventListener('change', (event) => {
-            if (event.target.value === 'Meio do Caminho') {
-                observacaoGroup.classList.remove('hidden');
-            } else {
-                observacaoGroup.classList.add('hidden');
-            }
+            observacaoGroup.classList.toggle('hidden', event.target.value !== 'Meio do Caminho');
         });
     });
 
-    document.getElementById('colaborador-form').addEventListener('submit', (event) => {
+    // Lógica de envio e exibição na lista
+    form.addEventListener('submit', (event) => {
         event.preventDefault();
         
-        const form = event.target;
-        const nome = form.querySelector('#nome').value;
-        const telefone = form.querySelector('#telefone').value;
+        const nome = document.getElementById('nome').value;
+        const telefone = document.getElementById('telefone').value;
+        const presenca = document.getElementById('presenca').checked ? 'Sim' : 'Não';
+        const transporte = document.querySelector('input[name="transporte"]:checked').value;
+        const localEncontro = transporte === 'Com a Empresa' ? (document.querySelector('input[name="localEncontro"]:checked')?.value || '') : '';
+        const observacao = localEncontro === 'No meio do caminho' ? document.getElementById('observacao').value : '';
+
+        // Cria a linha da tabela com os dados
+        const newRow = document.createElement('tr');
+        newRow.innerHTML = `
+            <td>${nome}</td>
+            <td>${presenca}</td>
+            <td>${transporte}</td>
+            <td>${localEncontro || observacao || '-'}</td>
+            <td>
+                <a href="https://wa.me/55${telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá, ${nome}! Estamos confirmando os detalhes do evento.`)}" 
+                   class="whatsapp-link" target="_blank">
+                   WhatsApp
+                </a>
+            </td>
+        `;
         
-        // Formata o número de telefone para o link do WhatsApp (código do país + DDD + número)
-        // O código do país para o Brasil é 55.
-        const ddd_number = "55" + telefone.replace(/\D/g, ''); 
-
-        // Cria a mensagem padrão
-        const mensagemPadrao = `Olá, ${nome}! Estou entrando em contato sobre a pauta do evento.`;
-
-        // Codifica a mensagem para a URL
-        const mensagemCodificada = encodeURIComponent(mensagemPadrao);
-
-        // Cria o link completo para o WhatsApp
-        const whatsappLink = `https://wa.me/${ddd_number}?text=${mensagemCodificada}`;
-
-        // Atualiza o link do botão e o torna visível
-        const whatsappLinkElement = document.getElementById('whatsapp-link');
-        whatsappLinkElement.href = whatsappLink;
-        whatsappLinkElement.classList.remove('hidden');
-
-        alert('Informações salvas! O link para o WhatsApp foi gerado abaixo.');
+        colaboradoresList.appendChild(newRow);
+        
+        // Limpa o formulário para a próxima entrada
+        form.reset();
+        localEncontroGroup.classList.add('hidden');
+        observacaoGroup.classList.add('hidden');
+        
+        alert('Colaborador adicionado à lista com sucesso!');
     });
 </script>
 
