@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Colaboradores</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 500px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"], input[type="tel"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .options-group label {
+            display: inline-block;
+            margin-right: 20px;
+            font-weight: normal;
+        }
+        .hidden {
+            display: none;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .whatsapp-link {
+            display: block;
+            margin-top: 15px;
+            text-align: center;
+            padding: 10px;
+            background-color: #25D366;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .whatsapp-link:hover {
+            background-color: #128C7E;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Gerenciar Colaboradores</h1>
+    <form id="colaborador-form">
+        
+        <div class="form-group">
+            <label for="nome">Nome do Colaborador:</label>
+            <input type="text" id="nome" name="nome" required>
+        </div>
+
+        <div class="form-group">
+            <label for="telefone">Telefone (com DDD):</label>
+            <input type="tel" id="telefone" name="telefone" placeholder="Ex: 21999998888" required>
+        </div>
+
+        <div class="form-group">
+            <label>Presença:</label>
+            <div class="options-group">
+                <input type="checkbox" id="presenca" name="presenca" value="Presente">
+                <label for="presenca">Marcar Presença</label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Como vai se deslocar?</label>
+            <div class="options-group">
+                <input type="radio" id="meios-proprios" name="transporte" value="Meios Próprios" required>
+                <label for="meios-proprios">Meios Próprios</label>
+                
+                <input type="radio" id="com-empresa" name="transporte" value="Com a Empresa">
+                <label for="com-empresa">Com a Empresa</label>
+            </div>
+        </div>
+
+        <div class="form-group hidden" id="local-encontro-group">
+            <label>Ponto de Encontro:</label>
+            <div class="options-group">
+                <input type="radio" id="sede" name="localEncontro" value="Sede">
+                <label for="sede">Sede</label>
+                
+                <input type="radio" id="meio-caminho" name="localEncontro" value="Meio do Caminho">
+                <label for="meio-caminho">No meio do caminho</label>
+            </div>
+        </div>
+
+        <div class="form-group hidden" id="observacao-group">
+            <label for="observacao">Observação:</label>
+            <textarea id="observacao" name="observacao" rows="3"></textarea>
+        </div>
+
+        <button type="submit">Salvar Informações</button>
+    </form>
+    
+    <div class="form-group" id="whatsapp-link-container" style="margin-top: 25px;">
+        <a id="whatsapp-link" href="#" class="whatsapp-link hidden">Enviar Mensagem via WhatsApp</a>
+    </div>
+
+</div>
+
+<script>
+    const transporteOptions = document.querySelectorAll('input[name="transporte"]');
+    const localEncontroGroup = document.getElementById('local-encontro-group');
+    const observacaoGroup = document.getElementById('observacao-group');
+    
+    transporteOptions.forEach(option => {
+        option.addEventListener('change', (event) => {
+            if (event.target.value === 'Com a Empresa') {
+                localEncontroGroup.classList.remove('hidden');
+            } else {
+                localEncontroGroup.classList.add('hidden');
+                observacaoGroup.classList.add('hidden');
+            }
+        });
+    });
+
+    const localEncontroOptions = document.querySelectorAll('input[name="localEncontro"]');
+    
+    localEncontroOptions.forEach(option => {
+        option.addEventListener('change', (event) => {
+            if (event.target.value === 'Meio do Caminho') {
+                observacaoGroup.classList.remove('hidden');
+            } else {
+                observacaoGroup.classList.add('hidden');
+            }
+        });
+    });
+
+    document.getElementById('colaborador-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        
+        const form = event.target;
+        const nome = form.querySelector('#nome').value;
+        const telefone = form.querySelector('#telefone').value;
+        
+        // Formata o número de telefone para o link do WhatsApp (código do país + DDD + número)
+        // O código do país para o Brasil é 55.
+        const ddd_number = "55" + telefone.replace(/\D/g, ''); 
+
+        // Cria a mensagem padrão
+        const mensagemPadrao = `Olá, ${nome}! Estou entrando em contato sobre a pauta do evento.`;
+
+        // Codifica a mensagem para a URL
+        const mensagemCodificada = encodeURIComponent(mensagemPadrao);
+
+        // Cria o link completo para o WhatsApp
+        const whatsappLink = `https://wa.me/${ddd_number}?text=${mensagemCodificada}`;
+
+        // Atualiza o link do botão e o torna visível
+        const whatsappLinkElement = document.getElementById('whatsapp-link');
+        whatsappLinkElement.href = whatsappLink;
+        whatsappLinkElement.classList.remove('hidden');
+
+        alert('Informações salvas! O link para o WhatsApp foi gerado abaixo.');
+    });
+</script>
+
+</body>
+</html>
