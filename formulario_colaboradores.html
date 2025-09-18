@@ -116,14 +116,6 @@
         </div>
 
         <div class="form-group">
-            <label>Presença:</label>
-            <div class="options-group">
-                <input type="checkbox" id="presenca" name="presenca" value="Presente">
-                <label for="presenca">Marcar Presença</label>
-            </div>
-        </div>
-
-        <div class="form-group">
             <label>Como vai se deslocar?</label>
             <div class="options-group">
                 <input type="radio" id="meios-proprios" name="transporte" value="Meios Próprios" required>
@@ -160,7 +152,7 @@
         <thead>
             <tr>
                 <th>Nome</th>
-                <th>Check-in</th>
+                <th>Presença</th>
                 <th>Horário</th>
                 <th>WhatsApp</th>
             </tr>
@@ -203,14 +195,13 @@
         
         const nome = document.getElementById('nome').value;
         const telefone = document.getElementById('telefone').value;
-        const presencaInicial = document.getElementById('presenca').checked;
         
         // Cria a linha da tabela com os dados
         const newRow = document.createElement('tr');
         newRow.innerHTML = `
             <td>${nome}</td>
-            <td><input type="checkbox" class="checkin-checkbox" ${presencaInicial ? 'checked' : ''}></td>
-            <td>${presencaInicial ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
+            <td><input type="checkbox" class="checkin-checkbox"></td>
+            <td>--:--</td>
             <td>
                 <a href="https://wa.me/55${telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá, ${nome}! Estamos confirmando os detalhes do evento.`)}" 
                    class="whatsapp-link" target="_blank">
@@ -242,4 +233,3 @@
 
 </body>
 </html>
-
