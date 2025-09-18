@@ -10,11 +10,11 @@
             background-color: #f4f4f4;
             display: flex;
             justify-content: center;
-            align-items: flex-start; /* Alinha no topo para a lista não ficar no meio da tela */
+            align-items: flex-start;
             padding: 20px;
             margin: 0;
             gap: 40px;
-            flex-wrap: wrap; /* Permite que os blocos quebrem a linha em telas menores */
+            flex-wrap: wrap;
         }
         .container, .list-container {
             background-color: #fff;
@@ -25,7 +25,7 @@
             max-width: 500px;
         }
         .list-container {
-            max-width: 700px;
+            max-width: 600px; /* Largura ajustada para a nova lista */
         }
         h1 {
             text-align: center;
@@ -155,15 +155,14 @@
 </div>
 
 <div class="list-container">
-    <h2>Lista de Colaboradores</h2>
+    <h2>Lista de Presença</h2>
     <table id="colaboradores-list">
         <thead>
             <tr>
                 <th>Nome</th>
-                <th>Presença</th>
-                <th>Transporte</th>
-                <th>Local</th>
-                <th>Ação</th>
+                <th>Check-in</th>
+                <th>Horário</th>
+                <th>WhatsApp</th>
             </tr>
         </thead>
         <tbody>
@@ -182,7 +181,13 @@
     transporteOptions.forEach(option => {
         option.addEventListener('change', (event) => {
             localEncontroGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
-            observacaoGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa' || !document.getElementById('meio-caminho').checked);
+            observacaoGroup.classList.add('hidden'); // Oculta observação por padrão
+            if (event.target.value === 'Com a Empresa') {
+                const localEncontroOptions = document.querySelectorAll('input[name="localEncontro"]');
+                localEncontroOptions.forEach(localOption => {
+                    localOption.checked = false; // Limpa a seleção
+                });
+            }
         });
     });
 
@@ -198,36 +203,43 @@
         
         const nome = document.getElementById('nome').value;
         const telefone = document.getElementById('telefone').value;
-        const presenca = document.getElementById('presenca').checked ? 'Sim' : 'Não';
-        const transporte = document.querySelector('input[name="transporte"]:checked').value;
-        const localEncontro = transporte === 'Com a Empresa' ? (document.querySelector('input[name="localEncontro"]:checked')?.value || '') : '';
-        const observacao = localEncontro === 'No meio do caminho' ? document.getElementById('observacao').value : '';
-
+        const presencaInicial = document.getElementById('presenca').checked;
+        
         // Cria a linha da tabela com os dados
         const newRow = document.createElement('tr');
         newRow.innerHTML = `
             <td>${nome}</td>
-            <td>${presenca}</td>
-            <td>${transporte}</td>
-            <td>${localEncontro || observacao || '-'}</td>
+            <td><input type="checkbox" class="checkin-checkbox" ${presencaInicial ? 'checked' : ''}></td>
+            <td>${presencaInicial ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</td>
             <td>
                 <a href="https://wa.me/55${telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá, ${nome}! Estamos confirmando os detalhes do evento.`)}" 
                    class="whatsapp-link" target="_blank">
-                   WhatsApp
+                   Mensagem
                 </a>
             </td>
         `;
         
         colaboradoresList.appendChild(newRow);
         
+        // Adiciona o event listener para a nova checkbox criada
+        const newCheckbox = newRow.querySelector('.checkin-checkbox');
+        newCheckbox.addEventListener('change', (e) => {
+            const horarioCell = e.target.closest('tr').querySelector('td:nth-child(3)');
+            if (e.target.checked) {
+                const now = new Date();
+                horarioCell.textContent = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            } else {
+                horarioCell.textContent = '--:--';
+            }
+        });
+
         // Limpa o formulário para a próxima entrada
         form.reset();
         localEncontroGroup.classList.add('hidden');
         observacaoGroup.classList.add('hidden');
-        
-        alert('Colaborador adicionado à lista com sucesso!');
     });
 </script>
 
 </body>
 </html>
+
