@@ -300,14 +300,15 @@
       measurementId: "G-8N6X36BC4M"
     };
 
-    // Inicializa o Firebase e o Firestore
+    // Inicializa o Firebase
     const app = firebase.initializeApp(firebaseConfig);
     const db = app.firestore();
 
     const urlParams = new URLSearchParams(window.location.search);
     const pautaId = urlParams.get('pautaId');
+    const userId = urlParams.get('userId'); // Pega o userId da URL
 
-    if (!pautaId) {
+    if (!pautaId || !userId) {
         document.body.innerHTML = `
             <style>
                 body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f4; }
@@ -317,12 +318,12 @@
                 .error-container a { display: inline-block; margin-top: 20px; padding: 10px 20px; background-color: #6c757d; color: #fff; text-decoration: none; border-radius: 5px; }
             </style>
             <div class="error-container">
-                <h1>Erro: Pauta não especificada</h1>
+                <h1>Erro: Acesso não autorizado</h1>
                 <p>Por favor, acesse esta página a partir de uma pauta específica no sistema principal.</p>
                 <a href="index.html">Voltar para o Início</a>
             </div>
         `;
-        throw new Error("ID da Pauta não encontrado na URL.");
+        throw new Error("ID da Pauta ou do Usuário não encontrado na URL.");
     }
 
     const form = document.getElementById('colaborador-form');
