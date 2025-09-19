@@ -185,6 +185,11 @@ document.addEventListener('DOMContentLoaded', () => {
     subjectInput.addEventListener('input', checkSubject);
     subjectInput.addEventListener('change', checkSubject); // Para casos de seleção pelo mouse
 
+    // Adiciona um ouvinte para selecionar o texto ao focar, facilitando a alteração
+    subjectInput.addEventListener('focus', () => {
+        subjectInput.select();
+    });
+
     // Adiciona ouvinte de evento ao botão de informação
     infoButton.addEventListener('click', () => {
         if (!infoButton.disabled) {
