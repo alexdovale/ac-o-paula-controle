@@ -146,51 +146,30 @@
                         <input type="file" id="file-upload" class="hidden" accept=".csv">
                     </div>
                 </div>
-                <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Formulário de Atendimento</title>
-    <!-- Incluindo o Tailwind CSS para estilização -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Incluindo a fonte Inter para uma aparência mais moderna -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-    </style>
-</head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
-    <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-4xl">
-        <h1 class="text-2xl font-bold text-gray-800 mb-8 text-center">Formulário de Atendimento</h1>
-
-        <!-- Seu trecho de código adaptado -->
-        <div class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                <div class="flex flex-col lg:col-span-2">
-                    <label for="assisted-name" class="mb-1 font-medium text-gray-600">Nome do Assistido</label>
-                    <input type="text" id="assisted-name" placeholder="Ex: João da Silva" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition">
-                </div>
-                <div class="flex flex-col">
-                    <label for="assisted-cpf" class="mb-1 font-medium text-gray-600">CPF (Opcional)</label>
-                    <input type="text" id="assisted-cpf" placeholder="___.___.___-__" maxlength="14" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition">
-                </div>
-                <div class="flex flex-col lg:col-span-4">
-                    <label for="assisted-subject" class="mb-1 font-medium text-gray-600">Matéria - Assunto</label>
-                    <!-- 1. Adicionado o atributo 'list' para conectar ao datalist -->
-                    <input list="subjects-list" id="assisted-subject" name="assisted-subject" placeholder="Digite ou selecione um assunto" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition w-full">
-                    <!-- 2. Adicionado o datalist que será preenchido pelo script -->
-                    <datalist id="subjects-list"></datalist>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 3. Adicionada a referência ao seu script externo. -->
-    <script src="assuntos.js" defer></script>
-</body>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                        <div class="flex flex-col lg:col-span-2">
+                            <label for="assisted-name" class="mb-1 font-medium text-gray-600">Nome do Assistido</label>
+                            <input type="text" id="assisted-name" placeholder="Ex: João da Silva" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition">
+                        </div>
+                        <div class="flex flex-col"><label for="assisted-cpf" class="mb-1 font-medium text-gray-600">CPF (Opcional)</label><input type="text" id="assisted-cpf" placeholder="___.___.___-__" maxlength="14" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition"></div>
+                        <div class="flex flex-col lg:col-span-4">
+                            <!-- Rótulo com ícone '!' e tooltip -->
+                            <div class="flex items-center gap-2 mb-1">
+                                <label for="assisted-subject" class="font-medium text-gray-600">Matéria - Assunto</label>
+                                <button type="button" id="subject-info-btn" class="font-bold text-lg text-blue-500 cursor-pointer rounded-full hover:bg-blue-100 w-6 h-6 flex items-center justify-center">!</button>
+                            </div>
+        
+                            <!-- Input conectado ao datalist -->
+                            <input list="subjects-list" id="assisted-subject" name="assisted-subject" placeholder="Digite ou selecione um assunto" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition w-full">
+                            <datalist id="subjects-list"></datalist>
+        
+                            <!-- Container para a descrição, inicialmente oculto -->
+                            <div id="subject-description" class="hidden mt-2 p-4 bg-blue-50 border border-blue-200 text-gray-800 rounded-lg text-sm transition-all duration-300">
+                                <!-- A descrição do assunto selecionado será inserida aqui via JavaScript -->
+                            </div>
+                        </div>
+                    </div>
 
                     <div id="form-options-container" class="border-t mt-4 pt-4 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                         <div id="is-scheduled-container">
@@ -310,8 +289,11 @@
     </div>
     <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh; display: flex; flex-direction: column;">
-            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0 gap-4">
                 <h2 class="text-2xl font-bold text-gray-800">Gerenciar Membros</h2>
+                <a href="formulario_colaboradores.html" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm whitespace-nowrap">
+                    Gerenciador de Colaboradores
+                </a>
                 <button id="close-members-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
             </div>
             <div class="overflow-y-auto">
@@ -1921,9 +1903,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
-
-
-
-
-
+}
 
