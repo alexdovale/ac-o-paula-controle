@@ -100,14 +100,17 @@
             background-color: #218838;
         }
         
-        /* Botão de Baixar PDF */
-        #download-pdf {
-            display: block;
+        /* Botões de Ação da Lista */
+        .list-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        #download-pdf, #clear-list {
             width: auto;
-            margin: 20px auto 0;
             padding: 8px 16px;
-            background-color: #28a745; /* Cor alterada para verde */
-            color: #fff;
             border: none;
             border-radius: 5px;
             cursor: pointer;
@@ -115,9 +118,23 @@
             text-align: center;
             transition: background-color 0.3s ease;
         }
-        #download-pdf:hover {
-            background-color: #218838; /* Cor alterada para verde mais escuro */
+
+        #download-pdf {
+            background-color: #28a745;
+            color: #fff;
         }
+        #download-pdf:hover {
+            background-color: #218838;
+        }
+
+        #clear-list {
+            background-color: #dc3545; /* Vermelho */
+            color: #fff;
+        }
+        #clear-list:hover {
+            background-color: #c82333;
+        }
+
 
         /* Estilo da Tabela */
         table {
@@ -146,6 +163,46 @@
         }
         .whatsapp-link:hover {
             background-color: #128C7E;
+        }
+
+        /* Estilo do Modal de Confirmação */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        }
+        .modal-content p {
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+        .modal-content button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        #confirm-clear {
+            background-color: #dc3545;
+            color: #fff;
+        }
+        #cancel-clear {
+            background-color: #6c757d;
+            color: #fff;
         }
     </style>
 </head>
@@ -215,7 +272,19 @@
                 <!-- Linhas adicionadas via JS -->
             </tbody>
         </table>
-        <button id="download-pdf">Baixar PDF da Lista</button>
+        <div class="list-actions">
+            <button id="download-pdf">Baixar PDF da Lista</button>
+            <button id="clear-list">Limpar Lista</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação -->
+<div id="confirm-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <p>Tem certeza que deseja limpar toda a lista?<br>Esta ação não pode ser desfeita.</p>
+        <button id="confirm-clear">Sim, Limpar</button>
+        <button id="cancel-clear">Cancelar</button>
     </div>
 </div>
 
@@ -224,19 +293,66 @@
     const localEncontroGroup = document.getElementById('local-encontro-group');
     const observacaoGroup = document.getElementById('observacao-group');
     const transporteOptions = document.querySelectorAll('input[name="transporte"]');
-    const colaboradoresList = document.querySelector('#colaboradores-list tbody');
+    const colaboradoresListBody = document.querySelector('#colaboradores-list tbody');
     const downloadPdfBtn = document.getElementById('download-pdf');
+    const clearListBtn = document.getElementById('clear-list');
+    const confirmModal = document.getElementById('confirm-modal');
+    const confirmClearBtn = document.getElementById('confirm-clear');
+    const cancelClearBtn = document.getElementById('cancel-clear');
+
+    const STORAGE_KEY = 'listaDeColaboradores';
+    let colaboradores = [];
+
+    const saveColaboradores = () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(colaboradores));
+    };
+
+    const renderColaboradores = () => {
+        colaboradoresListBody.innerHTML = ''; // Limpa a lista antes de renderizar
+
+        colaboradores.forEach((colaborador, index) => {
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td>${colaborador.nome}</td>
+                <td><input type="checkbox" class="checkin-checkbox" data-index="${index}" ${colaborador.presente ? 'checked' : ''}></td>
+                <td>${colaborador.horario}</td>
+                <td>
+                    <a href="https://wa.me/55${colaborador.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Bom dia! Poderia, por gentileza, informar se já está chegando? Estamos quase saindo.`)}" 
+                       class="whatsapp-link" target="_blank">
+                       Mensagem
+                    </a>
+                </td>
+            `;
+            colaboradoresListBody.appendChild(newRow);
+        });
+
+        // Adiciona os event listeners para as novas checkboxes
+        document.querySelectorAll('.checkin-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const index = e.target.dataset.index;
+                const colaborador = colaboradores[index];
+
+                if (e.target.checked) {
+                    const now = new Date();
+                    colaborador.presente = true;
+                    colaborador.horario = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                } else {
+                    colaborador.presente = false;
+                    colaborador.horario = '--:--';
+                }
+                saveColaboradores();
+                renderColaboradores();
+            });
+        });
+    };
 
     // Lógica para mostrar/esconder campos do formulário
     transporteOptions.forEach(option => {
         option.addEventListener('change', (event) => {
             localEncontroGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
-            observacaoGroup.classList.add('hidden'); // Oculta observação por padrão
+            observacaoGroup.classList.add('hidden'); 
             if (event.target.value === 'Com a Empresa') {
-                const localEncontroOptions = document.querySelectorAll('input[name="localEncontro"]');
-                localEncontroOptions.forEach(localOption => {
-                    localOption.checked = false; // Limpa a seleção
-                });
+                document.querySelectorAll('input[name="localEncontro"]').forEach(localOption => localOption.checked = false);
             }
         });
     });
@@ -247,39 +363,23 @@
         });
     });
 
-    // Lógica de envio e exibição na lista
+    // Lógica de envio do formulário
     form.addEventListener('submit', (event) => {
         event.preventDefault();
         
         const nome = document.getElementById('nome').value;
         const telefone = document.getElementById('telefone').value;
         
-        const newRow = document.createElement('tr');
-        newRow.innerHTML = `
-            <td>${nome}</td>
-            <td><input type="checkbox" class="checkin-checkbox"></td>
-            <td>--:--</td>
-            <td>
-                <a href="https://wa.me/55${telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Bom dia! Poderia, por gentileza, informar se já está chegando? Estamos quase saindo.`)}" 
-                   class="whatsapp-link" target="_blank">
-                   Mensagem
-                </a>
-            </td>
-        `;
-        
-        colaboradoresList.appendChild(newRow);
-        
-        const newCheckbox = newRow.querySelector('.checkin-checkbox');
-        newCheckbox.addEventListener('change', (e) => {
-            const horarioCell = e.target.closest('tr').querySelector('td:nth-child(3)');
-            if (e.target.checked) {
-                const now = new Date();
-                horarioCell.textContent = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            } else {
-                horarioCell.textContent = '--:--';
-            }
+        colaboradores.push({
+            nome: nome,
+            telefone: telefone,
+            presente: false,
+            horario: '--:--'
         });
 
+        saveColaboradores();
+        renderColaboradores();
+        
         form.reset();
         localEncontroGroup.classList.add('hidden');
         observacaoGroup.classList.add('hidden');
@@ -287,37 +387,76 @@
 
     // Lógica para baixar o PDF
     downloadPdfBtn.addEventListener('click', () => {
-        // As bibliotecas jspdf e jspdf-autotable anexam-se ao objeto 'window.jspdf'
         const doc = new window.jspdf.jsPDF();
         
         const head = [['Nome', 'Presença', 'Horário de Chegada']];
         const tableBody = [];
-        const rows = document.querySelectorAll('#colaboradores-list tbody tr');
+        
+        const presentes = colaboradores.filter(c => c.presente);
 
-        rows.forEach(row => {
-            const nome = row.cells[0].innerText;
-            const presencaCheckbox = row.cells[1].querySelector('input[type="checkbox"]');
-            const presenca = presencaCheckbox.checked ? 'Presente' : 'Ausente';
-            const horario = row.cells[2].innerText;
-            
-            tableBody.push([nome, presenca, horario]);
+        if (presentes.length === 0) {
+            // Reaproveitando a estrutura do modal para notificação
+            const notification = document.createElement('div');
+            notification.textContent = 'Nenhum colaborador com presença marcada para gerar o PDF.';
+            notification.style.position = 'fixed';
+            notification.style.bottom = '20px';
+            notification.style.left = '50%';
+            notification.style.transform = 'translateX(-50%)';
+            notification.style.backgroundColor = '#333';
+            notification.style.color = 'white';
+            notification.style.padding = '15px';
+            notification.style.borderRadius = '5px';
+            notification.style.zIndex = '1001';
+            notification.style.transition = 'opacity 0.5s';
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => document.body.removeChild(notification), 500);
+            }, 3000);
+            return;
+        }
+
+        presentes.forEach(colaborador => {
+            tableBody.push([colaborador.nome, 'Presente', colaborador.horario]);
         });
         
         doc.autoTable({
-            head: head,
-            body: tableBody,
-            startY: 20,
-            headStyles: { fillColor: [22, 160, 133] }, // Tom de verde
-            didDrawPage: function (data) {
-                // Título
+            head: head, body: tableBody, startY: 20,
+            headStyles: { fillColor: [22, 160, 133] },
+            didDrawPage: (data) => {
                 doc.setFontSize(18);
                 doc.setTextColor(40);
                 doc.text('Lista de Presença de Colaboradores', data.settings.margin.left, 15);
             }
         });
         
-        doc.save('lista_de_presenca.pdf');
+        doc.save('lista_presenca_presentes.pdf');
     });
+
+    // Lógica para Limpar a Lista
+    clearListBtn.addEventListener('click', () => {
+        confirmModal.classList.remove('hidden');
+    });
+    cancelClearBtn.addEventListener('click', () => {
+        confirmModal.classList.add('hidden');
+    });
+    confirmClearBtn.addEventListener('click', () => {
+        colaboradores = [];
+        saveColaboradores();
+        renderColaboradores();
+        confirmModal.classList.add('hidden');
+    });
+
+
+    // Carregar dados ao iniciar a página
+    document.addEventListener('DOMContentLoaded', () => {
+        const dadosSalvos = localStorage.getItem(STORAGE_KEY);
+        if (dadosSalvos) {
+            colaboradores = JSON.parse(dadosSalvos);
+        }
+        renderColaboradores();
+    });
+
 </script>
 
 </body>
