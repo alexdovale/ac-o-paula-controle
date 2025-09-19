@@ -165,16 +165,6 @@ document.addEventListener('DOMContentLoaded', () => {
         datalist.appendChild(option);
     });
 
-    const checkSubject = () => {
-        const currentValue = subjectInput.value;
-        const foundSubject = flatSubjects.find(subject => subject.value === currentValue);
-        if (foundSubject && foundSubject.description) {
-            descriptionBox.textContent = foundSubject.description;
-        } else {
-            descriptionBox.textContent = '';
-        }
-    };
-
     const updateDatalist = (query) => {
         const lowerCaseQuery = query.toLowerCase();
         const filteredSubjects = flatSubjects.filter(item =>
@@ -182,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
             item.description.toLowerCase().includes(lowerCaseQuery)
         );
         
-        // Limpa e repopula o datalist
         while (datalist.firstChild) {
             datalist.removeChild(datalist.firstChild);
         }
@@ -192,14 +181,21 @@ document.addEventListener('DOMContentLoaded', () => {
             datalist.appendChild(option);
         });
     };
+
+    // Função para encontrar um assunto com base no valor do input (curto ou completo).
+    const findSubjectByInputValue = (inputValue) => {
+        return flatSubjects.find(subject => {
+            const lastPart = subject.value.split(' > ').pop();
+            return lastPart === inputValue || subject.value === inputValue;
+        });
+    };
     
-    // Ouve a digitação para filtrar a lista
+    // Ouve a digitação para filtrar a lista.
     subjectInput.addEventListener('input', (e) => {
         updateDatalist(e.target.value);
-        checkSubject();
     });
 
-    // Ouve a seleção para formatar o texto e mostrar a descrição
+    // Ouve a seleção para formatar o texto e exibir a descrição.
     subjectInput.addEventListener('change', () => {
         let selectedText = subjectInput.value;
         if (selectedText.includes(' > ')) {
@@ -207,25 +203,27 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedText = parts[parts.length - 1];
         }
         subjectInput.value = selectedText;
-        checkSubject();
+
+        const foundSubject = findSubjectByInputValue(selectedText);
+        if (foundSubject && foundSubject.description) {
+            descriptionBox.textContent = foundSubject.description;
+            descriptionBox.classList.remove('hidden'); // Exibe a descrição
+        } else {
+            descriptionBox.textContent = '';
+            descriptionBox.classList.add('hidden');
+        }
     });
     
-    // Ouve o clique no botão para exibir ou ocultar a descrição
+    // Ouve o clique no botão para exibir ou ocultar a descrição.
     infoButton.addEventListener('click', () => {
         const currentValue = subjectInput.value;
         
-        // CORREÇÃO: Usamos `subject` no lugar de `item` para garantir que a busca funcione.
-        const foundSubject = flatSubjects.find(subject => {
-            const lastPart = subject.value.split(' > ').pop();
-            return lastPart === currentValue || subject.value === currentValue;
-        });
+        const foundSubject = findSubjectByInputValue(currentValue);
 
         if (foundSubject && foundSubject.description) {
-            // Se encontrou um assunto válido, alterna a visibilidade da descrição
-            descriptionBox.textContent = foundSubject.description; // Garante que o texto esteja atualizado
+            descriptionBox.textContent = foundSubject.description;
             descriptionBox.classList.toggle('hidden');
         } else {
-            // Se não, exibe uma mensagem de aviso na caixa de descrição
             descriptionBox.textContent = 'Por favor, selecione um assunto válido para ver a descrição.';
             descriptionBox.classList.remove('hidden');
         }
