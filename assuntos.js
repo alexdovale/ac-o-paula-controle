@@ -173,6 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (foundSubject && foundSubject.description) {
             descriptionBox.textContent = foundSubject.description;
+            descriptionBox.classList.remove('hidden');
             infoButton.disabled = false;
         } else {
             descriptionBox.classList.add('hidden');
@@ -183,7 +184,23 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Adiciona ouvintes de evento ao campo de input
     subjectInput.addEventListener('input', checkSubject);
-    subjectInput.addEventListener('change', checkSubject); // Para casos de seleção pelo mouse
+
+    // Adiciona um ouvinte para o evento 'change', que é disparado ao selecionar um item do datalist
+    subjectInput.addEventListener('change', () => {
+        let selectedText = subjectInput.value;
+    
+        // Lógica para pegar apenas a última parte após o '>'
+        if (selectedText.includes(' > ')) {
+            const parts = selectedText.split(' > ');
+            selectedText = parts[parts.length - 1];
+        }
+        
+        // Insere o texto processado no campo de input
+        subjectInput.value = selectedText;
+    
+        // Chama a função de verificação para exibir a descrição
+        checkSubject();
+    });
 
     // Adiciona um ouvinte de clique para gerenciar a seleção e limpeza do campo.
     subjectInput.addEventListener('click', (e) => {
@@ -208,4 +225,3 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
-
