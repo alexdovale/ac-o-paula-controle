@@ -6,7 +6,7 @@
     <title>Gerenciar Colaboradores</title>
     <!-- Bibliotecas para gerar PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf-autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.autotable.umd.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -260,7 +260,7 @@
             <td><input type="checkbox" class="checkin-checkbox"></td>
             <td>--:--</td>
             <td>
-                <a href="https://wa.me/55${telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá, ${nome}! Estamos confirmando os detalhes do evento.`)}" 
+                <a href="https://wa.me/55${telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Bom dia! Poderia, por gentileza, informar se já está chegando? Estamos quase saindo.`)}" 
                    class="whatsapp-link" target="_blank">
                    Mensagem
                 </a>
@@ -322,6 +322,5 @@
 
 </body>
 </html>
-
 
 
