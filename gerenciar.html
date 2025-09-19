@@ -358,10 +358,15 @@
         colaboradoresListBody.innerHTML = ''; // Limpa a lista antes de renderizar
 
         colaboradores.forEach((colaborador, index) => {
+            let deslocamentoTexto = colaborador.transporte;
+            if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro) {
+                deslocamentoTexto += ` (${colaborador.localEncontro})`;
+            }
+
             const newRow = document.createElement('tr');
             newRow.innerHTML = `
                 <td>${colaborador.nome}</td>
-                <td>${colaborador.transporte}</td>
+                <td>${deslocamentoTexto}</td>
                 <td><input type="checkbox" class="checkin-checkbox" data-index="${index}" ${colaborador.presente ? 'checked' : ''}></td>
                 <td>${colaborador.horario}</td>
                 <td>
