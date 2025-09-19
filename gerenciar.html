@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerenciar Colaboradores</title>
-    <!-- Bibliotecas para gerar PDF de um novo CDN -->
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.autotable.umd.min.js"></script>
     <style>
@@ -243,7 +242,10 @@
             <div class="form-group">
                 <label>Como vai se deslocar?</label>
                 <div class="options-group">
-                    <input type="radio" id="meios-proprios" name="transporte" value="Meios Próprios" required>
+                    <input type="radio" id="nao-confirmado" name="transporte" value="Não Confirmado" checked required>
+                    <label for="nao-confirmado">Não Confirmado</label>
+                    
+                    <input type="radio" id="meios-proprios" name="transporte" value="Meios Próprios">
                     <label for="meios-proprios">Meios Próprios</label>
                     
                     <input type="radio" id="com-empresa" name="transporte" value="Com a Empresa">
@@ -277,6 +279,7 @@
             <thead>
                 <tr>
                     <th>Nome</th>
+                    <th>Deslocamento</th>
                     <th>Presença</th>
                     <th>Horário</th>
                     <th>WhatsApp</th>
@@ -284,8 +287,7 @@
                 </tr>
             </thead>
             <tbody>
-                <!-- Linhas adicionadas via JS -->
-            </tbody>
+                </tbody>
         </table>
         <div class="list-actions">
             <button id="download-pdf">Baixar PDF da Lista</button>
@@ -294,7 +296,6 @@
     </div>
 </div>
 
-<!-- Modal de Confirmação -->
 <div id="confirm-modal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
         <p id="modal-text"></p>
@@ -360,12 +361,13 @@
             const newRow = document.createElement('tr');
             newRow.innerHTML = `
                 <td>${colaborador.nome}</td>
+                <td>${colaborador.transporte}</td>
                 <td><input type="checkbox" class="checkin-checkbox" data-index="${index}" ${colaborador.presente ? 'checked' : ''}></td>
                 <td>${colaborador.horario}</td>
                 <td>
                     <a href="https://wa.me/55${colaborador.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Bom dia! Poderia, por gentileza, informar se já está chegando? Estamos quase saindo.`)}" 
-                       class="whatsapp-link" target="_blank">
-                       Mensagem
+                        class="whatsapp-link" target="_blank">
+                        Mensagem
                     </a>
                 </td>
                 <td class="action-buttons">
@@ -409,6 +411,25 @@
                 const colaborador = colaboradores[index];
                 document.getElementById('nome').value = colaborador.nome;
                 document.getElementById('telefone').value = colaborador.telefone;
+                
+                // Marca a opção de transporte correta
+                const transporteRadio = document.querySelector(`input[name="transporte"][value="${colaborador.transporte}"]`);
+                if (transporteRadio) {
+                    transporteRadio.checked = true;
+                    transporteRadio.dispatchEvent(new Event('change'));
+                }
+
+                // Se houver local de encontro, marca
+                const localEncontroRadio = document.querySelector(`input[name="localEncontro"][value="${colaborador.localEncontro}"]`);
+                if (localEncontroRadio) {
+                    localEncontroRadio.checked = true;
+                    localEncontroRadio.dispatchEvent(new Event('change'));
+                }
+
+                // Preenche a observação
+                document.getElementById('observacao').value = colaborador.observacao || '';
+
+
                 formTitle.textContent = "Editar Colaborador";
                 submitButton.textContent = "Salvar Alterações";
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -441,7 +462,7 @@
         option.addEventListener('change', (event) => {
             localEncontroGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
             observacaoGroup.classList.add('hidden'); 
-            if (event.target.value === 'Com a Empresa') {
+            if (event.target.value !== 'Com a Empresa') {
                 document.querySelectorAll('input[name="localEncontro"]').forEach(localOption => localOption.checked = false);
             }
         });
@@ -459,16 +480,25 @@
         
         const nome = document.getElementById('nome').value;
         const telefone = document.getElementById('telefone').value;
+        const transporte = document.querySelector('input[name="transporte"]:checked').value;
+        const localEncontro = document.querySelector('input[name="localEncontro"]:checked')?.value || '';
+        const observacao = document.getElementById('observacao').value;
 
         if (editIndex !== null) {
             // Editando
             colaboradores[editIndex].nome = nome;
             colaboradores[editIndex].telefone = telefone;
+            colaboradores[editIndex].transporte = transporte;
+            colaboradores[editIndex].localEncontro = localEncontro;
+            colaboradores[editIndex].observacao = observacao;
         } else {
             // Adicionando novo
             colaboradores.push({
                 nome: nome,
                 telefone: telefone,
+                transporte: transporte,
+                localEncontro: localEncontro,
+                observacao: observacao,
                 presente: false,
                 horario: '--:--'
             });
@@ -482,7 +512,7 @@
     // Lógica para baixar o PDF
     downloadPdfBtn.addEventListener('click', () => {
         const doc = new window.jspdf.jsPDF();
-        const head = [['Nome', 'Presença', 'Horário de Chegada']];
+        const head = [['Nome', 'Deslocamento', 'Presença', 'Horário de Chegada']];
         const tableBody = [];
         const presentes = colaboradores.filter(c => c.presente);
 
@@ -508,7 +538,10 @@
         }
 
         presentes.forEach(colaborador => {
-            tableBody.push([colaborador.nome, 'Presente', colaborador.horario]);
+            const deslocamento = colaborador.transporte === 'Com a Empresa' 
+                ? `${colaborador.transporte} (${colaborador.localEncontro})`
+                : colaborador.transporte;
+            tableBody.push([colaborador.nome, deslocamento, 'Presente', colaborador.horario]);
         });
         
         doc.autoTable({
@@ -566,4 +599,3 @@
 
 </body>
 </html>
-
