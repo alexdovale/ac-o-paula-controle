@@ -133,12 +133,12 @@ document.addEventListener('DOMContentLoaded', () => {
         { text: "Defesa de Direitos Homoafetivos", description: "Atuação específica para a promoção e defesa dos direitos de pessoas LGBT." }
     ];
 
+    // Função para achatar a árvore em uma lista de objetos
     function flattenTreeWithObjects(nodes, parentPrefix = '') {
         let flatList = [];
         nodes.forEach(node => {
             const currentValue = parentPrefix ? `${parentPrefix} > ${node.text}` : node.text;
             flatList.push({ value: currentValue, description: node.description });
-
             if (node.children) {
                 flatList = flatList.concat(flattenTreeWithObjects(node.children, currentValue));
             }
@@ -146,17 +146,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return flatList;
     }
 
+    // A lista de assuntos "achatada" é declarada aqui
+    const flatSubjects = flattenTreeWithObjects(subjectTree);
+
+    // Seletores para os campos de input
     const datalist = document.getElementById('subjects-list');
     const subjectInput = document.getElementById('assisted-subject');
+    const editSubjectInput = document.getElementById('edit-assisted-subject');
     const descriptionBox = document.getElementById('subject-description');
     const infoButton = document.getElementById('subject-info-btn');
 
-    if (!datalist || !subjectInput || !descriptionBox || !infoButton) {
+    if (!datalist || !subjectInput || !descriptionBox || !infoButton || !editSubjectInput) {
         console.error('Elementos essenciais para a lista de assuntos não foram encontrados.');
         return;
     }
-
-    const flatSubjects = flattenTreeWithObjects(subjectTree);
 
     // Preenche o datalist com todas as opções inicialmente.
     flatSubjects.forEach(subject => {
@@ -182,7 +185,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // Função para encontrar um assunto com base no valor do input (curto ou completo).
     const findSubjectByInputValue = (inputValue) => {
         return flatSubjects.find(subject => {
             const lastPart = subject.value.split(' > ').pop();
@@ -190,34 +192,36 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
     
-    // Ouve a digitação para filtrar a lista.
+    // Ouve a digitação para filtrar a lista no campo principal
     subjectInput.addEventListener('input', (e) => {
         updateDatalist(e.target.value);
     });
 
-    // Ouve a seleção para formatar o texto e exibir a descrição.
+    // Ouve a seleção para formatar o texto e exibir a descrição no campo principal
     subjectInput.addEventListener('change', () => {
-        let selectedText = subjectInput.value;
+        const originalValue = subjectInput.value;
+        let selectedText = originalValue;
+        
         if (selectedText.includes(' > ')) {
             const parts = selectedText.split(' > ');
             selectedText = parts[parts.length - 1];
         }
+        
         subjectInput.value = selectedText;
 
         const foundSubject = findSubjectByInputValue(selectedText);
         if (foundSubject && foundSubject.description) {
             descriptionBox.textContent = foundSubject.description;
-            descriptionBox.classList.remove('hidden'); // Exibe a descrição
+            descriptionBox.classList.remove('hidden');
         } else {
             descriptionBox.textContent = '';
             descriptionBox.classList.add('hidden');
         }
     });
-    
-    // Ouve o clique no botão para exibir ou ocultar a descrição.
+
+    // Ouve o clique no botão de info para exibir ou ocultar a descrição do campo principal
     infoButton.addEventListener('click', () => {
         const currentValue = subjectInput.value;
-        
         const foundSubject = findSubjectByInputValue(currentValue);
 
         if (foundSubject && foundSubject.description) {
@@ -228,4 +232,18 @@ document.addEventListener('DOMContentLoaded', () => {
             descriptionBox.classList.remove('hidden');
         }
     });
+
+    // LÓGICA ADICIONADA: Ouve a seleção no campo de edição
+    editSubjectInput.addEventListener('change', () => {
+        const originalValue = editSubjectInput.value;
+        let selectedText = originalValue;
+        
+        if (selectedText.includes(' > ')) {
+            const parts = selectedText.split(' > ');
+            selectedText = parts[parts.length - 1];
+        }
+        
+        editSubjectInput.value = selectedText;
+    });
+
 });
