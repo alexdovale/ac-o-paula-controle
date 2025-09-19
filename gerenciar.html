@@ -12,14 +12,14 @@
             background-color: #f4f4f4;
             display: flex;
             justify-content: center;
-            align-items: center; /* Centraliza o conteúdo */
+            align-items: center;
             padding: 20px;
             margin: 0;
-            flex-direction: column; /* Organiza os itens em coluna */
+            flex-direction: column;
         }
         .header {
             width: 100%;
-            max-width: 1140px; /* Alinha com a largura máxima dos contêineres */
+            max-width: 1140px;
             margin-bottom: 20px;
         }
         .content-wrapper {
@@ -69,7 +69,6 @@
             margin-right: 20px;
             font-weight: normal;
         }
-        /* Botão de Voltar */
         .back-button {
             display: inline-block;
             padding: 10px 20px;
@@ -83,11 +82,10 @@
         .back-button:hover {
             background-color: #5a6268;
         }
-        /* Botão principal do formulário */
         button[type="submit"] {
             width: 100%;
             padding: 12px;
-            background-color: #28a745; /* Cor alterada para verde */
+            background-color: #28a745;
             color: #fff;
             border: none;
             border-radius: 4px;
@@ -98,15 +96,12 @@
         button[type="submit"]:hover {
             background-color: #218838;
         }
-        
-        /* Botões de Ação da Lista */
         .list-actions {
             display: flex;
             justify-content: center;
             gap: 10px;
             margin-top: 20px;
         }
-
         #download-pdf, #clear-list {
             width: auto;
             padding: 8px 16px;
@@ -117,25 +112,16 @@
             text-align: center;
             transition: background-color 0.3s ease;
         }
-
-        #download-pdf {
-            background-color: #28a745;
-            color: #fff;
-        }
         #download-pdf:hover {
             background-color: #218838;
         }
-
         #clear-list {
-            background-color: #dc3545; /* Vermelho */
+            background-color: #dc3545;
             color: #fff;
         }
         #clear-list:hover {
             background-color: #c82333;
         }
-
-
-        /* Estilo da Tabela */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -164,7 +150,6 @@
         .whatsapp-link:hover {
             background-color: #128C7E;
         }
-
         .action-buttons button {
             background: none;
             border: none;
@@ -177,8 +162,6 @@
             height: 18px;
             vertical-align: middle;
         }
-
-        /* Estilo do Modal de Confirmação */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -287,7 +270,7 @@
                 </tr>
             </thead>
             <tbody>
-                </tbody>
+            </tbody>
         </table>
         <div class="list-actions">
             <button id="download-pdf">Baixar PDF da Lista</button>
@@ -304,12 +287,26 @@
     </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 <script>
-    // Pega o ID da pauta a partir da URL
+    const firebaseConfig = {
+      apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE",
+      authDomain: "pauta-ce162.firebaseapp.com",
+      projectId: "pauta-ce162",
+      storageBucket: "pauta-ce162.firebasestorage.app",
+      messagingSenderId: "87113750208",
+      appId: "1:87113750208:web:4abba0024f4d4af699bf25",
+      measurementId: "G-8N6X36BC4M"
+    };
+
+    // Inicializa o Firebase e o Firestore
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = app.firestore();
+
     const urlParams = new URLSearchParams(window.location.search);
     const pautaId = urlParams.get('pautaId');
 
-    // Se pautaId não for encontrado na URL, exibe uma mensagem de erro e para a execução.
     if (!pautaId) {
         document.body.innerHTML = `
             <style>
@@ -325,7 +322,7 @@
                 <a href="index.html">Voltar para o Início</a>
             </div>
         `;
-        throw new Error("ID da Pauta não encontrado na URL."); // Para a execução do script
+        throw new Error("ID da Pauta não encontrado na URL.");
     }
 
     const form = document.getElementById('colaborador-form');
@@ -344,20 +341,13 @@
     const confirmActionBtn = document.getElementById('confirm-action');
     const cancelActionBtn = document.getElementById('cancel-action');
 
-    // A chave de armazenamento agora é única para cada pauta
-    const STORAGE_KEY = `listaDeColaboradores_${pautaId}`;
-    let colaboradores = [];
-    let editIndex = null;
+    let editDocId = null;
     let actionToConfirm = null;
 
-    const saveColaboradores = () => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(colaboradores));
-    };
-
-    const renderColaboradores = () => {
-        colaboradoresListBody.innerHTML = ''; // Limpa a lista antes de renderizar
-
-        colaboradores.forEach((colaborador, index) => {
+    // Função para renderizar a lista
+    const renderColaboradores = (colaboradores) => {
+        colaboradoresListBody.innerHTML = '';
+        colaboradores.forEach((colaborador) => {
             let deslocamentoTexto = colaborador.transporte;
             if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro) {
                 deslocamentoTexto += ` (${colaborador.localEncontro})`;
@@ -367,7 +357,7 @@
             newRow.innerHTML = `
                 <td>${colaborador.nome}</td>
                 <td>${deslocamentoTexto}</td>
-                <td><input type="checkbox" class="checkin-checkbox" data-index="${index}" ${colaborador.presente ? 'checked' : ''}></td>
+                <td><input type="checkbox" class="checkin-checkbox" data-id="${colaborador.id}" ${colaborador.presente ? 'checked' : ''}></td>
                 <td>${colaborador.horario}</td>
                 <td>
                     <a href="https://wa.me/55${colaborador.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Bom dia! Poderia, por gentileza, informar se já está chegando? Estamos quase saindo.`)}" 
@@ -376,97 +366,33 @@
                     </a>
                 </td>
                 <td class="action-buttons">
-                    <button class="edit-btn" data-index="${index}" title="Editar">
+                    <button class="edit-btn" data-id="${colaborador.id}" title="Editar">
                         <svg fill="#000000" viewBox="0 0 24 24"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z"></path></svg>
                     </button>
-                    <button class="delete-btn" data-index="${index}" title="Excluir">
+                    <button class="delete-btn" data-id="${colaborador.id}" title="Excluir">
                         <svg fill="#dc3545" viewBox="0 0 24 24"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"></path></svg>
                     </button>
                 </td>
             `;
             colaboradoresListBody.appendChild(newRow);
         });
-
-        // Adiciona event listeners para todas as ações da lista
         addEventListenersToListActions();
     };
 
-    const addEventListenersToListActions = () => {
-        document.querySelectorAll('.checkin-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', (e) => {
-                const index = e.target.dataset.index;
-                const colaborador = colaboradores[index];
-                if (e.target.checked) {
-                    const now = new Date();
-                    colaborador.presente = true;
-                    colaborador.horario = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                } else {
-                    colaborador.presente = false;
-                    colaborador.horario = '--:--';
-                }
-                saveColaboradores();
-                renderColaboradores();
-            });
+    // Listener do Firestore para sincronização em tempo real
+    db.collection('pautas').doc(pautaId).collection('attendances').onSnapshot((snapshot) => {
+        const colaboradores = [];
+        snapshot.forEach((doc) => {
+            colaboradores.push({ id: doc.id, ...doc.data() });
         });
-
-        document.querySelectorAll('.edit-btn').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const index = e.currentTarget.dataset.index;
-                editIndex = index;
-                const colaborador = colaboradores[index];
-                document.getElementById('nome').value = colaborador.nome;
-                document.getElementById('telefone').value = colaborador.telefone;
-                
-                // Marca a opção de transporte correta
-                const transporteRadio = document.querySelector(`input[name="transporte"][value="${colaborador.transporte}"]`);
-                if (transporteRadio) {
-                    transporteRadio.checked = true;
-                    transporteRadio.dispatchEvent(new Event('change'));
-                }
-
-                // Se houver local de encontro, marca
-                const localEncontroRadio = document.querySelector(`input[name="localEncontro"][value="${colaborador.localEncontro}"]`);
-                if (localEncontroRadio) {
-                    localEncontroRadio.checked = true;
-                    localEncontroRadio.dispatchEvent(new Event('change'));
-                }
-
-                // Preenche a observação
-                document.getElementById('observacao').value = colaborador.observacao || '';
-
-
-                formTitle.textContent = "Editar Colaborador";
-                submitButton.textContent = "Salvar Alterações";
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            });
-        });
-
-        document.querySelectorAll('.delete-btn').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const index = e.currentTarget.dataset.index;
-                showConfirmModal(() => {
-                    colaboradores.splice(index, 1);
-                    saveColaboradores();
-                    renderColaboradores();
-                }, `Tem certeza que deseja excluir o colaborador "${colaboradores[index].nome}"?`);
-            });
-        });
-    }
-
-    const resetForm = () => {
-        form.reset();
-        editIndex = null;
-        formTitle.textContent = "Gerenciar Colaboradores";
-        submitButton.textContent = "Adicionar Colaborador";
-        localEncontroGroup.classList.add('hidden');
-        observacaoGroup.classList.add('hidden');
-    }
+        renderColaboradores(colaboradores);
+    });
 
     // Lógica para mostrar/esconder campos do formulário
     transporteOptions.forEach(option => {
         option.addEventListener('change', (event) => {
             localEncontroGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
-            observacaoGroup.classList.add('hidden'); 
+            observacaoGroup.classList.add('hidden');
             if (event.target.value !== 'Com a Empresa') {
                 document.querySelectorAll('input[name="localEncontro"]').forEach(localOption => localOption.checked = false);
             }
@@ -480,7 +406,7 @@
     });
 
     // Lógica de envio do formulário
-    form.addEventListener('submit', (event) => {
+    form.addEventListener('submit', async (event) => {
         event.preventDefault();
         
         const nome = document.getElementById('nome').value;
@@ -489,33 +415,93 @@
         const localEncontro = document.querySelector('input[name="localEncontro"]:checked')?.value || '';
         const observacao = document.getElementById('observacao').value;
 
-        if (editIndex !== null) {
+        const novoColaborador = {
+            nome: nome,
+            telefone: telefone,
+            transporte: transporte,
+            localEncontro: localEncontro,
+            observacao: observacao,
+            presente: false,
+            horario: '--:--'
+        };
+
+        if (editDocId) {
             // Editando
-            colaboradores[editIndex].nome = nome;
-            colaboradores[editIndex].telefone = telefone;
-            colaboradores[editIndex].transporte = transporte;
-            colaboradores[editIndex].localEncontro = localEncontro;
-            colaboradores[editIndex].observacao = observacao;
+            await db.collection('pautas').doc(pautaId).collection('attendances').doc(editDocId).update(novoColaborador);
         } else {
             // Adicionando novo
-            colaboradores.push({
-                nome: nome,
-                telefone: telefone,
-                transporte: transporte,
-                localEncontro: localEncontro,
-                observacao: observacao,
-                presente: false,
-                horario: '--:--'
-            });
+            await db.collection('pautas').doc(pautaId).collection('attendances').add(novoColaborador);
         }
 
-        saveColaboradores();
-        renderColaboradores();
         resetForm();
     });
 
-    // Lógica para baixar o PDF
-    downloadPdfBtn.addEventListener('click', () => {
+    const addEventListenersToListActions = () => {
+        document.querySelectorAll('.checkin-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', async (e) => {
+                const docId = e.target.dataset.id;
+                const presente = e.target.checked;
+                const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                await db.collection('pautas').doc(pautaId).collection('attendances').doc(docId).update({ presente, horario });
+            });
+        });
+
+        document.querySelectorAll('.edit-btn').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                const docId = e.currentTarget.dataset.id;
+                const doc = await db.collection('pautas').doc(pautaId).collection('attendances').doc(docId).get();
+                if (doc.exists) {
+                    const colaborador = doc.data();
+                    editDocId = docId;
+                    document.getElementById('nome').value = colaborador.nome;
+                    document.getElementById('telefone').value = colaborador.telefone;
+                    
+                    const transporteRadio = document.querySelector(`input[name="transporte"][value="${colaborador.transporte}"]`);
+                    if (transporteRadio) {
+                        transporteRadio.checked = true;
+                        transporteRadio.dispatchEvent(new Event('change'));
+                    }
+
+                    const localEncontroRadio = document.querySelector(`input[name="localEncontro"][value="${colaborador.localEncontro}"]`);
+                    if (localEncontroRadio) {
+                        localEncontroRadio.checked = true;
+                        localEncontroRadio.dispatchEvent(new Event('change'));
+                    }
+
+                    document.getElementById('observacao').value = colaborador.observacao || '';
+                    formTitle.textContent = "Editar Colaborador";
+                    submitButton.textContent = "Salvar Alterações";
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+        });
+
+        document.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const docId = e.currentTarget.dataset.id;
+                showConfirmModal(() => {
+                    db.collection('pautas').doc(pautaId).collection('attendances').doc(docId).delete();
+                }, `Tem certeza que deseja excluir este colaborador?`);
+            });
+        });
+    }
+
+    const resetForm = () => {
+        form.reset();
+        editDocId = null;
+        formTitle.textContent = "Gerenciar Colaboradores";
+        submitButton.textContent = "Adicionar Colaborador";
+        localEncontroGroup.classList.add('hidden');
+        observacaoGroup.classList.add('hidden');
+    }
+
+    downloadPdfBtn.addEventListener('click', async () => {
+        const snapshot = await db.collection('pautas').doc(pautaId).collection('attendances').get();
+        const colaboradores = [];
+        snapshot.forEach((doc) => {
+            colaboradores.push({ id: doc.id, ...doc.data() });
+        });
+        
         const doc = new window.jspdf.jsPDF();
         const head = [['Nome', 'Deslocamento', 'Presença', 'Horário de Chegada']];
         const tableBody = [];
@@ -562,7 +548,6 @@
         doc.save('lista_presenca_presentes.pdf');
     });
 
-    // Lógica do Modal de Confirmação
     const showConfirmModal = (callback, message) => {
         modalText.innerHTML = message;
         confirmModal.style.display = 'flex';
@@ -570,10 +555,14 @@
     }
 
     clearListBtn.addEventListener('click', () => {
-        showConfirmModal(() => {
-            colaboradores = [];
-            saveColaboradores();
-            renderColaboradores();
+        showConfirmModal(async () => {
+            const batch = db.batch();
+            const snapshot = await db.collection('pautas').doc(pautaId).collection('attendances').get();
+            snapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+            resetForm();
         }, 'Tem certeza que deseja limpar toda a lista?<br>Esta ação não pode ser desfeita.');
     });
 
@@ -588,16 +577,6 @@
     cancelActionBtn.addEventListener('click', () => {
         confirmModal.style.display = 'none';
         actionToConfirm = null;
-    });
-
-
-    // Carregar dados ao iniciar a página
-    document.addEventListener('DOMContentLoaded', () => {
-        const dadosSalvos = localStorage.getItem(STORAGE_KEY);
-        if (dadosSalvos) {
-            colaboradores = JSON.parse(dadosSalvos);
-        }
-        renderColaboradores();
     });
 
 </script>
