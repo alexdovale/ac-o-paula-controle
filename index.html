@@ -1742,48 +1742,57 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     await showMembersModal();
                 }
 
-                if (button.id === 'add-assisted-btn') {
-                    const name = document.getElementById('assisted-name').value.trim();
-                    if (!name) { showNotification("O nome é obrigatório.", "error"); return; }
-                    
-                    const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-                    let isScheduled, hasArrived, scheduledTimeValue;
+              if (button.id === 'add-assisted-btn') {
+    const name = document.getElementById('assisted-name').value.trim();
+    if (!name) {
+        showNotification("O nome é obrigatório.", "error");
+        return;
+    }
+    
+    const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
+    let isScheduled, hasArrived, scheduledTimeValue;
 
-                    if (currentMode === 'agendamento') {
-                        isScheduled = document.querySelector('input[name="is-scheduled"]:checked').value === 'yes';
-                        hasArrived = document.querySelector('input[name="has-arrived"]:checked').value === 'yes';
-                        scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time').value : null;
-                    } else { 
-                        isScheduled = false;
-                        hasArrived = true;
-                        scheduledTimeValue = null;
-                    }
+    if (currentMode === 'agendamento') {
+        isScheduled = document.querySelector('input[name="is-scheduled"]:checked').value === 'yes';
+        hasArrived = document.querySelector('input[name="has-arrived"]:checked').value === 'yes';
+        scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time').value : null;
 
-                    let arrivalDate = null;
-                    if (hasArrived) {
-                        const timeInput = document.getElementById('arrival-time').value;
-                        const [hours, minutes] = timeInput.split(':');
-                        arrivalDate = new Date();
-                        arrivalDate.setHours(hours, minutes, 0, 0);
-                    }
-                    
-                    const newAssisted = getUpdatePayload({
-                        name,
-                        cpf: document.getElementById('assisted-cpf').value.trim(),
-                        subject: document.getElementById('assisted-subject').value.trim(),
-                        type: currentMode,
-                        status: hasArrived ? 'aguardando' : 'pauta',
-                        scheduledTime: scheduledTimeValue,
-                        arrivalTime: hasArrived ? arrivalDate.toISOString() : null,
-                        createdAt: new Date().toISOString()
-                    });
+        // Adicionada validação para o horário agendado.
+        if (isScheduled && !scheduledTimeValue) {
+            showNotification("Por favor, informe o horário agendado.", "error");
+            return;
+        }
+    } else { 
+        isScheduled = false;
+        hasArrived = true;
+        scheduledTimeValue = null;
+    }
 
-                    await addDoc(collectionRef, newAssisted);
-                    showNotification("Assistido adicionado com sucesso!");
-                    document.getElementById('form-agendamento').reset();
-                    document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-                    document.getElementById('arrival-time-wrapper').classList.add('hidden');
-                }
+    let arrivalDate = null;
+    if (hasArrived) {
+        const timeInput = document.getElementById('arrival-time').value;
+        const [hours, minutes] = timeInput.split(':');
+        arrivalDate = new Date();
+        arrivalDate.setHours(hours, minutes, 0, 0);
+    }
+    
+    const newAssisted = getUpdatePayload({
+        name,
+        cpf: document.getElementById('assisted-cpf').value.trim(),
+        subject: document.getElementById('assisted-subject').value.trim(),
+        type: currentMode,
+        status: hasArrived ? 'aguardando' : 'pauta',
+        scheduledTime: scheduledTimeValue,
+        arrivalTime: hasArrived ? arrivalDate.toISOString() : null,
+        createdAt: new Date().toISOString()
+    });
+
+    await addDoc(collectionRef, newAssisted);
+    showNotification("Assistido adicionado com sucesso!");
+    document.getElementById('form-agendamento').reset();
+    document.getElementById('scheduled-time-wrapper').classList.add('hidden');
+    document.getElementById('arrival-time-wrapper').classList.add('hidden');
+}
 
                 if (button.id === 'confirm-arrival-btn') {
                     const arrivalTimeInput = document.getElementById('arrival-time-input').value;
@@ -2137,3 +2146,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+
