@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { text: "Defesa de Direitos Homoafetivos", description: "Atuação específica para a promoção e defesa dos direitos de pessoas LGBT." }
     ];
 
-    // Função recursiva para achatar a árvore em uma lista de objetos { valor, descricao }
+    // Função recursiva para achatar a árvore em uma lista de objetos { value, description }
     function flattenTreeWithObjects(nodes, parentPrefix = '') {
         let flatList = [];
         nodes.forEach(node => {
@@ -159,13 +159,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const flatSubjects = flattenTreeWithObjects(subjectTree);
 
-    // Preenche o datalist com as opções de assunto
+    // Adiciona uma nova lista para pesquisa, incluindo a descrição.
+    const searchableList = flatSubjects.map(item => ({
+        text: item.description,
+        value: item.value
+    }));
+
+    // Preenche o datalist com as opções de assunto. 
+    // MANTÉM apenas o valor original (título completo) no option.
     flatSubjects.forEach(subject => {
         const option = document.createElement('option');
         option.value = subject.value;
         datalist.appendChild(option);
     });
-    
+
+    // Função para pesquisar e atualizar o datalist com base na pesquisa
+    const searchAndFilterList = (query) => {
+        // Limpa o datalist para que apenas os resultados da busca apareçam
+        while (datalist.firstChild) {
+            datalist.removeChild(datalist.firstChild);
+        }
+
+        // Transforma a busca e os textos em minúsculas para pesquisa sem distinção de maiúsculas/minúsculas
+        const lowerCaseQuery = query.toLowerCase();
+
+        // Filtra a lista 'searchableList' onde o texto OU a descrição contenham a busca
+        const filteredSubjects = flatSubjects.filter(item =>
+            item.value.toLowerCase().includes(lowerCaseQuery) ||
+            item.description.toLowerCase().includes(lowerCaseQuery)
+        );
+
+        // Adiciona os resultados filtrados ao datalist
+        filteredSubjects.forEach(subject => {
+            const option = document.createElement('option');
+            option.value = subject.value;
+            datalist.appendChild(option);
+        });
+    };
+
     // Função para verificar e mostrar/ocultar a descrição e habilitar/desabilitar o botão
     const checkSubject = () => {
         const currentValue = subjectInput.value;
@@ -183,7 +214,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // Adiciona ouvintes de evento ao campo de input
-    subjectInput.addEventListener('input', checkSubject);
+    // O evento 'input' agora chama a função de busca
+    subjectInput.addEventListener('input', (e) => {
+        searchAndFilterList(e.target.value);
+        checkSubject(); // Mantém a verificação da descrição
+    });
 
     // Adiciona um ouvinte para o evento 'change', que é disparado ao selecionar um item do datalist
     subjectInput.addEventListener('change', () => {
@@ -224,4 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
             descriptionBox.classList.toggle('hidden');
         }
     });
+
+    // Chama a função de busca inicial para popular o datalist
+    searchAndFilterList('');
 });
