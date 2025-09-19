@@ -49,6 +49,9 @@
         .form-group {
             margin-bottom: 20px;
         }
+        .hidden {
+            display: none;
+        }
         label {
             display: block;
             margin-bottom: 8px;
@@ -66,9 +69,6 @@
             display: inline-block;
             margin-right: 20px;
             font-weight: normal;
-        }
-        .hidden {
-            display: none;
         }
         /* Botão de Voltar */
         .back-button {
@@ -295,7 +295,7 @@
 </div>
 
 <!-- Modal de Confirmação -->
-<div id="confirm-modal" class="modal-overlay hidden">
+<div id="confirm-modal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
         <p id="modal-text"></p>
         <button id="confirm-action">Sim</button>
@@ -416,7 +416,7 @@
     transporteOptions.forEach(option => {
         option.addEventListener('change', (event) => {
             localEncontroGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
-            observacaoGroup.classList.add('hidden'); 
+            observacaoGroup.classList.add('hidden'); // <-- ESTA LINHA FOI RESTAURADA
             if (event.target.value === 'Com a Empresa') {
                 document.querySelectorAll('input[name="localEncontro"]').forEach(localOption => localOption.checked = false);
             }
@@ -503,7 +503,7 @@
     // Lógica do Modal de Confirmação
     const showConfirmModal = (callback, message) => {
         modalText.innerHTML = message;
-        confirmModal.classList.remove('hidden');
+        confirmModal.style.display = 'flex';
         actionToConfirm = callback;
     }
 
@@ -519,12 +519,12 @@
         if (actionToConfirm) {
             actionToConfirm();
         }
-        confirmModal.classList.add('hidden');
+        confirmModal.style.display = 'none';
         actionToConfirm = null;
     });
 
     cancelActionBtn.addEventListener('click', () => {
-        confirmModal.classList.add('hidden');
+        confirmModal.style.display = 'none';
         actionToConfirm = null;
     });
 
