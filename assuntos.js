@@ -205,11 +205,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (foundSubject && foundSubject.description) {
             descriptionBox.textContent = foundSubject.description;
             descriptionBox.classList.remove('hidden');
-            infoButton.disabled = false;
         } else {
             descriptionBox.classList.add('hidden');
             descriptionBox.textContent = '';
-            infoButton.disabled = true;
         }
     };
     
@@ -253,10 +251,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Adiciona ouvinte de evento ao botão de informação
+    // O botão de informação está sempre ativo, mas sua ação depende do input
     infoButton.addEventListener('click', () => {
-        if (!infoButton.disabled) {
+        const currentValue = subjectInput.value;
+        const foundSubject = flatSubjects.find(subject => subject.value === currentValue);
+
+        // Se encontrou um assunto válido, alterna a visibilidade da descrição
+        if (foundSubject && foundSubject.description) {
             descriptionBox.classList.toggle('hidden');
+        } else {
+            // Se não, exibe uma mensagem de aviso na caixa de descrição
+            descriptionBox.textContent = 'Por favor, selecione um assunto válido para ver a descrição.';
+            descriptionBox.classList.remove('hidden');
         }
     });
 
