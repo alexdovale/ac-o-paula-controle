@@ -440,7 +440,7 @@
     transporteOptions.forEach(option => {
         option.addEventListener('change', (event) => {
             localEncontroGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
-            observacaoGroup.classList.add('hidden'); // <-- ESTA LINHA FOI RESTAURADA
+            observacaoGroup.classList.add('hidden'); 
             if (event.target.value === 'Com a Empresa') {
                 document.querySelectorAll('input[name="localEncontro"]').forEach(localOption => localOption.checked = false);
             }
