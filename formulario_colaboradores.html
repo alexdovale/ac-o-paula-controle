@@ -146,6 +146,7 @@
             border: 1px solid #ddd;
             padding: 12px;
             text-align: left;
+            vertical-align: middle;
         }
         th {
             background-color: #f2f2f2;
@@ -163,6 +164,19 @@
         }
         .whatsapp-link:hover {
             background-color: #128C7E;
+        }
+
+        .action-buttons button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            margin: 0 2px;
+        }
+        .action-buttons svg {
+            width: 18px;
+            height: 18px;
+            vertical-align: middle;
         }
 
         /* Estilo do Modal de Confirmação */
@@ -196,11 +210,11 @@
             cursor: pointer;
             margin: 0 10px;
         }
-        #confirm-clear {
+        #confirm-action {
             background-color: #dc3545;
             color: #fff;
         }
-        #cancel-clear {
+        #cancel-action {
             background-color: #6c757d;
             color: #fff;
         }
@@ -214,7 +228,7 @@
 
 <div class="content-wrapper">
     <div class="container">
-        <h1>Gerenciar Colaboradores</h1>
+        <h1 id="form-title">Gerenciar Colaboradores</h1>
         <form id="colaborador-form">
             <div class="form-group">
                 <label for="nome">Nome do Colaborador:</label>
@@ -253,7 +267,7 @@
                 <textarea id="observacao" name="observacao" rows="3"></textarea>
             </div>
 
-            <button type="submit">Adicionar Colaborador</button>
+            <button type="submit" id="submit-button">Adicionar Colaborador</button>
         </form>
     </div>
 
@@ -266,6 +280,7 @@
                     <th>Presença</th>
                     <th>Horário</th>
                     <th>WhatsApp</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody>
@@ -282,26 +297,33 @@
 <!-- Modal de Confirmação -->
 <div id="confirm-modal" class="modal-overlay hidden">
     <div class="modal-content">
-        <p>Tem certeza que deseja limpar toda a lista?<br>Esta ação não pode ser desfeita.</p>
-        <button id="confirm-clear">Sim, Limpar</button>
-        <button id="cancel-clear">Cancelar</button>
+        <p id="modal-text"></p>
+        <button id="confirm-action">Sim</button>
+        <button id="cancel-action">Cancelar</button>
     </div>
 </div>
 
 <script>
     const form = document.getElementById('colaborador-form');
+    const formTitle = document.getElementById('form-title');
+    const submitButton = document.getElementById('submit-button');
     const localEncontroGroup = document.getElementById('local-encontro-group');
     const observacaoGroup = document.getElementById('observacao-group');
     const transporteOptions = document.querySelectorAll('input[name="transporte"]');
     const colaboradoresListBody = document.querySelector('#colaboradores-list tbody');
     const downloadPdfBtn = document.getElementById('download-pdf');
     const clearListBtn = document.getElementById('clear-list');
+    
+    // Modal
     const confirmModal = document.getElementById('confirm-modal');
-    const confirmClearBtn = document.getElementById('confirm-clear');
-    const cancelClearBtn = document.getElementById('cancel-clear');
+    const modalText = document.getElementById('modal-text');
+    const confirmActionBtn = document.getElementById('confirm-action');
+    const cancelActionBtn = document.getElementById('cancel-action');
 
     const STORAGE_KEY = 'listaDeColaboradores';
     let colaboradores = [];
+    let editIndex = null;
+    let actionToConfirm = null;
 
     const saveColaboradores = () => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(colaboradores));
@@ -322,16 +344,27 @@
                        Mensagem
                     </a>
                 </td>
+                <td class="action-buttons">
+                    <button class="edit-btn" data-index="${index}" title="Editar">
+                        <svg fill="#000000" viewBox="0 0 24 24"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z"></path></svg>
+                    </button>
+                    <button class="delete-btn" data-index="${index}" title="Excluir">
+                        <svg fill="#dc3545" viewBox="0 0 24 24"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"></path></svg>
+                    </button>
+                </td>
             `;
             colaboradoresListBody.appendChild(newRow);
         });
 
-        // Adiciona os event listeners para as novas checkboxes
+        // Adiciona event listeners para todas as ações da lista
+        addEventListenersToListActions();
+    };
+
+    const addEventListenersToListActions = () => {
         document.querySelectorAll('.checkin-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', (e) => {
                 const index = e.target.dataset.index;
                 const colaborador = colaboradores[index];
-
                 if (e.target.checked) {
                     const now = new Date();
                     colaborador.presente = true;
@@ -344,7 +377,40 @@
                 renderColaboradores();
             });
         });
-    };
+
+        document.querySelectorAll('.edit-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const index = e.currentTarget.dataset.index;
+                editIndex = index;
+                const colaborador = colaboradores[index];
+                document.getElementById('nome').value = colaborador.nome;
+                document.getElementById('telefone').value = colaborador.telefone;
+                formTitle.textContent = "Editar Colaborador";
+                submitButton.textContent = "Salvar Alterações";
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+
+        document.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const index = e.currentTarget.dataset.index;
+                showConfirmModal(() => {
+                    colaboradores.splice(index, 1);
+                    saveColaboradores();
+                    renderColaboradores();
+                }, `Tem certeza que deseja excluir o colaborador "${colaboradores[index].nome}"?`);
+            });
+        });
+    }
+
+    const resetForm = () => {
+        form.reset();
+        editIndex = null;
+        formTitle.textContent = "Gerenciar Colaboradores";
+        submitButton.textContent = "Adicionar Colaborador";
+        localEncontroGroup.classList.add('hidden');
+        observacaoGroup.classList.add('hidden');
+    }
 
     // Lógica para mostrar/esconder campos do formulário
     transporteOptions.forEach(option => {
@@ -369,33 +435,34 @@
         
         const nome = document.getElementById('nome').value;
         const telefone = document.getElementById('telefone').value;
-        
-        colaboradores.push({
-            nome: nome,
-            telefone: telefone,
-            presente: false,
-            horario: '--:--'
-        });
+
+        if (editIndex !== null) {
+            // Editando
+            colaboradores[editIndex].nome = nome;
+            colaboradores[editIndex].telefone = telefone;
+        } else {
+            // Adicionando novo
+            colaboradores.push({
+                nome: nome,
+                telefone: telefone,
+                presente: false,
+                horario: '--:--'
+            });
+        }
 
         saveColaboradores();
         renderColaboradores();
-        
-        form.reset();
-        localEncontroGroup.classList.add('hidden');
-        observacaoGroup.classList.add('hidden');
+        resetForm();
     });
 
     // Lógica para baixar o PDF
     downloadPdfBtn.addEventListener('click', () => {
         const doc = new window.jspdf.jsPDF();
-        
         const head = [['Nome', 'Presença', 'Horário de Chegada']];
         const tableBody = [];
-        
         const presentes = colaboradores.filter(c => c.presente);
 
         if (presentes.length === 0) {
-            // Reaproveitando a estrutura do modal para notificação
             const notification = document.createElement('div');
             notification.textContent = 'Nenhum colaborador com presença marcada para gerar o PDF.';
             notification.style.position = 'fixed';
@@ -433,18 +500,32 @@
         doc.save('lista_presenca_presentes.pdf');
     });
 
-    // Lógica para Limpar a Lista
-    clearListBtn.addEventListener('click', () => {
+    // Lógica do Modal de Confirmação
+    const showConfirmModal = (callback, message) => {
+        modalText.innerHTML = message;
         confirmModal.classList.remove('hidden');
+        actionToConfirm = callback;
+    }
+
+    clearListBtn.addEventListener('click', () => {
+        showConfirmModal(() => {
+            colaboradores = [];
+            saveColaboradores();
+            renderColaboradores();
+        }, 'Tem certeza que deseja limpar toda a lista?<br>Esta ação não pode ser desfeita.');
     });
-    cancelClearBtn.addEventListener('click', () => {
+
+    confirmActionBtn.addEventListener('click', () => {
+        if (actionToConfirm) {
+            actionToConfirm();
+        }
         confirmModal.classList.add('hidden');
+        actionToConfirm = null;
     });
-    confirmClearBtn.addEventListener('click', () => {
-        colaboradores = [];
-        saveColaboradores();
-        renderColaboradores();
+
+    cancelActionBtn.addEventListener('click', () => {
         confirmModal.classList.add('hidden');
+        actionToConfirm = null;
     });
 
 
