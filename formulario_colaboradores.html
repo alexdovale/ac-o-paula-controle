@@ -4,17 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerenciar Colaboradores</title>
+    <!-- Bibliotecas para gerar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf-autotable.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
             display: flex;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center; /* Centraliza o conteúdo */
             padding: 20px;
             margin: 0;
+            flex-direction: column; /* Organiza os itens em coluna */
+        }
+        .header {
+            width: 100%;
+            max-width: 1140px; /* Alinha com a largura máxima dos contêineres */
+            margin-bottom: 20px;
+        }
+        .content-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
             gap: 40px;
             flex-wrap: wrap;
+            width: 100%;
         }
         .container, .list-container {
             background-color: #fff;
@@ -25,9 +40,9 @@
             max-width: 500px;
         }
         .list-container {
-            max-width: 600px; /* Largura ajustada para a nova lista */
+            max-width: 600px;
         }
-        h1 {
+        h1, h2 {
             text-align: center;
             color: #333;
         }
@@ -55,10 +70,25 @@
         .hidden {
             display: none;
         }
-        button {
+        /* Botão de Voltar */
+        .back-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #6c757d;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        .back-button:hover {
+            background-color: #5a6268;
+        }
+        /* Botão principal do formulário */
+        button[type="submit"] {
             width: 100%;
             padding: 12px;
-            background-color: #28a745;
+            background-color: #28a745; /* Cor alterada para verde */
             color: #fff;
             border: none;
             border-radius: 4px;
@@ -66,10 +96,29 @@
             cursor: pointer;
             transition: background-color 0.3s;
         }
-        button:hover {
+        button[type="submit"]:hover {
             background-color: #218838;
         }
         
+        /* Botão de Baixar PDF */
+        #download-pdf {
+            display: block;
+            width: auto;
+            margin: 20px auto 0;
+            padding: 8px 16px;
+            background-color: #28a745; /* Cor alterada para verde */
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            text-align: center;
+            transition: background-color 0.3s ease;
+        }
+        #download-pdf:hover {
+            background-color: #218838; /* Cor alterada para verde mais escuro */
+        }
+
         /* Estilo da Tabela */
         table {
             width: 100%;
@@ -102,64 +151,72 @@
 </head>
 <body>
 
-<div class="container">
-    <h1>Gerenciar Colaboradores</h1>
-    <form id="colaborador-form">
-        <div class="form-group">
-            <label for="nome">Nome do Colaborador:</label>
-            <input type="text" id="nome" name="nome" required>
-        </div>
-
-        <div class="form-group">
-            <label for="telefone">Telefone (com DDD):</label>
-            <input type="tel" id="telefone" name="telefone" placeholder="Ex: 21999998888" required>
-        </div>
-
-        <div class="form-group">
-            <label>Como vai se deslocar?</label>
-            <div class="options-group">
-                <input type="radio" id="meios-proprios" name="transporte" value="Meios Próprios" required>
-                <label for="meios-proprios">Meios Próprios</label>
-                
-                <input type="radio" id="com-empresa" name="transporte" value="Com a Empresa">
-                <label for="com-empresa">Com a Empresa</label>
-            </div>
-        </div>
-
-        <div class="form-group hidden" id="local-encontro-group">
-            <label>Ponto de Encontro:</label>
-            <div class="options-group">
-                <input type="radio" id="sede" name="localEncontro" value="Sede">
-                <label for="sede">Sede</label>
-                
-                <input type="radio" id="meio-caminho" name="localEncontro" value="Meio do Caminho">
-                <label for="meio-caminho">No meio do caminho</label>
-            </div>
-        </div>
-
-        <div class="form-group hidden" id="observacao-group">
-            <label for="observacao">Observação:</label>
-            <textarea id="observacao" name="observacao" rows="3"></textarea>
-        </div>
-
-        <button type="submit">Adicionar Colaborador</button>
-    </form>
+<div class="header">
+    <a href="index.html" class="back-button">← Voltar para o Início</a>
 </div>
 
-<div class="list-container">
-    <h2>Lista de Presença</h2>
-    <table id="colaboradores-list">
-        <thead>
-            <tr>
-                <th>Nome</th>
-                <th>Presença</th>
-                <th>Horário</th>
-                <th>WhatsApp</th>
-            </tr>
-        </thead>
-        <tbody>
+<div class="content-wrapper">
+    <div class="container">
+        <h1>Gerenciar Colaboradores</h1>
+        <form id="colaborador-form">
+            <div class="form-group">
+                <label for="nome">Nome do Colaborador:</label>
+                <input type="text" id="nome" name="nome" required>
+            </div>
+
+            <div class="form-group">
+                <label for="telefone">Telefone (com DDD):</label>
+                <input type="tel" id="telefone" name="telefone" placeholder="Ex: 21999998888" required>
+            </div>
+
+            <div class="form-group">
+                <label>Como vai se deslocar?</label>
+                <div class="options-group">
+                    <input type="radio" id="meios-proprios" name="transporte" value="Meios Próprios" required>
+                    <label for="meios-proprios">Meios Próprios</label>
+                    
+                    <input type="radio" id="com-empresa" name="transporte" value="Com a Empresa">
+                    <label for="com-empresa">Com a Empresa</label>
+                </div>
+            </div>
+
+            <div class="form-group hidden" id="local-encontro-group">
+                <label>Ponto de Encontro:</label>
+                <div class="options-group">
+                    <input type="radio" id="sede" name="localEncontro" value="Sede">
+                    <label for="sede">Sede</label>
+                    
+                    <input type="radio" id="meio-caminho" name="localEncontro" value="Meio do Caminho">
+                    <label for="meio-caminho">No meio do caminho</label>
+                </div>
+            </div>
+
+            <div class="form-group hidden" id="observacao-group">
+                <label for="observacao">Observação:</label>
+                <textarea id="observacao" name="observacao" rows="3"></textarea>
+            </div>
+
+            <button type="submit">Adicionar Colaborador</button>
+        </form>
+    </div>
+
+    <div class="list-container">
+        <h2>Lista de Presença</h2>
+        <table id="colaboradores-list">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Presença</th>
+                    <th>Horário</th>
+                    <th>WhatsApp</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Linhas adicionadas via JS -->
             </tbody>
-    </table>
+        </table>
+        <button id="download-pdf">Baixar PDF da Lista</button>
+    </div>
 </div>
 
 <script>
@@ -168,6 +225,7 @@
     const observacaoGroup = document.getElementById('observacao-group');
     const transporteOptions = document.querySelectorAll('input[name="transporte"]');
     const colaboradoresList = document.querySelector('#colaboradores-list tbody');
+    const downloadPdfBtn = document.getElementById('download-pdf');
 
     // Lógica para mostrar/esconder campos do formulário
     transporteOptions.forEach(option => {
@@ -196,7 +254,6 @@
         const nome = document.getElementById('nome').value;
         const telefone = document.getElementById('telefone').value;
         
-        // Cria a linha da tabela com os dados
         const newRow = document.createElement('tr');
         newRow.innerHTML = `
             <td>${nome}</td>
@@ -212,7 +269,6 @@
         
         colaboradoresList.appendChild(newRow);
         
-        // Adiciona o event listener para a nova checkbox criada
         const newCheckbox = newRow.querySelector('.checkin-checkbox');
         newCheckbox.addEventListener('change', (e) => {
             const horarioCell = e.target.closest('tr').querySelector('td:nth-child(3)');
@@ -224,12 +280,48 @@
             }
         });
 
-        // Limpa o formulário para a próxima entrada
         form.reset();
         localEncontroGroup.classList.add('hidden');
         observacaoGroup.classList.add('hidden');
+    });
+
+    // Lógica para baixar o PDF
+    downloadPdfBtn.addEventListener('click', () => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        const head = [['Nome', 'Presença', 'Horário de Chegada']];
+        const tableBody = [];
+        const rows = document.querySelectorAll('#colaboradores-list tbody tr');
+
+        rows.forEach(row => {
+            const nome = row.cells[0].innerText;
+            const presencaCheckbox = row.cells[1].querySelector('input[type="checkbox"]');
+            const presenca = presencaCheckbox.checked ? 'Presente' : 'Ausente';
+            const horario = row.cells[2].innerText;
+            
+            tableBody.push([nome, presenca, horario]);
+        });
+        
+        doc.autoTable({
+            head: head,
+            body: tableBody,
+            startY: 20,
+            headStyles: { fillColor: [22, 160, 133] }, // Tom de verde
+            didDrawPage: function (data) {
+                // Título
+                doc.setFontSize(18);
+                doc.setTextColor(40);
+                doc.text('Lista de Presença de Colaboradores', data.settings.margin.left, 15);
+            }
+        });
+        
+        doc.save('lista_de_presenca.pdf');
     });
 </script>
 
 </body>
 </html>
+
+
+
