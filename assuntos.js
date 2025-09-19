@@ -133,7 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
         { text: "Defesa de Direitos Homoafetivos", description: "Atuação específica para a promoção e defesa dos direitos de pessoas LGBT." }
     ];
 
-    // Função recursiva para achatar a árvore em uma lista de objetos { value, description }
     function flattenTreeWithObjects(nodes, parentPrefix = '') {
         let flatList = [];
         nodes.forEach(node => {
@@ -159,105 +158,71 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const flatSubjects = flattenTreeWithObjects(subjectTree);
 
-    // Adiciona uma nova lista para pesquisa, incluindo a descrição.
-    const searchableList = flatSubjects.map(item => ({
-        text: item.description,
-        value: item.value
-    }));
-
-    // Preenche o datalist com as opções de assunto. 
-    // MANTÉM apenas o valor original (título completo) no option.
+    // Preenche o datalist com todas as opções inicialmente.
     flatSubjects.forEach(subject => {
         const option = document.createElement('option');
         option.value = subject.value;
         datalist.appendChild(option);
     });
 
-    // Função para pesquisar e atualizar o datalist com base na pesquisa
-    const searchAndFilterList = (query) => {
-        // Limpa o datalist para que apenas os resultados da busca apareçam
-        while (datalist.firstChild) {
-            datalist.removeChild(datalist.firstChild);
+    const checkSubject = () => {
+        const currentValue = subjectInput.value;
+        const foundSubject = flatSubjects.find(subject => subject.value === currentValue);
+        if (foundSubject && foundSubject.description) {
+            descriptionBox.textContent = foundSubject.description;
+        } else {
+            descriptionBox.textContent = '';
         }
+    };
 
-        // Transforma a busca e os textos em minúsculas para pesquisa sem distinção de maiúsculas/minúsculas
+    const updateDatalist = (query) => {
         const lowerCaseQuery = query.toLowerCase();
-
-        // Filtra a lista 'searchableList' onde o texto OU a descrição contenham a busca
         const filteredSubjects = flatSubjects.filter(item =>
             item.value.toLowerCase().includes(lowerCaseQuery) ||
             item.description.toLowerCase().includes(lowerCaseQuery)
         );
-
-        // Adiciona os resultados filtrados ao datalist
+        
+        // Limpa e repopula o datalist
+        while (datalist.firstChild) {
+            datalist.removeChild(datalist.firstChild);
+        }
         filteredSubjects.forEach(subject => {
             const option = document.createElement('option');
             option.value = subject.value;
             datalist.appendChild(option);
         });
     };
-
-    // Função para verificar e mostrar/ocultar a descrição e habilitar/desabilitar o botão
-    const checkSubject = () => {
-        const currentValue = subjectInput.value;
-        const foundSubject = flatSubjects.find(subject => subject.value === currentValue);
-
-        if (foundSubject && foundSubject.description) {
-            descriptionBox.textContent = foundSubject.description;
-            descriptionBox.classList.remove('hidden');
-        } else {
-            descriptionBox.classList.add('hidden');
-            descriptionBox.textContent = '';
-        }
-    };
     
-    // Adiciona ouvintes de evento ao campo de input
-    // O evento 'input' agora chama a função de busca
+    // Ouve a digitação para filtrar a lista
     subjectInput.addEventListener('input', (e) => {
-        searchAndFilterList(e.target.value);
-        checkSubject(); // Mantém a verificação da descrição
+        updateDatalist(e.target.value);
+        checkSubject();
     });
 
-    // Adiciona um ouvinte para o evento 'change', que é disparado ao selecionar um item do datalist
+    // Ouve a seleção para formatar o texto e mostrar a descrição
     subjectInput.addEventListener('change', () => {
         let selectedText = subjectInput.value;
-    
-        // Lógica para pegar apenas a última parte após o '>'
         if (selectedText.includes(' > ')) {
             const parts = selectedText.split(' > ');
             selectedText = parts[parts.length - 1];
         }
-        
-        // Insere o texto processado no campo de input
         subjectInput.value = selectedText;
-    
-        // Chama a função de verificação para exibir a descrição
         checkSubject();
     });
-
-    // Adiciona um ouvinte de clique para gerenciar a seleção e limpeza do campo.
-    subjectInput.addEventListener('click', (e) => {
-        const input = e.target;
-        const isTextSelected = input.selectionStart === 0 && input.selectionEnd === input.value.length;
-
-        // Se o texto já está todo selecionado (indicando um segundo clique),
-        // limpa o campo para o usuário ver a lista completa de opções.
-        if (isTextSelected) {
-            input.value = '';
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-        } else {
-            // Se não, o comportamento padrão do clique é selecionar todo o texto.
-            input.select();
-        }
-    });
-
-    // O botão de informação está sempre ativo, mas sua ação depende do input
+    
+    // Ouve o clique no botão para exibir ou ocultar a descrição
     infoButton.addEventListener('click', () => {
         const currentValue = subjectInput.value;
-        const foundSubject = flatSubjects.find(subject => subject.value === currentValue);
+        
+        // CORREÇÃO: Usamos `subject` no lugar de `item` para garantir que a busca funcione.
+        const foundSubject = flatSubjects.find(subject => {
+            const lastPart = subject.value.split(' > ').pop();
+            return lastPart === currentValue || subject.value === currentValue;
+        });
 
-        // Se encontrou um assunto válido, alterna a visibilidade da descrição
         if (foundSubject && foundSubject.description) {
+            // Se encontrou um assunto válido, alterna a visibilidade da descrição
+            descriptionBox.textContent = foundSubject.description; // Garante que o texto esteja atualizado
             descriptionBox.classList.toggle('hidden');
         } else {
             // Se não, exibe uma mensagem de aviso na caixa de descrição
@@ -265,7 +230,4 @@ document.addEventListener('DOMContentLoaded', () => {
             descriptionBox.classList.remove('hidden');
         }
     });
-
-    // Chama a função de busca inicial para popular o datalist
-    searchAndFilterList('');
 });
