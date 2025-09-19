@@ -185,9 +185,20 @@ document.addEventListener('DOMContentLoaded', () => {
     subjectInput.addEventListener('input', checkSubject);
     subjectInput.addEventListener('change', checkSubject); // Para casos de seleção pelo mouse
 
-    // Adiciona um ouvinte para selecionar o texto ao focar, facilitando a alteração
-    subjectInput.addEventListener('focus', () => {
-        subjectInput.select();
+    // Adiciona um ouvinte de clique para gerenciar a seleção e limpeza do campo.
+    subjectInput.addEventListener('click', (e) => {
+        const input = e.target;
+        const isTextSelected = input.selectionStart === 0 && input.selectionEnd === input.value.length;
+
+        // Se o texto já está todo selecionado (indicando um segundo clique),
+        // limpa o campo para o usuário ver a lista completa de opções.
+        if (isTextSelected) {
+            input.value = '';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        } else {
+            // Se não, o comportamento padrão do clique é selecionar todo o texto.
+            input.select();
+        }
     });
 
     // Adiciona ouvinte de evento ao botão de informação
