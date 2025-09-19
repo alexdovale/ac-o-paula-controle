@@ -157,7 +157,7 @@
                         <div class="flex flex-col lg:col-span-4">
                             <div class="flex items-center gap-2 mb-1">
                                 <label for="assisted-subject" class="font-medium text-gray-600">Matéria - Assunto</label>
-                                <button type="button" id="subject-info-btn" class="font-bold text-lg text-blue-500 cursor-help rounded-full disabled:text-gray-300 disabled:cursor-not-allowed" disabled>!</button>
+                                <button type="button" id="subject-info-btn" class="font-bold text-lg text-blue-500 cursor-help rounded-full disabled:text-gray-300 disabled:cursor-not-allowed">!</button>
                             </div>
         
                             <input list="subjects-list" id="assisted-subject" name="assisted-subject" placeholder="Digite ou selecione um assunto" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition w-full">
@@ -536,19 +536,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, getDoc, setDoc, query, where, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Variáveis Globais
-        let auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '', currentPautaOwnerId = null;
-        let db = null; // Apenas para inicializar a variável
-
-        let assistedIdToHandle = null;
-        let currentChecklistAction = null;
-
-        const loadingContainer = document.getElementById('loading-container');
-        const loginContainer = document.getElementById('login-container');
-        const pautaSelectionContainer = document.getElementById('pauta-selection-container');
-        const appContainer = document.getElementById('app-container');
-        const loadingText = document.getElementById('loading-text');
-        
         // --- INÍCIO DA LÓGICA DE ASSUNTOS (ANTIGO assuntos.js) ---
         const subjectTree = [
             { text: "Orientação Jurídica", description: "Prestação de informações e esclarecimentos gerais sobre direitos, deveres e as leis, auxiliando o cidadão a entender sua situação e as possíveis soluções legais." },
@@ -2150,4 +2137,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
-
