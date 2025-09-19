@@ -150,8 +150,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const datalist = document.getElementById('subjects-list');
     const subjectInput = document.getElementById('assisted-subject');
     const descriptionBox = document.getElementById('subject-description');
+    const infoButton = document.getElementById('subject-info-btn');
 
-    if (!datalist || !subjectInput || !descriptionBox) {
+    if (!datalist || !subjectInput || !descriptionBox || !infoButton) {
+        console.error('Elementos essenciais para a lista de assuntos não foram encontrados.');
         return;
     }
 
@@ -163,18 +165,30 @@ document.addEventListener('DOMContentLoaded', () => {
         option.value = subject.value;
         datalist.appendChild(option);
     });
-
-    // Adiciona um ouvinte de evento ao campo de input
-    subjectInput.addEventListener('input', (event) => {
-        const currentValue = event.target.value;
+    
+    // Função para verificar e mostrar/ocultar a descrição e habilitar/desabilitar o botão
+    const checkSubject = () => {
+        const currentValue = subjectInput.value;
         const foundSubject = flatSubjects.find(subject => subject.value === currentValue);
 
         if (foundSubject && foundSubject.description) {
             descriptionBox.textContent = foundSubject.description;
-            descriptionBox.classList.remove('hidden');
+            infoButton.disabled = false;
         } else {
             descriptionBox.classList.add('hidden');
             descriptionBox.textContent = '';
+            infoButton.disabled = true;
+        }
+    };
+    
+    // Adiciona ouvintes de evento ao campo de input
+    subjectInput.addEventListener('input', checkSubject);
+    subjectInput.addEventListener('change', checkSubject); // Para casos de seleção pelo mouse
+
+    // Adiciona ouvinte de evento ao botão de informação
+    infoButton.addEventListener('click', () => {
+        if (!infoButton.disabled) {
+            descriptionBox.classList.toggle('hidden');
         }
     });
 });
