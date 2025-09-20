@@ -308,9 +308,9 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const pautaId = urlParams.get('pautaId');
-    const userId = urlParams.get('userId');
+    const authToken = urlParams.get('authToken'); // Pega o token de autenticação da URL
 
-    if (!pautaId || !userId) {
+    if (!pautaId || !authToken) {
         document.body.innerHTML = `
             <style>
                 body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f4; }
@@ -321,11 +321,11 @@
             </style>
             <div class="error-container">
                 <h1>Erro: Acesso não autorizado</h1>
-                <p>Por favor, acesse esta página a partir de uma pauta específica no sistema principal.</p>
+                <p>O token de autenticação não foi encontrado. Por favor, acesse esta página a partir de uma pauta específica no sistema principal.</p>
                 <a href="index.html">Voltar para o Início</a>
             </div>
         `;
-        throw new Error("ID da Pauta ou do Usuário não encontrado na URL.");
+        throw new Error("Token de autenticação não encontrado na URL.");
     }
 
     const form = document.getElementById('colaborador-form');
@@ -347,9 +347,7 @@
     let editDocId = null;
     let actionToConfirm = null;
     let currentUserName = "Usuário Desconhecido";
-
-    // Adicionado: referência da coleção de atendimentos para uso global
-    const attendancesCollectionRef = db.collection('pautas').doc(pautaId).collection('attendances');
+    let attendancesCollectionRef = null;
 
     // Função para renderizar a lista
     const renderColaboradores = (colaboradores) => {
@@ -386,18 +384,32 @@
         addEventListenersToListActions();
     };
 
-    // A lógica de autenticação precisa ser aqui para que o userId seja usado corretamente.
-    auth.signInWithCustomToken(userId).catch(async (error) => {
-        // Se a autenticação com o token falhar, tenta com o ID do usuário como token.
-        // Isso é uma suposição, mas pode funcionar se o "userId" for na verdade o "token".
-        // O ideal é passar um token de verdade gerado no backend.
-        console.warn("Falha na autenticação com token. Tentando com ID do usuário.");
-        try {
-            await auth.signInWithCustomToken(userId);
-            // Autenticação bem-sucedida, agora podemos configurar o listener.
-            setupFirestoreListener();
-        } catch (authError) {
-            console.error("Erro final de autenticação:", authError);
+    // Autentica o usuário com o token e, em seguida, configura o listener.
+    auth.signInWithCustomToken(authToken)
+        .then(async (userCredential) => {
+            const user = userCredential.user;
+            console.log("Usuário autenticado com sucesso:", user.uid);
+            
+            // Define a referência da coleção APÓS a autenticação
+            attendancesCollectionRef = db.collection('pautas').doc(pautaId).collection('attendances');
+
+            // Configura o listener do Firestore para sincronização em tempo real
+            attendancesCollectionRef.onSnapshot(async (snapshot) => {
+                const colaboradores = [];
+                snapshot.forEach((doc) => {
+                    colaboradores.push({ id: doc.id, ...doc.data() });
+                });
+                renderColaboradores(colaboradores);
+
+                // Obter o nome do usuário logado para os registros
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists) {
+                    currentUserName = userDoc.data().name || "Usuário Desconhecido";
+                }
+            });
+        })
+        .catch(error => {
+            console.error("Erro de autenticação com token:", error);
             document.body.innerHTML = `
                 <style>
                     body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f4; }
@@ -408,30 +420,12 @@
                 </style>
                 <div class="error-container">
                     <h1>Erro de Autenticação</h1>
-                    <p>Não foi possível autenticar o usuário. Verifique se o ID de usuário está correto.</p>
+                    <p>Não foi possível autenticar o usuário. Verifique as credenciais.</p>
                     <a href="index.html">Voltar para o Início</a>
                 </div>
             `;
-        }
-    });
-
-    const setupFirestoreListener = () => {
-         // Listener do Firestore para sincronização em tempo real
-        attendancesCollectionRef.onSnapshot(async (snapshot) => {
-            const colaboradores = [];
-            snapshot.forEach((doc) => {
-                colaboradores.push({ id: doc.id, ...doc.data() });
-            });
-            renderColaboradores(colaboradores);
-
-            // Obter o nome do usuário logado para os registros
-            const userDoc = await db.collection('users').doc(userId).get();
-            if (userDoc.exists) {
-                currentUserName = userDoc.data().name || "Usuário Desconhecido";
-            }
         });
-    }
-
+    
     // Lógica para mostrar/esconder campos do formulário
     transporteOptions.forEach(option => {
         option.addEventListener('change', (event) => {
