@@ -256,7 +256,7 @@
               </div>
             <form id="form-agendamento" class="bg-white p-6 rounded-lg shadow-md mb-8">
                 <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
-                    <h2 id="form-title" class="text-xl font-semibold text-gray-700">Adicionar Novo Agendamento</h2>
+                    <h2 id="form-title">Adicionar Novo Agendamento</h2>
                     <div id="agendamento-actions" class="flex items-center gap-4">
                         <a href="#" id="format-help-link" class="text-sm text-green-600 hover:text-green-800 hover:underline transition-colors duration-300 flex items-center gap-1">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle-fill" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.95-11.05a.9.9 0 0 1 .023 1.272l-.2.204a.9.9 0 0 1-1.273-.226L6.451 4.95a.9.9 0 0 1 1.273-.023l.204.2zM8 8.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
@@ -400,7 +400,7 @@
         </div>
         <div class="content-wrapper">
             <div class="container-gerenciar">
-                <h1 id="form-title">Gerenciar Colaboradores</h1>
+                <h1 id="form-title-gerenciar">Gerenciar Colaboradores</h1>
                 <form id="colaborador-form">
                     <div class="form-group-gerenciar">
                         <label for="nome">Nome do Colaborador:</label>
@@ -437,7 +437,7 @@
                         <label for="observacao">Observação:</label>
                         <textarea id="observacao" name="observacao" rows="3"></textarea>
                     </div>
-                    <button type="submit" id="submit-button">Adicionar Colaborador</button>
+                    <button type="submit" id="submit-button-gerenciar" class="w-full py-3 px-6 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition">Adicionar Colaborador</button>
                 </form>
             </div>
             <div class="list-container">
@@ -577,7 +577,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
     <div id="demands-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg flex flex-col" style="max-height: 90vh;">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
                 <h2 class="text-2xl font-bold text-gray-800">Gerenciar Demandas Adicionais</h2>
                 <button id="close-demands-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
@@ -741,7 +741,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 children: [
                     { text: "Ação de Obrigação de Fazer", description: "Ação para exigir que alguém (ou uma empresa/órgão) cumpra uma determinada tarefa ou realize um serviço." },
                     { text: "Ação Declaratória de Nulidade", description: "Ação para pedir que a justiça declare a invalidade de um ato jurídico (ex: contrato, multa, cobrança)." },
-                    { text: "Ação de Indenização (Danos Morais e Materiais)", description: "Ação para buscar compensação financeira por prejuízos sofridos (perdas materiais) e/ou por abalos psicológicos, honra ou dignidade (danos morais)." },
+                    { text: "Ação de Indenização (Danos Morais e Materiais)", description: "Ação para buscar compensação financeira por prejuízos sofridos (perdas materiais) e/ou por abalos psicológicos, honra ou dignidade (damos morais)." },
                     { text: "Ação Revisional de Débito", description: "Ação para contestar e pedir a alteração de valores de dívidas ou cobranças consideradas abusivas ou indevidas." },
                     { text: "Ação de Exigir Contas", description: "Ação para solicitar que uma pessoa (ex: antigo curador, administrador) apresente detalhes e comprovantes de como administrou valores ou bens de outra." }
                 ]
@@ -903,8 +903,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         const colaboradoresListBody = document.querySelector('#colaboradores-list tbody');
         const downloadPdfBtn = document.getElementById('download-pdf');
         const clearListBtn = document.getElementById('clear-list');
-        const formTitleGerenciar = document.getElementById('form-title');
-        const submitButtonGerenciar = document.getElementById('submit-button');
+        const formTitleGerenciar = document.getElementById('form-title-gerenciar');
+        const submitButtonGerenciar = document.getElementById('submit-button-gerenciar');
+        // Modal de confirmação do gerenciar.html
+        const confirmModalGerenciar = document.getElementById('confirm-modal');
+        const modalTextGerenciar = document.getElementById('modal-text');
+        const confirmActionBtnGerenciar = document.getElementById('confirm-action');
+        const cancelActionBtnGerenciar = document.getElementById('cancel-action');
+
 
         const normalizeText = (str) => {
             if (!str) return '';
@@ -1087,8 +1093,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             render(faltososList, faltosos, a => {
                 const card = document.createElement('div');
                 card.className = 'relative bg-red-50 p-4 rounded-lg shadow-sm border-red-200';
-                const totalAssuntos = 1 + (a.demandas?.quantidade ? Number(a.demandas.quantidade) : 0);
-                const demandasInfo = a.demandas?.descricoes?.length > 0 ? `<div class="mt-2 text-xs bg-gray-100 p-2 rounded"><strong class="text-gray-700">Demandas Adicionais (${a.demandas.quantidade || 0}):</strong><ul class="list-disc list-inside pl-2 text-gray-600">${a.demandas.descricoes.map(d => `<li>${d}</li>`).join('')}</ul></div>` : '';
                 card.innerHTML = `
                     <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5zM6 6.5a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm3 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm-5 1a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1h-6z"/></svg></button>
                     <p class="font-bold text-lg">${a.name}</p>
@@ -1136,9 +1140,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         currentPautaId = pautaId;
         document.getElementById('pauta-title').textContent = pautaName;
         
+        // Corrigido para ser um botão
         const manageCollaboratorsBtn = document.getElementById('manage-collaborators-btn');
         if (manageCollaboratorsBtn) {
-            manageCollaboratorsBtn.addEventListener('click', () => showGerenciarScreen());
+            manageCollaboratorsBtn.onclick = showGerenciarScreen;
         }
 
         const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
@@ -1166,6 +1171,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
     const showAppScreen = () => {
         showScreen('app');
+        if (unsubscribeFromColaboradores) unsubscribeFromColaboradores();
         loadPauta(currentPautaId, document.getElementById('pauta-title').textContent);
     };
 
@@ -1392,12 +1398,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         // --- INÍCIO DA LÓGICA DE GERENCIAR COLABORADORES ---
         let editColaboradorId = null;
         let colaboradoresCollectionRef = null;
+        let colaboradoresData = [];
 
         const loadColaboradores = () => {
+            if (!currentPautaId) {
+                console.error("ID da Pauta não encontrado.");
+                return;
+            }
             colaboradoresCollectionRef = collection(db, "pautas", currentPautaId, "attendances");
             unsubscribeFromColaboradores = onSnapshot(colaboradoresCollectionRef, (snapshot) => {
-                const colaboradores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderColaboradoresList(colaboradores);
+                colaboradoresData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderColaboradoresList(colaboradoresData);
+            }, (error) => {
+                console.error("Erro ao carregar colaboradores:", error);
             });
         };
 
@@ -1478,7 +1491,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.querySelectorAll('.delete-btn-colaborador').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const docId = e.currentTarget.dataset.id;
-                    showConfirmModal(() => {
+                    showConfirmModalGerenciar(() => {
                         deleteDoc(doc(colaboradoresCollectionRef, docId));
                     }, `Tem certeza que deseja excluir este colaborador?`);
                 });
@@ -1493,12 +1506,118 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             localEncontroGroup.classList.add('hidden');
             observacaoGroup.classList.add('hidden');
         };
+
+        const showConfirmModalGerenciar = (callback, message) => {
+            modalTextGerenciar.innerHTML = message;
+            confirmModalGerenciar.classList.remove('hidden');
+            actionToConfirm = callback;
+        }
+
+        // Event Listeners da tela de gerenciamento
+        colaboradorForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            
+            const nome = nomeInput.value;
+            const telefone = telefoneInput.value;
+            const transporte = document.querySelector('input[name="transporte"]:checked').value;
+            const localEncontro = document.querySelector('input[name="localEncontro"]:checked')?.value || '';
+            const observacao = document.getElementById('observacao').value;
+
+            const novoColaborador = {
+                nome: nome,
+                telefone: telefone,
+                transporte: transporte,
+                localEncontro: localEncontro,
+                observacao: observacao,
+                presente: false,
+                horario: '--:--'
+            };
+
+            if (editColaboradorId) {
+                await updateDoc(doc(colaboradoresCollectionRef, editColaboradorId), novoColaborador);
+            } else {
+                await addDoc(colaboradoresCollectionRef, novoColaborador);
+            }
+
+            resetColaboradorForm();
+        });
+
+        downloadPdfBtn.addEventListener('click', async () => {
+            const snapshot = await getDocs(colaboradoresCollectionRef);
+            const colaboradores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            const docPDF = new jspdf.jsPDF();
+            const head = [['Nome', 'Deslocamento', 'Presença', 'Horário de Chegada']];
+            const tableBody = [];
+            const presentes = colaboradores.filter(c => c.presente);
+
+            if (presentes.length === 0) {
+                showNotification('Nenhum colaborador com presença marcada para gerar o PDF.', 'info');
+                return;
+            }
+
+            presentes.forEach(colaborador => {
+                const deslocamento = colaborador.transporte === 'Com a Empresa' 
+                    ? `${colaborador.transporte} (${colaborador.localEncontro})`
+                    : colaborador.transporte;
+                tableBody.push([colaborador.nome, deslocamento, 'Presente', colaborador.horario]);
+            });
+            
+            docPDF.autoTable({
+                head: head, body: tableBody, startY: 20,
+                headStyles: { fillColor: [22, 160, 133] },
+                didDrawPage: (data) => {
+                    docPDF.setFontSize(18);
+                    docPDF.setTextColor(40);
+                    docPDF.text('Lista de Presença de Colaboradores', data.settings.margin.left, 15);
+                }
+            });
+            
+            docPDF.save('lista_presenca_presentes.pdf');
+        });
+
+        clearListBtn.addEventListener('click', () => {
+            showConfirmModalGerenciar(async () => {
+                const batch = writeBatch(db);
+                const snapshot = await getDocs(colaboradoresCollectionRef);
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+                resetColaboradorForm();
+            }, 'Tem certeza que deseja limpar toda a lista?<br>Esta ação não pode ser desfeita.');
+        });
+        
+        if (backFromGerenciarBtn) {
+            backFromGerenciarBtn.addEventListener('click', showAppScreen);
+        }
+        
+        // Listener dos botões da modal de confirmação do Gerenciador
+        const confirmModalGerenciarElement = document.getElementById('confirm-modal');
+        const confirmActionBtnGerenciarElement = document.getElementById('confirm-action');
+        const cancelActionBtnGerenciarElement = document.getElementById('cancel-action');
+
+        if(confirmActionBtnGerenciarElement) {
+            confirmActionBtnGerenciarElement.addEventListener('click', () => {
+                if (actionToConfirm) {
+                    actionToConfirm();
+                }
+                confirmModalGerenciarElement.classList.add('hidden');
+                actionToConfirm = null;
+            });
+        }
+        if(cancelActionBtnGerenciarElement) {
+            cancelActionBtnGerenciarElement.addEventListener('click', () => {
+                confirmModalGerenciarElement.classList.add('hidden');
+                actionToConfirm = null;
+            });
+        }
         // --- FIM DA LÓGICA DE GERENCIAR COLABORADORES ---
 
         document.addEventListener('DOMContentLoaded', () => {
             main();
             setupModalClosers();
-
+            
             // Lógica para preencher o datalist
             const datalist = document.getElementById('subjects-list');
             flatSubjects.forEach(subject => {
@@ -2072,58 +2191,57 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (button.id === 'manage-members-btn') {
                     await showMembersModal();
                 }
+                
+                if (button.id === 'add-assisted-btn') {
+                    const name = document.getElementById('assisted-name').value.trim();
+                    if (!name) {
+                        showNotification("O nome é obrigatório.", "error");
+                        return;
+                    }
+                    
+                    const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
+                    let isScheduled, hasArrived, scheduledTimeValue;
 
-              if (button.id === 'add-assisted-btn') {
-    const name = document.getElementById('assisted-name').value.trim();
-    if (!name) {
-        showNotification("O nome é obrigatório.", "error");
-        return;
-    }
-    
-    const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-    let isScheduled, hasArrived, scheduledTimeValue;
+                    if (currentMode === 'agendamento') {
+                        isScheduled = document.querySelector('input[name="is-scheduled"]:checked').value === 'yes';
+                        hasArrived = document.querySelector('input[name="has-arrived"]:checked').value === 'yes';
+                        scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time').value : null;
 
-    if (currentMode === 'agendamento') {
-        isScheduled = document.querySelector('input[name="is-scheduled"]:checked').value === 'yes';
-        hasArrived = document.querySelector('input[name="has-arrived']:checked').value === 'yes';
-        scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time').value : null;
+                        if (isScheduled && !scheduledTimeValue) {
+                            showNotification("Por favor, informe o horário agendado.", "error");
+                            return;
+                        }
+                    } else { 
+                        isScheduled = false;
+                        hasArrived = true;
+                        scheduledTimeValue = null;
+                    }
 
-        // Adicionada validação para o horário agendado.
-        if (isScheduled && !scheduledTimeValue) {
-            showNotification("Por favor, informe o horário agendado.", "error");
-            return;
-        }
-    } else { 
-        isScheduled = false;
-        hasArrived = true;
-        scheduledTimeValue = null;
-    }
+                    let arrivalDate = null;
+                    if (hasArrived) {
+                        const timeInput = document.getElementById('arrival-time').value;
+                        const [hours, minutes] = timeInput.split(':');
+                        arrivalDate = new Date();
+                        arrivalDate.setHours(hours, minutes, 0, 0);
+                    }
+                    
+                    const newAssisted = getUpdatePayload({
+                        name,
+                        cpf: document.getElementById('assisted-cpf').value.trim(),
+                        subject: document.getElementById('assisted-subject').value.trim(),
+                        type: currentMode,
+                        status: hasArrived ? 'aguardando' : 'pauta',
+                        scheduledTime: scheduledTimeValue,
+                        arrivalTime: hasArrived ? arrivalDate.toISOString() : null,
+                        createdAt: new Date().toISOString()
+                    });
 
-    let arrivalDate = null;
-    if (hasArrived) {
-        const timeInput = document.getElementById('arrival-time').value;
-        const [hours, minutes] = timeInput.split(':');
-        arrivalDate = new Date();
-        arrivalDate.setHours(hours, minutes, 0, 0);
-    }
-    
-    const newAssisted = getUpdatePayload({
-        name,
-        cpf: document.getElementById('assisted-cpf').value.trim(),
-        subject: document.getElementById('assisted-subject').value.trim(),
-        type: currentMode,
-        status: hasArrived ? 'aguardando' : 'pauta',
-        scheduledTime: scheduledTimeValue,
-        arrivalTime: hasArrived ? arrivalDate.toISOString() : null,
-        createdAt: new Date().toISOString()
-    });
-
-    await addDoc(collection(db, "pautas", currentPautaId, "attendances"), newAssisted);
-    showNotification("Assistido adicionado com sucesso!");
-    document.getElementById('form-agendamento').reset();
-    document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-    document.getElementById('arrival-time-wrapper').classList.add('hidden');
-}
+                    await addDoc(collection(db, "pautas", currentPautaId, "attendances"), newAssisted);
+                    showNotification("Assistido adicionado com sucesso!");
+                    document.getElementById('form-agendamento').reset();
+                    document.getElementById('scheduled-time-wrapper').classList.add('hidden');
+                    document.getElementById('arrival-time-wrapper').classList.add('hidden');
+                }
 
                 if (button.id === 'confirm-arrival-btn') {
                     const arrivalTimeInput = document.getElementById('arrival-time-input').value;
