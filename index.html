@@ -921,15 +921,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }, (error) => console.error("Erro no listener do Firestore: ", error));
         };
 
-       const loadPauta = async (pautaId, pautaName) => {
-    currentPautaId = pautaId;
-    document.getElementById('pauta-title').textContent = pautaName;
+    const loadPauta = async (pautaId, pautaName) => {
+        currentPautaId = pautaId;
+        document.getElementById('pauta-title').textContent = pautaName;
 
-    const linkColaboradores = document.getElementById('manage-collaborators-link');
-    if (linkColaboradores && auth.currentUser) {
-        try {
-            // Gera um token de autenticação válido para o usuário logado.
-            const authToken = await auth.currentUser.getIdToken();
+        const linkColaboradores = document.getElementById('manage-collaborators-link');
+            if (linkColaboradores && auth.currentUser) {
+                try {
+                    // Gera um token de autenticação válido para o usuário logado.
+                    const authToken = await auth.currentUser.getIdToken();
             // Passa o ID da pauta E o token na URL.
             linkColaboradores.href = `gerenciar.html?pautaId=${pautaId}&authToken=${authToken}`;
         } catch (error) {
@@ -2153,6 +2153,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+
 
 
 
