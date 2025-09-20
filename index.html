@@ -761,6 +761,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         let assistedIdToHandle = null;
         let currentChecklistAction = null;
 
+        // Variáveis para a lógica de Colaboradores
+        let colaboradores = [];
+        let editCollaboratorId = null;
+        let unsubscribeFromCollaborators = () => {};
+
         const loadingContainer = document.getElementById('loading-container');
         const loginContainer = document.getElementById('login-container');
         const pautaSelectionContainer = document.getElementById('pauta-selection-container');
@@ -1790,8 +1795,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 if (button.id === 'back-to-pautas-btn') {
                     if (unsubscribeFromAttendances) unsubscribeFromAttendances();
+                    if (unsubscribeFromCollaborators) unsubscribeFromCollaborators();
                     currentPautaId = null;
                     allAssisted = [];
+                    colaboradores = [];
                     showPautaSelectionScreen(auth.currentUser.uid);
                 }
                 if (button.id === 'reset-all-btn') {
@@ -2206,7 +2213,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 editSubjectInput.value = selectedText;
             });
             
-            // --- INÍCIO DA LÓGICA DE COLABORADORES ---
+            // --- INÍCIO DA LÓGICA DE COLABORADORES (CORRIGIDO COM FIRESTORE) ---
             const collaboratorsModal = document.getElementById('collaborators-modal');
             const collaboratorForm = document.getElementById('collaborator-form');
             const collaboratorListTableBody = document.querySelector('#collaborators-list-table tbody');
@@ -2217,23 +2224,31 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const localEncontroGroup = document.getElementById('local-encontro-group');
             const observacaoGroup = document.getElementById('observacao-group');
 
-            // A chave de armazenamento agora é única para cada pauta
-            const getCollaboratorsStorageKey = () => `listaDeColaboradores_${currentPautaId}`;
-            let colaboradores = [];
-            let editCollaboratorIndex = null;
-
-            const saveColaboradores = () => {
-                if (!currentPautaId) return;
-                localStorage.setItem(getCollaboratorsStorageKey(), JSON.stringify(colaboradores));
+            const setupCollaboratorsListener = (pautaId) => {
+                if (unsubscribeFromCollaborators) {
+                    unsubscribeFromCollaborators();
+                }
+                const collaboratorsCollectionRef = collection(db, "pautas", pautaId, "collaborators");
+                unsubscribeFromCollaborators = onSnapshot(collaboratorsCollectionRef, (snapshot) => {
+                    colaboradores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    colaboradores.sort((a, b) => a.nome.localeCompare(b.nome)); // Mantém a lista ordenada por nome
+                    renderColaboradores();
+                }, (error) => {
+                    console.error("Erro no listener de colaboradores: ", error);
+                    collaboratorListTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Erro ao carregar colaboradores.</td></tr>';
+                });
             };
 
             const renderColaboradores = () => {
                 collaboratorListTableBody.innerHTML = '';
-                colaboradores.forEach((colaborador, index) => {
+                if (colaboradores.length === 0) {
+                    collaboratorListTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">Nenhum colaborador adicionado.</td></tr>';
+                    return;
+                }
+                colaboradores.forEach((colaborador) => {
                     const newRow = document.createElement('tr');
                     newRow.className = "bg-white border-b";
 
-                    // Lógica para exibir o texto de deslocamento
                     let deslocamentoTexto = colaborador.transporte || 'Não Confirmado';
                     if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro) {
                         deslocamentoTexto += ` (${colaborador.localEncontro})`;
@@ -2242,16 +2257,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     newRow.innerHTML = `
                         <td class="py-4 px-6 font-medium text-gray-900">${colaborador.nome}</td>
                         <td class="py-4 px-6">${deslocamentoTexto}</td>
-                        <td class="py-4 px-6"><input type="checkbox" class="checkin-checkbox" data-index="${index}" ${colaborador.presente ? 'checked' : ''}></td>
+                        <td class="py-4 px-6"><input type="checkbox" class="checkin-checkbox" data-id="${colaborador.id}" ${colaborador.presente ? 'checked' : ''}></td>
                         <td class="py-4 px-6">${colaborador.horario || '--:--'}</td>
                         <td class="py-4 px-6">
                             <a href="https://wa.me/55${colaborador.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Bom dia! Poderia, por gentileza, informar se já está chegando? Estamos quase saindo.`)}" class="text-blue-600 hover:underline" target="_blank">Mensagem</a>
                         </td>
                         <td class="py-4 px-6 space-x-2">
-                            <button class="edit-collaborator-btn text-gray-500 hover:text-gray-900" data-index="${index}" title="Editar">
+                            <button class="edit-collaborator-btn text-gray-500 hover:text-gray-900" data-id="${colaborador.id}" title="Editar">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
-                            <button class="delete-collaborator-btn text-red-500 hover:text-red-700" data-index="${index}" title="Excluir">
+                            <button class="delete-collaborator-btn text-red-500 hover:text-red-700" data-id="${colaborador.id}" title="Excluir">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                             </button>
                         </td>
@@ -2260,38 +2275,41 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 });
                 
                 document.querySelectorAll('.checkin-checkbox').forEach(checkbox => {
-                    checkbox.addEventListener('change', (e) => {
-                        const index = e.target.dataset.index;
-                        const colaborador = colaboradores[index];
+                    checkbox.addEventListener('change', async (e) => {
+                        const collaboratorId = e.target.dataset.id;
+                        const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", collaboratorId);
                         if (e.target.checked) {
                             const now = new Date();
-                            colaborador.presente = true;
-                            colaborador.horario = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                            await updateDoc(collaboratorRef, {
+                                presente: true,
+                                horario: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                            });
                         } else {
-                            colaborador.presente = false;
-                            colaborador.horario = '--:--';
+                            await updateDoc(collaboratorRef, {
+                                presente: false,
+                                horario: '--:--'
+                            });
                         }
-                        saveColaboradores();
-                        renderColaboradores();
                     });
                 });
+
                 document.querySelectorAll('.edit-collaborator-btn').forEach(button => {
                     button.addEventListener('click', (e) => {
-                        const index = e.currentTarget.dataset.index;
-                        editCollaboratorIndex = index;
-                        const colaborador = colaboradores[index];
+                        const collaboratorId = e.currentTarget.dataset.id;
+                        editCollaboratorId = collaboratorId;
+                        const colaborador = colaboradores.find(c => c.id === collaboratorId);
+                        if (!colaborador) return;
+                        
                         document.getElementById('collaborator-name').value = colaborador.nome;
                         document.getElementById('collaborator-phone').value = colaborador.telefone;
                         document.getElementById('collaborator-obs').value = colaborador.observacao || '';
 
-                        // Marca a opção de transporte correta
                         const transporteRadio = document.querySelector(`input[name="transporte"][value="${colaborador.transporte}"]`);
                         if (transporteRadio) {
                             transporteRadio.checked = true;
                             transporteRadio.dispatchEvent(new Event('change'));
                         }
 
-                        // Se houver local de encontro, marca
                         const localEncontroRadio = document.querySelector(`input[name="localEncontro"][value="${colaborador.localEncontro}"]`);
                         if (localEncontroRadio) {
                             localEncontroRadio.checked = true;
@@ -2301,13 +2319,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         addCollaboratorBtn.textContent = "Salvar Alterações";
                     });
                 });
+
                 document.querySelectorAll('.delete-collaborator-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const index = e.currentTarget.dataset.index;
-                        if (confirm(`Tem certeza que deseja excluir o colaborador "${colaboradores[index].nome}"?`)) {
-                            colaboradores.splice(index, 1);
-                            saveColaboradores();
-                            renderColaboradores();
+                    button.addEventListener('click', async (e) => {
+                        const collaboratorId = e.currentTarget.dataset.id;
+                        const colaborador = colaboradores.find(c => c.id === collaboratorId);
+                        if (colaborador && confirm(`Tem certeza que deseja excluir o colaborador "${colaborador.nome}"?`)) {
+                            await deleteDoc(doc(db, "pautas", currentPautaId, "collaborators", collaboratorId));
+                            showNotification("Colaborador excluído.", "success");
                         }
                     });
                 });
@@ -2315,8 +2334,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             const resetCollaboratorForm = () => {
                 collaboratorForm.reset();
-                document.querySelector('input[name="transporte"][value="Não Confirmado"]').checked = true; // Garante que o padrão seja 'Não Confirmado'
-                editCollaboratorIndex = null;
+                document.querySelector('input[name="transporte"][value="Não Confirmado"]').checked = true;
+                editCollaboratorId = null;
                 addCollaboratorBtn.textContent = "Adicionar Colaborador";
                 localEncontroGroup.classList.add('hidden');
                 observacaoGroup.classList.add('hidden');
@@ -2338,7 +2357,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 });
             });
 
-            collaboratorForm.addEventListener('submit', (event) => {
+            collaboratorForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 const nome = document.getElementById('collaborator-name').value;
                 const telefone = document.getElementById('collaborator-phone').value;
@@ -2346,30 +2365,23 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const localEncontro = collaboratorForm.querySelector('input[name="localEncontro"]:checked')?.value || '';
                 const observacao = document.getElementById('collaborator-obs').value;
 
-                const newCollaboratorData = {
-                    nome,
-                    telefone,
-                    transporte,
-                    localEncontro,
-                    observacao,
-                };
+                const collaboratorData = { nome, telefone, transporte, localEncontro, observacao };
 
-                if (editCollaboratorIndex !== null) {
-                    // Mantém o status de presença ao editar
-                    colaboradores[editCollaboratorIndex] = {
-                        ...colaboradores[editCollaboratorIndex],
-                        ...newCollaboratorData
-                    };
-                } else {
-                    colaboradores.push({
-                        ...newCollaboratorData,
-                        presente: false,
-                        horario: '--:--'
-                    });
+                try {
+                    if (editCollaboratorId) {
+                        const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", editCollaboratorId);
+                        await updateDoc(collaboratorRef, collaboratorData);
+                        showNotification("Colaborador atualizado com sucesso!");
+                    } else {
+                        const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
+                        await addDoc(collaboratorsCollectionRef, { ...collaboratorData, presente: false, horario: '--:--' });
+                        showNotification("Colaborador adicionado com sucesso!");
+                    }
+                    resetCollaboratorForm();
+                } catch (error) {
+                    console.error("Erro ao salvar colaborador: ", error);
+                    showNotification("Erro ao salvar colaborador.", "error");
                 }
-                saveColaboradores();
-                renderColaboradores();
-                resetCollaboratorForm();
             });
 
             downloadCollaboratorsPdfBtn.addEventListener('click', () => {
@@ -2398,30 +2410,37 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     didDrawPage: (data) => {
                         docPDF.setFontSize(18);
                         docPDF.setTextColor(40);
-                        docPDF.text('Lista de Presença de Colaboradores', data.settings.margin.left, 15);
+                        docPDF.text(`Lista de Presença - ${document.getElementById('pauta-title').textContent}`, data.settings.margin.left, 15);
                     }
                 });
                 docPDF.save('lista_presenca_colaboradores.pdf');
             });
 
-            clearCollaboratorsListBtn.addEventListener('click', () => {
+            clearCollaboratorsListBtn.addEventListener('click', async () => {
                 if (confirm('Tem certeza que deseja limpar toda a lista? Esta ação não pode ser desfeita.')) {
-                    colaboradores = [];
-                    saveColaboradores();
-                    renderColaboradores();
+                    const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
+                    const snapshot = await getDocs(collaboratorsCollectionRef);
+                    if (snapshot.empty) {
+                        showNotification("A lista já está limpa.", "info");
+                        return;
+                    }
+                    const batch = writeBatch(db);
+                    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                    await batch.commit();
                     showNotification("Lista de colaboradores limpa.", "success");
                 }
             });
 
             document.getElementById('manage-collaborators-btn').addEventListener('click', () => {
-                const dadosSalvos = localStorage.getItem(getCollaboratorsStorageKey());
-                colaboradores = dadosSalvos ? JSON.parse(dadosSalvos) : [];
-                renderColaboradores();
+                setupCollaboratorsListener(currentPautaId);
                 resetCollaboratorForm();
                 collaboratorsModal.classList.remove('hidden');
             });
 
             document.getElementById('close-collaborators-modal-btn').addEventListener('click', () => {
+                if (unsubscribeFromCollaborators) {
+                    unsubscribeFromCollaborators();
+                }
                 collaboratorsModal.classList.add('hidden');
             });
             // --- FIM DA LÓGICA DE COLABORADORES ---
