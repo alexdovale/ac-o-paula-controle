@@ -308,9 +308,9 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const pautaId = urlParams.get('pautaId');
-    const authToken = urlParams.get('authToken'); // Pega o token de autenticação da URL
+    const userId = urlParams.get('userId'); // Pega o userId da URL
 
-    if (!pautaId || !authToken) {
+    if (!pautaId || !userId) {
         document.body.innerHTML = `
             <style>
                 body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f4; }
@@ -321,13 +321,13 @@
             </style>
             <div class="error-container">
                 <h1>Erro: Acesso não autorizado</h1>
-                <p>O token de autenticação não foi encontrado. Por favor, acesse esta página a partir de uma pauta específica no sistema principal.</p>
+                <p>Por favor, acesse esta página a partir de uma pauta específica no sistema principal.</p>
                 <a href="index.html">Voltar para o Início</a>
             </div>
         `;
-        throw new Error("Token de autenticação não encontrado na URL.");
+        throw new Error("ID da Pauta ou do Usuário não encontrado na URL.");
     }
-
+    
     const form = document.getElementById('colaborador-form');
     const formTitle = document.getElementById('form-title');
     const submitButton = document.getElementById('submit-button');
@@ -347,9 +347,7 @@
     let editDocId = null;
     let actionToConfirm = null;
     let currentUserName = "Usuário Desconhecido";
-    let attendancesCollectionRef = null;
 
-    // Função para renderizar a lista
     const renderColaboradores = (colaboradores) => {
         colaboradoresListBody.innerHTML = '';
         colaboradores.forEach((colaborador) => {
@@ -384,14 +382,13 @@
         addEventListenersToListActions();
     };
 
-    // Autentica o usuário com o token e, em seguida, configura o listener.
-    auth.signInWithCustomToken(authToken)
+    // A lógica de autenticação com o userId do index.html
+    auth.signInWithCustomToken(userId)
         .then(async (userCredential) => {
             const user = userCredential.user;
             console.log("Usuário autenticado com sucesso:", user.uid);
             
-            // Define a referência da coleção APÓS a autenticação
-            attendancesCollectionRef = db.collection('pautas').doc(pautaId).collection('attendances');
+            const attendancesCollectionRef = db.collection('pautas').doc(pautaId).collection('attendances');
 
             // Configura o listener do Firestore para sincronização em tempo real
             attendancesCollectionRef.onSnapshot(async (snapshot) => {
@@ -401,11 +398,155 @@
                 });
                 renderColaboradores(colaboradores);
 
-                // Obter o nome do usuário logado para os registros
                 const userDoc = await db.collection('users').doc(user.uid).get();
                 if (userDoc.exists) {
                     currentUserName = userDoc.data().name || "Usuário Desconhecido";
                 }
+            });
+
+            // Adiciona a lógica de manipulação do formulário aqui
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                
+                const nome = document.getElementById('nome').value;
+                const telefone = document.getElementById('telefone').value;
+                const transporte = document.querySelector('input[name="transporte"]:checked').value;
+                const localEncontro = document.querySelector('input[name="localEncontro"]:checked')?.value || '';
+                const observacao = document.getElementById('observacao').value;
+
+                const novoColaborador = {
+                    nome: nome,
+                    telefone: telefone,
+                    transporte: transporte,
+                    localEncontro: localEncontro,
+                    observacao: observacao,
+                    presente: false,
+                    horario: '--:--'
+                };
+
+                if (editDocId) {
+                    await attendancesCollectionRef.doc(editDocId).update(novoColaborador);
+                } else {
+                    await attendancesCollectionRef.add(novoColaborador);
+                }
+
+                resetForm();
+            });
+
+            // Adiciona a lógica dos botões de ação da lista aqui
+            function addEventListenersToListActions() {
+                document.querySelectorAll('.checkin-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', async (e) => {
+                        const docId = e.target.dataset.id;
+                        const presente = e.target.checked;
+                        const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                        await attendancesCollectionRef.doc(docId).update({ presente, horario });
+                    });
+                });
+
+                document.querySelectorAll('.edit-btn').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const docId = e.currentTarget.dataset.id;
+                        const doc = await attendancesCollectionRef.doc(docId).get();
+                        if (doc.exists) {
+                            const colaborador = doc.data();
+                            editDocId = docId;
+                            document.getElementById('nome').value = colaborador.nome;
+                            document.getElementById('telefone').value = colaborador.telefone;
+                            
+                            const transporteRadio = document.querySelector(`input[name="transporte"][value="${colaborador.transporte}"]`);
+                            if (transporteRadio) {
+                                transporteRadio.checked = true;
+                                transporteRadio.dispatchEvent(new Event('change'));
+                            }
+
+                            const localEncontroRadio = document.querySelector(`input[name="localEncontro"][value="${colaborador.localEncontro}"]`);
+                            if (localEncontroRadio) {
+                                localEncontroRadio.checked = true;
+                                localEncontroRadio.dispatchEvent(new Event('change'));
+                            }
+
+                            document.getElementById('observacao').value = colaborador.observacao || '';
+                            formTitle.textContent = "Editar Colaborador";
+                            submitButton.textContent = "Salvar Alterações";
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                    });
+                });
+
+                document.querySelectorAll('.delete-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const docId = e.currentTarget.dataset.id;
+                        showConfirmModal(() => {
+                            attendancesCollectionRef.doc(docId).delete();
+                        }, `Tem certeza que deseja excluir este colaborador?`);
+                    });
+                });
+            }
+
+            downloadPdfBtn.addEventListener('click', async () => {
+                const snapshot = await attendancesCollectionRef.get();
+                const colaboradores = [];
+                snapshot.forEach((doc) => {
+                    colaboradores.push({ id: doc.id, ...doc.data() });
+                });
+                
+                const doc = new window.jspdf.jsPDF();
+                const head = [['Nome', 'Deslocamento', 'Presença', 'Horário de Chegada']];
+                const tableBody = [];
+                const presentes = colaboradores.filter(c => c.presente);
+
+                if (presentes.length === 0) {
+                    const notification = document.createElement('div');
+                    notification.textContent = 'Nenhum colaborador com presença marcada para gerar o PDF.';
+                    notification.style.position = 'fixed';
+                    notification.style.bottom = '20px';
+                    notification.style.left = '50%';
+                    notification.style.transform = 'translateX(-50%)';
+                    notification.style.backgroundColor = '#333';
+                    notification.style.color = 'white';
+                    notification.style.padding = '15px';
+                    notification.style.borderRadius = '5px';
+                    notification.style.zIndex = '1001';
+                    notification.style.transition = 'opacity 0.5s';
+                    document.body.appendChild(notification);
+                    setTimeout(() => {
+                        notification.style.opacity = '0';
+                        setTimeout(() => document.body.removeChild(notification), 500);
+                    }, 3000);
+                    return;
+                }
+
+                presentes.forEach(colaborador => {
+                    const deslocamento = colaborador.transporte === 'Com a Empresa' 
+                        ? `${colaborador.transporte} (${colaborador.localEncontro})`
+                        : colaborador.transporte;
+                    tableBody.push([colaborador.nome, deslocamento, 'Presente', colaborador.horario]);
+                });
+                
+                doc.autoTable({
+                    head: head, body: tableBody, startY: 20,
+                    headStyles: { fillColor: [22, 160, 133] },
+                    didDrawPage: (data) => {
+                        doc.setFontSize(18);
+                        doc.setTextColor(40);
+                        doc.text('Lista de Presença de Colaboradores', data.settings.margin.left, 15);
+                    }
+                });
+                
+                doc.save('lista_presenca_presentes.pdf');
+            });
+
+            clearListBtn.addEventListener('click', () => {
+                showConfirmModal(async () => {
+                    const batch = db.batch();
+                    const snapshot = await attendancesCollectionRef.get();
+                    snapshot.docs.forEach(doc => {
+                        batch.delete(doc.ref);
+                    });
+                    await batch.commit();
+                    resetForm();
+                }, 'Tem certeza que deseja limpar toda a lista?<br>Esta ação não pode ser desfeita.');
             });
         })
         .catch(error => {
@@ -426,7 +567,7 @@
             `;
         });
     
-    // Lógica para mostrar/esconder campos do formulário
+    // Funções modais e de formulário
     transporteOptions.forEach(option => {
         option.addEventListener('change', (event) => {
             localEncontroGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
@@ -443,87 +584,6 @@
         });
     });
 
-    // Lógica de envio do formulário
-    form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        
-        const nome = document.getElementById('nome').value;
-        const telefone = document.getElementById('telefone').value;
-        const transporte = document.querySelector('input[name="transporte"]:checked').value;
-        const localEncontro = document.querySelector('input[name="localEncontro"]:checked')?.value || '';
-        const observacao = document.getElementById('observacao').value;
-
-        const novoColaborador = {
-            nome: nome,
-            telefone: telefone,
-            transporte: transporte,
-            localEncontro: localEncontro,
-            observacao: observacao,
-            presente: false,
-            horario: '--:--'
-        };
-
-        if (editDocId) {
-            // Editando
-            await attendancesCollectionRef.doc(editDocId).update(novoColaborador);
-        } else {
-            // Adicionando novo
-            await attendancesCollectionRef.add(novoColaborador);
-        }
-
-        resetForm();
-    });
-
-    const addEventListenersToListActions = () => {
-        document.querySelectorAll('.checkin-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', async (e) => {
-                const docId = e.target.dataset.id;
-                const presente = e.target.checked;
-                const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-                await attendancesCollectionRef.doc(docId).update({ presente, horario });
-            });
-        });
-
-        document.querySelectorAll('.edit-btn').forEach(button => {
-            button.addEventListener('click', async (e) => {
-                const docId = e.currentTarget.dataset.id;
-                const doc = await attendancesCollectionRef.doc(docId).get();
-                if (doc.exists) {
-                    const colaborador = doc.data();
-                    editDocId = docId;
-                    document.getElementById('nome').value = colaborador.nome;
-                    document.getElementById('telefone').value = colaborador.telefone;
-                    
-                    const transporteRadio = document.querySelector(`input[name="transporte"][value="${colaborador.transporte}"]`);
-                    if (transporteRadio) {
-                        transporteRadio.checked = true;
-                        transporteRadio.dispatchEvent(new Event('change'));
-                    }
-
-                    const localEncontroRadio = document.querySelector(`input[name="localEncontro"][value="${colaborador.localEncontro}"]`);
-                    if (localEncontroRadio) {
-                        localEncontroRadio.checked = true;
-                        localEncontroRadio.dispatchEvent(new Event('change'));
-                    }
-
-                    document.getElementById('observacao').value = colaborador.observacao || '';
-                    formTitle.textContent = "Editar Colaborador";
-                    submitButton.textContent = "Salvar Alterações";
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            });
-        });
-
-        document.querySelectorAll('.delete-btn').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const docId = e.currentTarget.dataset.id;
-                showConfirmModal(() => {
-                    attendancesCollectionRef.doc(docId).delete();
-                }, `Tem certeza que deseja excluir este colaborador?`);
-            });
-        });
-    }
-
     const resetForm = () => {
         form.reset();
         editDocId = null;
@@ -533,76 +593,11 @@
         observacaoGroup.classList.add('hidden');
     }
 
-    downloadPdfBtn.addEventListener('click', async () => {
-        const snapshot = await attendancesCollectionRef.get();
-        const colaboradores = [];
-        snapshot.forEach((doc) => {
-            colaboradores.push({ id: doc.id, ...doc.data() });
-        });
-        
-        const doc = new window.jspdf.jsPDF();
-        const head = [['Nome', 'Deslocamento', 'Presença', 'Horário de Chegada']];
-        const tableBody = [];
-        const presentes = colaboradores.filter(c => c.presente);
-
-        if (presentes.length === 0) {
-            const notification = document.createElement('div');
-            notification.textContent = 'Nenhum colaborador com presença marcada para gerar o PDF.';
-            notification.style.position = 'fixed';
-            notification.style.bottom = '20px';
-            notification.style.left = '50%';
-            notification.style.transform = 'translateX(-50%)';
-            notification.style.backgroundColor = '#333';
-            notification.style.color = 'white';
-            notification.style.padding = '15px';
-            notification.style.borderRadius = '5px';
-            notification.style.zIndex = '1001';
-            notification.style.transition = 'opacity 0.5s';
-            document.body.appendChild(notification);
-            setTimeout(() => {
-                notification.style.opacity = '0';
-                setTimeout(() => document.body.removeChild(notification), 500);
-            }, 3000);
-            return;
-        }
-
-        presentes.forEach(colaborador => {
-            const deslocamento = colaborador.transporte === 'Com a Empresa' 
-                ? `${colaborador.transporte} (${colaborador.localEncontro})`
-                : colaborador.transporte;
-            tableBody.push([colaborador.nome, deslocamento, 'Presente', colaborador.horario]);
-        });
-        
-        doc.autoTable({
-            head: head, body: tableBody, startY: 20,
-            headStyles: { fillColor: [22, 160, 133] },
-            didDrawPage: (data) => {
-                doc.setFontSize(18);
-                doc.setTextColor(40);
-                doc.text('Lista de Presença de Colaboradores', data.settings.margin.left, 15);
-            }
-        });
-        
-        doc.save('lista_presenca_presentes.pdf');
-    });
-
     const showConfirmModal = (callback, message) => {
         modalText.innerHTML = message;
         confirmModal.style.display = 'flex';
         actionToConfirm = callback;
     }
-
-    clearListBtn.addEventListener('click', () => {
-        showConfirmModal(async () => {
-            const batch = db.batch();
-            const snapshot = await attendancesCollectionRef.get();
-            snapshot.docs.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-            await batch.commit();
-            resetForm();
-        }, 'Tem certeza que deseja limpar toda a lista?<br>Esta ação não pode ser desfeita.');
-    });
 
     confirmActionBtn.addEventListener('click', () => {
         if (actionToConfirm) {
