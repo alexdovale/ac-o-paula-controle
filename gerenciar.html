@@ -289,6 +289,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE",
@@ -303,6 +304,7 @@
     // Inicializa o Firebase
     const app = firebase.initializeApp(firebaseConfig);
     const db = app.firestore();
+    const auth = app.auth();
 
     const urlParams = new URLSearchParams(window.location.search);
     const pautaId = urlParams.get('pautaId');
@@ -344,6 +346,7 @@
 
     let editDocId = null;
     let actionToConfirm = null;
+    let currentUserName = "Usuário Desconhecido"; // Adiciona uma variável para o nome do usuário
 
     // Função para renderizar a lista
     const renderColaboradores = (colaboradores) => {
@@ -380,14 +383,51 @@
         addEventListenersToListActions();
     };
 
-    // Listener do Firestore para sincronização em tempo real
-    db.collection('pautas').doc(pautaId).collection('attendances').onSnapshot((snapshot) => {
-        const colaboradores = [];
-        snapshot.forEach((doc) => {
-            colaboradores.push({ id: doc.id, ...doc.data() });
-        });
-        renderColaboradores(colaboradores);
+    // A lógica de autenticação precisa ser aqui para que o userId seja usado corretamente.
+    auth.signInWithCustomToken(userId).catch(async (error) => {
+        // Se a autenticação com o token falhar, tenta com o ID do usuário como token.
+        // Isso é uma suposição, mas pode funcionar se o "userId" for na verdade o "token".
+        // O ideal é passar um token de verdade gerado no backend.
+        console.warn("Falha na autenticação com token. Tentando com ID do usuário.");
+        try {
+            await auth.signInWithCustomToken(userId);
+            // Autenticação bem-sucedida, agora podemos configurar o listener.
+            setupFirestoreListener();
+        } catch (authError) {
+            console.error("Erro final de autenticação:", authError);
+            document.body.innerHTML = `
+                <style>
+                    body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f4; }
+                    .error-container { text-align: center; padding: 40px; background-color: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+                    .error-container h1 { color: #dc3545; }
+                    .error-container p { color: #333; }
+                    .error-container a { display: inline-block; margin-top: 20px; padding: 10px 20px; background-color: #6c757d; color: #fff; text-decoration: none; border-radius: 5px; }
+                </style>
+                <div class="error-container">
+                    <h1>Erro de Autenticação</h1>
+                    <p>Não foi possível autenticar o usuário. Verifique se o ID de usuário está correto.</p>
+                    <a href="index.html">Voltar para o Início</a>
+                </div>
+            `;
+        }
     });
+
+    const setupFirestoreListener = () => {
+         // Listener do Firestore para sincronização em tempo real
+        db.collection('pautas').doc(pautaId).collection('attendances').onSnapshot(async (snapshot) => {
+            const colaboradores = [];
+            snapshot.forEach((doc) => {
+                colaboradores.push({ id: doc.id, ...doc.data() });
+            });
+            renderColaboradores(colaboradores);
+
+            // Obter o nome do usuário logado para os registros
+            const userDoc = await db.collection('users').doc(userId).get();
+            if (userDoc.exists) {
+                currentUserName = userDoc.data().name || "Usuário Desconhecido";
+            }
+        });
+    }
 
     // Lógica para mostrar/esconder campos do formulário
     transporteOptions.forEach(option => {
@@ -579,7 +619,6 @@
         confirmModal.style.display = 'none';
         actionToConfirm = null;
     });
-
 </script>
 
 </body>
