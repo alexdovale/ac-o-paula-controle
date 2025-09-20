@@ -308,7 +308,7 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const pautaId = urlParams.get('pautaId');
-    const userId = urlParams.get('userId'); // Pega o userId da URL
+    const userId = urlParams.get('userId');
 
     if (!pautaId || !userId) {
         document.body.innerHTML = `
@@ -346,7 +346,10 @@
 
     let editDocId = null;
     let actionToConfirm = null;
-    let currentUserName = "Usuário Desconhecido"; // Adiciona uma variável para o nome do usuário
+    let currentUserName = "Usuário Desconhecido";
+
+    // Adicionado: referência da coleção de atendimentos para uso global
+    const attendancesCollectionRef = db.collection('pautas').doc(pautaId).collection('attendances');
 
     // Função para renderizar a lista
     const renderColaboradores = (colaboradores) => {
@@ -414,7 +417,7 @@
 
     const setupFirestoreListener = () => {
          // Listener do Firestore para sincronização em tempo real
-        db.collection('pautas').doc(pautaId).collection('attendances').onSnapshot(async (snapshot) => {
+        attendancesCollectionRef.onSnapshot(async (snapshot) => {
             const colaboradores = [];
             snapshot.forEach((doc) => {
                 colaboradores.push({ id: doc.id, ...doc.data() });
@@ -468,10 +471,10 @@
 
         if (editDocId) {
             // Editando
-            await db.collection('pautas').doc(pautaId).collection('attendances').doc(editDocId).update(novoColaborador);
+            await attendancesCollectionRef.doc(editDocId).update(novoColaborador);
         } else {
             // Adicionando novo
-            await db.collection('pautas').doc(pautaId).collection('attendances').add(novoColaborador);
+            await attendancesCollectionRef.add(novoColaborador);
         }
 
         resetForm();
@@ -483,14 +486,14 @@
                 const docId = e.target.dataset.id;
                 const presente = e.target.checked;
                 const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-                await db.collection('pautas').doc(pautaId).collection('attendances').doc(docId).update({ presente, horario });
+                await attendancesCollectionRef.doc(docId).update({ presente, horario });
             });
         });
 
         document.querySelectorAll('.edit-btn').forEach(button => {
             button.addEventListener('click', async (e) => {
                 const docId = e.currentTarget.dataset.id;
-                const doc = await db.collection('pautas').doc(pautaId).collection('attendances').doc(docId).get();
+                const doc = await attendancesCollectionRef.doc(docId).get();
                 if (doc.exists) {
                     const colaborador = doc.data();
                     editDocId = docId;
@@ -521,7 +524,7 @@
             button.addEventListener('click', (e) => {
                 const docId = e.currentTarget.dataset.id;
                 showConfirmModal(() => {
-                    db.collection('pautas').doc(pautaId).collection('attendances').doc(docId).delete();
+                    attendancesCollectionRef.doc(docId).delete();
                 }, `Tem certeza que deseja excluir este colaborador?`);
             });
         });
@@ -537,7 +540,7 @@
     }
 
     downloadPdfBtn.addEventListener('click', async () => {
-        const snapshot = await db.collection('pautas').doc(pautaId).collection('attendances').get();
+        const snapshot = await attendancesCollectionRef.get();
         const colaboradores = [];
         snapshot.forEach((doc) => {
             colaboradores.push({ id: doc.id, ...doc.data() });
@@ -598,7 +601,7 @@
     clearListBtn.addEventListener('click', () => {
         showConfirmModal(async () => {
             const batch = db.batch();
-            const snapshot = await db.collection('pautas').doc(pautaId).collection('attendances').get();
+            const snapshot = await attendancesCollectionRef.get();
             snapshot.docs.forEach(doc => {
                 batch.delete(doc.ref);
             });
