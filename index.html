@@ -928,7 +928,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             // ATUALIZAÇÃO CRÍTICA: Atualiza o link dos colaboradores com o ID da pauta atual.
             const linkColaboradores = document.getElementById('manage-collaborators-link');
             if (linkColaboradores) {
-                linkColaboradores.href = `gerenciar.html?pautaId=${pautaId}`;
+                linkColaboradores.href = `gerenciar.html?pautaId=${pautaId}&userId=${auth.currentUser.uid}`;
             }
 
             const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
@@ -2146,4 +2146,5 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+
 
