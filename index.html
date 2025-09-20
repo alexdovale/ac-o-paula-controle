@@ -921,29 +921,36 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }, (error) => console.error("Erro no listener do Firestore: ", error));
         };
 
-        const loadPauta = async (pautaId, pautaName) => {
-            currentPautaId = pautaId;
-            document.getElementById('pauta-title').textContent = pautaName;
-            
-            // ATUALIZAÇÃO CRÍTICA: Atualiza o link dos colaboradores com o ID da pauta atual.
-            const linkColaboradores = document.getElementById('manage-collaborators-link');
-            if (linkColaboradores) {
-                linkColaboradores.href = `gerenciar.html?pautaId=${pautaId}&userId=${auth.currentUser.uid}`;
-            }
+       const loadPauta = async (pautaId, pautaName) => {
+    currentPautaId = pautaId;
+    document.getElementById('pauta-title').textContent = pautaName;
 
-            const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
-            if (pautaDoc.exists()) {
-                const pautaData = pautaDoc.data();
-                currentPautaOwnerId = pautaData.owner;
-                if (pautaData.owner === auth.currentUser.uid) {
-                    document.getElementById('edit-pauta-name-btn').classList.remove('hidden');
-                } else {
-                    document.getElementById('edit-pauta-name-btn').classList.add('hidden');
-                }
-            }
-            setupRealtimeListener(pautaId);
-            showScreen('app');
-        };
+    const linkColaboradores = document.getElementById('manage-collaborators-link');
+    if (linkColaboradores && auth.currentUser) {
+        try {
+            // Gera um token de autenticação válido para o usuário logado.
+            const authToken = await auth.currentUser.getIdToken();
+            // Passa o ID da pauta E o token na URL.
+            linkColaboradores.href = `gerenciar.html?pautaId=${pautaId}&authToken=${authToken}`;
+        } catch (error) {
+            console.error("Erro ao gerar token de autenticação:", error);
+            showNotification("Erro ao acessar a lista de colaboradores.", "error");
+        }
+    }
+
+    const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
+    if (pautaDoc.exists()) {
+        const pautaData = pautaDoc.data();
+        currentPautaOwnerId = pautaData.owner;
+        if (pautaData.owner === auth.currentUser.uid) {
+            document.getElementById('edit-pauta-name-btn').classList.remove('hidden');
+        } else {
+            document.getElementById('edit-pauta-name-btn').classList.add('hidden');
+        }
+    }
+    setupRealtimeListener(pautaId);
+    showScreen('app');
+};
 
          /**
          * Exclui uma pauta do Firestore.
@@ -2146,5 +2153,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+
 
 
