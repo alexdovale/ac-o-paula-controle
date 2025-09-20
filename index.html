@@ -21,136 +21,14 @@
         .priority-maxima { border-left: 5px solid #22c55e; }
         .priority-media { border-left: 5px solid #f97316; }
         .priority-minima { border-left: 5px solid #6b7280; }
-        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar, #members-list-container::-webkit-scrollbar, .list-container table::-webkit-scrollbar { width: 8px; }
-        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track, .list-container table::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
-        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb, .list-container table::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar, #members-list-container::-webkit-scrollbar { width: 8px; }
+        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
+        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
         input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
         .tab-active { border-color: #16a34a; background-color: #f0fdf4; color: #16a34a; font-weight: 600; }
         .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
         .loader { border: 6px solid #f3f3f3; border-top: 6px solid #16a34a; border-radius: 50%; width: 50px; height: 50px; animation: spin 1.5s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* Estilos do gerenciar.html */
-        .page-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            margin: 0;
-            flex-direction: column;
-            width: 100%;
-        }
-        .header-gerenciar {
-            width: 100%;
-            max-width: 1140px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: flex-start;
-        }
-        .content-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            gap: 40px;
-            flex-wrap: wrap;
-            width: 100%;
-        }
-        .container-gerenciar, .list-container {
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 90%;
-            max-width: 500px;
-        }
-        .list-container {
-            max-width: 600px;
-        }
-        .form-group-gerenciar {
-            margin-bottom: 20px;
-        }
-        .options-group label {
-            display: inline-block;
-            margin-right: 20px;
-            font-weight: normal;
-        }
-        .back-button-gerenciar {
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #6c757d;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 5px;
-            font-size: 16px;
-            transition: background-color 0.3s ease;
-        }
-        .back-button-gerenciar:hover {
-            background-color: #5a6268;
-        }
-        .whatsapp-link {
-            display: inline-block;
-            padding: 8px 12px;
-            background-color: #25D366;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 14px;
-            transition: background-color 0.3s;
-        }
-        .whatsapp-link:hover {
-            background-color: #128C7E;
-        }
-        .action-buttons button {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 5px;
-            margin: 0 2px;
-        }
-        .action-buttons svg {
-            width: 18px;
-            height: 18px;
-            vertical-align: middle;
-        }
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-        }
-        .modal-content p {
-            margin-bottom: 20px;
-            font-size: 16px;
-        }
-        .modal-content button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 0 10px;
-        }
-        #confirm-action {
-            background-color: #dc3545;
-            color: #fff;
-        }
-        #cancel-action {
-            background-color: #6c757d;
-            color: #fff;
-        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -256,7 +134,7 @@
               </div>
             <form id="form-agendamento" class="bg-white p-6 rounded-lg shadow-md mb-8">
                 <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
-                    <h2 id="form-title">Adicionar Novo Agendamento</h2>
+                    <h2 id="form-title" class="text-xl font-semibold text-gray-700">Adicionar Novo Agendamento</h2>
                     <div id="agendamento-actions" class="flex items-center gap-4">
                         <a href="#" id="format-help-link" class="text-sm text-green-600 hover:text-green-800 hover:underline transition-colors duration-300 flex items-center gap-1">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle-fill" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.95-11.05a.9.9 0 0 1 .023 1.272l-.2.204a.9.9 0 0 1-1.273-.226L6.451 4.95a.9.9 0 0 1 1.273-.023l.204.2zM8 8.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
@@ -394,77 +272,6 @@
         </div>
     </div>
 
-    <div id="gerenciar-container" class="hidden page-container">
-        <div class="header-gerenciar">
-            <button id="back-from-gerenciar-btn" class="back-button-gerenciar">← Voltar para a Pauta</button>
-        </div>
-        <div class="content-wrapper">
-            <div class="container-gerenciar">
-                <h1 id="form-title-gerenciar">Gerenciar Colaboradores</h1>
-                <form id="colaborador-form">
-                    <div class="form-group-gerenciar">
-                        <label for="nome">Nome do Colaborador:</label>
-                        <input type="text" id="nome" name="nome" required>
-                    </div>
-                    <div class="form-group-gerenciar">
-                        <label for="telefone">Telefone (com DDD):</label>
-                        <input type="tel" id="telefone" name="telefone" placeholder="Ex: 21999998888" required>
-                    </div>
-                    <div class="form-group-gerenciar">
-                        <label>Como vai se deslocar?</label>
-                        <div class="options-group">
-                            <input type="radio" id="nao-confirmado" name="transporte" value="Não Confirmado" checked required>
-                            <label for="nao-confirmado">Não Confirmado</label>
-                            
-                            <input type="radio" id="meios-proprios" name="transporte" value="Meios Próprios">
-                            <label for="meios-proprios">Meios Próprios</label>
-                            
-                            <input type="radio" id="com-empresa" name="transporte" value="Com a Empresa">
-                            <label for="com-empresa">Com a Empresa</label>
-                        </div>
-                    </div>
-                    <div class="form-group-gerenciar hidden" id="local-encontro-group">
-                        <label>Ponto de Encontro:</label>
-                        <div class="options-group">
-                            <input type="radio" id="sede" name="localEncontro" value="Sede">
-                            <label for="sede">Sede</label>
-                            
-                            <input type="radio" id="meio-caminho" name="localEncontro" value="Meio do Caminho">
-                            <label for="meio-caminho">No meio do caminho</label>
-                        </div>
-                    </div>
-                    <div class="form-group-gerenciar hidden" id="observacao-group">
-                        <label for="observacao">Observação:</label>
-                        <textarea id="observacao" name="observacao" rows="3"></textarea>
-                    </div>
-                    <button type="submit" id="submit-button-gerenciar" class="w-full py-3 px-6 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition">Adicionar Colaborador</button>
-                </form>
-            </div>
-            <div class="list-container">
-                <h2>Lista de Presença</h2>
-                <div class="overflow-x-auto">
-                    <table id="colaboradores-list" class="min-w-full">
-                        <thead>
-                            <tr>
-                                <th>Nome</th>
-                                <th>Deslocamento</th>
-                                <th>Presença</th>
-                                <th>Horário</th>
-                                <th>WhatsApp</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="list-actions">
-                    <button id="download-pdf">Baixar PDF da Lista</button>
-                    <button id="clear-list">Limpar Lista</button>
-                </div>
-            </div>
-        </div>
-    </div>
     <div id="create-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Criar Nova Pauta</h2>
@@ -577,7 +384,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
     <div id="demands-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh;">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg flex flex-col" style="max-height: 90vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
                 <h2 class="text-2xl font-bold text-gray-800">Gerenciar Demandas Adicionais</h2>
                 <button id="close-demands-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
@@ -723,7 +530,77 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
         </div>
     </div>
-    
+
+    <div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 90vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Gerenciar Colaboradores</h2>
+                <button id="close-collaborators-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+            </div>
+            
+            <div class="flex-grow overflow-y-auto pr-2">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-700 mb-4">Adicionar/Editar Colaborador</h3>
+                        <form id="collaborator-form" class="space-y-4">
+                            <div>
+                                <label for="collaborator-name" class="block text-sm font-medium text-gray-700">Nome do Colaborador:</label>
+                                <input type="text" id="collaborator-name" name="nome" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                            </div>
+                            <div>
+                                <label for="collaborator-phone" class="block text-sm font-medium text-gray-700">Telefone (com DDD):</label>
+                                <input type="tel" id="collaborator-phone" name="telefone" placeholder="Ex: 21999998888" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Como vai se deslocar?</label>
+                                <div class="mt-1 flex items-center space-x-4">
+                                    <label><input type="radio" id="transporte-proprio" name="transporte" value="Meios Próprios" required> Meios Próprios</label>
+                                    <label><input type="radio" id="transporte-empresa" name="transporte" value="Com a Empresa"> Com a Empresa</label>
+                                </div>
+                            </div>
+                            <div id="local-encontro-group" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700">Ponto de Encontro:</label>
+                                <div class="mt-1 flex items-center space-x-4">
+                                    <label><input type="radio" id="local-sede" name="localEncontro" value="Sede"> Sede</label>
+                                    <label><input type="radio" id="local-meio" name="localEncontro" value="Meio do Caminho"> No meio do caminho</label>
+                                </div>
+                            </div>
+                            <div id="observacao-group" class="hidden">
+                                <label for="collaborator-obs" class="block text-sm font-medium text-gray-700">Observação:</label>
+                                <textarea id="collaborator-obs" name="observacao" rows="3" class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></textarea>
+                            </div>
+                            <button type="submit" id="add-collaborator-btn" class="w-full bg-green-600 text-white font-bold py-2 rounded-md hover:bg-green-700 transition">Adicionar Colaborador</button>
+                        </form>
+                    </div>
+
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-700 mb-4">Lista de Presença</h3>
+                        <div class="overflow-x-auto">
+                            <table id="collaborators-list-table" class="w-full text-sm text-left text-gray-500">
+                                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="py-3 px-6">Nome</th>
+                                        <th scope="col" class="py-3 px-6">Presença</th>
+                                        <th scope="col" class="py-3 px-6">Horário</th>
+                                        <th scope="col" class="py-3 px-6">WhatsApp</th>
+                                        <th scope="col" class="py-3 px-6">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    </tbody>
+                            </table>
+                        </div>
+                        <div class="flex justify-between items-center mt-4">
+                            <button id="download-collaborators-pdf" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Baixar PDF</button>
+                            <button id="clear-collaborators-list" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Limpar Lista</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -741,7 +618,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 children: [
                     { text: "Ação de Obrigação de Fazer", description: "Ação para exigir que alguém (ou uma empresa/órgão) cumpra uma determinada tarefa ou realize um serviço." },
                     { text: "Ação Declaratória de Nulidade", description: "Ação para pedir que a justiça declare a invalidade de um ato jurídico (ex: contrato, multa, cobrança)." },
-                    { text: "Ação de Indenização (Danos Morais e Materiais)", description: "Ação para buscar compensação financeira por prejuízos sofridos (perdas materiais) e/ou por abalos psicológicos, honra ou dignidade (damos morais)." },
+                    { text: "Ação de Indenização (Danos Morais e Materiais)", description: "Ação para buscar compensação financeira por prejuízos sofridos (perdas materiais) e/ou por abalos psicológicos, honra ou dignidade (danos morais)." },
                     { text: "Ação Revisional de Débito", description: "Ação para contestar e pedir a alteração de valores de dívidas ou cobranças consideradas abusivas ou indevidas." },
                     { text: "Ação de Exigir Contas", description: "Ação para solicitar que uma pessoa (ex: antigo curador, administrador) apresente detalhes e comprovantes de como administrou valores ou bens de outra." }
                 ]
@@ -883,34 +760,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '', currentPautaOwnerId = null;
         let assistedIdToHandle = null;
         let currentChecklistAction = null;
-        let unsubscribeFromColaboradores = () => {};
 
         const loadingContainer = document.getElementById('loading-container');
         const loginContainer = document.getElementById('login-container');
         const pautaSelectionContainer = document.getElementById('pauta-selection-container');
         const appContainer = document.getElementById('app-container');
         const loadingText = document.getElementById('loading-text');
-        
-        // Elementos da página de gerenciamento de colaboradores
-        const gerenciarContainer = document.getElementById('gerenciar-container');
-        const backFromGerenciarBtn = document.getElementById('back-from-gerenciar-btn');
-        const colaboradorForm = document.getElementById('colaborador-form');
-        const nomeInput = document.getElementById('nome');
-        const telefoneInput = document.getElementById('telefone');
-        const transporteOptions = document.querySelectorAll('input[name="transporte"]');
-        const localEncontroGroup = document.getElementById('local-encontro-group');
-        const observacaoGroup = document.getElementById('observacao-group');
-        const colaboradoresListBody = document.querySelector('#colaboradores-list tbody');
-        const downloadPdfBtn = document.getElementById('download-pdf');
-        const clearListBtn = document.getElementById('clear-list');
-        const formTitleGerenciar = document.getElementById('form-title-gerenciar');
-        const submitButtonGerenciar = document.getElementById('submit-button-gerenciar');
-        // Modal de confirmação do gerenciar.html
-        const confirmModalGerenciar = document.getElementById('confirm-modal');
-        const modalTextGerenciar = document.getElementById('modal-text');
-        const confirmActionBtnGerenciar = document.getElementById('confirm-action');
-        const cancelActionBtnGerenciar = document.getElementById('cancel-action');
-
 
         const normalizeText = (str) => {
             if (!str) return '';
@@ -1139,41 +994,33 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     const loadPauta = async (pautaId, pautaName) => {
         currentPautaId = pautaId;
         document.getElementById('pauta-title').textContent = pautaName;
-        
-        // Corrigido para ser um botão
-        const manageCollaboratorsBtn = document.getElementById('manage-collaborators-btn');
-        if (manageCollaboratorsBtn) {
-            manageCollaboratorsBtn.onclick = showGerenciarScreen;
-        }
 
-        const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
-        if (pautaDoc.exists()) {
-            const pautaData = pautaDoc.data();
-            currentPautaOwnerId = pautaData.owner;
-            if (pautaData.owner === auth.currentUser.uid) {
-                document.getElementById('edit-pauta-name-btn').classList.remove('hidden');
-            } else {
-                document.getElementById('edit-pauta-name-btn').classList.add('hidden');
-            }
+        const linkColaboradores = document.getElementById('manage-collaborators-link');
+            if (linkColaboradores && auth.currentUser) {
+                try {
+                    // Gera um token de autenticação válido para o usuário logado.
+                    const authToken = await auth.currentUser.getIdToken();
+            // Passa o ID da pauta E o token na URL.
+            linkColaboradores.href = `gerenciar.html?pautaId=${pautaId}&authToken=${authToken}`;
+        } catch (error) {
+            console.error("Erro ao gerar token de autenticação:", error);
+            showNotification("Erro ao acessar a lista de colaboradores.", "error");
         }
-        setupRealtimeListener(pautaId);
-        showScreen('app');
-    };
+    }
 
-    const showGerenciarScreen = () => {
-        if (!currentPautaId) {
-            showNotification("Nenhuma pauta selecionada.", "error");
-            return;
+    const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
+    if (pautaDoc.exists()) {
+        const pautaData = pautaDoc.data();
+        currentPautaOwnerId = pautaData.owner;
+        if (pautaData.owner === auth.currentUser.uid) {
+            document.getElementById('edit-pauta-name-btn').classList.remove('hidden');
+        } else {
+            document.getElementById('edit-pauta-name-btn').classList.add('hidden');
         }
-        showScreen('gerenciar');
-        loadColaboradores();
-    };
-
-    const showAppScreen = () => {
-        showScreen('app');
-        if (unsubscribeFromColaboradores) unsubscribeFromColaboradores();
-        loadPauta(currentPautaId, document.getElementById('pauta-title').textContent);
-    };
+    }
+    setupRealtimeListener(pautaId);
+    showScreen('app');
+};
 
          /**
          * Exclui uma pauta do Firestore.
@@ -1323,7 +1170,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             loginContainer.classList.toggle('hidden', screenName !== 'login');
             pautaSelectionContainer.classList.toggle('hidden', screenName !== 'pautaSelection');
             appContainer.classList.toggle('hidden', screenName !== 'app');
-            gerenciarContainer.classList.toggle('hidden', screenName !== 'gerenciar');
         };
 
         const switchTab = (tabName) => {
@@ -1395,229 +1241,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
         };
 
-        // --- INÍCIO DA LÓGICA DE GERENCIAR COLABORADORES ---
-        let editColaboradorId = null;
-        let colaboradoresCollectionRef = null;
-        let colaboradoresData = [];
-
-        const loadColaboradores = () => {
-            if (!currentPautaId) {
-                console.error("ID da Pauta não encontrado.");
-                return;
-            }
-            colaboradoresCollectionRef = collection(db, "pautas", currentPautaId, "attendances");
-            unsubscribeFromColaboradores = onSnapshot(colaboradoresCollectionRef, (snapshot) => {
-                colaboradoresData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderColaboradoresList(colaboradoresData);
-            }, (error) => {
-                console.error("Erro ao carregar colaboradores:", error);
-            });
-        };
-
-        const renderColaboradoresList = (colaboradores) => {
-            colaboradoresListBody.innerHTML = '';
-            colaboradores.forEach((colaborador) => {
-                let deslocamentoTexto = colaborador.transporte;
-                if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro) {
-                    deslocamentoTexto += ` (${colaborador.localEncontro})`;
-                }
-
-                const newRow = document.createElement('tr');
-                newRow.innerHTML = `
-                    <td>${colaborador.nome}</td>
-                    <td>${deslocamentoTexto}</td>
-                    <td><input type="checkbox" class="checkin-checkbox" data-id="${colaborador.id}" ${colaborador.presente ? 'checked' : ''}></td>
-                    <td>${colaborador.horario}</td>
-                    <td>
-                        <a href="https://wa.me/55${colaborador.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Bom dia! Poderia, por gentileza, informar se já está chegando? Estamos quase saindo.`)}" 
-                            class="whatsapp-link" target="_blank">
-                            Mensagem
-                        </a>
-                    </td>
-                    <td class="action-buttons">
-                        <button class="edit-btn-colaborador" data-id="${colaborador.id}" title="Editar">
-                            <svg fill="#000000" viewBox="0 0 24 24"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z"></path></svg>
-                        </button>
-                        <button class="delete-btn-colaborador" data-id="${colaborador.id}" title="Excluir">
-                            <svg fill="#dc3545" viewBox="0 0 24 24"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"></path></svg>
-                        </button>
-                    </td>
-                `;
-                colaboradoresListBody.appendChild(newRow);
-            });
-            addEventListenersToColaboradoresList();
-        };
-
-        const addEventListenersToColaboradoresList = () => {
-            document.querySelectorAll('.checkin-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', async (e) => {
-                    const docId = e.target.dataset.id;
-                    const presente = e.target.checked;
-                    const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-                    await updateDoc(doc(colaboradoresCollectionRef, docId), { presente, horario });
-                });
-            });
-
-            document.querySelectorAll('.edit-btn-colaborador').forEach(button => {
-                button.addEventListener('click', async (e) => {
-                    const docId = e.currentTarget.dataset.id;
-                    const docSnap = await getDoc(doc(colaboradoresCollectionRef, docId));
-                    if (docSnap.exists()) {
-                        const colaborador = docSnap.data();
-                        editColaboradorId = docId;
-                        nomeInput.value = colaborador.nome;
-                        telefoneInput.value = colaborador.telefone;
-                        
-                        const transporteRadio = document.querySelector(`input[name="transporte"][value="${colaborador.transporte}"]`);
-                        if (transporteRadio) {
-                            transporteRadio.checked = true;
-                            transporteRadio.dispatchEvent(new Event('change'));
-                        }
-
-                        const localEncontroRadio = document.querySelector(`input[name="localEncontro"][value="${colaborador.localEncontro}"]`);
-                        if (localEncontroRadio) {
-                            localEncontroRadio.checked = true;
-                            localEncontroRadio.dispatchEvent(new Event('change'));
-                        }
-                        
-                        document.getElementById('observacao').value = colaborador.observacao || '';
-                        formTitleGerenciar.textContent = "Editar Colaborador";
-                        submitButtonGerenciar.textContent = "Salvar Alterações";
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }
-                });
-            });
-
-            document.querySelectorAll('.delete-btn-colaborador').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const docId = e.currentTarget.dataset.id;
-                    showConfirmModalGerenciar(() => {
-                        deleteDoc(doc(colaboradoresCollectionRef, docId));
-                    }, `Tem certeza que deseja excluir este colaborador?`);
-                });
-            });
-        };
-
-        const resetColaboradorForm = () => {
-            colaboradorForm.reset();
-            editColaboradorId = null;
-            formTitleGerenciar.textContent = "Gerenciar Colaboradores";
-            submitButtonGerenciar.textContent = "Adicionar Colaborador";
-            localEncontroGroup.classList.add('hidden');
-            observacaoGroup.classList.add('hidden');
-        };
-
-        const showConfirmModalGerenciar = (callback, message) => {
-            modalTextGerenciar.innerHTML = message;
-            confirmModalGerenciar.classList.remove('hidden');
-            actionToConfirm = callback;
-        }
-
-        // Event Listeners da tela de gerenciamento
-        colaboradorForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            
-            const nome = nomeInput.value;
-            const telefone = telefoneInput.value;
-            const transporte = document.querySelector('input[name="transporte"]:checked').value;
-            const localEncontro = document.querySelector('input[name="localEncontro"]:checked')?.value || '';
-            const observacao = document.getElementById('observacao').value;
-
-            const novoColaborador = {
-                nome: nome,
-                telefone: telefone,
-                transporte: transporte,
-                localEncontro: localEncontro,
-                observacao: observacao,
-                presente: false,
-                horario: '--:--'
-            };
-
-            if (editColaboradorId) {
-                await updateDoc(doc(colaboradoresCollectionRef, editColaboradorId), novoColaborador);
-            } else {
-                await addDoc(colaboradoresCollectionRef, novoColaborador);
-            }
-
-            resetColaboradorForm();
-        });
-
-        downloadPdfBtn.addEventListener('click', async () => {
-            const snapshot = await getDocs(colaboradoresCollectionRef);
-            const colaboradores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            const docPDF = new jspdf.jsPDF();
-            const head = [['Nome', 'Deslocamento', 'Presença', 'Horário de Chegada']];
-            const tableBody = [];
-            const presentes = colaboradores.filter(c => c.presente);
-
-            if (presentes.length === 0) {
-                showNotification('Nenhum colaborador com presença marcada para gerar o PDF.', 'info');
-                return;
-            }
-
-            presentes.forEach(colaborador => {
-                const deslocamento = colaborador.transporte === 'Com a Empresa' 
-                    ? `${colaborador.transporte} (${colaborador.localEncontro})`
-                    : colaborador.transporte;
-                tableBody.push([colaborador.nome, deslocamento, 'Presente', colaborador.horario]);
-            });
-            
-            docPDF.autoTable({
-                head: head, body: tableBody, startY: 20,
-                headStyles: { fillColor: [22, 160, 133] },
-                didDrawPage: (data) => {
-                    docPDF.setFontSize(18);
-                    docPDF.setTextColor(40);
-                    docPDF.text('Lista de Presença de Colaboradores', data.settings.margin.left, 15);
-                }
-            });
-            
-            docPDF.save('lista_presenca_presentes.pdf');
-        });
-
-        clearListBtn.addEventListener('click', () => {
-            showConfirmModalGerenciar(async () => {
-                const batch = writeBatch(db);
-                const snapshot = await getDocs(colaboradoresCollectionRef);
-                snapshot.docs.forEach(doc => {
-                    batch.delete(doc.ref);
-                });
-                await batch.commit();
-                resetColaboradorForm();
-            }, 'Tem certeza que deseja limpar toda a lista?<br>Esta ação não pode ser desfeita.');
-        });
-        
-        if (backFromGerenciarBtn) {
-            backFromGerenciarBtn.addEventListener('click', showAppScreen);
-        }
-        
-        // Listener dos botões da modal de confirmação do Gerenciador
-        const confirmModalGerenciarElement = document.getElementById('confirm-modal');
-        const confirmActionBtnGerenciarElement = document.getElementById('confirm-action');
-        const cancelActionBtnGerenciarElement = document.getElementById('cancel-action');
-
-        if(confirmActionBtnGerenciarElement) {
-            confirmActionBtnGerenciarElement.addEventListener('click', () => {
-                if (actionToConfirm) {
-                    actionToConfirm();
-                }
-                confirmModalGerenciarElement.classList.add('hidden');
-                actionToConfirm = null;
-            });
-        }
-        if(cancelActionBtnGerenciarElement) {
-            cancelActionBtnGerenciarElement.addEventListener('click', () => {
-                confirmModalGerenciarElement.classList.add('hidden');
-                actionToConfirm = null;
-            });
-        }
-        // --- FIM DA LÓGICA DE GERENCIAR COLABORADORES ---
-
         document.addEventListener('DOMContentLoaded', () => {
             main();
             setupModalClosers();
-            
+
             // Lógica para preencher o datalist
             const datalist = document.getElementById('subjects-list');
             flatSubjects.forEach(subject => {
@@ -2191,57 +1818,58 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (button.id === 'manage-members-btn') {
                     await showMembersModal();
                 }
-                
-                if (button.id === 'add-assisted-btn') {
-                    const name = document.getElementById('assisted-name').value.trim();
-                    if (!name) {
-                        showNotification("O nome é obrigatório.", "error");
-                        return;
-                    }
-                    
-                    const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-                    let isScheduled, hasArrived, scheduledTimeValue;
 
-                    if (currentMode === 'agendamento') {
-                        isScheduled = document.querySelector('input[name="is-scheduled"]:checked').value === 'yes';
-                        hasArrived = document.querySelector('input[name="has-arrived"]:checked').value === 'yes';
-                        scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time').value : null;
+              if (button.id === 'add-assisted-btn') {
+    const name = document.getElementById('assisted-name').value.trim();
+    if (!name) {
+        showNotification("O nome é obrigatório.", "error");
+        return;
+    }
+    
+    const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
+    let isScheduled, hasArrived, scheduledTimeValue;
 
-                        if (isScheduled && !scheduledTimeValue) {
-                            showNotification("Por favor, informe o horário agendado.", "error");
-                            return;
-                        }
-                    } else { 
-                        isScheduled = false;
-                        hasArrived = true;
-                        scheduledTimeValue = null;
-                    }
+    if (currentMode === 'agendamento') {
+        isScheduled = document.querySelector('input[name="is-scheduled"]:checked').value === 'yes';
+        hasArrived = document.querySelector('input[name="has-arrived"]:checked').value === 'yes';
+        scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time').value : null;
 
-                    let arrivalDate = null;
-                    if (hasArrived) {
-                        const timeInput = document.getElementById('arrival-time').value;
-                        const [hours, minutes] = timeInput.split(':');
-                        arrivalDate = new Date();
-                        arrivalDate.setHours(hours, minutes, 0, 0);
-                    }
-                    
-                    const newAssisted = getUpdatePayload({
-                        name,
-                        cpf: document.getElementById('assisted-cpf').value.trim(),
-                        subject: document.getElementById('assisted-subject').value.trim(),
-                        type: currentMode,
-                        status: hasArrived ? 'aguardando' : 'pauta',
-                        scheduledTime: scheduledTimeValue,
-                        arrivalTime: hasArrived ? arrivalDate.toISOString() : null,
-                        createdAt: new Date().toISOString()
-                    });
+        // Adicionada validação para o horário agendado.
+        if (isScheduled && !scheduledTimeValue) {
+            showNotification("Por favor, informe o horário agendado.", "error");
+            return;
+        }
+    } else { 
+        isScheduled = false;
+        hasArrived = true;
+        scheduledTimeValue = null;
+    }
 
-                    await addDoc(collection(db, "pautas", currentPautaId, "attendances"), newAssisted);
-                    showNotification("Assistido adicionado com sucesso!");
-                    document.getElementById('form-agendamento').reset();
-                    document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-                    document.getElementById('arrival-time-wrapper').classList.add('hidden');
-                }
+    let arrivalDate = null;
+    if (hasArrived) {
+        const timeInput = document.getElementById('arrival-time').value;
+        const [hours, minutes] = timeInput.split(':');
+        arrivalDate = new Date();
+        arrivalDate.setHours(hours, minutes, 0, 0);
+    }
+    
+    const newAssisted = getUpdatePayload({
+        name,
+        cpf: document.getElementById('assisted-cpf').value.trim(),
+        subject: document.getElementById('assisted-subject').value.trim(),
+        type: currentMode,
+        status: hasArrived ? 'aguardando' : 'pauta',
+        scheduledTime: scheduledTimeValue,
+        arrivalTime: hasArrived ? arrivalDate.toISOString() : null,
+        createdAt: new Date().toISOString()
+    });
+
+    await addDoc(collectionRef, newAssisted);
+    showNotification("Assistido adicionado com sucesso!");
+    document.getElementById('form-agendamento').reset();
+    document.getElementById('scheduled-time-wrapper').classList.add('hidden');
+    document.getElementById('arrival-time-wrapper').classList.add('hidden');
+}
 
                 if (button.id === 'confirm-arrival-btn') {
                     const arrivalTimeInput = document.getElementById('arrival-time-input').value;
@@ -2250,18 +1878,18 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const arrivalDate = new Date();
                     arrivalDate.setHours(hours, minutes, 0, 0);
 
-                    await updateDoc(doc(collection(db, "pautas", currentPautaId, "attendances"), assistedIdToHandle), getUpdatePayload({ status: 'aguardando', arrivalTime: arrivalDate.toISOString() }));
+                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ status: 'aguardando', arrivalTime: arrivalDate.toISOString() }));
                     button.closest('.fixed').classList.add('hidden');
                 }
                 if (button.id === 'confirm-attendant-btn') {
                     const attendantName = document.getElementById('attendant-name').value.trim();
-                    await updateDoc(doc(collection(db, "pautas", currentPautaId, "attendances"), assistedIdToHandle), getUpdatePayload({ status: 'atendido', attendant: attendantName, attendedTime: new Date().toISOString() }));
+                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ status: 'atendido', attendant: attendantName, attendedTime: new Date().toISOString() }));
                     button.closest('.fixed').classList.add('hidden');
                 }
                 if (button.id === 'confirm-priority-reason-btn') {
                     const reason = document.getElementById('priority-reason-input').value.trim();
                     if (!reason) { showNotification("O motivo é obrigatório.", "error"); return; }
-                    await updateDoc(doc(collection(db, "pautas", currentPautaId, "attendances"), assistedIdToHandle), getUpdatePayload({ priority: 'URGENTE', priorityReason: reason }));
+                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ priority: 'URGENTE', priorityReason: reason }));
                     button.closest('.fixed').classList.add('hidden');
                 }
                 if (button.id === 'confirm-edit-assisted-btn') {
@@ -2273,12 +1901,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         subject: document.getElementById('edit-assisted-subject').value.trim(),
                         scheduledTime: document.getElementById('edit-scheduled-time').value || null,
                     };
-                    await updateDoc(doc(collection(db, "pautas", currentPautaId, "attendances"), assistedIdToHandle), getUpdatePayload(updatedData));
+                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload(updatedData));
                     button.closest('.fixed').classList.add('hidden');
                 }
                 if (button.id === 'confirm-edit-attendant-btn') {
                     const attendantName = document.getElementById('edit-attendant-name').value.trim();
-                    await updateDoc(doc(collection(db, "pautas", currentPautaId, "attendances"), assistedIdToHandle), getUpdatePayload({ attendant: attendantName }));
+                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ attendant: attendantName }));
                     button.closest('.fixed').classList.add('hidden');
                 }
                 if (button.id === 'confirm-reset-btn') {
@@ -2387,7 +2015,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         quantidade: descricoes.length,
                         descricoes: descricoes
                     };
-                    const docRef = doc(collection(db, "pautas", currentPautaId, "attendances"), assistedIdToHandle);
+                    const docRef = doc(collectionRef, assistedIdToHandle);
                     await updateDoc(docRef, getUpdatePayload({ demandas: demandsData }));
                     showNotification("Demandas salvas com sucesso!");
                     document.getElementById('demands-modal').classList.add('hidden');
@@ -2554,7 +2182,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 };
 
                 try {
-                    const docRef = doc(collection(db, "pautas", currentPautaId, "attendances"), assistedIdToHandle);
+                    const docRef = doc(db, "pautas", currentPautaId, "attendances", assistedIdToHandle);
                     await updateDoc(docRef, getUpdatePayload({ documentChecklist: checklistData }));
                     showNotification("Checklist salvo com sucesso!", "success");
                     document.getElementById('documents-modal').classList.add('hidden');
@@ -2590,6 +2218,185 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 
                 editSubjectInput.value = selectedText;
             });
+            
+            // --- INÍCIO DA LÓGICA DE COLABORADORES ---
+            const collaboratorsModal = document.getElementById('collaborators-modal');
+            const collaboratorForm = document.getElementById('collaborator-form');
+            const collaboratorListTableBody = document.querySelector('#collaborators-list-table tbody');
+            const addCollaboratorBtn = document.getElementById('add-collaborator-btn');
+            const downloadCollaboratorsPdfBtn = document.getElementById('download-collaborators-pdf');
+            const clearCollaboratorsListBtn = document.getElementById('clear-collaborators-list');
+            const transporteOptions = document.querySelectorAll('input[name="transporte"]');
+            const localEncontroGroup = document.getElementById('local-encontro-group');
+            const observacaoGroup = document.getElementById('observacao-group');
+            
+            const COLLABORATORS_STORAGE_KEY = 'listaDeColaboradores';
+            let colaboradores = [];
+            let editCollaboratorIndex = null;
+
+            const saveColaboradores = () => {
+                localStorage.setItem(COLLABORATORS_STORAGE_KEY, JSON.stringify(colaboradores));
+            };
+
+            const renderColaboradores = () => {
+                collaboratorListTableBody.innerHTML = '';
+                colaboradores.forEach((colaborador, index) => {
+                    const newRow = document.createElement('tr');
+                    newRow.className = "bg-white border-b";
+                    const formattedPhone = `(${colaborador.telefone.substring(0,2)}) ${colaborador.telefone.substring(2,7)}-${colaborador.telefone.substring(7)}`;
+
+                    newRow.innerHTML = `
+                        <td class="py-4 px-6 font-medium text-gray-900">${colaborador.nome}</td>
+                        <td class="py-4 px-6"><input type="checkbox" class="checkin-checkbox" data-index="${index}" ${colaborador.presente ? 'checked' : ''}></td>
+                        <td class="py-4 px-6">${colaborador.horario}</td>
+                        <td class="py-4 px-6">
+                            <a href="https://wa.me/55${colaborador.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Bom dia! Poderia, por gentileza, informar se já está chegando? Estamos quase saindo.`)}" class="text-blue-600 hover:underline">Mensagem</a>
+                        </td>
+                        <td class="py-4 px-6 space-x-2">
+                            <button class="edit-collaborator-btn text-gray-500 hover:text-gray-900" data-index="${index}" title="Editar">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                            <button class="delete-collaborator-btn text-red-500 hover:text-red-700" data-index="${index}" title="Excluir">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            </button>
+                        </td>
+                    `;
+                    collaboratorListTableBody.appendChild(newRow);
+                });
+                
+                document.querySelectorAll('.checkin-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', (e) => {
+                        const index = e.target.dataset.index;
+                        const colaborador = colaboradores[index];
+                        if (e.target.checked) {
+                            const now = new Date();
+                            colaborador.presente = true;
+                            colaborador.horario = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        } else {
+                            colaborador.presente = false;
+                            colaborador.horario = '--:--';
+                        }
+                        saveColaboradores();
+                        renderColaboradores();
+                    });
+                });
+                document.querySelectorAll('.edit-collaborator-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const index = e.currentTarget.dataset.index;
+                        editCollaboratorIndex = index;
+                        const colaborador = colaboradores[index];
+                        document.getElementById('collaborator-name').value = colaborador.nome;
+                        document.getElementById('collaborator-phone').value = colaborador.telefone;
+                        addCollaboratorBtn.textContent = "Salvar Alterações";
+                    });
+                });
+                document.querySelectorAll('.delete-collaborator-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const index = e.currentTarget.dataset.index;
+                        if (confirm(`Tem certeza que deseja excluir o colaborador "${colaboradores[index].nome}"?`)) {
+                            colaboradores.splice(index, 1);
+                            saveColaboradores();
+                            renderColaboradores();
+                        }
+                    });
+                });
+            };
+
+            const resetCollaboratorForm = () => {
+                collaboratorForm.reset();
+                editCollaboratorIndex = null;
+                addCollaboratorBtn.textContent = "Adicionar Colaborador";
+                localEncontroGroup.classList.add('hidden');
+                observacaoGroup.classList.add('hidden');
+            };
+
+            transporteOptions.forEach(option => {
+                option.addEventListener('change', (event) => {
+                    localEncontroGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
+                    observacaoGroup.classList.add('hidden');
+                    if (event.target.value === 'Com a Empresa') {
+                        document.querySelectorAll('input[name="localEncontro"]').forEach(localOption => localOption.checked = false);
+                    }
+                });
+            });
+
+            document.querySelectorAll('input[name="localEncontro"]').forEach(option => {
+                option.addEventListener('change', (event) => {
+                    observacaoGroup.classList.toggle('hidden', event.target.value !== 'Meio do Caminho');
+                });
+            });
+
+            collaboratorForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const nome = document.getElementById('collaborator-name').value;
+                const telefone = document.getElementById('collaborator-phone').value;
+
+                if (editCollaboratorIndex !== null) {
+                    colaboradores[editCollaboratorIndex].nome = nome;
+                    colaboradores[editCollaboratorIndex].telefone = telefone;
+                } else {
+                    colaboradores.push({
+                        nome: nome,
+                        telefone: telefone,
+                        presente: false,
+                        horario: '--:--'
+                    });
+                }
+                saveColaboradores();
+                renderColaboradores();
+                resetCollaboratorForm();
+            });
+
+            downloadCollaboratorsPdfBtn.addEventListener('click', () => {
+                const { jsPDF } = window.jspdf;
+                const docPDF = new jsPDF();
+                const head = [['Nome', 'Presença', 'Horário de Chegada']];
+                const tableBody = [];
+                const presentes = colaboradores.filter(c => c.presente);
+
+                if (presentes.length === 0) {
+                    showNotification("Nenhum colaborador com presença marcada.", "info");
+                    return;
+                }
+
+                presentes.forEach(colaborador => {
+                    tableBody.push([colaborador.nome, 'Presente', colaborador.horario]);
+                });
+
+                docPDF.autoTable({
+                    head: head, body: tableBody, startY: 20,
+                    headStyles: { fillColor: [34, 197, 94] },
+                    didDrawPage: (data) => {
+                        docPDF.setFontSize(18);
+                        docPDF.setTextColor(40);
+                        docPDF.text('Lista de Presença de Colaboradores', data.settings.margin.left, 15);
+                    }
+                });
+                docPDF.save('lista_presenca_colaboradores.pdf');
+            });
+
+            clearCollaboratorsListBtn.addEventListener('click', () => {
+                if (confirm('Tem certeza que deseja limpar toda a lista? Esta ação não pode ser desfeita.')) {
+                    colaboradores = [];
+                    saveColaboradores();
+                    renderColaboradores();
+                    showNotification("Lista de colaboradores limpa.", "success");
+                }
+            });
+
+            document.getElementById('manage-collaborators-btn').addEventListener('click', () => {
+                const dadosSalvos = localStorage.getItem(COLLABORATORS_STORAGE_KEY);
+                if (dadosSalvos) {
+                    colaboradores = JSON.parse(dadosSalvos);
+                }
+                renderColaboradores();
+                collaboratorsModal.classList.remove('hidden');
+            });
+
+            document.getElementById('close-collaborators-modal-btn').addEventListener('click', () => {
+                collaboratorsModal.classList.add('hidden');
+            });
+            // --- FIM DA LÓGICA DE COLABORADORES ---
 
         });
     </script>
