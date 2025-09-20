@@ -1373,6 +1373,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         email: email,
                         uid: user.uid,
                         status: 'approved',
+                        role: 'admin', // Adicionado para garantir permissões de escrita
                         createdAt: new Date().toISOString()
                     });
                     
@@ -2225,6 +2226,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const observacaoGroup = document.getElementById('observacao-group');
 
             const setupCollaboratorsListener = (pautaId) => {
+                if (!auth.currentUser) {
+                    console.error("Tentativa de iniciar o listener de colaboradores sem usuário autenticado.");
+                    showNotification("Erro de autenticação. Por favor, recarregue a página.", "error");
+                    return;
+                }
                 if (unsubscribeFromCollaborators) {
                     unsubscribeFromCollaborators();
                 }
