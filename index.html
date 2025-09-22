@@ -1419,11 +1419,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 newRow.className = "bg-white border-b";
 
                 let deslocamentoTexto = colaborador.transporte || 'Não Confirmado';
-                if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro) {
-                    deslocamentoTexto += ` (${colaborador.localEncontro})`;
-                }
                 if (colaborador.transporte === 'Meios Próprios') selfTransport++;
-                if (colaborador.transporte === 'Com a Empresa') companyTransport++;
+                if (colaborador.transporte === 'Com a Empresa') {
+                    companyTransport++;
+                    if (colaborador.localEncontro) {
+                        deslocamentoTexto += ` (${colaborador.localEncontro})`;
+                    }
+                }
 
                 let nomeElement = colaborador.nome;
                 if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro === 'Sede') {
@@ -1523,121 +1525,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.getElementById('observacao-group').classList.add('hidden');
         };
 
-        const transporteOptions = document.querySelectorAll('input[name="transporte"]');
-        const localEncontroGroup = document.getElementById('local-encontro-group');
-        const observacaoGroup = document.getElementById('observacao-group');
-
-        transporteOptions.forEach(option => {
-            option.addEventListener('change', (event) => {
-                localEncontroGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
-                observacaoGroup.classList.add('hidden'); 
-                if (event.target.value !== 'Com a Empresa') {
-                    document.querySelectorAll('input[name="localEncontro"]').forEach(localOption => localOption.checked = false);
-                }
-            });
-        });
-
-        document.querySelectorAll('input[name="localEncontro"]').forEach(option => {
-            option.addEventListener('change', (event) => {
-                observacaoGroup.classList.toggle('hidden', event.target.value !== 'Meio do Caminho');
-            });
-        });
-
-        const collaboratorForm = document.getElementById('collaborator-form');
-        collaboratorForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const nome = document.getElementById('collaborator-name').value;
-            const telefone = document.getElementById('collaborator-phone').value;
-            const transporte = collaboratorForm.querySelector('input[name="transporte"]:checked').value;
-            const localEncontro = collaboratorForm.querySelector('input[name="localEncontro"]:checked')?.value || '';
-            const observacao = document.getElementById('collaborator-obs').value;
-
-            const collaboratorData = { nome, telefone, transporte, localEncontro, observacao };
-
-            try {
-                if (editCollaboratorId) {
-                    const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", editCollaboratorId);
-                    await updateDoc(collaboratorRef, collaboratorData);
-                    showNotification("Colaborador atualizado com sucesso!");
-                } else {
-                    const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
-                    await addDoc(collaboratorsCollectionRef, { ...collaboratorData, presente: false, horario: '--:--' });
-                    showNotification("Colaborador adicionado com sucesso!");
-                }
-                resetCollaboratorForm();
-            } catch (error) {
-                console.error("Erro ao salvar colaborador: ", error);
-                showNotification("Erro ao salvar colaborador.", "error");
-            }
-        });
-
-        const downloadCollaboratorsPdfBtn = document.getElementById('download-collaborators-pdf');
-        downloadCollaboratorsPdfBtn.addEventListener('click', () => {
-            const { jsPDF } = window.jspdf;
-            const docPDF = new jsPDF();
-            const head = [['Nome', 'Deslocamento', 'Presença', 'Horário de Chegada']];
-            const tableBody = [];
-            const presentes = colaboradores.filter(c => c.presente);
-
-            if (presentes.length === 0) {
-                showNotification("Nenhum colaborador com presença marcada.", "info");
-                return;
-            }
-
-            presentes.forEach(colaborador => {
-                let deslocamentoTexto = colaborador.transporte || 'Não Confirmado';
-                if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro) {
-                    deslocamentoTexto += ` (${colaborador.localEncontro})`;
-                }
-                tableBody.push([colaborador.nome, deslocamentoTexto, 'Presente', colaborador.horario]);
-            });
-
-            docPDF.autoTable({
-                head: head, body: tableBody, startY: 20,
-                headStyles: { fillColor: [34, 197, 94] },
-                didDrawPage: (data) => {
-                    docPDF.setFontSize(18);
-                    docPDF.setTextColor(40);
-                    docPDF.text(`Lista de Presença - ${document.getElementById('pauta-title').textContent}`, data.settings.margin.left, 15);
-                }
-            });
-            docPDF.save('lista_presenca_colaboradores.pdf');
-        });
-
-        const clearCollaboratorsListBtn = document.getElementById('clear-collaborators-list');
-        clearCollaboratorsListBtn.addEventListener('click', async () => {
-            if (confirm('Tem certeza que deseja limpar toda a lista? Esta ação não pode ser desfeita.')) {
-                const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
-                const snapshot = await getDocs(collaboratorsCollectionRef);
-                if (snapshot.empty) {
-                    showNotification("A lista já está limpa.", "info");
-                    return;
-                }
-                const batch = writeBatch(db);
-                snapshot.docs.forEach(doc => batch.delete(doc.ref));
-                await batch.commit();
-                showNotification("Lista de colaboradores limpa.", "success");
-            }
-        });
-
-        const manageCollaboratorsBtn = document.getElementById('manage-collaborators-btn');
-        const collaboratorsModal = document.getElementById('collaborators-modal');
-
-        manageCollaboratorsBtn.addEventListener('click', () => {
-            setupCollaboratorsListener(currentPautaId);
-            resetCollaboratorForm();
-            collaboratorsModal.classList.remove('hidden');
-        });
-
-        const closeCollaboratorsModalBtn = document.getElementById('close-collaborators-modal-btn');
-        closeCollaboratorsModalBtn.addEventListener('click', () => {
-            if (unsubscribeFromCollaborators) {
-                unsubscribeFromCollaborators();
-            }
-            collaboratorsModal.classList.add('hidden');
-        });
-
-        document.addEventListener('DOMContentLoaded', () => {
+        const initializeAppAndListeners = () => {
             main();
             setupModalClosers();
             lucide.createIcons();
@@ -2646,6 +2534,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             
             const collaboratorsModal = document.getElementById('collaborators-modal');
             const collaboratorForm = document.getElementById('collaborator-form');
+            
             const localEncontroGroup = document.getElementById('local-encontro-group');
             const observacaoGroup = document.getElementById('observacao-group');
             const addCollaboratorBtn = document.getElementById('add-collaborator-btn');
@@ -2795,6 +2684,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('observacao-group').classList.add('hidden');
             };
 
+            const transporteOptions = document.querySelectorAll('input[name="transporte"]');
+            const localEncontroGroup = document.getElementById('local-encontro-group');
+            const observacaoGroup = document.getElementById('observacao-group');
+
+            transporteOptions.forEach(option => {
+                option.addEventListener('change', (event) => {
+                    localEncontroGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
+                    observacaoGroup.classList.add('hidden'); 
+                    if (event.target.value !== 'Com a Empresa') {
+                        document.querySelectorAll('input[name="localEncontro"]').forEach(localOption => localOption.checked = false);
+                    }
+                });
+            });
 
             document.querySelectorAll('input[name="localEncontro"]').forEach(option => {
                 option.addEventListener('change', (event) => {
@@ -2895,14 +2797,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
                 collaboratorsModal.classList.add('hidden');
             });
-        });
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             main();
             setupModalClosers();
+            initializeAppAndListeners();
         });
     </script>
 </body>
 </html>
-
-
