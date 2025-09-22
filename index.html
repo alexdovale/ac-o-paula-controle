@@ -2120,7 +2120,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
 
                 if (button.id.startsWith('cancel-') || button.id.startsWith('close-')) {
-                    button.closest('.fixed').classList.add('hidden');
+                    const modal = button.closest('.fixed');
+                    if (modal) {
+                       modal.classList.add('hidden');
+                    }
                 }
                 if (button.id === 'close-documents-modal-btn' || button.id === 'cancel-checklist-btn') {
                      document.getElementById('documents-modal').classList.add('hidden');
@@ -2627,3 +2630,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+
