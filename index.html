@@ -15,6 +15,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
         .priority-urgente { border-left: 5px solid #ef4444; }
@@ -29,6 +30,24 @@
         .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
         .loader { border: 6px solid #f3f3f3; border-top: 6px solid #16a34a; border-radius: 50%; width: 50px; height: 50px; animation: spin 1.5s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+         /* Estilo para a transição suave ao expandir/recolher horizontalmente */
+        #actionsContainerWrapper {
+            transition: max-width 0.5s ease-in-out, opacity 0.3s ease-in-out;
+            max-width: 0;
+            opacity: 0;
+            overflow: hidden;
+            white-space: nowrap; /* Impede a quebra de linha dos botões durante a animação */
+            display: flex;
+            align-items: center;
+            gap: 0.75rem; /* 12px */
+        }
+        #actionsContainerWrapper.expanded {
+            max-width: 1000px; /* Altura suficiente para os botões */
+            opacity: 1;
+        }
+        .rotated-icon {
+            transform: rotate(180deg);
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -92,40 +111,68 @@
     
     <div id="app-container" class="max-w-full mx-auto hidden">
         <header class="mb-6 space-y-4">
-            <div class="flex justify-center items-center w-full relative">
-                 <h1 class="text-xl font-semibold text-gray-600 text-center">Sistema de Gerenciamento de Pauta - SIGAP</h1>
-                 <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700">
-                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
-                             <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
-                             <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
-                         </svg>
-                 </button>
-            </div>
-            <div class="bg-white p-4 rounded-lg shadow-sm space-y-4">
-                <div class="relative flex justify-center items-center border-b pb-4">
-                    <h2 id="pauta-title" class="text-2xl md:text-3xl font-bold text-gray-800 text-center px-8 truncate"></h2>
-                    <button id="edit-pauta-name-btn" title="Editar nome da pauta" class="hidden absolute right-0 top-1/2 transform -translate-y-1/2 p-2 rounded-full hover:bg-gray-200 transition flex-shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
-                            <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
-                            <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5h6a.5.5 0 0 0 0-1h-6A1.5 1.5 0 0 0 1 2.5v11z"/>
-                        </svg>
-                   </button>
-                </div>
-                <div class="flex flex-col sm:flex-row justify-between items-center w-full gap-4 pt-4">
-                    <div class="flex-shrink-0">
-                        <button id="back-to-pautas-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <div class="flex flex-col gap-6">
+                    <div class="flex items-center gap-4">
+                        <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo do SIGAP" class="h-12 w-auto rounded-md object-contain">
+                        <div class="flex-1 text-center">
+                             <h2 id="pauta-title" class="text-xl md:text-3xl font-bold text-gray-800 text-center px-8 truncate"></h2>
+                             <p class="text-sm text-gray-500">Painel de Gerenciamento da Pauta</p>
+                        </div>
+                        <button id="logout-btn-app" class="text-gray-400 hover:text-red-600 transition-colors ml-auto self-start" title="Sair">
+                             <i data-lucide="log-out" class="w-5 h-5"></i>
+                        </button>
                     </div>
-                    <div class="flex items-center gap-2 flex-wrap justify-center">
-                        <button id="manage-members-btn" class="bg-lime-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-lime-700">Membros</button>
-                        <button id="manage-collaborators-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Gerenciar Colaboradores</button>
-                        <button id="reset-all-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">Zerar</button>
-                        <button id="close-pauta-btn" class="hidden bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600">Fechar Pauta</button>
-                        <button id="reopen-pauta-btn" class="hidden bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600">Reabrir Pauta</button>
+
+                    <div class="border-t border-gray-200"></div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                         <button id="back-to-pautas-btn" class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                             <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                             Voltar
+                         </button>
+                         
+                         <div class="flex items-center gap-3">
+                             <button id="toggleActionsBtn" class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                                 <span id="toggleText">Ações</span>
+                                 <i id="toggleIcon" data-lucide="chevron-down" class="w-4 h-4 transition-transform duration-300"></i>
+                             </button>
+                             <div id="actionsContainerWrapper">
+                                 <button id="edit-pauta-name-btn" class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 border border-gray-300 rounded-lg shadow-sm hover:bg-gray-200 hover:scale-105 transform transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
+                                      <i data-lucide="pencil" class="w-4 h-4"></i>
+                                      Nome da Pauta
+                                 </button>
+                                 <button id="manage-members-btn" class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 border border-gray-300 rounded-lg shadow-sm hover:bg-gray-200 hover:scale-105 transform transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
+                                     <i data-lucide="users" class="w-4 h-4 text-green-600"></i>
+                                     Membros
+                                 </button>
+                                 
+                                 <button id="manage-collaborators-btn" class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-700 border border-transparent rounded-lg shadow-lg hover:shadow-xl hover:scale-105 transform transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                     <i data-lucide="user-cog" class="w-4 h-4"></i>
+                                     Colaboradores
+                                 </button>
+ 
+                                 <button id="close-pauta-btn" class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gray-800 border border-transparent rounded-lg shadow-sm hover:bg-gray-900 hover:scale-105 transform transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-700">
+                                     <i data-lucide="lock" class="w-4 h-4"></i>
+                                     Fechar Pauta
+                                 </button>
+
+                                 <button id="reopen-pauta-btn" class="hidden flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg shadow-sm hover:bg-green-700 hover:scale-105 transform transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                     <i data-lucide="unlock" class="w-4 h-4"></i>
+                                     Reabrir Pauta
+                                 </button>
+ 
+                                 <button id="reset-all-btn" class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-transparent border border-red-500 rounded-lg shadow-sm hover:bg-red-600 hover:text-white hover:scale-105 transform transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                     Zerar Pauta
+                                 </button>
+                             </div>
+                         </div>
                     </div>
                 </div>
             </div>
-            <div id="closed-pauta-alert" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4" role="alert">
-                <p class="font-bold">Pauta Fechada</p>
+            <div id="closed-pauta-alert" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4 rounded-md" role="alert">
+                <p class="font-bold flex items-center gap-2"><i data-lucide="alert-triangle" class="w-5 h-5"></i> Pauta Fechada</p>
                 <p>Esta pauta está fechada para novas edições. Apenas o criador pode reabri-la.</p>
             </div>
         </header>
@@ -843,7 +890,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             if (diffMinutes <= 20) return 'Média';
             return 'Mínima';
         };
-
+        
         const togglePautaLock = (isClosed) => {
             const isOwner = auth.currentUser?.uid === currentPautaOwnerId;
             isPautaClosed = isClosed;
@@ -1099,6 +1146,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
             setupRealtimeListener(pautaId);
             showScreen('app');
+            lucide.createIcons();
         };
 
          /**
@@ -1224,102 +1272,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             showScreen('pautaSelection');
         };
 
-        const setupModalClosers = () => {
-            document.querySelectorAll('.fixed.inset-0').forEach(modal => {
-                modal.addEventListener('click', (e) => {
-                    if (e.target === modal) {
-                        modal.classList.add('hidden');
-                    }
-                });
-            });
-        };
-
-        const handleAuthState = () => {
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    const userDoc = await getDoc(doc(db, "users", user.uid));
-                    if (userDoc.exists() && userDoc.data().status === 'approved') {
-                        currentUserName = userDoc.data().name || user.email;
-                        showPautaSelectionScreen(user.uid);
-                    } else {
-                        loadingText.innerHTML = 'Sua conta está pendente de aprovação. <br> Por favor, aguarde.';
-                        document.querySelector('.loader').style.display = 'none';
-                    }
-                } else {
-                    showScreen('login');
-                }
-            });
-        };
-
-        const showScreen = (screenName) => {
-            loadingContainer.classList.toggle('hidden', screenName !== 'loading');
-            loginContainer.classList.toggle('hidden', screenName !== 'login');
-            pautaSelectionContainer.classList.toggle('hidden', screenName !== 'pautaSelection');
-            appContainer.classList.toggle('hidden', screenName !== 'app');
-        };
-
-        const switchTab = (tabName) => {
-            const tabAgendamento = document.getElementById('tab-agendamento');
-            const tabAvulso = document.getElementById('tab-avulso');
-            const isScheduledContainer = document.getElementById('is-scheduled-container');
-            const formTitle = document.getElementById('form-title');
-            const pautaColumn = document.getElementById('pauta-column');
-
-            if (tabName === 'agendamento') {
-                tabAgendamento.classList.add('tab-active');
-                tabAvulso.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700');
-                isScheduledContainer.classList.remove('hidden');
-                pautaColumn.classList.remove('hidden');
-                formTitle.textContent = "Adicionar Novo Agendamento";
-            } else { // avulso
-                tabAvulso.classList.add('tab-active');
-                tabAgendamento.classList.remove('tab-active');
-                tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700');
-                isScheduledContainer.classList.add('hidden');
-                pautaColumn.classList.add('hidden');
-                formTitle.textContent = "Adicionar Atendimento Avulso";
-                
-                document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
-                document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
-                document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-                document.getElementById('arrival-time-wrapper').classList.remove('hidden');
-            }
-            renderAssistedList();
-        };
-
-        const main = () => {
-            try {
-                const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                handleAuthState();
-            } catch (error) {
-                console.error("Erro ao inicializar o Firebase: ", error);
-                loadingText.textContent = 'Erro na configuração do Firebase.';
-            }
-        };
-
-        const copyToClipboard = (text, message) => {
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'fixed';
-            textArea.style.opacity = '0';
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                showNotification(message, 'info');
-            } catch (err) {
-                showNotification('Erro ao copiar.', 'error');
-            }
-            document.body.removeChild(textArea);
-        };
-
         document.addEventListener('DOMContentLoaded', () => {
             main();
             setupModalClosers();
+            lucide.createIcons();
 
             // Lógica para preencher o datalist
             const datalist = document.getElementById('subjects-list');
@@ -1589,9 +1545,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     copyToClipboard(text, 'Prompt para IA copiado!');
                 }
             });
-
-            document.getElementById('tab-agendamento').addEventListener('click', () => switchTab('agendamento'));
-            document.getElementById('tab-avulso').addEventListener('click', () => switchTab('avulso'));
+            
+            document.getElementById('tab-agendamento').addEventListener('click', () => {
+                if (document.getElementById('tab-agendamento').classList.contains('tab-active')) return;
+                switchTab('agendamento');
+            });
+            document.getElementById('tab-avulso').addEventListener('click', () => {
+                if (document.getElementById('tab-avulso').classList.contains('tab-active')) return;
+                switchTab('avulso');
+            });
 
             const handleLogout = () => {
                 signOut(auth).catch(error => {
@@ -1631,6 +1593,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         showNotification("O arquivo CSV contém apenas um cabeçalho ou está vazio.", "error");
                         return;
                     }
+                    
+                    // A nova lógica: independentemente da aba atual, a pauta com horário
+                    // sempre vai para o modo agendamento
+                    switchTab('agendamento');
 
                     try {
                         const batch = writeBatch(db);
@@ -1877,7 +1843,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         assistedIdToHandle = id;
                         const assisted = allAssisted.find(a => a.id === id);
                         if (assisted) {
-                            document.getElementById('edit-attendant-name').value = assisted.attendant || '';
+                            const attendantInput = document.getElementById('edit-attendant-name');
+                            attendantInput.value = assisted.attendant || '';
+                            const datalist = document.getElementById('collaborators-list');
+                            datalist.innerHTML = '';
+                            colaboradores.forEach(c => {
+                                const option = document.createElement('option');
+                                option.value = c.nome;
+                                datalist.appendChild(option);
+                            });
                             document.getElementById('edit-attendant-modal').classList.remove('hidden');
                         }
                     }
@@ -2378,6 +2352,20 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const selfTransportCount = document.getElementById('self-transport-count');
             const companyTransportCount = document.getElementById('company-transport-count');
 
+            const toggleActionsBtn = document.getElementById('toggleActionsBtn');
+            const actionsContainerWrapper = document.getElementById('actionsContainerWrapper');
+            const toggleIcon = document.getElementById('toggleIcon');
+            
+            toggleActionsBtn.addEventListener('click', () => {
+                const isExpanded = actionsContainerWrapper.classList.toggle('expanded');
+                
+                if (isExpanded) {
+                    toggleIcon.classList.add('rotated-icon');
+                } else {
+                    toggleIcon.classList.remove('rotated-icon');
+                }
+            });
+
 
             const setupCollaboratorsListener = (pautaId) => {
                 if (!auth.currentUser) {
@@ -2452,6 +2440,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 totalParticipantsCount.textContent = colaboradores.length;
                 selfTransportCount.textContent = selfTransport;
                 companyTransportCount.textContent = companyTransport;
+                lucide.createIcons();
 
                 document.querySelectorAll('.checkin-checkbox').forEach(checkbox => {
                     checkbox.addEventListener('change', async (e) => {
