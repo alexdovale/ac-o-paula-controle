@@ -12,6 +12,8 @@
     <link rel="manifest" href="manifest.json">
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -29,6 +31,25 @@
         .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
         .loader { border: 6px solid #f3f3f3; border-top: 6px solid #16a34a; border-radius: 50%; width: 50px; height: 50px; animation: spin 1.5s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Estilo para a transição suave ao expandir/recolher horizontalmente */
+        #actionsContainerWrapper {
+            transition: max-width 0.5s ease-in-out, opacity 0.3s ease-in-out;
+            max-width: 0;
+            opacity: 0;
+            overflow: hidden;
+            white-space: nowrap; /* Impede a quebra de linha dos botões durante a animação */
+            display: flex;
+            align-items: center;
+            gap: 0.75rem; /* 12px */
+        }
+        #actionsContainerWrapper.expanded {
+            max-width: 1000px; /* Valor grande o suficiente para conter os botões */
+            opacity: 1;
+        }
+        #toggleIcon.rotated-icon {
+            transform: rotate(180deg);
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -91,44 +112,75 @@
     </div>
     
     <div id="app-container" class="max-w-full mx-auto hidden">
-        <header class="mb-6 space-y-4">
-            <div class="flex justify-center items-center w-full relative">
-                 <h1 class="text-xl font-semibold text-gray-600 text-center">Sistema de Gerenciamento de Pauta - SIGAP</h1>
-                 <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700">
-                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
-                             <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
-                             <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
-                         </svg>
-                 </button>
-            </div>
-            <div class="bg-white p-4 rounded-lg shadow-sm space-y-4">
-                <div class="relative flex justify-center items-center border-b pb-4">
-                    <h2 id="pauta-title" class="text-2xl md:text-3xl font-bold text-gray-800 text-center px-8 truncate"></h2>
-                    <button id="edit-pauta-name-btn" title="Editar nome da pauta" class="hidden absolute right-0 top-1/2 transform -translate-y-1/2 p-2 rounded-full hover:bg-gray-200 transition flex-shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
-                            <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
-                            <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5h6a.5.5 0 0 0 0-1h-6A1.5 1.5 0 0 0 1 2.5v11z"/>
-                        </svg>
-                   </button>
-                </div>
-                <div class="flex flex-col sm:flex-row justify-between items-center w-full gap-4 pt-4">
-                    <div class="flex-shrink-0">
-                        <button id="back-to-pautas-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
+        <!-- HEADER MODERNIZADO INSERIDO AQUI -->
+        <header class="mb-6">
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <div class="flex flex-col gap-6">
+                    <!-- Seção do Título com Logo -->
+                    <div class="flex items-center gap-4">
+                        <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo do SIGAP" class="h-12 w-auto rounded-md object-contain flex-shrink-0">
+                        <div class="flex-1 text-center min-w-0">
+                            <div class="flex items-center justify-center gap-2">
+                                 <h2 id="pauta-title" class="text-xl md:text-2xl font-bold text-gray-800 truncate"></h2>
+                                 <button id="edit-pauta-name-btn" title="Editar nome da pauta" class="hidden p-1 rounded-full hover:bg-gray-200 transition flex-shrink-0">
+                                    <i data-lucide="pencil" class="w-5 h-5 text-gray-600"></i>
+                                </button>
+                            </div>
+                            <p class="text-sm text-gray-500">Painel de Gerenciamento da Pauta</p>
+                        </div>
+                        <button id="logout-btn-app" class="text-gray-400 hover:text-red-600 transition-colors flex-shrink-0" title="Sair">
+                            <i data-lucide="log-out" class="w-6 h-6"></i>
+                        </button>
                     </div>
-                    <div class="flex items-center gap-2 flex-wrap justify-center">
-                        <button id="manage-members-btn" class="bg-lime-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-lime-700">Membros</button>
-                        <button id="manage-collaborators-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Gerenciar Colaboradores</button>
-                        <button id="reset-all-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">Zerar</button>
-                        <button id="close-pauta-btn" class="hidden bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600">Fechar Pauta</button>
-                        <button id="reopen-pauta-btn" class="hidden bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600">Reabrir Pauta</button>
+
+                    <!-- Divisor -->
+                    <div class="border-t border-gray-200"></div>
+
+                    <!-- Seção de Ações -->
+                    <div class="flex flex-wrap items-center justify-between gap-y-3">
+                        <button id="back-to-pautas-btn" class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                            <span>Voltar</span>
+                        </button>
+                        
+                        <div class="flex items-center gap-3 flex-wrap justify-end">
+                            <button id="toggleActionsBtn" class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all">
+                                <span>Ações</span>
+                                <i id="toggleIcon" data-lucide="chevron-down" class="w-4 h-4 transition-transform duration-300"></i>
+                            </button>
+                            <div id="actionsContainerWrapper">
+                                <button id="manage-members-btn" class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-lime-600 rounded-lg shadow-sm hover:bg-lime-700 transition-all duration-200">
+                                    <i data-lucide="users" class="w-4 h-4"></i>
+                                    <span>Membros</span>
+                                </button>
+                                <button id="manage-collaborators-btn" class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg shadow-sm hover:bg-blue-700 transition-all duration-200">
+                                    <i data-lucide="user-cog" class="w-4 h-4"></i>
+                                    <span>Colaboradores</span>
+                                </button>
+                                <button id="reset-all-btn" class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg shadow-sm hover:bg-red-700 transition-all duration-200">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    <span>Zerar</span>
+                                </button>
+                                <button id="close-pauta-btn" class="hidden flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-lg shadow-sm hover:bg-gray-900 transition-all">
+                                    <i data-lucide="lock" class="w-4 h-4"></i>
+                                    <span>Fechar Pauta</span>
+                                </button>
+                                <button id="reopen-pauta-btn" class="hidden flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-500 rounded-lg shadow-sm hover:bg-green-600 transition-all">
+                                    <i data-lucide="unlock" class="w-4 h-4"></i>
+                                    <span>Reabrir Pauta</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div id="closed-pauta-alert" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4" role="alert">
+            <div id="closed-pauta-alert" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4 rounded-r-lg" role="alert">
                 <p class="font-bold">Pauta Fechada</p>
                 <p>Esta pauta está fechada para novas edições. Apenas o criador pode reabri-la.</p>
             </div>
         </header>
+        <!-- FIM DO HEADER MODERNIZADO -->
+
         <div id="app-content">
               <div class="mb-6">
                   <div class="border-b border-gray-200">
@@ -278,6 +330,7 @@
         </div>
     </div>
 
+    <!-- Modais (sem alterações) -->
     <div id="create-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Criar Nova Pauta</h2>
@@ -1318,6 +1371,21 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         };
 
         document.addEventListener('DOMContentLoaded', () => {
+            // Inicializa os ícones do Lucide
+            lucide.createIcons();
+
+            // Adiciona o listener para o botão de Ações
+            const toggleActionsBtn = document.getElementById('toggleActionsBtn');
+            if (toggleActionsBtn) {
+                const actionsContainerWrapper = document.getElementById('actionsContainerWrapper');
+                const toggleIcon = document.getElementById('toggleIcon');
+                
+                toggleActionsBtn.addEventListener('click', () => {
+                    const isExpanded = actionsContainerWrapper.classList.toggle('expanded');
+                    toggleIcon.classList.toggle('rotated-icon', isExpanded);
+                });
+            }
+
             main();
             setupModalClosers();
 
@@ -2509,121 +2577,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         }
                     });
                 });
-            };
-
-            const resetCollaboratorForm = () => {
-                collaboratorForm.reset();
-                document.querySelector('input[name="transporte"][value="Não Confirmado"]').checked = true;
-                editCollaboratorId = null;
-                addCollaboratorBtn.textContent = "Adicionar Colaborador";
-                localEncontroGroup.classList.add('hidden');
-                observacaoGroup.classList.add('hidden');
-            };
-
-            transporteOptions.forEach(option => {
-                option.addEventListener('change', (event) => {
-                    localEncontroGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
-                    observacaoGroup.classList.add('hidden'); 
-                    if (event.target.value !== 'Com a Empresa') {
-                        document.querySelectorAll('input[name="localEncontro"]').forEach(localOption => localOption.checked = false);
-                    }
-                });
-            });
-
-            document.querySelectorAll('input[name="localEncontro"]').forEach(option => {
-                option.addEventListener('change', (event) => {
-                    observacaoGroup.classList.toggle('hidden', event.target.value !== 'Meio do Caminho');
-                });
-            });
-
-            collaboratorForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                const nome = document.getElementById('collaborator-name').value;
-                const telefone = document.getElementById('collaborator-phone').value;
-                const transporte = collaboratorForm.querySelector('input[name="transporte"]:checked').value;
-                const localEncontro = collaboratorForm.querySelector('input[name="localEncontro"]:checked')?.value || '';
-                const observacao = document.getElementById('collaborator-obs').value;
-
-                const collaboratorData = { nome, telefone, transporte, localEncontro, observacao };
-
-                try {
-                    if (editCollaboratorId) {
-                        const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", editCollaboratorId);
-                        await updateDoc(collaboratorRef, collaboratorData);
-                        showNotification("Colaborador atualizado com sucesso!");
-                    } else {
-                        const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
-                        await addDoc(collaboratorsCollectionRef, { ...collaboratorData, presente: false, horario: '--:--' });
-                        showNotification("Colaborador adicionado com sucesso!");
-                    }
-                    resetCollaboratorForm();
-                } catch (error) {
-                    console.error("Erro ao salvar colaborador: ", error);
-                    showNotification("Erro ao salvar colaborador.", "error");
-                }
-            });
-
-            downloadCollaboratorsPdfBtn.addEventListener('click', () => {
-                const { jsPDF } = window.jspdf;
-                const docPDF = new jsPDF();
-                const head = [['Nome', 'Deslocamento', 'Presença', 'Horário de Chegada']];
-                const tableBody = [];
-                const presentes = colaboradores.filter(c => c.presente);
-
-                if (presentes.length === 0) {
-                    showNotification("Nenhum colaborador com presença marcada.", "info");
-                    return;
-                }
-
-                presentes.forEach(colaborador => {
-                    let deslocamentoTexto = colaborador.transporte || 'Não Confirmado';
-                    if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro) {
-                        deslocamentoTexto += ` (${colaborador.localEncontro})`;
-                    }
-                    tableBody.push([colaborador.nome, deslocamentoTexto, 'Presente', colaborador.horario]);
-                });
-
-                docPDF.autoTable({
-                    head: head, body: tableBody, startY: 20,
-                    headStyles: { fillColor: [34, 197, 94] },
-                    didDrawPage: (data) => {
-                        docPDF.setFontSize(18);
-                        docPDF.setTextColor(40);
-                        docPDF.text(`Lista de Presença - ${document.getElementById('pauta-title').textContent}`, data.settings.margin.left, 15);
-                    }
-                });
-                docPDF.save('lista_presenca_colaboradores.pdf');
-            });
-
-            clearCollaboratorsListBtn.addEventListener('click', async () => {
-                if (confirm('Tem certeza que deseja limpar toda a lista? Esta ação não pode ser desfeita.')) {
-                    const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
-                    const snapshot = await getDocs(collaboratorsCollectionRef);
-                    if (snapshot.empty) {
-                        showNotification("A lista já está limpa.", "info");
-                        return;
-                    }
-                    const batch = writeBatch(db);
-                    snapshot.docs.forEach(doc => batch.delete(doc.ref));
-                    await batch.commit();
-                    showNotification("Lista de colaboradores limpa.", "success");
-                }
-            });
-
-            document.getElementById('manage-collaborators-btn').addEventListener('click', () => {
-                setupCollaboratorsListener(currentPautaId);
-                resetCollaboratorForm();
-                collaboratorsModal.classList.remove('hidden');
-            });
-
-            document.getElementById('close-collaborators-modal-btn').addEventListener('click', () => {
-                if (unsubscribeFromCollaborators) {
-                    unsubscribeFromCollaborators();
-                }
-                collaboratorsModal.classList.add('hidden');
-            });
-            // --- FIM DA LÓGICA DE COLABORADORES ---
-        });
-    </script>
-</body>
-</html>
