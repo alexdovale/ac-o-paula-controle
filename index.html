@@ -1269,9 +1269,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 tabAgendamento.classList.add('tab-active');
                 tabAvulso.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700');
                 isScheduledContainer.classList.remove('hidden');
-                pautaColumn.classList.remove('hidden');
                 formTitle.textContent = "Adicionar Novo Agendamento";
                 toggleFaltososBtn.classList.remove('hidden');
+                
                 if (faltososColumn.classList.contains('hidden')) {
                      pautaColumn.classList.remove('hidden');
                 } else {
@@ -2062,15 +2062,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const btn = e.currentTarget;
                 const pautaColumn = document.getElementById('pauta-column');
                 const faltososColumn = document.getElementById('faltosos-column');
+                const pautaColumnIsHidden = pautaColumn.classList.contains('hidden');
 
-                pautaColumn.classList.toggle('hidden');
-                faltososColumn.classList.toggle('hidden');
-                
-                if (faltososColumn.classList.contains('hidden')) {
+                if (pautaColumnIsHidden) {
+                    pautaColumn.classList.remove('hidden');
+                    faltososColumn.classList.add('hidden');
                     btn.textContent = 'Ver Faltosos';
                     btn.classList.replace('bg-blue-600', 'bg-purple-600');
                     btn.classList.replace('hover:bg-blue-700', 'hover:bg-purple-700');
                 } else {
+                    pautaColumn.classList.add('hidden');
+                    faltososColumn.classList.remove('hidden');
                     btn.textContent = 'Ver Pauta';
                     btn.classList.replace('bg-purple-600', 'bg-blue-600');
                     btn.classList.replace('hover:bg-purple-700', 'hover:bg-blue-700');
@@ -2688,11 +2690,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     newRow.className = "bg-white border-b";
 
                     let deslocamentoTexto = colaborador.transporte || 'Não Confirmado';
-                    if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro) {
-                        deslocamentoTexto += ` (${colaborador.localEncontro})`;
-                    }
                     if (colaborador.transporte === 'Meios Próprios') selfTransport++;
-                    if (colaborador.transporte === 'Com a Empresa') companyTransport++;
+                    if (colaborador.transporte === 'Com a Empresa') {
+                        companyTransport++;
+                        if (colaborador.localEncontro) {
+                            deslocamentoTexto += ` (${colaborador.localEncontro})`;
+                        }
+                    }
 
                     let nomeElement = colaborador.nome;
                     if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro === 'Sede') {
@@ -2719,9 +2723,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     collaboratorListTableBody.appendChild(newRow);
                 });
                 
-                totalParticipantsCount.textContent = colaboradores.length;
-                selfTransportCount.textContent = selfTransport;
-                companyTransportCount.textContent = companyTransport;
+                document.getElementById('total-participants-count').textContent = colaboradores.length;
+                document.getElementById('self-transport-count').textContent = selfTransport;
+                document.getElementById('company-transport-count').textContent = companyTransport;
                 lucide.createIcons();
 
                 document.querySelectorAll('.checkin-checkbox').forEach(checkbox => {
@@ -2905,9 +2909,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
                 collaboratorsModal.classList.add('hidden');
             });
-        };
+        });
 
-        document.addEventListener('DOMContentLoaded', initializeAppAndListeners);
+        document.addEventListener('DOMContentLoaded', () => {
+            main();
+            setupModalClosers();
+        });
     </script>
 </body>
 </html>
