@@ -116,7 +116,7 @@
                     <div class="flex items-center gap-4">
                         <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo do SIGAP" class="h-12 w-auto rounded-md object-contain">
                         <div class="flex-1 text-center">
-                             <h2 id="pauta-title" class="text-xl md:text-3xl font-bold text-gray-800 px-8 truncate inline-block"></h2>
+                             <h2 id="pauta-title" class="text-xl md:text-3xl font-bold text-gray-800 text-center px-8 truncate"></h2>
                              <p class="text-sm text-gray-500">Painel de Gerenciamento da Pauta</p>
                         </div>
                         <button id="logout-btn-app" class="text-gray-400 hover:text-red-600 transition-colors ml-auto self-start" title="Sair">
@@ -691,6 +691,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, getDoc, setDoc, query, where, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // --- INÍCIO DA LÓGICA DE ASSUNTOS (ANTIGO assuntos.js) ---
         const subjectTree = [
             { text: "Orientação Jurídica", description: "Prestação de informações e esclarecimentos gerais sobre direitos, deveres e as leis, auxiliando o cidadão a entender sua situação e as possíveis soluções legais." },
             { text: "Atendimento Jurídico Integral e Gratuito", description: "O serviço principal da Defensoria, oferecido a pessoas que não possuem condições financeiras para contratar um advogado, abrangendo todas as etapas e necessidades legais." },
@@ -836,13 +837,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
             return flatList;
         }
-        
-        const flatSubjects = flattenTreeWithObjects(subjectTree);
 
+        const flatSubjects = flattenTreeWithObjects(subjectTree);
+        // --- FIM DA LÓGICA DE ASSUNTOS ---
+
+        // Variáveis Globais (existentes)
         let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '', currentPautaOwnerId = null, isPautaClosed = false;
         let assistedIdToHandle = null;
         let currentChecklistAction = null;
 
+        // Variáveis para a lógica de Colaboradores
         let colaboradores = [];
         let editCollaboratorId = null;
         let unsubscribeFromCollaborators = () => {};
@@ -886,7 +890,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             if (diffMinutes <= 20) return 'Média';
             return 'Mínima';
         };
-
+        
         const togglePautaLock = (isClosed) => {
             const isOwner = auth.currentUser?.uid === currentPautaOwnerId;
             isPautaClosed = isClosed;
@@ -894,8 +898,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const buttonsToDisable = [
                 'form-agendamento', 'file-upload', 'add-assisted-btn',
                 'reset-all-btn', 'download-pdf-btn', 'manage-members-btn',
-                'manage-collaborators-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento',
-                'toggleActionsBtn', 'edit-pauta-name-btn'
+                'manage-collaborators-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento'
             ];
             
             buttonsToDisable.forEach(id => {
@@ -930,8 +933,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('close-pauta-btn').classList.add('hidden');
                 document.getElementById('reopen-pauta-btn').classList.add('hidden');
             }
-            
-            lucide.createIcons();
         };
 
         const renderAssistedList = () => {
@@ -1148,388 +1149,130 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             lucide.createIcons();
         };
 
+         /**
+         * Exclui uma pauta do Firestore.
+         * Em uma aplicação real, seria ideal ter um modal de confirmação customizado
+         * antes de executar a exclusão.
+         * @param {string} pautaId - O ID do documento da pauta a ser excluída.
+         */
         const deletePauta = async (pautaId) => {
             try {
+                // As funções 'doc' e 'deleteDoc' devem ser importadas do Firestore.
                 await deleteDoc(doc(db, "pautas", pautaId));
+                // A UI será atualizada automaticamente pelo onSnapshot.
             } catch (error) {
                 console.error("Erro ao excluir a pauta:", error);
+                // Aqui, seria bom notificar o usuário sobre o erro com um componente de UI.
             }
         };
 
+        /**
+         * Cria um elemento de card para uma pauta específica.
+         * Esta função previne vulnerabilidades de Cross-Site Scripting (XSS)
+         * ao usar `textContent` em vez de `innerHTML` para dados dinâmicos.
+         * @param {import("firebase/firestore").QueryDocumentSnapshot} docSnap - O snapshot do documento da pauta.
+         * @returns {HTMLDivElement} O elemento do card da pauta.
+         */
         const createPautaCard = (docSnap) => {
             const pauta = docSnap.data();
             const card = document.createElement('div');
             card.className = "relative bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer flex flex-col justify-between h-full";
+
+            // --- Botão de Excluir ---
             const deleteButton = document.createElement('button');
             deleteButton.className = "absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:bg-red-100 hover:text-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500";
             deleteButton.setAttribute('aria-label', 'Excluir pauta');
+            // SVG do ícone de lixeira
             deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
+
             deleteButton.addEventListener('click', (event) => {
-                event.stopPropagation();
+                event.stopPropagation(); // Impede que o clique no botão ative o clique no card
                 deletePauta(docSnap.id);
             });
-            card.appendChild(deleteButton);
+
+            card.appendChild(deleteButton); // Adiciona o botão ao card
+
+            // --- Cálculo de Datas ---
             const creationDate = pauta.createdAt?.toDate ? pauta.createdAt.toDate() : new Date();
             const expirationDate = new Date(creationDate);
-            expirationDate.setDate(creationDate.getDate() + 7);
+            expirationDate.setDate(creationDate.getDate() + 7); // Adiciona 7 dias para a data de expiração
+
             const formattedCreationDate = creationDate.toLocaleDateString('pt-BR');
             const formattedExpirationDate = expirationDate.toLocaleDateString('pt-BR');
+
+            // --- Criação de Elementos (Seguro contra XSS) ---
             const contentDiv = document.createElement('div');
+
             const title = document.createElement('h3');
             title.className = "font-bold text-xl mb-2";
-            title.textContent = pauta.name;
+            title.textContent = pauta.name; // Usar textContent é crucial para segurança
+
             const members = document.createElement('p');
             members.className = "text-gray-600";
             members.textContent = `Membros: ${pauta.memberEmails?.length || 1}`;
+
             contentDiv.appendChild(title);
             contentDiv.appendChild(members);
+
             const footerDiv = document.createElement('div');
             footerDiv.className = "mt-4 pt-2 border-t border-gray-200";
+
             const createdP = document.createElement('p');
             createdP.className = "text-xs text-gray-500";
             createdP.innerHTML = `Criada em: <strong>${formattedCreationDate}</strong>`;
+
             const expiresP = document.createElement('p');
             expiresP.className = "text-xs text-red-600";
             expiresP.innerHTML = `Será eliminada em: <strong>${formattedExpirationDate}</strong>`;
+
             footerDiv.appendChild(createdP);
             footerDiv.appendChild(expiresP);
+
             card.appendChild(contentDiv);
             card.appendChild(footerDiv);
+
+            // Adiciona o evento de clique para carregar a pauta selecionada
             card.addEventListener('click', () => loadPauta(docSnap.id, pauta.name));
             return card;
         };
 
+
+        /**
+         * Exibe a tela de seleção de pautas, buscando e renderizando as pautas do usuário.
+         * @param {string} userId - O ID do usuário logado.
+         */
         const showPautaSelectionScreen = (userId) => {
             const pautasList = document.getElementById('pautas-list');
             pautasList.innerHTML = '<p class="col-span-full text-center">Carregando pautas...</p>';
+
             const q = query(collection(db, "pautas"), where("members", "array-contains", userId));
+
+            // 'onSnapshot' ouve por atualizações em tempo real.
             onSnapshot(q, (snapshot) => {
-                pautasList.innerHTML = '';
+                pautasList.innerHTML = ''; // Limpa a lista antes de adicionar os novos itens
+
                 if (snapshot.empty) {
                     pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500">Você ainda não tem pautas. Crie uma para começar.</p>';
                     return;
                 }
+
+                // Usar um DocumentFragment melhora a performance ao adicionar muitos elementos ao DOM
                 const fragment = document.createDocumentFragment();
                 snapshot.docs.forEach((docSnap) => {
                     const card = createPautaCard(docSnap);
                     fragment.appendChild(card);
                 });
                 pautasList.appendChild(fragment);
-            }, (error) => {
+
+            }, (error) => { // Adicionado tratamento de erro para a consulta
                 console.error("Erro ao buscar pautas:", error);
                 pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Ocorreu um erro ao carregar as pautas. Tente novamente mais tarde.</p>';
             });
+
             showScreen('pautaSelection');
         };
 
-        const setupModalClosers = () => {
-            document.querySelectorAll('.fixed.inset-0').forEach(modal => {
-                modal.addEventListener('click', (e) => {
-                    if (e.target === modal) {
-                        modal.classList.add('hidden');
-                    }
-                });
-            });
-        };
-
-        const handleAuthState = () => {
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    const userDoc = await getDoc(doc(db, "users", user.uid));
-                    if (userDoc.exists() && userDoc.data().status === 'approved') {
-                        currentUserName = userDoc.data().name || user.email;
-                        showPautaSelectionScreen(user.uid);
-                    } else {
-                        loadingText.innerHTML = 'Sua conta está pendente de aprovação. <br> Por favor, aguarde.';
-                        document.querySelector('.loader').style.display = 'none';
-                    }
-                } else {
-                    showScreen('login');
-                }
-            });
-        };
-
-        const showScreen = (screenName) => {
-            loadingContainer.classList.toggle('hidden', screenName !== 'loading');
-            loginContainer.classList.toggle('hidden', screenName !== 'login');
-            pautaSelectionContainer.classList.toggle('hidden', screenName !== 'pautaSelection');
-            appContainer.classList.toggle('hidden', screenName !== 'app');
-        };
-
-        const switchTab = (tabName) => {
-            const tabAgendamento = document.getElementById('tab-agendamento');
-            const tabAvulso = document.getElementById('tab-avulso');
-            const isScheduledContainer = document.getElementById('is-scheduled-container');
-            const formTitle = document.getElementById('form-title');
-            const pautaColumn = document.getElementById('pauta-column');
-            const faltososColumn = document.getElementById('faltosos-column');
-            const toggleFaltososBtn = document.getElementById('toggle-faltosos-btn');
-
-            if (tabName === 'agendamento') {
-                tabAgendamento.classList.add('tab-active');
-                tabAvulso.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700');
-                isScheduledContainer.classList.remove('hidden');
-                formTitle.textContent = "Adicionar Novo Agendamento";
-                toggleFaltososBtn.classList.remove('hidden');
-                
-                if (faltososColumn.classList.contains('hidden')) {
-                     pautaColumn.classList.remove('hidden');
-                } else {
-                     pautaColumn.classList.add('hidden');
-                }
-            } else { // avulso
-                tabAvulso.classList.add('tab-active');
-                tabAgendamento.classList.remove('tab-active');
-                tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700');
-                isScheduledContainer.classList.add('hidden');
-                pautaColumn.classList.add('hidden');
-                formTitle.textContent = "Adicionar Atendimento Avulso";
-                
-                document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
-                document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
-                document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-                document.getElementById('arrival-time-wrapper').classList.remove('hidden');
-                
-                faltososColumn.classList.add('hidden');
-                toggleFaltososBtn.classList.add('hidden');
-            }
-            renderAssistedList();
-        };
-
-        const main = () => {
-            try {
-                const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                handleAuthState();
-            } catch (error) {
-                console.error("Erro ao inicializar o Firebase: ", error);
-                loadingText.textContent = 'Erro na configuração do Firebase.';
-            }
-        };
-
-        const copyToClipboard = (text, message) => {
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'fixed';
-            textArea.style.opacity = '0';
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                showNotification(message, 'info');
-            } catch (err) {
-                showNotification('Erro ao copiar.', 'error');
-            }
-            document.body.removeChild(textArea);
-        };
-
-        const showMembersModal = async () => {
-            if (!currentPautaId) return;
-            const modal = document.getElementById('members-modal');
-            const container = document.getElementById('members-list-container');
-            container.innerHTML = 'Carregando...';
-            modal.classList.remove('hidden');
-
-            const pautaRef = doc(db, "pautas", currentPautaId);
-            const pautaSnap = await getDoc(pautaRef);
-            if (pautaSnap.exists()) {
-                const pautaData = pautaSnap.data();
-                currentPautaOwnerId = pautaData.owner;
-                container.innerHTML = '';
-                pautaData.memberEmails.forEach(email => {
-                    const isOwner = pautaData.ownerEmail === email;
-                    const memberEl = document.createElement('div');
-                    memberEl.className = 'flex justify-between items-center bg-gray-100 p-2 rounded';
-                    memberEl.innerHTML = `
-                        <span>${email} ${isOwner ? '<span class="text-xs text-yellow-600 font-bold">(dono)</span>' : ''}</span>
-                        ${!isOwner ? `<button data-email="${email}" class="remove-member-btn text-red-500 hover:text-red-700 text-sm font-semibold">Remover</button>` : ''}
-                    `;
-                    container.appendChild(memberEl);
-                });
-            }
-        };
-
-        const showDemandsModal = (assistedId) => {
-            const modal = document.getElementById('demands-modal');
-            const assisted = allAssisted.find(a => a.id === assistedId);
-            if (!assisted) return;
-
-            document.getElementById('demands-assisted-name-modal').textContent = assisted.name;
-            const demandsListContainer = document.getElementById('demands-list-container');
-            demandsListContainer.innerHTML = ''; 
-
-            const demands = assisted.demandas?.descricoes || [];
-            if (demands.length === 0) {
-                demandsListContainer.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
-            } else {
-                demands.forEach(demandText => {
-                    const li = document.createElement('li');
-                    li.className = 'flex justify-between items-center p-2 bg-white rounded-md';
-                    li.textContent = demandText;
-                    const removeBtn = document.createElement('button');
-                    removeBtn.className = 'remove-demand-item-btn text-red-500 hover:text-red-700 text-xs';
-                    removeBtn.textContent = 'Remover';
-                    li.appendChild(removeBtn);
-                    demandsListContainer.appendChild(li);
-                });
-            }
-            modal.classList.remove('hidden');
-        };
-
-        const setupCollaboratorsListener = (pautaId) => {
-            if (!auth.currentUser) {
-                console.error("Tentativa de iniciar o listener de colaboradores sem usuário autenticado.");
-                showNotification("Erro de autenticação. Por favor, recarregue a página.", "error");
-                return;
-            }
-            if (unsubscribeFromCollaborators) {
-                unsubscribeFromCollaborators();
-            }
-            const collaboratorsCollectionRef = collection(db, "pautas", pautaId, "collaborators");
-            unsubscribeFromCollaborators = onSnapshot(collaboratorsCollectionRef, (snapshot) => {
-                colaboradores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                colaboradores.sort((a, b) => a.nome.localeCompare(b.nome)); 
-                renderColaboradores();
-            }, (error) => {
-                console.error("Erro no listener de colaboradores: ", error);
-                document.querySelector('#collaborators-list-table tbody').innerHTML = '<tr><td colspan="6" class="text-center py-4">Erro ao carregar colaboradores.</td></tr>';
-            });
-        };
-
-        const renderColaboradores = () => {
-            const collaboratorListTableBody = document.querySelector('#collaborators-list-table tbody');
-            collaboratorListTableBody.innerHTML = '';
-
-            let selfTransport = 0;
-            let companyTransport = 0;
-            
-            if (colaboradores.length === 0) {
-                collaboratorListTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">Nenhum colaborador adicionado.</td></tr>';
-                document.getElementById('total-participants-count').textContent = 0;
-                document.getElementById('self-transport-count').textContent = 0;
-                document.getElementById('company-transport-count').textContent = 0;
-                return;
-            }
-            
-            colaboradores.forEach((colaborador) => {
-                const newRow = document.createElement('tr');
-                newRow.className = "bg-white border-b";
-
-                let deslocamentoTexto = colaborador.transporte || 'Não Confirmado';
-                if (colaborador.transporte === 'Meios Próprios') selfTransport++;
-                if (colaborador.transporte === 'Com a Empresa') {
-                    companyTransport++;
-                    if (colaborador.localEncontro) {
-                        deslocamentoTexto += ` (${colaborador.localEncontro})`;
-                    }
-                }
-
-                let nomeElement = colaborador.nome;
-                if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro === 'Sede') {
-                     nomeElement = `<strong>${colaborador.nome}</strong>`;
-                }
-
-                newRow.innerHTML = `
-                    <td class="py-4 px-6 font-medium text-gray-900">${nomeElement}</td>
-                    <td class="py-4 px-6">${deslocamentoTexto}</td>
-                    <td class="py-4 px-6"><input type="checkbox" class="checkin-checkbox" data-id="${colaborador.id}" ${colaborador.presente ? 'checked' : ''} ${isPautaClosed ? 'disabled' : ''}></td>
-                    <td class="py-4 px-6">${colaborador.horario || '--:--'}</td>
-                    <td class="py-4 px-6">
-                        <a href="https://wa.me/55${colaborador.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Bom dia! Poderia, por gentileza, informar se já está chegando? Estamos quase saindo.`)}" class="text-blue-600 hover:underline" target="_blank">Mensagem</a>
-                    </td>
-                    <td class="py-4 px-6 space-x-2">
-                        <button class="edit-collaborator-btn text-gray-500 hover:text-gray-900" data-id="${colaborador.id}" title="Editar" ${isPautaClosed ? 'disabled' : ''}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                        </button>
-                        <button class="delete-collaborator-btn text-red-500 hover:text-red-700" data-id="${colaborador.id}" title="Excluir" ${isPautaClosed ? 'disabled' : ''}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                        </button>
-                    </td>
-                `;
-                collaboratorListTableBody.appendChild(newRow);
-            });
-            
-            document.getElementById('total-participants-count').textContent = colaboradores.length;
-            document.getElementById('self-transport-count').textContent = selfTransport;
-            document.getElementById('company-transport-count').textContent = companyTransport;
-            lucide.createIcons();
-
-            document.querySelectorAll('.checkin-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', async (e) => {
-                    const collaboratorId = e.target.dataset.id;
-                    const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", collaboratorId);
-                    if (e.target.checked) {
-                        const now = new Date();
-                        await updateDoc(collaboratorRef, {
-                            presente: true,
-                            horario: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-                        });
-                    } else {
-                        await updateDoc(collaboratorRef, {
-                            presente: false,
-                            horario: '--:--'
-                        });
-                    }
-                });
-            });
-
-            document.querySelectorAll('.edit-collaborator-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const collaboratorId = e.currentTarget.dataset.id;
-                    editCollaboratorId = collaboratorId;
-                    const colaborador = colaboradores.find(c => c.id === collaboratorId);
-                    if (!colaborador) return;
-                    
-                    document.getElementById('collaborator-name').value = colaborador.nome;
-                    document.getElementById('collaborator-phone').value = colaborador.telefone;
-                    document.getElementById('collaborator-obs').value = colaborador.observacao || '';
-
-                    const transporteRadio = document.querySelector(`input[name="transporte"][value="${colaborador.transporte}"]`);
-                    if (transporteRadio) {
-                        transporteRadio.checked = true;
-                        transporteRadio.dispatchEvent(new Event('change'));
-                    }
-
-                    const localEncontroRadio = document.querySelector(`input[name="localEncontro"][value="${colaborador.localEncontro}"]`);
-                    if (localEncontroRadio) {
-                        localEncontroRadio.checked = true;
-                        localEncontroRadio.dispatchEvent(new Event('change'));
-                    }
-
-                    document.getElementById('add-collaborator-btn').textContent = "Salvar Alterações";
-                });
-            });
-
-            document.querySelectorAll('.delete-collaborator-btn').forEach(button => {
-                button.addEventListener('click', async (e) => {
-                    const collaboratorId = e.currentTarget.dataset.id;
-                    const colaborador = colaboradores.find(c => c.id === collaboratorId);
-                    if (colaborador && confirm(`Tem certeza que deseja excluir o colaborador "${colaborador.nome}"?`)) {
-                        await deleteDoc(doc(db, "pautas", currentPautaId, "collaborators", collaboratorId));
-                        showNotification("Colaborador excluído.", "success");
-                    }
-                });
-            });
-        };
-
-        const resetCollaboratorForm = () => {
-            const collaboratorForm = document.getElementById('collaborator-form');
-            collaboratorForm.reset();
-            document.querySelector('input[name="transporte"][value="Não Confirmado"]').checked = true;
-            editCollaboratorId = null;
-            document.getElementById('add-collaborator-btn').textContent = "Adicionar Colaborador";
-            document.getElementById('local-encontro-group').classList.add('hidden');
-            document.getElementById('observacao-group').classList.add('hidden');
-        };
-
-        const initializeAppAndListeners = () => {
-            main();
-            setupModalClosers();
-            lucide.createIcons();
-            
+            // Lógica para preencher o datalist
             const datalist = document.getElementById('subjects-list');
             flatSubjects.forEach(subject => {
                 const option = document.createElement('option');
@@ -1537,6 +1280,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 datalist.appendChild(option);
             });
 
+            // Lógica de assuntos e descrição para o campo principal
             const subjectInput = document.getElementById('assisted-subject');
             const descriptionBox = document.getElementById('subject-description');
             const infoButton = document.getElementById('subject-info-btn');
@@ -1603,6 +1347,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
 
+            // --- LÓGICA DE LOGIN/CADASTRO ---
             const loginTabBtn = document.getElementById('login-tab-btn');
             const registerTabBtn = document.getElementById('register-tab-btn');
             const loginForm = document.getElementById('login-form');
@@ -1727,6 +1472,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
 
+            // --- LÓGICA DE EVENTOS GERAIS E MODAIS ---
+            
             document.getElementById('privacy-policy-link').addEventListener('click', e => {
                 e.preventDefault();
                 document.getElementById('privacy-policy-modal').classList.remove('hidden');
@@ -1842,6 +1589,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         return;
                     }
                     
+                    // A nova lógica: independentemente da aba atual, a pauta com horário
+                    // sempre vai para o modo agendamento
                     switchTab('agendamento');
 
                     try {
@@ -1950,17 +1699,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const btn = e.currentTarget;
                 const pautaColumn = document.getElementById('pauta-column');
                 const faltososColumn = document.getElementById('faltosos-column');
-                const pautaColumnIsHidden = pautaColumn.classList.contains('hidden');
 
-                if (pautaColumnIsHidden) {
-                    pautaColumn.classList.remove('hidden');
-                    faltososColumn.classList.add('hidden');
+                pautaColumn.classList.toggle('hidden');
+                faltososColumn.classList.toggle('hidden');
+                
+                if (faltososColumn.classList.contains('hidden')) {
                     btn.textContent = 'Ver Faltosos';
                     btn.classList.replace('bg-blue-600', 'bg-purple-600');
                     btn.classList.replace('hover:bg-blue-700', 'hover:bg-purple-700');
                 } else {
-                    pautaColumn.classList.add('hidden');
-                    faltososColumn.classList.remove('hidden');
                     btn.textContent = 'Ver Pauta';
                     btn.classList.replace('bg-purple-600', 'bg-blue-600');
                     btn.classList.replace('hover:bg-purple-700', 'hover:bg-blue-700');
@@ -1988,6 +1735,59 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 });
             });
             
+            const showMembersModal = async () => {
+                if (!currentPautaId) return;
+                const modal = document.getElementById('members-modal');
+                const container = document.getElementById('members-list-container');
+                container.innerHTML = 'Carregando...';
+                modal.classList.remove('hidden');
+
+                const pautaRef = doc(db, "pautas", currentPautaId);
+                const pautaSnap = await getDoc(pautaRef);
+                if (pautaSnap.exists()) {
+                    const pautaData = pautaSnap.data();
+                    currentPautaOwnerId = pautaData.owner;
+                    container.innerHTML = '';
+                    pautaData.memberEmails.forEach(email => {
+                        const isOwner = pautaData.ownerEmail === email;
+                        const memberEl = document.createElement('div');
+                        memberEl.className = 'flex justify-between items-center bg-gray-100 p-2 rounded';
+                        memberEl.innerHTML = `
+                            <span>${email} ${isOwner ? '<span class="text-xs text-yellow-600 font-bold">(dono)</span>' : ''}</span>
+                            ${!isOwner ? `<button data-email="${email}" class="remove-member-btn text-red-500 hover:text-red-700 text-sm font-semibold">Remover</button>` : ''}
+                        `;
+                        container.appendChild(memberEl);
+                    });
+                }
+            };
+            
+            const showDemandsModal = (assistedId) => {
+                const modal = document.getElementById('demands-modal');
+                const assisted = allAssisted.find(a => a.id === assistedId);
+                if (!assisted) return;
+
+                document.getElementById('demands-assisted-name-modal').textContent = assisted.name;
+                const demandsListContainer = document.getElementById('demands-list-container');
+                demandsListContainer.innerHTML = ''; 
+
+                const demands = assisted.demandas?.descricoes || [];
+                if (demands.length === 0) {
+                    demandsListContainer.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
+                } else {
+                    demands.forEach(demandText => {
+                        const li = document.createElement('li');
+                        li.className = 'flex justify-between items-center p-2 bg-white rounded-md';
+                        li.textContent = demandText;
+                        const removeBtn = document.createElement('button');
+                        removeBtn.className = 'remove-demand-item-btn text-red-500 hover:text-red-700 text-xs';
+                        removeBtn.textContent = 'Remover';
+                        li.appendChild(removeBtn);
+                        demandsListContainer.appendChild(li);
+                    });
+                }
+                modal.classList.remove('hidden');
+            };
+
             document.body.addEventListener('click', async (e) => {
                 const button = e.target.closest('button');
                 if (!button) return;
@@ -2087,56 +1887,56 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
 
               if (button.id === 'add-assisted-btn') {
-                const name = document.getElementById('assisted-name').value.trim();
-                if (!name) {
-                    showNotification("O nome é obrigatório.", "error");
-                    return;
-                }
-                
-                const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-                let isScheduled, hasArrived, scheduledTimeValue;
+    const name = document.getElementById('assisted-name').value.trim();
+    if (!name) {
+        showNotification("O nome é obrigatório.", "error");
+        return;
+    }
+    
+    const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
+    let isScheduled, hasArrived, scheduledTimeValue;
 
-                if (currentMode === 'agendamento') {
-                    isScheduled = document.querySelector('input[name="is-scheduled"]:checked').value === 'yes';
-                    hasArrived = document.querySelector('input[name="has-arrived"]:checked').value === 'yes';
-                    scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time').value : null;
+    if (currentMode === 'agendamento') {
+        isScheduled = document.querySelector('input[name="is-scheduled"]:checked').value === 'yes';
+        hasArrived = document.querySelector('input[name="has-arrived"]:checked').value === 'yes';
+        scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time').value : null;
 
-                    if (isScheduled && !scheduledTimeValue) {
-                        showNotification("Por favor, informe o horário agendado.", "error");
-                        return;
-                    }
-                } else { 
-                    isScheduled = false;
-                    hasArrived = true;
-                    scheduledTimeValue = null;
-                }
+        // Adicionada validação para o horário agendado.
+        if (isScheduled && !scheduledTimeValue) {
+            showNotification("Por favor, informe o horário agendado.", "error");
+            return;
+        }
+    } else { 
+        isScheduled = false;
+        hasArrived = true;
+        scheduledTimeValue = null;
+    }
 
-                let arrivalDate = null;
-                if (hasArrived) {
-                    const timeInput = document.getElementById('arrival-time').value;
-                    const [hours, minutes] = timeInput.split(':');
-                    arrivalDate = new Date();
-                    arrivalDate.setHours(hours, minutes, 0, 0);
-                }
-                
-                const newAssisted = getUpdatePayload({
-                    name,
-                    cpf: document.getElementById('assisted-cpf').value.trim(),
-                    subject: document.getElementById('assisted-subject').value.trim(),
-                    type: currentMode,
-                    status: hasArrived ? 'aguardando' : 'pauta',
-                    scheduledTime: scheduledTimeValue,
-                    arrivalTime: hasArrived ? arrivalDate.toISOString() : null,
-                    createdAt: new Date().toISOString()
-                });
+    let arrivalDate = null;
+    if (hasArrived) {
+        const timeInput = document.getElementById('arrival-time').value;
+        const [hours, minutes] = timeInput.split(':');
+        arrivalDate = new Date();
+        arrivalDate.setHours(hours, minutes, 0, 0);
+    }
+    
+    const newAssisted = getUpdatePayload({
+        name,
+        cpf: document.getElementById('assisted-cpf').value.trim(),
+        subject: document.getElementById('assisted-subject').value.trim(),
+        type: currentMode,
+        status: hasArrived ? 'aguardando' : 'pauta',
+        scheduledTime: scheduledTimeValue,
+        arrivalTime: hasArrived ? arrivalDate.toISOString() : null,
+        createdAt: new Date().toISOString()
+    });
 
-                const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
-                await addDoc(collectionRef, newAssisted);
-                showNotification("Assistido adicionado com sucesso!");
-                document.getElementById('form-agendamento').reset();
-                document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-                document.getElementById('arrival-time-wrapper').classList.add('hidden');
-            }
+    await addDoc(collectionRef, newAssisted);
+    showNotification("Assistido adicionado com sucesso!");
+    document.getElementById('form-agendamento').reset();
+    document.getElementById('scheduled-time-wrapper').classList.add('hidden');
+    document.getElementById('arrival-time-wrapper').classList.add('hidden');
+}
 
                 if (button.id === 'confirm-arrival-btn') {
                     const arrivalTimeInput = document.getElementById('arrival-time-input').value;
@@ -2519,6 +2319,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 });
             });
 
+            // Adiciona a lógica de autocompletar e formatação ao campo de assunto na modal de edição
             const editSubjectInput = document.getElementById('edit-assisted-subject');
             editSubjectInput.addEventListener('change', () => {
                 const originalValue = editSubjectInput.value;
@@ -2532,10 +2333,20 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 editSubjectInput.value = selectedText;
             });
             
+            // --- INÍCIO DA LÓGICA DE COLABORADORES (CORRIGIDO COM FIRESTORE) ---
             const collaboratorsModal = document.getElementById('collaborators-modal');
             const collaboratorForm = document.getElementById('collaborator-form');
-            
-    
+            const collaboratorListTableBody = document.querySelector('#collaborators-list-table tbody');
+            const addCollaboratorBtn = document.getElementById('add-collaborator-btn');
+            const downloadCollaboratorsPdfBtn = document.getElementById('download-collaborators-pdf');
+            const clearCollaboratorsListBtn = document.getElementById('clear-collaborators-list');
+            const transporteOptions = document.querySelectorAll('input[name="transporte"]');
+            const localEncontroGroup = document.getElementById('local-encontro-group');
+            const observacaoGroup = document.getElementById('observacao-group');
+            const totalParticipantsCount = document.getElementById('total-participants-count');
+            const selfTransportCount = document.getElementById('self-transport-count');
+            const companyTransportCount = document.getElementById('company-transport-count');
+
             const toggleActionsBtn = document.getElementById('toggleActionsBtn');
             const actionsContainerWrapper = document.getElementById('actionsContainerWrapper');
             const toggleIcon = document.getElementById('toggleIcon');
@@ -2550,13 +2361,30 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
 
-            const renderColaboradores = () => {
-                const collaboratorListTableBody = document.querySelector('#collaborators-list-table tbody');
-                const totalParticipantsCount = document.getElementById('total-participants-count');
-                const selfTransportCount = document.getElementById('self-transport-count');
-                const companyTransportCount = document.getElementById('company-transport-count');
 
+            const setupCollaboratorsListener = (pautaId) => {
+                if (!auth.currentUser) {
+                    console.error("Tentativa de iniciar o listener de colaboradores sem usuário autenticado.");
+                    showNotification("Erro de autenticação. Por favor, recarregue a página.", "error");
+                    return;
+                }
+                if (unsubscribeFromCollaborators) {
+                    unsubscribeFromCollaborators();
+                }
+                const collaboratorsCollectionRef = collection(db, "pautas", pautaId, "collaborators");
+                unsubscribeFromCollaborators = onSnapshot(collaboratorsCollectionRef, (snapshot) => {
+                    colaboradores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    colaboradores.sort((a, b) => a.nome.localeCompare(b.nome)); 
+                    renderColaboradores();
+                }, (error) => {
+                    console.error("Erro no listener de colaboradores: ", error);
+                    collaboratorListTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Erro ao carregar colaboradores.</td></tr>';
+                });
+            };
+
+            const renderColaboradores = () => {
                 collaboratorListTableBody.innerHTML = '';
+
                 let selfTransport = 0;
                 let companyTransport = 0;
                 
@@ -2573,13 +2401,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     newRow.className = "bg-white border-b";
 
                     let deslocamentoTexto = colaborador.transporte || 'Não Confirmado';
-                    if (colaborador.transporte === 'Meios Próprios') selfTransport++;
-                    if (colaborador.transporte === 'Com a Empresa') {
-                        companyTransport++;
-                        if (colaborador.localEncontro) {
-                            deslocamentoTexto += ` (${colaborador.localEncontro})`;
-                        }
+                    if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro) {
+                        deslocamentoTexto += ` (${colaborador.localEncontro})`;
                     }
+                    if (colaborador.transporte === 'Meios Próprios') selfTransport++;
+                    if (colaborador.transporte === 'Com a Empresa') companyTransport++;
 
                     let nomeElement = colaborador.nome;
                     if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro === 'Sede') {
@@ -2606,9 +2432,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     collaboratorListTableBody.appendChild(newRow);
                 });
                 
-                document.getElementById('total-participants-count').textContent = colaboradores.length;
-                document.getElementById('self-transport-count').textContent = selfTransport;
-                document.getElementById('company-transport-count').textContent = companyTransport;
+                totalParticipantsCount.textContent = colaboradores.length;
+                selfTransportCount.textContent = selfTransport;
+                companyTransportCount.textContent = companyTransport;
                 lucide.createIcons();
 
                 document.querySelectorAll('.checkin-checkbox').forEach(checkbox => {
@@ -2653,7 +2479,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             localEncontroRadio.dispatchEvent(new Event('change'));
                         }
 
-                        document.getElementById('add-collaborator-btn').textContent = "Salvar Alterações";
+                        addCollaboratorBtn.textContent = "Salvar Alterações";
                     });
                 });
 
@@ -2670,18 +2496,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             };
 
             const resetCollaboratorForm = () => {
-                const collaboratorForm = document.getElementById('collaborator-form');
                 collaboratorForm.reset();
                 document.querySelector('input[name="transporte"][value="Não Confirmado"]').checked = true;
                 editCollaboratorId = null;
-                document.getElementById('add-collaborator-btn').textContent = "Adicionar Colaborador";
-                document.getElementById('local-encontro-group').classList.add('hidden');
-                document.getElementById('observacao-group').classList.add('hidden');
+                addCollaboratorBtn.textContent = "Adicionar Colaborador";
+                localEncontroGroup.classList.add('hidden');
+                observacaoGroup.classList.add('hidden');
             };
-
-            const transporteOptions = document.querySelectorAll('input[name="transporte"]');
-            const localEncontroGroup = document.getElementById('local-encontro-group');
-            const observacaoGroup = document.getElementById('observacao-group');
 
             transporteOptions.forEach(option => {
                 option.addEventListener('change', (event) => {
@@ -2699,7 +2520,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 });
             });
 
-            const collaboratorForm = document.getElementById('collaborator-form');
             collaboratorForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 const nome = document.getElementById('collaborator-name').value;
@@ -2727,7 +2547,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
 
-            const downloadCollaboratorsPdfBtn = document.getElementById('download-collaborators-pdf');
             downloadCollaboratorsPdfBtn.addEventListener('click', () => {
                 const { jsPDF } = window.jspdf;
                 const docPDF = new jsPDF();
@@ -2760,7 +2579,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 docPDF.save('lista_presenca_colaboradores.pdf');
             });
 
-            const clearCollaboratorsListBtn = document.getElementById('clear-collaborators-list');
             clearCollaboratorsListBtn.addEventListener('click', async () => {
                 if (confirm('Tem certeza que deseja limpar toda a lista? Esta ação não pode ser desfeita.')) {
                     const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
@@ -2776,28 +2594,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
 
-            const manageCollaboratorsBtn = document.getElementById('manage-collaborators-btn');
-            const collaboratorsModal = document.getElementById('collaborators-modal');
-
-            manageCollaboratorsBtn.addEventListener('click', () => {
+            document.getElementById('manage-collaborators-btn').addEventListener('click', () => {
                 setupCollaboratorsListener(currentPautaId);
                 resetCollaboratorForm();
                 collaboratorsModal.classList.remove('hidden');
             });
 
-            const closeCollaboratorsModalBtn = document.getElementById('close-collaborators-modal-btn');
-            closeCollaboratorsModalBtn.addEventListener('click', () => {
+            document.getElementById('close-collaborators-modal-btn').addEventListener('click', () => {
                 if (unsubscribeFromCollaborators) {
                     unsubscribeFromCollaborators();
                 }
                 collaboratorsModal.classList.add('hidden');
             });
-        };
-
-        document.addEventListener('DOMContentLoaded', () => {
-            main();
-            setupModalClosers();
-            initializeAppAndListeners();
+            // --- FIM DA LÓGICA DE COLABORADORES ---
         });
     </script>
 </body>
