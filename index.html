@@ -116,7 +116,7 @@
                     <div class="flex items-center gap-4">
                         <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo do SIGAP" class="h-12 w-auto rounded-md object-contain">
                         <div class="flex-1 text-center">
-                             <h2 id="pauta-title" class="text-xl md:text-3xl font-bold text-gray-800 text-center px-8 truncate"></h2>
+                             <h2 id="pauta-title" class="text-xl md:text-3xl font-bold text-gray-800 px-8 truncate inline-block"></h2>
                              <p class="text-sm text-gray-500">Painel de Gerenciamento da Pauta</p>
                         </div>
                         <button id="logout-btn-app" class="text-gray-400 hover:text-red-600 transition-colors ml-auto self-start" title="Sair">
@@ -1494,7 +1494,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.getElementById('observacao-group').classList.add('hidden');
         };
 
-        document.addEventListener('DOMContentLoaded', () => {
+        const initializeAppAndListeners = () => {
             main();
             setupModalClosers();
             lucide.createIcons();
@@ -1572,7 +1572,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
 
-            // --- LÓGICA DE LOGIN/CADASTRO ---
             const loginTabBtn = document.getElementById('login-tab-btn');
             const registerTabBtn = document.getElementById('register-tab-btn');
             const loginForm = document.getElementById('login-form');
@@ -1697,8 +1696,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
 
-            // --- LÓGICA DE EVENTOS GERAIS E MODAIS ---
-            
             document.getElementById('privacy-policy-link').addEventListener('click', e => {
                 e.preventDefault();
                 document.getElementById('privacy-policy-modal').classList.remove('hidden');
@@ -2622,7 +2619,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             localEncontroRadio.dispatchEvent(new Event('change'));
                         }
 
-                        addCollaboratorBtn.textContent = "Salvar Alterações";
+                        document.getElementById('add-collaborator-btn').textContent = "Salvar Alterações";
                     });
                 });
 
@@ -2648,6 +2645,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('observacao-group').classList.add('hidden');
             };
 
+            const transporteOptions = document.querySelectorAll('input[name="transporte"]');
+            const localEncontroGroup = document.getElementById('local-encontro-group');
+            const observacaoGroup = document.getElementById('observacao-group');
+
             transporteOptions.forEach(option => {
                 option.addEventListener('change', (event) => {
                     localEncontroGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
@@ -2664,6 +2665,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 });
             });
 
+            const collaboratorForm = document.getElementById('collaborator-form');
             collaboratorForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 const nome = document.getElementById('collaborator-name').value;
@@ -2691,6 +2693,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
 
+            const downloadCollaboratorsPdfBtn = document.getElementById('download-collaborators-pdf');
             downloadCollaboratorsPdfBtn.addEventListener('click', () => {
                 const { jsPDF } = window.jspdf;
                 const docPDF = new jsPDF();
@@ -2723,6 +2726,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 docPDF.save('lista_presenca_colaboradores.pdf');
             });
 
+            const clearCollaboratorsListBtn = document.getElementById('clear-collaborators-list');
             clearCollaboratorsListBtn.addEventListener('click', async () => {
                 if (confirm('Tem certeza que deseja limpar toda a lista? Esta ação não pode ser desfeita.')) {
                     const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
@@ -2738,19 +2742,25 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
 
-            document.getElementById('manage-collaborators-btn').addEventListener('click', () => {
+            const manageCollaboratorsBtn = document.getElementById('manage-collaborators-btn');
+            const collaboratorsModal = document.getElementById('collaborators-modal');
+
+            manageCollaboratorsBtn.addEventListener('click', () => {
                 setupCollaboratorsListener(currentPautaId);
                 resetCollaboratorForm();
                 collaboratorsModal.classList.remove('hidden');
             });
 
-            document.getElementById('close-collaborators-modal-btn').addEventListener('click', () => {
+            const closeCollaboratorsModalBtn = document.getElementById('close-collaborators-modal-btn');
+            closeCollaboratorsModalBtn.addEventListener('click', () => {
                 if (unsubscribeFromCollaborators) {
                     unsubscribeFromCollaborators();
                 }
                 collaboratorsModal.classList.add('hidden');
             });
-        });
+        };
+        
+        document.addEventListener('DOMContentLoaded', initializeAppAndListeners);
     </script>
 </body>
 </html>
