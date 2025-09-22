@@ -691,7 +691,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, getDoc, setDoc, query, where, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- INÍCIO DA LÓGICA DE ASSUNTOS (ANTIGO assuntos.js) ---
         const subjectTree = [
             { text: "Orientação Jurídica", description: "Prestação de informações e esclarecimentos gerais sobre direitos, deveres e as leis, auxiliando o cidadão a entender sua situação e as possíveis soluções legais." },
             { text: "Atendimento Jurídico Integral e Gratuito", description: "O serviço principal da Defensoria, oferecido a pessoas que não possuem condições financeiras para contratar um advogado, abrangendo todas as etapas e necessidades legais." },
@@ -896,7 +895,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 'form-agendamento', 'file-upload', 'add-assisted-btn',
                 'reset-all-btn', 'download-pdf-btn', 'manage-members-btn',
                 'manage-collaborators-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento',
-                'toggleActionsBtn'
+                'toggleActionsBtn', 'edit-pauta-name-btn'
             ];
             
             buttonsToDisable.forEach(id => {
@@ -1079,6 +1078,25 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 return card;
             });
 
+            render(faltososList, faltosos, a => {
+                const card = document.createElement('div');
+                card.className = 'relative bg-red-50 p-4 rounded-lg shadow-sm border-red-200';
+                card.innerHTML = `
+                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5zM6 6.5a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm3 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm-5 1a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1h-6z"/></svg></button>
+                    <p class="font-bold text-lg">${a.name}</p>
+                    <div class="mt-2 space-y-2">
+                        ${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}
+                        <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
+                        <p class="text-sm">Agendado: <strong>${a.scheduledTime}</strong></p>
+                        <div class="mt-3">
+                            <button data-id="${a.id}" class="return-to-pauta-from-faltoso-btn w-full bg-gray-500 text-white font-semibold py-1 rounded-lg hover:bg-gray-600 text-xs">Revertido para Pauta</button>
+                        </div>
+                    </div>
+                    ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
+                `;
+                return card;
+            });
+
             togglePautaLock(isPautaClosed);
         };
 
@@ -1244,6 +1262,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const isScheduledContainer = document.getElementById('is-scheduled-container');
             const formTitle = document.getElementById('form-title');
             const pautaColumn = document.getElementById('pauta-column');
+            const faltososColumn = document.getElementById('faltosos-column');
+            const toggleFaltososBtn = document.getElementById('toggle-faltosos-btn');
 
             if (tabName === 'agendamento') {
                 tabAgendamento.classList.add('tab-active');
@@ -1251,6 +1271,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 isScheduledContainer.classList.remove('hidden');
                 pautaColumn.classList.remove('hidden');
                 formTitle.textContent = "Adicionar Novo Agendamento";
+                toggleFaltososBtn.classList.remove('hidden');
+                if (faltososColumn.classList.contains('hidden')) {
+                     pautaColumn.classList.remove('hidden');
+                } else {
+                     pautaColumn.classList.add('hidden');
+                }
             } else { // avulso
                 tabAvulso.classList.add('tab-active');
                 tabAgendamento.classList.remove('tab-active');
@@ -1263,6 +1289,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
                 document.getElementById('scheduled-time-wrapper').classList.add('hidden');
                 document.getElementById('arrival-time-wrapper').classList.remove('hidden');
+                
+                faltososColumn.classList.add('hidden');
+                toggleFaltososBtn.classList.add('hidden');
             }
             renderAssistedList();
         };
@@ -1494,7 +1523,121 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.getElementById('observacao-group').classList.add('hidden');
         };
 
-        const initializeAppAndListeners = () => {
+        const transporteOptions = document.querySelectorAll('input[name="transporte"]');
+        const localEncontroGroup = document.getElementById('local-encontro-group');
+        const observacaoGroup = document.getElementById('observacao-group');
+
+        transporteOptions.forEach(option => {
+            option.addEventListener('change', (event) => {
+                localEncontroGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
+                observacaoGroup.classList.add('hidden'); 
+                if (event.target.value !== 'Com a Empresa') {
+                    document.querySelectorAll('input[name="localEncontro"]').forEach(localOption => localOption.checked = false);
+                }
+            });
+        });
+
+        document.querySelectorAll('input[name="localEncontro"]').forEach(option => {
+            option.addEventListener('change', (event) => {
+                observacaoGroup.classList.toggle('hidden', event.target.value !== 'Meio do Caminho');
+            });
+        });
+
+        const collaboratorForm = document.getElementById('collaborator-form');
+        collaboratorForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const nome = document.getElementById('collaborator-name').value;
+            const telefone = document.getElementById('collaborator-phone').value;
+            const transporte = collaboratorForm.querySelector('input[name="transporte"]:checked').value;
+            const localEncontro = collaboratorForm.querySelector('input[name="localEncontro"]:checked')?.value || '';
+            const observacao = document.getElementById('collaborator-obs').value;
+
+            const collaboratorData = { nome, telefone, transporte, localEncontro, observacao };
+
+            try {
+                if (editCollaboratorId) {
+                    const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", editCollaboratorId);
+                    await updateDoc(collaboratorRef, collaboratorData);
+                    showNotification("Colaborador atualizado com sucesso!");
+                } else {
+                    const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
+                    await addDoc(collaboratorsCollectionRef, { ...collaboratorData, presente: false, horario: '--:--' });
+                    showNotification("Colaborador adicionado com sucesso!");
+                }
+                resetCollaboratorForm();
+            } catch (error) {
+                console.error("Erro ao salvar colaborador: ", error);
+                showNotification("Erro ao salvar colaborador.", "error");
+            }
+        });
+
+        const downloadCollaboratorsPdfBtn = document.getElementById('download-collaborators-pdf');
+        downloadCollaboratorsPdfBtn.addEventListener('click', () => {
+            const { jsPDF } = window.jspdf;
+            const docPDF = new jsPDF();
+            const head = [['Nome', 'Deslocamento', 'Presença', 'Horário de Chegada']];
+            const tableBody = [];
+            const presentes = colaboradores.filter(c => c.presente);
+
+            if (presentes.length === 0) {
+                showNotification("Nenhum colaborador com presença marcada.", "info");
+                return;
+            }
+
+            presentes.forEach(colaborador => {
+                let deslocamentoTexto = colaborador.transporte || 'Não Confirmado';
+                if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro) {
+                    deslocamentoTexto += ` (${colaborador.localEncontro})`;
+                }
+                tableBody.push([colaborador.nome, deslocamentoTexto, 'Presente', colaborador.horario]);
+            });
+
+            docPDF.autoTable({
+                head: head, body: tableBody, startY: 20,
+                headStyles: { fillColor: [34, 197, 94] },
+                didDrawPage: (data) => {
+                    docPDF.setFontSize(18);
+                    docPDF.setTextColor(40);
+                    docPDF.text(`Lista de Presença - ${document.getElementById('pauta-title').textContent}`, data.settings.margin.left, 15);
+                }
+            });
+            docPDF.save('lista_presenca_colaboradores.pdf');
+        });
+
+        const clearCollaboratorsListBtn = document.getElementById('clear-collaborators-list');
+        clearCollaboratorsListBtn.addEventListener('click', async () => {
+            if (confirm('Tem certeza que deseja limpar toda a lista? Esta ação não pode ser desfeita.')) {
+                const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
+                const snapshot = await getDocs(collaboratorsCollectionRef);
+                if (snapshot.empty) {
+                    showNotification("A lista já está limpa.", "info");
+                    return;
+                }
+                const batch = writeBatch(db);
+                snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+                showNotification("Lista de colaboradores limpa.", "success");
+            }
+        });
+
+        const manageCollaboratorsBtn = document.getElementById('manage-collaborators-btn');
+        const collaboratorsModal = document.getElementById('collaborators-modal');
+
+        manageCollaboratorsBtn.addEventListener('click', () => {
+            setupCollaboratorsListener(currentPautaId);
+            resetCollaboratorForm();
+            collaboratorsModal.classList.remove('hidden');
+        });
+
+        const closeCollaboratorsModalBtn = document.getElementById('close-collaborators-modal-btn');
+        closeCollaboratorsModalBtn.addEventListener('click', () => {
+            if (unsubscribeFromCollaborators) {
+                unsubscribeFromCollaborators();
+            }
+            collaboratorsModal.classList.add('hidden');
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
             main();
             setupModalClosers();
             lucide.createIcons();
@@ -2097,6 +2240,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     createdAt: new Date().toISOString()
                 });
 
+                const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
                 await addDoc(collectionRef, newAssisted);
                 showNotification("Assistido adicionado com sucesso!");
                 document.getElementById('form-agendamento').reset();
@@ -2542,16 +2686,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 colaboradores.forEach((colaborador) => {
                     const newRow = document.createElement('tr');
                     newRow.className = "bg-white border-b";
+
                     let deslocamentoTexto = colaborador.transporte || 'Não Confirmado';
                     if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro) {
                         deslocamentoTexto += ` (${colaborador.localEncontro})`;
                     }
                     if (colaborador.transporte === 'Meios Próprios') selfTransport++;
                     if (colaborador.transporte === 'Com a Empresa') companyTransport++;
+
                     let nomeElement = colaborador.nome;
                     if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro === 'Sede') {
                          nomeElement = `<strong>${colaborador.nome}</strong>`;
                     }
+
                     newRow.innerHTML = `
                         <td class="py-4 px-6 font-medium text-gray-900">${nomeElement}</td>
                         <td class="py-4 px-6">${deslocamentoTexto}</td>
@@ -2759,7 +2906,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 collaboratorsModal.classList.add('hidden');
             });
         };
-        
+
         document.addEventListener('DOMContentLoaded', initializeAppAndListeners);
     </script>
 </body>
