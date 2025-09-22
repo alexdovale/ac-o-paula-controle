@@ -2796,19 +2796,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('observacao-group').classList.add('hidden');
             };
 
-            const transporteOptions = document.querySelectorAll('input[name="transporte"]');
-            const localEncontroGroup = document.getElementById('local-encontro-group');
-            const observacaoGroup = document.getElementById('observacao-group');
-
-            transporteOptions.forEach(option => {
-                option.addEventListener('change', (event) => {
-                    localEncontroGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
-                    observacaoGroup.classList.add('hidden'); 
-                    if (event.target.value !== 'Com a Empresa') {
-                        document.querySelectorAll('input[name="localEncontro"]').forEach(localOption => localOption.checked = false);
-                    }
-                });
-            });
 
             document.querySelectorAll('input[name="localEncontro"]').forEach(option => {
                 option.addEventListener('change', (event) => {
@@ -2918,3 +2905,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+
