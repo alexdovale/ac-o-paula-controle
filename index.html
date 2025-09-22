@@ -691,6 +691,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, getDoc, setDoc, query, where, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // --- INÍCIO DA LÓGICA DE ASSUNTOS (ANTIGO assuntos.js) ---
         const subjectTree = [
             { text: "Orientação Jurídica", description: "Prestação de informações e esclarecimentos gerais sobre direitos, deveres e as leis, auxiliando o cidadão a entender sua situação e as possíveis soluções legais." },
             { text: "Atendimento Jurídico Integral e Gratuito", description: "O serviço principal da Defensoria, oferecido a pessoas que não possuem condições financeiras para contratar um advogado, abrangendo todas as etapas e necessidades legais." },
@@ -2797,7 +2798,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
                 collaboratorsModal.classList.add('hidden');
             });
-
         };
 
         document.addEventListener('DOMContentLoaded', () => {
