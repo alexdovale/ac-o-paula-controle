@@ -351,16 +351,28 @@
               </footer>
         </div>
     </div>
-
-    <div id="choose-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md text-center">
-            <h2 class="text-2xl font-bold mb-6">Tipo de Pauta</h2>
-            <p class="mb-6 text-gray-700">Escolha o tipo de atendimento para a sua nova pauta.</p>
-            <div class="flex flex-col sm:flex-row justify-center gap-4">
-                <button id="choose-agendado-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 w-full sm:w-auto">Atendimento Agendado</button>
-                <button id="choose-avulso-btn" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 w-full sm:w-auto">Atendimento Avulso</button>
+    
+    <div id="pauta-type-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4 text-center">Tipo de Pauta</h2>
+            <p class="text-gray-600 text-center mb-6">Selecione o tipo de atendimento para sua nova pauta:</p>
+            <div class="space-y-4">
+                <button data-type="agendado" class="pauta-type-btn w-full flex items-center justify-center gap-2 p-4 bg-green-100 text-green-700 font-semibold rounded-lg hover:bg-green-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h8m-11 0h11a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
+                    </svg>
+                    Pauta de Atendimento Agendado
+                </button>
+                <button data-type="avulso" class="pauta-type-btn w-full flex items-center justify-center gap-2 p-4 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Pauta de Atendimento Avulso
+                </button>
             </div>
-            <button id="cancel-choose-pauta-btn" class="mt-6 text-gray-500 hover:text-gray-700 text-sm font-semibold">Cancelar</button>
+            <div class="flex justify-end mt-6">
+                <button id="cancel-pauta-type-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+            </div>
         </div>
     </div>
 
@@ -375,8 +387,6 @@
             </div>
         </div>
     </div>
-
-
     <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh; display: flex; flex-direction: column;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -898,7 +908,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '', currentPautaOwnerId = null, isPautaClosed = false;
         let assistedIdToHandle = null;
         let currentChecklistAction = null;
-        let newPautaType = 'agendamento'; // Variável para armazenar o tipo da nova pauta
 
         // Variáveis para a lógica de Colaboradores
         let colaboradores = [];
@@ -1187,9 +1196,30 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }, (error) => console.error("Erro no listener do Firestore: ", error));
         };
 
-        const loadPauta = async (pautaId, pautaName) => {
+        const loadPauta = async (pautaId, pautaName, pautaType) => {
             currentPautaId = pautaId;
             document.getElementById('pauta-title').textContent = pautaName;
+
+            const tabAgendamento = document.getElementById('tab-agendamento');
+            const tabAvulso = document.getElementById('tab-avulso');
+            const pautaColumn = document.getElementById('pauta-column');
+
+            if (pautaType === 'agendado') {
+                 tabAgendamento.classList.remove('hidden');
+                 tabAvulso.classList.add('hidden');
+                 pautaColumn.classList.remove('hidden');
+                 switchTab('agendamento');
+            } else if (pautaType === 'avulso') {
+                 tabAvulso.classList.remove('hidden');
+                 tabAgendamento.classList.add('hidden');
+                 pautaColumn.classList.add('hidden');
+                 switchTab('avulso');
+            } else {
+                tabAgendamento.classList.remove('hidden');
+                tabAvulso.classList.remove('hidden');
+                pautaColumn.classList.remove('hidden');
+                switchTab('agendamento');
+            }
 
             const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
             if (pautaDoc.exists()) {
@@ -1291,7 +1321,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             card.appendChild(footerDiv);
 
             // Adiciona o evento de clique para carregar a pauta selecionada
-            card.addEventListener('click', () => loadPauta(docSnap.id, pauta.name));
+            card.addEventListener('click', () => loadPauta(docSnap.id, pauta.name, pauta.type));
             return card;
         };
 
@@ -1371,6 +1401,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const isScheduledContainer = document.getElementById('is-scheduled-container');
             const formTitle = document.getElementById('form-title');
             const pautaColumn = document.getElementById('pauta-column');
+            const formContainer = document.getElementById('form-agendamento');
+
+            formContainer.classList.remove('hidden');
 
             if (tabName === 'agendamento') {
                 tabAgendamento.classList.add('tab-active');
@@ -1378,6 +1411,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 isScheduledContainer.classList.remove('hidden');
                 pautaColumn.classList.remove('hidden');
                 formTitle.textContent = "Adicionar Novo Agendamento";
+                document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
+                document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
+                document.getElementById('scheduled-time-wrapper').classList.add('hidden');
+                document.getElementById('arrival-time-wrapper').classList.add('hidden');
             } else { // avulso
                 tabAvulso.classList.add('tab-active');
                 tabAgendamento.classList.remove('tab-active');
@@ -1390,6 +1427,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
                 document.getElementById('scheduled-time-wrapper').classList.add('hidden');
                 document.getElementById('arrival-time-wrapper').classList.remove('hidden');
+                document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
             }
             renderAssistedList();
         };
@@ -1614,37 +1652,30 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         });
                 }
             });
-            // Lógica para abrir o modal de seleção de tipo de pauta
+
+            // NOVO FLUXO DE CRIAÇÃO DE PAUTA: SELEÇÃO DO TIPO
             document.getElementById('create-pauta-btn').addEventListener('click', () => {
-                document.getElementById('choose-pauta-modal').classList.remove('hidden');
+                document.getElementById('pauta-type-modal').classList.remove('hidden');
+            });
+            document.getElementById('cancel-pauta-type-btn').addEventListener('click', () => {
+                document.getElementById('pauta-type-modal').classList.add('hidden');
             });
 
-            // Lógica para selecionar o tipo e abrir o modal de nome da pauta
-            document.getElementById('choose-agendado-btn').addEventListener('click', () => {
-                newPautaType = 'agendamento';
-                document.getElementById('choose-pauta-modal').classList.add('hidden');
-                document.getElementById('create-pauta-modal').classList.remove('hidden');
-            });
-
-            document.getElementById('choose-avulso-btn').addEventListener('click', () => {
-                newPautaType = 'avulso';
-                document.getElementById('choose-pauta-modal').classList.add('hidden');
-                document.getElementById('create-pauta-modal').classList.remove('hidden');
-            });
-
-            // Lógica para cancelar a criação da pauta
-            document.getElementById('cancel-choose-pauta-btn').addEventListener('click', () => {
-                document.getElementById('choose-pauta-modal').classList.add('hidden');
+            document.querySelectorAll('.pauta-type-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const type = e.currentTarget.dataset.type;
+                    document.getElementById('pauta-type-modal').classList.add('hidden');
+                    document.getElementById('create-pauta-modal').dataset.pautaType = type;
+                    document.getElementById('create-pauta-modal').classList.remove('hidden');
+                });
             });
 
             document.getElementById('cancel-create-pauta-btn').addEventListener('click', () => {
                 document.getElementById('create-pauta-modal').classList.add('hidden');
             });
-
-
-            // Lógica para confirmar a criação da pauta
             document.getElementById('confirm-create-pauta-btn').addEventListener('click', async () => {
                 const pautaName = document.getElementById('create-pauta-name-input').value.trim();
+                const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
                 if (!pautaName) {
                     showNotification("O nome da pauta não pode ser vazio.", "error");
                     return;
@@ -1657,11 +1688,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 try {
                     await addDoc(collection(db, "pautas"), {
                         name: pautaName,
+                        type: pautaType,
                         owner: user.uid,
                         ownerEmail: user.email,
                         members: [user.uid],
                         memberEmails: [user.email],
-                        type: newPautaType, // Adiciona o tipo da pauta
                         isClosed: false,
                         createdAt: new Date().toISOString()
                     });
@@ -1673,7 +1704,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     showNotification("Erro ao criar pauta.", "error");
                 }
             });
-
 
             // --- LÓGICA DE EVENTOS GERAIS E MODAIS ---
 
@@ -1987,7 +2017,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 const id = button.dataset.id;
                 const collectionRef = currentPautaId ? collection(db, "pautas", currentPautaId, "attendances") : null;
-                
+
                 if (id && collectionRef) {
                     const docRef = doc(collectionRef, id);
 
@@ -1997,7 +2027,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
 
                     if (button.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5); }
-                    if (button.classList.contains('attend-btn')) { 
+                    if (button.classList.contains('attend-btn')) {
                         const attendantInput = document.getElementById('attendant-name');
                         attendantInput.value = '';
                         const datalist = document.getElementById('collaborators-list');
@@ -2007,9 +2037,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                              option.value = c.nome;
                              datalist.appendChild(option);
                         });
-                        assistedIdToHandle = id; 
-                        document.getElementById('attendant-modal').classList.remove('hidden'); 
+                        assistedIdToHandle = id;
+                        document.getElementById('attendant-modal').classList.remove('hidden');
                     }
+
                     if (button.classList.contains('faltou-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'faltoso' })); showNotification("Marcado como faltoso."); }
                     if (button.classList.contains('return-to-pauta-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'pauta', arrivalTime: null, priority: null })); showNotification("Retornado para a pauta."); }
                     if (button.classList.contains('return-to-pauta-from-faltoso-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'pauta' })); showNotification("Revertido para a pauta."); }
@@ -2784,6 +2815,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+
 
 
 
