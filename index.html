@@ -805,16 +805,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 ]
             },
             {
-                text: "Processos de Fazenda Pública",
-                description: "Demandas contra o Estado (União, Estados, Municípios) e seus órgãos.",
-                children: [
-                    { text: "Fornecimento de Medicamentos", description: "Ação para compelir o Poder Público a fornecer medicamentos essenciais." },
-                    { text: "Indenizações contra o Poder Público", description: "Ações para buscar compensação por danos causados por atos ou omissões do Estado." },
-                    { text: "Previdência Social (estadual e municipal)", description: "Atuação em questões relacionadas a benefícios previdenciários de regimes próprios." },
-                    { text: "Questionamentos em Cobranças de Impostos, Taxas e Multas", description: "Ações para contestar cobranças indevidas de tributos ou multas por entes públicos." }
-                ]
-            },
-            {
                 text: "Processos de Infância e Juventude",
                 description: "Ações focadas nos direitos de crianças e adolescentes.",
                 children: [
@@ -935,7 +925,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             const diffMinutes = (arrivalTime - scheduled) / (1000 * 60);
 
-            if (diffMinutes <= 0) return 'Máxima'; 
+            if (diffMinutes <= 0) return 'Máxima';
             if (diffMinutes <= 20) return 'Média';
             return 'Mínima';
         };
@@ -949,7 +939,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 'download-pdf-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento',
                 'actions-toggle' // Adicionado o novo botão de ações
             ];
-            
+
             buttonsToDisable.forEach(id => {
                 const element = document.getElementById(id);
                 if (element) {
@@ -973,7 +963,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             actionButtons.forEach(btn => {
                 btn.disabled = isClosed;
             });
-            
+
             if (isClosed) {
                 document.getElementById('closed-pauta-alert').classList.remove('hidden');
                 document.getElementById('close-pauta-btn').classList.add('hidden');
@@ -1004,12 +994,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             [pautaList, aguardandoList, atendidosList, faltososList].forEach(el => el.innerHTML = '');
 
             const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-            
+
             const pautaSearchTerm = normalizeText(document.getElementById('pauta-search').value);
             const aguardandoSearchTerm = normalizeText(document.getElementById('aguardando-search').value);
             const atendidosSearchTerm = normalizeText(document.getElementById('atendidos-search').value);
             const faltososSearchTerm = normalizeText(document.getElementById('faltosos-search').value);
-            
+
             const searchFilter = (assisted, term) => !term || normalizeText(assisted.name).includes(term) || (assisted.cpf && normalizeText(assisted.cpf).includes(term)) || normalizeText(assisted.subject).includes(term);
 
             const pauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && searchFilter(a, pautaSearchTerm));
@@ -1020,7 +1010,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
             atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
             faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
-            
+
             aguardando.sort((a, b) => {
                 const order = { 'URGENTE': 0, 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
                 const priorityDiff = order[a.priority] - order[b.priority];
@@ -1035,10 +1025,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
                 const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
                 if (arrivalA !== arrivalB) return arrivalA - arrivalB;
-                
+
                 return (a.createdAt || 0) - (b.createdAt || 0);
             });
-            
+
             document.getElementById('pauta-count').textContent = pauta.length;
             document.getElementById('aguardando-count').textContent = aguardando.length;
             document.getElementById('faltosos-count').textContent = faltosos.length;
@@ -1048,7 +1038,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if(data.length === 0) el.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum resultado.</p>`;
                 else data.forEach((item, index) => el.appendChild(generator(item, index)));
             };
-            
+
             render(pautaList, pauta, a => {
                 const card = document.createElement('div');
                 card.className = 'relative bg-gray-50 p-4 rounded-lg shadow-sm border';
@@ -1067,7 +1057,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 `;
                 return card;
             });
-            
+
             render(aguardandoList, aguardando, (a, index) => {
                 const card = document.createElement('div');
                 card.className = `relative bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)}`;
@@ -1093,7 +1083,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     `;
                 return card;
             });
-            
+
             render(atendidosList, atendidos, a => {
                 const card = document.createElement('div');
                 card.className = 'relative bg-green-50 p-4 rounded-lg shadow-sm border-green-200';
@@ -1162,7 +1152,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             notification.className = `fixed top-5 right-5 bg-${colors[type]}-500 text-white py-3 px-6 rounded-lg shadow-lg z-[100] transition-transform transform translate-x-full`;
             notification.textContent = message;
             document.body.appendChild(notification);
-            
+
             requestAnimationFrame(() => {
                 notification.classList.remove('translate-x-full');
             });
@@ -1202,6 +1192,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             setupRealtimeListener(pautaId);
             showScreen('app');
         };
+
 
          /**
          * Exclui uma pauta do Firestore.
@@ -2756,6 +2747,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+
 
 
 
