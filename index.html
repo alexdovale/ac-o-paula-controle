@@ -130,7 +130,7 @@
             <div class="relative flex items-center">
                 
                 <div id="actions-panel" 
-                     class="absolute top-1/2 -translate-y-1/2 right-full mr-3 flex items-center gap-2 p-2 bg-white rounded-lg shadow-xl border border-gray-200
+                     class="absolute top-1/2 -translate-y-1/2 right-full mr-3  flex-col flex items-center gap-2 p-2 bg-white rounded-lg shadow-xl border border-gray-200
                             transition-all duration-300 ease-in-out transform origin-right
                             opacity-0 scale-90 pointer-events-none">
                     
@@ -1710,9 +1710,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     copyToClipboard(text, 'Prompt para IA copiado!');
                 }
             });
-
-            document.getElementById('tab-agendamento').addEventListener('click', () => switchTab('agendamento'));
-            document.getElementById('tab-avulso').addEventListener('click', () => switchTab('avulso'));
+            document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
+            document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
+            document.getElementById('scheduled-time-wrapper').classList.add('hidden');
+            document.getElementById('arrival-time-wrapper').classList.remove('hidden');
 
             const handleLogout = () => {
                 signOut(auth).catch(error => {
@@ -2751,6 +2752,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+
 
 
 
