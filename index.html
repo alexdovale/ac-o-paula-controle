@@ -1378,14 +1378,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 isScheduledContainer.classList.remove('hidden');
                 pautaColumn.classList.remove('hidden');
                 formTitle.textContent = "Adicionar Novo Agendamento";
-                document.getElementById('assisted-name').value = '';
-                document.getElementById('assisted-cpf').value = '';
-                document.getElementById('assisted-subject').value = '';
-                document.getElementById('scheduled-time').value = '';
-                document.querySelector('input[name="is-scheduled"][value="yes"]').checked = true;
-                document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
-                document.getElementById('scheduled-time-wrapper').classList.remove('hidden');
-                document.getElementById('arrival-time-wrapper').classList.add('hidden');
             } else { // avulso
                 tabAvulso.classList.add('tab-active');
                 tabAgendamento.classList.remove('tab-active');
@@ -1393,14 +1385,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 isScheduledContainer.classList.add('hidden');
                 pautaColumn.classList.add('hidden');
                 formTitle.textContent = "Adicionar Atendimento Avulso";
-                document.getElementById('assisted-name').value = '';
-                document.getElementById('assisted-cpf').value = '';
-                document.getElementById('assisted-subject').value = '';
+
                 document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
                 document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
                 document.getElementById('scheduled-time-wrapper').classList.add('hidden');
                 document.getElementById('arrival-time-wrapper').classList.remove('hidden');
-                document.getElementById('arrival-time').value = new Date().toTimeString().slice(0,5);
             }
             renderAssistedList();
         };
@@ -1625,30 +1614,35 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         });
                 }
             });
-
+            // Lógica para abrir o modal de seleção de tipo de pauta
             document.getElementById('create-pauta-btn').addEventListener('click', () => {
-                document.getElementById('pauta-type-modal').classList.remove('hidden');
+                document.getElementById('choose-pauta-modal').classList.remove('hidden');
             });
 
-            document.getElementById('cancel-type-selection-btn').addEventListener('click', () => {
-                document.getElementById('pauta-type-modal').classList.add('hidden');
-            });
-
-            document.getElementById('select-agendado-btn').addEventListener('click', () => {
-                currentPautaType = 'agendamento';
-                document.getElementById('pauta-type-modal').classList.add('hidden');
+            // Lógica para selecionar o tipo e abrir o modal de nome da pauta
+            document.getElementById('choose-agendado-btn').addEventListener('click', () => {
+                newPautaType = 'agendamento';
+                document.getElementById('choose-pauta-modal').classList.add('hidden');
                 document.getElementById('create-pauta-modal').classList.remove('hidden');
             });
 
-            document.getElementById('select-avulso-btn').addEventListener('click', () => {
-                currentPautaType = 'avulso';
-                document.getElementById('pauta-type-modal').classList.add('hidden');
+            document.getElementById('choose-avulso-btn').addEventListener('click', () => {
+                newPautaType = 'avulso';
+                document.getElementById('choose-pauta-modal').classList.add('hidden');
                 document.getElementById('create-pauta-modal').classList.remove('hidden');
+            });
+
+            // Lógica para cancelar a criação da pauta
+            document.getElementById('cancel-choose-pauta-btn').addEventListener('click', () => {
+                document.getElementById('choose-pauta-modal').classList.add('hidden');
             });
 
             document.getElementById('cancel-create-pauta-btn').addEventListener('click', () => {
                 document.getElementById('create-pauta-modal').classList.add('hidden');
             });
+
+
+            // Lógica para confirmar a criação da pauta
             document.getElementById('confirm-create-pauta-btn').addEventListener('click', async () => {
                 const pautaName = document.getElementById('create-pauta-name-input').value.trim();
                 if (!pautaName) {
@@ -1667,7 +1661,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         ownerEmail: user.email,
                         members: [user.uid],
                         memberEmails: [user.email],
-                        type: currentPautaType,
+                        type: newPautaType, // Adiciona o tipo da pauta
                         isClosed: false,
                         createdAt: new Date().toISOString()
                     });
@@ -1679,6 +1673,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     showNotification("Erro ao criar pauta.", "error");
                 }
             });
+
 
             // --- LÓGICA DE EVENTOS GERAIS E MODAIS ---
 
@@ -2789,6 +2784,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+
 
 
 
