@@ -351,6 +351,21 @@
               </footer>
         </div>
     </div>
+    
+    <div id="pauta-type-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-6 text-center">Tipo de Nova Pauta</h2>
+            <p class="mb-6 text-gray-600 text-center">Escolha o tipo de atendimento que você irá gerenciar:</p>
+            <div class="flex flex-col gap-4">
+                <button id="select-agendado-btn" class="w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition">Atendimento Agendado</button>
+                <button id="select-avulso-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition">Atendimento Avulso</button>
+            </div>
+            <div class="flex justify-center mt-6">
+                 <button id="cancel-type-selection-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
 
     <div id="create-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
@@ -884,6 +899,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '', currentPautaOwnerId = null, isPautaClosed = false;
         let assistedIdToHandle = null;
         let currentChecklistAction = null;
+        let currentPautaType = 'agendamento';
 
         // Variáveis para a lógica de Colaboradores
         let colaboradores = [];
@@ -1193,7 +1209,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             showScreen('app');
         };
 
-
          /**
          * Exclui uma pauta do Firestore.
          * Em uma aplicação real, seria ideal ter um modal de confirmação customizado
@@ -1364,6 +1379,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 isScheduledContainer.classList.remove('hidden');
                 pautaColumn.classList.remove('hidden');
                 formTitle.textContent = "Adicionar Novo Agendamento";
+                document.getElementById('assisted-name').value = '';
+                document.getElementById('assisted-cpf').value = '';
+                document.getElementById('assisted-subject').value = '';
+                document.getElementById('scheduled-time').value = '';
+                document.querySelector('input[name="is-scheduled"][value="yes"]').checked = true;
+                document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
+                document.getElementById('scheduled-time-wrapper').classList.remove('hidden');
+                document.getElementById('arrival-time-wrapper').classList.add('hidden');
             } else { // avulso
                 tabAvulso.classList.add('tab-active');
                 tabAgendamento.classList.remove('tab-active');
@@ -1371,11 +1394,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 isScheduledContainer.classList.add('hidden');
                 pautaColumn.classList.add('hidden');
                 formTitle.textContent = "Adicionar Atendimento Avulso";
-                
+                document.getElementById('assisted-name').value = '';
+                document.getElementById('assisted-cpf').value = '';
+                document.getElementById('assisted-subject').value = '';
                 document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
                 document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
                 document.getElementById('scheduled-time-wrapper').classList.add('hidden');
                 document.getElementById('arrival-time-wrapper').classList.remove('hidden');
+                document.getElementById('arrival-time').value = new Date().toTimeString().slice(0,5);
             }
             renderAssistedList();
         };
@@ -1422,7 +1448,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             if (toggleButton && panel && arrow) {
                 toggleButton.addEventListener('click', (event) => {
                     // Impede que o clique se propague para o document, evitando que o menu se feche imediatamente
-                    event.stopPropagation(); 
+                    event.stopPropagation();
                     panel.classList.toggle('hidden');
                     arrow.classList.toggle('rotate-180');
                 });
@@ -1449,14 +1475,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const subjectInput = document.getElementById('assisted-subject');
             const descriptionBox = document.getElementById('subject-description');
             const infoButton = document.getElementById('subject-info-btn');
-            
+
             const updateDatalist = (query) => {
                 const lowerCaseQuery = query.toLowerCase();
                 const filteredSubjects = flatSubjects.filter(item =>
                     item.value.toLowerCase().includes(lowerCaseQuery) ||
                     item.description.toLowerCase().includes(lowerCaseQuery)
                 );
-                
+
                 while (datalist.firstChild) {
                     datalist.removeChild(datalist.firstChild);
                 }
@@ -1481,12 +1507,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             subjectInput.addEventListener('change', () => {
                 const originalValue = subjectInput.value;
                 let selectedText = originalValue;
-                
+
                 if (selectedText.includes(' > ')) {
                     const parts = selectedText.split(' > ');
                     selectedText = parts[parts.length - 1];
                 }
-                
+
                 subjectInput.value = selectedText;
 
                 const foundSubject = findSubjectByInputValue(selectedText);
@@ -1517,7 +1543,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const registerTabBtn = document.getElementById('register-tab-btn');
             const loginForm = document.getElementById('login-form');
             const registerForm = document.getElementById('register-form');
-            
+
             loginTabBtn.addEventListener('click', () => {
                 loginTabBtn.classList.add('border-green-600', 'text-green-600');
                 loginTabBtn.classList.remove('text-gray-500');
@@ -1573,14 +1599,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         email: email,
                         uid: user.uid,
                         status: 'approved',
-                        role: 'admin', 
+                        role: 'admin',
                         createdAt: new Date().toISOString()
                     });
-                    
+
                     errorDiv.classList.add('hidden');
                     showNotification('Conta criada com sucesso! Agora você pode fazer o login.', 'success');
                     loginTabBtn.click();
-                    
+
                 } catch (error) {
                     console.error("Registration failed:", error);
                     errorDiv.textContent = error.code === 'auth/email-already-in-use' ? 'Este email já está em uso.' : 'Ocorreu um erro ao criar a conta.';
@@ -1602,8 +1628,25 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
 
             document.getElementById('create-pauta-btn').addEventListener('click', () => {
+                document.getElementById('pauta-type-modal').classList.remove('hidden');
+            });
+
+            document.getElementById('cancel-type-selection-btn').addEventListener('click', () => {
+                document.getElementById('pauta-type-modal').classList.add('hidden');
+            });
+
+            document.getElementById('select-agendado-btn').addEventListener('click', () => {
+                currentPautaType = 'agendamento';
+                document.getElementById('pauta-type-modal').classList.add('hidden');
                 document.getElementById('create-pauta-modal').classList.remove('hidden');
             });
+
+            document.getElementById('select-avulso-btn').addEventListener('click', () => {
+                currentPautaType = 'avulso';
+                document.getElementById('pauta-type-modal').classList.add('hidden');
+                document.getElementById('create-pauta-modal').classList.remove('hidden');
+            });
+
             document.getElementById('cancel-create-pauta-btn').addEventListener('click', () => {
                 document.getElementById('create-pauta-modal').classList.add('hidden');
             });
@@ -1625,6 +1668,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         ownerEmail: user.email,
                         members: [user.uid],
                         memberEmails: [user.email],
+                        type: currentPautaType,
                         isClosed: false,
                         createdAt: new Date().toISOString()
                     });
@@ -1638,7 +1682,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
 
             // --- LÓGICA DE EVENTOS GERAIS E MODAIS ---
-            
+
             document.getElementById('privacy-policy-link').addEventListener('click', e => {
                 e.preventDefault();
                 document.getElementById('privacy-policy-modal').classList.remove('hidden');
@@ -1654,8 +1698,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.getElementById('pauta-selection-container').addEventListener('click', async (e) => {
                 const deleteBtn = e.target.closest('.delete-pauta-btn');
                 if (!deleteBtn) return;
-                
-                e.stopPropagation(); 
+
+                e.stopPropagation();
                 const pautaId = deleteBtn.dataset.pautaId;
                 const pautaName = deleteBtn.dataset.pautaName;
 
@@ -1666,17 +1710,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                         const attendanceCollectionRef = collection(db, "pautas", pautaId, "attendances");
                         const attendanceSnapshot = await getDocs(attendanceCollectionRef);
-                        
+
                         if (!attendanceSnapshot.empty) {
                             const batch = writeBatch(db);
                             attendanceSnapshot.docs.forEach(doc => {
                                 batch.delete(doc.ref);
                             });
-                            await batch.commit(); 
+                            await batch.commit();
                         }
-                        
+
                         await deleteDoc(doc(db, "pautas", pautaId));
-                        
+
                         showNotification(`Pauta "${pautaName}" apagada com sucesso.`);
                         showScreen('pautaSelection');
                     } catch (error) {
@@ -1691,7 +1735,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 e.preventDefault();
                 document.getElementById('format-help-modal').classList.remove('hidden');
             });
-            
+
             document.getElementById('format-help-modal').addEventListener('click', e => {
                 const buttonId = e.target.id;
                 if (buttonId === 'copy-csv-format-btn') {
@@ -1705,10 +1749,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     copyToClipboard(text, 'Prompt para IA copiado!');
                 }
             });
-            document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
-            document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
-            document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-            document.getElementById('arrival-time-wrapper').classList.remove('hidden');
+
+            document.getElementById('tab-agendamento').addEventListener('click', () => switchTab('agendamento'));
+            document.getElementById('tab-avulso').addEventListener('click', () => switchTab('avulso'));
 
             const handleLogout = () => {
                 signOut(auth).catch(error => {
@@ -1743,7 +1786,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                              lines.shift();
                          }
                     }
-                    
+
                     if (lines.length === 0) {
                         showNotification("O arquivo CSV contém apenas um cabeçalho ou está vazio.", "error");
                         return;
@@ -1753,7 +1796,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         const batch = writeBatch(db);
                         const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
                         let processedCount = 0;
-                        
+
                         lines.forEach(line => {
                             const parts = line.split(';').map(item => item.trim());
                              if (parts.length >= 3) {
@@ -1791,13 +1834,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 };
                 reader.readAsText(file);
-                event.target.value = ''; 
+                event.target.value = '';
             });
 
             document.getElementById('download-pdf-btn').addEventListener('click', () => {
                 const { jsPDF } = window.jspdf;
                 const docPDF = new jsPDF();
-                
+
                 const pautaName = document.getElementById('pauta-title').textContent;
                 const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
                 const atendidos = allAssisted
@@ -1832,7 +1875,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                              duration = `${diffMins} min`;
                          }
                     }
-                    
+
                     const cleanString = (str) => String(str || '').replace(/"/g, '');
 
                     const rowData = [
@@ -1858,7 +1901,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 pautaColumn.classList.toggle('hidden');
                 faltososColumn.classList.toggle('hidden');
-                
+
                 if (faltososColumn.classList.contains('hidden')) {
                     btn.textContent = 'Ver Faltosos';
                     btn.classList.replace('bg-blue-600', 'bg-purple-600');
@@ -1869,7 +1912,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     btn.classList.replace('hover:bg-purple-700', 'hover:bg-blue-700');
                 }
             });
-            
+
             document.getElementById('toggle-logic-btn').addEventListener('click', (e) => {
                 const explanationDiv = document.getElementById('logic-explanation');
                 const isHidden = explanationDiv.classList.toggle('hidden');
@@ -1890,7 +1933,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 });
             });
-            
+
             const showMembersModal = async () => {
                 if (!currentPautaId) return;
                 const modal = document.getElementById('members-modal');
@@ -1916,7 +1959,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     });
                 }
             };
-            
+
             const showDemandsModal = (assistedId) => {
                 const modal = document.getElementById('demands-modal');
                 const assisted = allAssisted.find(a => a.id === assistedId);
@@ -1924,7 +1967,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 document.getElementById('demands-assisted-name-modal').textContent = assisted.name;
                 const demandsListContainer = document.getElementById('demands-list-container');
-                demandsListContainer.innerHTML = ''; 
+                demandsListContainer.innerHTML = '';
 
                 const demands = assisted.demandas?.descricoes || [];
                 if (demands.length === 0) {
@@ -2747,6 +2790,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+
 
 
 
