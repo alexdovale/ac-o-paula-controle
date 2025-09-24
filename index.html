@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Gerenciamento de Pauta - SIGAP</title>
-    
+
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ac-o-paula-controle/imagem.png">
 
     <meta name="theme-color" content="#16a34a"/>
@@ -82,7 +81,7 @@
                 Instalar App
             </button>
         </div>
-        
+
         <div id="invitations-container" class="hidden mb-8">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Convites Pendentes</h2>
             <div id="pending-invitations-list" class="space-y-4"></div>
@@ -90,7 +89,7 @@
         <div id="pautas-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         <div class="mt-6"><button id="create-pauta-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Criar Nova Pauta</button></div>
     </div>
-    
+
     <div id="app-container" class="max-w-full mx-auto hidden">
         <header class="mb-6 space-y-4">
             <div class="flex justify-center items-center w-full relative">
@@ -102,7 +101,7 @@
                          </svg>
                  </button>
             </div>
-            
+
             <div class="bg-white p-4 rounded-lg shadow-sm space-y-4">
                 <div class="text-center border-b pb-4">
                     <h2 id="pauta-title" class="text-2xl md:text-3xl font-bold text-gray-800 truncate px-4"></h2>
@@ -112,56 +111,43 @@
                     <div class="flex-shrink-0">
                         <button id="back-to-pautas-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
                     </div>
-                    
-<!--    nome exemplo que é exibido                
-<div class="w-full max-w-4xl mx-auto p-4">
-    <div class="bg-white p-4 rounded-lg shadow-sm space-y-4">
-        <div class="text-center border-b pb-4">
-            <h2 id="pauta-title" class="text-2xl md:text-3xl font-bold text-gray-800 truncate px-4">
-                Nome da Pauta de Exemplo
-            </h2>
-        </div>
-        -->
-        <div class="flex flex-col sm:flex-row justify-between items-center w-full gap-4 pt-4">
+
+<div class="flex flex-col sm:flex-row justify-between items-center w-full gap-4 pt-4">
             <div class="flex-shrink-0">
-               <!-- <button id="back-to-pautas-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button> -->
-            </div>
-            
+               </div>
+
             <div class="relative flex items-center">
-                
-                <div id="actions-panel" 
-                     class="absolute top-1/2 -translate-y-1/2 right-full mr-3  flex-col flex items-center gap-2 p-2 bg-white rounded-lg shadow-xl border border-gray-200
-                            transition-all duration-300 ease-in-out transform origin-right
-                            opacity-0 scale-90 pointer-events-none">
-                    
-                    <button id="edit-pauta-name-btn" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap">
+
+                <div id="actions-panel" class="absolute top-1/2 -translate-y-1/2 right-full mr-3 flex flex-col items-center gap-2 p-2 bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-300 ease-in-out transform origin-right opacity-0 scale-90 pointer-events-none">
+
+                    <button id="edit-pauta-name-btn" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-slate-500"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                         <span>Editar Nome</span>
                     </button>
-                    
-                    <button id="manage-members-btn" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap">
+
+                    <button id="manage-members-btn" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-slate-500"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         <span>Compartilhar</span>
                     </button>
 
-                    <div class="w-px h-6 bg-gray-300"></div>
+                    <div class="w-full h-px bg-gray-300"></div>
 
-                    <button id="close-pauta-btn" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-orange-700 bg-orange-100 rounded-lg hover:bg-orange-200 transition-colors whitespace-nowrap">
+                    <button id="close-pauta-btn" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-orange-700 bg-orange-100 rounded-lg hover:bg-orange-200 transition-colors whitespace-nowrap">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-orange-500"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         <span>Fechar Pauta</span>
                     </button>
 
-                    <button id="reopen-pauta-btn" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-teal-700 bg-teal-100 rounded-lg hover:bg-teal-200 transition-colors whitespace-nowrap">
+                    <button id="reopen-pauta-btn" class="hidden flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-teal-700 bg-teal-100 rounded-lg hover:bg-teal-200 transition-colors whitespace-nowrap">
                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-teal-500"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
                        <span>Reabrir Pauta</span>
                     </button>
 
-                    <button id="reset-all-btn" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition-colors whitespace-nowrap">
+                    <button id="reset-all-btn" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition-colors whitespace-nowrap">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-red-500"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                         <span>Zerar Pauta</span>
                     </button>
-                    
-                    <button id="manage-collaborators-btn" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-violet-700 bg-violet-100 rounded-lg hover:bg-violet-200 transition-colors whitespace-nowrap">
+
+                    <button id="manage-collaborators-btn" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-violet-700 bg-violet-100 rounded-lg hover:bg-violet-200 transition-colors whitespace-nowrap">
                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-violet-500"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
                         <span>Colaboradores</span>
                     </button>
@@ -175,10 +161,6 @@
             </div>
         </div>
     </div>
-</div>
-<!-- Fim do Componente de Cabeçalho -->
-
-<!-- Script para o menu de ações -->
 <script>
     const actionsToggle = document.getElementById('actions-toggle');
     const actionsPanel = document.getElementById('actions-panel');
@@ -257,10 +239,10 @@
                                 <label for="assisted-subject" class="font-medium text-gray-600">Matéria - Assunto</label>
                                 <button type="button" id="subject-info-btn" class="font-bold text-lg text-blue-500 cursor-help rounded-full disabled:text-gray-300 disabled:cursor-not-allowed">!</button>
                             </div>
-        
+
                             <input list="subjects-list" id="assisted-subject" name="assisted-subject" placeholder="Digite ou selecione um assunto" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition w-full">
                             <datalist id="subjects-list"></datalist>
-        
+
                             <div id="subject-description" class="hidden mt-2 p-4 bg-blue-50 border border-blue-200 text-gray-800 rounded-lg text-sm transition-all duration-300">
                                 </div>
                         </div>
@@ -408,7 +390,7 @@
     <div id="arrival-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold mb-4">Confirmar Horário de Chegada</h2><p class="mb-4 text-gray-600">Por favor, informe o horário de chegada do assistido.</p><input type="time" id="arrival-time-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6"><div class="flex justify-end space-x-4"><button id="cancel-arrival-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button><button id="confirm-arrival-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button></div></div>
     </div>
-    
+
     <div id="attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Finalizar Atendimento</h2>
@@ -421,9 +403,21 @@
             </div>
         </div>
     </div>
-    
+
     <div id="reset-confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg space-y-4"><h2 class="text-2xl font-bold text-gray-800">Zerar Pauta</h2><p class="text-gray-600">Tem certeza de que deseja apagar permanentemente todos os dados desta pauta?</p><div class="flex justify-end space-x-4 pt-4"><button id="cancel-reset-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button><button id="confirm-reset-btn" class="bg-red-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-800">Zerar Pauta</button></div></div>
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg space-y-4">
+            <h2 class="text-2xl font-bold text-gray-800">Zerar Pauta</h2>
+            <p class="text-gray-600">Tem certeza de que deseja apagar permanentemente todos os dados desta pauta?</p>
+            <div id="reset-auth-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden" role="alert"></div>
+            <div>
+                <label for="reset-pauta-password" class="block text-sm font-medium text-gray-700">Confirme sua senha:</label>
+                <input type="password" id="reset-pauta-password" class="w-full p-3 border border-gray-300 rounded-lg mt-1" required>
+            </div>
+            <div class="flex justify-end space-x-4 pt-4">
+                <button id="cancel-reset-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-reset-btn" class="bg-red-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-800">Zerar Pauta</button>
+            </div>
+        </div>
     </div>
     <div id="edit-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
@@ -459,7 +453,7 @@
             </div>
             <div class="flex-grow overflow-y-auto scrollable-content pr-4">
                 <p class="mb-4 text-gray-600">Para importar seus agendamentos de uma vez, crie um arquivo <strong>.csv</strong> (Valores Separados por Vírgula). Você pode criar este arquivo usando o Bloco de Notas, Excel, Google Sheets ou similar.</p>
-                
+
                 <div class="flex justify-between items-center mb-2">
                      <p class="font-semibold">O arquivo deve seguir o formato abaixo, com 4 colunas, nesta ordem:</p>
                      <button id="copy-csv-format-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Formato</button>
@@ -467,7 +461,7 @@
                 <div class="bg-gray-100 p-4 rounded-lg text-sm mb-4">
                     <code id="csv-format-code">Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code>
                 </div>
-                
+
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="text-lg font-semibold">Exemplo:</h3>
                     <button id="copy-csv-example-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Exemplo</button>
@@ -572,13 +566,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 <p><strong>1. Natureza do Sistema e Ciclo de Vida dos Dados</strong></p>
                 <p>O Sistema de Gerenciamento de Pauta (SIGAP) é uma interface de controle para a gestão de atendimentos. Ele coleta e armazena os dados pessoais de assistidos, como nome, CPF (opcional), assunto e demanda, por um período de sete dias após a finalização da ação. Após esse prazo, os dados são permanentemente excluídos do SIGAP.</p>
                 <p>Para o armazenamento permanente, todos os dados são enviados e salvos no sistema Verde, que é de responsabilidade da Defensoria Pública do Estado do Rio de Janeiro (DPERJ) e está em total conformidade com a LGPD.</p>
-                
+
                 <p><strong>2. Dados Coletados pelo SIGAP</strong></p>
                 <p>Para permitir o uso da interface, o SIGAP coleta apenas os dados de autenticação dos usuários (profissionais): e-mail e senha.</p>
-                
+
                 <p><strong>3. Tratamento e Proteção de Dados (dentro do SIGAP)</strong></p>
                 <p>Os dados de autenticação são utilizados para garantir o acesso restrito e seguro ao sistema. Os dados de assistidos são armazenados por apenas sete dias, tempo necessário para a conclusão da ação, e são protegidos por medidas de segurança para evitar acesso não autorizado.</p>
-                
+
                 <p><strong>4. Direitos dos Titulares dos Dados</strong></p>
                 <p>Os direitos dos assistidos, como acesso, correção e exclusão de dados, são garantidos e exercidos diretamente por meio do sistema Verde, que é o responsável pelo armazenamento final. Os usuários do SIGAP podem gerenciar a pauta e solicitar alterações no sistema Verde conforme as normas da DPERJ.</p>
 
@@ -662,7 +656,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 <h2 class="text-2xl font-bold text-gray-800">Gerenciar Colaboradores</h2>
                 <button id="close-collaborators-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
             </div>
-    
+
             <div class="flex-grow overflow-y-auto pr-2">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div>
@@ -698,7 +692,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             <button type="submit" id="add-collaborator-btn" class="w-full bg-green-600 text-white font-bold py-2 rounded-md hover:bg-green-700 transition">Adicionar Colaborador</button>
                         </form>
                     </div>
-    
+
                     <div>
                         <h3 class="text-xl font-semibold text-gray-700 mb-4">Lista de Presença</h3>
                         <div id="presence-stats" class="mb-4 text-sm text-gray-700 space-y-1">
@@ -798,6 +792,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     { text: "Defesa de Acusados em Processo Criminal", description: "Representação legal de pessoas que respondem a acusações criminais." },
                     { text: "Acompanhamento do Cumprimento da Pena (Execução Penal)", description: "Atuação em favor de pessoas condenadas, para garantir seus direitos durante o cumprimento da pena (regime, progressão, benefícios)." },
                     { text: "Atuação em Audiência de Custódia", description: "Assistência a pessoas presas em flagrante, avaliando a legalidade da prisão e buscando medidas alternativas." }
+                ]
+            },
+            {
+                text: "Processos de Fazenda Pública",
+                description: "Demandas contra o Estado (União, Estados, Municípios) e seus órgãos.",
+                children: [
+                    { text: "Fornecimento de Medicamentos", description: "Ação para compelir o Poder Público a fornecer medicamentos essenciais." },
+                    { text: "Indenizações contra o Poder Público", description: "Ações para buscar compensação por danos causados por atos ou omissões do Estado." },
+                    { text: "Previdência Social (estadual e municipal)", description: "Atuação em questões relacionadas a benefícios previdenciários de regimes próprios." },
+                    { text: "Questionamentos em Cobranças de Impostos, Taxas e Multas", description: "Ações para contestar cobranças indevidas de tributos ou multas por entes públicos." }
                 ]
             },
             {
@@ -2752,6 +2756,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+
 
 
 
