@@ -1803,7 +1803,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         return;
                     }
 
-                    const firstLineParts = lines[0].split(';');
+                    const firstLineParts = lines[0].split(';').map(item => item.trim().replace(/^"|"$/g, ''));
                     if (firstLineParts.length >= 3) {
                          const potentialTime = firstLineParts[1].trim();
                          if (!/^\d{1,2}:\d{2}$/.test(potentialTime)) {
@@ -1822,12 +1822,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         let processedCount = 0;
 
                         lines.forEach(line => {
-                            const parts = line.split(';').map(item => item.trim());
+                            const parts = line.split(';').map(item => item.trim().replace(/^"|"$/g, ''));
                              if (parts.length >= 3) {
                                  const name = parts[0];
                                  const scheduledTime = parts[1];
                                  const subject = parts[2];
-                                 const cpf = parts.length > 3 ? parts[3] : '';
+                                 const cpf = parts.length > 3 ? parts[3].replace(/^"|"$/g, '') : '';
 
                                  if (name && subject && scheduledTime && /^\d{1,2}:\d{2}$/.test(scheduledTime)) {
                                      const newDocRef = doc(collectionRef);
@@ -2815,15 +2815,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
