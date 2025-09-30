@@ -1295,13 +1295,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             card.appendChild(deleteButton); // Adiciona o botão ao card
 
-            // --- Cálculo de Datas ---
-            const creationDate = pauta.createdAt?.toDate ? pauta.createdAt.toDate() : new Date();
-            const expirationDate = new Date(creationDate);
-            expirationDate.setDate(creationDate.getDate() + 7); // Adiciona 7 dias para a data de expiração
+            // --- Cálculo de Datas ---
+            const creationDate = pauta.createdAt ? new Date(pauta.createdAt) : new Date();
+            const expirationDate = new Date(creationDate);
+            expirationDate.setDate(creationDate.getDate() + 7); // Adiciona 7 dias para a data de expiração
 
-            const formattedCreationDate = creationDate.toLocaleDateString('pt-BR');
-            const formattedExpirationDate = expirationDate.toLocaleDateString('pt-BR');
+            const formattedCreationDate = creationDate.toLocaleDateString('pt-BR');
+            const formattedExpirationDate = expirationDate.toLocaleDateString('pt-BR');
 
             // --- Criação de Elementos (Seguro contra XSS) ---
             const contentDiv = document.createElement('div');
@@ -2894,3 +2894,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
