@@ -21,9 +21,9 @@
         .priority-maxima { border-left: 5px solid #22c55e; }
         .priority-media { border-left: 5px solid #f97316; }
         .priority-minima { border-left: 5px solid #6b7280; }
-        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar, #members-list-container::-webkit-scrollbar { width: 8px; }
-        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
-        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar, #members-list-container::-webkit-scrollbar, #pending-users-list::-webkit-scrollbar { width: 8px; }
+        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track, #pending-users-list::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
+        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb, #pending-users-list::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
         input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
         .tab-active { border-color: #16a34a; background-color: #f0fdf4; color: #16a34a; font-weight: 600; }
         .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
@@ -40,6 +40,8 @@
             <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGAP" class="mx-auto h-24 w-auto mb-6">
             <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Sistema de Gerenciamento de Pauta</h2>
             <div id="auth-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden" role="alert"></div>
+            <div id="auth-success" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg relative mb-4 hidden" role="alert"></div>
+
             <div class="flex border-b mb-6">
                 <button id="login-tab-btn" class="flex-1 py-2 text-center font-semibold text-green-600 border-b-2 border-green-600">Login</button>
                 <button id="register-tab-btn" class="flex-1 py-2 text-center font-semibold text-gray-500">Cadastrar</button>
@@ -93,13 +95,13 @@
     <div id="app-container" class="max-w-full mx-auto hidden">
         <header class="mb-6 space-y-4">
             <div class="flex justify-center items-center w-full relative">
-                 <h1 class="text-xl font-semibold text-gray-600 text-center">Sistema de Gerenciamento de Pauta - SIGAP</h1>
-                 <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700">
-                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
-                             <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
-                             <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
-                         </svg>
-                 </button>
+                <h1 class="text-xl font-semibold text-gray-600 text-center">Sistema de Gerenciamento de Pauta - SIGAP</h1>
+                <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
+                         <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                         <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                    </svg>
+                </button>
             </div>
 
             <div class="bg-white p-4 rounded-lg shadow-sm space-y-4">
@@ -107,116 +109,61 @@
                     <h2 id="pauta-title" class="text-2xl md:text-3xl font-bold text-gray-800 truncate px-4"></h2>
                 </div>
 
+                <!-- Estrutura do cabeçalho simplificada -->
                 <div class="flex flex-col sm:flex-row justify-between items-center w-full gap-4 pt-4">
                     <div class="flex-shrink-0">
                         <button id="back-to-pautas-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
                     </div>
 
-<div class="flex flex-col sm:flex-row justify-between items-center w-full gap-4 pt-4">
-            <div class="flex-shrink-0">
-               </div>
-
-            <div class="relative flex items-center">
-
-                <div id="actions-panel" class="absolute top-1/2 -translate-y-1/2 right-full mr-3 flex flex-col items-center gap-2 p-2 bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-300 ease-in-out transform origin-right opacity-0 scale-90 pointer-events-none">
-
-                    <button id="edit-pauta-name-btn" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-slate-500"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                        <span>Editar Nome</span>
-                    </button>
-
-                    <button id="manage-members-btn" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-slate-500"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                        <span>Compartilhar</span>
-                    </button>
-
-                    <div class="w-full h-px bg-gray-300"></div>
-
-                    <button id="close-pauta-btn" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-orange-700 bg-orange-100 rounded-lg hover:bg-orange-200 transition-colors whitespace-nowrap">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-orange-500"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        <span>Fechar Pauta</span>
-                    </button>
-
-                    <button id="reopen-pauta-btn" class="hidden flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-teal-700 bg-teal-100 rounded-lg hover:bg-teal-200 transition-colors whitespace-nowrap">
-                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-teal-500"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
-                       <span>Reabrir Pauta</span>
-                    </button>
-
-                    <button id="reset-all-btn" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition-colors whitespace-nowrap">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-red-500"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-                        <span>Zerar Pauta</span>
-                    </button>
-
-                    <button id="manage-collaborators-btn" 
-    class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-violet-700 bg-violet-100 rounded-lg hover:bg-violet-200 transition-colors whitespace-nowrap">
-        <svg xmlns='http://www.w3.org/2000/svg' class='w-5 h-5 text-violet-500' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
-            <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><polyline points='16 11 18 13 22 9'/>
-        </svg>
-        <span>Colaboradores</span>
-    </button>
-
-    <!-- Botão de Anotações -->
-    <button id="notes-btn" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-indigo-700 bg-indigo-100 rounded-lg hover:bg-indigo-200 transition-colors whitespace-nowrap">
-        <svg xmlns='http://www.w3.org/2000/svg' class='w-5 h-5 text-indigo-500' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
-            <path d='M9 12h6M9 16h6M12 20h.01M19 3h-4a2 2 0 0 0-2-2H11a2 2 0 0 0-2 2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z'/>
-        </svg>
-        <span>Anotações</span>
-    </button class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-violet-700 bg-violet-100 rounded-lg hover:bg-violet-200 transition-colors whitespace-nowrap">
-                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-violet-500"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
-                        <span>Colaboradores</span>
-                    </button>
+                    <div class="relative flex items-center">
+                        <div id="actions-panel" class="absolute top-1/2 -translate-y-1/2 right-full mr-3 flex flex-col items-center gap-2 p-2 bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-300 ease-in-out transform origin-right opacity-0 scale-90 pointer-events-none">
+                            <button id="edit-pauta-name-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-slate-500"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                                <span>Editar Nome</span>
+                            </button>
+                            <button id="manage-members-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-slate-500"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                <span>Compartilhar</span>
+                            </button>
+                            <div class="w-full h-px bg-gray-300"></div>
+                            <button id="close-pauta-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-orange-700 bg-orange-100 rounded-lg hover:bg-orange-200 transition-colors whitespace-nowrap">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-orange-500"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                <span>Fechar Pauta</span>
+                            </button>
+                            <button id="reopen-pauta-btn" class="hidden flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-teal-700 bg-teal-100 rounded-lg hover:bg-teal-200 transition-colors whitespace-nowrap">
+                               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-teal-500"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+                               <span>Reabrir Pauta</span>
+                            </button>
+                            <button id="reset-all-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition-colors whitespace-nowrap">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-red-500"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                                <span>Zerar Pauta</span>
+                            </button>
+                             <button id="manage-collaborators-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-violet-700 bg-violet-100 rounded-lg hover:bg-violet-200 transition-colors whitespace-nowrap">
+                                <svg xmlns='http://www.w3.org/2000/svg' class='w-5 h-5 text-violet-500' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
+                                    <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><polyline points='16 11 18 13 22 9'/>
+                                </svg>
+                                <span>Colaboradores</span>
+                            </button>
+                            <button id="notes-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-indigo-700 bg-indigo-100 rounded-lg hover:bg-indigo-200 transition-colors whitespace-nowrap">
+                                <svg xmlns='http://www.w3.org/2000/svg' class='w-5 h-5 text-indigo-500' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
+                                    <path d='M9 12h6M9 16h6M12 20h.01M19 3h-4a2 2 0 0 0-2-2H11a2 2 0 0 0-2 2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z'/>
+                                </svg>
+                                <span>Anotações</span>
+                            </button>
+                        </div>
+                        <button id="actions-toggle" class="z-10 flex items-center justify-center gap-2 px-5 py-2.5 text-white bg-green-600 hover:bg-green-700 font-semibold rounded-lg transition-colors duration-200">
+                            <span>Ações</span>
+                            <svg id="actions-arrow" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 transition-transform duration-200"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                    </div>
                 </div>
-
-                <button id="actions-toggle" class="z-10 flex items-center justify-center gap-2 px-5 py-2.5 text-white bg-green-600 hover:bg-green-700 font-semibold rounded-lg transition-colors duration-200">
-                    <span>Ações</span>
-                    <svg id="actions-arrow" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 transition-transform duration-200"><path d="m6 9 6 6 6-6"/></svg>
-                </button>
-
             </div>
-        </div>
-    </div>
-<script>
-    const actionsToggle = document.getElementById('actions-toggle');
-    const actionsPanel = document.getElementById('actions-panel');
-    const actionsArrow = document.getElementById('actions-arrow');
-
-    function showPanel() {
-        if(actionsPanel && actionsArrow) {
-            actionsPanel.classList.remove('opacity-0', 'scale-90', 'pointer-events-none');
-            actionsArrow.classList.add('rotate-180');
-        }
-    }
-
-    function hidePanel() {
-        if(actionsPanel && actionsArrow) {
-            actionsPanel.classList.add('opacity-0', 'scale-90', 'pointer-events-none');
-            actionsArrow.classList.remove('rotate-180');
-        }
-    }
-
-    if(actionsToggle) {
-        actionsToggle.addEventListener('click', (event) => {
-            event.stopPropagation();
-            if (actionsPanel && actionsPanel.classList.contains('opacity-0')) {
-                showPanel();
-            } else {
-                hidePanel();
-            }
-        });
-    }
-
-    // Fecha o painel se clicar fora dele
-    window.addEventListener('click', (event) => {
-        if (actionsPanel && !actionsPanel.contains(event.target) && actionsToggle && !actionsToggle.contains(event.target)) {
-            hidePanel();
-        }
-    });
-</script>
             <div id="closed-pauta-alert" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4" role="alert">
                 <p class="font-bold">Pauta Fechada</p>
                 <p>Esta pauta está fechada para novas edições. Apenas o criador pode reabri-la.</p>
             </div>
         </header>
+
         <div id="app-content">
               <div class="mb-6">
                   <div class="border-b border-gray-200">
@@ -313,7 +260,7 @@
                 <div class="bg-white rounded-lg shadow-md flex flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <div class="flex justify-between items-center mb-3">
-                             <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center w-full">
+                            <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center w-full">
                                 <span>✅ Atendidos</span>
                                 <span id="atendidos-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
                             </h3>
@@ -424,7 +371,20 @@
             </div>
         </div>
     </div>
-    <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4"></div>
+    <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl" style="max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Painel do Administrador</h2>
+                <button id="close-admin-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+            </div>
+            <div class="overflow-y-auto">
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">Usuários Pendentes de Aprovação</h3>
+                <div id="pending-users-list" class="space-y-2 max-h-96 overflow-y-auto">
+                    <!-- User items will be injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="arrival-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold mb-4">Confirmar Horário de Chegada</h2><p class="mb-4 text-gray-600">Por favor, informe o horário de chegada do assistido.</p><input type="time" id="arrival-time-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6"><div class="flex justify-end space-x-4"><button id="cancel-arrival-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button><button id="confirm-arrival-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button></div></div>
     </div>
@@ -482,7 +442,6 @@
         </div>
     </div>
 
-
     <div id="format-help-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl relative flex flex-col" style="max-height: 90vh;">
             <div class="flex-shrink-0">
@@ -533,7 +492,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Editar Atendente</h2>
             <input list="collaborators-list" type="text" id="edit-attendant-name" placeholder="Nome do Defensor/Servidor" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
-            <datalist id="collaborators-list"></datalist>
+            <datalist id="collaborators-list-edit"></datalist>
             <div class="flex justify-end space-x-4">
                 <button id="cancel-edit-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
                 <button id="confirm-edit-attendant-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar</button>
@@ -763,12 +722,38 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
         </div>
     </div>
+    
+    <!-- Modal de Anotações -->
+    <div id="notes-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[60]">
+      <div class="bg-white rounded-xl p-6 w-full max-w-lg shadow-lg">
+        <h2 class="text-lg font-semibold text-gray-700 mb-3">Minhas Anotações para esta Pauta</h2>
+        <textarea id="notes-text" class="w-full h-48 border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500" placeholder="Digite suas anotações aqui. Elas ficarão salvas no banco de dados, associadas a esta pauta e ao seu usuário."></textarea>
+        <div class="mt-4 flex justify-end gap-2">
+          <button id="save-notes-btn" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Salvar</button>
+          <button id="close-notes-btn" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">Fechar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Confirmação Genérico -->
+    <div id="confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[70]">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 id="confirm-modal-title" class="text-2xl font-bold mb-4 text-gray-800">Confirmar Ação</h2>
+            <p id="confirm-modal-text" class="mb-6 text-gray-600">Você tem certeza?</p>
+            <div class="flex justify-end space-x-4">
+                <button id="confirm-modal-cancel-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-modal-confirm-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, writeBatch, getDoc, setDoc, query, where, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- INÍCIO DA LÓGICA DE ASSUNTOS (ANTIGO assuntos.js) ---
+        // --- INÍCIO DA LÓGICA DE ASSUNTOS ---
         const subjectTree = [
             { text: "Orientação Jurídica", description: "Prestação de informações e esclarecimentos gerais sobre direitos, deveres e as leis, auxiliando o cidadão a entender sua situação e as possíveis soluções legais." },
             { text: "Atendimento Jurídico Integral e Gratuito", description: "O serviço principal da Defensoria, oferecido a pessoas que não possuem condições financeiras para contratar um advogado, abrangendo todas as etapas e necessidades legais." },
@@ -918,22 +903,50 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         const flatSubjects = flattenTreeWithObjects(subjectTree);
         // --- FIM DA LÓGICA DE ASSUNTOS ---
 
-        // Variáveis Globais (existentes)
+        // --- Variáveis Globais ---
         let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '', currentPautaOwnerId = null, isPautaClosed = false;
         let assistedIdToHandle = null;
         let currentChecklistAction = null;
-
-        // Variáveis para a lógica de Colaboradores
         let colaboradores = [];
         let editCollaboratorId = null;
         let unsubscribeFromCollaborators = () => {};
 
+        // --- Elementos do DOM ---
         const loadingContainer = document.getElementById('loading-container');
         const loginContainer = document.getElementById('login-container');
         const pautaSelectionContainer = document.getElementById('pauta-selection-container');
         const appContainer = document.getElementById('app-container');
         const loadingText = document.getElementById('loading-text');
 
+        // --- Lógica do Modal de Confirmação ---
+        let confirmCallback = null;
+        const confirmModal = document.getElementById('confirm-modal');
+        const confirmModalTitle = document.getElementById('confirm-modal-title');
+        const confirmModalText = document.getElementById('confirm-modal-text');
+        const confirmModalConfirmBtn = document.getElementById('confirm-modal-confirm-btn');
+        const confirmModalCancelBtn = document.getElementById('confirm-modal-cancel-btn');
+
+        function showConfirmModal(title, text, onConfirm) {
+            confirmModalTitle.textContent = title;
+            confirmModalText.textContent = text;
+            confirmCallback = onConfirm;
+            confirmModal.classList.remove('hidden');
+        }
+
+        confirmModalCancelBtn.addEventListener('click', () => {
+            confirmModal.classList.add('hidden');
+            confirmCallback = null;
+        });
+
+        confirmModalConfirmBtn.addEventListener('click', () => {
+            if (confirmCallback) {
+                confirmCallback();
+            }
+            confirmModal.classList.add('hidden');
+            confirmCallback = null;
+        });
+        
+        // --- Funções Utilitárias ---
         const normalizeText = (str) => {
             if (!str) return '';
             return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -972,37 +985,22 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const isOwner = auth.currentUser?.uid === currentPautaOwnerId;
             isPautaClosed = isClosed;
 
-            const buttonsToDisable = [
-                'form-agendamento', 'file-upload', 'add-assisted-btn',
-                'download-pdf-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento',
-                'actions-toggle' // Adicionado o novo botão de ações
+            const elementsToToggle = [
+                ...document.querySelectorAll('#form-agendamento, #file-upload, #add-assisted-btn, #download-pdf-btn, #toggle-faltosos-btn, #tab-avulso, #tab-agendamento, #actions-toggle, .check-in-btn, .attend-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn, #manage-collaborators-btn, #notes-btn')
             ];
 
-            buttonsToDisable.forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    if (isClosed) {
-                        element.classList.add('pointer-events-none', 'opacity-50');
-                        element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = true);
+            elementsToToggle.forEach(element => {
+                if(element) {
+                    element.disabled = isClosed;
+                    if(isClosed) {
+                        element.classList.add('opacity-50', 'pointer-events-none');
                     } else {
-                        element.classList.remove('pointer-events-none', 'opacity-50');
-                        element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = false);
+                        element.classList.remove('opacity-50', 'pointer-events-none');
                     }
                 }
             });
-
-            // Gerencia os botões dentro do painel de ações
-            const actionPanelButtons = document.querySelectorAll('#actions-panel button');
-            actionPanelButtons.forEach(btn => {
-                btn.disabled = isClosed;
-            });
-
-            const actionButtons = document.querySelectorAll('.check-in-btn, .attend-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn');
-            actionButtons.forEach(btn => {
-                btn.disabled = isClosed;
-            });
-
-            if (isClosed) {
+            
+             if (isClosed) {
                 document.getElementById('closed-pauta-alert').classList.remove('hidden');
                 document.getElementById('close-pauta-btn').classList.add('hidden');
                 document.getElementById('reopen-pauta-btn').classList.remove('hidden');
@@ -1015,6 +1013,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             if (!isOwner) {
                 document.getElementById('close-pauta-btn').classList.add('hidden');
                 document.getElementById('reopen-pauta-btn').classList.add('hidden');
+                document.getElementById('reset-all-btn').classList.add('hidden');
+            } else {
+                 document.getElementById('reset-all-btn').classList.remove('hidden');
             }
         };
 
@@ -1156,7 +1157,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     </div>
                     <div class="text-right mt-1">
                          <button class="toggle-details-btn text-gray-500 hover:text-gray-800 p-1">
-                              <svg class="pointer-events-none" style="transform: rotate(180deg);" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
+                             <svg class="pointer-events-none" style="transform: rotate(180deg);" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
                          </button>
                     </div>`;
                 return card;
@@ -1173,7 +1174,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
                         <p class="text-sm">Agendado: <strong>${a.scheduledTime}</strong></p>
                         <div class="mt-3">
-                            <button data-id="${a.id}" class="return-to-pauta-from-faltoso-btn w-full bg-gray-500 text-white font-semibold py-1 rounded-lg hover:bg-gray-600 text-xs">Revertido para Pauta</button>
+                            <button data-id="${a.id}" class="return-to-pauta-from-faltoso-btn w-full bg-gray-500 text-white font-semibold py-1 rounded-lg hover:bg-gray-600 text-xs">Reverter para Pauta</button>
                         </div>
                     </div>
                     ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
@@ -2894,4 +2895,5 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
