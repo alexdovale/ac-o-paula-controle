@@ -1243,8 +1243,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const expirationDate = new Date(creationDate);
                 expirationDate.setDate(creationDate.getDate() + 7);
                 if (new Date() > expirationDate) {
-                    showNotification("Esta pauta expirou e não está mais acessível.", "error");
-                    showPautaSelectionScreen(auth.currentUser.uid);
+                    showNotification("Pauta inacessível pois cumpriu seu prazo.", "error");
                     return;
                 }
 
@@ -1300,10 +1299,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
         };
 
-        const createPautaCard = (docSnap) => {
+        const createPautaCard = (docSnap, isExpired) => {
             const pauta = docSnap.data();
             const card = document.createElement('div');
-            card.className = "relative bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer flex flex-col justify-between h-full";
+            card.className = "relative bg-white p-6 rounded-lg shadow-md flex flex-col justify-between h-full";
+            
+            if (isExpired) {
+                card.classList.add('opacity-60', 'bg-gray-100', 'cursor-not-allowed');
+            } else {
+                card.classList.add('hover:shadow-xl', 'transition-shadow', 'cursor-pointer');
+            }
 
             const deleteButton = document.createElement('button');
             deleteButton.className = "absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:bg-red-100 hover:text-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500";
@@ -1345,14 +1350,28 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             createdP.innerHTML = `Criada em: <strong>${formattedCreationDate}</strong>`;
 
             const expiresP = document.createElement('p');
-            expiresP.className = "text-xs text-red-600";
-            expiresP.innerHTML = `Será eliminada em: <strong>${formattedExpirationDate}</strong>`;
+            if (isExpired) {
+                expiresP.className = "text-xs text-gray-500 font-semibold";
+                expiresP.innerHTML = `Prazo de acesso expirou em: <strong>${formattedExpirationDate}</strong>`;
+            } else {
+                expiresP.className = "text-xs text-red-600";
+                expiresP.innerHTML = `Será eliminada em: <strong>${formattedExpirationDate}</strong>`;
+            }
 
             footerDiv.appendChild(createdP);
             footerDiv.appendChild(expiresP);
             card.appendChild(contentDiv);
             card.appendChild(footerDiv);
-            card.addEventListener('click', () => loadPauta(docSnap.id, pauta.name, pauta.type));
+            
+            card.addEventListener('click', (event) => {
+                if (event.target.closest('button')) return;
+
+                if (isExpired) {
+                    showNotification("Pauta inacessível pois cumpriu seu prazo.", "error");
+                } else {
+                    loadPauta(docSnap.id, pauta.name, pauta.type);
+                }
+            });
             return card;
         };
 
@@ -1368,22 +1387,23 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const fragment = document.createDocumentFragment();
                 const now = new Date();
                 
-                const validDocs = snapshot.docs.filter(doc => {
-                     const pauta = doc.data();
-                     if (!pauta.createdAt) return true; // Keep pautas without creation date for now
-                     const creationDate = new Date(pauta.createdAt);
-                     const expirationDate = new Date(creationDate);
-                     expirationDate.setDate(creationDate.getDate() + 7);
-                     return now <= expirationDate;
-                });
-
-                if (validDocs.length === 0) {
-                    pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500">Nenhuma pauta ativa encontrada. Crie uma para começar.</p>';
+                if (snapshot.empty) {
+                    pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500">Nenhuma pauta encontrada. Crie uma para começar.</p>';
                     return;
                 }
 
-                validDocs.forEach((docSnap) => {
-                    const card = createPautaCard(docSnap);
+                snapshot.docs.forEach((docSnap) => {
+                    const pauta = docSnap.data();
+                    let isExpired = false;
+                    if (pauta.createdAt) {
+                        const creationDate = new Date(pauta.createdAt);
+                        const expirationDate = new Date(creationDate);
+                        expirationDate.setDate(creationDate.getDate() + 7);
+                        if (now > expirationDate) {
+                            isExpired = true;
+                        }
+                    }
+                    const card = createPautaCard(docSnap, isExpired);
                     fragment.appendChild(card);
                 });
                 pautasList.appendChild(fragment);
