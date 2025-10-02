@@ -95,10 +95,10 @@
             <div class="flex justify-center items-center w-full relative">
                  <h1 class="text-xl font-semibold text-gray-600 text-center">Sistema de Gerenciamento de Pauta - SIGAP</h1>
                  <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700">
-                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
-                           <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
-                           <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
-                       </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                            <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                        </svg>
                  </button>
             </div>
 
@@ -1270,15 +1270,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             }
              if (pautaType === 'agendado') {
-                  tabAgendamento.classList.remove('hidden');
-                  tabAvulso.classList.add('hidden');
-                  pautaColumn.classList.remove('hidden');
-                  switchTab('agendamento');
+                 tabAgendamento.classList.remove('hidden');
+                 tabAvulso.classList.add('hidden');
+                 pautaColumn.classList.remove('hidden');
+                 switchTab('agendamento');
             } else if (pautaType === 'avulso') {
-                  tabAvulso.classList.remove('hidden');
-                  tabAgendamento.classList.add('hidden');
-                  pautaColumn.classList.add('hidden');
-                  switchTab('avulso');
+                 tabAvulso.classList.remove('hidden');
+                 tabAgendamento.classList.add('hidden');
+                 pautaColumn.classList.add('hidden');
+                 switchTab('avulso');
             } else {
                 tabAgendamento.classList.remove('hidden');
                 tabAvulso.classList.remove('hidden');
@@ -2170,7 +2170,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         const timeInput = document.getElementById('arrival-time').value;
         const [hours, minutes] = timeInput.split(':');
         arrivalDate = new Date();
-        arrivalDate.setHours(hours, minutes, 0, 0);
+        arrivalDate.setHours(hours, minutes);
     }
     
     const newAssisted = getUpdatePayload({
