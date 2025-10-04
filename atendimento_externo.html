@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finalização de Atendimento - SIGAP</title>
+
+    <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
+    <meta name="theme-color" content="#16a34a"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
+        .loader { border: 6px solid #f3f3f3; border-top: 6px solid #16a34a; border-radius: 50%; width: 50px; height: 50px; animation: spin 1.5s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <!-- Tela de Carregamento -->
+    <div id="loading-container" class="text-center">
+        <div class="loader mx-auto"></div>
+        <p class="mt-4 text-gray-700 font-semibold">Carregando informações do atendimento...</p>
+    </div>
+
+    <!-- Tela de Erro -->
+    <div id="error-container" class="hidden text-center bg-white p-8 rounded-xl shadow-lg max-w-lg w-full">
+         <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGAP" class="mx-auto h-20 w-auto mb-4">
+        <h2 class="text-2xl font-bold text-red-600 mb-4">Ocorreu um Erro</h2>
+        <p id="error-message" class="text-gray-600">Não foi possível carregar os dados do atendimento. Por favor, verifique se o link está correto ou contate o suporte.</p>
+    </div>
+
+    <!-- Tela de Sucesso -->
+    <div id="success-container" class="hidden text-center bg-white p-8 rounded-xl shadow-lg max-w-lg w-full">
+         <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGAP" class="mx-auto h-20 w-auto mb-4">
+        <h2 class="text-2xl font-bold text-green-600 mb-4">Registro de Atendimento Salvo!</h2>
+        <p class="text-gray-600">Obrigado por sua confirmação. Os detalhes do atendimento foram finalizados com sucesso.</p>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div id="main-container" class="hidden bg-white p-6 md:p-8 rounded-xl shadow-lg w-full max-w-2xl">
+        <div class="text-center mb-6">
+             <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGAP" class="mx-auto h-20 w-auto mb-4">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Finalizar Atendimento</h1>
+            <p class="text-gray-500 mt-2">Olá, <strong id="collaborator-name-header" class="text-gray-700">Colaborador(a)</strong>! Por favor, confirme os detalhes do atendimento para <strong id="assistido-name-header" class="text-gray-700"></strong>.</p>
+        </div>
+
+        <div class="space-y-6">
+            <!-- Card de Resumo -->
+            <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg">
+                <h3 class="font-semibold text-gray-700 mb-2">Resumo do Atendimento</h3>
+                 <p class="text-sm"><span class="text-gray-500">Assistido(a):</span> <strong id="assistido-name-summary" class="text-gray-800"></strong></p>
+                <p class="text-sm"><span class="text-gray-500">Assunto Principal:</span> <strong id="assistido-subject" class="text-gray-800"></strong></p>
+            </div>
+
+            <!-- Formulário de Confirmação -->
+            <div>
+                <label for="attendant-name" class="block text-sm font-medium text-gray-700 mb-1">Seu Nome (Atendente):</label>
+                <input type="text" id="attendant-name" placeholder="Seu nome como Defensor/Servidor" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition">
+            </div>
+
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">Houve mais alguma demanda/matéria?</h3>
+                <div class="bg-gray-50 p-4 rounded-lg border">
+                    <label for="new-demand-input" class="block text-sm font-medium text-gray-700 mb-1">Se sim, adicione aqui:</label>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="text" id="new-demand-input" placeholder="Ex: Ação de Partilha de Bens" class="flex-grow p-2 border border-gray-300 rounded-lg">
+                        <button id="add-demand-btn" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 flex-shrink-0">Adicionar</button>
+                    </div>
+                    <div id="demands-list-container" class="mt-3">
+                         <ul id="demands-list" class="space-y-2">
+                            <!-- Itens adicionados aparecerão aqui -->
+                         </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botão de Finalizar -->
+            <div class="border-t pt-6">
+                <button id="finish-btn" class="w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition shadow-md">
+                    Finalizar e Salvar Registro
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, updateDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- ELEMENTOS DO DOM ---
+        const loadingContainer = document.getElementById('loading-container');
+        const errorContainer = document.getElementById('error-container');
+        const mainContainer = document.getElementById('main-container');
+        const successContainer = document.getElementById('success-container');
+
+        // --- LÓGICA PRINCIPAL ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            const params = new URLSearchParams(window.location.search);
+            const pautaId = params.get('pautaId');
+            const assistidoId = params.get('assistidoId');
+            const collaboratorName = params.get('collaboratorName');
+
+            if (!pautaId || !assistidoId) {
+                showScreen('error');
+                document.getElementById('error-message').textContent = 'Link de atendimento inválido ou incompleto. Faltam parâmetros essenciais.';
+                return;
+            }
+
+            try {
+                // Cole aqui a configuração do seu Firebase
+                const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
+                const app = initializeApp(firebaseConfig);
+                const db = getFirestore(app);
+
+                const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
+                const docSnap = await getDoc(docRef);
+
+                if (!docSnap.exists()) {
+                    showScreen('error');
+                    document.getElementById('error-message').textContent = 'Atendimento não encontrado. Verifique se o link está correto.';
+                    return;
+                }
+
+                const assistido = docSnap.data();
+                
+                if (assistido.finalizadoPeloColaborador) {
+                    showScreen('success');
+                     document.querySelector('#success-container h2').textContent = "Atendimento Já Finalizado";
+                    document.querySelector('#success-container p').textContent = "Este registro de atendimento já foi finalizado anteriormente. Obrigado!";
+                    return;
+                }
+
+                populateData(assistido, collaboratorName);
+                setupEventListeners(docRef, assistido);
+                showScreen('main');
+
+            } catch (error) {
+                console.error("Erro ao conectar ou buscar dados: ", error);
+                showScreen('error');
+                document.getElementById('error-message').textContent = 'Ocorreu um problema ao conectar com o serviço. Tente novamente mais tarde.';
+            }
+        });
+
+        function showScreen(screenName) {
+            loadingContainer.classList.add('hidden');
+            errorContainer.classList.add('hidden');
+            mainContainer.classList.add('hidden');
+            successContainer.classList.add('hidden');
+            
+            document.getElementById(`${screenName}-container`).classList.remove('hidden');
+        }
+
+        function populateData(assistido, collaboratorName) {
+            document.getElementById('collaborator-name-header').textContent = collaboratorName ? collaboratorName.split(' ')[0] : 'Colaborador(a)';
+            document.getElementById('assistido-name-header').textContent = assistido.name;
+            document.getElementById('assistido-name-summary').textContent = assistido.name;
+            document.getElementById('assistido-subject').textContent = assistido.subject || 'Não informado';
+            
+            // Preenche o nome do atendente com o nome do colaborador da URL, ou o que já estava salvo
+            document.getElementById('attendant-name').value = collaboratorName || assistido.attendant || '';
+        }
+
+        function setupEventListeners(docRef, assistido) {
+            const addDemandBtn = document.getElementById('add-demand-btn');
+            const newDemandInput = document.getElementById('new-demand-input');
+            const demandsList = document.getElementById('demands-list');
+            const finishBtn = document.getElementById('finish-btn');
+
+            // Popula as demandas já existentes, se houver
+            const existingDemands = assistido.demandas?.descricoes || [];
+            existingDemands.forEach(addDemandToList);
+
+            addDemandBtn.addEventListener('click', () => {
+                const demandText = newDemandInput.value.trim();
+                if (demandText) {
+                    addDemandToList(demandText);
+                    newDemandInput.value = '';
+                }
+            });
+
+            function addDemandToList(demandText) {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-2 bg-white rounded-md text-sm shadow-sm';
+                li.textContent = demandText;
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'text-red-500 hover:text-red-700 text-xs font-semibold ml-2';
+                removeBtn.textContent = 'Remover';
+                removeBtn.onclick = () => li.remove();
+                
+                li.appendChild(removeBtn);
+                demandsList.appendChild(li);
+            }
+            
+             newDemandInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addDemandBtn.click();
+                }
+            });
+
+            finishBtn.addEventListener('click', async () => {
+                finishBtn.disabled = true;
+                finishBtn.textContent = 'Salvando...';
+
+                const attendantName = document.getElementById('attendant-name').value.trim();
+                const additionalDemands = Array.from(demandsList.querySelectorAll('li')).map(li => li.firstChild.textContent);
+
+                try {
+                    // Combina as demandas existentes (se houver) com as novas, evitando duplicatas
+                    const existingDemands = assistido.demandas?.descricoes || [];
+                    const allDemands = [...new Set([...existingDemands, ...additionalDemands])];
+
+                    await updateDoc(docRef, {
+                        attendant: attendantName, // Atualiza o nome do atendente com o valor final
+                        "demandas.descricoes": allDemands,
+                        "demandas.quantidade": allDemands.length,
+                        finalizadoPeloColaborador: true,
+                        finalizadoEm: new Date().toISOString()
+                    });
+                    showScreen('success');
+                } catch(error) {
+                    console.error("Erro ao atualizar o documento: ", error);
+                    alert("Não foi possível salvar a finalização. Tente novamente.");
+                    finishBtn.disabled = false;
+                    finishBtn.textContent = 'Finalizar e Salvar Registro';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
+
