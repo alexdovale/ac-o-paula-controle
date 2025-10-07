@@ -460,7 +460,7 @@
     <div id="select-collaborator-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Atender Assistido</h2>
-            <p class="mb-4 text-gray-600">Selecione o colaborador que irá atender <strong id="assisted-to-attend-name"></strong>:</p>
+            <p class="mb-4 text-gray-600">Selecione o colaborador que irá atender <strong id="assisted-to-attend-name"></strong> (opcional):</p>
             <div id="collaborator-selection-list" class="space-y-3 mb-6 max-h-60 overflow-y-auto">
                 <p class="text-gray-500 text-center">Carregando colaboradores...</p>
             </div>
@@ -1182,11 +1182,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const card = document.createElement('div');
                 card.className = `relative bg-purple-50 p-4 rounded-lg shadow-sm border-purple-200`;
                 const inAttendanceTime = new Date(a.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const assignedCollabText = a.assignedCollaborator?.name ? `Colaborador: <strong>${a.assignedCollaborator.name}</strong>` : 'Colaborador: Não atribuído';
                 card.innerHTML = `
                     <p class="font-bold text-lg">${index + 1}. ${a.name}</p>
                     ${a.cpf ? `<p class="text-sm text-gray-500">CPF: <strong>${a.cpf}</strong></p>` : ''}
                     <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
-                    <p class="text-sm">Colaborador: <strong>${a.assignedCollaborator?.name || 'Não informado'}</strong></p>
+                    <p class="text-sm">${assignedCollabText}</p>
                     <p class="text-sm text-gray-500">Início: ${inAttendanceTime}</p>
                     <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
                         <button data-id="${a.id}" data-name="${a.name}" data-collaborator-name="${a.assignedCollaborator?.name || ''}" class="delegate-finalization-btn bg-indigo-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-indigo-600">Delegar Finalização</button>
@@ -1286,7 +1287,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }, (error) => console.error("Erro no listener do Firestore: ", error));
         };
 
-        // --- INÍCIO DA LÓGICA DE COLABORADORES (CORRIGIDO COM FIRESTORE) - MOVIDA PARA CIMA ---
+        // --- INÍCIO DA LÓGICA DE COLABORADORES (MOVIDA PARA CIMA E COM FUNCTION) ---
         const collaboratorsModal = document.getElementById('collaborators-modal');
         const collaboratorForm = document.getElementById('collaborator-form');
         const collaboratorListTableBody = document.querySelector('#collaborators-list-table tbody');
@@ -1301,7 +1302,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         const companyTransportCount = document.getElementById('company-transport-count');
 
 
-        const setupCollaboratorsListener = (pautaId) => {
+        function setupCollaboratorsListener(pautaId) {
             if (!auth.currentUser) {
                 console.error("Tentativa de iniciar o listener de colaboradores sem usuário autenticado.");
                 showNotification("Erro de autenticação. Por favor, recarregue a página.", "error");
@@ -1319,9 +1320,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 console.error("Erro no listener de colaboradores: ", error);
                 collaboratorListTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Erro ao carregar colaboradores.</td></tr>';
             });
-        };
+        }
 
-        const renderColaboradores = () => {
+        function renderColaboradores() {
             collaboratorListTableBody.innerHTML = '';
 
             let selfTransport = 0;
@@ -1431,16 +1432,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 });
             });
-        };
+        }
 
-        const resetCollaboratorForm = () => {
+        function resetCollaboratorForm() {
             collaboratorForm.reset();
             document.querySelector('input[name="transporte"][value="Não Confirmado"]').checked = true;
             editCollaboratorId = null;
             addCollaboratorBtn.textContent = "Adicionar Colaborador";
             localEncontroGroup.classList.add('hidden');
             observacaoGroup.classList.add('hidden');
-        };
+        }
 
         transporteOptions.forEach(option => {
             option.addEventListener('change', (event) => {
@@ -2557,21 +2558,24 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 
                 // Lógica do novo modal de seleção de colaborador
                 if (button.id === 'confirm-select-collaborator-btn') {
-                    const selectedCollaboratorRadio = document.querySelector('input[name="selectedCollaborator"]:checked');
-                    if (!selectedCollaboratorRadio) {
-                        showNotification("Por favor, selecione um colaborador.", "error");
-                        return;
+                    const selectedCollaboratorRadio = document.querySelector('#collaborator-selection-list input[name="selectedCollaborator"]:checked');
+                    let collaboratorData = null; // Default to null
+
+                    if (selectedCollaboratorRadio) {
+                        const collaboratorId = selectedCollaboratorRadio.value;
+                        const collaboratorName = selectedCollaboratorRadio.dataset.name;
+                        collaboratorData = { id: collaboratorId, name: collaboratorName };
+                        showNotification(`${assistedNameToHandle} atribuído a ${collaboratorName}.`);
+                    } else {
+                        showNotification(`${assistedNameToHandle} movido para 'Em Atendimento' sem colaborador atribuído.`);
                     }
-                    const collaboratorId = selectedCollaboratorRadio.value;
-                    const collaboratorName = selectedCollaboratorRadio.dataset.name;
 
                     await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({
                         status: 'emAtendimento',
-                        assignedCollaborator: { id: collaboratorId, name: collaboratorName },
+                        assignedCollaborator: collaboratorData, // Assign null or the selected collaborator
                         inAttendanceTime: new Date().toISOString()
                     }));
                     document.getElementById('select-collaborator-modal').classList.add('hidden');
-                    showNotification(`${assistedNameToHandle} atribuído a ${collaboratorName}.`);
                 }
 
                 // Ação de confirmar atendimento (antiga, agora para "Finalizar Diretamente")
