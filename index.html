@@ -268,7 +268,7 @@
                     <div id="aguardando-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
                 <!-- Nova Coluna: Em Atendimento -->
-                <div id="em-atendimento-column" class="bg-white rounded-lg shadow-md flex flex-col">
+                <div id="em-atendimento-column" class="bg-white rounded-lg shadow-md flex flex-col hidden"> <!-- Inicialmente escondida -->
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
                             <span>👩‍💻 Em Atendimento</span>
@@ -409,10 +409,39 @@
             </div>
             <div class="flex justify-end space-x-4 mt-6">
                 <button id="cancel-ordem-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Voltar</button>
+                <button id="next-to-delegation-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Avançar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOVO MODAL: Fluxo de Delegação -->
+    <div id="delegation-flow-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Fluxo de Atendimento</h2>
+            <p class="text-gray-600 mb-6">Deseja utilizar a coluna "Em Atendimento" para delegar a finalização a um colaborador?</p>
+            <div class="space-y-3">
+                <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="radio" name="useDelegationFlow" value="true" class="h-5 w-5 text-green-600 focus:ring-green-500" checked>
+                    <span class="ml-3">
+                        <span class="font-semibold text-gray-800">Sim, usar fluxo de delegação</span>
+                        <span class="block text-sm text-gray-500">Permite atribuir e delegar a finalização para outro colaborador.</span>
+                    </span>
+                </label>
+                <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="radio" name="useDelegationFlow" value="false" class="h-5 w-5 text-red-600 focus:ring-red-500">
+                    <span class="ml-3">
+                        <span class="font-semibold text-gray-800">Não, finalizar diretamente</span>
+                        <span class="block text-sm text-gray-500">Pular a coluna "Em Atendimento", indo direto para "Atendidos".</span>
+                    </span>
+                </label>
+            </div>
+            <div class="flex justify-end space-x-4 mt-6">
+                <button id="cancel-delegation-flow-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Voltar</button>
                 <button id="confirm-create-pauta-final-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Criar Pauta</button>
             </div>
         </div>
     </div>
+    <!-- FIM NOVO MODAL -->
 
     <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh; display: flex; flex-direction: column;">
@@ -1179,6 +1208,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 card.className = `relative bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)}`;
                 const arrival = a.type === 'agendamento' && a.scheduledTime ? `Agendado: ${a.scheduledTime} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : `Chegada: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
                 const returnToPautaBtn = a.type === 'agendamento' ? `<button data-id="${a.id}" class="return-to-pauta-btn w-full bg-gray-400 text-white font-semibold py-1 rounded-lg hover:bg-gray-500 text-xs mt-1">Voltar p/ Pauta</button>` : '';
+                
+                let atenderButton;
+                if (currentPautaData?.useDelegationFlow) {
+                    atenderButton = `<button data-id="${a.id}" data-name="${a.name}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`;
+                } else {
+                    atenderButton = `<button data-id="${a.id}" data-name="${a.name}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`;
+                }
+
+
                 card.innerHTML = `
                     <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
                     <div class="flex justify-between items-start">
@@ -1190,7 +1228,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         </div>
                     </div>
                     <div class="mt-3 grid grid-cols-2 lg:grid-cols-3 gap-2">
-                        <button data-id="${a.id}" data-name="${a.name}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>
+                        ${atenderButton}
                         ${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : ''}
                         <button data-id="${a.id}" class="edit-assisted-btn bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar</button>
                     </div>
@@ -1214,7 +1252,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     <p class="text-sm text-gray-500">Início: ${inAttendanceTime}</p>
                     <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
                         <button data-id="${a.id}" data-name="${a.name}" data-collaborator-name="${a.assignedCollaborator?.name || 'Não informado'}" class="delegate-finalization-btn bg-indigo-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-indigo-600">Delegar Finalização</button>
-                        <button data-id="${a.id}" class="attend-directly-btn bg-green-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-600">Finalizar Diretamente</button>
+                        <button data-id="${a.id}" data-name="${a.name}" data-collaborator-name="${a.assignedCollaborator?.name || 'Não informado'}" class="attend-directly-btn bg-green-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-600">Finalizar Diretamente</button>
                         <button data-id="${a.id}" class="return-to-aguardando-from-emAtendimento-btn col-span-2 bg-gray-400 text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-500">Voltar p/ Aguardando</button>
                     </div>
                     ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
@@ -1599,24 +1637,32 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 } else {
                     document.getElementById('edit-pauta-name-btn').classList.add('hidden');
                 }
+
+                // Lógica condicional para a coluna "Em Atendimento"
+                if (pautaData.useDelegationFlow) {
+                    emAtendimentoColumn.classList.remove('hidden');
+                } else {
+                    emAtendimentoColumn.classList.add('hidden');
+                }
+
             }
              if (pautaType === 'agendado') {
                  tabAgendamento.classList.remove('hidden');
                  tabAvulso.classList.add('hidden');
                  pautaColumn.classList.remove('hidden');
-                 emAtendimentoColumn.classList.remove('hidden'); // Exibe a nova coluna
+                 // A visibilidade de emAtendimentoColumn é definida acima, baseada em pautaData.useDelegationFlow
                  switchTab('agendamento');
             } else if (pautaType === 'avulso') {
                  tabAvulso.classList.remove('hidden');
                  tabAgendamento.classList.add('hidden');
                  pautaColumn.classList.add('hidden');
-                 emAtendimentoColumn.classList.remove('hidden'); // Exibe a nova coluna
+                 // A visibilidade de emAtendimentoColumn é definida acima, baseada em pautaData.useDelegationFlow
                  switchTab('avulso');
             } else {
                 tabAgendamento.classList.remove('hidden');
                 tabAvulso.classList.remove('hidden');
                 pautaColumn.classList.remove('hidden');
-                emAtendimentoColumn.classList.remove('hidden'); // Exibe a nova coluna
+                // A visibilidade de emAtendimentoColumn é definida acima, baseada em pautaData.useDelegationFlow
                 switchTab('agendamento');
             }
 
@@ -1774,8 +1820,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 } else {
                     showScreen('login');
-                }
-            });
+                });
+            }
         };
 
         const showScreen = (screenName) => {
@@ -1801,7 +1847,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 tabAvulso.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700');
                 isScheduledContainer.classList.remove('hidden');
                 pautaColumn.classList.remove('hidden');
-                emAtendimentoColumn.classList.remove('hidden'); // Exibe a nova coluna
+                // A visibilidade de emAtendimentoColumn é definida em loadPauta
+                if (currentPautaData?.useDelegationFlow) {
+                    emAtendimentoColumn.classList.remove('hidden');
+                } else {
+                    emAtendimentoColumn.classList.add('hidden');
+                }
                 formTitle.textContent = "Adicionar Novo Agendamento";
                 document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
                 document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
@@ -1813,7 +1864,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700');
                 isScheduledContainer.classList.add('hidden');
                 pautaColumn.classList.add('hidden');
-                emAtendimentoColumn.classList.remove('hidden'); // Exibe a nova coluna
+                // A visibilidade de emAtendimentoColumn é definida em loadPauta
+                 if (currentPautaData?.useDelegationFlow) {
+                    emAtendimentoColumn.classList.remove('hidden');
+                } else {
+                    emAtendimentoColumn.classList.add('hidden');
+                }
                 formTitle.textContent = "Adicionar Atendimento Avulso";
 
                 document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
@@ -2056,7 +2112,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
 
-            // --- NOVO FLUXO DE CRIAÇÃO DE PAUTA COM ORDEM DE ATENDIMENTO ---
+            // --- NOVO FLUXO DE CRIAÇÃO DE PAUTA COM ORDEM DE ATENDIMENTO E DELEGAÇÃO ---
             document.getElementById('create-pauta-btn').addEventListener('click', () => {
                 document.getElementById('pauta-type-modal').classList.remove('hidden');
             });
@@ -2091,11 +2147,25 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('ordem-atendimento-modal').classList.add('hidden');
                 document.getElementById('create-pauta-modal').classList.remove('hidden');
             });
+
+            // Adicionado: Botão para ir para o modal de delegação
+            document.getElementById('next-to-delegation-btn').addEventListener('click', () => {
+                document.getElementById('ordem-atendimento-modal').classList.add('hidden');
+                document.getElementById('delegation-flow-modal').classList.remove('hidden');
+            });
+
+            // Adicionado: Botão de voltar do modal de delegação
+            document.getElementById('cancel-delegation-flow-btn').addEventListener('click', () => {
+                document.getElementById('delegation-flow-modal').classList.add('hidden');
+                document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
+            });
             
+            // Lógica final de criação da pauta, agora no modal de delegação
             document.getElementById('confirm-create-pauta-final-btn').addEventListener('click', async () => {
                 const pautaName = document.getElementById('create-pauta-name-input').value.trim();
                 const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
                 const ordemAtendimento = document.querySelector('input[name="ordemAtendimento"]:checked').value;
+                const useDelegationFlow = document.querySelector('input[name="useDelegationFlow"]:checked').value === 'true'; // Novo campo
                 const user = auth.currentUser;
                 
                 if (!user) {
@@ -2108,6 +2178,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         name: pautaName,
                         type: pautaType,
                         ordemAtendimento: ordemAtendimento,
+                        useDelegationFlow: useDelegationFlow, // Salva a escolha
                         owner: user.uid,
                         ownerEmail: user.email,
                         members: [user.uid],
@@ -2117,7 +2188,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     });
                     showNotification("Pauta criada com sucesso!");
                     document.getElementById('create-pauta-name-input').value = '';
-                    document.getElementById('ordem-atendimento-modal').classList.add('hidden');
+                    document.getElementById('delegation-flow-modal').classList.add('hidden'); // Fecha o modal final
                 } catch (error) {
                     console.error("Error creating pauta:", error);
                     showNotification("Erro ao criar pauta.", "error");
@@ -2438,6 +2509,21 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             });
                         }
                         document.getElementById('select-collaborator-modal').classList.remove('hidden');
+                    }
+
+                    // Botão "Atender" para o fluxo antigo (sem delegação)
+                    if (button.classList.contains('attend-directly-from-aguardando-btn')) {
+                        assistedIdToHandle = id;
+                        const attendantInput = document.getElementById('attendant-name');
+                        attendantInput.value = ''; // Limpar o campo para nova atribuição
+                        const datalist = document.getElementById('collaborators-list');
+                        datalist.innerHTML = '';
+                        colaboradores.forEach(c => {
+                            const option = document.createElement('option');
+                            option.value = c.nome;
+                            datalist.appendChild(option);
+                        });
+                        document.getElementById('attendant-modal').classList.remove('hidden');
                     }
                     
                     // Lógica para o botão 'Delegar Finalização' na coluna 'Em Atendimento'
@@ -2847,7 +2933,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     return;
                 }
 
-                const externalLink = `${window.location.origin}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(collaboratorNameForDelegation)}`;
+                // Obtém o URL base atual (por exemplo, "https://seusite.com" ou "http://localhost:8000")
+                const baseUrl = window.location.origin;
+                const externalLink = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(collaboratorNameForDelegation)}`;
 
                 try {
                     // Substitua "YOUR_EMAILJS_SERVICE_ID" e "YOUR_EMAILJS_TEMPLATE_ID_FOR_DELEGATION" pelos seus IDs reais.
