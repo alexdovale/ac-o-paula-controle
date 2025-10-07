@@ -174,7 +174,7 @@
             </div>
         </header>
 
-        <div id="app-content" class="w-full"> <!-- Ajustado para usar toda a largura -->
+        <div id="app-content" class="w-full">
               <div class="mb-6">
                   <div class="border-b border-gray-200">
                       <nav class="-mb-px flex space-x-6" aria-label="Tabs">
@@ -1356,17 +1356,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
         // --- INÍCIO DA LÓGICA DE COLABORADORES (LISTA DE PRESENÇA) ---
         const collaboratorsModal = document.getElementById('collaborators-modal');
-        const collaboratorFormModal = document.getElementById('collaborator-form-modal'); // Renamed ID
-        const collaboratorNameModal = document.getElementById('collaborator-name-modal'); // New ID
-        const collaboratorPhoneModal = document.getElementById('collaborator-phone-modal'); // New ID
-        const transporteOptionsModal = document.querySelectorAll('input[name="transporte-colaborador"]'); // New Name
-        const localEncontroGroupModal = document.getElementById('local-encontro-group-modal'); // New ID
-        const observacaoGroupModal = document.getElementById('observacao-group-modal'); // New ID
-        const collaboratorObsModal = document.getElementById('collaborator-obs-modal'); // New ID
-        const addCollaboratorBtnModal = document.getElementById('add-collaborator-btn-modal'); // New ID
-        const collaboratorListTableBodyModal = document.querySelector('#collaborators-list-table-modal tbody'); // New ID
-        const downloadCollaboratorsPdfBtnModal = document.getElementById('download-collaborators-pdf-modal'); // New ID
-        const clearCollaboratorsListBtnModal = document.getElementById('clear-collaborators-list-modal'); // New ID
+        const collaboratorFormModal = document.getElementById('collaborator-form-modal');
+        const collaboratorNameModal = document.getElementById('collaborator-name-modal');
+        const collaboratorPhoneModal = document.getElementById('collaborator-phone-modal');
+        const transporteOptionsModal = document.querySelectorAll('input[name="transporte-colaborador"]');
+        const localEncontroGroupModal = document.getElementById('local-encontro-group-modal');
+        const observacaoGroupModal = document.getElementById('observacao-group-modal');
+        const collaboratorObsModal = document.getElementById('collaborator-obs-modal');
+        const addCollaboratorBtnModal = document.getElementById('add-collaborator-btn-modal');
+        const collaboratorListTableBodyModal = document.querySelector('#collaborators-list-table-modal tbody');
+        const downloadCollaboratorsPdfBtnModal = document.getElementById('download-collaborators-pdf-modal');
+        const clearCollaboratorsListBtnModal = document.getElementById('clear-collaborators-list-modal');
         
         // Stats (assuming these are in the modal as well)
         const totalParticipantsCount = document.getElementById('total-participants-count');
@@ -1458,6 +1458,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             collaboratorFormModal.reset();
             document.querySelector('input[name="transporte-colaborador"][value="Não Confirmado"]').checked = true;
             editCollaboratorId = null;
+            collaboratorsModal.querySelector('h2').textContent = "Lista de Presença de Colaboradores"; // Reset modal title
             addCollaboratorBtnModal.textContent = "Adicionar Colaborador";
             localEncontroGroupModal.classList.add('hidden');
             observacaoGroupModal.classList.add('hidden');
@@ -1529,13 +1530,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         collaboratorPhoneModal.value = colaborador.telefone;
                         collaboratorObsModal.value = colaborador.observacao || '';
                         
-                        const transporteRadio = document.querySelector(`#collaborators-modal input[name="transporte-colaborador"][value="${colaborador.transporte}"]`);
+                        const transporteRadio = document.querySelector(`input[name="transporte-colaborador"][value="${colaborador.transporte}"]`);
                         if (transporteRadio) {
                             transporteRadio.checked = true;
                             transporteRadio.dispatchEvent(new Event('change'));
                         }
 
-                        const localEncontroRadio = document.querySelector(`#collaborators-modal input[name="localEncontro-colaborador"][value="${colaborador.localEncontro}"]`);
+                        const localEncontroRadio = document.querySelector(`input[name="localEncontro-colaborador"][value="${colaborador.localEncontro}"]`);
                         if (localEncontroRadio) {
                             localEncontroRadio.checked = true;
                             localEncontroRadio.dispatchEvent(new Event('change'));
@@ -1551,6 +1552,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.querySelectorAll('#collaborators-modal .delete-collaborator-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const docId = e.currentTarget.dataset.id;
+                    // Usando o modal de confirmação existente no index.html
                     showConfirmModal(() => {
                         const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", docId);
                         deleteDoc(collaboratorRef);
@@ -1594,6 +1596,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
         // Clear list for modal's list
         clearCollaboratorsListBtnModal.addEventListener('click', () => {
+            // Usando o modal de confirmação existente no index.html
             showConfirmModal(async () => {
                 const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
                 const snapshot = await getDocs(collaboratorsCollectionRef);
@@ -1707,7 +1710,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
 
             const deleteButton = document.createElement('button');
-            deleteButton.className = "absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:bg-red-100 hover:text-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500";
+            deleteButton.className = "absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:text-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500";
             deleteButton.setAttribute('aria-label', 'Excluir pauta');
             deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
 
@@ -2639,7 +2642,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 // Lógica para abrir o modal de "Lista de Presença de Colaboradores"
                 if (button.id === 'manage-collaborators-btn') {
-                    // Chamar a função que exibe e gerencia o modal de colaboradores (lista de presença)
                     setupCollaboratorsListener(currentPautaId); // Inicia o listener específico para este modal
                     resetCollaboratorFormModal(); // Limpa o formulário do modal de colaboradores
                     collaboratorsModal.classList.remove('hidden'); // Abre o modal
@@ -2968,19 +2970,21 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const externalLink = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(collaboratorNameForDelegation)}`;
 
                 try {
-                    // Substitua "YOUR_EMAILJS_SERVICE_ID" e "YOUR_EMAILJS_TEMPLATE_ID_FOR_DELEGATION" pelos seus IDs reais.
-                    // Você precisará criar um novo template no EmailJS para a delegação de atendimento.
-                    await emailjs.send("YOUR_EMAILJS_SERVICE_ID", "YOUR_EMAILJS_TEMPLATE_ID_FOR_DELEGATION", {
-                        to_email: collaboratorEmail,
-                        assisted_name: assistedNameForDelegation,
-                        collaborator_name: collaboratorNameForDelegation,
-                        finalization_link: externalLink
-                    });
+                    await emailjs.send(
+                        "service_r1nxe6a", // Seu Service ID
+                        "template_wbav27n", // Seu Template ID para Delegação
+                        {
+                            to_email: collaboratorEmail,
+                            assisted_name: assistedNameForDelegation,
+                            collaborator_name: collaboratorNameForDelegation,
+                            finalization_link: externalLink
+                        }
+                    );
                     showNotification("Link de finalização enviado com sucesso por e-mail!", "success");
                     document.getElementById('delegate-email-modal').classList.add('hidden');
                 } catch (error) {
                     console.error("Erro ao enviar e-mail de delegação:", error);
-                    showNotification("Erro ao enviar o link de finalização por e-mail.", "error");
+                    showNotification("Erro ao enviar o link de finalização por e-mail. Verifique a configuração do EmailJS e os parâmetros do template.", "error");
                 }
             });
 
@@ -3185,7 +3189,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 <script src="https://cdn.jsdelivr.net/npm/emailjs-com@2/dist/email.min.js"></script>
 <script>
   (function(){
-    emailjs.init("YOUR_EMAILJS_USER_ID"); // substituir pelo ID do EmailJS
+    // SUBSTITUA "YOUR_EMAILJS_USER_ID" PELA SUA PUBLIC KEY
+    emailjs.init("aGL-Q2UJcD2tDpUKq"); // Sua Public Key do EmailJS
   })();
 
   const notesBtn = document.getElementById("notes-btn");
@@ -3215,17 +3220,22 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     if (!notes) return;
 
     try {
-      await emailjs.send("YOUR_EMAILJS_SERVICE_ID", "YOUR_EMAILJS_TEMPLATE_ID", {
-        message: notes,
-        email_to: "YOUR_EMAIL@dominio.com" // Substitua pelo seu email
-      });
+      // SUBSTITUA "YOUR_EMAILJS_SERVICE_ID" E "YOUR_EMAILJS_TEMPLATE_ID" PELOS IDs REAIS
+      await emailjs.send(
+        "service_r1nxe6a", // Seu Service ID para anotações
+        "template_fbd7yud", // Seu Template ID para Anotações
+        {
+            message: notes,
+            email_to: "SEU_EMAIL_DESTINO_ANOTACOES@dominio.com" // Substitua pelo seu email para receber as anotações
+        }
+      );
       console.log("Anotações enviadas por e-mail!");
     } catch (err) {
-      console.error("Erro ao enviar email:", err);
+      console.error("Erro ao enviar email de anotações:", err);
     }
   }
 
-  // Integrar com o botão de fechar pauta
+  // Integrar com o botão de fechar pauta (se ainda usar o EmailJS para isso)
   const closePautaBtn = document.getElementById("close-pauta-btn");
   if (closePautaBtn) {
     closePautaBtn.addEventListener("click", async () => {
