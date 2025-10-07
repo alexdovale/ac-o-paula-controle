@@ -472,6 +472,24 @@
     </div>
     <!-- FIM NOVO MODAL -->
 
+    <!-- NOVO MODAL: Delegar Finalização por Email -->
+    <div id="delegate-email-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Delegar Finalização de Atendimento</h2>
+            <p class="mb-4 text-gray-600">Enviar link de finalização para <strong id="delegate-assisted-name"></strong>.</p>
+            <div class="mb-4">
+                <label for="collaborator-email-input" class="block text-sm font-medium text-gray-700">Email do Colaborador:</label>
+                <input type="email" id="collaborator-email-input" placeholder="email@exemplo.com" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <p class="text-sm text-gray-500 mb-6">O colaborador receberá um link por e-mail para finalizar o atendimento.</p>
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-delegate-email-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="send-delegate-email-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Enviar Link por E-mail</button>
+            </div>
+        </div>
+    </div>
+    <!-- FIM NOVO MODAL -->
+
     <div id="reset-confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg space-y-4">
             <h2 class="text-2xl font-bold text-gray-800">Zerar Pauta</h2>
@@ -955,6 +973,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         let assistedNameToHandle = null; // Adicionado para passar o nome para o modal de seleção de colaborador
         let currentChecklistAction = null;
 
+        // Variáveis para o novo modal de delegação de e-mail
+        let assistedIdForDelegation = null;
+        let assistedNameForDelegation = null;
+        let collaboratorNameForDelegation = null; // Nome do colaborador já atribuído ao assistido, se houver.
+
         // Variáveis para a lógica de Colaboradores (MOVIDAS PARA CIMA)
         let colaboradores = [];
         let editCollaboratorId = null;
@@ -1190,7 +1213,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     <p class="text-sm">${assignedCollabText}</p>
                     <p class="text-sm text-gray-500">Início: ${inAttendanceTime}</p>
                     <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
-                        <button data-id="${a.id}" data-name="${a.name}" data-collaborator-name="${a.assignedCollaborator?.name || ''}" class="delegate-finalization-btn bg-indigo-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-indigo-600">Delegar Finalização</button>
+                        <button data-id="${a.id}" data-name="${a.name}" data-collaborator-name="${a.assignedCollaborator?.name || 'Não informado'}" class="delegate-finalization-btn bg-indigo-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-indigo-600">Delegar Finalização</button>
                         <button data-id="${a.id}" class="attend-directly-btn bg-green-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-600">Finalizar Diretamente</button>
                         <button data-id="${a.id}" class="return-to-aguardando-from-emAtendimento-btn col-span-2 bg-gray-400 text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-500">Voltar p/ Aguardando</button>
                     </div>
@@ -2389,8 +2412,20 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         
                         const collaboratorSelectionList = document.getElementById('collaborator-selection-list');
                         collaboratorSelectionList.innerHTML = '';
+                        // Adiciona uma opção "Não atribuir"
+                        const noAssignLabel = document.createElement('label');
+                        noAssignLabel.className = 'flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50';
+                        noAssignLabel.innerHTML = `
+                            <input type="radio" name="selectedCollaborator" value="null" data-name="Não atribuído" class="h-5 w-5 text-gray-600 focus:ring-gray-500" checked>
+                            <span class="ml-3 font-semibold text-gray-800">Não atribuir colaborador</span>
+                        `;
+                        collaboratorSelectionList.appendChild(noAssignLabel);
+
                         if (colaboradores.length === 0) {
-                            collaboratorSelectionList.innerHTML = '<p class="text-gray-500 text-center">Nenhum colaborador registrado. Adicione um na seção "Colaboradores".</p>';
+                            const noCollabMessage = document.createElement('p');
+                            noCollabMessage.className = 'text-gray-500 text-center mt-2';
+                            noCollabMessage.textContent = 'Nenhum colaborador registrado. Adicione um na seção "Colaboradores" para atribuir.';
+                            collaboratorSelectionList.appendChild(noCollabMessage);
                         } else {
                             colaboradores.forEach(collab => {
                                 const label = document.createElement('label');
@@ -2407,16 +2442,20 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     
                     // Lógica para o botão 'Delegar Finalização' na coluna 'Em Atendimento'
                     if (button.classList.contains('delegate-finalization-btn')) {
-                        const collaboratorName = button.dataset.collaboratorName;
-                        const externalLink = `atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${id}&collaboratorName=${encodeURIComponent(collaboratorName)}`;
-                        window.open(externalLink, '_blank');
-                        showNotification("Link de finalização gerado e aberto em nova aba.");
+                        assistedIdForDelegation = id;
+                        assistedNameForDelegation = button.dataset.name;
+                        collaboratorNameForDelegation = button.dataset.collaboratorName; // Get collaborator name
+                        document.getElementById('delegate-assisted-name').textContent = assistedNameForDelegation;
+                        // Pre-fill email if the collaborator is known and has an email in Firebase (optional, requires storing emails for collaborators)
+                        // For now, it will be blank for manual input.
+                        document.getElementById('collaborator-email-input').value = '';
+                        document.getElementById('delegate-email-modal').classList.remove('hidden');
                     }
 
                     // Lógica para o botão 'Finalizar Diretamente' na coluna 'Em Atendimento'
                     if (button.classList.contains('attend-directly-btn')) {
                         const attendantInput = document.getElementById('attendant-name');
-                        attendantInput.value = ''; // Limpar o campo
+                        attendantInput.value = button.dataset.collaboratorName || ''; // Preenche com o nome do colaborador já atribuído
                         const datalist = document.getElementById('collaborators-list');
                         datalist.innerHTML = '';
                         colaboradores.forEach(c => {
@@ -2561,7 +2600,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const selectedCollaboratorRadio = document.querySelector('#collaborator-selection-list input[name="selectedCollaborator"]:checked');
                     let collaboratorData = null; // Default to null
 
-                    if (selectedCollaboratorRadio) {
+                    if (selectedCollaboratorRadio && selectedCollaboratorRadio.value !== 'null') {
                         const collaboratorId = selectedCollaboratorRadio.value;
                         const collaboratorName = selectedCollaboratorRadio.dataset.name;
                         collaboratorData = { id: collaboratorId, name: collaboratorName };
@@ -2733,6 +2772,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (button.id === 'cancel-select-collaborator-btn') {
                     document.getElementById('select-collaborator-modal').classList.add('hidden');
                 }
+                // Adicionado: Botões de cancelamento para o novo modal de delegação por e-mail
+                if (button.id === 'cancel-delegate-email-btn') {
+                    document.getElementById('delegate-email-modal').classList.add('hidden');
+                }
 
 
                 if (button.classList.contains('toggle-details-btn')) {
@@ -2790,6 +2833,39 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 }
             });
+
+            // Lógica para enviar o link de delegação por e-mail
+            document.getElementById('send-delegate-email-btn').addEventListener('click', async () => {
+                const collaboratorEmail = document.getElementById('collaborator-email-input').value.trim();
+                if (!collaboratorEmail) {
+                    showNotification("Por favor, insira o e-mail do colaborador.", "error");
+                    return;
+                }
+
+                if (!assistedIdForDelegation || !currentPautaId || !collaboratorNameForDelegation) {
+                    showNotification("Erro interno: dados do atendimento ausentes para delegação.", "error");
+                    return;
+                }
+
+                const externalLink = `${window.location.origin}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(collaboratorNameForDelegation)}`;
+
+                try {
+                    // Substitua "YOUR_EMAILJS_SERVICE_ID" e "YOUR_EMAILJS_TEMPLATE_ID_FOR_DELEGATION" pelos seus IDs reais.
+                    // Você precisará criar um novo template no EmailJS para a delegação de atendimento.
+                    await emailjs.send("YOUR_EMAILJS_SERVICE_ID", "YOUR_EMAILJS_TEMPLATE_ID_FOR_DELEGATION", {
+                        to_email: collaboratorEmail,
+                        assisted_name: assistedNameForDelegation,
+                        collaborator_name: collaboratorNameForDelegation,
+                        finalization_link: externalLink
+                    });
+                    showNotification("Link de finalização enviado com sucesso por e-mail!", "success");
+                    document.getElementById('delegate-email-modal').classList.add('hidden');
+                } catch (error) {
+                    console.error("Erro ao enviar e-mail de delegação:", error);
+                    showNotification("Erro ao enviar o link de finalização por e-mail.", "error");
+                }
+            });
+
 
             const documentsData = {
                 alimentos_fixacao: {
