@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -486,6 +485,10 @@
                                     <input type="text" id="collaborator-name-modal" name="nome-colaborador" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
                                 </div>
                                 <div>
+                                    <label for="collaborator-email-modal" class="block text-sm font-medium text-gray-700">Email do Colaborador (opcional):</label>
+                                    <input type="email" id="collaborator-email-modal" name="email-colaborador" placeholder="email@exemplo.com" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                                </div>
+                                <div>
                                     <label for="collaborator-phone-modal" class="block text-sm font-medium text-gray-700">Telefone (com DDD):</label>
                                     <input type="tel" id="collaborator-phone-modal" name="telefone-colaborador" placeholder="Ex: 21999998888" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
                                 </div>
@@ -525,6 +528,7 @@
                                 <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                                     <tr>
                                         <th scope="col" class="py-3 px-6">Nome</th>
+                                        <th scope="col" class="py-3 px-6">Email</th> <!-- Novo cabeçalho para Email -->
                                         <th scope="col" class="py-3 px-6">Deslocamento</th>
                                         <th scope="col" class="py-3 px-6">Presença</th>
                                         <th scope="col" class="py-3 px-6">Horário</th>
@@ -690,6 +694,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Editar Atendente</h2>
+            <p class="mb-4 text-gray-600">Insira o nome do profissional que realizou o atendimento (opcional).</p>
             <input list="collaborators-list" type="text" id="edit-attendant-name" placeholder="Nome do Defensor/Servidor" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
             <datalist id="collaborators-list"></datalist>
             <div class="flex justify-end space-x-4">
@@ -1257,7 +1262,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     <p class="text-sm">${assignedCollabText}</p>
                     <p class="text-sm text-gray-500">Início: ${inAttendanceTime}</p>
                     <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
-                        <button data-id="${a.id}" data-name="${a.name}" data-collaborator-name="${a.assignedCollaborator?.name || 'Não informado'}" class="delegate-finalization-btn bg-indigo-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-indigo-600">Delegar Finalização</button>
+                        <button data-id="${a.id}" data-name="${a.name}" data-collaborator-name="${a.assignedCollaborator?.name || 'Não informado'}" data-collaborator-id="${a.assignedCollaborator?.id || ''}" class="delegate-finalization-btn bg-indigo-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-indigo-600">Delegar Finalização</button>
                         <button data-id="${a.id}" data-name="${a.name}" data-collaborator-name="${a.assignedCollaborator?.name || 'Não informado'}" class="attend-directly-btn bg-green-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-600">Finalizar Diretamente</button>
                         <button data-id="${a.id}" class="return-to-aguardando-from-emAtendimento-btn col-span-2 bg-gray-400 text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-500">Voltar p/ Aguardando</button>
                     </div>
@@ -1294,7 +1299,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             </div>
                         </div>
                         <div class="mt-2 pt-2 border-t flex justify-between items-center">
-                            ${a.lastActionBy ? `<p class="text-xs text-gray-500">Última ação por: <strong>${a.lastActionBy}</strong></p>` : '<div></div>'}
+                            ${a.lastActionBy ? `<p class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></p>` : '<div></div>'}
                             <button data-id="${a.id}" class="return-to-aguardando-btn bg-yellow-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-yellow-600 text-xs">Voltar p/ Aguardando</button>
                         </div>
                     </div>
@@ -1457,6 +1462,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         const collaboratorsModal = document.getElementById('collaborators-modal');
         const collaboratorFormModal = document.getElementById('collaborator-form-modal');
         const collaboratorNameModal = document.getElementById('collaborator-name-modal');
+        const collaboratorEmailModal = document.getElementById('collaborator-email-modal'); // NOVO CAMPO
         const collaboratorPhoneModal = document.getElementById('collaborator-phone-modal');
         const transporteOptionsModal = document.querySelectorAll('input[name="transporte-colaborador"]');
         const localEncontroGroupModal = document.getElementById('local-encontro-group-modal');
@@ -1489,7 +1495,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 renderColaboradores();
             }, (error) => {
                 console.error("Erro no listener de colaboradores: ", error);
-                collaboratorListTableBodyModal.innerHTML = '<tr><td colspan="6" class="text-center py-4">Erro ao carregar colaboradores.</td></tr>';
+                collaboratorListTableBodyModal.innerHTML = '<tr><td colspan="7" class="text-center py-4">Erro ao carregar colaboradores.</td></tr>'; // Ajustado colspan
             });
         }
 
@@ -1500,7 +1506,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             let companyTransport = 0;
             
             if (colaboradores.length === 0) {
-                collaboratorListTableBodyModal.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">Nenhum colaborador adicionado.</td></tr>';
+                collaboratorListTableBodyModal.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhum colaborador adicionado.</td></tr>'; // Ajustado colspan
                 totalParticipantsCount.textContent = 0;
                 selfTransportCount.textContent = 0;
                 companyTransportCount.textContent = 0;
@@ -1525,6 +1531,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 newRow.innerHTML = `
                     <td class="py-4 px-6 font-medium text-gray-900">${nomeElement}</td>
+                    <td class="py-4 px-6">${colaborador.email || 'N/A'}</td> <!-- Exibe o email -->
                     <td class="py-4 px-6">${deslocamentoTexto}</td>
                     <td class="py-4 px-6"><input type="checkbox" class="checkin-checkbox" data-id="${colaborador.id}" ${colaborador.presente ? 'checked' : ''} ${isPautaClosed ? 'disabled' : ''}></td>
                     <td class="py-4 px-6">${colaborador.horario || '--:--'}</td>
@@ -1582,12 +1589,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         collaboratorFormModal.addEventListener('submit', async (event) => {
             event.preventDefault();
             const nome = collaboratorNameModal.value;
+            const email = collaboratorEmailModal.value.trim() || null; // Capture email, allow null
             const telefone = collaboratorPhoneModal.value;
             const transporte = collaboratorFormModal.querySelector('input[name="transporte-colaborador"]:checked').value;
             const localEncontro = collaboratorFormModal.querySelector('input[name="localEncontro-colaborador"]:checked')?.value || '';
             const observacao = collaboratorObsModal.value;
 
-            const collaboratorData = { nome, telefone, transporte, localEncontro, observacao };
+            const collaboratorData = { nome, email, telefone, transporte, localEncontro, observacao };
 
             try {
                 const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
@@ -1626,6 +1634,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         const colaborador = docSnap.data();
                         editCollaboratorId = docId;
                         collaboratorNameModal.value = colaborador.nome;
+                        collaboratorEmailModal.value = colaborador.email || ''; // Preenche o campo de email
                         collaboratorPhoneModal.value = colaborador.telefone;
                         collaboratorObsModal.value = colaborador.observacao || '';
                         
@@ -1664,7 +1673,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         downloadCollaboratorsPdfBtnModal.addEventListener('click', () => {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF();
-            const head = [['Nome', 'Deslocamento', 'Presença', 'Horário de Chegada']];
+            const head = [['Nome', 'Email', 'Deslocamento', 'Presença', 'Horário de Chegada']]; // Adicionado Email ao cabeçalho
             const tableBody = [];
             const presentes = colaboradores.filter(c => c.presente);
 
@@ -1678,7 +1687,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro) {
                     deslocamentoTexto += ` (${colaborador.localEncontro})`;
                 }
-                tableBody.push([colaborador.nome, deslocamentoTexto, 'Presente', colaborador.horario]);
+                tableBody.push([colaborador.nome, colaborador.email || 'N/A', deslocamentoTexto, 'Presente', colaborador.horario]); // Adicionado Email
             });
 
             docPDF.autoTable({
@@ -2626,9 +2635,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         assistedNameForDelegation = button.dataset.name;
                         collaboratorNameForDelegation = button.dataset.collaboratorName; // Get collaborator name
                         document.getElementById('delegate-assisted-name').textContent = assistedNameForDelegation;
-                        // Pre-fill email if the collaborator is known and has an email in Firebase (optional, requires storing emails for collaborators)
-                        // For now, it will be blank for manual input.
-                        document.getElementById('collaborator-email-input').value = '';
+                        
+                        // Tenta preencher o e-mail do colaborador atribuído
+                        const assignedCollabId = button.dataset.collaboratorId;
+                        const assignedCollab = colaboradores.find(c => c.id === assignedCollabId);
+                        document.getElementById('collaborator-email-input').value = assignedCollab?.email || ''; // Preenche se encontrar, senão vazio
+
                         document.getElementById('delegate-email-modal').classList.remove('hidden');
                     }
 
@@ -3070,6 +3082,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     );
                     showNotification("Link de finalização enviado com sucesso por e-mail!", "success");
                     document.getElementById('delegate-email-modal').classList.add('hidden');
+
+                    // NOVO: Se um e-mail foi digitado/atualizado, salva no registro do colaborador
+                    const assignedCollabId = allAssisted.find(a => a.id === assistedIdForDelegation)?.assignedCollaborator?.id;
+                    if (assignedCollabId && collaboratorEmail) {
+                         const collaboratorRef = doc(collection(db, "pautas", currentPautaId, "collaborators"), assignedCollabId);
+                         await updateDoc(collaboratorRef, { email: collaboratorEmail });
+                         console.log(`Email '${collaboratorEmail}' salvo para o colaborador ${assignedCollabId}.`);
+                    }
+
                 } catch (error) {
                     console.error("Erro ao enviar e-mail de delegação:", error);
                     showNotification("Erro ao enviar o link de finalização por e-mail. Verifique a configuração do EmailJS e os parâmetros do template.", "error");
