@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -443,7 +444,7 @@
     <!-- FIM NOVO MODAL -->
 
     <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh; display: flex; flex-direction: column;">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
                 <h2 class="text-2xl font-bold text-gray-800">Gerenciar Membros da Pauta</h2>
                 <button id="close-members-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
@@ -1293,7 +1294,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             </div>
                         </div>
                         <div class="mt-2 pt-2 border-t flex justify-between items-center">
-                            ${a.lastActionBy ? `<p class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></p>` : '<div></div>'}
+                            ${a.lastActionBy ? `<p class="text-xs text-gray-500">Última ação por: <strong>${a.lastActionBy}</strong></p>` : '<div></div>'}
                             <button data-id="${a.id}" class="return-to-aguardando-btn bg-yellow-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-yellow-600 text-xs">Voltar p/ Aguardando</button>
                         </div>
                     </div>
@@ -2502,7 +2503,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 } else {
                     btn.textContent = 'Ver Pauta';
                     btn.classList.replace('bg-purple-600', 'bg-blue-600');
-                    btn.classList.replace('hover:bg-blue-700', 'hover:bg-blue-700');
+                    btn.classList.replace('hover:bg-purple-700', 'hover:bg-blue-700');
                 }
             });
 
@@ -2790,7 +2791,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         const collaboratorId = selectedCollaboratorRadio.value;
                         const collaboratorName = selectedCollaboratorRadio.dataset.name;
                         collaboratorData = { id: collaboratorId, name: collaboratorName };
-                        // AQUI: Usar assistedNameToHandle que já está definida globalmente.
+                        // Usar assistedNameToHandle que já está definida globalmente.
                         showNotification(`${assistedNameToHandle} atribuído a ${collaboratorName}.`);
                     } else {
                         showNotification(`${assistedNameToHandle} movido para 'Em Atendimento' sem colaborador atribuído.`);
@@ -3042,6 +3043,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 // Obtém o URL base atual (por exemplo, "https://seusite.com" ou "http://localhost:8000")
                 const baseUrl = window.location.origin;
                 const externalLink = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(collaboratorNameForDelegation)}`;
+
+                // --- INÍCIO DOS CONSOLE.LOGS DE DEBUG ---
+                console.log("--- DEBUG EMAILJS DELEGAÇÃO ---");
+                console.log("Service ID:", "service_r1nxe6a");
+                console.log("Template ID:", "template_jslp9ny");
+                console.log("Public Key (usada no init):", "aGL-Q2UJcD2tDpUKq");
+                console.log("to_email (para quem será enviado):", collaboratorEmail);
+                console.log("assisted_name (nome do assistido):", assistedNameForDelegation);
+                console.log("collaborator_name (nome do colaborador):", collaboratorNameForDelegation);
+                console.log("finalization_link (link gerado):", externalLink);
+                console.log("-------------------------------");
+                // --- FIM DOS CONSOLE.LOGS DE DEBUG ---
+
 
                 try {
                     await emailjs.send(
@@ -3365,4 +3379,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
-
