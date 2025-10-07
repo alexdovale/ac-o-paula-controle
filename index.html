@@ -443,25 +443,79 @@
     </div>
     <!-- FIM NOVO MODAL -->
 
-    <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh; display: flex; flex-direction: column;">
+    <div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-6xl flex flex-col" style="max-height: 90vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
-                <h2 class="text-2xl font-bold text-gray-800">Gerenciar Membros</h2>
-                <button id="close-members-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+                <h2 class="text-2xl font-bold text-gray-800">Gerenciar Colaboradores</h2>
+                <button id="close-collaborators-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
             </div>
-            <div class="overflow-y-auto">
-                <div class="space-y-4">
-                    <h3 class="text-lg font-semibold text-gray-700">Convidar Novo Membro</h3>
-                    <div class="flex flex-col sm:flex-row gap-2">
-                        <input type="email" id="invite-email-input" placeholder="email@exemplo.com" class="flex-grow p-2 border border-gray-300 rounded-lg">
-                        <button id="invite-member-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 flex-shrink-0">Convidar</button>
+
+            <div class="flex-grow overflow-y-auto pr-2">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-700 mb-4">Adicionar/Editar Colaborador</h3>
+                        <form id="collaborator-form-modal"> <!-- Renamed ID to avoid conflict if form content is moved -->
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="collaborator-name-modal" class="block text-sm font-medium text-gray-700">Nome do Colaborador:</label>
+                                    <input type="text" id="collaborator-name-modal" name="nome" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                                </div>
+                                <div>
+                                    <label for="collaborator-phone-modal" class="block text-sm font-medium text-gray-700">Telefone (com DDD):</label>
+                                    <input type="tel" id="collaborator-phone-modal" name="telefone" placeholder="Ex: 21999998888" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Como vai se deslocar?</label>
+                                    <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
+                                        <label><input type="radio" id="transporte-nao-confirmado-modal" name="transporte-modal" value="Não Confirmado" checked required> Não Confirmado</label>
+                                        <label><input type="radio" id="transporte-meios-proprios-modal" name="transporte-modal" value="Meios Próprios"> Meios Próprios</label>
+                                        <label><input type="radio" id="transporte-com-empresa-modal" name="transporte-modal" value="Com a Empresa"> Com a Empresa</label>
+                                    </div>
+                                </div>
+                                <div id="local-encontro-group-modal" class="hidden">
+                                    <label class="block text-sm font-medium text-gray-700">Ponto de Encontro:</label>
+                                    <div class="mt-1 flex items-center space-x-4">
+                                        <label><input type="radio" id="local-sede-modal" name="localEncontro-modal" value="Sede"> Sede</label>
+                                        <label><input type="radio" id="local-meio-caminho-modal" name="localEncontro-modal" value="Meio do Caminho"> No meio do caminho</label>
+                                    </div>
+                                </div>
+                                <div id="observacao-group-modal" class="hidden">
+                                    <label for="collaborator-obs-modal" class="block text-sm font-medium text-gray-700">Observação:</label>
+                                    <textarea id="collaborator-obs-modal" name="observacao" rows="3" class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></textarea>
+                                </div>
+                                <button type="submit" id="add-collaborator-btn-modal" class="w-full bg-green-600 text-white font-bold py-2 rounded-md hover:bg-green-700 transition">Adicionar Colaborador</button>
+                            </div>
+                        </form>
                     </div>
-                    <div id="invite-status" class="text-sm h-4"></div>
-                </div>
-                <div class="mt-6">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Membros Atuais</h3>
-                    <div id="members-list-container" class="space-y-2 max-h-64 overflow-y-auto">
+
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-700 mb-4">Lista de Presença</h3>
+                        <div id="presence-stats" class="mb-4 text-sm text-gray-700 space-y-1">
+                            <p>Total de Participantes: <strong id="total-participants-count">0</strong></p>
+                            <p>Meios Próprios: <strong id="self-transport-count">0</strong></p>
+                            <p>Com a Empresa: <strong id="company-transport-count">0</strong></p>
                         </div>
+                        <div class="overflow-x-auto">
+                            <table id="collaborators-list-table-modal" class="w-full text-sm text-left text-gray-500">
+                                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="py-3 px-6">Nome</th>
+                                        <th scope="col" class="py-3 px-6">Deslocamento</th>
+                                        <th scope="col" class="py-3 px-6">Presença</th>
+                                        <th scope="col" class="py-3 px-6">Horário</th>
+                                        <th scope="col" class="py-3 px-6">WhatsApp</th>
+                                        <th scope="col" class="py-3 px-6">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    </tbody>
+                            </table>
+                        </div>
+                        <div class="flex justify-between items-center mt-4">
+                            <button id="download-collaborators-pdf-modal" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Baixar PDF</button>
+                            <button id="clear-collaborators-list-modal" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Limpar Lista</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -765,81 +819,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
 
-    <div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-6xl flex flex-col" style="max-height: 90vh;">
-            <div class="flex justify-between items-center mb-4 flex-shrink-0">
-                <h2 class="text-2xl font-bold text-gray-800">Gerenciar Colaboradores</h2>
-                <button id="close-collaborators-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
-            </div>
-
-            <div class="flex-grow overflow-y-auto pr-2">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div>
-                        <h3 class="text-xl font-semibold text-gray-700 mb-4">Adicionar/Editar Colaborador</h3>
-                        <form id="collaborator-form" class="space-y-4">
-                            <div>
-                                <label for="collaborator-name" class="block text-sm font-medium text-gray-700">Nome do Colaborador:</label>
-                                <input type="text" id="collaborator-name" name="nome" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                            </div>
-                            <div>
-                                <label for="collaborator-phone" class="block text-sm font-medium text-gray-700">Telefone (com DDD):</label>
-                                <input type="tel" id="collaborator-phone" name="telefone" placeholder="Ex: 21999998888" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Como vai se deslocar?</label>
-                                <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
-                                    <label><input type="radio" name="transporte" value="Não Confirmado" checked required> Não Confirmado</label>
-                                    <label><input type="radio" name="transporte" value="Meios Próprios"> Meios Próprios</label>
-                                    <label><input type="radio" name="transporte" value="Com a Empresa"> Com a Empresa</label>
-                                </div>
-                            </div>
-                            <div id="local-encontro-group" class="hidden">
-                                <label class="block text-sm font-medium text-gray-700">Ponto de Encontro:</label>
-                                <div class="mt-1 flex items-center space-x-4">
-                                    <label><input type="radio" name="localEncontro" value="Sede"> Sede</label>
-                                    <label><input type="radio" name="localEncontro" value="Meio do Caminho"> No meio do caminho</label>
-                                </div>
-                            </div>
-                            <div id="observacao-group" class="hidden">
-                                <label for="collaborator-obs" class="block text-sm font-medium text-gray-700">Observação:</label>
-                                <textarea id="collaborator-obs" name="observacao" rows="3" class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></textarea>
-                            </div>
-                            <button type="submit" id="add-collaborator-btn" class="w-full bg-green-600 text-white font-bold py-2 rounded-md hover:bg-green-700 transition">Adicionar Colaborador</button>
-                        </form>
-                    </div>
-
-                    <div>
-                        <h3 class="text-xl font-semibold text-gray-700 mb-4">Lista de Presença</h3>
-                        <div id="presence-stats" class="mb-4 text-sm text-gray-700 space-y-1">
-                            <p>Total de Participantes: <strong id="total-participants-count">0</strong></p>
-                            <p>Meios Próprios: <strong id="self-transport-count">0</strong></p>
-                            <p>Com a Empresa: <strong id="company-transport-count">0</strong></p>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table id="collaborators-list-table" class="w-full text-sm text-left text-gray-500">
-                                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="py-3 px-6">Nome</th>
-                                        <th scope="col" class="py-3 px-6">Deslocamento</th>
-                                        <th scope="col" class="py-3 px-6">Presença</th>
-                                        <th scope="col" class="py-3 px-6">Horário</th>
-                                        <th scope="col" class="py-3 px-6">WhatsApp</th>
-                                        <th scope="col" class="py-3 px-6">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    </tbody>
-                            </table>
-                        </div>
-                        <div class="flex justify-between items-center mt-4">
-                            <button id="download-collaborators-pdf" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Baixar PDF</button>
-                            <button id="clear-collaborators-list" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Limpar Lista</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -1350,14 +1329,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
         // --- INÍCIO DA LÓGICA DE COLABORADORES (MOVIDA PARA CIMA E COM FUNCTION) ---
         const collaboratorsModal = document.getElementById('collaborators-modal');
-        const collaboratorForm = document.getElementById('collaborator-form');
-        const collaboratorListTableBody = document.querySelector('#collaborators-list-table tbody');
-        const addCollaboratorBtn = document.getElementById('add-collaborator-btn');
-        const downloadCollaboratorsPdfBtn = document.getElementById('download-collaborators-pdf');
-        const clearCollaboratorsListBtn = document.getElementById('clear-collaborators-list');
-        const transporteOptions = document.querySelectorAll('input[name="transporte"]');
-        const localEncontroGroup = document.getElementById('local-encontro-group');
-        const observacaoGroup = document.getElementById('observacao-group');
+        const collaboratorFormModal = document.getElementById('collaborator-form-modal'); // Renamed ID
+        const collaboratorNameModal = document.getElementById('collaborator-name-modal'); // New ID
+        const collaboratorPhoneModal = document.getElementById('collaborator-phone-modal'); // New ID
+        const transporteOptionsModal = document.querySelectorAll('input[name="transporte-modal"]'); // New Name
+        const localEncontroGroupModal = document.getElementById('local-encontro-group-modal'); // New ID
+        const observacaoGroupModal = document.getElementById('observacao-group-modal'); // New ID
+        const collaboratorObsModal = document.getElementById('collaborator-obs-modal'); // New ID
+        const addCollaboratorBtnModal = document.getElementById('add-collaborator-btn-modal'); // New ID
+        const collaboratorListTableBodyModal = document.querySelector('#collaborators-list-table-modal tbody'); // New ID
+        const downloadCollaboratorsPdfBtnModal = document.getElementById('download-collaborators-pdf-modal'); // New ID
+        const clearCollaboratorsListBtnModal = document.getElementById('clear-collaborators-list-modal'); // New ID
+        
+        // Stats (assuming these are in the modal as well)
         const totalParticipantsCount = document.getElementById('total-participants-count');
         const selfTransportCount = document.getElementById('self-transport-count');
         const companyTransportCount = document.getElementById('company-transport-count');
@@ -1379,18 +1363,18 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 renderColaboradores();
             }, (error) => {
                 console.error("Erro no listener de colaboradores: ", error);
-                collaboratorListTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Erro ao carregar colaboradores.</td></tr>';
+                collaboratorListTableBodyModal.innerHTML = '<tr><td colspan="6" class="text-center py-4">Erro ao carregar colaboradores.</td></tr>';
             });
         }
 
         function renderColaboradores() {
-            collaboratorListTableBody.innerHTML = '';
+            collaboratorListTableBodyModal.innerHTML = '';
 
             let selfTransport = 0;
             let companyTransport = 0;
             
             if (colaboradores.length === 0) {
-                collaboratorListTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">Nenhum colaborador adicionado.</td></tr>';
+                collaboratorListTableBodyModal.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">Nenhum colaborador adicionado.</td></tr>';
                 totalParticipantsCount.textContent = 0;
                 selfTransportCount.textContent = 0;
                 companyTransportCount.textContent = 0;
@@ -1413,13 +1397,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                      nomeElement = `<strong>${colaborador.nome}</strong>`;
                 }
 
+                // Certifique-se de que o viewBox está no formato correto (4 valores) para os SVGs
                 newRow.innerHTML = `
                     <td class="py-4 px-6 font-medium text-gray-900">${nomeElement}</td>
                     <td class="py-4 px-6">${deslocamentoTexto}</td>
                     <td class="py-4 px-6"><input type="checkbox" class="checkin-checkbox" data-id="${colaborador.id}" ${colaborador.presente ? 'checked' : ''} ${isPautaClosed ? 'disabled' : ''}></td>
                     <td class="py-4 px-6">${colaborador.horario || '--:--'}</td>
                     <td class="py-4 px-6">
-                        <a href="https://wa.me/55${colaborador.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Bom dia! Poderia, por gentileza, informar se já está chegando? Estamos quase saindo.`)}" class="text-blue-600 hover:underline" target="_blank">Mensagem</a>
+                        <a href="https://wa.me/55${colaborador.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Bom dia! Poderia, por gentileza, informar se já está chegando? Estamos quase saindo.`)}" 
+                            class="text-blue-600 hover:underline" target="_blank">
+                            Mensagem
+                        </a>
                     </td>
                     <td class="py-4 px-6 space-x-2">
                         <button class="edit-collaborator-btn text-gray-500 hover:text-gray-900" data-id="${colaborador.id}" title="Editar" ${isPautaClosed ? 'disabled' : ''}>
@@ -1430,124 +1418,127 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         </button>
                     </td>
                 `;
-                collaboratorListTableBody.appendChild(newRow);
+                collaboratorListTableBodyModal.appendChild(newRow);
             });
             
             totalParticipantsCount.textContent = colaboradores.length;
             selfTransportCount.textContent = selfTransport;
             companyTransportCount.textContent = companyTransport;
 
-            document.querySelectorAll('.checkin-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', async (e) => {
-                    const collaboratorId = e.target.dataset.id;
-                    const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", collaboratorId);
-                    if (e.target.checked) {
-                        const now = new Date();
-                        await updateDoc(collaboratorRef, {
-                            presente: true,
-                            horario: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-                        });
-                    } else {
-                        await updateDoc(collaboratorRef, {
-                            presente: false,
-                            horario: '--:--'
-                        });
-                    }
-                });
-            });
-
-            document.querySelectorAll('.edit-collaborator-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const collaboratorId = e.currentTarget.dataset.id;
-                    editCollaboratorId = collaboratorId;
-                    const colaborador = colaboradores.find(c => c.id === collaboratorId);
-                    if (!colaborador) return;
-                    
-                    document.getElementById('collaborator-name').value = colaborador.nome;
-                    document.getElementById('collaborator-phone').value = colaborador.telefone;
-                    document.getElementById('collaborator-obs').value = colaborador.observacao || '';
-
-                    const transporteRadio = document.querySelector(`input[name="transporte"][value="${colaborador.transporte}"]`);
-                    if (transporteRadio) {
-                        transporteRadio.checked = true;
-                        transporteRadio.dispatchEvent(new Event('change'));
-                    }
-
-                    const localEncontroRadio = document.querySelector(`input[name="localEncontro"][value="${colaborador.localEncontro}"]`);
-                    if (localEncontroRadio) {
-                        localEncontroRadio.checked = true;
-                        localEncontroRadio.dispatchEvent(new Event('change'));
-                    }
-
-                    addCollaboratorBtn.textContent = "Salvar Alterações";
-                });
-            });
-
-            document.querySelectorAll('.delete-collaborator-btn').forEach(button => {
-                button.addEventListener('click', async (e) => {
-                    const collaboratorId = e.currentTarget.dataset.id;
-                    const colaborador = colaboradores.find(c => c.id === collaboratorId);
-                    if (colaborador && confirm(`Tem certeza que deseja excluir o colaborador "${colaborador.nome}"?`)) {
-                        await deleteDoc(doc(db, "pautas", currentPautaId, "collaborators", collaboratorId));
-                        showNotification("Colaborador excluído.", "success");
-                    }
-                });
-            });
+            addEventListenersToModalListActions(); // Re-add event listeners after re-rendering
         }
 
-        function resetCollaboratorForm() {
-            collaboratorForm.reset();
-            document.querySelector('input[name="transporte"][value="Não Confirmado"]').checked = true;
+        // Renamed and adapted resetForm
+        function resetCollaboratorFormModal() {
+            collaboratorFormModal.reset();
+            document.querySelector('input[name="transporte-modal"][value="Não Confirmado"]').checked = true;
             editCollaboratorId = null;
-            addCollaboratorBtn.textContent = "Adicionar Colaborador";
-            localEncontroGroup.classList.add('hidden');
-            observacaoGroup.classList.add('hidden');
+            addCollaboratorBtnModal.textContent = "Adicionar Colaborador";
+            localEncontroGroupModal.classList.add('hidden');
+            observacaoGroupModal.classList.add('hidden');
         }
 
-        transporteOptions.forEach(option => {
+        // Renamed event listeners for modal's form
+        transporteOptionsModal.forEach(option => {
             option.addEventListener('change', (event) => {
-                localEncontroGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
-                observacaoGroup.classList.add('hidden'); 
+                localEncontroGroupModal.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
+                observacaoGroupModal.classList.add('hidden'); 
                 if (event.target.value !== 'Com a Empresa') {
-                    document.querySelectorAll('input[name="localEncontro"]').forEach(localOption => localOption.checked = false);
+                    document.querySelectorAll('input[name="localEncontro-modal"]').forEach(localOption => localOption.checked = false);
                 }
             });
         });
 
-        document.querySelectorAll('input[name="localEncontro"]').forEach(option => {
+        document.querySelectorAll('input[name="localEncontro-modal"]').forEach(option => {
             option.addEventListener('change', (event) => {
-                observacaoGroup.classList.toggle('hidden', event.target.value !== 'Meio do Caminho');
+                observacaoGroupModal.classList.toggle('hidden', event.target.value !== 'Meio do Caminho');
             });
         });
 
-        collaboratorForm.addEventListener('submit', async (event) => {
+        // Event listener for the modal's form submission
+        collaboratorFormModal.addEventListener('submit', async (event) => {
             event.preventDefault();
-            const nome = document.getElementById('collaborator-name').value;
-            const telefone = document.getElementById('collaborator-phone').value;
-            const transporte = collaboratorForm.querySelector('input[name="transporte"]:checked').value;
-            const localEncontro = collaboratorForm.querySelector('input[name="localEncontro"]:checked')?.value || '';
-            const observacao = document.getElementById('collaborator-obs').value;
+            const nome = collaboratorNameModal.value;
+            const telefone = collaboratorPhoneModal.value;
+            const transporte = collaboratorFormModal.querySelector('input[name="transporte-modal"]:checked').value;
+            const localEncontro = collaboratorFormModal.querySelector('input[name="localEncontro-modal"]:checked')?.value || '';
+            const observacao = collaboratorObsModal.value;
 
             const collaboratorData = { nome, telefone, transporte, localEncontro, observacao };
 
             try {
+                const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
                 if (editCollaboratorId) {
-                    const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", editCollaboratorId);
+                    const collaboratorRef = doc(collaboratorsCollectionRef, editCollaboratorId);
                     await updateDoc(collaboratorRef, collaboratorData);
                     showNotification("Colaborador atualizado com sucesso!");
                 } else {
-                    const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
                     await addDoc(collaboratorsCollectionRef, { ...collaboratorData, presente: false, horario: '--:--' });
                     showNotification("Colaborador adicionado com sucesso!");
                 }
-                resetCollaboratorForm();
+                resetCollaboratorFormModal();
             } catch (error) {
                 console.error("Erro ao salvar colaborador: ", error);
                 showNotification("Erro ao salvar colaborador.", "error");
             }
         });
 
-        downloadCollaboratorsPdfBtn.addEventListener('click', () => {
+        // Function to add event listeners to buttons within the rendered list
+        function addEventListenersToModalListActions() {
+            document.querySelectorAll('#collaborators-modal .checkin-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', async (e) => {
+                    const docId = e.target.dataset.id;
+                    const presente = e.target.checked;
+                    const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                    const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", docId);
+                    await updateDoc(collaboratorRef, { presente, horario });
+                });
+            });
+
+            document.querySelectorAll('#collaborators-modal .edit-collaborator-btn').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const docId = e.currentTarget.dataset.id;
+                    const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", docId);
+                    const docSnap = await getDoc(collaboratorRef);
+                    if (docSnap.exists()) {
+                        const colaborador = docSnap.data();
+                        editCollaboratorId = docId;
+                        collaboratorNameModal.value = colaborador.nome;
+                        collaboratorPhoneModal.value = colaborador.telefone;
+                        collaboratorObsModal.value = colaborador.observacao || '';
+                        
+                        const transporteRadio = document.querySelector(`#collaborators-modal input[name="transporte-modal"][value="${colaborador.transporte}"]`);
+                        if (transporteRadio) {
+                            transporteRadio.checked = true;
+                            transporteRadio.dispatchEvent(new Event('change'));
+                        }
+
+                        const localEncontroRadio = document.querySelector(`#collaborators-modal input[name="localEncontro-modal"][value="${colaborador.localEncontro}"]`);
+                        if (localEncontroRadio) {
+                            localEncontroRadio.checked = true;
+                            localEncontroRadio.dispatchEvent(new Event('change'));
+                        }
+
+                        document.getElementById('form-title').textContent = "Editar Colaborador"; // Update modal title if needed
+                        addCollaboratorBtnModal.textContent = "Salvar Alterações";
+                        collaboratorsModal.querySelector('.flex-grow.overflow-y-auto.pr-2').scrollTop = 0; // Scroll to top of form
+                    }
+                });
+            });
+
+            document.querySelectorAll('#collaborators-modal .delete-collaborator-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const docId = e.currentTarget.dataset.id;
+                    showConfirmModal(() => {
+                        const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", docId);
+                        deleteDoc(collaboratorRef);
+                    }, `Tem certeza que deseja excluir este colaborador?`);
+                });
+            });
+        }
+        
+        // PDF Download for modal's list
+        downloadCollaboratorsPdfBtnModal.addEventListener('click', () => {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF();
             const head = [['Nome', 'Deslocamento', 'Presença', 'Horário de Chegada']];
@@ -1555,7 +1546,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const presentes = colaboradores.filter(c => c.presente);
 
             if (presentes.length === 0) {
-                showNotification("Nenhum colaborador com presença marcada.", "info");
+                showNotification("Nenhum colaborador com presença marcada para gerar o PDF.", "info");
                 return;
             }
 
@@ -1579,8 +1570,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             docPDF.save('lista_presenca_colaboradores.pdf');
         });
 
-        clearCollaboratorsListBtn.addEventListener('click', async () => {
-            if (confirm('Tem certeza que deseja limpar toda a lista? Esta ação não pode ser desfeita.')) {
+        // Clear list for modal's list
+        clearCollaboratorsListBtnModal.addEventListener('click', () => {
+            showConfirmModal(async () => {
                 const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
                 const snapshot = await getDocs(collaboratorsCollectionRef);
                 if (snapshot.empty) {
@@ -1590,8 +1582,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const batch = writeBatch(db);
                 snapshot.docs.forEach(doc => batch.delete(doc.ref));
                 await batch.commit();
+                resetCollaboratorFormModal();
                 showNotification("Lista de colaboradores limpa.", "success");
-            }
+            }, 'Tem certeza que deseja limpar toda a lista?<br>Esta ação não pode ser desfeita.');
         });
         // --- FIM DA LÓGICA DE COLABORADORES ---
 
@@ -1694,6 +1687,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const deleteButton = document.createElement('button');
             deleteButton.className = "absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:bg-red-100 hover:text-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500";
             deleteButton.setAttribute('aria-label', 'Excluir pauta');
+            // Certifique-se de que o viewBox está no formato correto (4 valores) para os SVGs
             deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
 
             deleteButton.addEventListener('click', (event) => {
@@ -2407,28 +2401,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             const showMembersModal = async () => {
                 if (!currentPautaId) return;
-                const modal = document.getElementById('members-modal');
-                const container = document.getElementById('members-list-container');
-                container.innerHTML = 'Carregando...';
+                const modal = document.getElementById('collaborators-modal'); // Referencia o modal de colaboradores
+                
+                // Resetar o formulário antes de abrir o modal
+                resetCollaboratorFormModal(); 
+                
                 modal.classList.remove('hidden');
-
-                const pautaRef = doc(db, "pautas", currentPautaId);
-                const pautaSnap = await getDoc(pautaRef);
-                if (pautaSnap.exists()) {
-                    const pautaData = pautaSnap.data();
-                    currentPautaOwnerId = pautaData.owner;
-                    container.innerHTML = '';
-                    pautaData.memberEmails.forEach(email => {
-                        const isOwner = pautaData.ownerEmail === email;
-                        const memberEl = document.createElement('div');
-                        memberEl.className = 'flex justify-between items-center bg-gray-100 p-2 rounded';
-                        memberEl.innerHTML = `
-                            <span>${email} ${isOwner ? '<span class="text-xs text-yellow-600 font-bold">(dono)</span>' : ''}</span>
-                            ${!isOwner ? `<button data-email="${email}" class="remove-member-btn text-red-500 hover:text-red-700 text-sm font-semibold">Remover</button>` : ''}
-                        `;
-                        container.appendChild(memberEl);
-                    });
-                }
+                
+                // A função setupCollaboratorsListener já é chamada em loadPauta e manterá a lista atualizada
+                // Não precisamos carregar a lista aqui novamente, o listener já faz isso.
             };
 
             const showDemandsModal = (assistedId) => {
@@ -2612,7 +2593,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.getElementById('edit-pauta-modal').classList.remove('hidden');
                 }
                 if (button.id === 'manage-members-btn') {
-                    await showMembersModal();
+                    await showMembersModal(); // Chamada para o modal de colaboradores
                 }
 
               if (button.id === 'add-assisted-btn') {
