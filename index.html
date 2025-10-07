@@ -245,7 +245,7 @@
                      <button type="button" id="add-assisted-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition shadow-md w-full lg:w-auto">Adicionar</button>
                 </div>
             </form>
-            <main id="main-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <main id="main-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 <div id="pauta-column" class="bg-white rounded-lg shadow-md flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
@@ -266,6 +266,18 @@
                     </div>
                     <div id="aguardando-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
+                <!-- Nova Coluna: Em Atendimento -->
+                <div id="em-atendimento-column" class="bg-white rounded-lg shadow-md flex flex-col">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                        <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
+                            <span>👩‍💻 Em Atendimento</span>
+                            <span id="em-atendimento-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                        </h3>
+                        <input type="search" id="em-atendimento-search" placeholder="Pesquisar por nome, colaborador..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div id="em-atendimento-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                </div>
+                <!-- Fim da Nova Coluna: Em Atendimento -->
                 <div class="bg-white rounded-lg shadow-md flex flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <div class="flex justify-between items-center mb-3">
@@ -429,6 +441,7 @@
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold mb-4">Confirmar Horário de Chegada</h2><p class="mb-4 text-gray-600">Por favor, informe o horário de chegada do assistido.</p><input type="time" id="arrival-time-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6"><div class="flex justify-end space-x-4"><button id="cancel-arrival-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button><button id="confirm-arrival-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button></div></div>
     </div>
 
+    <!-- Modal de Finalização de Atendimento (Antigo) - Mantido para 'Finalizar Diretamente' ou 'Editar Atendente' -->
     <div id="attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Finalizar Atendimento</h2>
@@ -441,6 +454,22 @@
             </div>
         </div>
     </div>
+
+    <!-- NOVO MODAL: Selecionar Colaborador -->
+    <div id="select-collaborator-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Atender Assistido</h2>
+            <p class="mb-4 text-gray-600">Selecione o colaborador que irá atender <strong id="assisted-to-attend-name"></strong>:</p>
+            <div id="collaborator-selection-list" class="space-y-3 mb-6 max-h-60 overflow-y-auto">
+                <p class="text-gray-500 text-center">Carregando colaboradores...</p>
+            </div>
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-select-collaborator-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-select-collaborator-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Confirmar Seleção</button>
+            </div>
+        </div>
+    </div>
+    <!-- FIM NOVO MODAL -->
 
     <div id="reset-confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg space-y-4">
@@ -549,15 +578,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             <div class="flex-grow overflow-y-auto pr-2">
                 <p class="mb-4">Assistido: <strong id="demands-assisted-name-modal" class="text-green-600"></strong></p>
                 <div class="space-y-2">
-                    <label for="new-demand-input" class="block text-sm font-medium text-gray-700">Adicionar nova demanda:</label>
+                    <label for="demands-modal-new-demand-input" class="block text-sm font-medium text-gray-700">Adicionar nova demanda:</label>
                     <div class="flex gap-2">
-                        <input type="text" id="new-demand-input" placeholder="Ex: Ação de Partilha de Bens" class="flex-grow p-2 border border-gray-300 rounded-lg">
-                        <button id="add-demand-btn" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 flex-shrink-0">Adicionar</button>
+                        <input type="text" id="demands-modal-new-demand-input" placeholder="Ex: Ação de Partilha de Bens" class="flex-grow p-2 border border-gray-300 rounded-lg">
+                        <button id="demands-modal-add-demand-btn" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 flex-shrink-0">Adicionar</button>
                     </div>
                 </div>
                 <div class="mt-4">
                     <h3 class="text-lg font-semibold text-gray-700 mb-2">Demandas Adicionais Registradas:</h3>
-                    <div id="demands-list-container" class="space-y-2 max-h-60 overflow-y-auto bg-gray-50 p-3 rounded-lg border">
+                    <div id="demands-modal-list-container" class="space-y-2 max-h-60 overflow-y-auto bg-gray-50 p-3 rounded-lg border">
                         <p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>
                     </div>
                 </div>
@@ -922,6 +951,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '', currentPautaOwnerId = null, isPautaClosed = false;
         let currentPautaData = null; // Para armazenar todos os dados da pauta atual
         let assistedIdToHandle = null;
+        let assistedNameToHandle = null; // Adicionado para passar o nome para o modal de seleção de colaborador
         let currentChecklistAction = null;
 
         // Variáveis para a lógica de Colaboradores
@@ -997,7 +1027,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 btn.disabled = isClosed;
             });
 
-            const actionButtons = document.querySelectorAll('.check-in-btn, .attend-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn');
+            const actionButtons = document.querySelectorAll('.check-in-btn, .delegate-finalization-btn, .attend-directly-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn');
             actionButtons.forEach(btn => {
                 btn.disabled = isClosed;
             });
@@ -1027,21 +1057,24 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             const pautaList = document.getElementById('pauta-list');
             const aguardandoList = document.getElementById('aguardando-list');
+            const emAtendimentoList = document.getElementById('em-atendimento-list'); // Nova lista
             const atendidosList = document.getElementById('atendidos-list');
             const faltososList = document.getElementById('faltosos-list');
-            [pautaList, aguardandoList, atendidosList, faltososList].forEach(el => el.innerHTML = '');
+            [pautaList, aguardandoList, emAtendimentoList, atendidosList, faltososList].forEach(el => el.innerHTML = '');
 
             const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
 
             const pautaSearchTerm = normalizeText(document.getElementById('pauta-search').value);
             const aguardandoSearchTerm = normalizeText(document.getElementById('aguardando-search').value);
+            const emAtendimentoSearchTerm = normalizeText(document.getElementById('em-atendimento-search').value); // Novo termo de busca
             const atendidosSearchTerm = normalizeText(document.getElementById('atendidos-search').value);
             const faltososSearchTerm = normalizeText(document.getElementById('faltosos-search').value);
 
-            const searchFilter = (assisted, term) => !term || normalizeText(assisted.name).includes(term) || (assisted.cpf && normalizeText(assisted.cpf).includes(term)) || normalizeText(assisted.subject).includes(term);
+            const searchFilter = (assisted, term) => !term || normalizeText(assisted.name).includes(term) || (assisted.cpf && normalizeText(assisted.cpf).includes(term)) || normalizeText(assisted.subject).includes(term) || (assisted.assignedCollaborator?.name && normalizeText(assisted.assignedCollaborator.name).includes(term));
 
             const pauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && searchFilter(a, pautaSearchTerm));
             const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm));
+            const emAtendimento = allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode && searchFilter(a, emAtendimentoSearchTerm)); // Novo filtro
             const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && searchFilter(a, atendidosSearchTerm));
             const faltosos = allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento' && searchFilter(a, faltososSearchTerm));
 
@@ -1083,9 +1116,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     return (a.createdAt || 0) - (b.createdAt || 0);
                 }
             });
+            // Ordenação para "Em Atendimento" - mais recente primeiro, ou por colaborador
+            emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
+
 
             document.getElementById('pauta-count').textContent = pauta.length;
             document.getElementById('aguardando-count').textContent = aguardando.length;
+            document.getElementById('em-atendimento-count').textContent = emAtendimento.length; // Novo contador
             document.getElementById('faltosos-count').textContent = faltosos.length;
             document.getElementById('atendidos-count').textContent = atendidos.length;
 
@@ -1129,13 +1166,34 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         </div>
                     </div>
                     <div class="mt-3 grid grid-cols-2 lg:grid-cols-3 gap-2">
-                        <button data-id="${a.id}" class="attend-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>
+                        <button data-id="${a.id}" data-name="${a.name}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>
                         ${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : ''}
                         <button data-id="${a.id}" class="edit-assisted-btn bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar</button>
                     </div>
                     ${returnToPautaBtn ? `<div class="mt-2">${returnToPautaBtn}</div>` : ''}
                     ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
                     `;
+                return card;
+            });
+            
+            // Renderizar a nova coluna "Em Atendimento"
+            render(emAtendimentoList, emAtendimento, (a, index) => {
+                const card = document.createElement('div');
+                card.className = `relative bg-purple-50 p-4 rounded-lg shadow-sm border-purple-200`;
+                const inAttendanceTime = new Date(a.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                card.innerHTML = `
+                    <p class="font-bold text-lg">${index + 1}. ${a.name}</p>
+                    ${a.cpf ? `<p class="text-sm text-gray-500">CPF: <strong>${a.cpf}</strong></p>` : ''}
+                    <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
+                    <p class="text-sm">Colaborador: <strong>${a.assignedCollaborator?.name || 'Não informado'}</strong></p>
+                    <p class="text-sm text-gray-500">Início: ${inAttendanceTime}</p>
+                    <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+                        <button data-id="${a.id}" data-name="${a.name}" data-collaborator-name="${a.assignedCollaborator?.name || ''}" class="delegate-finalization-btn bg-indigo-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-indigo-600">Delegar Finalização</button>
+                        <button data-id="${a.id}" class="attend-directly-btn bg-green-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-600">Finalizar Diretamente</button>
+                        <button data-id="${a.id}" class="return-to-aguardando-from-emAtendimento-btn col-span-2 bg-gray-400 text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-500">Voltar p/ Aguardando</button>
+                    </div>
+                    ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
+                `;
                 return card;
             });
 
@@ -1234,6 +1292,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const tabAgendamento = document.getElementById('tab-agendamento');
             const tabAvulso = document.getElementById('tab-avulso');
             const pautaColumn = document.getElementById('pauta-column');
+            const emAtendimentoColumn = document.getElementById('em-atendimento-column'); // Nova coluna
 
             const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
             if (pautaDoc.exists()) {
@@ -1273,20 +1332,24 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                  tabAgendamento.classList.remove('hidden');
                  tabAvulso.classList.add('hidden');
                  pautaColumn.classList.remove('hidden');
+                 emAtendimentoColumn.classList.remove('hidden'); // Exibe a nova coluna
                  switchTab('agendamento');
             } else if (pautaType === 'avulso') {
                  tabAvulso.classList.remove('hidden');
                  tabAgendamento.classList.add('hidden');
                  pautaColumn.classList.add('hidden');
+                 emAtendimentoColumn.classList.remove('hidden'); // Exibe a nova coluna
                  switchTab('avulso');
             } else {
                 tabAgendamento.classList.remove('hidden');
                 tabAvulso.classList.remove('hidden');
                 pautaColumn.classList.remove('hidden');
+                emAtendimentoColumn.classList.remove('hidden'); // Exibe a nova coluna
                 switchTab('agendamento');
             }
 
             setupRealtimeListener(pautaId);
+            setupCollaboratorsListener(pautaId); // Inicia o listener para colaboradores
             showScreen('app');
         };
 
@@ -1456,6 +1519,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const isScheduledContainer = document.getElementById('is-scheduled-container');
             const formTitle = document.getElementById('form-title');
             const pautaColumn = document.getElementById('pauta-column');
+            const emAtendimentoColumn = document.getElementById('em-atendimento-column'); // Nova coluna
             const formContainer = document.getElementById('form-agendamento');
 
             formContainer.classList.remove('hidden');
@@ -1465,6 +1529,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 tabAvulso.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700');
                 isScheduledContainer.classList.remove('hidden');
                 pautaColumn.classList.remove('hidden');
+                emAtendimentoColumn.classList.remove('hidden'); // Exibe a nova coluna
                 formTitle.textContent = "Adicionar Novo Agendamento";
                 document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
                 document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
@@ -1476,6 +1541,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700');
                 isScheduledContainer.classList.add('hidden');
                 pautaColumn.classList.add('hidden');
+                emAtendimentoColumn.classList.remove('hidden'); // Exibe a nova coluna
                 formTitle.textContent = "Adicionar Atendimento Avulso";
 
                 document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
@@ -1830,7 +1896,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.getElementById('logout-btn-main').addEventListener('click', handleLogout);
             document.getElementById('logout-btn-app').addEventListener('click', handleLogout);
 
-            ['pauta-search', 'aguardando-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
+            ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
                 document.getElementById(id).addEventListener('input', renderAssistedList);
             });
 
@@ -2028,7 +2094,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (!assisted) return;
 
                 document.getElementById('demands-assisted-name-modal').textContent = assisted.name;
-                const demandsListContainer = document.getElementById('demands-list-container');
+                const demandsListContainer = document.getElementById('demands-modal-list-container'); // Usar ID atualizado
                 demandsListContainer.innerHTML = '';
 
                 const demands = assisted.demandas?.descricoes || [];
@@ -2065,9 +2131,43 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
 
                     if (button.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5); }
-                    if (button.classList.contains('attend-btn')) {
+                    
+                    // Lógica para o novo botão 'Atender' na coluna 'Aguardando'
+                    if (button.classList.contains('select-collaborator-btn')) {
+                        assistedIdToHandle = id;
+                        assistedNameToHandle = button.dataset.name;
+                        document.getElementById('assisted-to-attend-name').textContent = assistedNameToHandle;
+                        
+                        const collaboratorSelectionList = document.getElementById('collaborator-selection-list');
+                        collaboratorSelectionList.innerHTML = '';
+                        if (colaboradores.length === 0) {
+                            collaboratorSelectionList.innerHTML = '<p class="text-gray-500 text-center">Nenhum colaborador registrado. Adicione um na seção "Colaboradores".</p>';
+                        } else {
+                            colaboradores.forEach(collab => {
+                                const label = document.createElement('label');
+                                label.className = 'flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50';
+                                label.innerHTML = `
+                                    <input type="radio" name="selectedCollaborator" value="${collab.id}" data-name="${collab.nome}" class="h-5 w-5 text-blue-600 focus:ring-blue-500">
+                                    <span class="ml-3 font-semibold text-gray-800">${collab.nome}</span>
+                                `;
+                                collaboratorSelectionList.appendChild(label);
+                            });
+                        }
+                        document.getElementById('select-collaborator-modal').classList.remove('hidden');
+                    }
+                    
+                    // Lógica para o botão 'Delegar Finalização' na coluna 'Em Atendimento'
+                    if (button.classList.contains('delegate-finalization-btn')) {
+                        const collaboratorName = button.dataset.collaboratorName;
+                        const externalLink = `atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${id}&collaboratorName=${encodeURIComponent(collaboratorName)}`;
+                        window.open(externalLink, '_blank');
+                        showNotification("Link de finalização gerado e aberto em nova aba.");
+                    }
+
+                    // Lógica para o botão 'Finalizar Diretamente' na coluna 'Em Atendimento'
+                    if (button.classList.contains('attend-directly-btn')) {
                         const attendantInput = document.getElementById('attendant-name');
-                        attendantInput.value = '';
+                        attendantInput.value = ''; // Limpar o campo
                         const datalist = document.getElementById('collaborators-list');
                         datalist.innerHTML = '';
                         colaboradores.forEach(c => {
@@ -2078,10 +2178,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         assistedIdToHandle = id;
                         document.getElementById('attendant-modal').classList.remove('hidden');
                     }
+
                     if (button.classList.contains('faltou-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'faltoso' })); showNotification("Marcado como faltoso."); }
-                    if (button.classList.contains('return-to-pauta-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'pauta', arrivalTime: null, priority: null })); showNotification("Retornado para a pauta."); }
+                    if (button.classList.contains('return-to-pauta-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'pauta', arrivalTime: null, priority: null, assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para a pauta."); }
                     if (button.classList.contains('return-to-pauta-from-faltoso-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'pauta' })); showNotification("Revertido para a pauta."); }
-                    if (button.classList.contains('return-to-aguardando-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', attendant: null, attendedTime: null })); showNotification("Retornado para aguardando."); }
+                    if (button.classList.contains('return-to-aguardando-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', attendant: null, attendedTime: null, assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
+                    if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
                     if (button.classList.contains('delete-btn')) { if(confirm("Tem certeza que deseja apagar este registro permanentemente?")) { await deleteDoc(docRef); showNotification("Registro apagado."); }}
                     if (button.classList.contains('priority-btn')) { assistedIdToHandle = id; document.getElementById('priority-reason-modal').classList.remove('hidden'); }
                     if (button.classList.contains('edit-assisted-btn')) { 
@@ -2155,7 +2257,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time').value : null;
 
         // Adicionada validação para o horário agendado.
-        if (isScheduled && !scheduledTimeValue) {
+        if (isScheduled && !scheduledTimeValue && !hasArrived) { // Só é obrigatório se for agendado e AINDA não chegou
             showNotification("Por favor, informe o horário agendado.", "error");
             return;
         }
@@ -2181,6 +2283,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         status: hasArrived ? 'aguardando' : 'pauta',
         scheduledTime: scheduledTimeValue,
         arrivalTime: hasArrived ? arrivalDate.toISOString() : null,
+        assignedCollaborator: null, // Novo campo
+        inAttendanceTime: null, // Novo campo
+        finalizadoPeloColaborador: false, // Novo campo
         createdAt: new Date().toISOString()
     });
 
@@ -2201,6 +2306,27 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ status: 'aguardando', arrivalTime: arrivalDate.toISOString() }));
                     button.closest('.fixed').classList.add('hidden');
                 }
+                
+                // Lógica do novo modal de seleção de colaborador
+                if (button.id === 'confirm-select-collaborator-btn') {
+                    const selectedCollaboratorRadio = document.querySelector('input[name="selectedCollaborator"]:checked');
+                    if (!selectedCollaboratorRadio) {
+                        showNotification("Por favor, selecione um colaborador.", "error");
+                        return;
+                    }
+                    const collaboratorId = selectedCollaboratorRadio.value;
+                    const collaboratorName = selectedCollaboratorRadio.dataset.name;
+
+                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({
+                        status: 'emAtendimento',
+                        assignedCollaborator: { id: collaboratorId, name: collaboratorName },
+                        inAttendanceTime: new Date().toISOString()
+                    }));
+                    document.getElementById('select-collaborator-modal').classList.add('hidden');
+                    showNotification(`${assistedNameToHandle} atribuído a ${collaboratorName}.`);
+                }
+
+                // Ação de confirmar atendimento (antiga, agora para "Finalizar Diretamente")
                 if (button.id === 'confirm-attendant-btn') {
                     const attendantName = document.getElementById('attendant-name').value.trim();
                     await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ status: 'atendido', attendant: attendantName, attendedTime: new Date().toISOString() }));
@@ -2300,12 +2426,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 }
                 
-                if (button.id === 'add-demand-btn') {
-                    const input = document.getElementById('new-demand-input');
+                // Usar os IDs atualizados para o modal de demandas
+                if (button.id === 'demands-modal-add-demand-btn') {
+                    const input = document.getElementById('demands-modal-new-demand-input');
                     const text = input.value.trim();
                     if(text) {
-                        const demandsListContainer = document.getElementById('demands-list-container');
-                        if(demandsListContainer.querySelector('p')) {
+                        const demandsListContainer = document.getElementById('demands-modal-list-container');
+                        if(demandsListContainer.querySelector('p.text-gray-500')) { // Verifica se é a mensagem de "Nenhuma demanda"
                             demandsListContainer.innerHTML = '';
                         }
                         const li = document.createElement('li');
@@ -2322,13 +2449,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (button.classList.contains('remove-demand-item-btn')) {
                     const li = button.parentElement;
                     li.remove();
-                    const demandsListContainer = document.getElementById('demands-list-container');
+                    const demandsListContainer = document.getElementById('demands-modal-list-container'); // Usar ID atualizado
                     if (demandsListContainer.children.length === 0) {
                          demandsListContainer.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
                     }
                 }
                 if (button.id === 'save-demands-btn') {
-                    const demandsListContainer = document.getElementById('demands-list-container');
+                    const demandsListContainer = document.getElementById('demands-modal-list-container'); // Usar ID atualizado
                     const items = demandsListContainer.querySelectorAll('li');
                     const descricoes = Array.from(items).map(li => li.firstChild.textContent);
                     const demandsData = {
@@ -2350,6 +2477,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (button.id === 'close-documents-modal-btn' || button.id === 'cancel-checklist-btn') {
                      document.getElementById('documents-modal').classList.add('hidden');
                 }
+                // Adicionado: Botões de cancelamento para o novo modal de seleção de colaborador
+                if (button.id === 'cancel-select-collaborator-btn') {
+                    document.getElementById('select-collaborator-modal').classList.add('hidden');
+                }
+
 
                 if (button.classList.contains('toggle-details-btn')) {
                     const card = button.closest('div.p-4');
@@ -2866,7 +2998,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 <script src="https://cdn.jsdelivr.net/npm/emailjs-com@2/dist/email.min.js"></script>
 <script>
   (function(){
-    emailjs.init("SEU_USER_ID"); // substituir pelo ID do EmailJS
+    emailjs.init("YOUR_EMAILJS_USER_ID"); // substituir pelo ID do EmailJS
   })();
 
   const notesBtn = document.getElementById("notes-btn");
@@ -2896,9 +3028,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     if (!notes) return;
 
     try {
-      await emailjs.send("SEU_SERVICE_ID", "SEU_TEMPLATE_ID", {
+      await emailjs.send("YOUR_EMAILJS_SERVICE_ID", "YOUR_EMAILJS_TEMPLATE_ID", {
         message: notes,
-        email_to: "SEU_EMAIL@dominio.com"
+        email_to: "YOUR_EMAIL@dominio.com" // Substitua pelo seu email
       });
       console.log("Anotações enviadas por e-mail!");
     } catch (err) {
@@ -2910,7 +3042,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
   const closePautaBtn = document.getElementById("close-pauta-btn");
   if (closePautaBtn) {
     closePautaBtn.addEventListener("click", async () => {
-      await sendNotesByEmail();
+      // Adicionado delay para garantir que a autenticação de senha seja processada primeiro
+      setTimeout(async () => {
+        const isClosed = document.getElementById('close-pauta-password').value !== ''; // Simplistic check for re-auth success
+        if (isClosed) { // Only send email if pauta is successfully closed/reopened
+          await sendNotesByEmail();
+        }
+      }, 500); // Pequeno atraso para a modal de senha processar
     });
   }
 </script>
