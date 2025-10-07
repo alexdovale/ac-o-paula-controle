@@ -1818,8 +1818,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         loadingText.innerHTML = 'Sua conta está pendente de aprovação. <br> Por favor, aguarde.';
                         document.querySelector('.loader').style.display = 'none';
                     }
+                } else {
+                    showScreen('login');
                 }
-            }
+            });
         };
 
         const showScreen = (screenName) => {
@@ -2473,8 +2475,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                     if (button.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5); }
                     
-                    // Lógica para o novo botão 'Atender' na coluna 'Aguardando'
-                    if (button.classList.contains('select-collaborator-btn')) {
+                    // Lógica para o botão "Atender" na coluna "Aguardando"
+                    if (button.classList.contains('select-collaborator-btn')) { // Fluxo de delegação ativado
                         assistedIdToHandle = id;
                         assistedNameToHandle = button.dataset.name;
                         document.getElementById('assisted-to-attend-name').textContent = assistedNameToHandle;
@@ -2510,7 +2512,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
 
                     // Botão "Atender" para o fluxo antigo (sem delegação)
-                    if (button.classList.contains('attend-directly-from-aguardando-btn')) {
+                    if (button.classList.contains('attend-directly-from-aguardando-btn')) { // Fluxo de delegação desativado
                         assistedIdToHandle = id;
                         const attendantInput = document.getElementById('attendant-name');
                         attendantInput.value = ''; // Limpar o campo para nova atribuição
@@ -3210,4 +3212,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
-
