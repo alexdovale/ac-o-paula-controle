@@ -528,7 +528,7 @@
                                 <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                                     <tr>
                                         <th scope="col" class="py-3 px-6">Nome</th>
-                                        <th scope="col" class="py-3 px-6">Email</th> <!-- Novo cabeçalho para Email -->
+                                        <th scope="col" class="py-3 px-6">Email</th> <!-- NOVO: Cabeçalho para Email -->
                                         <th scope="col" class="py-3 px-6">Deslocamento</th>
                                         <th scope="col" class="py-3 px-6">Presença</th>
                                         <th scope="col" class="py-3 px-6">Horário</th>
@@ -1595,7 +1595,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const localEncontro = collaboratorFormModal.querySelector('input[name="localEncontro-colaborador"]:checked')?.value || '';
             const observacao = collaboratorObsModal.value;
 
-            const collaboratorData = { nome, email, telefone, transporte, localEncontro, observacao };
+            const collaboratorData = { nome, email, telefone, transporte, localEncontro, observacao }; // Inclui email
 
             try {
                 const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
@@ -2740,7 +2740,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
     if (currentMode === 'agendamento') {
         isScheduled = document.querySelector('input[name="is-scheduled"]:checked').value === 'yes';
-        hasArrived = document.querySelector('input[name="has-arrived"]:checked').value === 'yes';
+        hasArrived = document.querySelector('input[name="has-arrived']:checked').value === 'yes';
         scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time').value : null;
 
         // Adicionada validação para o horário agendado.
@@ -3065,6 +3065,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 console.log("assisted_name (nome do assistido):", assistedNameForDelegation);
                 console.log("collaborator_name (nome do colaborador):", collaboratorNameForDelegation);
                 console.log("finalization_link (link gerado):", externalLink);
+                console.log("name (remetente):", currentUserName); // Adicionado
+                console.log("email (email de resposta):", auth.currentUser?.email || "noreply@example.com"); // Adicionado
                 console.log("-------------------------------");
                 // --- FIM DOS CONSOLE.LOGS DE DEBUG ---
 
@@ -3077,7 +3079,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             to_email: collaboratorEmail,
                             assisted_name: assistedNameForDelegation,
                             collaborator_name: collaboratorNameForDelegation,
-                            finalization_link: externalLink
+                            finalization_link: externalLink,
+                            name: currentUserName, // Adicionado
+                            email: auth.currentUser?.email || "noreply@example.com" // Adicionado
                         }
                     );
                     showNotification("Link de finalização enviado com sucesso por e-mail!", "success");
@@ -3298,7 +3302,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 <script src="https://cdn.jsdelivr.net/npm/emailjs-com@2/dist/email.min.js"></script>
 <script>
   (function(){
-    // SUBSTITUA "aGL-Q2UJcD2tDpUKq" PELA SUA PUBLIC KEY REAL DO EmailJS
+    // PUBLIC KEY REAL DO EmailJS
     emailjs.init("aGL-Q2UJcD2tDpUKq"); // Sua Public Key do EmailJS
   })();
 
@@ -3308,23 +3312,18 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
   const saveNotesBtn = document.getElementById("save-notes-btn");
   const notesText = document.getElementById("notes-text");
 
-  // As referências para os elementos do modal de confirmação (showConfirmModal)
-  // não foram encontradas no escopo global deste script, presumo que estão no script principal
   const confirmModal = document.getElementById('confirm-modal');
   const modalText = document.getElementById('modal-text');
   const confirmActionBtn = document.getElementById('confirm-action');
   const cancelActionBtn = document.getElementById('cancel-action');
-  let actionToConfirm = null; // Variável para armazenar a callback da ação a ser confirmada
+  let actionToConfirm = null;
 
-  // Função showConfirmModal precisa ser acessível globalmente ou ser passada
-  // Aqui, recrio-a para garantir que esteja definida
   function showConfirmModal(callback, message) {
     modalText.innerHTML = message;
-    confirmModal.classList.remove('hidden'); // Use classList.remove para Tailwind CSS
+    confirmModal.classList.remove('hidden');
     actionToConfirm = callback;
   }
 
-  // Event Listeners para o modal de confirmação
   if (confirmActionBtn) {
     confirmActionBtn.addEventListener('click', () => {
         if (actionToConfirm) {
@@ -3355,8 +3354,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
   saveNotesBtn.addEventListener("click", () => {
     localStorage.setItem("pauta_notes", notesText.value);
-    // showNotification("Anotação salva!", "success"); // Melhor usar showNotification
-    alert("Anotação salva!"); // Mantendo o alert como estava
+    alert("Anotação salva!");
     notesModal.classList.add("hidden");
   });
 
@@ -3365,35 +3363,31 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     if (!notes) return;
 
     try {
-      // SUBSTITUA "service_r1nxe6a" E "template_fbd7yud" PELOS IDs REAIS
       await emailjs.send(
         "service_r1nxe6a", // Seu Service ID para anotações
         "template_ynrwaxt", // Seu Template ID para Anotações (ATUALIZADO)
         {
             message: notes,
-            email_to: "SEU_EMAIL_DESTINO_ANOTACOES@dominio.com" // Substitua pelo seu email para receber as anotações
+            email_to: "SEU_EMAIL_DESTINO_ANOTACOES@dominio.com", // Substitua pelo seu email para receber as anotações
+            name: currentUserName, // Adicionado
+            email: auth.currentUser?.email || "noreply@example.com" // Adicionado
         }
       );
       console.log("Anotações enviadas por e-mail!");
     } catch (err) {
       console.error("Erro ao enviar email de anotações:", err);
-      // showNotification("Erro ao enviar as anotações por e-mail.", "error"); // Melhor usar showNotification
     }
   }
 
-  // Integrar com o botão de fechar pauta (se ainda usar o EmailJS para isso)
   const closePautaBtn = document.getElementById("close-pauta-btn");
   if (closePautaBtn) {
     closePautaBtn.addEventListener("click", async () => {
-      // Adicionado delay para garantir que a autenticação de senha seja processada primeiro
       setTimeout(async () => {
-        // Isso é uma verificação simples, a lógica real de reautenticação é mais complexa e está no script principal.
-        // Aqui, assumimos que se o modal de senha não está mais visível, a ação prosseguiu.
         const isPasswordModalHidden = document.getElementById('close-pauta-modal').classList.contains('hidden');
         if (isPasswordModalHidden) { 
           await sendNotesByEmail();
         }
-      }, 500); // Pequeno atraso para a modal de senha processar
+      }, 500);
     });
   }
 </script>
