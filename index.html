@@ -3052,7 +3052,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     return;
                 }
 
-                const baseUrl = window.location.origin;
+                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
                 const externalLink = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(collaboratorNameForDelegation)}`;
 
                 // --- INÍCIO DOS CONSOLE.LOGS DE DEBUG ---
@@ -3394,3 +3394,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
