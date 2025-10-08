@@ -1,3 +1,5 @@
+Okay, entendi as suas novas solicitações. Vamos ajustar o código para incluir essas funcionalidades e correções:
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -907,7 +909,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         { text: "Procedimento de Fixação dos Limites da Curatela (antiga interdição)", description: "Processo para instituir a curatela, definindo os atos para os quais a pessoa precisará de assistência." },
                         { text: "Levantamento de Curatela", description: "Ação para encerrar a curatela quando a causa da incapacidade cessa ou a pessoa recupera a autonomia." }
                     ]},
-                    { text: "Tutela", description: "Medida judicial que nomeia um tutor para cuidar de um menor que não tem pais ou cujos pais perderam o poder familiar." },
+                    { text: "Tutela", description: "Medida judicial que nomeia um tutor para cuidar de um menor que não tem pais ou cujos pais que perderam o poder familiar." },
                     { text: "Adoção", description: "Processo judicial para estabelecer um novo vínculo de filiação, em que uma criança ou adolescente se torna filho legal de pais adotivos." }
                 ]
             },
@@ -1243,7 +1245,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         ${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : ''}
                         <button data-id="${a.id}" class="edit-assisted-btn bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar</button>
                     </div>
-                    ${a.lastActionBy ? `<div class="mt-2">${returnToPautaBtn}</div>` : ''}
+                    ${returnToPautaBtn ? `<div class="mt-2">${returnToPautaBtn}</div>` : ''}
                     ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
                     `;
                 return card;
@@ -1307,6 +1309,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         </div>
                         <button data-id="${a.id}" class="toggle-confirmed-atendido w-full text-white font-semibold py-1 px-3 rounded-lg text-xs ${confirmedClass}">
                             ${confirmedText}
+                            ${a.isConfirmed && a.confirmationDetails ? `<br><span class="text-xs opacity-75">Por: ${a.confirmationDetails.confirmedBy} em ${new Date(a.confirmationDetails.confirmedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}</span>` : ''}
                         </button>
                     </div>
                     <div class="text-right mt-1">
@@ -1335,6 +1338,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         </div>
                         <button data-id="${a.id}" class="toggle-confirmed-faltoso w-full text-white font-semibold py-1 px-3 rounded-lg text-xs ${confirmedClass}">
                             ${confirmedText}
+                            ${a.isConfirmed && a.confirmationDetails ? `<br><span class="text-xs opacity-75">Por: ${a.confirmationDetails.confirmedBy} em ${new Date(a.confirmationDetails.confirmedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}</span>` : ''}
                         </button>
                     </div>
                     ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
@@ -2455,7 +2459,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                                          scheduledTime,
                                          status: 'pauta',
                                          type: 'agendamento',
-                                         createdAt: new Date().toISOString()
+                                         createdAt: new Date().toISOString(),
+                                         isConfirmed: false, // Novo campo
+                                         confirmationDetails: null // Novo campo
                                      }));
                                      processedCount++;
                                  }
@@ -2504,7 +2510,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 docPDF.text(`Total de Assuntos: ${totalSubjects}`, 100, 36);
 
 
-                const tableColumn = ["#", "Nome", "CPF", "Assunto Principal", "Atendente", "Finalizado", "Duração"];
+                const tableColumn = ["#", "Nome", "CPF", "Assunto Principal", "Atendente", "Finalizado", "Duração", "Confirmado"]; // Adicionado "Confirmado"
                 const tableRows = [];
 
                 atendidos.forEach((item, index) => {
@@ -2518,6 +2524,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
 
                     const cleanString = (str) => String(str || '').replace(/"/g, '');
+                    
+                    const confirmedStatus = item.isConfirmed ? `Sim (${item.confirmationDetails?.confirmedBy || 'N/A'})` : 'Não'; // Detalhes da confirmação
 
                     const rowData = [
                         index + 1,
@@ -2525,8 +2533,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         cleanString(item.cpf),
                         cleanString(item.subject),
                         cleanString(item.attendant) || 'N/A',
-                        item.attendedTime ? new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A', // Corrigido para garantir string
-                        duration
+                        item.attendedTime ? new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+                        duration,
+                        confirmedStatus // Adicionado ao PDF
                     ];
                     tableRows.push(rowData);
                 });
@@ -2698,7 +2707,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (button.classList.contains('return-to-pauta-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'pauta', arrivalTime: null, priority: null, assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para a pauta."); }
                     if (button.classList.contains('return-to-pauta-from-faltoso-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'pauta' })); showNotification("Revertido para a pauta."); }
                     if (button.classList.contains('return-to-aguardando-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', attendant: null, attendedTime: null, assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
-                    if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
                     if (button.classList.contains('delete-btn')) { if(confirm("Tem certeza que deseja apagar este registro permanentemente?")) { await deleteDoc(docRef); showNotification("Registro apagado."); }}
                     if (button.classList.contains('priority-btn')) { assistedIdToHandle = id; document.getElementById('priority-reason-modal').classList.remove('hidden'); }
                     if (button.classList.contains('edit-assisted-btn')) { 
