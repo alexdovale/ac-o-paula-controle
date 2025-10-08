@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Gerenciamento de Pauta - SIGEP</title>
+    <title>Sistema de Gerenciamento de Pauta - SIGAP</title>
 
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
 
@@ -29,6 +29,33 @@
         .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
         .loader { border: 6px solid #f3f3f3; border-top: 6px solid #16a34a; border-radius: 50%; width: 50px; height: 50px; animation: spin 1.5s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Estilos para o botão de confirmado */
+        .confirm-btn-style {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px; /* Ligeiramente maior para visibilidade */
+            height: 28px; /* Ligeiramente maior para visibilidade */
+            border-radius: 50%;
+            border: 1px solid currentColor;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            flex-shrink: 0; 
+            margin-left: 8px; /* Espaçamento do nome */
+        }
+        .confirm-btn-icon {
+            width: 18px; /* Tamanho do ícone */
+            height: 18px; /* Tamanho do ícone */
+            color: white; /* Cor do ícone */
+        }
+        /* Reduzindo o espaçamento dos cards */
+        .grid.gap-2 > div {
+            padding: 0.5rem; /* Ajuste para preenchimento interno dos cards */
+        }
+        .space-y-2 > * + * {
+            margin-top: 0.25rem; /* Espaçamento vertical entre elementos internos do card */
+        }
+
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -37,7 +64,7 @@
 
     <div id="login-container" class="hidden min-h-screen flex items-center justify-center">
         <div class="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
-            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="mx-auto h-24 w-auto mb-6">
+            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGAP" class="mx-auto h-24 w-auto mb-6">
             <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Sistema de Gerenciamento de Pauta</h2>
             <div id="auth-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden" role="alert"></div>
             <div class="flex border-b mb-6">
@@ -66,7 +93,7 @@
 
     <div id="pauta-selection-container" class="hidden max-w-4xl mx-auto">
         <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-800">Sistema de Gerenciamento de Pauta - SIGEP</h1>
+            <h1 class="text-3xl font-bold text-gray-800">Sistema de Gerenciamento de Pauta - SIGAP</h1>
         </div>
         <div class="flex justify-between items-center mb-6">
               <h2 class="text-3xl font-bold text-gray-800">Minhas Pautas</h2>
@@ -93,7 +120,7 @@
     <div id="app-container" class="max-w-full mx-auto hidden">
         <header class="mb-6 space-y-4">
             <div class="flex justify-center items-center w-full relative">
-                 <h1 class="text-xl font-semibold text-gray-600 text-center">Sistema de Gerenciamento de Pauta - SIGEP</h1>
+                 <h1 class="text-xl font-semibold text-gray-600 text-center">Sistema de Gerenciamento de Pauta - SIGAP</h1>
                  <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
                             <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
@@ -149,11 +176,6 @@
                                 </svg>
                                 <span>Colaboradores</span>
                             </button>
-
-                            <a href="manual.html" target="_blank" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors whitespace-nowrap">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-blue-500"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
-                                <span>Manual do Usuário</span>
-                            </a>
                             
                             <button id="notes-btn" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-indigo-700 bg-indigo-100 rounded-lg hover:bg-indigo-200 transition-colors whitespace-nowrap">
                                 <svg xmlns='http://www.w3.org/2000/svg' class='w-5 h-5 text-indigo-500' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
@@ -250,7 +272,7 @@
                      <button type="button" id="add-assisted-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition shadow-md w-full lg:w-auto">Adicionar</button>
                 </div>
             </form>
-            <main id="main-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <main id="main-content" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 w-full">
                 <div id="pauta-column" class="bg-white rounded-lg shadow-md flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
@@ -259,7 +281,7 @@
                         </h3>
                         <input type="search" id="pauta-search" placeholder="Pesquisar por nome, CPF, assunto..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
-                    <div id="pauta-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                    <div id="pauta-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
                 <div class="bg-white rounded-lg shadow-md flex flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
@@ -269,7 +291,7 @@
                         </h3>
                         <input type="search" id="aguardando-search" placeholder="Pesquisar por nome, CPF, assunto..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
-                    <div id="aguardando-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                    <div id="aguardando-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
                 <!-- Nova Coluna: Em Atendimento -->
                 <div id="em-atendimento-column" class="bg-white rounded-lg shadow-md flex flex-col hidden"> <!-- Inicialmente escondida, visibilidade controlada pelo JS -->
@@ -280,10 +302,10 @@
                         </h3>
                         <input type="search" id="em-atendimento-search" placeholder="Pesquisar por nome, colaborador..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
-                    <div id="em-atendimento-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                    <div id="em-atendimento-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
                 <!-- Fim da Nova Coluna: Em Atendimento -->
-                <div class="bg-white rounded-lg shadow-md flex flex-col">
+                <div id="atendidos-column" class="bg-white rounded-lg shadow-md flex flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <div class="flex justify-between items-center mb-3">
                              <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center w-full">
@@ -294,9 +316,9 @@
                         </div>
                         <input type="search" id="atendidos-search" placeholder="Pesquisar por nome, CPF, assunto..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
-                    <div id="atendidos-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                    <div id="atendidos-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
-                 <div id="faltosos-column" class="bg-white rounded-lg shadow-md flex-col hidden">
+                 <div id="faltosos-column" class="bg-white rounded-lg shadow-md flex flex-col hidden">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <div class="flex justify-between items-center mb-3">
                             <h3 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
@@ -306,7 +328,7 @@
                         </div>
                         <input type="search" id="faltosos-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
-                    <div id="faltosos-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                    <div id="faltosos-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
             </main>
             <div class="mt-8 flex justify-center">
@@ -561,7 +583,7 @@
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold mb-4">Confirmar Horário de Chegada</h2><p class="mb-4 text-gray-600">Por favor, informe o horário de chegada do assistido.</p><input type="time" id="arrival-time-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6"><div class="flex justify-end space-x-4"><button id="cancel-arrival-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button><button id="confirm-arrival-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button></div></div>
     </div>
 
-    <!-- Modal de Finalização de Atendimento -->
+    <!-- Modal de Finalização de Atendimento (Antigo) - Mantido para 'Finalizar Diretamente' ou 'Editar Atendente' -->
     <div id="attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Finalizar Atendimento</h2>
@@ -770,23 +792,23 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
             <div id="policy-content" class="text-gray-700 space-y-4 overflow-y-auto pr-2">
                 <p><strong>1. Natureza do Sistema e Ciclo de Vida dos Dados</strong></p>
-                <p>O Sistema de Gerenciamento de Pauta (SIGEP) é uma interface de controle para a gestão de atendimentos. Ele coleta e armazena os dados pessoais de assistidos, como nome, CPF (opcional), assunto e demanda, por um período de sete dias após a finalização da ação. Após esse prazo, os dados são permanentemente excluídos do SIGEP.</p> <!-- SIGLA CORRIGIDA -->
+                <p>O Sistema de Gerenciamento de Pauta (SIGAP) é uma interface de controle para a gestão de atendimentos. Ele coleta e armazena os dados pessoais de assistidos, como nome, CPF (opcional), assunto e demanda, por um período de sete dias após a finalização da ação. Após esse prazo, os dados são permanentemente excluídos do SIGAP.</p>
                 <p>Para o armazenamento permanente, todos os dados são enviados e salvos no sistema Verde, que é de responsabilidade da Defensoria Pública do Estado do Rio de Janeiro (DPERJ) e está em total conformidade com a LGPD.</p>
 
-                <p><strong>2. Dados Coletados pelo SIGEP</strong></p> <!-- SIGLA CORRIGIDA -->
-                <p>Para permitir o uso da interface, o SIGEP coleta apenas os dados de autenticação dos usuários (profissionais): e-mail e senha.</p>
+                <p><strong>2. Dados Coletados pelo SIGAP</strong></p>
+                <p>Para permitir o uso da interface, o SIGAP coleta apenas os dados de autenticação dos usuários (profissionais): e-mail e senha.</p>
 
-                <p><strong>3. Tratamento e Proteção de Dados (dentro do SIGEP)</strong></p> <!-- SIGLA CORRIGIDA -->
+                <p><strong>3. Tratamento e Proteção de Dados (dentro do SIGAP)</strong></p>
                 <p>Os dados de autenticação são utilizados para garantir o acesso restrito e seguro ao sistema. Os dados de assistidos são armazenados por apenas sete dias, tempo necessário para a conclusão da ação, e são protegidos por medidas de segurança para evitar acesso não autorizado.</p>
 
                 <p><strong>4. Direitos dos Titulares dos Dados</strong></p>
-                <p>Os direitos dos assistidos, como acesso, correção e exclusão de dados, são garantidos e exercidos diretamente por meio do sistema Verde, que é o responsável pelo armazenamento final. Os usuários do SIGEP podem gerenciar a pauta e solicitar alterações no sistema Verde conforme as normas da DPERJ.</p> <!-- SIGLA CORRIGIDA -->
+                <p>Os direitos dos assistidos, como acesso, correção e exclusão de dados, são garantidos e exercidos diretamente por meio do sistema Verde, que é o responsável pelo armazenamento final. Os usuários do SIGAP podem gerenciar a pauta e solicitar alterações no sistema Verde conforme as normas da DPERJ.</p>
 
                 <p><strong>5. Origem e Transferência de Dados dos Assistidos</strong></p>
-                <p>Os dados dos assistidos gerenciados no SIGEP podem ter duas origens:</p> <!-- SIGLA CORRIGIDA -->
+                <p>Os dados dos assistidos gerenciados no SIGAP podem ter duas origens:</p>
                 <p><strong>Importação do Sistema Verde:</strong> A maior parte dos dados (nome, horário, assunto) é transferida manualmente do sistema oficial Verde (DPERJ) através de um processo de exportação e importação. Neste fluxo, o CPF do assistido não é transferido.</p>
-                <p><strong>Cadastro Direto no SIGEP:</strong> Novos atendimentos, como os avulsos, podem ser registrados diretamente na plataforma. Nesses casos, o campo CPF é opcional e pode ser preenchido pelo profissional responsável pelo cadastro (criador ou membro da pauta).</p>
-                <p>O processo de transferência manual consiste na exportação da pauta do sistema Verde, quando houver pauta previamente cadastrada, sua conversão para um formato compatível e a importação do arquivo final no SIGEP. Cabe ao usuário responsável pela transferência garantir a segurança dos dados durante este processo, incluindo a exclusão segura dos arquivos intermediários (como PDFs e CSVs) de seus dispositivos locais após a importação bem-sucedida. O SIGEP não se responsabiliza pelo manuseio dos dados fora de sua plataforma, mas orienta todos os usuários a seguirem as melhores práticas de segurança para proteger a privacidade dos assistidos.</p> <!-- SIGLA CORRIGIDA -->
+                <p><strong>Cadastro Direto no SIGAP:</strong> Novos atendimentos, como os avulsos, podem ser registrados diretamente na plataforma. Nesses casos, o campo CPF é opcional e pode ser preenchido pelo profissional responsável pelo cadastro (criador ou membro da pauta).</p>
+                <p>O processo de transferência manual consiste na exportação da pauta do sistema Verde, quando houver pauta previamente cadastrada, sua conversão para um formato compatível e a importação do arquivo final no SIGAP. Cabe ao usuário responsável pela transferência garantir a segurança dos dados durante este processo, incluindo a exclusão segura dos arquivos intermediários (como PDFs e CSVs) de seus dispositivos locais após a importação bem-sucedida. O SIGAP não se responsabiliza pelo manuseio dos dados fora de sua plataforma, mas orienta todos os usuários a seguirem as melhores práticas de segurança para proteger a privacidade dos assistidos.</p>
             </div>
             <div class="flex justify-end mt-6 flex-shrink-0">
                 <button id="close-policy-modal-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Fechar</button>
@@ -1013,19 +1035,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
         // Variáveis Globais
         let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '', currentPautaOwnerId = null, isPautaClosed = false;
-        let currentPautaData = null;
+        let currentPautaData = null; // Para armazenar todos os dados da pauta atual
         let assistedIdToHandle = null;
-        let assistedNameToHandle = null;
+        let assistedNameToHandle = null; // Adicionado para passar o nome para o modal de seleção de colaborador
         let currentChecklistAction = null;
 
-        // Variáveis para o modal de delegação de e-mail
+        // Variáveis para o novo modal de delegação de e-mail
         let assistedIdForDelegation = null;
         let assistedNameForDelegation = null;
-        let collaboratorNameForDelegation = null;
+        let collaboratorNameForDelegation = null; // Nome do colaborador já atribuído ao assistido, se houver.
 
         // Variáveis para a lógica de Colaboradores (lista de presença)
-        let colaboradores = [];
-        let editCollaboratorId = null;
+        let colaboradores = []; // Esta é a lista de colaboradores (da lista de presença)
+        let editCollaboratorId = null; // ID do colaborador sendo editado na lista de presença
         let unsubscribeFromCollaborators = () => {};
 
         const loadingContainer = document.getElementById('loading-container');
@@ -1096,7 +1118,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 btn.disabled = isClosed;
             });
 
-            const actionButtons = document.querySelectorAll('.check-in-btn, .delegate-finalization-btn, .attend-directly-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn, .toggle-confirmed-atendido, .toggle-confirmed-faltoso, .return-from-atendido-btn, .return-to-aguardando-from-emAtendimento-btn');
+            const actionButtons = document.querySelectorAll('.check-in-btn, .delegate-finalization-btn, .attend-directly-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn, .toggle-confirmed-atendido, .toggle-confirmed-faltoso'); // Adicionado
             actionButtons.forEach(btn => {
                 btn.disabled = isClosed;
             });
@@ -1104,10 +1126,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             if (isClosed) {
                 document.getElementById('closed-pauta-alert').classList.remove('hidden');
                 document.getElementById('close-pauta-btn').classList.add('hidden');
-                if (isOwner) document.getElementById('reopen-pauta-btn').classList.remove('hidden'); // Apenas o dono pode ver o botão de reabrir
+                document.getElementById('reopen-pauta-btn').classList.remove('hidden');
             } else {
                 document.getElementById('closed-pauta-alert').classList.add('hidden');
-                if (isOwner) document.getElementById('close-pauta-btn').classList.remove('hidden'); // Apenas o dono pode ver o botão de fechar
+                document.getElementById('close-pauta-btn').classList.remove('hidden');
                 document.getElementById('reopen-pauta-btn').classList.add('hidden');
             }
 
@@ -1185,7 +1207,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     return (a.createdAt || 0) - (b.createdAt || 0);
                 }
             });
+            // Ordenação para "Em Atendimento" - mais recente primeiro, ou por colaborador
             emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
+
 
             document.getElementById('pauta-count').textContent = pauta.length;
             document.getElementById('aguardando-count').textContent = aguardando.length;
@@ -1194,6 +1218,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.getElementById('atendidos-count').textContent = atendidos.length;
 
             const render = (el, data, generator) => {
+                // Ajustado o espaçamento entre os cards
                 if(data.length === 0) el.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum resultado.</p>`;
                 else data.forEach((item, index) => el.appendChild(generator(item, index)));
             };
@@ -1212,6 +1237,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         <button data-id="${a.id}" class="faltou-btn bg-yellow-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-yellow-600">Faltou</button>
                         <button data-id="${a.id}" class="edit-assisted-btn col-span-2 bg-gray-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-600">Editar Dados</button>
                     </div>
+                    ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
                 `;
                 return card;
             });
@@ -1219,7 +1245,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             render(aguardandoList, aguardando, (a, index) => {
                 const card = document.createElement('div');
                 card.className = `relative bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)}`;
-                const arrival = a.type === 'agendamento' && a.scheduledTime ? `Ag: ${a.scheduledTime} | Ch: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : `Chegada: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+                const arrival = a.type === 'agendamento' && a.scheduledTime ? `Agendado: ${a.scheduledTime} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : `Chegada: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+                const returnToPautaBtn = a.type === 'agendamento' ? `<button data-id="${a.id}" class="return-to-pauta-btn w-full bg-gray-400 text-white font-semibold py-1 rounded-lg hover:bg-gray-500 text-xs mt-1">Voltar p/ Pauta</button>` : '';
                 
                 let atenderButton;
                 if (currentPautaData?.useDelegationFlow) {
@@ -1228,77 +1255,134 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     atenderButton = `<button data-id="${a.id}" data-name="${a.name}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`;
                 }
 
+
                 card.innerHTML = `
+                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
                     <div class="flex justify-between items-start">
-                        <p class="font-bold text-lg">${index + 1}. ${a.name}</p>
-                        <button data-id="${a.id}" class="delete-btn text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
+                        <div>
+                            <p class="font-bold text-lg">${index + 1}. ${a.name}</p>
+                            <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
+                            <p class="text-sm text-gray-500">${arrival}</p>
+                            <button data-id="${a.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-sm hover:underline font-semibold py-1">Ver Detalhes</button>
+                        </div>
                     </div>
-                    <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
-                    <p class="text-sm text-gray-500">${arrival}</p>
-                    <div class="mt-3 grid grid-cols-3 gap-2">
+                    <div class="mt-3 grid grid-cols-2 lg:grid-cols-3 gap-2">
                         ${atenderButton}
-                        ${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : '<div class="bg-red-500 text-white font-semibold py-2 rounded-lg text-sm text-center">URGENTE</div>'}
+                        ${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : ''}
                         <button data-id="${a.id}" class="edit-assisted-btn bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar</button>
                     </div>
-                `;
+                    ${returnToPautaBtn ? `<div class="mt-2">${returnToPautaBtn}</div>` : ''}
+                    ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
+                    `;
                 return card;
             });
             
+            // Renderizar a nova coluna "Em Atendimento"
             render(emAtendimentoList, emAtendimento, (a, index) => {
                 const card = document.createElement('div');
                 card.className = `relative bg-purple-50 p-4 rounded-lg shadow-sm border-purple-200`;
                 const inAttendanceTime = new Date(a.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 const assignedCollabText = a.assignedCollaborator?.name ? `Colaborador: <strong>${a.assignedCollaborator.name}</strong>` : 'Colaborador: Não atribuído';
                 card.innerHTML = `
+                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
                     <p class="font-bold text-lg">${index + 1}. ${a.name}</p>
+                    ${a.cpf ? `<p class="text-sm text-gray-500">CPF: <strong>${a.cpf}</strong></p>` : ''}
+                    <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
                     <p class="text-sm">${assignedCollabText}</p>
                     <p class="text-sm text-gray-500">Início: ${inAttendanceTime}</p>
                     <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
                         <button data-id="${a.id}" data-name="${a.name}" data-collaborator-name="${a.assignedCollaborator?.name || 'Não informado'}" data-collaborator-id="${a.assignedCollaborator?.id || ''}" class="delegate-finalization-btn bg-indigo-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-indigo-600">Delegar Finalização</button>
                         <button data-id="${a.id}" data-name="${a.name}" data-collaborator-name="${a.assignedCollaborator?.name || 'Não informado'}" class="attend-directly-btn bg-green-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-600">Finalizar Diretamente</button>
+                        <button data-id="${a.id}" class="return-to-aguardando-from-emAtendimento-btn col-span-2 bg-gray-400 text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-500">Voltar p/ Aguardando</button>
                     </div>
+                    ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
                 `;
                 return card;
             });
 
             render(atendidosList, atendidos, a => {
                 const card = document.createElement('div');
+                const confirmedBtnBgClass = a.isConfirmed ? 'bg-green-500' : 'bg-gray-400';
+                const confirmedBtnHoverClass = a.isConfirmed ? 'hover:bg-green-600' : 'hover:bg-gray-500';
+                const confirmedText = a.isConfirmed ? 'Confirmado' : 'Confirmar';
+                const confirmationInfo = a.isConfirmed && a.confirmationDetails ? 
+                    `<span class="text-xs opacity-75 block">Por: ${a.confirmationDetails.confirmedBy} em ${new Date(a.confirmationDetails.confirmedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}</span>` : '';
+
                 card.className = 'relative bg-green-50 p-4 rounded-lg shadow-sm border-green-200';
                 const totalAssuntos = 1 + (a.demandas?.quantidade ? Number(a.demandas.quantidade) : 0);
                 const demandasInfo = a.demandas?.descricoes?.length > 0 ? `<div class="mt-2 text-xs bg-gray-100 p-2 rounded"><strong class="text-gray-700">Demandas Adicionais (${a.demandas.quantidade || 0}):</strong><ul class="list-disc list-inside pl-2 text-gray-600">${a.demandas.descricoes.map(d => `<li>${d}</li>`).join('')}</ul></div>` : '';
                 card.innerHTML = `
-                    <div class="flex justify-between items-start">
-                        <p class="font-bold text-lg">${a.name} ${totalAssuntos > 1 ? `<span class="text-sm font-medium text-green-600">(${totalAssuntos} assuntos)</span>` : ''}</p>
-                        <button data-id="${a.id}" class="return-from-atendido-btn text-gray-400 hover:text-yellow-600 p-1 rounded-full" title="Reverter Atendimento"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-return-left" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L3.707 7.5H12.5A1.5 1.5 0 0 0 14 6.3V2a.5.5 0 0 1 .5-.5z"/></svg></button>
+                    <div class="flex items-center justify-between">
+                        <p class="font-bold text-lg inline-flex items-center">
+                            ${a.name} ${totalAssuntos > 1 ? `<span class="text-sm font-medium text-green-600 ml-1">(${totalAssuntos} assuntos)</span>` : ''}
+                        </p>
+                        <button data-id="${a.id}" class="toggle-confirmed-atendido confirm-btn-style ${confirmedBtnBgClass} ${confirmedBtnHoverClass} text-white">
+                            <svg class="confirm-btn-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/></svg>
+                        </button>
                     </div>
-                    <div class="mt-2 space-y-2">
-                        <p class="text-sm">Por: <strong>${a.attendant || 'Não informado'}</strong></p>
-                        ${demandasInfo}
-                        <div class="flex items-center gap-2 flex-wrap mt-2 text-xs">
-                            <button data-id="${a.id}" class="manage-demands-btn text-blue-600 hover:underline">Demandas</button>
-                            <span class="text-gray-300">|</span>
-                            <button data-id="${a.id}" class="edit-attendant-btn text-blue-600 hover:underline">Atendente</button>
-                            <span class="text-gray-300">|</span>
-                            <button data-id="${a.id}" class="delete-btn text-red-600 hover:underline">Deletar</button>
+                    <div class="card-details mt-2 space-y-2">
+                        ${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}
+                        <p class="text-sm">Assunto Principal: <strong>${a.subject}</strong></p>
+                        <div class="text-xs text-gray-600 grid grid-cols-3 gap-2 text-center border-y py-2">
+                            <div><strong>Agendado:</strong><br>${a.scheduledTime || 'N/A'}</div>
+                            <div><strong>Chegou:</strong><br>${a.arrivalTime ? new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</div>
+                            <div><strong>Finalizado:</strong><br>${a.attendedTime ? new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</div>
                         </div>
+                        ${demandasInfo}
+                        <div class="flex justify-between items-center mt-2">
+                            <p class="text-sm">Por: <strong>${a.attendant || 'Não informado'}</strong></p>
+                            <div class="flex items-center gap-1 flex-wrap">
+                                <button data-id="${a.id}" class="manage-demands-btn text-blue-600 hover:text-blue-800 font-semibold text-xs py-1 px-2 rounded hover:bg-blue-100">Demandas</button>
+                                <button data-id="${a.id}" class="edit-assisted-btn text-gray-600 hover:text-gray-800 font-semibold text-xs py-1 px-2 rounded hover:bg-gray-100">Dados</button>
+                                <button data-id="${a.id}" class="edit-attendant-btn text-green-600 hover:text-green-800 font-semibold text-xs py-1 px-2 rounded hover:bg-green-100">Atendente</button>
+                                <button data-id="${a.id}" class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs py-1 px-2 rounded hover:bg-red-100">Deletar</button>
+                            </div>
+                        </div>
+                        <div class="mt-2 pt-2 border-t flex justify-between items-center">
+                            ${a.lastActionBy ? `<p class="text-xs text-gray-500">Última ação por: <strong>${a.lastActionBy}</strong></p>` : '<div></div>'}
+                            <button data-id="${a.id}" data-assigned-collaborator='${JSON.stringify(a.assignedCollaborator || null)}' class="return-from-atendido-btn ${currentPautaData?.useDelegationFlow ? 'bg-orange-500 hover:bg-orange-600' : 'bg-yellow-500 hover:bg-yellow-600'} text-white font-semibold py-1 px-3 rounded-lg text-xs">
+                                ${currentPautaData?.useDelegationFlow ? 'Voltar p/ Em Atendimento' : 'Voltar p/ Aguardando'}
+                            </button>
+                        </div>
+                        ${confirmationInfo}
                     </div>
-                `;
+                    <div class="text-right mt-1">
+                         <button class="toggle-details-btn text-gray-500 hover:text-gray-800 p-1">
+                             <svg class="pointer-events-none" style="transform: rotate(180deg);" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
+                         </button>
+                    </div>`;
                 return card;
             });
 
             render(faltososList, faltosos, a => {
                 const card = document.createElement('div');
+                const confirmedBtnBgClass = a.isConfirmed ? 'bg-red-500' : 'bg-gray-400';
+                const confirmedBtnHoverClass = a.isConfirmed ? 'hover:bg-red-600' : 'hover:bg-gray-500';
+                const confirmedText = a.isConfirmed ? 'Confirmado' : 'Confirmar';
+                 const confirmationInfo = a.isConfirmed && a.confirmationDetails ? 
+                    `<span class="text-xs opacity-75 block">Por: ${a.confirmationDetails.confirmedBy} em ${new Date(a.confirmationDetails.confirmedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}</span>` : '';
+
                 card.className = 'relative bg-red-50 p-4 rounded-lg shadow-sm border-red-200';
                 card.innerHTML = `
-                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5zM6 6.5a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm3 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm-5 1a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1h-6z"/></svg></button>
-                    <p class="font-bold text-lg">${a.name}</p>
+                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5zM6 6.5a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm3 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm-5 1a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1h-6z"/></svg></button>
+                    <div class="flex items-center justify-between">
+                        <p class="font-bold text-lg inline-flex items-center">
+                            ${a.name}
+                        </p>
+                        <button data-id="${a.id}" class="toggle-confirmed-faltoso confirm-btn-style ${confirmedBtnBgClass} ${confirmedBtnHoverClass} text-white">
+                            <svg class="confirm-btn-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/></svg>
+                        </button>
+                    </div>
                     <div class="mt-2 space-y-2">
+                        ${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}
                         <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
                         <p class="text-sm">Agendado: <strong>${a.scheduledTime}</strong></p>
                         <div class="mt-3">
-                            <button data-id="${a.id}" class="return-to-pauta-from-faltoso-btn w-full bg-gray-500 text-white font-semibold py-1 rounded-lg hover:bg-gray-600 text-xs">Reverter para Pauta</button>
+                            <button data-id="${a.id}" class="return-to-pauta-from-faltoso-btn w-full bg-gray-500 text-white font-semibold py-1 rounded-lg hover:bg-gray-600 text-xs">Revertido para Pauta</button>
                         </div>
+                        ${confirmationInfo}
                     </div>
+                    ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
                 `;
                 return card;
             });
@@ -1431,10 +1515,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 
         // --- INÍCIO DA LÓGICA DE GERENCIAR COLABORADORES (LISTA DE PRESENÇA) ---
+        // Referências aos elementos do modal de colaboradores
         const collaboratorsModal = document.getElementById('collaborators-modal');
         const collaboratorFormModal = document.getElementById('collaborator-form-modal');
         const collaboratorNameModal = document.getElementById('collaborator-name-modal');
-        const collaboratorEmailModal = document.getElementById('collaborator-email-modal');
+        const collaboratorEmailModal = document.getElementById('collaborator-email-modal'); // NOVO CAMPO
         const collaboratorPhoneModal = document.getElementById('collaborator-phone-modal');
         const transporteOptionsModal = document.querySelectorAll('input[name="transporte-colaborador"]');
         const localEncontroGroupModal = document.getElementById('local-encontro-group-modal');
@@ -1445,6 +1530,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         const downloadCollaboratorsPdfBtnModal = document.getElementById('download-collaborators-pdf-modal');
         const clearCollaboratorsListBtnModal = document.getElementById('clear-collaborators-list-modal');
         
+        // Stats
         const totalParticipantsCount = document.getElementById('total-participants-count');
         const selfTransportCount = document.getElementById('self-transport-count');
         const companyTransportCount = document.getElementById('company-transport-count');
@@ -1466,7 +1552,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 renderColaboradores();
             }, (error) => {
                 console.error("Erro no listener de colaboradores: ", error);
-                collaboratorListTableBodyModal.innerHTML = '<tr><td colspan="7" class="text-center py-4">Erro ao carregar colaboradores.</td></tr>';
+                collaboratorListTableBodyModal.innerHTML = '<tr><td colspan="7" class="text-center py-4">Erro ao carregar colaboradores.</td></tr>'; // Ajustado colspan
             });
         }
 
@@ -1477,7 +1563,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             let companyTransport = 0;
             
             if (colaboradores.length === 0) {
-                collaboratorListTableBodyModal.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhum colaborador adicionado.</td></tr>';
+                collaboratorListTableBodyModal.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhum colaborador adicionado.</td></tr>'; // Ajustado colspan
                 totalParticipantsCount.textContent = 0;
                 selfTransportCount.textContent = 0;
                 companyTransportCount.textContent = 0;
@@ -1502,7 +1588,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 newRow.innerHTML = `
                     <td class="py-4 px-6 font-medium text-gray-900">${nomeElement}</td>
-                    <td class="py-4 px-6">${colaborador.email || 'N/A'}</td>
+                    <td class="py-4 px-6">${colaborador.email || 'N/A'}</td> <!-- Exibe o email -->
                     <td class="py-4 px-6">${deslocamentoTexto}</td>
                     <td class="py-4 px-6"><input type="checkbox" class="checkin-checkbox" data-id="${colaborador.id}" ${colaborador.presente ? 'checked' : ''} ${isPautaClosed ? 'disabled' : ''}></td>
                     <td class="py-4 px-6">${colaborador.horario || '--:--'}</td>
@@ -1528,14 +1614,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             selfTransportCount.textContent = selfTransport;
             companyTransportCount.textContent = companyTransport;
 
-            addEventListenersToModalListActions();
+            addEventListenersToModalListActions(); // Re-add event listeners after re-rendering
         }
 
         function resetCollaboratorFormModal() {
             collaboratorFormModal.reset();
             document.querySelector('input[name="transporte-colaborador"][value="Não Confirmado"]').checked = true;
             editCollaboratorId = null;
-            collaboratorsModal.querySelector('h2').textContent = "Lista de Presença de Colaboradores";
+            collaboratorsModal.querySelector('h2').textContent = "Lista de Presença de Colaboradores"; // Reset modal title
             addCollaboratorBtnModal.textContent = "Adicionar Colaborador";
             localEncontroGroupModal.classList.add('hidden');
             observacaoGroupModal.classList.add('hidden');
@@ -1560,13 +1646,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         collaboratorFormModal.addEventListener('submit', async (event) => {
             event.preventDefault();
             const nome = collaboratorNameModal.value;
-            const email = collaboratorEmailModal.value.trim() || null;
+            const email = collaboratorEmailModal.value.trim() || null; // Capture email, allow null
             const telefone = collaboratorPhoneModal.value;
             const transporte = collaboratorFormModal.querySelector('input[name="transporte-colaborador"]:checked').value;
             const localEncontro = collaboratorFormModal.querySelector('input[name="localEncontro-colaborador"]:checked')?.value || '';
             const observacao = collaboratorObsModal.value;
 
-            const collaboratorData = { nome, email, telefone, transporte, localEncontro, observacao };
+            const collaboratorData = { nome, email, telefone, transporte, localEncontro, observacao }; // Inclui email
 
             try {
                 const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
@@ -1605,7 +1691,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         const colaborador = docSnap.data();
                         editCollaboratorId = docId;
                         collaboratorNameModal.value = colaborador.nome;
-                        collaboratorEmailModal.value = colaborador.email || '';
+                        collaboratorEmailModal.value = colaborador.email || ''; // Preenche o campo de email
                         collaboratorPhoneModal.value = colaborador.telefone;
                         collaboratorObsModal.value = colaborador.observacao || '';
                         
@@ -1621,9 +1707,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             localEncontroRadio.dispatchEvent(new Event('change'));
                         }
 
-                        collaboratorsModal.querySelector('h2').textContent = "Editar Colaborador";
+                        collaboratorsModal.querySelector('h2').textContent = "Editar Colaborador"; // Update modal title if needed
                         addCollaboratorBtnModal.textContent = "Salvar Alterações";
-                        collaboratorsModal.querySelector('.flex-grow.overflow-y-auto.pr-2').scrollTop = 0;
+                        collaboratorsModal.querySelector('.flex-grow.overflow-y-auto.pr-2').scrollTop = 0; // Scroll to top of form
                     }
                 });
             });
@@ -1631,6 +1717,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.querySelectorAll('#collaborators-modal .delete-collaborator-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const docId = e.currentTarget.dataset.id;
+                    // Usando o modal de confirmação existente no index.html
                     showConfirmModal(() => {
                         const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", docId);
                         deleteDoc(collaboratorRef);
@@ -1639,10 +1726,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
         }
         
+        // PDF Download for modal's list
         downloadCollaboratorsPdfBtnModal.addEventListener('click', () => {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF();
-            const head = [['Nome', 'Email', 'Deslocamento', 'Presença', 'Horário de Chegada']];
+            const head = [['Nome', 'Email', 'Deslocamento', 'Presença', 'Horário de Chegada']]; // Adicionado Email ao cabeçalho
             const tableBody = [];
             const presentes = colaboradores.filter(c => c.presente);
 
@@ -1656,7 +1744,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro) {
                     deslocamentoTexto += ` (${colaborador.localEncontro})`;
                 }
-                tableBody.push([colaborador.nome, colaborador.email || 'N/A', deslocamentoTexto, 'Presente', colaborador.horario]);
+                tableBody.push([colaborador.nome, colaborador.email || 'N/A', deslocamentoTexto, 'Presente', colaborador.horario]); // Adicionado Email
             });
 
             docPDF.autoTable({
@@ -1671,7 +1759,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             docPDF.save('lista_presenca_colaboradores.pdf');
         });
 
+        // Clear list for modal's list
         clearCollaboratorsListBtnModal.addEventListener('click', () => {
+            // Usando o modal de confirmação existente no index.html
             showConfirmModal(async () => {
                 const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
                 const snapshot = await getDocs(collaboratorsCollectionRef);
@@ -1692,6 +1782,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             currentPautaId = pautaId;
             document.getElementById('pauta-title').textContent = pautaName;
 
+            // Salva a pauta atual no localStorage
             localStorage.setItem('lastPautaId', pautaId);
             localStorage.setItem('lastPautaType', pautaType);
 
@@ -1734,6 +1825,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.getElementById('edit-pauta-name-btn').classList.add('hidden');
                 }
 
+                // Lógica condicional para a coluna "Em Atendimento"
                 if (pautaData.useDelegationFlow) {
                     emAtendimentoColumn.classList.remove('hidden');
                 } else {
@@ -1745,21 +1837,24 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                  tabAgendamento.classList.remove('hidden');
                  tabAvulso.classList.add('hidden');
                  pautaColumn.classList.remove('hidden');
+                 // A visibilidade de emAtendimentoColumn é definida acima, baseada em pautaData.useDelegationFlow
                  switchTab('agendamento');
             } else if (pautaType === 'avulso') {
                  tabAvulso.classList.remove('hidden');
                  tabAgendamento.classList.add('hidden');
                  pautaColumn.classList.add('hidden');
+                 // A visibilidade de emAtendimentoColumn é definida acima, baseada em pautaData.useDelegationFlow
                  switchTab('avulso');
             } else {
                 tabAgendamento.classList.remove('hidden');
                 tabAvulso.classList.remove('hidden');
                 pautaColumn.classList.remove('hidden');
+                // A visibilidade de emAtendimentoColumn é definida acima, baseada em pautaData.useDelegationFlow
                 switchTab('agendamento');
             }
 
             setupRealtimeListener(pautaId);
-            setupCollaboratorsListener(pautaId);
+            setupCollaboratorsListener(pautaId); // Inicia o listener para colaboradores
             showScreen('app');
         };
 
@@ -1850,6 +1945,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 
         const showPautaSelectionScreen = (userId) => {
+            // Limpa o localStorage para a última pauta quando volta para a seleção
             localStorage.removeItem('lastPautaId');
             localStorage.removeItem('lastPautaType');
 
@@ -1909,15 +2005,18 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (userDoc.exists() && userDoc.data().status === 'approved') {
                         currentUserName = userDoc.data().name || user.email;
 
+                        // Tenta carregar a última pauta acessada
                         const lastPautaId = localStorage.getItem('lastPautaId');
                         const lastPautaType = localStorage.getItem('lastPautaType');
 
                         if (lastPautaId && lastPautaType) {
+                            // Verifica se o usuário logado ainda é membro daquela pauta
                             const pautaRef = doc(db, "pautas", lastPautaId);
                             const pautaSnap = await getDoc(pautaRef);
                             if (pautaSnap.exists() && pautaSnap.data().members.includes(user.uid)) {
                                 loadPauta(lastPautaId, pautaSnap.data().name, lastPautaType);
                             } else {
+                                // Se a pauta não existe mais ou o usuário não é membro, vai para a seleção
                                 showPautaSelectionScreen(user.uid);
                             }
                         } else {
@@ -1957,6 +2056,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 tabAvulso.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700');
                 isScheduledContainer.classList.remove('hidden');
                 pautaColumn.classList.remove('hidden');
+                // A visibilidade de emAtendimentoColumn é definida em loadPauta
                 if (currentPautaData?.useDelegationFlow) {
                     emAtendimentoColumn.classList.remove('hidden');
                 } else {
@@ -1973,6 +2073,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700');
                 isScheduledContainer.classList.add('hidden');
                 pautaColumn.classList.add('hidden');
+                // A visibilidade de emAtendimentoColumn é definida em loadPauta
                  if (currentPautaData?.useDelegationFlow) {
                     emAtendimentoColumn.classList.remove('hidden');
                 } else {
@@ -2562,14 +2663,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                     if (button.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5); }
                     
-                    if (button.classList.contains('select-collaborator-btn')) {
+                    // Lógica para o botão "Atender" na coluna "Aguardando"
+                    if (button.classList.contains('select-collaborator-btn')) { // Fluxo de delegação ativado
                         assistedIdToHandle = id;
                         assistedNameToHandle = button.dataset.name;
                         document.getElementById('assisted-to-attend-name').textContent = assistedNameToHandle;
                         
                         const collaboratorSelectionList = document.getElementById('collaborator-selection-list');
                         collaboratorSelectionList.innerHTML = '';
-                        
+                        // Adiciona uma opção "Não atribuir"
                         const noAssignLabel = document.createElement('label');
                         noAssignLabel.className = 'flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50';
                         noAssignLabel.innerHTML = `
@@ -2597,10 +2699,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         document.getElementById('select-collaborator-modal').classList.remove('hidden');
                     }
 
-                    if (button.classList.contains('attend-directly-from-aguardando-btn')) {
+                    // Botão "Atender" para o fluxo antigo (sem delegação)
+                    if (button.classList.contains('attend-directly-from-aguardando-btn')) { // Fluxo de delegação desativado
                         assistedIdToHandle = id;
                         const attendantInput = document.getElementById('attendant-name');
-                        attendantInput.value = '';
+                        attendantInput.value = ''; // Limpar o campo para nova atribuição
                         const datalist = document.getElementById('collaborators-list');
                         datalist.innerHTML = '';
                         colaboradores.forEach(c => {
@@ -2611,22 +2714,25 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         document.getElementById('attendant-modal').classList.remove('hidden');
                     }
                     
+                    // Lógica para o botão 'Delegar Finalização' na coluna 'Em Atendimento'
                     if (button.classList.contains('delegate-finalization-btn')) {
                         assistedIdForDelegation = id;
                         assistedNameForDelegation = button.dataset.name;
-                        collaboratorNameForDelegation = button.dataset.collaboratorName;
+                        collaboratorNameForDelegation = button.dataset.collaboratorName; // Get collaborator name
                         document.getElementById('delegate-assisted-name').textContent = assistedNameForDelegation;
                         
+                        // Tenta preencher o e-mail do colaborador atribuído
                         const assignedCollabId = button.dataset.collaboratorId;
                         const assignedCollab = colaboradores.find(c => c.id === assignedCollabId);
-                        document.getElementById('collaborator-email-input').value = assignedCollab?.email || '';
+                        document.getElementById('collaborator-email-input').value = assignedCollab?.email || ''; // Preenche se encontrar, senão vazio
 
                         document.getElementById('delegate-email-modal').classList.remove('hidden');
                     }
 
+                    // Lógica para o botão 'Finalizar Diretamente' na coluna 'Em Atendimento'
                     if (button.classList.contains('attend-directly-btn')) {
                         const attendantInput = document.getElementById('attendant-name');
-                        attendantInput.value = button.dataset.collaboratorName || '';
+                        attendantInput.value = button.dataset.collaboratorName || ''; // Preenche com o nome do colaborador já atribuído
                         const datalist = document.getElementById('collaborators-list');
                         datalist.innerHTML = '';
                         colaboradores.forEach(c => {
@@ -2642,6 +2748,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (button.classList.contains('return-to-pauta-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'pauta', arrivalTime: null, priority: null, assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para a pauta."); }
                     if (button.classList.contains('return-to-pauta-from-faltoso-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'pauta' })); showNotification("Revertido para a pauta."); }
                     if (button.classList.contains('return-to-aguardando-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', attendant: null, attendedTime: null, assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
+                    if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
                     if (button.classList.contains('delete-btn')) { if(confirm("Tem certeza que deseja apagar este registro permanentemente?")) { await deleteDoc(docRef); showNotification("Registro apagado."); }}
                     if (button.classList.contains('priority-btn')) { assistedIdToHandle = id; document.getElementById('priority-reason-modal').classList.remove('hidden'); }
                     if (button.classList.contains('edit-assisted-btn')) { 
@@ -2678,9 +2785,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         showDemandsModal(id);
                     }
 
+                    // Lógica para os novos botões de "Confirmado"
                     if (button.classList.contains('toggle-confirmed-atendido') || button.classList.contains('toggle-confirmed-faltoso')) {
                         const currentAssisted = allAssisted.find(a => a.id === id);
-                        const newConfirmedState = !(currentAssisted.isConfirmed || false);
+                        const newConfirmedState = !(currentAssisted.isConfirmed || false); // Inverte o estado
 
                         await updateDoc(docRef, getUpdatePayload({
                             isConfirmed: newConfirmedState,
@@ -2689,9 +2797,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         showNotification(`Status de confirmação atualizado para ${newConfirmedState ? 'Confirmado' : 'Não Confirmado'}.`, 'info');
                     }
 
+                    // NOVO: Lógica para "Voltar p/ Em Atendimento" de "Atendidos"
                     if (button.classList.contains('return-from-atendido-btn')) {
                         const currentAssisted = allAssisted.find(a => a.id === id);
                         let updateData = {
+                            status: 'aguardando', // Padrão se não for fluxo de delegação
                             attendant: null,
                             attendedTime: null,
                             finalizadoPeloColaborador: false,
@@ -2699,18 +2809,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             confirmationDetails: null
                         };
 
-                        if (currentPautaData?.useDelegationFlow && currentAssisted.assignedCollaborator) {
+                        if (currentPautaData?.useDelegationFlow) {
+                            // Se o fluxo de delegação está ativo, volta para "Em Atendimento"
                             updateData.status = 'emAtendimento';
-                            updateData.attendant = currentAssisted.attendant; 
-                        } else {
-                            updateData.status = 'aguardando';
-                            updateData.assignedCollaborator = null;
-                            updateData.inAttendanceTime = null;
+                            // Mantém o assignedCollaborator e inAttendanceTime que já estavam
+                            updateData.attendant = currentAssisted.attendant; // Mantém o atendente que finalizou
                         }
                         
                         await updateDoc(docRef, getUpdatePayload(updateData));
-                        showNotification(`Atendimento de ${currentAssisted.name} revertido para ${currentPautaData?.useDelegationFlow && currentAssisted.assignedCollaborator ? 'Em Atendimento' : 'Aguardando'}.`, 'info');
+                        showNotification(`Atendimento de ${currentAssisted.name} revertido para ${currentPautaData?.useDelegationFlow ? 'Em Atendimento' : 'Aguardando'}.`, 'info');
                     }
+
                 }
 
                 if (button.id === 'back-to-pautas-btn') {
@@ -2730,13 +2839,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.getElementById('edit-pauta-modal').classList.remove('hidden');
                 }
                 if (button.id === 'manage-members-btn') {
-                    await showMembersModal();
+                    await showMembersModal(); // Abre o modal de "Gerenciar Membros da Pauta"
                 }
 
+                // Lógica para abrir o modal de "Lista de Presença de Colaboradores"
                 if (button.id === 'manage-collaborators-btn') {
-                    setupCollaboratorsListener(currentPautaId);
-                    resetCollaboratorFormModal();
-                    collaboratorsModal.classList.remove('hidden');
+                    setupCollaboratorsListener(currentPautaId); // Inicia o listener específico para este modal
+                    resetCollaboratorFormModal(); // Limpa o formulário do modal de colaboradores
+                    collaboratorsModal.classList.remove('hidden'); // Abre o modal
                 }
 
               if (button.id === 'add-assisted-btn') {
@@ -2754,7 +2864,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         hasArrived = document.querySelector('input[name="has-arrived"]:checked').value === 'yes';
         scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time').value : null;
 
-        if (isScheduled && !scheduledTimeValue && !hasArrived) {
+        // Adicionada validação para o horário agendado.
+        if (isScheduled && !scheduledTimeValue && !hasArrived) { // Só é obrigatório se for agendado e AINDA não chegou
             showNotification("Por favor, informe o horário agendado.", "error");
             return;
         }
@@ -2780,11 +2891,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         status: hasArrived ? 'aguardando' : 'pauta',
         scheduledTime: scheduledTimeValue,
         arrivalTime: hasArrived ? arrivalDate.toISOString() : null,
-        assignedCollaborator: null,
-        inAttendanceTime: null,
-        finalizadoPeloColaborador: false,
-        isConfirmed: false,
-        confirmationDetails: null,
+        assignedCollaborator: null, // Novo campo
+        inAttendanceTime: null, // Novo campo
+        finalizadoPeloColaborador: false, // Novo campo
+        isConfirmed: false, // Novo campo
+        confirmationDetails: null, // Novo campo
         createdAt: new Date().toISOString()
     });
 
@@ -2806,9 +2917,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     button.closest('.fixed').classList.add('hidden');
                 }
                 
+                // Lógica do novo modal de seleção de colaborador
                 if (button.id === 'confirm-select-collaborator-btn') {
                     const selectedCollaboratorRadio = document.querySelector('#collaborator-selection-list input[name="selectedCollaborator"]:checked');
-                    let collaboratorData = null;
+                    let collaboratorData = null; // Default to null
 
                     if (selectedCollaboratorRadio && selectedCollaboratorRadio.value !== 'null') {
                         const collaboratorId = selectedCollaboratorRadio.value;
@@ -2821,12 +2933,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                     await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({
                         status: 'emAtendimento',
-                        assignedCollaborator: collaboratorData,
+                        assignedCollaborator: collaboratorData, // Assign null or the selected collaborator
                         inAttendanceTime: new Date().toISOString()
                     }));
                     document.getElementById('select-collaborator-modal').classList.add('hidden');
                 }
 
+                // Ação de confirmar atendimento (antiga, agora para "Finalizar Diretamente")
                 if (button.id === 'confirm-attendant-btn') {
                     const attendantName = document.getElementById('attendant-name').value.trim();
                     await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ status: 'atendido', attendant: attendantName, attendedTime: new Date().toISOString() }));
@@ -2891,7 +3004,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const querySnapshot = await getDocs(q);
                     
                     if (querySnapshot.empty) {
-                        statusDiv.textContent = 'Usuário não encontrado.';
+                        inviteStatus.textContent = 'Usuário não encontrado.';
                         return;
                     }
                     
@@ -2931,12 +3044,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 }
                 
+                // Usar os IDs atualizados para o modal de demandas
                 if (button.id === 'demands-modal-add-demand-btn') {
                     const input = document.getElementById('demands-modal-new-demand-input');
                     const text = input.value.trim();
                     if(text) {
                         const demandsListContainer = document.getElementById('demands-modal-list-container');
-                        if(demandsListContainer.querySelector('p.text-gray-500')) {
+                        if(demandsListContainer.querySelector('p.text-gray-500')) { // Verifica se é a mensagem de "Nenhuma demanda"
                             demandsListContainer.innerHTML = '';
                         }
                         const li = document.createElement('li');
@@ -2953,13 +3067,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (button.classList.contains('remove-demand-item-btn')) {
                     const li = button.parentElement;
                     li.remove();
-                    const demandsListContainer = document.getElementById('demands-modal-list-container');
+                    const demandsListContainer = document.getElementById('demands-modal-list-container'); // Usar ID atualizado
                     if (demandsListContainer.children.length === 0) {
                          demandsListContainer.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
                     }
                 }
                 if (button.id === 'save-demands-btn') {
-                    const demandsListContainer = document.getElementById('demands-modal-list-container');
+                    const demandsListContainer = document.getElementById('demands-modal-list-container'); // Usar ID atualizado
                     const items = demandsListContainer.querySelectorAll('li');
                     const descricoes = Array.from(items).map(li => li.firstChild.textContent);
                     const demandsData = {
@@ -2968,7 +3082,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     };
                     const docRef = doc(collectionRef, assistedIdToHandle);
                     await updateDoc(docRef, getUpdatePayload({ demandas: demandsData }));
-                    showNotification("Demandas salvas com sucesso!");
+                    showNotification("Demandas salvas com sucesso!", "success");
                     document.getElementById('demands-modal').classList.add('hidden');
                 }
 
@@ -2981,9 +3095,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (button.id === 'close-documents-modal-btn' || button.id === 'cancel-checklist-btn') {
                      document.getElementById('documents-modal').classList.add('hidden');
                 }
+                // Adicionado: Botões de cancelamento para o novo modal de seleção de colaborador
                 if (button.id === 'cancel-select-collaborator-btn') {
                     document.getElementById('select-collaborator-modal').classList.add('hidden');
                 }
+                // Adicionado: Botões de cancelamento para o novo modal de delegação por e-mail
                 if (button.id === 'cancel-delegate-email-btn') {
                     document.getElementById('delegate-email-modal').classList.add('hidden');
                 }
@@ -3045,6 +3161,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
 
+            // Lógica para enviar o link de delegação por e-mail
             document.getElementById('send-delegate-email-btn').addEventListener('click', async () => {
                 const collaboratorEmail = document.getElementById('collaborator-email-input').value.trim();
                 if (!collaboratorEmail) {
@@ -3060,30 +3177,32 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
                 const externalLink = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(collaboratorNameForDelegation)}`;
 
+                // --- INÍCIO DOS CONSOLE.LOGS DE DEBUG ---
                 console.log("--- DEBUG EMAILJS DELEGAÇÃO ---");
                 console.log("Service ID:", "service_r1nxe6a");
                 console.log("Template ID:", "template_jslp9ny");
                 console.log("Public Key (usada no init):", "aGL-Q2UJcD2tDpUKq");
-                console.log("to_email:", collaboratorEmail);
-                console.log("assisted_name:", assistedNameForDelegation);
-                console.log("collaborator_name:", collaboratorNameForDelegation);
-                console.log("finalization_link:", externalLink);
+                console.log("to_email (para quem será enviado):", collaboratorEmail);
+                console.log("assisted_name (nome do assistido):", assistedNameForDelegation);
+                console.log("collaborator_name (nome do colaborador):", collaboratorNameForDelegation);
+                console.log("finalization_link (link gerado):", externalLink);
                 console.log("name (remetente):", currentUserName);
                 console.log("email (email de resposta):", auth.currentUser?.email || "noreply@example.com");
                 console.log("-------------------------------");
+                // --- FIM DOS CONSOLE.LOGS DE DEBUG ---
 
 
                 try {
                     await emailjs.send(
-                        "service_r1nxe6a",
-                        "template_jslp9ny",
+                        "service_r1nxe6a", // Seu Service ID
+                        "template_jslp9ny", // Seu Template ID para Delegação
                         {
                             to_email: collaboratorEmail,
                             assisted_name: assistedNameForDelegation,
                             collaborator_name: collaboratorNameForDelegation,
                             finalization_link: externalLink,
-                            name: currentUserName,
-                            email: auth.currentUser?.email || "noreply@example.com"
+                            name: currentUserName, // Adicionado
+                            email: auth.currentUser?.email || "noreply@example.com" // Adicionado
                         }
                     );
                     showNotification("Link de finalização enviado com sucesso por e-mail!", "success");
@@ -3271,6 +3390,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 });
             });
 
+            // Adiciona a lógica de autocompletar e formatação ao campo de assunto na modal de edição
             const editSubjectInput = document.getElementById('edit-assisted-subject');
             editSubjectInput.addEventListener('change', () => {
                 const originalValue = editSubjectInput.value;
@@ -3314,6 +3434,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
   (function(){
+    // SUBSTITUA "aGL-Q2UJcD2tDpUKq" PELA SUA PUBLIC KEY REAL DO EmailJS
     emailjs.init("aGL-Q2UJcD2tDpUKq"); // Sua Public Key do EmailJS
   })();
 
@@ -3331,7 +3452,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
   function showConfirmModal(callback, message) {
     modalText.innerHTML = message;
-    confirmModal.classList.remove('hidden');
+    confirmModal.classList.remove('hidden'); // Use classList.remove para Tailwind CSS
     actionToConfirm = callback;
   }
 
@@ -3376,12 +3497,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     try {
       await emailjs.send(
         "service_r1nxe6a", // Seu Service ID para anotações
-        "template_ynrwaxt", // Seu Template ID para Anotações
+        "template_ynrwaxt", // Seu Template ID para Anotações (ATUALIZADO)
         {
             message: notes,
             email_to: "SEU_EMAIL_DESTINO_ANOTACOES@dominio.com", // Substitua pelo seu email para receber as anotações
-            name: "Sistema SIGEP",
-            email: "noreply@sigep.com"
+            name: currentUserName, // Adicionado
+            email: auth.currentUser?.email || "noreply@example.com" // Adicionado
         }
       );
       console.log("Anotações enviadas por e-mail!");
@@ -3405,3 +3526,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
