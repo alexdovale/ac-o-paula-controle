@@ -1,3 +1,17 @@
+Okay, recebi as suas novas solicitações e peço desculpas pela confusão anterior. Vamos corrigir e implementar tudo agora.
+
+Entendi perfeitamente a necessidade de:
+
+1.  **Separar as funcionalidades de gerenciamento:**
+    *   **"Compartilhar" (via `manage-members-btn`)**: Para gerenciar os membros da pauta (usuários do sistema com acesso à edição da pauta). Isso usará o modal `#members-modal` e os arrays `members` e `memberEmails` do documento da pauta.
+    *   **"Colaboradores" (via `manage-collaborators-btn`)**: Para gerenciar a lista de presença de colaboradores (equipe de campo para delegação), que é uma lista separada e interna à pauta. Isso usará o modal `#collaborators-modal` e a subcoleção `pautas/{pautaId}/collaborators`.
+
+2.  **Adicionar botão "Confirmado" nos cards de "Atendidos" e "Faltosos":**
+    *   **Atendidos**: Começa cinza, clica fica verde, clica novamente volta a cinza.
+    *   **Faltosos**: Começa cinza, clica fica vermelho, clica novamente volta a cinza.
+    *   O estado "confirmado" deve ser persistente (salvo no Firestore).
+
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -245,7 +259,7 @@
                      <button type="button" id="add-assisted-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition shadow-md w-full lg:w-auto">Adicionar</button>
                 </div>
             </form>
-            <main id="main-content" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 w-full">
+            <main id="main-content" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 w-full">
                 <div id="pauta-column" class="bg-white rounded-lg shadow-md flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
@@ -254,7 +268,7 @@
                         </h3>
                         <input type="search" id="pauta-search" placeholder="Pesquisar por nome, CPF, assunto..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
-                    <div id="pauta-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                    <div id="pauta-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
                 <div class="bg-white rounded-lg shadow-md flex flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
@@ -264,7 +278,7 @@
                         </h3>
                         <input type="search" id="aguardando-search" placeholder="Pesquisar por nome, CPF, assunto..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
-                    <div id="aguardando-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                    <div id="aguardando-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
                 <!-- Nova Coluna: Em Atendimento -->
                 <div id="em-atendimento-column" class="bg-white rounded-lg shadow-md flex flex-col hidden"> <!-- Inicialmente escondida, visibilidade controlada pelo JS -->
@@ -275,7 +289,7 @@
                         </h3>
                         <input type="search" id="em-atendimento-search" placeholder="Pesquisar por nome, colaborador..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
-                    <div id="em-atendimento-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                    <div id="em-atendimento-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
                 <!-- Fim da Nova Coluna: Em Atendimento -->
                 <div id="atendidos-column" class="bg-white rounded-lg shadow-md flex flex-col">
@@ -289,7 +303,7 @@
                         </div>
                         <input type="search" id="atendidos-search" placeholder="Pesquisar por nome, CPF, assunto..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
-                    <div id="atendidos-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                    <div id="atendidos-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
                  <div id="faltosos-column" class="bg-white rounded-lg shadow-md flex-col hidden">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
@@ -301,7 +315,7 @@
                         </div>
                         <input type="search" id="faltosos-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
-                    <div id="faltosos-list" class="p-4 space-y-4 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                    <div id="faltosos-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
             </main>
             <div class="mt-8 flex justify-center">
@@ -1091,7 +1105,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 btn.disabled = isClosed;
             });
 
-            const actionButtons = document.querySelectorAll('.check-in-btn, .delegate-finalization-btn, .attend-directly-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn');
+            const actionButtons = document.querySelectorAll('.check-in-btn, .delegate-finalization-btn, .attend-directly-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn, .toggle-confirmed-atendido, .toggle-confirmed-faltoso'); // Adicionado
             actionButtons.forEach(btn => {
                 btn.disabled = isClosed;
             });
@@ -1243,7 +1257,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         ${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : ''}
                         <button data-id="${a.id}" class="edit-assisted-btn bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar</button>
                     </div>
-                    ${returnToPautaBtn ? `<div class="mt-2">${returnToPautaBtn}</div>` : ''}
+                    ${a.lastActionBy ? `<div class="mt-2">${returnToPautaBtn}</div>` : ''}
                     ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
                     `;
                 return card;
@@ -1273,6 +1287,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             render(atendidosList, atendidos, a => {
                 const card = document.createElement('div');
+                // Adicionado classes para o botão "Confirmado" (ativo/inativo)
+                const confirmedClass = a.isConfirmed ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-400 hover:bg-gray-500';
+                const confirmedText = a.isConfirmed ? 'Confirmado' : 'Confirmar';
                 card.className = 'relative bg-green-50 p-4 rounded-lg shadow-sm border-green-200';
                 const totalAssuntos = 1 + (a.demandas?.quantidade ? Number(a.demandas.quantidade) : 0);
                 const demandasInfo = a.demandas?.descricoes?.length > 0 ? `<div class="mt-2 text-xs bg-gray-100 p-2 rounded"><strong class="text-gray-700">Demandas Adicionais (${a.demandas.quantidade || 0}):</strong><ul class="list-disc list-inside pl-2 text-gray-600">${a.demandas.descricoes.map(d => `<li>${d}</li>`).join('')}</ul></div>` : '';
@@ -1299,9 +1316,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             </div>
                         </div>
                         <div class="mt-2 pt-2 border-t flex justify-between items-center">
-                            ${a.lastActionBy ? `<p class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></p>` : '<div></div>'}
+                            ${a.lastActionBy ? `<p class="text-xs text-gray-500">Última ação por: <strong>${a.lastActionBy}</strong></p>` : '<div></div>'}
                             <button data-id="${a.id}" class="return-to-aguardando-btn bg-yellow-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-yellow-600 text-xs">Voltar p/ Aguardando</button>
                         </div>
+                        <button data-id="${a.id}" class="toggle-confirmed-atendido w-full text-white font-semibold py-1 px-3 rounded-lg text-xs ${confirmedClass}">
+                            ${confirmedText}
+                        </button>
                     </div>
                     <div class="text-right mt-1">
                          <button class="toggle-details-btn text-gray-500 hover:text-gray-800 p-1">
@@ -1313,6 +1333,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             render(faltososList, faltosos, a => {
                 const card = document.createElement('div');
+                // Adicionado classes para o botão "Confirmado" (ativo/inativo)
+                const confirmedClass = a.isConfirmed ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-400 hover:bg-gray-500';
+                const confirmedText = a.isConfirmed ? 'Confirmado' : 'Confirmar';
                 card.className = 'relative bg-red-50 p-4 rounded-lg shadow-sm border-red-200';
                 card.innerHTML = `
                     <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5zM6 6.5a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm3 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm-5 1a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1h-6z"/></svg></button>
@@ -1324,6 +1347,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         <div class="mt-3">
                             <button data-id="${a.id}" class="return-to-pauta-from-faltoso-btn w-full bg-gray-500 text-white font-semibold py-1 rounded-lg hover:bg-gray-600 text-xs">Revertido para Pauta</button>
                         </div>
+                        <button data-id="${a.id}" class="toggle-confirmed-faltoso w-full text-white font-semibold py-1 px-3 rounded-lg text-xs ${confirmedClass}">
+                            ${confirmedText}
+                        </button>
                     </div>
                     ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
                 `;
@@ -1725,6 +1751,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             currentPautaId = pautaId;
             document.getElementById('pauta-title').textContent = pautaName;
 
+            // Salva a pauta atual no localStorage
+            localStorage.setItem('lastPautaId', pautaId);
+            localStorage.setItem('lastPautaType', pautaType);
+
             const tabAgendamento = document.getElementById('tab-agendamento');
             const tabAvulso = document.getElementById('tab-avulso');
             const pautaColumn = document.getElementById('pauta-column');
@@ -1884,6 +1914,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 
         const showPautaSelectionScreen = (userId) => {
+            // Limpa o localStorage para a última pauta quando volta para a seleção
+            localStorage.removeItem('lastPautaId');
+            localStorage.removeItem('lastPautaType');
+
             const pautasList = document.getElementById('pautas-list');
             pautasList.innerHTML = '<p class="col-span-full text-center">Carregando pautas...</p>';
 
@@ -1939,7 +1973,25 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const userDoc = await getDoc(doc(db, "users", user.uid));
                     if (userDoc.exists() && userDoc.data().status === 'approved') {
                         currentUserName = userDoc.data().name || user.email;
-                        showPautaSelectionScreen(user.uid);
+
+                        // Tenta carregar a última pauta acessada
+                        const lastPautaId = localStorage.getItem('lastPautaId');
+                        const lastPautaType = localStorage.getItem('lastPautaType');
+
+                        if (lastPautaId && lastPautaType) {
+                            // Verifica se o usuário logado ainda é membro daquela pauta
+                            const pautaRef = doc(db, "pautas", lastPautaId);
+                            const pautaSnap = await getDoc(pautaRef);
+                            if (pautaSnap.exists() && pautaSnap.data().members.includes(user.uid)) {
+                                loadPauta(lastPautaId, pautaSnap.data().name, lastPautaType);
+                            } else {
+                                // Se a pauta não existe mais ou o usuário não é membro, vai para a seleção
+                                showPautaSelectionScreen(user.uid);
+                            }
+                        } else {
+                            showPautaSelectionScreen(user.uid);
+                        }
+
                     } else {
                         loadingText.innerHTML = 'Sua conta está pendente de aprovação. <br> Por favor, aguarde.';
                         document.querySelector('.loader').style.display = 'none';
@@ -2487,7 +2539,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         cleanString(item.cpf),
                         cleanString(item.subject),
                         cleanString(item.attendant) || 'N/A',
-                        new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                        item.attendedTime ? new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A', // Corrigido para garantir string
                         duration
                     ];
                     tableRows.push(rowData);
@@ -2530,9 +2582,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 });
             });
-
-            // Lógica para mostrar o modal de "Gerenciar Membros da Pauta"
-            // (Função já definida acima, movida para o lugar correto)
 
             const showDemandsModal = (assistedId) => {
                 const modal = document.getElementById('demands-modal');
@@ -2699,6 +2748,18 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         assistedIdToHandle = id;
                         showDemandsModal(id);
                     }
+
+                    // Lógica para os novos botões de "Confirmado"
+                    if (button.classList.contains('toggle-confirmed-atendido') || button.classList.contains('toggle-confirmed-faltoso')) {
+                        const currentAssisted = allAssisted.find(a => a.id === id);
+                        const newConfirmedState = !(currentAssisted.isConfirmed || false); // Inverte o estado
+
+                        await updateDoc(docRef, getUpdatePayload({
+                            isConfirmed: newConfirmedState,
+                            confirmationDetails: newConfirmedState ? { confirmedBy: currentUserName, confirmedAt: new Date().toISOString() } : null
+                        }));
+                        showNotification(`Status de confirmação atualizado para ${newConfirmedState ? 'Confirmado' : 'Não Confirmado'}.`, 'info');
+                    }
                 }
 
                 if (button.id === 'back-to-pautas-btn') {
@@ -2773,6 +2834,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         assignedCollaborator: null, // Novo campo
         inAttendanceTime: null, // Novo campo
         finalizadoPeloColaborador: false, // Novo campo
+        isConfirmed: false, // Novo campo
+        confirmationDetails: null, // Novo campo
         createdAt: new Date().toISOString()
     });
 
@@ -3086,8 +3149,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     showNotification("Link de finalização enviado com sucesso por e-mail!", "success");
                     document.getElementById('delegate-email-modal').classList.add('hidden');
 
-                    // NOVO: Se um e-mail foi digitado/atualizado, salva no registro do colaborador
-                    // Buscar o ID do colaborador atribuído ao assistido para salvar o e-mail
                     const assignedCollabId = allAssisted.find(a => a.id === assistedIdForDelegation)?.assignedCollaborator?.id;
                     if (assignedCollabId && collaboratorEmail) {
                          const collaboratorRef = doc(collection(db, "pautas", currentPautaId, "collaborators"), assignedCollabId);
@@ -3299,6 +3360,18 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
   </div>
 </div>
 
+<!-- Modal de Confirmação (necessário para as novas funcionalidades) -->
+<div id="confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+        <h2 class="text-2xl font-bold mb-4">Confirmação</h2>
+        <p id="modal-text" class="mb-6 text-gray-600">Tem certeza que deseja realizar esta ação?</p>
+        <div class="flex justify-end space-x-4">
+            <button id="cancel-action" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+            <button id="confirm-action" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">Confirmar</button>
+        </div>
+    </div>
+</div>
+
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
   (function(){
@@ -3394,4 +3467,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
-
