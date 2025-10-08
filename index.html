@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Gerenciamento de Pauta - SIGEP</title> <!-- SIGLA CORRIGIDA -->
+    <title>Sistema de Gerenciamento de Pauta - SIGEP</title>
 
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
 
@@ -29,33 +29,6 @@
         .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
         .loader { border: 6px solid #f3f3f3; border-top: 6px solid #16a34a; border-radius: 50%; width: 50px; height: 50px; animation: spin 1.5s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* Estilos para o botão de confirmado */
-        .confirm-btn-style {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 28px; /* Ligeiramente maior para visibilidade */
-            height: 28px; /* Ligeiramente maior para visibilidade */
-            border-radius: 50%;
-            border: 1px solid currentColor;
-            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-            flex-shrink: 0; 
-            margin-left: 8px; /* Espaçamento do nome */
-        }
-        .confirm-btn-icon {
-            width: 18px; /* Tamanho do ícone */
-            height: 18px; /* Tamanho do ícone */
-            color: white; /* Cor do ícone */
-        }
-        /* Reduzindo o espaçamento dos cards */
-        .grid.gap-2 > div {
-            padding: 0.5rem; /* Ajuste para preenchimento interno dos cards */
-        }
-        .space-y-2 > * + * {
-            margin-top: 0.25rem; /* Espaçamento vertical entre elementos internos do card */
-        }
-
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -64,7 +37,7 @@
 
     <div id="login-container" class="hidden min-h-screen flex items-center justify-center">
         <div class="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
-            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="mx-auto h-24 w-auto mb-6"> <!-- SIGLA CORRIGIDA -->
+            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="mx-auto h-24 w-auto mb-6">
             <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Sistema de Gerenciamento de Pauta</h2>
             <div id="auth-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden" role="alert"></div>
             <div class="flex border-b mb-6">
@@ -93,7 +66,7 @@
 
     <div id="pauta-selection-container" class="hidden max-w-4xl mx-auto">
         <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-800">Sistema de Gerenciamento de Pauta - SIGEP</h1> <!-- SIGLA CORRIGIDA -->
+            <h1 class="text-3xl font-bold text-gray-800">Sistema de Gerenciamento de Pauta - SIGEP</h1>
         </div>
         <div class="flex justify-between items-center mb-6">
               <h2 class="text-3xl font-bold text-gray-800">Minhas Pautas</h2>
@@ -120,7 +93,7 @@
     <div id="app-container" class="max-w-full mx-auto hidden">
         <header class="mb-6 space-y-4">
             <div class="flex justify-center items-center w-full relative">
-                 <h1 class="text-xl font-semibold text-gray-600 text-center">Sistema de Gerenciamento de Pauta - SIGEP</h1> <!-- SIGLA CORRIGIDA -->
+                 <h1 class="text-xl font-semibold text-gray-600 text-center">Sistema de Gerenciamento de Pauta - SIGEP</h1>
                  <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
                             <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
@@ -177,8 +150,7 @@
                                 <span>Colaboradores</span>
                             </button>
 
-                            <!-- NOVO BOTÃO PARA O MANUAL -->
-                            <a href="https://github.com/alexdovale/ac-o-paula-controle/blob/main/manual_do_usu%C3%A1rio.htm" target="_blank" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors whitespace-nowrap">
+                            <a href="manual.html" target="_blank" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors whitespace-nowrap">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-blue-500"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
                                 <span>Manual do Usuário</span>
                             </a>
@@ -1043,17 +1015,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '', currentPautaOwnerId = null, isPautaClosed = false;
         let currentPautaData = null; // Para armazenar todos os dados da pauta atual
         let assistedIdToHandle = null;
-        let assistedNameToHandle = null; // Adicionado para passar o nome para o modal de seleção de colaborador
+        let assistedNameToHandle = null;
         let currentChecklistAction = null;
 
-        // Variáveis para o novo modal de delegação de e-mail
+        // Variáveis para o modal de delegação de e-mail
         let assistedIdForDelegation = null;
         let assistedNameForDelegation = null;
-        let collaboratorNameForDelegation = null; // Nome do colaborador já atribuído ao assistido, se houver.
+        let collaboratorNameForDelegation = null;
 
         // Variáveis para a lógica de Colaboradores (lista de presença)
-        let colaboradores = []; // Esta é a lista de colaboradores (da lista de presença)
-        let editCollaboratorId = null; // ID do colaborador sendo editado na lista de presença
+        let colaboradores = [];
+        let editCollaboratorId = null;
         let unsubscribeFromCollaborators = () => {};
 
         const loadingContainer = document.getElementById('loading-container');
@@ -1124,7 +1096,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 btn.disabled = isClosed;
             });
 
-            const actionButtons = document.querySelectorAll('.check-in-btn, .delegate-finalization-btn, .attend-directly-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn, .toggle-confirmed-atendido, .toggle-confirmed-faltoso, .return-from-atendido-btn, .return-to-aguardando-from-emAtendimento-btn'); // Adicionado
+            const actionButtons = document.querySelectorAll('.check-in-btn, .delegate-finalization-btn, .attend-directly-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn, .toggle-confirmed-atendido, .toggle-confirmed-faltoso, .return-from-atendido-btn, .return-to-aguardando-from-emAtendimento-btn');
             actionButtons.forEach(btn => {
                 btn.disabled = isClosed;
             });
@@ -1213,9 +1185,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     return (a.createdAt || 0) - (b.createdAt || 0);
                 }
             });
-            // Ordenação para "Em Atendimento" - mais recente primeiro, ou por colaborador
             emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
-
 
             document.getElementById('pauta-count').textContent = pauta.length;
             document.getElementById('aguardando-count').textContent = aguardando.length;
@@ -1224,35 +1194,31 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.getElementById('atendidos-count').textContent = atendidos.length;
 
             const render = (el, data, generator) => {
-                // Ajustado o espaçamento entre os cards
                 if(data.length === 0) el.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum resultado.</p>`;
                 else data.forEach((item, index) => el.appendChild(generator(item, index)));
             };
 
             render(pautaList, pauta, a => {
                 const card = document.createElement('div');
-                card.className = 'relative bg-gray-50 p-4 rounded-lg shadow-sm border';
+                card.className = 'relative bg-gray-50 p-2 space-y-2 rounded-lg shadow-sm border'; // Adjusted padding and space
                 card.innerHTML = `
                     <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
-                    <p class="font-bold text-lg">${a.name}</p>
-                    ${a.cpf ? `<p class="text-sm text-gray-500">CPF: <strong>${a.cpf}</strong></p>` : ''}
-                    <p>Assunto: <strong>${a.subject}</strong></p>
-                    <p>Agendado: <strong>${a.scheduledTime}</strong></p>
-                    <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+                    <p class="font-bold">${a.name}</p>
+                    <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
+                    <p class="text-sm">Agendado: <strong>${a.scheduledTime}</strong></p>
+                    <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
                         <button data-id="${a.id}" class="check-in-btn bg-green-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-600">Marcar Chegada</button>
                         <button data-id="${a.id}" class="faltou-btn bg-yellow-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-yellow-600">Faltou</button>
                         <button data-id="${a.id}" class="edit-assisted-btn col-span-2 bg-gray-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-600">Editar Dados</button>
                     </div>
-                    ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
                 `;
                 return card;
             });
 
             render(aguardandoList, aguardando, (a, index) => {
                 const card = document.createElement('div');
-                card.className = `relative bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)}`;
-                const arrival = a.type === 'agendamento' && a.scheduledTime ? `Agendado: ${a.scheduledTime} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : `Chegada: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-                const returnToPautaBtn = a.type === 'agendamento' ? `<button data-id="${a.id}" class="return-to-pauta-btn w-full bg-gray-400 text-white font-semibold py-1 rounded-lg hover:bg-gray-500 text-xs mt-1">Voltar p/ Pauta</button>` : '';
+                card.className = `relative bg-white p-2 space-y-2 rounded-lg shadow-sm ${getPriorityClass(a.priority)}`;
+                const arrival = a.type === 'agendamento' && a.scheduledTime ? `Ag: ${a.scheduledTime} | Ch: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : `Ch: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
                 
                 let atenderButton;
                 if (currentPautaData?.useDelegationFlow) {
@@ -1261,133 +1227,73 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     atenderButton = `<button data-id="${a.id}" data-name="${a.name}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`;
                 }
 
-
                 card.innerHTML = `
-                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
                     <div class="flex justify-between items-start">
-                        <div>
-                            <p class="font-bold text-lg">${index + 1}. ${a.name}</p>
-                            <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
-                            <p class="text-sm text-gray-500">${arrival}</p>
-                            <button data-id="${a.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-sm hover:underline font-semibold py-1">Ver Detalhes</button>
-                        </div>
+                        <p class="font-bold">${index + 1}. ${a.name}</p>
+                        <button data-id="${a.id}" class="delete-btn text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
                     </div>
-                    <div class="mt-3 grid grid-cols-2 lg:grid-cols-3 gap-2">
+                    <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
+                    <p class="text-sm text-gray-500">${arrival}</p>
+                    <div class="mt-2 grid grid-cols-3 gap-2">
                         ${atenderButton}
-                        ${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : ''}
+                        ${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : '<div class="bg-red-500 text-white font-semibold py-2 rounded-lg text-sm text-center">URGENTE</div>'}
                         <button data-id="${a.id}" class="edit-assisted-btn bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar</button>
                     </div>
-                    ${returnToPautaBtn ? `<div class="mt-2">${returnToPautaBtn}</div>` : ''}
-                    ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
-                    `;
+                `;
                 return card;
             });
             
-            // Renderizar a nova coluna "Em Atendimento"
             render(emAtendimentoList, emAtendimento, (a, index) => {
                 const card = document.createElement('div');
-                card.className = `relative bg-purple-50 p-4 rounded-lg shadow-sm border-purple-200`;
+                card.className = `relative bg-purple-50 p-2 space-y-2 rounded-lg shadow-sm border-purple-200`;
                 const inAttendanceTime = new Date(a.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 const assignedCollabText = a.assignedCollaborator?.name ? `Colaborador: <strong>${a.assignedCollaborator.name}</strong>` : 'Colaborador: Não atribuído';
                 card.innerHTML = `
-                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
-                    <p class="font-bold text-lg">${index + 1}. ${a.name}</p>
-                    ${a.cpf ? `<p class="text-sm text-gray-500">CPF: <strong>${a.cpf}</strong></p>` : ''}
-                    <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
+                    <p class="font-bold">${index + 1}. ${a.name}</p>
                     <p class="text-sm">${assignedCollabText}</p>
                     <p class="text-sm text-gray-500">Início: ${inAttendanceTime}</p>
-                    <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
-                        <button data-id="${a.id}" data-name="${a.name}" data-collaborator-name="${a.assignedCollaborator?.name || 'Não informado'}" data-collaborator-id="${a.assignedCollaborator?.id || ''}" class="delegate-finalization-btn bg-indigo-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-indigo-600">Delegar Finalização</button>
-                        <button data-id="${a.id}" data-name="${a.name}" data-collaborator-name="${a.assignedCollaborator?.name || 'Não informado'}" class="attend-directly-btn bg-green-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-600">Finalizar Diretamente</button>
-                        <button data-id="${a.id}" class="return-to-aguardando-from-emAtendimento-btn col-span-2 bg-gray-400 text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-500">Voltar p/ Aguardando</button>
+                    <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
+                        <button data-id="${a.id}" data-name="${a.name}" data-collaborator-name="${a.assignedCollaborator?.name || 'Não informado'}" data-collaborator-id="${a.assignedCollaborator?.id || ''}" class="delegate-finalization-btn bg-indigo-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-indigo-600">Delegar</button>
+                        <button data-id="${a.id}" data-name="${a.name}" data-collaborator-name="${a.assignedCollaborator?.name || 'Não informado'}" class="attend-directly-btn bg-green-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-600">Finalizar</button>
                     </div>
-                    ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
                 `;
                 return card;
             });
 
             render(atendidosList, atendidos, a => {
                 const card = document.createElement('div');
-                const confirmedBtnBgClass = a.isConfirmed ? 'bg-green-500' : 'bg-gray-400';
-                const confirmedBtnHoverClass = a.isConfirmed ? 'hover:bg-green-600' : 'hover:bg-gray-500';
-                const confirmedText = a.isConfirmed ? '' : ''; // Vazio para exibir apenas o ícone quando confirmado
-                const confirmationInfo = a.isConfirmed && a.confirmationDetails ? 
-                    `<span class="text-xs opacity-75 block text-gray-700">Por: ${a.confirmationDetails.confirmedBy} em ${new Date(a.confirmationDetails.confirmedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}</span>` : '';
-
-                card.className = 'relative bg-green-50 p-4 rounded-lg shadow-sm border-green-200';
+                card.className = 'relative bg-green-50 p-2 space-y-2 rounded-lg shadow-sm border-green-200';
                 const totalAssuntos = 1 + (a.demandas?.quantidade ? Number(a.demandas.quantidade) : 0);
-                const demandasInfo = a.demandas?.descricoes?.length > 0 ? `<div class="mt-2 text-xs bg-gray-100 p-2 rounded"><strong class="text-gray-700">Demandas Adicionais (${a.demandas.quantidade || 0}):</strong><ul class="list-disc list-inside pl-2 text-gray-600">${a.demandas.descricoes.map(d => `<li>${d}</li>`).join('')}</ul></div>` : '';
                 card.innerHTML = `
                     <div class="flex items-center justify-between">
-                        <p class="font-bold text-lg inline-flex items-center">
-                            ${a.name} ${totalAssuntos > 1 ? `<span class="text-sm font-medium text-green-600 ml-1">(${totalAssuntos} assuntos)</span>` : ''}
-                            <button data-id="${a.id}" class="toggle-confirmed-atendido confirm-btn-style ${confirmedBtnBgClass} ${confirmedBtnHoverClass} text-white">
-                                <svg class="confirm-btn-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/></svg>
-                            </button>
-                        </p>
-                        <button data-id="${a.id}" class="delete-btn text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5zM6 6.5a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm3 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm-5 1a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1h-6z"/></svg></button>
+                        <p class="font-bold">${a.name}</p>
+                        <button data-id="${a.id}" class="return-from-atendido-btn text-gray-400 hover:text-yellow-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-return-left" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L3.707 7.5H12.5A1.5 1.5 0 0 0 14 6.3V2a.5.5 0 0 1 .5-.5z"/></svg></button>
                     </div>
-                    <div class="card-details mt-2 space-y-2">
-                        ${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}
-                        <p class="text-sm">Assunto Principal: <strong>${a.subject}</strong></p>
-                        <div class="text-xs text-gray-600 grid grid-cols-3 gap-2 text-center border-y py-2">
-                            <div><strong>Agendado:</strong><br>${a.scheduledTime || 'N/A'}</div>
-                            <div><strong>Chegou:</strong><br>${a.arrivalTime ? new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</div>
-                            <div><strong>Finalizado:</strong><br>${a.attendedTime ? new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</div>
-                        </div>
-                        ${demandasInfo}
-                        <div class="flex justify-between items-center mt-2">
-                            <p class="text-sm">Por: <strong>${a.attendant || 'Não informado'}</strong></p>
-                            <div class="flex items-center gap-1 flex-wrap">
-                                <button data-id="${a.id}" class="manage-demands-btn text-blue-600 hover:text-blue-800 font-semibold text-xs py-1 px-2 rounded hover:bg-blue-100">Demandas</button>
-                                <button data-id="${a.id}" class="edit-assisted-btn text-gray-600 hover:text-gray-800 font-semibold text-xs py-1 px-2 rounded hover:bg-gray-100">Dados</button>
-                                <button data-id="${a.id}" class="edit-attendant-btn text-green-600 hover:text-green-800 font-semibold text-xs py-1 px-2 rounded hover:bg-green-100">Atendente</button>
-                            </div>
-                        </div>
-                        <div class="mt-2 pt-2 border-t flex justify-between items-center">
-                            ${a.lastActionBy ? `<p class="text-xs text-gray-500">Última ação por: <strong>${a.lastActionBy}</strong></p>` : '<div></div>'}
-                            <button data-id="${a.id}" data-assigned-collaborator='${JSON.stringify(a.assignedCollaborator || null)}' class="return-from-atendido-btn ${currentPautaData?.useDelegationFlow ? 'bg-orange-500 hover:bg-orange-600' : 'bg-yellow-500 hover:bg-yellow-600'} text-white font-semibold py-1 px-3 rounded-lg text-xs">
-                                ${currentPautaData?.useDelegationFlow ? 'Voltar p/ Em Atendimento' : 'Voltar p/ Aguardando'}
-                            </button>
-                        </div>
-                        ${confirmationInfo}
+                    <p class="text-sm">Por: <strong>${a.attendant || 'Não informado'}</strong></p>
+                    <p class="text-sm">Assuntos: <span class="font-semibold">${totalAssuntos}</span></p>
+                    <div class="flex flex-wrap items-center gap-1 mt-2 text-xs">
+                        <button data-id="${a.id}" class="manage-demands-btn text-blue-600 hover:underline">Demandas</button>
+                        <span class="text-gray-300">|</span>
+                        <button data-id="${a.id}" class="edit-attendant-btn text-blue-600 hover:underline">Atendente</button>
+                        <span class="text-gray-300">|</span>
+                        <button data-id="${a.id}" class="delete-btn text-red-600 hover:underline">Deletar</button>
                     </div>
-                    <div class="text-right mt-1">
-                         <button class="toggle-details-btn text-gray-500 hover:text-gray-800 p-1">
-                             <svg class="pointer-events-none" style="transform: rotate(180deg);" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
-                         </button>
-                    </div>`;
+                `;
                 return card;
             });
 
             render(faltososList, faltosos, a => {
                 const card = document.createElement('div');
-                const confirmedBtnBgClass = a.isConfirmed ? 'bg-red-500' : 'bg-gray-400';
-                const confirmedBtnHoverClass = a.isConfirmed ? 'hover:bg-red-600' : 'hover:bg-gray-500';
-                const confirmedText = a.isConfirmed ? '' : ''; // Vazio para exibir apenas o ícone quando confirmado
-                 const confirmationInfo = a.isConfirmed && a.confirmationDetails ? 
-                    `<span class="text-xs opacity-75 block text-gray-700">Por: ${a.confirmationDetails.confirmedBy} em ${new Date(a.confirmationDetails.confirmedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}</span>` : '';
-
-                card.className = 'relative bg-red-50 p-4 rounded-lg shadow-sm border-red-200';
+                card.className = 'relative bg-red-50 p-2 space-y-2 rounded-lg shadow-sm border-red-200';
                 card.innerHTML = `
                     <div class="flex items-center justify-between">
-                        <p class="font-bold text-lg inline-flex items-center">
-                            ${a.name}
-                        </p>
-                        <button data-id="${a.id}" class="toggle-confirmed-faltoso confirm-btn-style ${confirmedBtnBgClass} ${confirmedBtnHoverClass} text-white">
-                            <svg class="confirm-btn-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/></svg>
-                        </button>
+                        <p class="font-bold">${a.name}</p>
+                        <button data-id="${a.id}" class="delete-btn text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5zM6 6.5a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm3 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm-5 1a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1h-6z"/></svg></button>
                     </div>
-                    <div class="mt-2 space-y-2">
-                        ${a.cpf ? `<p class="text-sm">CPF: <strong>${a.cpf}</strong></p>` : ''}
-                        <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
-                        <p class="text-sm">Agendado: <strong>${a.scheduledTime}</strong></p>
-                        <div class="mt-3">
-                            <button data-id="${a.id}" class="return-to-pauta-from-faltoso-btn w-full bg-gray-500 text-white font-semibold py-1 rounded-lg hover:bg-gray-600 text-xs">Revertido para Pauta</button>
-                        </div>
-                        ${confirmationInfo}
+                    <p class="text-sm">Agendado: <strong>${a.scheduledTime}</strong></p>
+                    <div class="mt-2">
+                        <button data-id="${a.id}" class="return-to-pauta-from-faltoso-btn w-full bg-gray-500 text-white font-semibold py-1 rounded-lg hover:bg-gray-600 text-xs">Reverter para Pauta</button>
                     </div>
-                    ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
                 `;
                 return card;
             });
@@ -1520,7 +1426,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 
         // --- INÍCIO DA LÓGICA DE GERENCIAR COLABORADORES (LISTA DE PRESENÇA) ---
-        // Referências aos elementos do modal de colaboradores
         const collaboratorsModal = document.getElementById('collaborators-modal');
         const collaboratorFormModal = document.getElementById('collaborator-form-modal');
         const collaboratorNameModal = document.getElementById('collaborator-name-modal');
@@ -1884,7 +1789,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
 
             const deleteButton = document.createElement('button');
-            deleteButton.className = "absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:text-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500";
+            deleteButton.className = "absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:bg-red-100 hover:text-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500";
             deleteButton.setAttribute('aria-label', 'Excluir pauta');
             deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
 
@@ -3013,7 +2918,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const querySnapshot = await getDocs(q);
                     
                     if (querySnapshot.empty) {
-                        inviteStatus.textContent = 'Usuário não encontrado.';
+                        statusDiv.textContent = 'Usuário não encontrado.';
                         return;
                     }
                     
@@ -3091,7 +2996,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     };
                     const docRef = doc(collectionRef, assistedIdToHandle);
                     await updateDoc(docRef, getUpdatePayload({ demandas: demandsData }));
-                    showNotification("Demandas salvas com sucesso!", "success");
+                    showNotification("Demandas salvas com sucesso!");
                     document.getElementById('demands-modal').classList.add('hidden');
                 }
 
@@ -3412,6 +3317,71 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 
                 editSubjectInput.value = selectedText;
             });
+
+            // --- Lógica de controles de layout e espaçamento ---
+            const mainContent = document.getElementById('main-content');
+            const layoutCols2Btn = document.getElementById('layout-cols-2-btn');
+            const layoutCols3Btn = document.getElementById('layout-cols-3-btn');
+            const layoutCols4Btn = document.getElementById('layout-cols-4-btn');
+            const gapSmallBtn = document.getElementById('gap-small-btn');
+            const gapMediumBtn = document.getElementById('gap-medium-btn');
+            const gapLargeBtn = document.getElementById('gap-large-btn');
+
+            function applyLayout(cols) {
+                mainContent.classList.remove('lg:grid-cols-2', 'lg:grid-cols-3', 'lg:grid-cols-4');
+                mainContent.classList.add(`lg:grid-cols-${cols}`);
+                localStorage.setItem('cardLayoutCols', cols);
+                updateLayoutButtonStates(cols);
+            }
+
+            function applyGap(gapSize) {
+                mainContent.classList.remove('gap-1', 'gap-2', 'gap-4', 'gap-8');
+                mainContent.classList.add(`gap-${gapSize}`);
+                localStorage.setItem('cardLayoutGap', gapSize);
+                updateGapButtonStates(gapSize);
+            }
+
+            function updateLayoutButtonStates(activeCols) {
+                [layoutCols2Btn, layoutCols3Btn, layoutCols4Btn].forEach(btn => {
+                    if (btn.id === `layout-cols-${activeCols}-btn`) {
+                        btn.classList.add('bg-green-500', 'text-white');
+                        btn.classList.remove('bg-gray-200', 'text-gray-800');
+                    } else {
+                        btn.classList.remove('bg-green-500', 'text-white');
+                        btn.classList.add('bg-gray-200', 'text-gray-800');
+                    }
+                });
+            }
+
+            function updateGapButtonStates(activeGap) {
+                const gapMap = { '1': 'small', '2': 'medium', '4': 'large' };
+                [gapSmallBtn, gapMediumBtn, gapLargeBtn].forEach(btn => {
+                    const buttonGapName = btn.id.split('-')[1];
+                    if (buttonGapName === gapMap[activeGap]) {
+                        btn.classList.add('bg-green-500', 'text-white');
+                        btn.classList.remove('bg-gray-200', 'text-gray-800');
+                    } else {
+                        btn.classList.remove('bg-green-500', 'text-white');
+                        btn.classList.add('bg-gray-200', 'text-gray-800');
+                    }
+                });
+            }
+
+            // Event Listeners para os botões de layout
+            layoutCols2Btn.addEventListener('click', () => applyLayout(2));
+            layoutCols3Btn.addEventListener('click', () => applyLayout(3));
+            layoutCols4Btn.addEventListener('click', () => applyLayout(4));
+
+            // Event Listeners para os botões de espaçamento
+            gapSmallBtn.addEventListener('click', () => applyGap(1));
+            gapMediumBtn.addEventListener('click', () => applyGap(2));
+            gapLargeBtn.addEventListener('click', () => applyGap(4));
+
+            // Carregar preferências salvas ao iniciar
+            const savedCols = localStorage.getItem('cardLayoutCols') || 4;
+            const savedGap = localStorage.getItem('cardLayoutGap') || 2;
+            applyLayout(savedCols);
+            applyGap(savedGap);
             
         });
     </script>
@@ -3506,12 +3476,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     try {
       await emailjs.send(
         "service_r1nxe6a", // Seu Service ID para anotações
-        "template_ynrwaxt", // Seu Template ID para Anotações (ATUALIZADO)
+        "template_ynrwaxt", // Seu Template ID para Anotações
         {
             message: notes,
             email_to: "SEU_EMAIL_DESTINO_ANOTACOES@dominio.com", // Substitua pelo seu email para receber as anotações
-            name: currentUserName, // Adicionado
-            email: auth.currentUser?.email || "noreply@example.com" // Adicionado
+            name: "Sistema SIGEP", // Remetente
+            email: "noreply@sigep.com" // Email de resposta
         }
       );
       console.log("Anotações enviadas por e-mail!");
