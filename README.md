@@ -27,6 +27,10 @@ Geração de Relatórios (PDF): Exporte um relatório em PDF com o resumo de tod
 
 Progressive Web App (PWA): O sistema pode ser "instalado" em computadores e dispositivos móveis para acesso rápido e funcionamento offline.
 
+SITE QUE USO: 
+https://dashboard.emailjs.com/admin
+https://firebase.google.com/
+
 
 📂 Estrutura do Projeto
 /
