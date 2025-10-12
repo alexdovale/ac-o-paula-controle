@@ -550,7 +550,7 @@ async function handleGeneratePdf() {
         // Reabilita o botão após a conclusão
         if (printChecklistBtn) {
             printChecklistBtn.disabled = false;
-            printChecklistBtn.textContent = 'Baixar PDF'; // O ideal é que seu botão já tenha esse texto
+            printChecklistBtn.textContent = 'PDF'; // O ideal é que seu botão já tenha esse texto
         }
     }
 }
