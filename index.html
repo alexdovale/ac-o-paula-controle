@@ -13,11 +13,12 @@
 
     <!-- Para os gráficos -->    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- Para o PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     
-   
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
@@ -900,7 +901,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
     
-    <script src="estatisticas.js"></script> <!-- <<< ESTE É O SEGUNDO PASSO -->
+    <script src="estatisticas.js"></script>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -2157,9 +2158,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.body.removeChild(textArea);
         };
         
-    
-     // FUNÇÃO PARA MOSTRAR ESTATÍSTICAS (AGORA CHAMA O SCRIPT EXTERNO)
-      const showStatisticsModal = () => {
+        // FUNÇÃO PARA MOSTRAR ESTATÍSTICAS (AGORA CHAMA O SCRIPT EXTERNO)
+        const showStatisticsModal = () => {
             // Chama a função do arquivo estatisticas.js
             renderStatisticsModal(
                 allAssisted,
@@ -2167,7 +2167,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('pauta-title').textContent
             );
         };
-
         document.addEventListener('DOMContentLoaded', () => {
             main();
             setupModalClosers();
@@ -3576,7 +3575,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
-
 
 
 
