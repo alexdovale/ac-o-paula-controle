@@ -470,7 +470,10 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     };
 
     const addSectionTitle = (title) => {
-        if (yPos > pageHeight - 120) { // Verifica espaço para o título e algum conteúdo
+        // Aumentado o buffer de verificação de espaço para 180pt (antes era 120pt).
+        // Isso ajuda a evitar que um título de seção apareça no final de uma página
+        // com a sua tabela ou gráfico começando na página seguinte.
+        if (yPos > pageHeight - 180) { 
             doc.addPage();
             yPos = margin + 20;
         }
