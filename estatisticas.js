@@ -1,4 +1,4 @@
-function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
+export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
     const modal = document.getElementById('statistics-modal');
     
     if (!modal) {
