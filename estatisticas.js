@@ -635,4 +635,3 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     addHeaderAndFooter();
     doc.save(`estatisticas_${pautaName.replace(/\s+/g, '_')}.pdf`);
 }
-
