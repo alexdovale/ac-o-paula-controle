@@ -274,13 +274,13 @@ let currentChecklistAction = null;
 const modal = document.getElementById('documents-modal');
 const assistedNameEl = document.getElementById('documents-assisted-name');
 const actionSelectionView = document.getElementById('document-action-selection');
-const actionSearchInput = document.getElementById('action-search-input'); // Novo: Campo de pesquisa de assunto
+const actionSearchInput = document.getElementById('action-search-input');
 const checklistView = document.getElementById('document-checklist-view');
 const checklistContainer = document.getElementById('checklist-container');
 const checklistTitle = document.getElementById('checklist-title');
 const backToActionSelectionBtn = document.getElementById('back-to-action-selection-btn');
 const saveChecklistBtn = document.getElementById('save-checklist-btn');
-const printChecklistBtn = document.getElementById('print-checklist-btn'); // Novo: Botão de impressão
+const printChecklistBtn = document.getElementById('print-checklist-btn');
 const checklistSearch = document.getElementById('checklist-search');
 const closeBtn = document.getElementById('close-documents-modal-btn');
 const cancelBtn = document.getElementById('cancel-checklist-btn');
@@ -294,43 +294,33 @@ const cancelBtn = document.getElementById('cancel-checklist-btn');
  * a partir do objeto documentsData.
  */
 function populateActionSelection() {
-    // Encontra o container onde os botões serão inseridos.
     const container = document.getElementById('document-action-selection');
-    if (!container) return; // Se não encontrar o container, não faz nada.
+    if (!container) return;
 
-    // Verifica se os botões já foram criados para evitar duplicatas
+    // Evita recriar os botões se eles já existirem.
     if (container.querySelector('.grid')) {
         return;
     }
 
-    // Limpa qualquer conteúdo antigo e adiciona o parágrafo de instrução.
     container.innerHTML = '<p class="text-gray-600 mb-4">Selecione o tipo de ação para ver a lista de documentos necessários:</p>';
 
-    // Cria a div que vai conter os botões no layout de grid.
     const gridContainer = document.createElement('div');
     gridContainer.className = 'grid grid-cols-1 md:grid-cols-2 gap-3';
 
-    // Itera sobre cada ação definida no objeto documentsData.
     Object.keys(documentsData).forEach((actionKey, index) => {
         const actionData = documentsData[actionKey];
-
-        // Cria o elemento botão.
         const button = document.createElement('button');
-        button.dataset.action = actionKey; // Adiciona o data-attribute para o clique funcionar.
+        button.dataset.action = actionKey;
         button.className = 'w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition';
 
-        // Cria o span interno com o título da ação.
         const span = document.createElement('span');
         span.className = 'font-semibold text-gray-800';
-        // Usa o número do índice + 1 para criar a numeração "1. ", "2. ", etc.
         span.textContent = `${index + 1}. ${actionData.title}`;
 
-        // Monta o botão e o adiciona ao grid.
         button.appendChild(span);
         gridContainer.appendChild(button);
     });
 
-    // Adiciona o grid completo ao container principal.
     container.appendChild(gridContainer);
 }
 
@@ -349,7 +339,7 @@ function renderChecklist(actionKey) {
 
     checklistTitle.textContent = data.title;
     checklistContainer.innerHTML = '';
-    checklistSearch.value = ''; // Limpa a busca
+    checklistSearch.value = '';
 
     data.sections.forEach((section, sectionIndex) => {
         const sectionDiv = document.createElement('div');
@@ -384,7 +374,6 @@ function renderChecklist(actionKey) {
     });
 }
 
-/** Normaliza texto para busca (remove acentos e converte para minúsculas). */
 const normalizeText = (str) => {
     if (!str) return '';
     return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -450,19 +439,18 @@ function handleSearch(e) {
     });
 }
 
-/** Novo: Filtra a lista de assuntos/ações na tela de seleção. */
 function handleActionSearch(e) {
     const searchTerm = normalizeText(e.target.value);
     const allActions = actionSelectionView.querySelectorAll('button[data-action]');
     allActions.forEach(btn => {
         const actionText = normalizeText(btn.textContent);
-        // O botão é o próprio item a ser escondido/mostrado, não um parente
-        btn.style.display = actionText.includes(searchTerm) ? 'block' : 'none';
+        const parentDiv = btn.parentElement; 
+        if (parentDiv) {
+            btn.style.display = actionText.includes(searchTerm) ? 'block' : 'none';
+        }
     });
 }
 
-
-/** Novo: Gera uma versão para impressão do checklist. */
 function handlePrint() {
     const title = checklistTitle.textContent;
     const assistedName = assistedNameEl.textContent;
@@ -486,12 +474,11 @@ function handlePrint() {
     printWindow.document.write(`<h2>Assunto: ${title}</h2>`);
 
     let printableHtml = '';
-    const sections = checklistContainer.querySelectorAll('div > div'); // Seleciona as divs que contêm as seções
+    const sections = checklistContainer.querySelectorAll('div > div');
     sections.forEach(section => {
         const sectionTitleEl = section.querySelector('h4');
         if (sectionTitleEl) {
-            const sectionTitle = sectionTitleEl.textContent;
-            printableHtml += `<h4>${sectionTitle}</h4>`;
+            printableHtml += `<h4>${sectionTitleEl.textContent}</h4>`;
             printableHtml += '<ul>';
             const items = section.querySelectorAll('li');
             items.forEach(item => {
@@ -521,11 +508,6 @@ function closeModal() {
 
 // --- Funções Exportadas ---
 
-/**
- * Configura os listeners de evento para o modal de detalhes.
- * Deve ser chamada uma vez quando a aplicação carrega.
- * @param {object} config - Objeto de configuração com dependências.
- */
 export function setupDetailsModal(config) {
     db = config.db;
     getUpdatePayload = config.getUpdatePayload;
@@ -538,17 +520,13 @@ export function setupDetailsModal(config) {
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
     
-    // Novos Listeners
     if (actionSearchInput) actionSearchInput.addEventListener('input', handleActionSearch);
     if (printChecklistBtn) printChecklistBtn.addEventListener('click', handlePrint);
 }
 
-/**
- * Abre o modal de detalhes para um assistido específico.
- * @param {object} config - Objeto de configuração com os dados da pauta atual.
- */
 export function openDetailsModal(config) {
-    populateActionSelection(); // *** MODIFICAÇÃO: Chama a função para criar os botões ***
+    // MODIFICAÇÃO: Garante que os botões de ação sejam criados.
+    populateActionSelection();
     
     currentAssistedId = config.assistedId;
     currentPautaId = config.pautaId;
@@ -563,7 +541,6 @@ export function openDetailsModal(config) {
 
     assistedNameEl.textContent = assisted.name;
 
-    // Lógica para carregar checklist salvo ou mostrar seleção
     if (assisted.documentChecklist && assisted.documentChecklist.action) {
         const savedAction = assisted.documentChecklist.action;
         renderChecklist(savedAction);
@@ -571,7 +548,6 @@ export function openDetailsModal(config) {
         checklistView.classList.remove('hidden');
         checklistView.classList.add('flex');
     } else {
-        // Comportamento padrão: mostra a seleção de ação
         handleBack(); 
     }
     
