@@ -322,7 +322,7 @@
                                  <span>✅ Atendidos</span>
                                  <span id="atendidos-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
                              </h3>
-                            <button id="download-pdf-btn" class="ml-4 flex-shrink-0 bg-blue-600 text-white font-bold py-1 px-3 rounded-lg hover:bg-blue-700 text-sm">PDF</button>
+                            <button id="download-pdf-btn" class="ml-4 flex-shrink-0 bg-blue-600 text-white font-bold py-1 px-3 rounded-lg hover:bg-blue-700 text-sm">Baixar PDF</button>
                         </div>
                         <input type="search" id="atendidos-search" placeholder="Pesquisar por nome, CPF, horário..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
@@ -610,7 +610,7 @@
                         </table>
                     </div>
                     <div class="flex justify-between items-center mt-4">
-                        <button id="download-collaborators-pdf-modal" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">PDF</button>
+                        <button id="download-collaborators-pdf-modal" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Baixar PDF</button>
                         <button id="clear-collaborators-list-modal" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Limpar Lista</button>
                     </div>
                 </div>
@@ -858,6 +858,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
 
+    <!-- ***** INÍCIO DO HTML DO MODAL DE DETALHES ***** -->
     <div id="documents-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl flex flex-col" style="max-height: 90vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -915,10 +916,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     <input type="search" id="checklist-search" placeholder="Pesquisar documento..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                 </div>
                 <div id="checklist-container" class="space-y-4 overflow-y-auto pr-2 flex-grow border rounded-lg p-4 bg-gray-50" style="max-height: 55vh;">
-                    </div>
+                </div>
             </div>
         </div>
     </div>
+    <!-- ***** FIM DO HTML DO MODAL DE DETALHES ***** -->
     
  <!-- Modal de Estatísticas (Container) -->
     <div id="statistics-modal" class="hidden z-50">
@@ -927,6 +929,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     
 
     <script type="module">
+        // Importando as funções do novo módulo de detalhes
+        import { setupDetailsModal, openDetailsModal } from './detalhes.js';
         import { renderStatisticsModal } from './estatisticas.js'
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -1087,8 +1091,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         let currentPautaData = null; // Para armazenar todos os dados da pauta atual
         let assistedIdToHandle = null;
         let assistedNameToHandle = null; // Adicionado para passar o nome para o modal de seleção de colaborador
-        let currentChecklistAction = null;
-
+        
         // Variáveis para o novo modal de delegação de e-mail
         let assistedIdForDelegation = null;
         let assistedNameForDelegation = null;
@@ -1426,7 +1429,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 card.className = 'relative bg-red-50 p-4 rounded-lg shadow-sm border-red-200';
                 card.innerHTML = `
-                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5zM6 6.5a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm3 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm-5 1a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1h-6z"/></svg></button>
+                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5zM6 6.5a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm3 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm-5 1a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1h-6z"/></svg></button>
                     <div class="flex items-center justify-between">
                         <p class="font-bold text-lg inline-flex items-center">
                             ${a.name}
@@ -2068,8 +2071,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const userDoc = await getDoc(doc(db, "users", user.uid));
                     if (userDoc.exists() && userDoc.data().status === 'approved') {
                         currentUserName = userDoc.data().name || user.email;
-
-                        // Tenta carregar a última pauta acessada
                         const lastPautaId = localStorage.getItem('lastPautaId');
                         const lastPautaType = localStorage.getItem('lastPautaType');
 
@@ -3299,79 +3300,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
 
-
-            const documentsData = {
-                alimentos_fixacao: {
-                    title: 'Ação de Alimentos (Fixação)',
-                    sections: [
-                        { title: 'Do Representante Legal:', docs: ['ID e CPF', 'Comprovante de residência', 'Certidão de nascimento/casamento', 'Comprovante de renda', 'Dados bancários'] },
-                        { title: 'Do Filho(a):', docs: ['Certidão de Nascimento', 'Comprovantes de despesas (escola, saúde)'] },
-                        { title: 'Sobre o Réu:', docs: ['Endereço completo', 'Local de trabalho (se souber)'] }
-                    ]
-                },
-                alimentos_oferta: {
-                    title: 'Oferta de Alimentos',
-                    sections: [
-                        { title: 'Do Ofertante:', docs: ['ID e CPF', 'Comprovante de residência', 'Comprovante de renda'] },
-                        { title: 'Do Filho(a):', docs: ['Certidão de Nascimento'] },
-                        { title: 'Sobre o Representante Legal:', docs: ['Nome e endereço completo', 'Dados bancários (se souber)'] }
-                    ]
-                },
-                alimentos_exoneracao: {
-                    title: 'Exoneração de Alimentos',
-                    sections: [
-                        { title: 'Do Requerente (quem paga):', docs: ['ID e CPF', 'Comprovante de residência', 'Sentença que fixou os alimentos'] },
-                        { title: 'Do Filho(a) (maior de idade):', docs: ['Nome e endereço completo', 'Comprovante de que não estuda mais ou pode se sustentar (se houver)'] }
-                    ]
-                },
-                alimentos_revisional: {
-                    title: 'Revisional de Alimentos',
-                    sections: [
-                        { title: 'Do Requerente:', docs: ['ID e CPF', 'Comprovante de residência', 'Sentença que fixou os alimentos', 'Prova da mudança da situação financeira (desemprego, nova prole, etc.)'] },
-                        { title: 'Da Outra Parte:', docs: ['Nome e endereço completo'] }
-                    ]
-                },
-                divorcio_litigioso: {
-                    title: 'Divórcio Litigioso',
-                    sections: [
-                        { title: 'Do Requerente:', docs: ['ID e CPF', 'Comprovante de residência', 'Certidão de Casamento atualizada'] },
-                        { title: 'Dos Filhos (se houver):', docs: ['Certidão de Nascimento dos filhos'] },
-                        { title: 'Dos Bens (se houver):', docs: ['Documentos de propriedade de imóveis, veículos, etc.'] },
-                        { title: 'Do Cônjuge:', docs: ['Endereço completo para citação'] }
-                    ]
-                },
-                divorcio_consensual: {
-                    title: 'Divórcio Consensual',
-                    sections: [
-                        { title: 'De Ambos os Cônjuges:', docs: ['ID e CPF de ambos', 'Comprovante de residência de ambos', 'Certidão de Casamento atualizada', 'Pacto antenupcial (se houver)'] },
-                        { title: 'Acordo:', docs: ['Definição sobre partilha de bens', 'Definição sobre pensão (se houver)', 'Definição sobre guarda dos filhos (se houver)'] }
-                    ]
-                },
-                guarda_visitas: {
-                    title: 'Guarda e Regul. de Visitas',
-                    sections: [
-                        { title: 'Do Requerente:', docs: ['ID e CPF', 'Comprovante de residência'] },
-                        { title: 'Do Filho(a):', docs: ['Certidão de Nascimento'] },
-                        { title: 'Da Outra Parte:', docs: ['Nome e endereço completo'] }
-                    ]
-                },
-                paternidade: {
-                    title: 'Investigação de Paternidade',
-                    sections: [
-                        { title: 'Do Representante Legal:', docs: ['ID e CPF', 'Comprovante de residência'] },
-                        { title: 'Do Filho(a):', docs: ['Certidão de Nascimento'] },
-                        { title: 'Do Suposto Pai:', docs: ['Nome e endereço completo', 'Qualquer prova que indique a paternidade (fotos, mensagens, etc.)'] }
-                    ]
-                },
-                uniao_estavel: {
-                    title: 'União Estável (Rec./Diss.)',
-                    sections: [
-                        { title: 'De Ambos os Companheiros:', docs: ['ID e CPF de ambos', 'Comprovante de residência'] },
-                        { title: 'Provas da União:', docs: ['Fotos do casal', 'Declaração de testemunhas', 'Contas conjuntas', 'Filhos em comum (Certidão de Nascimento)'] }
-                    ]
-                }
-            };
-
             const actionSelectionView = document.getElementById('document-action-selection');
             const checklistView = document.getElementById('document-checklist-view');
             const checklistContainer = document.getElementById('checklist-container');
@@ -3604,11 +3532,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
-
-
-
-
-
-
-
-
