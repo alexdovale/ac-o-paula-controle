@@ -12,35 +12,35 @@ const documentsData = {
     obrigacao_fazer: {
         title: 'Ação de Obrigação de Fazer',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos Específicos do Caso', docs: ['Documentos que comprovem a obrigação (contrato, acordo, etc.)', 'Provas do descumprimento (e-mails, protocolos, fotos, etc.)', 'Se contra concessionária de serviço público: Faturas, protocolos de reclamação.'] }
         ]
     },
     declaratoria_nulidade: {
         title: 'Ação Declaratória de Nulidade',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos Específicos do Caso', docs: ['Documento ou ato jurídico a ser anulado (contrato, cobrança, multa)', 'Provas da ilegalidade ou abusividade (jurisprudências, extratos)', 'Se contra concessionária (ex: TOI da LIGHT): Cópia do TOI, histórico de consumo.'] }
         ]
     },
     indenizacao_danos: {
         title: 'Ação de Indenização (Danos Morais e Materiais)',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos Específicos do Caso', docs: ['Provas do evento danoso (boletim de ocorrência, fotos, vídeos)', 'Provas dos danos materiais (notas fiscais, orçamentos, recibos)', 'Provas dos danos morais (laudos psicológicos, atestados, testemunhas)', 'Se contra concessionária: Protocolos, notas de aparelhos queimados.'] }
         ]
     },
     revisional_debito: {
         title: 'Ação Revisional de Débito',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos Específicos do Caso', docs: ['Contrato ou documento que originou o débito', 'Faturas, extratos ou planilhas do débito', 'Provas de que os valores são indevidos (histórico de consumo, cálculos)', 'Se contra concessionária: Histórico de consumo, protocolos de reclamação.'] }
         ]
     },
     exigir_contas: {
         title: 'Ação de Exigir Contas',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos Específicos do Caso', docs: ['Documento que comprove a relação de administração/gestão (termo de curatela, contrato)', 'Documentos que indiquem a movimentação de valores (extratos)', 'Provas da recusa em prestar contas ou suspeita de irregularidades.'] }
         ]
     },
@@ -49,7 +49,7 @@ const documentsData = {
     alimentos_fixacao_majoracao_oferta: {
         title: 'Alimentos (Fixação / Majoração / Oferta)',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos do Filho(a)/Alimentando(a)', docs: ['Certidão de Nascimento', 'Comprovantes de despesas (matrícula, escola, saúde, remédios)', 'Laudos de necessidades especiais (se aplicável)'] },
             { title: 'Sobre o Réu (Alimentante)', docs: ['Endereço do(a) alimentante', 'Nome e endereço do trabalho do(a) alimentante (se souber)', 'Dados da(o) empregador(a) da parte ré (CNPJ, se possível)', 'Contracheque(s), extrato bancário ou IR do(a) alimentante (se conseguir)'] },
             { title: 'Para Depósito', docs: ['Dados bancários do(a) representante legal (para depósito da pensão)'] }
@@ -58,7 +58,7 @@ const documentsData = {
     alimentos_gravidicos: {
         title: 'Ação de Alimentos Gravídicos',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos Específicos do Caso', docs: ['Comprovante de gravidez (ultrassom, atestado médico)', 'Provas do relacionamento com o suposto pai (fotos, mensagens, testemunhas)', 'Comprovantes das despesas da gravidez (exames, medicamentos, enxoval)'] },
             { title: 'Sobre o Suposto Pai', docs: ['Endereço do suposto pai', 'Informações sobre a profissão e possibilidade financeira do suposto pai'] }
         ]
@@ -66,7 +66,7 @@ const documentsData = {
     alimentos_avoengos: {
         title: 'Ação de Alimentos Avoengos (contra avós)',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos do Neto(a)/Alimentando(a)', docs: ['Certidão de Nascimento'] },
             { title: 'Sobre os Pais', docs: ['Provas da impossibilidade/insuficiência dos pais (desemprego, decisão judicial anterior, certidão de óbito)'] },
             { title: 'Sobre o(s) Avó(s) Réu(s)', docs: ['Endereço do(a) avó(ô) réu', 'Provas da capacidade financeira do(a) avó(ô) (contracheques, extratos, IR, etc.)'] }
@@ -75,14 +75,14 @@ const documentsData = {
     divorcio_consensual: {
         title: 'Divórcio Consensual',
         sections: [
-            { title: 'Documentação Comum (Ambos os Cônjuges)', docs: ['Carteira de Identidade (RG) de ambos', 'CPF de ambos', 'Comprovante de Residência de ambos', 'Certidão de Casamento (atualizada)'] },
+            { title: 'Documentação Comum (Ambos os Cônjuges)', docs: ['Carteira de Identidade (RG) de ambos', 'CPF de ambos', 'Comprovante de Residência de ambos', 'Certidão de Casamento (atualizada)', 'Declaração de Hipossuficiência'] },
             { title: 'Bens e Filhos (se houver)', docs: ['Documentos dos bens (imóveis, veículos, contas) e seus valores', 'Certidão de Nascimento/Casamento dos filhos', 'Comprovantes de despesas dos filhos', 'Dados bancários para pensão (se houver)'] }
         ]
     },
     divorcio_litigioso: {
         title: 'Divórcio Litigioso',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Certidão de Casamento (atualizada)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Certidão de Casamento (atualizada)', 'Declaração de Hipossuficiência'] },
             { title: 'Sobre o Outro Cônjuge (Réu)', docs: ['Endereço do(a) outro(a) cônjuge (réu)'] },
             { title: 'Bens e Filhos (se houver)', docs: ['Documentos dos bens (imóveis, veículos, contas) e seus valores', 'Certidão de Nascimento/Casamento dos filhos', 'Comprovantes de despesas dos filhos', 'Informações de renda do réu (para alimentos)', 'Se há imóvel MCMV: Documentação do imóvel', 'Se há cotas sociais (empresa): Contrato social, documentos da empresa'] }
         ]
@@ -90,7 +90,7 @@ const documentsData = {
     uniao_estavel_reconhecimento_dissolucao: {
         title: 'Reconhecimento e Dissolução de União Estável',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
             { title: 'Dos Companheiros', docs: ['Certidão de Nascimento/Casamento de ambos (para comprovar estado civil)'] },
             { title: 'Provas da União', docs: ['Provas da existência da união estável (fotos, contas conjuntas, contratos, declarações)', 'Endereço do(a) ex-companheiro(a) (réu)'] },
             { title: 'Bens e Filhos (se houver)', docs: ['Documentos dos bens adquiridos na constância da união', 'Certidão de Nascimento/Casamento dos filhos', 'Comprovantes de despesas, informações de renda do réu (para alimentos)'] }
@@ -99,7 +99,7 @@ const documentsData = {
     uniao_estavel_post_mortem: {
         title: 'Reconhecimento / Dissolução de União Estável Post Mortem',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
             { title: 'Documentos do Falecido(a)', docs: ['Certidão de Óbito do(a) companheiro(a) falecido(a)'] },
             { title: 'Provas e Herdeiros', docs: ['Provas da existência da união estável (conforme item anterior)', 'Endereço dos herdeiros do falecido (réus)', 'Documentos que comprovem a inexistência de filhos ou testamento do de cujus'] }
         ]
@@ -107,14 +107,14 @@ const documentsData = {
     conversao_uniao_homoafetiva: {
         title: 'Conversão de União Estável Homoafetiva em Casamento',
         sections: [
-            { title: 'Documentação Comum (Ambos)', docs: ['Documentos de Identidade e CPF de ambos', 'Certidão de Nascimento/Casamento de ambos', 'Comprovante de Residência'] },
+            { title: 'Documentação Comum (Ambos)', docs: ['Documentos de Identidade e CPF de ambos', 'Certidão de Nascimento/Casamento de ambos', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
             { title: 'Provas da União e Testemunhas', docs: ['Provas da união estável (fotos, extratos, declarações)', 'Dados das testemunhas do casamento (nome, RG, CPF, endereço, telefone)'] }
         ]
     },
     guarda: {
         title: 'Guarda (pedida pelos pais / por terceiros)',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
             { title: 'Da(s) Criança(s)/Adolescente(s)', docs: ['Certidão de Nascimento'] },
             { title: 'Se pedida pelos pais:', docs: ['Provas do arranjo familiar atual', 'Se houver conflito: Provas da incapacidade do outro genitor ou situação de risco'] },
             { title: 'Se pedida por terceiros (avó/tio/etc.):', docs: ['Declaração de Idoneidade Moral do(a) requerente', 'Atestado médico de boa saúde física e mental (requerente e criança)', 'Comprovante de vacinação e escolar da criança', 'Provas da situação de risco ou incapacidade dos pais (relatórios do Conselho Tutelar)', 'Endereço dos pais (réus)'] }
@@ -123,14 +123,14 @@ const documentsData = {
     regulamentacao_convivencia: {
         title: 'Regulamentação de Convivência Familiar (Visitas)',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
             { title: 'Documentos do Caso', docs: ['Certidão de Nascimento da(s) criança(s)/adolescente(s)', 'Endereço do(s) pais', 'Cópia da decisão ou termo de guarda (se já houver)', 'Propostas de dias e horários para a convivência'] }
         ]
     },
     investigacao_paternidade: {
         title: 'Investigação de Paternidade (com ou sem Alimentos / Pós Morte)',
         sections: [
-            { title: 'Documentação Comum (Representante Legal)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência'] },
+            { title: 'Documentação Comum (Representante Legal)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
             { title: 'Do Filho(a)', docs: ['Certidão de Nascimento (sem nome do pai ou com pai a ser contestado)', 'Comprovantes de despesas do(a) filho(a) (para pedido de alimentos)'] },
             { title: 'Sobre o Suposto Pai', docs: ['Provas do relacionamento da mãe com o suposto pai (fotos, mensagens, testemunhas)', 'Informações sobre o suposto pai (nome completo, endereço, profissão, etc.)', 'Certidão de Óbito do suposto pai (se for Pós Morte)'] }
         ]
@@ -138,28 +138,28 @@ const documentsData = {
     curatela: {
         title: 'Curatela (antiga interdição)',
         sections: [
-            { title: 'Documentação Comum (Requerente/Futuro Curador)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Idoneidade Moral', 'Atestado médico de boa saúde física e mental', 'Declaração de Anuência dos demais familiares (se houver)'] },
+            { title: 'Documentação Comum (Requerente/Futuro Curador)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Idoneidade Moral', 'Atestado médico de boa saúde física e mental', 'Declaração de Anuência dos demais familiares (se houver)', 'Declaração de Hipossuficiência'] },
             { title: 'Do Curatelando(a)', docs: ['RG e CPF', 'Certidão de Nascimento/Casamento', 'Laudos médicos ATUALIZADOS (com CID, indicando impossibilidade de exprimir vontade)', 'Relatórios de equipe multiprofissional/biopsicossocial (se houver)', 'Documentos de bens do(a) curatelando(a) (se possuir)'] }
         ]
     },
     levantamento_curatela: {
         title: 'Levantamento de Curatela',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
             { title: 'Documentos do Caso', docs: ['Cópia da sentença ou termo de curatela', 'Laudos médicos ATUALIZADOS comprovando a cessação da incapacidade', 'Documentos que comprovem o retorno do(a) curatelado(a) ao convívio social'] }
         ]
     },
     tutela: {
         title: 'Tutela',
         sections: [
-            { title: 'Documentação Comum (Requerente/Futuro Tutor)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Idoneidade Moral', 'Atestado médico de boa saúde física e mental'] },
+            { title: 'Documentação Comum (Requerente/Futuro Tutor)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Idoneidade Moral', 'Atestado médico de boa saúde física e mental', 'Declaração de Hipossuficiência'] },
             { title: 'Do Menor e Pais', docs: ['Certidão de Nascimento/Óbito dos pais do(a) menor (para comprovar ausência)', 'Provas da situação de abandono/risco do menor'] }
         ]
     },
     adocao: {
         title: 'Adoção',
         sections: [
-            { title: 'Dos Requerentes (Futuros Pais Adotivos)', docs: ['Documentos de Identidade e CPF', 'Comprovante de Residência', 'Habilitação para adoção (se já houver)', 'Estudo psicossocial'] },
+            { title: 'Dos Requerentes (Futuros Pais Adotivos)', docs: ['Documentos de Identidade e CPF', 'Comprovante de Residência', 'Habilitação para adoção (se já houver)', 'Estudo psicossocial', 'Declaração de Hipossuficiência'] },
             { title: 'Da Criança/Adolescente e Pais Biológicos', docs: ['Certidão de Nascimento', 'Consentimento dos pais biológicos (se consensual) ou provas de destituição do poder familiar'] }
         ]
     },
@@ -168,14 +168,14 @@ const documentsData = {
     defesa_criminal_custodia: {
         title: 'Defesa Criminal / Audiência de Custódia',
         sections: [
-            { title: 'Documentação Comum (Assistido/Familiar)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência'] },
+            { title: 'Documentação Comum (Assistido/Familiar)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
             { title: 'Documentos do Caso', docs: ['Cópia do Registro de Ocorrência (BO) ou Auto de Prisão em Flagrante (APF)', 'Mandado de Prisão (se houver)', 'Informações sobre o crime/acusação', 'Provas da versão do assistido (testemunhas, áudios, vídeos, fotos)', 'Comprovante de residência fixa e trabalho lícito (para liberdade)', 'Certidão de nascimento de filhos menores/laudos de dependentes (para domiciliar)', 'Certidões de antecedentes criminais'] }
         ]
     },
     execucao_penal: {
         title: 'Acompanhamento de Execução Penal',
         sections: [
-            { title: 'Documentação Comum (Apenado/Familiar)', docs: ['Documentos pessoais do apenado'] },
+            { title: 'Documentação Comum (Apenado/Familiar)', docs: ['Documentos pessoais do apenado', 'Declaração de Hipossuficiência'] },
             { title: 'Documentos do Processo', docs: ['Cópia da Sentença Condenatória e Certidão de Trânsito em Julgado', 'Número do Processo de Execução Penal (PEP)'] },
             { title: 'Para Pedidos Específicos', docs: ['Atestados de trabalho/estudo (para remição)', 'Comprovante de residência familiar (para VPL - Visita Periódica ao Lar)', 'Informações sobre comportamento carcerário'] }
         ]
@@ -185,28 +185,28 @@ const documentsData = {
     fornecimento_medicamentos: {
         title: 'Fornecimento de Medicamentos / Cirurgias / Exames',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos Médicos', docs: ['Receita médica ATUALIZADA (original)', 'Laudo médico DETALHADO (com CID, justificativa da imprescindibilidade, ineficácia de alternativas do SUS)', 'Comprovante de negativa de fornecimento pelo SUS ou plano de saúde', 'Orçamentos do medicamento/procedimento em locais particulares (mínimo de 3)', 'Carteirinha do plano de saúde (se for contra plano)'] }
         ]
     },
     indenizacao_poder_publico: {
         title: 'Indenizações contra o Poder Público',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
             { title: 'Documentos do Caso', docs: ['Documentos que comprovem o dano e o nexo com a atuação/omissão do ente público (BO, laudos, fotos, notas fiscais)'] }
         ]
     },
     previdencia_estadual_municipal: {
         title: 'Previdência Social (estadual e municipal)',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
             { title: 'Documentos Específicos', docs: ['Documentos específicos do benefício pleiteado ou contestado (ex: certidão de tempo de contribuição, laudos médicos)', 'Comprovante da negativa administrativa'] }
         ]
     },
     questionamento_impostos_taxas: {
         title: 'Questionamentos em Cobranças de Impostos, Taxas e Multas',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
             { title: 'Documentos do Débito', docs: ['Cópia do débito/multa que se busca contestar', 'Documentos que comprovem a indevida cobrança ou o pagamento'] }
         ]
     },
@@ -215,21 +215,21 @@ const documentsData = {
     vaga_escola_creche: {
         title: 'Vaga em Escolas e Creches',
         sections: [
-            { title: 'Documentação Comum (Representante Legal)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência'] },
+            { title: 'Documentação Comum (Representante Legal)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
             { title: 'Documentos da Criança e do Pedido', docs: ['Certidão de Nascimento da criança', 'Comprovante de inscrição na lista de espera da prefeitura (se houver)', 'Protocolos de solicitação de vaga na CRE/escolas', 'Endereço das creches/escolas próximas à residência', 'Provas da necessidade da vaga (mãe trabalhadora, laudos para crianças com deficiência)'] }
         ]
     },
     apoio_escolar: {
         title: 'Profissionais de Apoio Escolar',
         sections: [
-            { title: 'Documentação Comum (Representante Legal)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência'] },
+            { title: 'Documentação Comum (Representante Legal)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
             { title: 'Documentos da Criança e do Pedido', docs: ['Certidão de Nascimento da criança/adolescente', 'Laudo médico comprovando a deficiência e a necessidade do profissional de apoio', 'Declaração da escola sobre a matrícula e a ausência do profissional', 'Plano Educacional Individualizado (PEI) (se houver)'] }
         ]
     },
     transporte_gratuito: {
         title: 'Transporte Gratuito (Infância e Juventude)',
         sections: [
-            { title: 'Documentação Comum (Representante Legal)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência'] },
+            { title: 'Documentação Comum (Representante Legal)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
             { title: 'Documentos da Criança/Adolescente', docs: ['Certidão de Nascimento', 'Laudo médico comprovando a deficiência/doença e a necessidade de transporte', 'Comprovante de negativa da solicitação administrativa de transporte'] }
         ]
     },
@@ -238,7 +238,7 @@ const documentsData = {
     retificacao_registro_civil: {
         title: 'Retificação de Registro Civil (Dados / Gênero e Nome)',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
             { title: 'Para Retificação de Dados', docs: ['Cópia da Certidão a ser retificada', 'Documentos que comprovem o erro ou a omissão (outras certidões, documentos antigos)', 'Certidão de Óbito (se for retificação de óbito de "indigente")'] },
             { title: 'Para Alteração de Gênero e Nome', docs: ['Certidão de Nascimento (original e atualizada)', 'Comprovantes de que a pessoa se identifica com o gênero/nome pleiteado'] }
         ]
@@ -248,14 +248,14 @@ const documentsData = {
     alvara_levantamento_valores: {
         title: 'Alvará para Levantamento de Valores (FGTS, PIS/PASEP)',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
             { title: 'Documentos do Falecido e dos Valores', docs: ['Certidão de Óbito do titular dos valores', 'Certidão de dependentes habilitados no INSS ou declaração de inexistência', 'Extrato do FGTS/PIS/PASEP comprovando o saldo', 'Comprovantes de relação com o falecido (certidão de nascimento/casamento)'] }
         ]
     },
     alvara_viagem_menor: {
         title: 'Alvará para Autorização de Viagem de Menor ao Exterior',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
             { title: 'Documentos do Menor e da Viagem', docs: ['Certidão de Nascimento do(a) menor', 'Passaporte do(a) menor (se já existir)', 'Informações sobre a viagem (datas, destino, motivo)', 'Endereço do(a) genitor(a) que não autoriza (para citação)', 'Provas do benefício da viagem para o menor', 'Provas da impossibilidade de obter o consentimento do outro genitor'] }
         ]
     }
