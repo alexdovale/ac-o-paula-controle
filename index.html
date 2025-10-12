@@ -11,14 +11,14 @@
     <link rel="apple-touch-icon" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <link rel="manifest" href="manifest.json">
 
-    <!-- Para os gráficos -->
+    <!-- Para os gráficos -->    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Para o PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
@@ -45,7 +45,7 @@
             border-radius: 50%;
             border: 1px solid currentColor;
             transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-            flex-shrink: 0;
+            flex-shrink: 0; 
             margin-left: 8px; /* Espaçamento do nome */
         }
         .confirm-btn-icon {
@@ -147,12 +147,12 @@
                     <div class="relative flex items-center">
 
                         <div id="actions-panel" class="absolute top-1/2 -translate-y-1/2 right-full mr-3 flex flex-col items-center gap-2 p-2 bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-300 ease-in-out transform origin-right opacity-0 scale-90 pointer-events-none">
-
+                            
                             <button id="view-stats-btn" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-cyan-700 bg-cyan-100 rounded-lg hover:bg-cyan-200 transition-colors whitespace-nowrap">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-cyan-500"><path d="M3 3v18h18"/><path d="M18.7 8a6 6 0 0 0-8.4 0L3 15.6V21h5.4l7.3-7.3Z"/></svg>
                                 <span>Ver Estatísticas</span>
                             </button>
-
+                            
                             <button id="edit-pauta-name-btn" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-slate-500"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                 <span>Editar Nome</span>
@@ -179,14 +179,14 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-red-500"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                                 <span>Zerar Pauta</span>
                             </button>
-
+                            
                             <button id="manage-collaborators-btn" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-violet-700 bg-violet-100 rounded-lg hover:bg-violet-200 transition-colors whitespace-nowrap">
                                 <svg xmlns='http://www.w3.org/2000/svg' class='w-5 h-5 text-violet-500' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
                                     <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><polyline points='16 11 18 13 22 9'/>
                                 </svg>
                                 <span>Colaboradores</span>
                             </button>
-
+                            
                             <button id="notes-btn" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-indigo-700 bg-indigo-100 rounded-lg hover:bg-indigo-200 transition-colors whitespace-nowrap">
                                 <svg xmlns='http://www.w3.org/2000/svg' class='w-5 h-5 text-indigo-500' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
                                     <path d='M9 12h6M9 16h6M12 20h.01M19 3h-4a2 2 0 0 0-2-2H11a2 2 0 0 0-2 2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z'/>
@@ -1782,8 +1782,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro) {
                     deslocamentoTexto += ` (${colaborador.localEncontro})`;
                 }
-                 tableBody.push([colaborador.nome, colaborador.email || 'N/A', deslocamentoTexto, 'Presente', colaborador.horario]); // Adicionado Email
+                tableBody.push([colaborador.nome, colaborador.email || 'N/A', deslocamentoTexto, 'Presente', colaborador.horario]); // Adicionado Email
             });
+
             docPDF.autoTable({
                 head: head, body: tableBody, startY: 20,
                 headStyles: { fillColor: [34, 197, 94] },
