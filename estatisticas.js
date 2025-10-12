@@ -1,6 +1,7 @@
 /**
- * estatisticas.js - Versão Módulo Corrigida
+ * estatisticas.js - Versão Módulo Corrigida e com PDF Melhorado
  * Este arquivo deve ser importado pelo seu script principal.
+ * Requer: jspdf, jspdf-autotable, chart.js
  */
 
 function makeModalInteractive(modal) {
@@ -174,8 +175,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
         acc[a.attendant || 'Não informado'] = (acc[a.attendant || 'Não informado'] || 0) + 1;
         return acc;
     }, {});
-
-    // NOVO: Cálculo detalhado para a tabela de demandas
+    
     const statsBySubject = allAssisted.reduce((acc, a) => {
         const demandasDoAssistido = (a.subject ? [a.subject] : []).concat(a.demandas?.descricoes || []);
         demandasDoAssistido.forEach(demanda => {
@@ -233,7 +233,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
 
     const html = `
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 h-full p-4 overflow-hidden">
-        <div class="lg:col-span-2 flex flex-col gap-4 overflow-y-auto">
+        <div class="lg:col-span-2 flex flex-col gap-4 overflow-y-auto pr-2">
             <div class="bg-white p-4 rounded-lg border">
                 <h3 class="text-lg font-semibold text-gray-800 mb-3">Resumo Geral</h3>
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-center">
@@ -247,7 +247,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
                 <h3 class="text-lg font-semibold text-gray-800 mb-3">Exportar Relatório</h3>
                 <div class="space-y-2 text-sm">
                     <label class="flex items-center"><input type="checkbox" id="export-general" class="mr-2 h-4 w-4 rounded" checked> Resumo</label>
-                    <label class="flex items-center"><input type="checkbox" id="export-collaborators" class="mr-2 h-4 w-4 rounded" checked> Por Colaborador</label>
+                    <label class="flex items-center"><input type="checkbox" id="export-collaborators" class="mr-2 h-4 w-4 rounded" checked> Gráfico por Colaborador</label>
                     <label class="flex items-center"><input type="checkbox" id="export-subjects" class="mr-2 h-4 w-4 rounded" checked> Por Assunto</label>
                     <label class="flex items-center"><input type="checkbox" id="export-times" class="mr-2 h-4 w-4 rounded" checked> Atend. por Horário</label>
                     <label class="flex items-center"><input type="checkbox" id="export-absentees-time" class="mr-2 h-4 w-4 rounded" checked> Faltosos por Horário</label>
@@ -256,7 +256,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
                     <button id="export-stats-pdf-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm transition-colors">Gerar PDF</button>
                 </div>
             </div>
-             ${sortedTimes.length > 0 ? `
+            ${sortedTimes.length > 0 ? `
             <div class="bg-white p-4 rounded-lg border">
                 <h3 class="text-md font-semibold text-gray-800 mb-2">Atendimentos por Horário</h3>
                 <div class="max-h-40 overflow-y-auto">
@@ -279,10 +279,10 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
                 </div>
             </div>` : ''}
         </div>
-        <div class="lg:col-span-3 flex flex-col gap-4 overflow-y-auto">
+        <div class="lg:col-span-3 flex flex-col gap-4 overflow-y-auto pr-2">
             <div class="bg-white p-4 rounded-lg border">
                 <h3 class="text-lg font-semibold text-gray-800 mb-2">Demandas por Assunto</h3>
-                 <div class="overflow-y-auto">
+                 <div class="max-h-[50vh] overflow-y-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
                             <tr>
@@ -294,7 +294,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
                             </tr>
                         </thead>
                         <tbody>
-                             ${Object.entries(statsBySubject).sort(([,a],[,b]) => b.total - a.total).map(([subject, data]) => `
+                            ${Object.entries(statsBySubject).sort(([,a],[,b]) => b.total - a.total).map(([subject, data]) => `
                                 <tr class="border-b">
                                     <td class="px-4 py-2 font-medium">${subject}</td>
                                     <td class="px-4 py-2 text-center font-bold">${data.total}</td>
@@ -308,7 +308,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
             </div>
             <div class="bg-white p-4 rounded-lg border">
                 <h3 class="text-lg font-semibold text-gray-800 mb-2">Atendimentos por Colaborador</h3>
-                <div class="overflow-y-auto">
+                <div class="max-h-[30vh] overflow-y-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
                             <tr>
@@ -331,7 +331,11 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
     `;
     content.innerHTML = html;
 
-    document.getElementById('export-stats-pdf-btn').addEventListener('click', () => {
+    const exportBtn = document.getElementById('export-stats-pdf-btn');
+    exportBtn.addEventListener('click', () => {
+        exportBtn.textContent = 'Gerando PDF...';
+        exportBtn.disabled = true;
+
         exportStatisticsToPDF(pautaName, {
             atendidosCount: atendidos.length,
             faltososCount: faltosos.length,
@@ -339,116 +343,237 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
             avgTimeDelegated,
             useDelegationFlow,
             statsByCollaborator,
-            statsBySubject, // Passando os novos dados detalhados
+            statsBySubject,
             statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
             statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
+        }).finally(() => {
+            exportBtn.textContent = 'Gerar PDF';
+            exportBtn.disabled = false;
         });
     });
 }
 
-
+/**
+ * NOVA FUNÇÃO DE EXPORTAÇÃO PARA PDF
+ * Gera um PDF com visual aprimorado, incluindo gráficos e layout profissional.
+ * @param {string} pautaName - O nome da pauta para o título do relatório.
+ * @param {object} statsData - Os dados estatísticos compilados.
+ */
 async function exportStatisticsToPDF(pautaName, statsData) {
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    let yPos = 15;
-
-    // ALTERADO: Lógica do título para quebrar linha se necessário
-    const title = `Estatísticas - ${pautaName}`;
-    const splitTitle = doc.splitTextToSize(title, 180); // 180mm = Largura da página A4 menos margens
-    doc.setFontSize(18);
-    doc.text(splitTitle, 14, yPos);
-    yPos += doc.getTextDimensions(splitTitle).h + 5; // Pula o espaço ocupado pelo título
-
-    doc.setFontSize(12);
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, yPos);
-    yPos += 15;
-
-    const addSection = (title, startY) => {
-        if (startY > 250) {
-            doc.addPage();
-            startY = 20;
-        }
-        doc.setFontSize(14);
-        doc.text(title, 14, startY);
-        return startY + 8;
-    };
-
-    if (document.getElementById('export-general').checked) {
-        yPos = addSection("Resumo Geral", yPos);
-        doc.setFontSize(12);
-        let summaryText = `- Total de Atendidos: ${statsData.atendidosCount}\n- Total de Faltosos: ${statsData.faltososCount}\n- Tempo Médio (direto): ${statsData.avgTimeDirect} min`;
-        if (statsData.useDelegationFlow) {
-            summaryText += `\n- Tempo Médio (com delegação): ${statsData.avgTimeDelegated} min`;
-        }
-        const splitText = doc.splitTextToSize(summaryText, 180);
-        doc.text(splitText, 14, yPos);
-        yPos += doc.getTextDimensions(splitText).h + 10;
+    if (!window.Chart) {
+        alert('A biblioteca Chart.js é necessária e não foi encontrada.');
+        return;
     }
 
+    // --- CONFIGURAÇÕES E ESTILOS ---
+    const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 40;
+    let yPos = 0;
+
+    const FONT_NORMAL = 'Helvetica';
+    const FONT_BOLD = 'Helvetica-Bold';
+    const COLOR_PRIMARY = '#2B3A55';
+    const COLOR_SECONDARY = '#4F709C';
+    const COLOR_TEXT = '#333333';
+    const COLOR_GRAY = '#7f8c8d';
+    const COLOR_GREEN = '#27ae60';
+    const COLOR_RED = '#c0392b';
+    const COLOR_BLUE = '#2980b9';
+
+    // --- FUNÇÕES AUXILIARES ---
+
+    const addHeaderAndFooter = () => {
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            // Cabeçalho
+            doc.setFont(FONT_BOLD, 'normal');
+            doc.setFontSize(16);
+            doc.setTextColor(COLOR_PRIMARY);
+            doc.text(`Relatório de Estatísticas: ${pautaName}`, margin, margin - 10);
+            
+            // Linha do Cabeçalho
+            doc.setDrawColor(COLOR_SECONDARY);
+            doc.line(margin, margin, pageWidth - margin, margin);
+
+            // Rodapé
+            const footerText = `Página ${i} de ${pageCount}`;
+            const generationDate = `Gerado em: ${new Date().toLocaleString('pt-BR')}`;
+            doc.setFont(FONT_NORMAL, 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(COLOR_GRAY);
+            doc.text(generationDate, margin, pageHeight - margin + 15);
+            doc.text(footerText, pageWidth - margin - doc.getStringUnitWidth(footerText) * 8, pageHeight - margin + 15);
+        }
+    };
+
+    const addSectionTitle = (title) => {
+        if (yPos > pageHeight - 120) { // Verifica espaço para o título e algum conteúdo
+            doc.addPage();
+            yPos = margin + 20;
+        }
+        doc.setFont(FONT_BOLD, 'normal');
+        doc.setFontSize(14);
+        doc.setTextColor(COLOR_PRIMARY);
+        doc.text(title, margin, yPos);
+        yPos += 20;
+    };
+
+    // --- CONSTRUÇÃO DO PDF ---
+
+    // 1. PÁGINA DE ROSTO / TÍTULO PRINCIPAL
+    doc.setFont(FONT_BOLD, 'normal');
+    doc.setFontSize(22);
+    doc.setTextColor(COLOR_PRIMARY);
+    const titleLines = doc.splitTextToSize(`Relatório de Estatísticas`, pageWidth - margin * 2);
+    doc.text(titleLines, pageWidth / 2, 80, { align: 'center' });
+    
+    doc.setFont(FONT_NORMAL, 'normal');
+    doc.setFontSize(16);
+    doc.setTextColor(COLOR_SECONDARY);
+    const pautaLines = doc.splitTextToSize(pautaName, pageWidth - margin * 2);
+    doc.text(pautaLines, pageWidth / 2, 110, { align: 'center' });
+    yPos = 160;
+
+    // 2. SEÇÃO DE RESUMO GERAL
+    if (document.getElementById('export-general').checked) {
+        addSectionTitle("Resumo Geral");
+        doc.setFont(FONT_NORMAL, 'normal');
+
+        const summaryItems = [
+            { label: 'Atendidos', value: statsData.atendidosCount, color: COLOR_GREEN },
+            { label: 'Faltosos', value: statsData.faltososCount, color: COLOR_RED },
+            { label: 'Tempo Médio (direto)', value: `${statsData.avgTimeDirect} min`, color: COLOR_BLUE },
+        ];
+        if(statsData.useDelegationFlow) {
+            summaryItems.push({ label: 'Tempo Médio (delegação)', value: `${statsData.avgTimeDelegated} min`, color: '#8e44ad' });
+        }
+
+        const cardWidth = (pageWidth - margin * 2 - (summaryItems.length -1) * 10) / summaryItems.length;
+        const cardHeight = 60;
+        let currentX = margin;
+
+        summaryItems.forEach(item => {
+            doc.setDrawColor(item.color);
+            doc.setFillColor(255, 255, 255);
+            doc.roundedRect(currentX, yPos, cardWidth, cardHeight, 5, 5, 'FD');
+
+            doc.setFont(FONT_BOLD, 'normal');
+            doc.setFontSize(18);
+            doc.setTextColor(item.color);
+            doc.text(String(item.value), currentX + cardWidth / 2, yPos + 30, { align: 'center' });
+            
+            doc.setFont(FONT_NORMAL, 'normal');
+            doc.setFontSize(10);
+            doc.setTextColor(COLOR_TEXT);
+            doc.text(item.label, currentX + cardWidth / 2, yPos + 50, { align: 'center' });
+
+            currentX += cardWidth + 10;
+        });
+        yPos += cardHeight + 30;
+    }
+
+    // 3. GRÁFICO DE ATENDIMENTOS POR COLABORADOR
+    if (document.getElementById('export-collaborators').checked && Object.keys(statsData.statsByCollaborator).length > 0) {
+        addSectionTitle("Atendimentos por Colaborador");
+
+        const sortedCollaborators = Object.entries(statsData.statsByCollaborator).sort(([, a], [, b]) => b - a);
+        const labels = sortedCollaborators.map(item => item[0]);
+        const data = sortedCollaborators.map(item => item[1]);
+
+        // Criar um canvas temporário para o gráfico
+        const canvas = document.createElement('canvas');
+        canvas.width = 500;
+        canvas.height = labels.length * 25 + 50; // Altura dinâmica
+        const ctx = canvas.getContext('2d');
+
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Atendimentos',
+                    data: data,
+                    backgroundColor: 'rgba(79, 112, 156, 0.8)',
+                    borderColor: 'rgba(43, 58, 85, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: false,
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+        
+        // Aguardar o gráfico renderizar e adicionar ao PDF
+        await new Promise(resolve => setTimeout(resolve, 500)); // Pequeno delay para garantir renderização
+        const imgData = canvas.toDataURL('image/png');
+        
+        if (yPos + canvas.height > pageHeight - margin) {
+            doc.addPage();
+            yPos = margin + 20;
+        }
+
+        doc.addImage(imgData, 'PNG', margin, yPos, canvas.width, canvas.height);
+        yPos += canvas.height + 20;
+
+        chart.destroy(); // Limpar
+        canvas.remove();
+    }
+
+
+    // 4. TABELA DE DEMANDAS POR ASSUNTO
     if (document.getElementById('export-subjects').checked && Object.keys(statsData.statsBySubject).length > 0) {
-        yPos = addSection("Demandas por Assunto", yPos);
+        addSectionTitle("Demandas por Assunto");
         const totalDemands = Object.values(statsData.statsBySubject).reduce((sum, data) => sum + data.total, 0);
         doc.autoTable({
             startY: yPos,
-            // ALTERADO: Novas colunas no PDF
             head: [['Assunto/Demanda', 'Total', 'Atendidos', 'Faltosos', '% do Total']],
             body: Object.entries(statsData.statsBySubject)
                 .sort(([, a], [, b]) => b.total - a.total)
                 .map(([subject, data]) => [
-                    subject,
-                    data.total,
-                    data.atendidos,
-                    data.faltosos,
+                    subject, data.total, data.atendidos, data.faltosos,
                     totalDemands > 0 ? ((data.total / totalDemands) * 100).toFixed(1) + '%' : '0%'
                 ]),
-            theme: 'striped',
-            didDrawPage: (data) => {
-                yPos = data.cursor.y;
-            }
+            theme: 'grid',
+            headStyles: { fillColor: COLOR_PRIMARY, textColor: '#FFFFFF', fontStyle: 'bold' },
+            didDrawPage: (data) => yPos = data.cursor.y,
+            margin: { top: margin + 20, bottom: margin + 20 }
         });
-        yPos = doc.autoTable.previous.finalY + 10;
+        yPos = doc.autoTable.previous.finalY + 20;
     }
-
-    if (document.getElementById('export-collaborators').checked && Object.keys(statsData.statsByCollaborator).length > 0) {
-        yPos = addSection("Atendimentos por Colaborador", yPos);
-        doc.autoTable({
-            startY: yPos,
-            head: [['Colaborador', 'Atendimentos']],
-            body: Object.entries(statsData.statsByCollaborator).sort(([, a], [, b]) => b - a),
-            theme: 'striped',
-            didDrawPage: (data) => {
-                yPos = data.cursor.y;
-            }
-        });
-        yPos = doc.autoTable.previous.finalY + 10;
-    }
-
-    // ALTERADO: Função agora aceita um total para o rodapé
-    const addTableToPdf = (title, data, headStyles, checkboxId, total) => {
+    
+    // 5. TABELAS POR HORÁRIO
+    const addTimeTableToPdf = (title, data, checkboxId, total, color) => {
         if (document.getElementById(checkboxId).checked && data.length > 0) {
-            yPos = addSection(title, yPos);
+            addSectionTitle(title);
             doc.autoTable({
                 startY: yPos,
                 head: [['Horário', 'Quantidade']],
                 body: data.map(item => [item.time, item.count]),
-                // NOVO: Adiciona o rodapé com o total
                 foot: [['Total', total]],
-                theme: 'striped',
-                headStyles: headStyles || {},
-                footStyles: { fontStyle: 'bold', fillColor: headStyles.fillColor ? headStyles.fillColor : [240, 240, 240] },
-                didDrawPage: (data) => {
-                    yPos = data.cursor.y;
-                }
+                theme: 'grid',
+                headStyles: { fillColor: color, textColor: '#FFFFFF', fontStyle: 'bold' },
+                footStyles: { fillColor: [240, 240, 240], textColor: COLOR_TEXT, fontStyle: 'bold' },
+                didDrawPage: (data) => yPos = data.cursor.y,
+                margin: { top: margin + 20, bottom: margin + 20 }
             });
-            yPos = doc.autoTable.previous.finalY + 10;
+            yPos = doc.autoTable.previous.finalY + 20;
         }
     };
+    
+    addTimeTableToPdf("Atendimentos por Horário", statsData.statsByTime, 'export-times', statsData.atendidosCount, COLOR_GREEN);
+    addTimeTableToPdf("Faltosos por Horário", statsData.statsByTimeFaltosos, 'export-absentees-time', statsData.faltososCount, COLOR_RED);
 
-    // ALTERADO: Passando os totais para as funções
-    addTableToPdf("Atendimentos por Horário", statsData.statsByTime, {}, 'export-times', statsData.atendidosCount);
-    addTableToPdf("Faltosos por Horário", statsData.statsByTimeFaltosos, {
-        fillColor: [220, 38, 38]
-    }, 'export-absentees-time', statsData.faltososCount);
-
+    // --- FINALIZAÇÃO ---
+    addHeaderAndFooter();
     doc.save(`estatisticas_${pautaName.replace(/\s+/g, '_')}.pdf`);
 }
