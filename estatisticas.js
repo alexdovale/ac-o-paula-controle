@@ -446,7 +446,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         const pageCount = doc.internal.getNumberOfPages();
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
-            // Cabeçalho
+            // Cabeçalho para todas as páginas
             doc.setFont(FONT_BOLD, 'normal');
             doc.setFontSize(16);
             doc.setTextColor(COLOR_PRIMARY);
@@ -456,7 +456,6 @@ async function exportStatisticsToPDF(pautaName, statsData) {
             // Linha do Cabeçalho
             doc.setDrawColor(COLOR_SECONDARY);
             doc.line(margin, margin + (titleLines.length * 12), pageWidth - margin, margin + (titleLines.length * 12));
-
 
             // Rodapé
             const footerText = `Página ${i} de ${pageCount}`;
@@ -470,12 +469,10 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     };
 
     const addSectionTitle = (title) => {
-        // Aumentado o buffer de verificação de espaço para 180pt (antes era 120pt).
-        // Isso ajuda a evitar que um título de seção apareça no final de uma página
-        // com a sua tabela ou gráfico começando na página seguinte.
-        if (yPos > pageHeight - 180) { 
+        // Aumentado o buffer de verificação de espaço para 200pt.
+        if (yPos > pageHeight - 200) { 
             doc.addPage();
-            yPos = margin + 20;
+            yPos = margin + 30; // Posição inicial em nova página
         }
         doc.setFont(FONT_BOLD, 'normal');
         doc.setFontSize(14);
@@ -485,22 +482,9 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     };
 
     // --- CONSTRUÇÃO DO PDF ---
+    yPos = margin + 30; // Posição Y inicial para o conteúdo na primeira página
 
-    // 1. PÁGINA DE ROSTO / TÍTULO PRINCIPAL
-    doc.setFont(FONT_BOLD, 'normal');
-    doc.setFontSize(22);
-    doc.setTextColor(COLOR_PRIMARY);
-    const titleLines = doc.splitTextToSize(`Relatório de Estatísticas`, pageWidth - margin * 2);
-    doc.text(titleLines, pageWidth / 2, 80, { align: 'center' });
-    
-    doc.setFont(FONT_NORMAL, 'normal');
-    doc.setFontSize(16);
-    doc.setTextColor(COLOR_SECONDARY);
-    const pautaLines = doc.splitTextToSize(pautaName, pageWidth - margin * 2);
-    doc.text(pautaLines, pageWidth / 2, 110, { align: 'center' });
-    yPos = 160;
-
-    // 2. SEÇÃO DE RESUMO GERAL
+    // SEÇÃO DE RESUMO GERAL
     if (document.getElementById('export-general').checked) {
         addSectionTitle("Resumo Geral");
         doc.setFont(FONT_NORMAL, 'normal');
@@ -538,22 +522,18 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         yPos += cardHeight + 30;
     }
 
-    // 3. GRÁFICOS DE ATENDIMENTOS POR GRUPO/COLABORADOR
+    // GRÁFICOS DE ATENDIMENTOS POR GRUPO/COLABORADOR
     if (document.getElementById('export-collaborators').checked && Object.keys(statsData.statsByGroup).length > 0) {
         const sortedGroups = Object.entries(statsData.statsByGroup).sort(([, a], [, b]) => b.total - a.total);
 
         for (const [groupName, groupData] of sortedGroups) {
-            if (yPos > pageHeight - 200) { // Pre-check for space
-                doc.addPage();
-                yPos = margin + 20;
-            }
             
             addSectionTitle(`Grupo: ${groupName} (Total de Atendimentos: ${groupData.total})`);
             
             const sortedCollaborators = Object.entries(groupData.collaborators).sort(([, a], [, b]) => b - a);
             if (sortedCollaborators.length === 0) continue;
 
-            const MAX_CHART_ITEMS = 15; // Limite para decidir entre gráfico e tabela
+            const MAX_CHART_ITEMS = 15;
 
             if (sortedCollaborators.length > MAX_CHART_ITEMS) {
                 // Renderiza como tabela se a lista for muito longa
@@ -563,7 +543,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
                     body: sortedCollaborators,
                     theme: 'grid',
                     headStyles: { fillColor: COLOR_SECONDARY, textColor: '#FFFFFF', fontStyle: 'bold' },
-                    didDrawPage: (data) => yPos = data.cursor.y,
+                    didDrawPage: (data) => { if(data.pageNumber > 1) yPos = margin + 30 },
                     margin: { top: yPos, bottom: margin + 20 }
                 });
                 yPos = doc.autoTable.previous.finalY + 20;
@@ -574,7 +554,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
 
                 const canvas = document.createElement('canvas');
                 canvas.width = 500;
-                const chartHeight = Math.min(pageHeight / 2, Math.max(100, labels.length * 22 + 60)); // Altura ajustada e com limite
+                const chartHeight = Math.min(pageHeight / 2, Math.max(100, labels.length * 22 + 60)); 
                 canvas.height = chartHeight;
                 const ctx = canvas.getContext('2d');
 
@@ -607,7 +587,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
                 
                 if (yPos + chartHeight > pageHeight - margin) {
                     doc.addPage();
-                    yPos = margin + 20;
+                    yPos = margin + 30;
                 }
 
                 const finalWidth = Math.min(canvas.width, pageWidth - margin * 2);
@@ -623,7 +603,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     }
 
 
-    // 4. TABELA DE DEMANDAS POR ASSUNTO
+    // TABELA DE DEMANDAS POR ASSUNTO
     if (document.getElementById('export-subjects').checked && Object.keys(statsData.statsBySubject).length > 0) {
         addSectionTitle("Demandas por Assunto");
         const totalDemands = Object.values(statsData.statsBySubject).reduce((sum, data) => sum + data.total, 0);
@@ -643,13 +623,13 @@ async function exportStatisticsToPDF(pautaName, statsData) {
             theme: 'grid',
             headStyles: { fillColor: COLOR_PRIMARY, textColor: '#FFFFFF', fontStyle: 'bold' },
             footStyles: { fillColor: [240, 240, 240], textColor: COLOR_TEXT, fontStyle: 'bold' },
-            didDrawPage: (data) => yPos = data.cursor.y,
+            didDrawPage: (data) => { if(data.pageNumber > 1) yPos = margin + 30 },
             margin: { top: yPos, bottom: margin + 20 }
         });
         yPos = doc.autoTable.previous.finalY + 20;
     }
     
-    // 5. TABELAS POR HORÁRIO
+    // TABELAS POR HORÁRIO
     const addTimeTableToPdf = (title, data, checkboxId, total, color) => {
         if (document.getElementById(checkboxId).checked && data.length > 0) {
             addSectionTitle(title);
@@ -661,7 +641,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
                 theme: 'grid',
                 headStyles: { fillColor: color, textColor: '#FFFFFF', fontStyle: 'bold' },
                 footStyles: { fillColor: [240, 240, 240], textColor: COLOR_TEXT, fontStyle: 'bold' },
-                didDrawPage: (data) => yPos = data.cursor.y,
+                didDrawPage: (data) => { if(data.pageNumber > 1) yPos = margin + 30 },
                 margin: { top: yPos, bottom: margin + 20 }
             });
             yPos = doc.autoTable.previous.finalY + 20;
