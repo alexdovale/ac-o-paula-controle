@@ -615,4 +615,11 @@ export function openDetailsModal(config) {
     
     modal.classList.remove('hidden');
 }
+" in the document "Módulo de Detalhes (PDF Melhorado)". I want you to make the following changes to the selected code.
+aumenta o tamanho do checklist de documentos para 22,
+e o assistido para 14, 
+assunto 14
+e o titulo da seção 16
+e o texto do documento 12
+ e remove a função de quebra de texto, para que eu possa ter o texto todo em uma única linha.
 
