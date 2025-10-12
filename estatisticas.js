@@ -1,4 +1,3 @@
-// Substitua a função inteira por esta versão:
 function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
     const modal = document.getElementById('statistics-modal');
     
@@ -7,10 +6,8 @@ function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
         return;
     }
 
-    // ADICIONADO: Limpa o conteúdo interno do modal para evitar duplicidade.
     modal.innerHTML = ''; 
 
-    // ADICIONADO: Cria dinamicamente o container de conteúdo que o resto do script espera.
     const content = document.createElement('div');
     content.id = 'statistics-content';
     modal.appendChild(content);
@@ -32,7 +29,8 @@ function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
         return acc;
     }, {});
 
-    const statsBySubject = atendidos.reduce((acc, a) => {
+    // ALTERADO: Agora usa 'allAssisted' para obter o total geral da pauta
+    const statsBySubject = allAssisted.reduce((acc, a) => {
         (a.subject ? [a.subject] : []).concat(a.demandas?.descricoes || []).forEach(demanda => {
             acc[demanda] = (acc[demanda] || 0) + 1;
         });
@@ -152,7 +150,7 @@ function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
                         <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
                             <tr>
                                 <th class="px-4 py-2">Assunto/Demanda</th>
-                                <th class="px-4 py-2 text-right">Total Atendido</th>
+                                <th class="px-4 py-2 text-right">Total na Pauta</th>
                                 <th class="px-4 py-2 text-right">% do Total</th>
                             </tr>
                         </thead>
@@ -176,9 +174,98 @@ function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
         exportStatisticsToPDF(pautaName, {
             atendidosCount: atendidos.length, faltososCount: faltosos.length,
             avgTimeDirect, avgTimeDelegated, useDelegationFlow,
-            statsByCollaborator, statsBySubject,
+            statsByCollaborator, 
+            statsBySubject, // Passando os dados já recalculados
             statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
             statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
         });
     });
+}
+
+
+async function exportStatisticsToPDF(pautaName, statsData) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    let yPos = 20;
+
+    doc.setFontSize(18);
+    doc.text(`Estatísticas - ${pautaName}`, 14, yPos);
+    yPos += 10;
+    doc.setFontSize(12);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, yPos);
+    yPos += 15;
+    
+    const addSection = (title, startY) => {
+        if (startY > 250) {
+             doc.addPage();
+             startY = 20;
+        }
+        doc.setFontSize(14);
+        doc.text(title, 14, startY);
+        return startY + 8;
+    };
+
+    if (document.getElementById('export-general').checked) {
+        yPos = addSection("Resumo Geral", yPos);
+        doc.setFontSize(12);
+        let summaryText = `- Total de Atendidos: ${statsData.atendidosCount}\n- Total de Faltosos: ${statsData.faltososCount}\n- Tempo Médio (direto): ${statsData.avgTimeDirect} min`;
+        if (statsData.useDelegationFlow) {
+            summaryText += `\n- Tempo Médio (com delegação): ${statsData.avgTimeDelegated} min`;
+        }
+        const splitText = doc.splitTextToSize(summaryText, 180);
+        doc.text(splitText, 14, yPos);
+        yPos += doc.getTextDimensions(splitText).h + 10;
+    }
+    
+    if (document.getElementById('export-collaborators').checked && Object.keys(statsData.statsByCollaborator).length > 0) {
+        yPos = addSection("Atendimentos por Colaborador", yPos);
+        doc.autoTable({
+            startY: yPos,
+            head: [['Colaborador', 'Atendimentos']],
+            body: Object.entries(statsData.statsByCollaborator).sort(([,a],[,b]) => b-a),
+            theme: 'striped',
+            didDrawPage: (data) => { yPos = data.cursor.y; }
+        });
+        yPos = doc.autoTable.previous.finalY + 10;
+    }
+
+    if (document.getElementById('export-subjects').checked && Object.keys(statsData.statsBySubject).length > 0) {
+        yPos = addSection("Demandas por Assunto", yPos);
+        const totalDemands = Object.values(statsData.statsBySubject).reduce((sum, count) => sum + count, 0);
+        doc.autoTable({
+            startY: yPos,
+            // ALTERADO: Cabeçalho da tabela no PDF
+            head: [['Assunto/Demanda', 'Total na Pauta', '% do Total']],
+            body: Object.entries(statsData.statsBySubject)
+                .sort(([,a],[,b]) => b-a)
+                .map(([subject, count]) => [
+                    subject,
+                    count,
+                    totalDemands > 0 ? ((count / totalDemands) * 100).toFixed(1) + '%' : '0%'
+                ]),
+            theme: 'striped',
+            didDrawPage: (data) => { yPos = data.cursor.y; }
+        });
+        yPos = doc.autoTable.previous.finalY + 10;
+    }
+
+    const addTableToPdf = (title, data, headStyles, checkboxId) => {
+        if (document.getElementById(checkboxId).checked && data.length > 0) {
+             yPos = addSection(title, yPos);
+             doc.autoTable({
+                 startY: yPos,
+                 head: [['Horário', 'Quantidade']],
+                 body: data.map(item => [item.time, item.count]),
+                 theme: 'striped',
+                 headStyles: headStyles || {},
+                 didDrawPage: (data) => { yPos = data.cursor.y; }
+             });
+             yPos = doc.autoTable.previous.finalY + 10;
+        }
+    };
+    
+    addTableToPdf("Atendimentos por Horário", statsData.statsByTime, {}, 'export-times');
+    addTableToPdf("Faltosos por Horário", statsData.statsByTimeFaltosos, { fillColor: [220, 38, 38] }, 'export-absentees-time');
+
+    doc.save(`estatisticas_${pautaName.replace(/\s+/g, '_')}.pdf`);
 }
