@@ -504,90 +504,122 @@
     </div>
     
     <!-- MODAL DE GERENCIAR COLABORADORES (LISTA DE PRESENÇA) - INTEGRADO -->
-    <div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-6xl flex flex-col" style="max-height: 90vh;">
-            <div class="flex justify-between items-center mb-4 flex-shrink-0">
-                <h2 class="text-2xl font-bold text-gray-800">Lista de Presença de Colaboradores</h2>
-                <button id="close-collaborators-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
-            </div>
+   <!-- MODAL DE GERENCIAR COLABORADORES (LISTA DE PRESENÇA) - ATUALIZADO -->
+<div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-6xl flex flex-col" style="max-height: 90vh;">
+        <div class="flex justify-between items-center mb-4 flex-shrink-0">
+            <h2 class="text-2xl font-bold text-gray-800">Lista de Presença de Colaboradores</h2>
+            <button id="close-collaborators-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+        </div>
 
-            <div class="flex-grow overflow-y-auto pr-2">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div>
-                        <h3 class="text-xl font-semibold text-gray-700 mb-4">Adicionar/Editar Colaborador (Equipe de Campo)</h3>
-                        <form id="collaborator-form-modal">
-                            <div class="space-y-4">
-                                <div>
-                                    <label for="collaborator-name-modal" class="block text-sm font-medium text-gray-700">Nome do Colaborador:</label>
-                                    <input type="text" id="collaborator-name-modal" name="nome-colaborador" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                                </div>
-                                <div>
-                                    <label for="collaborator-email-modal" class="block text-sm font-medium text-gray-700">Email do Colaborador (opcional):</label>
-                                    <input type="email" id="collaborator-email-modal" name="email-colaborador" placeholder="email@exemplo.com" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                                </div>
-                                <div>
-                                    <label for="collaborator-phone-modal" class="block text-sm font-medium text-gray-700">Telefone (com DDD):</label>
-                                    <input type="tel" id="collaborator-phone-modal" name="telefone-colaborador" placeholder="Ex: 21999998888" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Como vai se deslocar?</label>
-                                    <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
-                                        <label><input type="radio" id="transporte-nao-confirmado-modal" name="transporte-colaborador" value="Não Confirmado" checked required> Não Confirmado</label>
-                                        <label><input type="radio" id="transporte-meios-proprios-modal" name="transporte-colaborador" value="Meios Próprios"> Meios Próprios</label>
-                                        <label><input type="radio" id="transporte-com-empresa-modal" name="transporte-colaborador" value="Com a Empresa"> Com a Empresa</label>
-                                    </div>
-                                </div>
-                                <div id="local-encontro-group-modal" class="hidden">
-                                    <label class="block text-sm font-medium text-gray-700">Ponto de Encontro:</label>
-                                    <div class="mt-1 flex items-center space-x-4">
-                                        <label><input type="radio" id="local-sede-modal" name="localEncontro-colaborador" value="Sede"> Sede</label>
-                                        <label><input type="radio" id="local-meio-caminho-modal" name="localEncontro-colaborador" value="Meio do Caminho"> No meio do caminho</label>
-                                    </div>
-                                </div>
-                                <div id="observacao-group-modal" class="hidden">
-                                    <label for="collaborator-obs-modal" class="block text-sm font-medium text-gray-700">Observação:</label>
-                                    <textarea id="collaborator-obs-modal" name="observacao-colaborador" rows="3" class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></textarea>
-                                </div>
-                                <button type="submit" id="add-collaborator-btn-modal" class="w-full bg-green-600 text-white font-bold py-2 rounded-md hover:bg-green-700 transition">Adicionar Colaborador</button>
+        <div class="flex-grow overflow-y-auto pr-2">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Adicionar/Editar Colaborador (Equipe de Campo)</h3>
+                    <form id="collaborator-form-modal">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="collaborator-name-modal" class="block text-sm font-medium text-gray-700">Nome do Colaborador:</label>
+                                <input type="text" id="collaborator-name-modal" name="nome-colaborador" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
                             </div>
-                        </form>
-                    </div>
 
-                    <div>
-                        <h3 class="text-xl font-semibold text-gray-700 mb-4">Estatísticas e Lista</h3>
-                        <div id="presence-stats" class="mb-4 text-sm text-gray-700 space-y-1">
-                            <p>Total de Participantes: <strong id="total-participants-count">0</strong></p>
-                            <p>Meios Próprios: <strong id="self-transport-count">0</strong></p>
-                            <p>Com a Empresa: <strong id="company-transport-count">0</strong></p>
+                            <!-- CAMPO CARGO ADICIONADO -->
+                            <div>
+                                <label for="collaborator-role-modal" class="block text-sm font-medium text-gray-700">Cargo:</label>
+                                <select id="collaborator-role-modal" name="cargo-colaborador" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                                    <option value="" disabled selected>Selecione o cargo</option>
+                                    <option value="Defensor(a)">Defensor(a)</option>
+                                    <option value="Servidor(a)">Servidor(a)</option>
+                                    <option value="CRC">CRC</option>
+                                </select>
+                            </div>
+
+                            <!-- CAMPO EQUIPE ATUALIZADO PARA SELECT -->
+                            <div>
+                                <label for="collaborator-team-modal" class="block text-sm font-medium text-gray-700">Equipe:</label>
+                                <select id="collaborator-team-modal" name="equipe-colaborador" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                                    <option value="" disabled selected>Selecione a equipe</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                    <option value="6">6</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="collaborator-email-modal" class="block text-sm font-medium text-gray-700">Email do Colaborador (opcional):</label>
+                                <input type="email" id="collaborator-email-modal" name="email-colaborador" placeholder="email@exemplo.com" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                            </div>
+
+                            <div>
+                                <label for="collaborator-phone-modal" class="block text-sm font-medium text-gray-700">Telefone (com DDD):</label>
+                                <input type="tel" id="collaborator-phone-modal" name="telefone-colaborador" placeholder="Ex: 21999998888" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Como vai se deslocar?</label>
+                                <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
+                                    <label><input type="radio" id="transporte-nao-confirmado-modal" name="transporte-colaborador" value="Não Confirmado" checked required> Não Confirmado</label>
+                                    <label><input type="radio" id="transporte-meios-proprios-modal" name="transporte-colaborador" value="Meios Próprios"> Meios Próprios</label>
+                                    <label><input type="radio" id="transporte-com-empresa-modal" name="transporte-colaborador" value="Com a Empresa"> Com a Empresa</label>
+                                </div>
+                            </div>
+                            <div id="local-encontro-group-modal" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700">Ponto de Encontro:</label>
+                                <div class="mt-1 flex items-center space-x-4">
+                                    <label><input type="radio" id="local-sede-modal" name="localEncontro-colaborador" value="Sede"> Sede</label>
+                                    <label><input type="radio" id="local-meio-caminho-modal" name="localEncontro-colaborador" value="Meio do Caminho"> No meio do caminho</label>
+                                </div>
+                            </div>
+                            <div id="observacao-group-modal" class="hidden">
+                                <label for="collaborator-obs-modal" class="block text-sm font-medium text-gray-700">Observação:</label>
+                                <textarea id="collaborator-obs-modal" name="observacao-colaborador" rows="3" class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></textarea>
+                            </div>
+                            <button type="submit" id="add-collaborator-btn-modal" class="w-full bg-green-600 text-white font-bold py-2 rounded-md hover:bg-green-700 transition">Adicionar Colaborador</button>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table id="collaborators-list-table-modal" class="w-full text-sm text-left text-gray-500">
-                                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="py-3 px-6">Nome</th>
-                                        <th scope="col" class="py-3 px-6">Email</th>
-                                        <th scope="col" class="py-3 px-6">Deslocamento</th>
-                                        <th scope="col" class="py-3 px-6">Presença</th>
-                                        <th scope="col" class="py-3 px-6">Horário</th>
-                                        <th scope="col" class="py-3 px-6">WhatsApp</th>
-                                        <th scope="col" class="py-3 px-6">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    </tbody>
-                            </table>
-                        </div>
-                        <div class="flex justify-between items-center mt-4">
-                            <button id="download-collaborators-pdf-modal" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Baixar PDF</button>
-                            <button id="clear-collaborators-list-modal" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Limpar Lista</button>
-                        </div>
+                    </form>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Estatísticas e Lista</h3>
+                    <div id="presence-stats" class="mb-4 text-sm text-gray-700 space-y-1">
+                        <p>Total de Participantes: <strong id="total-participants-count">0</strong></p>
+                        <p>Meios Próprios: <strong id="self-transport-count">0</strong></p>
+                        <p>Com a Empresa: <strong id="company-transport-count">0</strong></p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table id="collaborators-list-table-modal" class="w-full text-sm text-left text-gray-500">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="py-3 px-6">Nome</th>
+                                    <!-- COLUNAS ADICIONADAS NA TABELA -->
+                                    <th scope="col" class="py-3 px-6">Cargo</th>
+                                    <th scope="col" class="py-3 px-6">Equipe</th>
+                                    <th scope="col" class="py-3 px-6">Email</th>
+                                    <th scope="col" class="py-3 px-6">Deslocamento</th>
+                                    <th scope="col" class="py-3 px-6">Presença</th>
+                                    <th scope="col" class="py-3 px-6">Horário</th>
+                                    <th scope="col" class="py-3 px-6">WhatsApp</th>
+                                    <th scope="col" class="py-3 px-6">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- As linhas da tabela serão preenchidas via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="flex justify-between items-center mt-4">
+                        <button id="download-collaborators-pdf-modal" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Baixar PDF</button>
+                        <button id="clear-collaborators-list-modal" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Limpar Lista</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <!-- FIM MODAL DE GERENCIAR COLABORADORES -->
-
+</div>
+<!-- FIM MODAL DE GERENCIAR COLABORADORES -->
+    
     <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4"></div>
     <div id="arrival-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold mb-4">Confirmar Horário de Chegada</h2><p class="mb-4 text-gray-600">Por favor, informe o horário de chegada do assistido.</p><input type="time" id="arrival-time-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6"><div class="flex justify-end space-x-4"><button id="cancel-arrival-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button><button id="confirm-arrival-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button></div></div>
@@ -3581,6 +3613,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
