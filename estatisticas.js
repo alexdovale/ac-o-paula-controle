@@ -310,4 +310,3 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     }
 
     doc.save(`estatisticas_${pautaName.replace(/\s+/g, '_')}.pdf`);
-}
