@@ -901,6 +901,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
         </div>
     </div>
+    
+    <script src="estatisticas.js"></script> <!-- <<< ESTE É O SEGUNDO PASSO -->
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -2157,50 +2159,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.body.removeChild(textArea);
         };
         
-        // FUNÇÃO PARA MOSTRAR ESTATÍSTICAS
-        const showStatisticsModal = () => {
-            const statsContent = document.getElementById('statistics-content');
-            statsContent.innerHTML = `<div class="text-center p-4"><div class="loader inline-block"></div> Carregando...</div>`;
-
-            const faltosos = allAssisted.filter(a => a.status === 'faltoso').length;
-            const atendidos = allAssisted.filter(a => a.status === 'atendido').length;
-            const aguardando = allAssisted.filter(a => a.status === 'aguardando').length;
-            const avulsos = allAssisted.filter(a => a.type === 'avulso').length;
-
-            const agendadosPorHorario = allAssisted
-                .filter(a => a.type === 'agendamento' && a.scheduledTime)
-                .reduce((acc, a) => {
-                    acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
-                    return acc;
-                }, {});
-            
-            const sortedHorarios = Object.keys(agendadosPorHorario).sort();
-
-            let contentHTML = `
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                    <div class="bg-red-100 p-4 rounded-lg"><p class="text-3xl font-bold text-red-700">${faltosos}</p><p class="text-sm text-gray-700 mt-1">Faltosos</p></div>
-                    <div class="bg-green-100 p-4 rounded-lg"><p class="text-3xl font-bold text-green-700">${atendidos}</p><p class="text-sm text-gray-700 mt-1">Atendidos</p></div>
-                    <div class="bg-yellow-100 p-4 rounded-lg"><p class="text-3xl font-bold text-yellow-700">${aguardando}</p><p class="text-sm text-gray-700 mt-1">Aguardando</p></div>
-                    <div class="bg-blue-100 p-4 rounded-lg"><p class="text-3xl font-bold text-blue-700">${avulsos}</p><p class="text-sm text-gray-700 mt-1">Avulsos</p></div>
-                </div>
-            `;
-
-            if (sortedHorarios.length > 0) {
-                contentHTML += `
-                    <div class="mt-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Agendados por Horário</h3>
-                        <ul class="space-y-1 bg-gray-50 p-3 rounded-lg border max-h-60 overflow-y-auto">
-                `;
-                sortedHorarios.forEach(horario => {
-                    contentHTML += `<li class="flex justify-between items-center text-sm p-1 hover:bg-gray-100 rounded"><span>${horario}</span><span class="font-bold bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">${agendadosPorHorario[horario]}</span></li>`;
-                });
-                contentHTML += '</ul></div>';
-            } else {
-                 contentHTML += '<p class="mt-6 text-center text-gray-500">Nenhum atendimento agendado por horário.</p>';
-            }
-
-            statsContent.innerHTML = contentHTML;
-            document.getElementById('statistics-modal').classList.remove('hidden');
+    
+     // FUNÇÃO PARA MOSTRAR ESTATÍSTICAS (AGORA CHAMA O SCRIPT EXTERNO)
+      const showStatisticsModal = () => {
+            // Chama a função do arquivo estatisticas.js
+            renderStatisticsModal(
+                allAssisted,
+                currentPautaData?.useDelegationFlow,
+                document.getElementById('pauta-title').textContent
+            );
         };
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -3611,4 +3578,5 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
