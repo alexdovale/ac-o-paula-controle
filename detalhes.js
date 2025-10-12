@@ -1,7 +1,7 @@
 /**
  * detalhes.js
  * Este módulo gerencia toda a funcionalidade do modal "Ver Detalhes",
- * incluindo a exibição da lista de documentos, o checklist e a geração de PDF.
+ * incluindo a exibição da lista de documentos e o checklist.
  */
 
 // --- Dados e Estado do Módulo ---
@@ -275,13 +275,12 @@ const modal = document.getElementById('documents-modal');
 const assistedNameEl = document.getElementById('documents-assisted-name');
 const actionSelectionView = document.getElementById('document-action-selection');
 const actionSearchInput = document.getElementById('action-search-input');
-const actionButtonsContainer = document.getElementById('action-buttons-container');
 const checklistView = document.getElementById('document-checklist-view');
 const checklistContainer = document.getElementById('checklist-container');
 const checklistTitle = document.getElementById('checklist-title');
 const backToActionSelectionBtn = document.getElementById('back-to-action-selection-btn');
 const saveChecklistBtn = document.getElementById('save-checklist-btn');
-const pdfChecklistBtn = document.getElementById('pdf-checklist-btn');
+const printChecklistBtn = document.getElementById('print-checklist-btn');
 const checklistSearch = document.getElementById('checklist-search');
 const closeBtn = document.getElementById('close-documents-modal-btn');
 const cancelBtn = document.getElementById('cancel-checklist-btn');
@@ -290,16 +289,23 @@ const cancelBtn = document.getElementById('cancel-checklist-btn');
 // --- Funções Internas ---
 
 /**
+ * **NOVA FUNÇÃO**
  * Preenche a área de seleção de ações com botões gerados dinamicamente
  * a partir do objeto documentsData.
  */
 function populateActionSelection() {
-    if (!actionButtonsContainer) return;
+    const container = document.getElementById('document-action-selection');
+    if (!container) return;
 
     // Evita recriar os botões se eles já existirem.
-    if (actionButtonsContainer.hasChildNodes()) {
+    if (container.querySelector('.grid')) {
         return;
     }
+
+    container.innerHTML = '<p class="text-gray-600 mb-4">Selecione o tipo de ação para ver a lista de documentos necessários:</p>';
+
+    const gridContainer = document.createElement('div');
+    gridContainer.className = 'grid grid-cols-1 md:grid-cols-2 gap-3';
 
     Object.keys(documentsData).forEach((actionKey, index) => {
         const actionData = documentsData[actionKey];
@@ -312,8 +318,10 @@ function populateActionSelection() {
         span.textContent = `${index + 1}. ${actionData.title}`;
 
         button.appendChild(span);
-        actionButtonsContainer.appendChild(button);
+        gridContainer.appendChild(button);
     });
+
+    container.appendChild(gridContainer);
 }
 
 
@@ -433,80 +441,64 @@ function handleSearch(e) {
 
 function handleActionSearch(e) {
     const searchTerm = normalizeText(e.target.value);
-    const allActions = actionButtonsContainer.querySelectorAll('button[data-action]');
+    const allActions = actionSelectionView.querySelectorAll('button[data-action]');
     allActions.forEach(btn => {
         const actionText = normalizeText(btn.textContent);
-        btn.style.display = actionText.includes(searchTerm) ? 'block' : 'none';
+        const parentDiv = btn.parentElement; 
+        if (parentDiv) {
+            btn.style.display = actionText.includes(searchTerm) ? 'block' : 'none';
+        }
     });
 }
 
-/**
- * Gera um PDF do checklist atual.
- * Requer as bibliotecas jsPDF e html2canvas.
- */
-async function handleGeneratePdf() {
-    if (!currentChecklistAction) {
-        showNotification("Nenhuma ação selecionada para gerar PDF.", "warning");
-        return;
-    }
+function handlePrint() {
+    const title = checklistTitle.textContent;
+    const assistedName = assistedNameEl.textContent;
 
-    const { jsPDF } = window.jspdf;
-    const button = pdfChecklistBtn;
-    const originalButtonText = button.innerHTML;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Imprimir Checklist</title>');
+    printWindow.document.write(`
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 2rem; line-height: 1.5; }
+            h1, h2 { color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
+            h1 { font-size: 1.875rem; }
+            h2 { font-size: 1.5rem; margin-top: 1.5rem; }
+            h4 { font-size: 1.125rem; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #374151; }
+            ul { list-style-type: none; padding-left: 0; }
+            li { margin-bottom: 0.5rem; font-size: 1rem; color: #4b5563; }
+        </style>
+    `);
+    printWindow.document.write('</head><body>');
+    printWindow.document.write(`<h1>Checklist de Documentos</h1>`);
+    printWindow.document.write(`<h2>Assistido(a): ${assistedName}</h2>`);
+    printWindow.document.write(`<h2>Assunto: ${title}</h2>`);
 
-    try {
-        // Mostra estado de carregamento
-        button.disabled = true;
-        button.innerHTML = `
-            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Gerando...
-        `;
+    let printableHtml = '';
+    const sections = checklistContainer.querySelectorAll('div > div');
+    sections.forEach(section => {
+        const sectionTitleEl = section.querySelector('h4');
+        if (sectionTitleEl) {
+            printableHtml += `<h4>${sectionTitleEl.textContent}</h4>`;
+            printableHtml += '<ul>';
+            const items = section.querySelectorAll('li');
+            items.forEach(item => {
+                const checkbox = item.querySelector('input');
+                const label = item.querySelector('label').textContent;
+                const symbol = checkbox.checked ? '☑' : '☐';
+                printableHtml += `<li>${symbol} ${label}</li>`;
+            });
+            printableHtml += '</ul>';
+        }
+    });
 
-        const doc = new jsPDF({
-            orientation: 'p',
-            unit: 'mm',
-            format: 'a4'
-        });
-
-        const assistedName = assistedNameEl.textContent;
-        const actionTitle = checklistTitle.textContent;
-
-        const canvas = await html2canvas(checklistContainer, {
-            scale: 2, // Melhora a qualidade da imagem
-            useCORS: true
-        });
-
-        const imgData = canvas.toDataURL('image/png');
-        const imgProps = doc.getImageProperties(imgData);
-        const pdfWidth = doc.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-        
-        const pageMargin = 15;
-        let position = pageMargin + 25;
-        
-        // Adiciona cabeçalho
-        doc.setFontSize(18);
-        doc.text("Checklist de Documentos", pdfWidth / 2, pageMargin, { align: 'center' });
-        doc.setFontSize(12);
-        doc.text(`Assistido(a): ${assistedName}`, pageMargin, pageMargin + 10);
-        doc.text(`Ação: ${actionTitle}`, pageMargin, pageMargin + 16);
-        
-        doc.addImage(imgData, 'PNG', pageMargin, position, pdfWidth - (pageMargin * 2), 0);
-        
-        const fileName = `Checklist_${assistedName.replace(/\s/g, '_')}_${actionTitle.replace(/\s/g, '_')}.pdf`;
-        doc.save(fileName);
-
-    } catch (error) {
-        console.error("Erro ao gerar PDF:", error);
-        showNotification("Ocorreu um erro ao gerar o PDF.", "error");
-    } finally {
-        // Restaura o botão
-        button.disabled = false;
-        button.innerHTML = originalButtonText;
-    }
+    printWindow.document.write(printableHtml);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 250);
 }
 
 function closeModal() {
@@ -529,11 +521,11 @@ export function setupDetailsModal(config) {
     cancelBtn.addEventListener('click', closeModal);
     
     if (actionSearchInput) actionSearchInput.addEventListener('input', handleActionSearch);
-    if (pdfChecklistBtn) pdfChecklistBtn.addEventListener('click', handleGeneratePdf);
+    if (printChecklistBtn) printChecklistBtn.addEventListener('click', handlePrint);
 }
 
 export function openDetailsModal(config) {
-    // Garante que os botões de ação sejam criados apenas uma vez.
+    // MODIFICAÇÃO: Garante que os botões de ação sejam criados.
     populateActionSelection();
     
     currentAssistedId = config.assistedId;
@@ -548,8 +540,7 @@ export function openDetailsModal(config) {
     }
 
     assistedNameEl.textContent = assisted.name;
-    
-    // Mostra o checklist salvo, se existir, ou a tela de seleção.
+
     if (assisted.documentChecklist && assisted.documentChecklist.action) {
         const savedAction = assisted.documentChecklist.action;
         renderChecklist(savedAction);
