@@ -171,8 +171,20 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
     const atendidos = allAssisted.filter(a => a.status === 'atendido');
     const faltosos = allAssisted.filter(a => a.status === 'faltoso');
 
-    const statsByCollaborator = atendidos.reduce((acc, a) => {
-        acc[a.attendant || 'Não informado'] = (acc[a.attendant || 'Não informado'] || 0) + 1;
+    // Alterado: Agrupa colaboradores por grupo
+    const statsByGroup = atendidos.reduce((acc, a) => {
+        const attendantIsObject = typeof a.attendant === 'object' && a.attendant !== null;
+        const attendantName = attendantIsObject ? a.attendant.name : (a.attendant || 'Não informado');
+        const groupName = attendantIsObject ? a.attendant.group : 'Sem Grupo';
+
+        if (!acc[groupName]) {
+            acc[groupName] = { collaborators: {}, total: 0 };
+        }
+
+        const safeAttendantName = attendantName || 'Não informado';
+        acc[groupName].collaborators[safeAttendantName] = (acc[groupName].collaborators[safeAttendantName] || 0) + 1;
+        acc[groupName].total++;
+        
         return acc;
     }, {});
     
@@ -230,6 +242,30 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
             <p class="text-2xl font-bold text-indigo-700">${avgTimeDelegated} min</p>
             <p class="text-xs text-gray-600 mt-1">Tempo Médio (delegação)</p>
         </div>` : '';
+
+    // Alterado: Gera tabelas de colaboradores agrupadas
+    const collaboratorsHTML = Object.entries(statsByGroup).sort(([,a],[,b]) => b.total - a.total).map(([groupName, groupData]) => {
+        const collaboratorsRows = Object.entries(groupData.collaborators).sort(([,a],[,b]) => b-a).map(([name, count]) => `
+            <tr class="border-b">
+                <td class="px-4 py-2 font-medium pl-8">${name}</td>
+                <td class="px-4 py-2 text-right">${count}</td>
+            </tr>
+        `).join('');
+
+        return `
+            <table class="w-full text-sm text-left mb-4">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-200">
+                    <tr>
+                        <th class="px-4 py-2">${groupName}</th>
+                        <th class="px-4 py-2 text-right font-bold">Total: ${groupData.total}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${collaboratorsRows}
+                </tbody>
+            </table>
+        `;
+    }).join('');
 
     const html = `
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 h-full p-4 overflow-hidden">
@@ -309,21 +345,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
             <div class="bg-white p-4 rounded-lg border">
                 <h3 class="text-lg font-semibold text-gray-800 mb-2">Atendimentos por Colaborador</h3>
                 <div class="max-h-[30vh] overflow-y-auto">
-                    <table class="w-full text-sm text-left">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
-                            <tr>
-                                <th class="px-4 py-2">Colaborador</th>
-                                <th class="px-4 py-2 text-right">Atendimentos</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${Object.entries(statsByCollaborator).sort(([,a],[,b]) => b-a).map(([name, count]) => `
-                                <tr class="border-b">
-                                    <td class="px-4 py-2 font-medium">${name}</td>
-                                    <td class="px-4 py-2 text-right">${count}</td>
-                                </tr>`).join('')}
-                        </tbody>
-                    </table>
+                    ${collaboratorsHTML}
                 </div>
             </div>
         </div>
@@ -342,7 +364,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
             avgTimeDirect,
             avgTimeDelegated,
             useDelegationFlow,
-            statsByCollaborator,
+            statsByGroup,
             statsBySubject,
             statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
             statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
@@ -393,11 +415,13 @@ async function exportStatisticsToPDF(pautaName, statsData) {
             doc.setFont(FONT_BOLD, 'normal');
             doc.setFontSize(16);
             doc.setTextColor(COLOR_PRIMARY);
-            doc.text(`Relatório de Estatísticas: ${pautaName}`, margin, margin - 10);
+            const titleLines = doc.splitTextToSize(`Relatório de Estatísticas: ${pautaName}`, pageWidth - margin * 2);
+            doc.text(titleLines, margin, margin - 10);
             
             // Linha do Cabeçalho
             doc.setDrawColor(COLOR_SECONDARY);
-            doc.line(margin, margin, pageWidth - margin, margin);
+            doc.line(margin, margin + (titleLines.length * 12), pageWidth - margin, margin + (titleLines.length * 12));
+
 
             // Rodapé
             const footerText = `Página ${i} de ${pageCount}`;
@@ -476,57 +500,67 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         yPos += cardHeight + 30;
     }
 
-    // 3. GRÁFICO DE ATENDIMENTOS POR COLABORADOR
-    if (document.getElementById('export-collaborators').checked && Object.keys(statsData.statsByCollaborator).length > 0) {
-        addSectionTitle("Atendimentos por Colaborador");
+    // 3. GRÁFICOS DE ATENDIMENTOS POR GRUPO/COLABORADOR
+    if (document.getElementById('export-collaborators').checked && Object.keys(statsData.statsByGroup).length > 0) {
+        const sortedGroups = Object.entries(statsData.statsByGroup).sort(([, a], [, b]) => b.total - a.total);
 
-        const sortedCollaborators = Object.entries(statsData.statsByCollaborator).sort(([, a], [, b]) => b - a);
-        const labels = sortedCollaborators.map(item => item[0]);
-        const data = sortedCollaborators.map(item => item[1]);
-
-        // Criar um canvas temporário para o gráfico
-        const canvas = document.createElement('canvas');
-        canvas.width = 500;
-        canvas.height = labels.length * 25 + 50; // Altura dinâmica
-        const ctx = canvas.getContext('2d');
-
-        const chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Atendimentos',
-                    data: data,
-                    backgroundColor: 'rgba(79, 112, 156, 0.8)',
-                    borderColor: 'rgba(43, 58, 85, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: false,
-                plugins: {
-                    legend: { display: false },
-                    title: { display: false }
-                },
-                scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        for (const [groupName, groupData] of sortedGroups) {
+            if (yPos > pageHeight - 200) { // Pre-check for space for title and a small chart
+                doc.addPage();
+                yPos = margin + 20;
             }
-        });
-        
-        // Aguardar o gráfico renderizar e adicionar ao PDF
-        await new Promise(resolve => setTimeout(resolve, 500)); // Pequeno delay para garantir renderização
-        const imgData = canvas.toDataURL('image/png');
-        
-        if (yPos + canvas.height > pageHeight - margin) {
-            doc.addPage();
-            yPos = margin + 20;
+            
+            addSectionTitle(`Grupo: ${groupName} (Total de Atendimentos: ${groupData.total})`);
+            
+            const sortedCollaborators = Object.entries(groupData.collaborators).sort(([, a], [, b]) => b - a);
+            if (sortedCollaborators.length === 0) continue;
+
+            const labels = sortedCollaborators.map(item => item[0]);
+            const data = sortedCollaborators.map(item => item[1]);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 500;
+            canvas.height = Math.max(100, labels.length * 25 + 50);
+            const ctx = canvas.getContext('2d');
+
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Atendimentos',
+                        data: data,
+                        backgroundColor: 'rgba(79, 112, 156, 0.8)',
+                        borderColor: 'rgba(43, 58, 85, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: false,
+                    animation: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: false }
+                    },
+                    scales: { x: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } } }
+                }
+            });
+            
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const imgData = canvas.toDataURL('image/png');
+            
+            if (yPos + canvas.height > pageHeight - margin) {
+                doc.addPage();
+                yPos = margin + 20;
+            }
+
+            doc.addImage(imgData, 'PNG', margin, yPos, canvas.width, canvas.height);
+            yPos += canvas.height + 20;
+
+            chart.destroy();
+            canvas.remove();
         }
-
-        doc.addImage(imgData, 'PNG', margin, yPos, canvas.width, canvas.height);
-        yPos += canvas.height + 20;
-
-        chart.destroy(); // Limpar
-        canvas.remove();
     }
 
 
@@ -546,7 +580,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
             theme: 'grid',
             headStyles: { fillColor: COLOR_PRIMARY, textColor: '#FFFFFF', fontStyle: 'bold' },
             didDrawPage: (data) => yPos = data.cursor.y,
-            margin: { top: margin + 20, bottom: margin + 20 }
+            margin: { top: yPos, bottom: margin + 20 }
         });
         yPos = doc.autoTable.previous.finalY + 20;
     }
@@ -564,7 +598,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
                 headStyles: { fillColor: color, textColor: '#FFFFFF', fontStyle: 'bold' },
                 footStyles: { fillColor: [240, 240, 240], textColor: COLOR_TEXT, fontStyle: 'bold' },
                 didDrawPage: (data) => yPos = data.cursor.y,
-                margin: { top: margin + 20, bottom: margin + 20 }
+                margin: { top: yPos, bottom: margin + 20 }
             });
             yPos = doc.autoTable.previous.finalY + 20;
         }
@@ -577,3 +611,4 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     addHeaderAndFooter();
     doc.save(`estatisticas_${pautaName.replace(/\s+/g, '_')}.pdf`);
 }
+
