@@ -1,0 +1,344 @@
+<!-- 
+  Este arquivo contém APENAS a estrutura e a lógica do modal de estatísticas.
+  Ele foi projetado para ser carregado dinamicamente em uma página principal (ex: index.html).
+-->
+
+<style>
+    /* Estilo para a animação do spinner de carregamento */
+    .loader {
+        border-top-color: #3498db;
+        -webkit-animation: spin 1s linear infinite;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        to { -webkit-transform: rotate(360deg); }
+    }
+    @-webkit-keyframes spin {
+        to { -webkit-transform: rotate(360deg); }
+    }
+    /* Custom scrollbar for better aesthetics */
+    #statistics-content::-webkit-scrollbar {
+        width: 8px;
+    }
+    #statistics-content::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    #statistics-content::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+    }
+    #statistics-content::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+</style>
+
+<!-- Modal de Estatísticas -->
+<!-- A classe 'hidden' controla a visibilidade. Remova-a com JavaScript na sua página principal para exibir o modal. -->
+<div id="statistics-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4 hidden">
+    <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-4xl flex flex-col" style="max-height: 95vh;">
+        
+        <!-- Cabeçalho do Modal -->
+        <div class="flex justify-between items-center mb-4 flex-shrink-0 border-b pb-4">
+            <h2 class="text-2xl font-bold text-gray-800">Estatísticas da Pauta</h2>
+            <button id="close-statistics-modal-btn" class="text-gray-500 hover:text-gray-700 text-3xl font-light">&times;</button>
+        </div>
+
+        <!-- Opções de Visualização -->
+        <div class="mb-4 p-4 bg-gray-50 rounded-lg flex-shrink-0">
+            <h3 class="font-semibold text-lg text-gray-700 mb-3">Selecione o que deseja exibir:</h3>
+            <div id="statistics-options" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" data-target="#stats-summary" class="form-checkbox h-5 w-5 text-blue-600 rounded" checked>
+                    <span class="text-gray-700">Resumo Geral</span>
+                </label>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" data-target="#stats-status-chart" class="form-checkbox h-5 w-5 text-blue-600 rounded" checked>
+                    <span class="text-gray-700">Gráfico de Status</span>
+                </label>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" data-target="#stats-time-chart" class="form-checkbox h-5 w-5 text-blue-600 rounded" checked>
+                    <span class="text-gray-700">Atendimentos por Hora</span>
+                </label>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" data-target="#stats-agent-table" class="form-checkbox h-5 w-5 text-blue-600 rounded" checked>
+                    <span class="text-gray-700">Detalhes por Atendente</span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Conteúdo das Estatísticas (com scroll) -->
+        <div id="statistics-content-wrapper" class="flex-grow overflow-y-auto pr-2">
+            <div id="statistics-content" class="space-y-6">
+                <!-- Cards de Resumo -->
+                <div id="stats-summary" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                    <!-- Conteúdo preenchido via JS -->
+                </div>
+
+                <!-- Gráficos -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div id="stats-status-chart" class="bg-white p-4 rounded-lg shadow-md">
+                        <h3 class="font-bold text-center text-gray-700 mb-2">Status dos Atendimentos</h3>
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                    <div id="stats-time-chart" class="bg-white p-4 rounded-lg shadow-md">
+                         <h3 class="font-bold text-center text-gray-700 mb-2">Atendimentos por Horário</h3>
+                        <canvas id="timeChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Tabela de Detalhes -->
+                <div id="stats-agent-table" class="bg-white p-4 rounded-lg shadow-md">
+                    <h3 class="font-bold text-gray-700 mb-4">Detalhes por Atendente</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Atendente</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Atendido</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resultado</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duração (min)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="agent-details-body" class="bg-white divide-y divide-gray-200">
+                                <!-- Linhas da tabela preenchidas via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Rodapé do Modal com Ações -->
+        <div class="flex-shrink-0 mt-6 pt-4 border-t flex justify-end items-center">
+            <button id="download-pdf-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg shadow hover:bg-green-700 transition duration-300 flex items-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+                <span>Baixar PDF</span>
+            </button>
+             <div id="pdf-loader" class="ml-4 hidden items-center space-x-2">
+                <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6"></div>
+                <span class="text-gray-600">Gerando PDF...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Assegura que o script só rode uma vez, mesmo se o modal for carregado várias vezes.
+    if (typeof window.statisticsModalLoaded === 'undefined') {
+        window.statisticsModalLoaded = true;
+
+        // Mock data - Simula os dados que viriam do seu sistema
+        const pautaData = [
+            { id: 1, nome: 'João Silva', horario: '09:00', status: 'Atendido', atendente: 'Agente Ana', chegada: '08:55', inicio: '09:05', fim: '09:20', demanda: 'Registro', resultado: 'Deferido' },
+            { id: 2, nome: 'Maria Oliveira', horario: '09:00', status: 'Faltoso', atendente: null, chegada: null, inicio: null, fim: null, demanda: 'Consulta', resultado: 'N/A' },
+            { id: 3, nome: 'Carlos Pereira', horario: '09:30', status: 'Atendido', atendente: 'Agente Bruno', chegada: '09:25', inicio: '09:32', fim: '09:45', demanda: 'Retirada', resultado: 'Deferido' },
+            { id: 4, nome: 'Fernanda Costa', horario: '10:00', status: 'Atendido', atendente: 'Agente Ana', chegada: '09:58', inicio: '10:03', fim: '10:15', demanda: 'Registro', resultado: 'Indeferido' },
+            { id: 5, nome: 'Lucas Martins', horario: '10:00', status: 'Atendido', atendente: 'Agente Carlos', chegada: '10:01', inicio: '10:05', fim: '10:30', demanda: 'Consulta', resultado: 'Deferido' },
+            { id: 6, nome: 'Patrícia Souza', horario: '10:30', status: 'Faltoso', atendente: null, chegada: null, inicio: null, fim: null, demanda: 'Registro', resultado: 'N/A' },
+            { id: 7, nome: 'Ricardo Alves', horario: '11:00', status: 'Atendido', atendente: 'Agente Bruno', chegada: '10:55', inicio: '11:01', fim: '11:10', demanda: 'Retirada', resultado: 'Deferido' },
+            { id: 8, nome: 'Juliana Lima', horario: '11:00', status: 'Atendido', atendente: 'Agente Ana', chegada: '11:02', inicio: '11:08', fim: '11:25', demanda: 'Consulta', resultado: 'Deferido' },
+        ];
+
+        // --- Variáveis globais para os gráficos ---
+        let statusChartInstance = null;
+        let timeChartInstance = null;
+
+        // --- Funções para renderizar as estatísticas ---
+        function renderStatistics() {
+            // 1. Calcular totais
+            const totalPauta = pautaData.length;
+            const totalAtendidos = pautaData.filter(p => p.status === 'Atendido').length;
+            const totalFaltosos = pautaData.filter(p => p.status === 'Faltoso').length;
+
+            // 2. Renderizar cards de resumo
+            const summaryContainer = document.getElementById('stats-summary');
+            summaryContainer.innerHTML = `
+                <div class="bg-blue-100 p-4 rounded-lg shadow">
+                    <p class="text-sm text-blue-800 font-semibold">Total na Pauta</p>
+                    <p class="text-3xl font-bold text-blue-900">${totalPauta}</p>
+                </div>
+                <div class="bg-green-100 p-4 rounded-lg shadow">
+                    <p class="text-sm text-green-800 font-semibold">Atendidos</p>
+                    <p class="text-3xl font-bold text-green-900">${totalAtendidos}</p>
+                </div>
+                <div class="bg-red-100 p-4 rounded-lg shadow">
+                    <p class="text-sm text-red-800 font-semibold">Faltosos</p>
+                    <p class="text-3xl font-bold text-red-900">${totalFaltosos}</p>
+                </div>
+            `;
+            
+            // 3. Renderizar Gráfico de Status (Pizza)
+            if(statusChartInstance) statusChartInstance.destroy();
+            const statusCtx = document.getElementById('statusChart').getContext('2d');
+            statusChartInstance = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Atendidos', 'Faltosos'],
+                    datasets: [{
+                        data: [totalAtendidos, totalFaltosos],
+                        backgroundColor: ['#4ade80', '#f87171'],
+                        borderColor: ['#22c55e', '#ef4444'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    const value = context.raw;
+                                    const percentage = ((value / totalPauta) * 100).toFixed(1);
+                                    label += `${value} (${percentage}%)`;
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 4. Renderizar Gráfico de Atendimentos por Hora (Barras)
+            const atendimentosPorHora = pautaData
+                .filter(p => p.status === 'Atendido')
+                .reduce((acc, p) => {
+                    const hora = p.horario.split(':')[0] + ':00';
+                    acc[hora] = (acc[hora] || 0) + 1;
+                    return acc;
+                }, {});
+
+            const horas = Object.keys(atendimentosPorHora).sort();
+            const contagens = horas.map(hora => atendimentosPorHora[hora]);
+
+            if(timeChartInstance) timeChartInstance.destroy();
+            const timeCtx = document.getElementById('timeChart').getContext('2d');
+            timeChartInstance = new Chart(timeCtx, {
+                type: 'bar',
+                data: {
+                    labels: horas,
+                    datasets: [{
+                        label: 'Nº de Atendimentos',
+                        data: contagens,
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // 5. Renderizar Tabela de Detalhes por Atendente
+            const agentDetailsBody = document.getElementById('agent-details-body');
+            agentDetailsBody.innerHTML = pautaData
+                .filter(p => p.status === 'Atendido')
+                .map(p => {
+                    const inicio = new Date(`1970-01-01T${p.inicio}:00`);
+                    const fim = new Date(`1970-01-01T${p.fim}:00`);
+                    const duracao = (fim - inicio) / (1000 * 60); // em minutos
+                    return `
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${p.atendente}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.nome}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${p.resultado === 'Deferido' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                    ${p.resultado}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${duracao} min</td>
+                        </tr>
+                    `;
+                }).join('');
+        }
+
+        // --- Controle do Modal ---
+        const modal = document.getElementById('statistics-modal');
+        const closeBtn = document.getElementById('close-statistics-modal-btn');
+
+        // A lógica para ABRIR o modal deve estar no seu arquivo index.html principal.
+        // Exemplo de como abrir: document.getElementById('statistics-modal').classList.remove('hidden');
+        
+        closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+        modal.addEventListener('click', (e) => {
+            // Fecha o modal se o clique for no fundo escuro
+            if (e.target === modal) {
+                modal.classList.add('hidden');
+            }
+        });
+
+        // --- Controle das Opções de Visualização ---
+        const optionsContainer = document.getElementById('statistics-options');
+        optionsContainer.addEventListener('change', (e) => {
+            if (e.target.type === 'checkbox') {
+                const targetId = e.target.dataset.target;
+                const section = document.querySelector(targetId);
+                if (section) {
+                    section.classList.toggle('hidden', !e.target.checked);
+                }
+            }
+        });
+
+        // --- Lógica para Download do PDF ---
+        const downloadPdfBtn = document.getElementById('download-pdf-btn');
+        const pdfLoader = document.getElementById('pdf-loader');
+        
+        downloadPdfBtn.addEventListener('click', async () => {
+            pdfLoader.style.display = 'flex';
+            downloadPdfBtn.disabled = true;
+
+            const content = document.getElementById('statistics-content');
+            
+            const canvas = await html2canvas(content, { scale: 2, useCORS: true });
+            const imgData = canvas.toDataURL('image/png');
+            
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const imgProps = pdf.getImageProperties(imgData);
+            const ratio = imgProps.height / imgProps.width;
+            
+            let finalImgWidth = pdfWidth - 40; // com margens
+            let finalImgHeight = finalImgWidth * ratio;
+
+            if(finalImgHeight > pdfHeight - 40) {
+                finalImgHeight = pdfHeight - 40;
+                finalImgWidth = finalImgHeight / ratio;
+            }
+
+            pdf.addImage(imgData, 'PNG', 20, 20, finalImgWidth, finalImgHeight);
+            pdf.save('estatisticas-pauta.pdf');
+            
+            pdfLoader.style.display = 'none';
+            downloadPdfBtn.disabled = false;
+        });
+
+        // --- Inicialização ---
+        // A renderização é chamada quando o script é carregado na página principal.
+        renderStatistics();
+    }
+</script>
+
