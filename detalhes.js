@@ -2,38 +2,266 @@
  * detalhes.js
  * Este módulo gerencia toda a funcionalidade do modal "Ver Detalhes",
  * incluindo a exibição da lista de documentos e o checklist.
- * 
- * Agora com PDF aprimorado: layout profissional, ícones visuais e coluna de observações.
  */
 
 // --- Dados e Estado do Módulo ---
-const documentsData = { 
+
+// Objeto com as informações de documentos para cada tipo de ação
+const documentsData = {
+    // --- II. PROCESSOS CÍVEIS (Gerais) ---
+    obrigacao_fazer: {
+        title: 'Ação de Obrigação de Fazer',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentos Específicos do Caso', docs: ['Documentos que comprovem a obrigação (contrato, acordo, etc.)', 'Provas do descumprimento (e-mails, protocolos, fotos, etc.)', 'Se contra concessionária de serviço público: Faturas, protocolos de reclamação.'] }
+        ]
+    },
+    declaratoria_nulidade: {
+        title: 'Ação Declaratória de Nulidade',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentos Específicos do Caso', docs: ['Documento ou ato jurídico a ser anulado (contrato, cobrança, multa)', 'Provas da ilegalidade ou abusividade (jurisprudências, extratos)', 'Se contra concessionária (ex: TOI da LIGHT): Cópia do TOI, histórico de consumo.'] }
+        ]
+    },
+    indenizacao_danos: {
+        title: 'Ação de Indenização (Danos Morais e Materiais)',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentos Específicos do Caso', docs: ['Provas do evento danoso (boletim de ocorrência, fotos, vídeos)', 'Provas dos danos materiais (notas fiscais, orçamentos, recibos)', 'Provas dos danos morais (laudos psicológicos, atestados, testemunhas)', 'Se contra concessionária: Protocolos, notas de aparelhos queimados.'] }
+        ]
+    },
+    revisional_debito: {
+        title: 'Ação Revisional de Débito',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentos Específicos do Caso', docs: ['Contrato ou documento que originou o débito', 'Faturas, extratos ou planilhas do débito', 'Provas de que os valores são indevidos (histórico de consumo, cálculos)', 'Se contra concessionária: Histórico de consumo, protocolos de reclamação.'] }
+        ]
+    },
+    exigir_contas: {
+        title: 'Ação de Exigir Contas',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentos Específicos do Caso', docs: ['Documento que comprove a relação de administração/gestão (termo de curatela, contrato)', 'Documentos que indiquem a movimentação de valores (extratos)', 'Provas da recusa em prestar contas ou suspeita de irregularidades.'] }
+        ]
+    },
+
+    // --- III. PROCESSOS DE FAMÍLIA ---
+    alimentos_fixacao_majoracao_oferta: {
+        title: 'Alimentos (Fixação / Majoração / Oferta)',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentos do Filho(a)/Alimentando(a)', docs: ['Certidão de Nascimento', 'Comprovantes de despesas (matrícula, escola, saúde, remédios)', 'Laudos de necessidades especiais (se aplicável)'] },
+            { title: 'Sobre o Réu (Alimentante)', docs: ['Endereço do(a) alimentante', 'Nome e endereço do trabalho do(a) alimentante (se souber)', 'Dados da(o) empregador(a) da parte ré (CNPJ, se possível)', 'Contracheque(s), extrato bancário ou IR do(a) alimentante (se conseguir)'] },
+            { title: 'Para Depósito', docs: ['Dados bancários do(a) representante legal (para depósito da pensão)'] }
+        ]
+    },
+    alimentos_gravidicos: {
+        title: 'Ação de Alimentos Gravídicos',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentos Específicos do Caso', docs: ['Comprovante de gravidez (ultrassom, atestado médico)', 'Provas do relacionamento com o suposto pai (fotos, mensagens, testemunhas)', 'Comprovantes das despesas da gravidez (exames, medicamentos, enxoval)'] },
+            { title: 'Sobre o Suposto Pai', docs: ['Endereço do suposto pai', 'Informações sobre a profissão e possibilidade financeira do suposto pai'] }
+        ]
+    },
+    alimentos_avoengos: {
+        title: 'Ação de Alimentos Avoengos (contra avós)',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentos do Neto(a)/Alimentando(a)', docs: ['Certidão de Nascimento'] },
+            { title: 'Sobre os Pais', docs: ['Provas da impossibilidade/insuficiência dos pais (desemprego, decisão judicial anterior, certidão de óbito)'] },
+            { title: 'Sobre o(s) Avó(s) Réu(s)', docs: ['Endereço do(a) avó(ô) réu', 'Provas da capacidade financeira do(a) avó(ô) (contracheques, extratos, IR, etc.)'] }
+        ]
+    },
+    divorcio_consensual: {
+        title: 'Divórcio Consensual',
+        sections: [
+            { title: 'Documentação Comum (Ambos os Cônjuges)', docs: ['Carteira de Identidade (RG) de ambos', 'CPF de ambos', 'Comprovante de Residência de ambos', 'Certidão de Casamento (atualizada)', 'Declaração de Hipossuficiência'] },
+            { title: 'Bens e Filhos (se houver)', docs: ['Documentos dos bens (imóveis, veículos, contas) e seus valores', 'Certidão de Nascimento/Casamento dos filhos', 'Comprovantes de despesas dos filhos', 'Dados bancários para pensão (se houver)'] }
+        ]
+    },
     divorcio_litigioso: {
         title: 'Divórcio Litigioso',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: [
-                'Carteira de Identidade (RG)',
-                'CPF',
-                'Comprovante de Residência',
-                'Certidão de Casamento (atualizada)',
-                'Declaração de Hipossuficiência'
-            ] },
-            { title: 'Sobre o Outro Cônjuge (Réu)', docs: [
-                'Endereço do(a) outro(a) cônjuge (réu)'
-            ] },
-            { title: 'Bens e Filhos (se houver)', docs: [
-                'Documentos dos bens (imóveis, veículos, contas) e seus valores',
-                'Certidão de Nascimento/Casamento dos filhos',
-                'Comprovantes de despesas dos filhos',
-                'Informações de renda do réu (para alimentos)',
-                'Se há imóvel MCMV: Documentação do imóvel',
-                'Se há cotas sociais (empresa): Contrato social, documentos da empresa'
-            ] }
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Certidão de Casamento (atualizada)', 'Declaração de Hipossuficiência'] },
+            { title: 'Sobre o Outro Cônjuge (Réu)', docs: ['Endereço do(a) outro(a) cônjuge (réu)'] },
+            { title: 'Bens e Filhos (se houver)', docs: ['Documentos dos bens (imóveis, veículos, contas) e seus valores', 'Certidão de Nascimento/Casamento dos filhos', 'Comprovantes de despesas dos filhos', 'Informações de renda do réu (para alimentos)', 'Se há imóvel MCMV: Documentação do imóvel', 'Se há cotas sociais (empresa): Contrato social, documentos da empresa'] }
+        ]
+    },
+    uniao_estavel_reconhecimento_dissolucao: {
+        title: 'Reconhecimento e Dissolução de União Estável',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Dos Companheiros', docs: ['Certidão de Nascimento/Casamento de ambos (para comprovar estado civil)'] },
+            { title: 'Provas da União', docs: ['Provas da existência da união estável (fotos, contas conjuntas, contratos, declarações)', 'Endereço do(a) ex-companheiro(a) (réu)'] },
+            { title: 'Bens e Filhos (se houver)', docs: ['Documentos dos bens adquiridos na constância da união', 'Certidão de Nascimento/Casamento dos filhos', 'Comprovantes de despesas, informações de renda do réu (para alimentos)'] }
+        ]
+    },
+    uniao_estavel_post_mortem: {
+        title: 'Reconhecimento / Dissolução de União Estável Post Mortem',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Documentos do Falecido(a)', docs: ['Certidão de Óbito do(a) companheiro(a) falecido(a)'] },
+            { title: 'Provas e Herdeiros', docs: ['Provas da existência da união estável (conforme item anterior)', 'Endereço dos herdeiros do falecido (réus)', 'Documentos que comprovem a inexistência de filhos ou testamento do de cujus'] }
+        ]
+    },
+    conversao_uniao_homoafetiva: {
+        title: 'Conversão de União Estável Homoafetiva em Casamento',
+        sections: [
+            { title: 'Documentação Comum (Ambos)', docs: ['Documentos de Identidade e CPF de ambos', 'Certidão de Nascimento/Casamento de ambos', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Provas da União e Testemunhas', docs: ['Provas da união estável (fotos, extratos, declarações)', 'Dados das testemunhas do casamento (nome, RG, CPF, endereço, telefone)'] }
+        ]
+    },
+    guarda: {
+        title: 'Guarda (pedida pelos pais / por terceiros)',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Da(s) Criança(s)/Adolescente(s)', docs: ['Certidão de Nascimento'] },
+            { title: 'Se pedida pelos pais:', docs: ['Provas do arranjo familiar atual', 'Se houver conflito: Provas da incapacidade do outro genitor ou situação de risco'] },
+            { title: 'Se pedida por terceiros (avó/tio/etc.):', docs: ['Declaração de Idoneidade Moral do(a) requerente', 'Atestado médico de boa saúde física e mental (requerente e criança)', 'Comprovante de vacinação e escolar da criança', 'Provas da situação de risco ou incapacidade dos pais (relatórios do Conselho Tutelar)', 'Endereço dos pais (réus)'] }
+        ]
+    },
+    regulamentacao_convivencia: {
+        title: 'Regulamentação de Convivência Familiar (Visitas)',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Documentos do Caso', docs: ['Certidão de Nascimento da(s) criança(s)/adolescente(s)', 'Endereço do(s) pais', 'Cópia da decisão ou termo de guarda (se já houver)', 'Propostas de dias e horários para a convivência'] }
+        ]
+    },
+    investigacao_paternidade: {
+        title: 'Investigação de Paternidade (com ou sem Alimentos / Pós Morte)',
+        sections: [
+            { title: 'Documentação Comum (Representante Legal)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Do Filho(a)', docs: ['Certidão de Nascimento (sem nome do pai ou com pai a ser contestado)', 'Comprovantes de despesas do(a) filho(a) (para pedido de alimentos)'] },
+            { title: 'Sobre o Suposto Pai', docs: ['Provas do relacionamento da mãe com o suposto pai (fotos, mensagens, testemunhas)', 'Informações sobre o suposto pai (nome completo, endereço, profissão, etc.)', 'Certidão de Óbito do suposto pai (se for Pós Morte)'] }
+        ]
+    },
+    curatela: {
+        title: 'Curatela (antiga interdição)',
+        sections: [
+            { title: 'Documentação Comum (Requerente/Futuro Curador)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Idoneidade Moral', 'Atestado médico de boa saúde física e mental', 'Declaração de Anuência dos demais familiares (se houver)', 'Declaração de Hipossuficiência'] },
+            { title: 'Do Curatelando(a)', docs: ['RG e CPF', 'Certidão de Nascimento/Casamento', 'Laudos médicos ATUALIZADOS (com CID, indicando impossibilidade de exprimir vontade)', 'Relatórios de equipe multiprofissional/biopsicossocial (se houver)', 'Documentos de bens do(a) curatelando(a) (se possuir)'] }
+        ]
+    },
+    levantamento_curatela: {
+        title: 'Levantamento de Curatela',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Documentos do Caso', docs: ['Cópia da sentença ou termo de curatela', 'Laudos médicos ATUALIZADOS comprovando a cessação da incapacidade', 'Documentos que comprovem o retorno do(a) curatelado(a) ao convívio social'] }
+        ]
+    },
+    tutela: {
+        title: 'Tutela',
+        sections: [
+            { title: 'Documentação Comum (Requerente/Futuro Tutor)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Idoneidade Moral', 'Atestado médico de boa saúde física e mental', 'Declaração de Hipossuficiência'] },
+            { title: 'Do Menor e Pais', docs: ['Certidão de Nascimento/Óbito dos pais do(a) menor (para comprovar ausência)', 'Provas da situação de abandono/risco do menor'] }
+        ]
+    },
+    adocao: {
+        title: 'Adoção',
+        sections: [
+            { title: 'Dos Requerentes (Futuros Pais Adotivos)', docs: ['Documentos de Identidade e CPF', 'Comprovante de Residência', 'Habilitação para adoção (se já houver)', 'Estudo psicossocial', 'Declaração de Hipossuficiência'] },
+            { title: 'Da Criança/Adolescente e Pais Biológicos', docs: ['Certidão de Nascimento', 'Consentimento dos pais biológicos (se consensual) ou provas de destituição do poder familiar'] }
+        ]
+    },
+
+    // --- IV. PROCESSOS CRIMINAIS E EXECUÇÃO PENAL ---
+    defesa_criminal_custodia: {
+        title: 'Defesa Criminal / Audiência de Custódia',
+        sections: [
+            { title: 'Documentação Comum (Assistido/Familiar)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Documentos do Caso', docs: ['Cópia do Registro de Ocorrência (BO) ou Auto de Prisão em Flagrante (APF)', 'Mandado de Prisão (se houver)', 'Informações sobre o crime/acusação', 'Provas da versão do assistido (testemunhas, áudios, vídeos, fotos)', 'Comprovante de residência fixa e trabalho lícito (para liberdade)', 'Certidão de nascimento de filhos menores/laudos de dependentes (para domiciliar)', 'Certidões de antecedentes criminais'] }
+        ]
+    },
+    execucao_penal: {
+        title: 'Acompanhamento de Execução Penal',
+        sections: [
+            { title: 'Documentação Comum (Apenado/Familiar)', docs: ['Documentos pessoais do apenado', 'Declaração de Hipossuficiência'] },
+            { title: 'Documentos do Processo', docs: ['Cópia da Sentença Condenatória e Certidão de Trânsito em Julgado', 'Número do Processo de Execução Penal (PEP)'] },
+            { title: 'Para Pedidos Específicos', docs: ['Atestados de trabalho/estudo (para remição)', 'Comprovante de residência familiar (para VPL - Visita Periódica ao Lar)', 'Informações sobre comportamento carcerário'] }
+        ]
+    },
+
+    // --- V. FAZENDA PÚBLICA (contra o Estado) ---
+    fornecimento_medicamentos: {
+        title: 'Fornecimento de Medicamentos / Cirurgias / Exames',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentos Médicos', docs: ['Receita médica ATUALIZADA (original)', 'Laudo médico DETALHADO (com CID, justificativa da imprescindibilidade, ineficácia de alternativas do SUS)', 'Comprovante de negativa de fornecimento pelo SUS ou plano de saúde', 'Orçamentos do medicamento/procedimento em locais particulares (mínimo de 3)', 'Carteirinha do plano de saúde (se for contra plano)'] }
+        ]
+    },
+    indenizacao_poder_publico: {
+        title: 'Indenizações contra o Poder Público',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Documentos do Caso', docs: ['Documentos que comprovem o dano e o nexo com a atuação/omissão do ente público (BO, laudos, fotos, notas fiscais)'] }
+        ]
+    },
+    previdencia_estadual_municipal: {
+        title: 'Previdência Social (estadual e municipal)',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Documentos Específicos', docs: ['Documentos específicos do benefício pleiteado ou contestado (ex: certidão de tempo de contribuição, laudos médicos)', 'Comprovante da negativa administrativa'] }
+        ]
+    },
+    questionamento_impostos_taxas: {
+        title: 'Questionamentos em Cobranças de Impostos, Taxas e Multas',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Documentos do Débito', docs: ['Cópia do débito/multa que se busca contestar', 'Documentos que comprovem a indevida cobrança ou o pagamento'] }
+        ]
+    },
+
+    // --- VI. INFÂNCIA E JUVENTUDE ---
+    vaga_escola_creche: {
+        title: 'Vaga em Escolas e Creches',
+        sections: [
+            { title: 'Documentação Comum (Representante Legal)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Documentos da Criança e do Pedido', docs: ['Certidão de Nascimento da criança', 'Comprovante de inscrição na lista de espera da prefeitura (se houver)', 'Protocolos de solicitação de vaga na CRE/escolas', 'Endereço das creches/escolas próximas à residência', 'Provas da necessidade da vaga (mãe trabalhadora, laudos para crianças com deficiência)'] }
+        ]
+    },
+    apoio_escolar: {
+        title: 'Profissionais de Apoio Escolar',
+        sections: [
+            { title: 'Documentação Comum (Representante Legal)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Documentos da Criança e do Pedido', docs: ['Certidão de Nascimento da criança/adolescente', 'Laudo médico comprovando a deficiência e a necessidade do profissional de apoio', 'Declaração da escola sobre a matrícula e a ausência do profissional', 'Plano Educacional Individualizado (PEI) (se houver)'] }
+        ]
+    },
+    transporte_gratuito: {
+        title: 'Transporte Gratuito (Infância e Juventude)',
+        sections: [
+            { title: 'Documentação Comum (Representante Legal)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Documentos da Criança/Adolescente', docs: ['Certidão de Nascimento', 'Laudo médico comprovando a deficiência/doença e a necessidade de transporte', 'Comprovante de negativa da solicitação administrativa de transporte'] }
+        ]
+    },
+
+    // --- VIII. DOCUMENTAÇÃO E REGISTROS ---
+    retificacao_registro_civil: {
+        title: 'Retificação de Registro Civil (Dados / Gênero e Nome)',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Para Retificação de Dados', docs: ['Cópia da Certidão a ser retificada', 'Documentos que comprovem o erro ou a omissão (outras certidões, documentos antigos)', 'Certidão de Óbito (se for retificação de óbito de "indigente")'] },
+            { title: 'Para Alteração de Gênero e Nome', docs: ['Certidão de Nascimento (original e atualizada)', 'Comprovantes de que a pessoa se identifica com o gênero/nome pleiteado'] }
+        ]
+    },
+
+    // --- X. ALVARÁ JUDICIAL ---
+    alvara_levantamento_valores: {
+        title: 'Alvará para Levantamento de Valores (FGTS, PIS/PASEP)',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Documentos do Falecido e dos Valores', docs: ['Certidão de Óbito do titular dos valores', 'Certidão de dependentes habilitados no INSS ou declaração de inexistência', 'Extrato do FGTS/PIS/PASEP comprovando o saldo', 'Comprovantes de relação com o falecido (certidão de nascimento/casamento)'] }
+        ]
+    },
+    alvara_viagem_menor: {
+        title: 'Alvará para Autorização de Viagem de Menor ao Exterior',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Documentos do Menor e da Viagem', docs: ['Certidão de Nascimento do(a) menor', 'Passaporte do(a) menor (se já existir)', 'Informações sobre a viagem (datas, destino, motivo)', 'Endereço do(a) genitor(a) que não autoriza (para citação)', 'Provas do benefício da viagem para o menor', 'Provas da impossibilidade de obter o consentimento do outro genitor'] }
         ]
     }
 };
 
-// --- Variáveis globais ---
+
 let currentAssistedId = null;
 let currentPautaId = null;
 let db = null;
@@ -42,7 +270,7 @@ let showNotification = null;
 let allAssisted = [];
 let currentChecklistAction = null;
 
-// --- Seletores DOM ---
+// --- Seletores de DOM ---
 const modal = document.getElementById('documents-modal');
 const assistedNameEl = document.getElementById('documents-assisted-name');
 const actionSelectionView = document.getElementById('document-action-selection');
@@ -56,23 +284,39 @@ const checklistSearch = document.getElementById('checklist-search');
 const closeBtn = document.getElementById('close-documents-modal-btn');
 const cancelBtn = document.getElementById('cancel-checklist-btn');
 
-// --- Funções internas ---
+
+// --- Funções Internas ---
+
+/**
+ * Preenche a área de seleção de ações com botões gerados dinamicamente
+ * a partir do objeto documentsData.
+ */
 function populateActionSelection() {
     const container = document.getElementById('document-action-selection');
     if (!container) return;
 
+    // --- Caixa de Pesquisa (NOVO) ---
+    // Adiciona a caixa de pesquisa se ela ainda não existir.
     if (!container.querySelector('#action-search-input')) {
         const searchInput = document.createElement('input');
         searchInput.id = 'action-search-input';
         searchInput.type = 'text';
         searchInput.placeholder = 'Pesquisar por assunto...';
         searchInput.className = 'w-full p-2 border border-gray-300 rounded-md mb-4 focus:ring-blue-500 focus:border-blue-500';
+        
+        // Adiciona o evento de busca diretamente ao campo criado
         searchInput.addEventListener('input', handleActionSearch);
+
+        // Insere a caixa de pesquisa no início do container
         container.prepend(searchInput);
     }
 
-    if (container.querySelector('.action-grid-container')) return;
 
+    // Evita recriar a lista de botões se ela já existir.
+    if (container.querySelector('.action-grid-container')) {
+        return;
+    }
+    
     const instruction = document.createElement('p');
     instruction.className = 'text-gray-600 mb-4';
     instruction.textContent = 'Selecione o tipo de ação para ver a lista de documentos necessários:';
@@ -85,9 +329,11 @@ function populateActionSelection() {
         const button = document.createElement('button');
         button.dataset.action = actionKey;
         button.className = 'w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition';
+
         const span = document.createElement('span');
         span.className = 'font-semibold text-gray-800';
         span.textContent = `${index + 1}. ${actionData.title}`;
+
         button.appendChild(span);
         gridContainer.appendChild(button);
     });
@@ -96,6 +342,11 @@ function populateActionSelection() {
     container.appendChild(gridContainer);
 }
 
+
+/**
+ * Renderiza a lista de verificação de documentos para uma ação específica.
+ * @param {string} actionKey - A chave da ação (ex: 'alimentos_fixacao').
+ */
 function renderChecklist(actionKey) {
     currentChecklistAction = actionKey;
     const data = documentsData[actionKey];
@@ -141,14 +392,21 @@ function renderChecklist(actionKey) {
     });
 }
 
-const normalizeText = (str) => str?.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() || "";
+const normalizeText = (str) => {
+    if (!str) return '';
+    return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+};
 
-// --- Eventos ---
+
+// --- Manipuladores de Eventos ---
+
 function handleActionSelect(e) {
     const actionButton = e.target.closest('button[data-action]');
     if (!actionButton) return;
+
     const actionKey = actionButton.dataset.action;
     renderChecklist(actionKey);
+
     actionSelectionView.classList.add('hidden');
     checklistView.classList.remove('hidden');
     checklistView.classList.add('flex');
@@ -158,6 +416,8 @@ function handleBack() {
     checklistView.classList.add('hidden');
     checklistView.classList.remove('flex');
     actionSelectionView.classList.remove('hidden');
+    
+    // Limpa o campo de busca ao voltar
     const searchInput = document.getElementById('action-search-input');
     if (searchInput) {
         searchInput.value = '';
@@ -165,32 +425,74 @@ function handleBack() {
     }
 }
 
+async function handleSave() {
+    if (!currentAssistedId || !currentChecklistAction || !db || !currentPautaId) {
+        if (showNotification) showNotification("Erro: Faltam dados para salvar.", "error");
+        return;
+    }
+
+    const checkedCheckboxes = checklistContainer.querySelectorAll('input[type="checkbox"]:checked');
+    const checkedIds = Array.from(checkedCheckboxes).map(cb => cb.id);
+
+    const checklistData = {
+        action: currentChecklistAction,
+        checkedIds: checkedIds
+    };
+
+    try {
+        const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
+        await updateDoc(docRef, getUpdatePayload({ documentChecklist: checklistData }));
+        showNotification("Checklist salvo com sucesso!", "success");
+        closeModal();
+    } catch (error) {
+        console.error("Erro ao salvar o checklist: ", error);
+        showNotification("Erro ao salvar o checklist.", "error");
+    }
+}
+
 function handleSearch(e) {
     const searchTerm = normalizeText(e.target.value);
-    checklistContainer.querySelectorAll('li').forEach(li => {
-        li.style.display = normalizeText(li.textContent).includes(searchTerm) ? 'block' : 'none';
+    const allDocs = checklistContainer.querySelectorAll('li');
+    allDocs.forEach(li => {
+        const labelText = normalizeText(li.textContent);
+        li.style.display = labelText.includes(searchTerm) ? 'block' : 'none';
     });
 }
 
 function handleActionSearch(e) {
     const searchTerm = normalizeText(e.target.value);
-    actionSelectionView.querySelectorAll('.action-grid-container button[data-action]').forEach(btn => {
-        btn.style.display = normalizeText(btn.textContent).includes(searchTerm) ? 'block' : 'none';
+    const allActions = actionSelectionView.querySelectorAll('.action-grid-container button[data-action]');
+    allActions.forEach(btn => {
+        const actionText = normalizeText(btn.textContent);
+        btn.style.display = actionText.includes(searchTerm) ? 'block' : 'none';
     });
 }
 
+/**
+ * **NOVO**
+ * Carrega um script dinamicamente na página.
+ * @param {string} src - A URL do script a ser carregado.
+ * @returns {Promise}
+ */
 function loadScript(src) {
     return new Promise((resolve, reject) => {
-        if (document.querySelector(`script[src="${src}"]`)) return resolve();
+        if (document.querySelector(`script[src="${src}"]`)) {
+            return resolve();
+        }
         const script = document.createElement('script');
         script.src = src;
-        script.onload = resolve;
-        script.onerror = () => reject(new Error(`Falha ao carregar: ${src}`));
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Falha ao carregar o script: ${src}`));
         document.head.appendChild(script);
     });
 }
 
-// --- NOVO PDF APRIMORADO ---
+/**
+ * **MÉTODO SUGERIDO (MELHORADO)**
+ * Gera um PDF com layout de documento, incluindo todos os itens do checklist,
+ * independentemente da barra de rolagem.
+ */
 async function handleGeneratePdf() {
     if (printChecklistBtn) {
         printChecklistBtn.disabled = true;
@@ -199,99 +501,58 @@ async function handleGeneratePdf() {
 
     try {
         await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
 
         const title = checklistTitle.textContent;
         const assistedName = assistedNameEl.textContent;
         const data = documentsData[currentChecklistAction];
+        
+        // Coleta todos os IDs dos checkboxes marcados na interface
         const checkedIds = Array.from(checklistContainer.querySelectorAll('input:checked')).map(cb => cb.id);
 
-        const margin = 50;
-        const pageWidth = pdf.internal.pageSize.getWidth();
+        // --- Montagem do PDF ---
         const pageHeight = pdf.internal.pageSize.getHeight();
-        let y = margin;
+        const margin = 40;
+        let y = margin; // Posição vertical inicial
 
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(20);
-        pdf.setTextColor(0, 82, 136);
-        pdf.text('CHECKLIST DE DOCUMENTOS', margin, y);
-        y += 30;
-
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(12);
-        pdf.setTextColor(0);
-        pdf.text(`Assistido(a): ${assistedName}`, margin, y);
-        y += 18;
-        pdf.text(`Assunto: ${title}`, margin, y);
-        y += 25;
-
-        pdf.setDrawColor(0, 82, 136);
-        pdf.setLineWidth(0.5);
-        pdf.line(margin, y, pageWidth - margin, y);
-        y += 20;
-
-        const checkPageBreak = (extra = 0) => {
-            if (y + extra > pageHeight - margin) {
+        // Função para adicionar texto e controlar a quebra de página
+        const addText = (text, size, isBold, indent = 0) => {
+            if (y > pageHeight - margin) { // Verifica se precisa de nova página
                 pdf.addPage();
                 y = margin;
             }
+            pdf.setFontSize(size);
+            pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
+            pdf.text(text, margin + indent, y);
+            y += size * 1.2; // Incrementa a posição vertical
         };
 
+        // Títulos Principais
+        addText('Checklist de Documentos', 22, true);
+        y += 10;
+        addText(`Assistido(a): ${assistedName}`, 14, false);
+        addText(`Assunto: ${title}`, 14, false);
+        y += 20;
+
+        // Itera sobre as seções e documentos do objeto 'documentsData'
         data.sections.forEach((section, sectionIndex) => {
-            checkPageBreak(60);
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(14);
-            pdf.setTextColor(0, 82, 136);
-            pdf.text(section.title, margin, y);
-            y += 10;
-
-            pdf.setDrawColor(200);
-            pdf.line(margin, y, pageWidth - margin, y);
-            y += 15;
-
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(11);
-            pdf.setTextColor(40);
-
-            // Cabeçalho da tabela
-            pdf.setFont('helvetica', 'bold');
-            pdf.text('Item', margin + 15, y);
-            pdf.text('Observações', pageWidth - 220, y);
-            y += 10;
-            pdf.setFont('helvetica', 'normal');
+            addText(section.title, 16, true); // Título da seção em negrito
+            y += 5;
 
             section.docs.forEach((docText, docIndex) => {
                 const checkboxId = `doc-${currentChecklistAction}-${sectionIndex}-${docIndex}`;
                 const isChecked = checkedIds.includes(checkboxId);
-                const symbol = isChecked ? '☑' : '☐';
-                const fullText = `${symbol} ${docText}`;
-                const splitText = pdf.splitTextToSize(fullText, 300);
+                const symbol = isChecked ? '☑' : '☐'; // Usa caracteres que funcionam bem em PDF
 
-                splitText.forEach(line => {
-                    checkPageBreak(20);
-                    pdf.text(line, margin + 15, y);
-                    pdf.rect(pageWidth - 230, y - 10, 180, 18); // campo de observação
-                    y += 18;
-                });
+                addText(`${symbol} ${docText}`, 12, false, 15); // Adiciona o texto com indentação
             });
-
-            y += 10;
-            pdf.setDrawColor(220);
-            pdf.line(margin, y, pageWidth - margin, y);
-            y += 20;
+            y += 15; // Espaço entre seções
         });
 
-        checkPageBreak(50);
-        pdf.setFontSize(10);
-        pdf.setTextColor(120);
-        pdf.text(
-            'Documento gerado automaticamente pelo sistema SIGAP - Coordenação de Gestão Documental (DPGERJ)',
-            margin,
-            pageHeight - margin
-        );
-
         pdf.save(`Checklist - ${assistedName} - ${title}.pdf`);
+
     } catch (error) {
         console.error("Erro ao gerar PDF:", error);
         if (showNotification) showNotification("Não foi possível gerar o PDF.", "error");
@@ -303,7 +564,14 @@ async function handleGeneratePdf() {
     }
 }
 
-// --- Exportações ---
+
+function closeModal() {
+    modal.classList.add('hidden');
+}
+
+
+// --- Funções Exportadas ---
+
 export function setupDetailsModal(config) {
     db = config.db;
     getUpdatePayload = config.getUpdatePayload;
@@ -311,31 +579,40 @@ export function setupDetailsModal(config) {
 
     actionSelectionView.addEventListener('click', handleActionSelect);
     backToActionSelectionBtn.addEventListener('click', handleBack);
-    saveChecklistBtn.addEventListener('click', () => showNotification("Checklist salvo localmente (exemplo).", "info"));
+    saveChecklistBtn.addEventListener('click', handleSave);
     checklistSearch.addEventListener('input', handleSearch);
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
+    
     if (printChecklistBtn) printChecklistBtn.addEventListener('click', handleGeneratePdf);
 }
 
 export function openDetailsModal(config) {
     populateActionSelection();
+    
     currentAssistedId = config.assistedId;
     currentPautaId = config.pautaId;
     allAssisted = config.allAssisted;
 
     const assisted = allAssisted.find(a => a.id === currentAssistedId);
-    assistedNameEl.textContent = assisted?.name || 'Assistido não identificado';
+    if (!assisted) {
+        console.error("Assistido não encontrado para abrir detalhes.");
+        if (showNotification) showNotification("Erro: assistido não encontrado.", "error");
+        return;
+    }
 
-    if (assisted?.documentChecklist?.action) {
-        renderChecklist(assisted.documentChecklist.action);
+    assistedNameEl.textContent = assisted.name;
+
+    if (assisted.documentChecklist && assisted.documentChecklist.action) {
+        const savedAction = assisted.documentChecklist.action;
+        renderChecklist(savedAction);
         actionSelectionView.classList.add('hidden');
         checklistView.classList.remove('hidden');
         checklistView.classList.add('flex');
-    } else handleBack();
+    } else {
+        handleBack(); 
+    }
+    
     modal.classList.remove('hidden');
 }
 
-function closeModal() {
-    modal.classList.add('hidden');
-}
