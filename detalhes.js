@@ -274,7 +274,6 @@ let currentChecklistAction = null;
 const modal = document.getElementById('documents-modal');
 const assistedNameEl = document.getElementById('documents-assisted-name');
 const actionSelectionView = document.getElementById('document-action-selection');
-const actionSearchInput = document.getElementById('action-search-input');
 const checklistView = document.getElementById('document-checklist-view');
 const checklistContainer = document.getElementById('checklist-container');
 const checklistTitle = document.getElementById('checklist-title');
@@ -296,12 +295,28 @@ function populateActionSelection() {
     const container = document.getElementById('document-action-selection');
     if (!container) return;
 
-    // Evita recriar os botões se eles já existirem.
+    // --- Caixa de Pesquisa (NOVO) ---
+    // Adiciona a caixa de pesquisa se ela ainda não existir.
+    if (!container.querySelector('#action-search-input')) {
+        const searchInput = document.createElement('input');
+        searchInput.id = 'action-search-input';
+        searchInput.type = 'text';
+        searchInput.placeholder = 'Pesquisar por assunto...';
+        searchInput.className = 'w-full p-2 border border-gray-300 rounded-md mb-4 focus:ring-blue-500 focus:border-blue-500';
+        
+        // Adiciona o evento de busca diretamente ao campo criado
+        searchInput.addEventListener('input', handleActionSearch);
+
+        // Insere a caixa de pesquisa no início do container
+        container.prepend(searchInput);
+    }
+
+
+    // Evita recriar a lista de botões se ela já existir.
     if (container.querySelector('.action-grid-container')) {
         return;
     }
     
-    // Cria o parágrafo de instrução dinamicamente para não apagar outros elementos (como o campo de busca)
     const instruction = document.createElement('p');
     instruction.className = 'text-gray-600 mb-4';
     instruction.textContent = 'Selecione o tipo de ação para ver a lista de documentos necessários:';
@@ -401,9 +416,12 @@ function handleBack() {
     checklistView.classList.add('hidden');
     checklistView.classList.remove('flex');
     actionSelectionView.classList.remove('hidden');
-    if (actionSearchInput) {
-        actionSearchInput.value = '';
-        actionSearchInput.dispatchEvent(new Event('input'));
+    
+    // Limpa o campo de busca ao voltar
+    const searchInput = document.getElementById('action-search-input');
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.dispatchEvent(new Event('input'));
     }
 }
 
@@ -520,12 +538,11 @@ export function setupDetailsModal(config) {
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
     
-    if (actionSearchInput) actionSearchInput.addEventListener('input', handleActionSearch);
     if (printChecklistBtn) printChecklistBtn.addEventListener('click', handlePrint);
 }
 
 export function openDetailsModal(config) {
-    // MODIFICAÇÃO: Garante que os botões de ação sejam criados.
+    // MODIFICAÇÃO: Garante que os botões e a busca de ação sejam criados.
     populateActionSelection();
     
     currentAssistedId = config.assistedId;
