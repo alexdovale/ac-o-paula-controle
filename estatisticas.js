@@ -1,5 +1,5 @@
 /**
- * estatisticas.js - Versão Módulo Corrigida, com PDF Melhorado e Responsiva
+ * estatisticas.js - Versão Módulo Corrigida, com PDF Melhorado, Responsiva e Agendados por Horário
  * Este arquivo deve ser importado pelo seu script principal.
  * Requer: jspdf, jspdf-autotable, chart.js
  */
@@ -11,8 +11,6 @@ function makeModalInteractive(modal) {
     modal.classList.add('interactive-modal-init', 'bg-white');
 
     // --- INÍCIO DA MELHORIA DE RESPONSIVIDADE ---
-    // Adiciona uma folha de estilos na página para controlar a responsividade do modal.
-    // Isso é feito apenas uma vez para evitar duplicação.
     if (!document.getElementById('statistics-responsive-styles')) {
         const styleSheet = document.createElement("style");
         styleSheet.id = 'statistics-responsive-styles';
@@ -20,39 +18,29 @@ function makeModalInteractive(modal) {
             /* Estilos para telas menores (ex: celulares com até 768px de largura) */
             @media (max-width: 768px) {
                 #statistics-modal {
-                    /* Ocupa quase toda a tela para melhor visualização */
                     width: 98vw !important;
                     height: 95vh !important;
                     max-height: 95vh !important;
-                    
-                    /* Reduz o tamanho mínimo para caber em telas pequenas */
                     min-width: 300px !important;
                     min-height: 400px !important;
-                    
-                    /* Desabilita o redimensionamento em telas touch, que é pouco prático */
                     resize: none !important; 
                 }
-
-                /* Ajusta o layout interno para melhor uso do espaço vertical */
                 #statistics-content .grid {
                     display: flex;
                     flex-direction: column;
                     padding: 8px !important;
                     gap: 8px !important;
                 }
-
                 #statistics-content .lg\\:col-span-2,
                 #statistics-content .lg\\:col-span-3 {
-                    max-height: 50vh; /* Controla a altura máxima das colunas com scroll */
+                    max-height: 50vh;
                     overflow-y: auto;
                 }
-                
-                /* Ajusta o tamanho das fontes dos cards de resumo */
                 #statistics-content .text-2xl {
-                    font-size: 1.25rem; /* Reduz a fonte principal dos cards */
+                    font-size: 1.25rem;
                 }
                  #statistics-content .text-xs {
-                    font-size: 0.7rem; /* Reduz a fonte do subtítulo */
+                    font-size: 0.7rem;
                 }
             }
         `;
@@ -285,6 +273,13 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
     }, {});
     const sortedTimesFaltosos = Object.keys(statsByTimeFaltosos).sort();
 
+    // NOVO: Cálculo de todos os agendados por horário
+    const statsByScheduledTime = allAssisted.filter(a => a.scheduledTime).reduce((acc, a) => {
+        acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
+        return acc;
+    }, {});
+    const sortedScheduledTimes = Object.keys(statsByScheduledTime).sort();
+
     let totalDelegatedMinutes = 0, delegatedCount = 0;
     let totalDirectMinutes = 0, directCount = 0;
 
@@ -351,6 +346,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
                     <label class="flex items-center"><input type="checkbox" id="export-general" class="mr-2 h-4 w-4 rounded" checked> Resumo</label>
                     <label class="flex items-center"><input type="checkbox" id="export-collaborators" class="mr-2 h-4 w-4 rounded" checked> Por Colaborador</label>
                     <label class="flex items-center"><input type="checkbox" id="export-subjects" class="mr-2 h-4 w-4 rounded" checked> Por Assunto</label>
+                    <label class="flex items-center"><input type="checkbox" id="export-scheduled-time" class="mr-2 h-4 w-4 rounded" checked> Agendados por Horário</label>
                     <label class="flex items-center"><input type="checkbox" id="export-times" class="mr-2 h-4 w-4 rounded" checked> Atend. por Horário</label>
                     <label class="flex items-center"><input type="checkbox" id="export-absentees-time" class="mr-2 h-4 w-4 rounded" checked> Faltosos por Horário</label>
                 </div>
@@ -358,6 +354,17 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
                     <button id="export-stats-pdf-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm transition-colors">Gerar PDF</button>
                 </div>
             </div>
+            ${sortedScheduledTimes.length > 0 ? `
+            <div class="bg-white p-4 rounded-lg border">
+                <h3 class="text-md font-semibold text-gray-800 mb-2">Agendados por Horário</h3>
+                <div class="max-h-40 overflow-y-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0"><tr><th class="px-4 py-2">Horário</th><th class="px-4 py-2 text-right">Qtd</th></tr></thead>
+                        <tbody>${sortedScheduledTimes.map(time => `<tr class="border-b"><td class="px-4 py-2 font-medium">${time}</td><td class="px-4 py-2 text-right">${statsByScheduledTime[time]}</td></tr>`).join('')}</tbody>
+                        <tfoot><tr class="bg-gray-100"><td class="px-4 py-2 font-bold">Total</td><td class="px-4 py-2 text-right font-bold">${allAssisted.length}</td></tr></tfoot>
+                    </table>
+                </div>
+            </div>` : ''}
             ${sortedTimes.length > 0 ? `
             <div class="bg-white p-4 rounded-lg border">
                 <h3 class="text-md font-semibold text-gray-800 mb-2">Atendimentos por Horário</h3>
@@ -435,6 +442,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
             exportBtn.disabled = true;
 
             exportStatisticsToPDF(pautaName, {
+                agendadosCount: allAssisted.length,
                 atendidosCount: atendidos.length,
                 faltososCount: faltosos.length,
                 avgTimeDirect,
@@ -442,6 +450,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
                 useDelegationFlow,
                 statsByGroup,
                 statsBySubject,
+                statsByScheduledTime: sortedScheduledTimes.map(time => ({ time, count: statsByScheduledTime[time] })),
                 statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
                 statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
             }).finally(() => {
@@ -682,6 +691,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         }
     };
     
+    addTimeTableToPdf("Agendados por Horário", statsData.statsByScheduledTime, 'export-scheduled-time', statsData.agendadosCount, COLOR_BLUE);
     addTimeTableToPdf("Atendimentos por Horário", statsData.statsByTime, 'export-times', statsData.atendidosCount, COLOR_GREEN);
     addTimeTableToPdf("Faltosos por Horário", statsData.statsByTimeFaltosos, 'export-absentees-time', statsData.faltososCount, COLOR_RED);
 
