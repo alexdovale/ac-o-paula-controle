@@ -562,7 +562,7 @@ async function handleGeneratePdf() {
     } finally {
         if (printChecklistBtn) {
             printChecklistBtn.disabled = false;
-            printChecklistBtn.textContent = 'PDF';
+            printChecklistBtn.textContent = 'Baixar PDF';
         }
     }
 }
@@ -618,4 +618,3 @@ export function openDetailsModal(config) {
     
     modal.classList.remove('hidden');
 }
-
