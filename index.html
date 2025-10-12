@@ -2195,6 +2195,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         document.addEventListener('DOMContentLoaded', () => {
             main();
             setupModalClosers();
+            setupDetailsModal({ db, getUpdatePayload, showNotification }); // <--- ADICIONE AQUI
 
             const actionsToggle = document.getElementById('actions-toggle');
             const actionsPanel = document.getElementById('actions-panel');
@@ -2849,15 +2850,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             document.getElementById('edit-attendant-modal').classList.remove('hidden');
                         }
                     }
+                   // NOVO CÓDIGO
                     if (button.classList.contains('view-details-btn')) {
-                        assistedIdToHandle = id;
-                        const assisted = allAssisted.find(a => a.id === id);
-                        if (assisted) {
-                            document.getElementById('documents-assisted-name').textContent = assisted.name;
-                            document.getElementById('document-checklist-view').classList.add('hidden');
-                            document.getElementById('document-action-selection').classList.remove('hidden');
-                            document.getElementById('documents-modal').classList.remove('hidden');
-                        }
+                        openDetailsModal({
+                            assistedId: id,
+                            pautaId: currentPautaId,
+                            allAssisted: allAssisted
+                        });
                     }
                     if (button.classList.contains('manage-demands-btn')) {
                         assistedIdToHandle = id;
@@ -3532,3 +3531,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
