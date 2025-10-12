@@ -21,9 +21,9 @@
         .priority-maxima { border-left: 5px solid #22c55e; }
         .priority-media { border-left: 5px solid #f97316; }
         .priority-minima { border-left: 5px solid #6b7280; }
-        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar, #members-list-container::-webkit-scrollbar { width: 8px; }
-        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
-        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar, #members-list-container::-webkit-scrollbar, #statistics-content::-webkit-scrollbar { width: 8px; }
+        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track, #statistics-content::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
+        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb, #statistics-content::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
         input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
         .tab-active { border-color: #16a34a; background-color: #f0fdf4; color: #16a34a; font-weight: 600; }
         .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
@@ -142,7 +142,12 @@
                     <div class="relative flex items-center">
 
                         <div id="actions-panel" class="absolute top-1/2 -translate-y-1/2 right-full mr-3 flex flex-col items-center gap-2 p-2 bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-300 ease-in-out transform origin-right opacity-0 scale-90 pointer-events-none">
-
+                            
+                            <button id="view-stats-btn" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-cyan-700 bg-cyan-100 rounded-lg hover:bg-cyan-200 transition-colors whitespace-nowrap">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-cyan-500"><path d="M3 3v18h18"/><path d="M18.7 8a6 6 0 0 0-8.4 0L3 15.6V21h5.4l7.3-7.3Z"/></svg>
+                                <span>Ver Estatísticas</span>
+                            </button>
+                            
                             <button id="edit-pauta-name-btn" class="flex items-center gap-2 w-full px-3 py-2 mt-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-slate-500"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                 <span>Editar Nome</span>
@@ -272,14 +277,14 @@
                      <button type="button" id="add-assisted-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition shadow-md w-full lg:w-auto">Adicionar</button>
                 </div>
             </form>
-            <main id="main-content" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 w-full">
+            <main id="main-content" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full">
                 <div id="pauta-column" class="bg-white rounded-lg shadow-md flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
                             <span>📋 Pauta</span>
                             <span id="pauta-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
                         </h3>
-                        <input type="search" id="pauta-search" placeholder="Pesquisar por nome, CPF, assunto..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                        <input type="search" id="pauta-search" placeholder="Pesquisar por nome, CPF, horário..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
                     <div id="pauta-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
@@ -289,7 +294,7 @@
                            <span>⏳ Aguardando Atendimento</span>
                            <span id="aguardando-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
                         </h3>
-                        <input type="search" id="aguardando-search" placeholder="Pesquisar por nome, CPF, assunto..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                        <input type="search" id="aguardando-search" placeholder="Pesquisar por nome, CPF, horário..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
                     <div id="aguardando-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
@@ -314,7 +319,7 @@
                              </h3>
                             <button id="download-pdf-btn" class="ml-4 flex-shrink-0 bg-blue-600 text-white font-bold py-1 px-3 rounded-lg hover:bg-blue-700 text-sm">Baixar PDF</button>
                         </div>
-                        <input type="search" id="atendidos-search" placeholder="Pesquisar por nome, CPF, assunto..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                        <input type="search" id="atendidos-search" placeholder="Pesquisar por nome, CPF, horário..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
                     <div id="atendidos-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
@@ -877,6 +882,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
         </div>
     </div>
+    
+    <!-- Modal de Estatísticas -->
+    <div id="statistics-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg flex flex-col" style="max-height: 90vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Estatísticas da Pauta</h2>
+                <button id="close-statistics-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+            </div>
+            <div id="statistics-content" class="flex-grow overflow-y-auto pr-2 space-y-4">
+                <!-- Conteúdo gerado via JavaScript -->
+            </div>
+        </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -1060,6 +1078,21 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             if (!str) return '';
             return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
         };
+        
+        // FUNÇÃO DE PESQUISA MELHORADA
+        const searchFilter = (assisted, term) => {
+            if (!term) return true;
+            
+            // Formata a data de chegada para HH:MM para permitir a pesquisa
+            const arrivalTimeFormatted = assisted.arrivalTime ? new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+
+            return normalizeText(assisted.name).includes(term) ||
+                   (assisted.cpf && normalizeText(assisted.cpf).includes(term)) ||
+                   normalizeText(assisted.subject).includes(term) ||
+                   (assisted.scheduledTime && assisted.scheduledTime.includes(term)) ||
+                   (arrivalTimeFormatted && arrivalTimeFormatted.includes(term)) ||
+                   (assisted.assignedCollaborator?.name && normalizeText(assisted.assignedCollaborator.name).includes(term));
+        };
 
         const getPriorityClass = (priority) => ({'URGENTE':'priority-urgente','Máxima':'priority-maxima','Média':'priority-media','Mínima':'priority-minima'}[priority]||'');
 
@@ -1160,8 +1193,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const emAtendimentoSearchTerm = normalizeText(document.getElementById('em-atendimento-search').value);
             const atendidosSearchTerm = normalizeText(document.getElementById('atendidos-search').value);
             const faltososSearchTerm = normalizeText(document.getElementById('faltosos-search').value);
-
-            const searchFilter = (assisted, term) => !term || normalizeText(assisted.name).includes(term) || (assisted.cpf && normalizeText(assisted.cpf).includes(term)) || normalizeText(assisted.subject).includes(term) || (assisted.assignedCollaborator?.name && normalizeText(assisted.assignedCollaborator.name).includes(term));
 
             const pauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && searchFilter(a, pautaSearchTerm));
             const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm));
@@ -1284,7 +1315,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const inAttendanceTime = new Date(a.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 const assignedCollabText = a.assignedCollaborator?.name ? `Colaborador: <strong>${a.assignedCollaborator.name}</strong>` : 'Colaborador: Não atribuído';
                 card.innerHTML = `
-                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
+                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
                     <p class="font-bold text-lg">${index + 1}. ${a.name}</p>
                     ${a.cpf ? `<p class="text-sm text-gray-500">CPF: <strong>${a.cpf}</strong></p>` : ''}
                     <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
@@ -1790,6 +1821,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const tabAvulso = document.getElementById('tab-avulso');
             const pautaColumn = document.getElementById('pauta-column');
             const emAtendimentoColumn = document.getElementById('em-atendimento-column');
+            const mainContent = document.getElementById('main-content');
 
             const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
             if (pautaDoc.exists()) {
@@ -1825,11 +1857,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.getElementById('edit-pauta-name-btn').classList.add('hidden');
                 }
 
-                // Lógica condicional para a coluna "Em Atendimento"
+                // LÓGICA DE LAYOUT DINÂMICO DOS CARDS
                 if (pautaData.useDelegationFlow) {
                     emAtendimentoColumn.classList.remove('hidden');
+                    mainContent.classList.remove('lg:grid-cols-3');
+                    mainContent.classList.add('lg:grid-cols-4');
                 } else {
                     emAtendimentoColumn.classList.add('hidden');
+                    mainContent.classList.remove('lg:grid-cols-4');
+                    mainContent.classList.add('lg:grid-cols-3');
                 }
 
             }
@@ -1837,19 +1873,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                  tabAgendamento.classList.remove('hidden');
                  tabAvulso.classList.add('hidden');
                  pautaColumn.classList.remove('hidden');
-                 // A visibilidade de emAtendimentoColumn é definida acima, baseada em pautaData.useDelegationFlow
                  switchTab('agendamento');
             } else if (pautaType === 'avulso') {
                  tabAvulso.classList.remove('hidden');
                  tabAgendamento.classList.add('hidden');
                  pautaColumn.classList.add('hidden');
-                 // A visibilidade de emAtendimentoColumn é definida acima, baseada em pautaData.useDelegationFlow
                  switchTab('avulso');
             } else {
                 tabAgendamento.classList.remove('hidden');
                 tabAvulso.classList.remove('hidden');
                 pautaColumn.classList.remove('hidden');
-                // A visibilidade de emAtendimentoColumn é definida acima, baseada em pautaData.useDelegationFlow
                 switchTab('agendamento');
             }
 
@@ -2056,7 +2089,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 tabAvulso.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700');
                 isScheduledContainer.classList.remove('hidden');
                 pautaColumn.classList.remove('hidden');
-                // A visibilidade de emAtendimentoColumn é definida em loadPauta
                 if (currentPautaData?.useDelegationFlow) {
                     emAtendimentoColumn.classList.remove('hidden');
                 } else {
@@ -2073,7 +2105,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700');
                 isScheduledContainer.classList.add('hidden');
                 pautaColumn.classList.add('hidden');
-                // A visibilidade de emAtendimentoColumn é definida em loadPauta
                  if (currentPautaData?.useDelegationFlow) {
                     emAtendimentoColumn.classList.remove('hidden');
                 } else {
@@ -2119,6 +2150,52 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
             document.body.removeChild(textArea);
         };
+        
+        // FUNÇÃO PARA MOSTRAR ESTATÍSTICAS
+        const showStatisticsModal = () => {
+            const statsContent = document.getElementById('statistics-content');
+            statsContent.innerHTML = `<div class="text-center p-4"><div class="loader inline-block"></div> Carregando...</div>`;
+
+            const faltosos = allAssisted.filter(a => a.status === 'faltoso').length;
+            const atendidos = allAssisted.filter(a => a.status === 'atendido').length;
+            const aguardando = allAssisted.filter(a => a.status === 'aguardando').length;
+            const avulsos = allAssisted.filter(a => a.type === 'avulso').length;
+
+            const agendadosPorHorario = allAssisted
+                .filter(a => a.type === 'agendamento' && a.scheduledTime)
+                .reduce((acc, a) => {
+                    acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
+                    return acc;
+                }, {});
+            
+            const sortedHorarios = Object.keys(agendadosPorHorario).sort();
+
+            let contentHTML = `
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div class="bg-red-100 p-4 rounded-lg"><p class="text-3xl font-bold text-red-700">${faltosos}</p><p class="text-sm text-gray-700 mt-1">Faltosos</p></div>
+                    <div class="bg-green-100 p-4 rounded-lg"><p class="text-3xl font-bold text-green-700">${atendidos}</p><p class="text-sm text-gray-700 mt-1">Atendidos</p></div>
+                    <div class="bg-yellow-100 p-4 rounded-lg"><p class="text-3xl font-bold text-yellow-700">${aguardando}</p><p class="text-sm text-gray-700 mt-1">Aguardando</p></div>
+                    <div class="bg-blue-100 p-4 rounded-lg"><p class="text-3xl font-bold text-blue-700">${avulsos}</p><p class="text-sm text-gray-700 mt-1">Avulsos</p></div>
+                </div>
+            `;
+
+            if (sortedHorarios.length > 0) {
+                contentHTML += `
+                    <div class="mt-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Agendados por Horário</h3>
+                        <ul class="space-y-1 bg-gray-50 p-3 rounded-lg border max-h-60 overflow-y-auto">
+                `;
+                sortedHorarios.forEach(horario => {
+                    contentHTML += `<li class="flex justify-between items-center text-sm p-1 hover:bg-gray-100 rounded"><span>${horario}</span><span class="font-bold bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">${agendadosPorHorario[horario]}</span></li>`;
+                });
+                contentHTML += '</ul></div>';
+            } else {
+                 contentHTML += '<p class="mt-6 text-center text-gray-500">Nenhum atendimento agendado por horário.</p>';
+            }
+
+            statsContent.innerHTML = contentHTML;
+            document.getElementById('statistics-modal').classList.remove('hidden');
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             main();
@@ -2134,6 +2211,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     actionsArrow.classList.add('rotate-180');
                 }
             }
+
+
 
             function hidePanel() {
                 if(actionsPanel && actionsArrow) {
@@ -3526,4 +3605,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
-
