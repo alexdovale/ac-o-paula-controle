@@ -472,13 +472,11 @@ function handleActionSearch(e) {
 /**
  * **NOVO**
  * Carrega um script dinamicamente na página.
- * Essencial para adicionar bibliotecas como jsPDF e html2canvas sem editar o HTML.
  * @param {string} src - A URL do script a ser carregado.
  * @returns {Promise}
  */
 function loadScript(src) {
     return new Promise((resolve, reject) => {
-        // Se o script já existe, não carrega de novo
         if (document.querySelector(`script[src="${src}"]`)) {
             return resolve();
         }
@@ -491,66 +489,80 @@ function loadScript(src) {
 }
 
 /**
- * **MODIFICADO**
- * Gera um arquivo PDF da lista de verificação de documentos e inicia o download.
- * Substitui a função de impressão anterior.
+ * **MÉTODO SUGERIDO (MELHORADO)**
+ * Gera um PDF com layout de documento, incluindo todos os itens do checklist,
+ * independentemente da barra de rolagem.
  */
 async function handleGeneratePdf() {
-    // Para uma melhor experiência do usuário, o botão pode ser desabilitado durante o processo
     if (printChecklistBtn) {
         printChecklistBtn.disabled = true;
         printChecklistBtn.textContent = 'Gerando PDF...';
     }
 
     try {
-        // Garante que as bibliotecas jsPDF e html2canvas estejam carregadas
-        await Promise.all([
-            loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'),
-            loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js')
-        ]);
+        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
 
         const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+
         const title = checklistTitle.textContent;
         const assistedName = assistedNameEl.textContent;
+        const data = documentsData[currentChecklistAction];
         
-        // Usa o html2canvas para capturar o container do checklist como uma imagem
-        const canvas = await html2canvas(checklistContainer);
-        const imgData = canvas.toDataURL('image/png');
+        // Coleta todos os IDs dos checkboxes marcados na interface
+        const checkedIds = Array.from(checklistContainer.querySelectorAll('input:checked')).map(cb => cb.id);
 
-        // Cria um novo documento PDF
-        const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'pt',
-            format: 'a4'
+        // --- Montagem do PDF ---
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 40;
+        let y = margin; // Posição vertical inicial
+
+        // Função para adicionar texto e controlar a quebra de página
+        const addText = (text, size, isBold, indent = 0) => {
+            if (y > pageHeight - margin) { // Verifica se precisa de nova página
+                pdf.addPage();
+                y = margin;
+            }
+            pdf.setFontSize(size);
+            pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
+            pdf.text(text, margin + indent, y);
+            y += size * 1.2; // Incrementa a posição vertical
+        };
+
+        // Títulos Principais
+        addText('Checklist de Documentos', 20, true);
+        y += 10;
+        addText(`Assistido(a): ${assistedName}`, 12, false);
+        addText(`Assunto: ${title}`, 12, false);
+        y += 20;
+
+        // Itera sobre as seções e documentos do objeto 'documentsData'
+        data.sections.forEach((section, sectionIndex) => {
+            addText(section.title, 14, true); // Título da seção em negrito
+            y += 5;
+
+            section.docs.forEach((docText, docIndex) => {
+                const checkboxId = `doc-${currentChecklistAction}-${sectionIndex}-${docIndex}`;
+                const isChecked = checkedIds.includes(checkboxId);
+                const symbol = isChecked ? '☑' : '☐'; // Usa caracteres que funcionam bem em PDF
+
+                // Divide o texto do documento se for muito longo para caber em uma linha
+                const splitText = pdf.splitTextToSize(`${symbol} ${docText}`, pdf.internal.pageSize.getWidth() - margin * 2 - 15);
+                
+                addText(splitText, 11, false, 15); // Adiciona o texto com indentação
+            });
+            y += 15; // Espaço entre seções
         });
 
-        // Adiciona os títulos ao PDF
-        pdf.setFontSize(20).text('Checklist de Documentos', 40, 60);
-        pdf.setFontSize(14).text(`Assistido(a): ${assistedName}`, 40, 90);
-        pdf.setFontSize(14).text(`Assunto: ${title}`, 40, 110);
-        
-        // Calcula as dimensões da imagem para caber no PDF
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
-        const ratio = imgHeight / imgWidth;
-        const finalImgWidth = pdfWidth - 80; // Margens de 40pt de cada lado
-        const finalImgHeight = finalImgWidth * ratio;
-
-        // Adiciona a imagem do checklist ao PDF
-        pdf.addImage(imgData, 'PNG', 40, 140, finalImgWidth, finalImgHeight);
-
-        // Inicia o download do PDF
         pdf.save(`Checklist - ${assistedName} - ${title}.pdf`);
 
     } catch (error) {
         console.error("Erro ao gerar PDF:", error);
         if (showNotification) showNotification("Não foi possível gerar o PDF.", "error");
     } finally {
-        // Reabilita o botão após a conclusão
         if (printChecklistBtn) {
             printChecklistBtn.disabled = false;
-            printChecklistBtn.textContent = 'PDF'; // O ideal é que seu botão já tenha esse texto
+            printChecklistBtn.textContent = 'PDF';
         }
     }
 }
@@ -575,12 +587,10 @@ export function setupDetailsModal(config) {
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
     
-    // MODIFICADO: O botão agora chama a função de gerar PDF
     if (printChecklistBtn) printChecklistBtn.addEventListener('click', handleGeneratePdf);
 }
 
 export function openDetailsModal(config) {
-    // MODIFICAÇÃO: Garante que os botões e a busca de ação sejam criados.
     populateActionSelection();
     
     currentAssistedId = config.assistedId;
