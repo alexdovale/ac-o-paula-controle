@@ -2699,6 +2699,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const button = e.target.closest('button');
                 if (!button) return;
 
+                // Adiciona o listener para o botão de estatísticas
+                if (button.id === 'view-stats-btn') {
+                    showStatisticsModal();
+                    return; // Retorna para não processar outros cliques
+                }
+                
                 const id = button.dataset.id;
                 const collectionRef = currentPautaId ? collection(db, "pautas", currentPautaId, "attendances") : null;
 
@@ -3575,6 +3581,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
