@@ -171,11 +171,11 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
     const atendidos = allAssisted.filter(a => a.status === 'atendido');
     const faltosos = allAssisted.filter(a => a.status === 'faltoso');
 
-    // Alterado: Agrupa colaboradores por grupo
+    // Alterado: Agrupa colaboradores por 'equipe' com base na estrutura do index.html
     const statsByGroup = atendidos.reduce((acc, a) => {
         const attendantIsObject = typeof a.attendant === 'object' && a.attendant !== null;
-        const attendantName = attendantIsObject ? a.attendant.name : (a.attendant || 'Não informado');
-        const groupName = attendantIsObject ? a.attendant.group : 'Sem Grupo';
+        const attendantName = attendantIsObject ? a.attendant.nome : (a.attendant || 'Não informado');
+        const groupName = attendantIsObject && a.attendant.equipe ? `Equipe ${a.attendant.equipe}` : 'Sem Grupo';
 
         if (!acc[groupName]) {
             acc[groupName] = { collaborators: {}, total: 0 };
