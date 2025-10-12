@@ -1,21 +1,16 @@
 /**
  * estatisticas.js
- * Este script lida com o cálculo e a exibição de estatísticas para a pauta,
- * incluindo a geração de gráficos e a exportação para PDF.
- *
- * COMO INTEGRAR:
+ * * Este script lida com o cálculo e a exibição de estatísticas para a pauta,
+ * incluindo a geração de tabelas de dados e a exportação para PDF.
+ * * COMO INTEGRAR:
  * 1. Adicione as bibliotecas Chart.js e jsPDF ao seu `index.html` (antes do script principal):
- * <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
- * <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+ * <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> * <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
  * <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
- *
- * 2. Adicione este arquivo `estatisticas.js` ao seu `index.html` (também antes do script principal):
+ * * 2. Adicione este arquivo `estatisticas.js` ao seu `index.html` (também antes do script principal):
  * <script src="estatisticas.js"></script>
- *
- * 3. No seu `script type="module"` principal em `index.html`, encontre a função `showStatisticsModal`
+ * * 3. No seu `script type="module"` principal em `index.html`, encontre a função `showStatisticsModal`
  * e substitua seu conteúdo pela chamada da nova função, passando os dados necessários.
- *
- * // Exemplo de como modificar a função existente em index.html:
+ * * // Exemplo de como modificar a função existente em index.html:
  * const showStatisticsModal = () => {
  * // Chama a função do arquivo estatisticas.js
  * renderStatisticsModal(
@@ -24,8 +19,7 @@
  * document.getElementById('pauta-title').textContent
  * );
  * };
- *
- * // O evento de clique no botão "view-stats-btn" já está configurado para chamar `showStatisticsModal`,
+ * * // O evento de clique no botão "view-stats-btn" já está configurado para chamar `showStatisticsModal`,
  * // então nenhuma outra alteração de evento é necessária.
  */
 
@@ -53,7 +47,7 @@ function makeModalInteractive(modal) {
         boxShadow: '0 5px 25px rgba(0,0,0,0.2)', borderRadius: '12px',
         minWidth: '600px', minHeight: '500px', display: 'flex',
         flexDirection: 'column',
-        padding: '0' // ADICIONADO: Garante que não haja padding interno no container principal
+        padding: '0'
     });
     
     if (document.getElementById('statistics-modal-header')) {
@@ -94,7 +88,7 @@ function makeModalInteractive(modal) {
     header.append(title, buttons);
 
     content.style.flexGrow = '1';
-    content.style.overflow = 'hidden'; // O conteúdo interno terá scroll
+    content.style.overflow = 'hidden';
     content.style.padding = '0';
     content.classList.add('bg-gray-50');
 
@@ -128,7 +122,6 @@ function makeModalInteractive(modal) {
         document.onmousemove = null;
     }
 
-    // CORREÇÃO: Altera o estilo 'display' diretamente em vez de usar classe
     closeBtn.onclick = () => modal.style.display = 'none';
 
     maxBtn.onclick = () => {
@@ -159,15 +152,7 @@ function makeModalInteractive(modal) {
     };
 }
 
-let chartInstances = {};
-
-function destroyCharts() {
-    Object.values(chartInstances).forEach(chart => {
-        if (chart) chart.destroy();
-    });
-    chartInstances = {};
-}
-
+// Removido o objeto chartInstances pois não há mais gráficos
 function getTimeDifferenceInMinutes(startTimeISO, endTimeISO) {
     if (!startTimeISO || !endTimeISO) return null;
     const start = new Date(startTimeISO);
@@ -190,13 +175,9 @@ function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
     const modalTitle = modal.querySelector('#statistics-modal-header span');
     if (modalTitle) modalTitle.textContent = `Estatísticas - ${pautaName}`;
 
-    destroyCharts();
     content.innerHTML = `<div class="flex items-center justify-center h-full"><p class="text-gray-600">Calculando estatísticas...</p></div>`;
-    
-    // CORREÇÃO: Mostra o modal definindo o display, para corresponder à lógica do botão de fechar
     modal.style.display = 'flex';
-    modal.classList.remove('hidden'); // Remove a classe 'hidden' por segurança, caso ela exista
-
+    modal.classList.remove('hidden');
 
     const atendidos = allAssisted.filter(a => a.status === 'atendido');
     const faltosos = allAssisted.filter(a => a.status === 'faltoso');
@@ -207,14 +188,14 @@ function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
     }, {});
 
     const statsBySubject = atendidos.reduce((acc, a) => {
-        acc[a.subject || 'Não informado'] = (acc[a.subject || 'Não informado'] || 0) + 1;
-        if (a.demandas && a.demandas.descricoes) {
-            a.demandas.descricoes.forEach(demanda => {
-                acc[demanda] = (acc[demanda] || 0) + 1;
-            });
-        }
+        (a.subject ? [a.subject] : []).concat(a.demandas?.descricoes || []).forEach(demanda => {
+            acc[demanda] = (acc[demanda] || 0) + 1;
+        });
         return acc;
     }, {});
+    
+    // NOVO: Cálculo do total de demandas para a porcentagem
+    const totalDemandas = Object.values(statsBySubject).reduce((sum, count) => sum + count, 0);
 
     const statsByTime = atendidos.filter(a => a.scheduledTime).reduce((acc, a) => {
         acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
@@ -253,6 +234,7 @@ function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
             <p class="text-xs text-gray-600 mt-1">Tempo Médio (delegação)</p>
         </div>` : '';
 
+    // ALTERADO: A coluna principal agora contém tabelas em vez de gráficos.
     const html = `
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 h-full p-4 overflow-hidden">
         <div class="lg:col-span-1 flex flex-col gap-4 overflow-y-auto">
@@ -300,45 +282,60 @@ function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
             </div>` : ''}
         </div>
         <div class="lg:col-span-3 flex flex-col gap-4 overflow-y-auto">
-            <div class="bg-white p-4 rounded-lg border flex-1 flex flex-col">
+            <div class="bg-white p-4 rounded-lg border">
                 <h3 class="text-lg font-semibold text-gray-800 mb-2">Atendimentos por Colaborador</h3>
-                <div class="relative flex-grow min-h-[300px]"><canvas id="collaboratorChart"></canvas></div>
+                <div class="overflow-y-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-2">Colaborador</th>
+                                <th class="px-4 py-2 text-right">Atendimentos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${Object.entries(statsByCollaborator).sort(([,a],[,b]) => b-a).map(([name, count]) => `
+                                <tr class="border-b">
+                                    <td class="px-4 py-2 font-medium">${name}</td>
+                                    <td class="px-4 py-2 text-right">${count}</td>
+                                </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div class="bg-white p-4 rounded-lg border flex-1 flex flex-col">
+            <div class="bg-white p-4 rounded-lg border">
                 <h3 class="text-lg font-semibold text-gray-800 mb-2">Demandas por Assunto</h3>
-                <div class="relative flex-grow min-h-[300px]"><canvas id="subjectChart"></canvas></div>
+                 <div class="overflow-y-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-2">Assunto/Demanda</th>
+                                <th class="px-4 py-2 text-right">Total Atendido</th>
+                                <th class="px-4 py-2 text-right">% do Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                             ${Object.entries(statsBySubject).sort(([,a],[,b]) => b-a).map(([subject, count]) => `
+                                <tr class="border-b">
+                                    <td class="px-4 py-2 font-medium">${subject}</td>
+                                    <td class="px-4 py-2 text-right">${count}</td>
+                                    <td class="px-4 py-2 text-right">${totalDemandas > 0 ? ((count / totalDemandas) * 100).toFixed(1) : 0}%</td>
+                                </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
     `;
     content.innerHTML = html;
 
-    try {
-        if (Object.keys(statsByCollaborator).length > 0) {
-            const ctxCollaborator = document.getElementById('collaboratorChart').getContext('2d');
-            chartInstances.collaboratorChart = new Chart(ctxCollaborator, {
-                type: 'doughnut',
-                data: { labels: Object.keys(statsByCollaborator), datasets: [{ data: Object.values(statsByCollaborator), backgroundColor: ['#22c55e', '#3b82f6', '#f97316', '#8b5cf6', '#ec4899', '#6b7280', '#f59e0b', '#10b981'], hoverOffset: 4 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
-            });
-        }
-        if (Object.keys(statsBySubject).length > 0) {
-            const ctxSubject = document.getElementById('subjectChart').getContext('2d');
-            chartInstances.subjectChart = new Chart(ctxSubject, {
-                type: 'bar',
-                data: { labels: Object.keys(statsBySubject), datasets: [{ label: 'Nº de Demandas', data: Object.values(statsBySubject), backgroundColor: '#3b82f6' }] },
-                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
-            });
-        }
-    } catch (e) {
-        console.error("Erro ao renderizar gráficos:", e);
-    }
+    // REMOVIDO: Bloco try/catch para renderizar gráficos não é mais necessário.
     
     document.getElementById('export-stats-pdf-btn').addEventListener('click', () => {
         exportStatisticsToPDF(pautaName, {
             atendidosCount: atendidos.length, faltososCount: faltosos.length,
             avgTimeDirect, avgTimeDelegated, useDelegationFlow,
-            statsByCollaborator, statsBySubject,
+            statsByCollaborator, statsBySubject, // Passa os dados brutos
             statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
             statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
         });
@@ -366,22 +363,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         doc.text(title, 14, startY);
         return startY + 8;
     };
-    const addChart = (chartId, title) => {
-        const checkboxId = chartId === 'collaboratorChart' ? 'export-collaborators' : 'export-subjects';
-        if (chartInstances[chartId] && document.getElementById(checkboxId).checked) {
-            yPos = addSection(title, yPos);
-            const canvas = document.getElementById(chartId);
-            const imgData = canvas.toDataURL('image/png', 1.0);
-            const imgWidth = 180;
-            const imgHeight = canvas.height * imgWidth / canvas.width;
-            if (yPos + imgHeight > 280) {
-                 doc.addPage();
-                 yPos = 20;
-            }
-            doc.addImage(imgData, 'PNG', 14, yPos, imgWidth, imgHeight);
-            yPos += imgHeight + 10;
-        }
-    };
+    // REMOVIDO: Função addChart não é mais necessária
 
     if (document.getElementById('export-general').checked) {
         yPos = addSection("Resumo Geral", yPos);
@@ -395,8 +377,37 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         yPos += doc.getTextDimensions(splitText).h + 10;
     }
     
-    addChart('collaboratorChart', 'Atendimentos por Colaborador');
-    addChart('subjectChart', 'Demandas por Assunto');
+    // ALTERADO: Em vez de addChart, usamos autoTable para as novas tabelas
+    if (document.getElementById('export-collaborators').checked && Object.keys(statsData.statsByCollaborator).length > 0) {
+        yPos = addSection("Atendimentos por Colaborador", yPos);
+        doc.autoTable({
+            startY: yPos,
+            head: [['Colaborador', 'Atendimentos']],
+            body: Object.entries(statsData.statsByCollaborator).sort(([,a],[,b]) => b-a),
+            theme: 'striped',
+            didDrawPage: (data) => { yPos = data.cursor.y; }
+        });
+        yPos = doc.autoTable.previous.finalY + 10;
+    }
+
+    if (document.getElementById('export-subjects').checked && Object.keys(statsData.statsBySubject).length > 0) {
+        yPos = addSection("Demandas por Assunto", yPos);
+        const totalDemands = Object.values(statsData.statsBySubject).reduce((sum, count) => sum + count, 0);
+        doc.autoTable({
+            startY: yPos,
+            head: [['Assunto/Demanda', 'Total', '% do Total']],
+            body: Object.entries(statsData.statsBySubject)
+                .sort(([,a],[,b]) => b-a)
+                .map(([subject, count]) => [
+                    subject,
+                    count,
+                    totalDemands > 0 ? ((count / totalDemands) * 100).toFixed(1) + '%' : '0%'
+                ]),
+            theme: 'striped',
+            didDrawPage: (data) => { yPos = data.cursor.y; }
+        });
+        yPos = doc.autoTable.previous.finalY + 10;
+    }
 
     const addTableToPdf = (title, data, headStyles, checkboxId) => {
         if (document.getElementById(checkboxId).checked && data.length > 0) {
