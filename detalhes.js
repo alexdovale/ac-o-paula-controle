@@ -289,7 +289,6 @@ const cancelBtn = document.getElementById('cancel-checklist-btn');
 // --- Funções Internas ---
 
 /**
- * **NOVA FUNÇÃO**
  * Preenche a área de seleção de ações com botões gerados dinamicamente
  * a partir do objeto documentsData.
  */
@@ -298,14 +297,17 @@ function populateActionSelection() {
     if (!container) return;
 
     // Evita recriar os botões se eles já existirem.
-    if (container.querySelector('.grid')) {
+    if (container.querySelector('.action-grid-container')) {
         return;
     }
-
-    container.innerHTML = '<p class="text-gray-600 mb-4">Selecione o tipo de ação para ver a lista de documentos necessários:</p>';
+    
+    // Cria o parágrafo de instrução dinamicamente para não apagar outros elementos (como o campo de busca)
+    const instruction = document.createElement('p');
+    instruction.className = 'text-gray-600 mb-4';
+    instruction.textContent = 'Selecione o tipo de ação para ver a lista de documentos necessários:';
 
     const gridContainer = document.createElement('div');
-    gridContainer.className = 'grid grid-cols-1 md:grid-cols-2 gap-3';
+    gridContainer.className = 'grid grid-cols-1 md:grid-cols-2 gap-3 action-grid-container';
 
     Object.keys(documentsData).forEach((actionKey, index) => {
         const actionData = documentsData[actionKey];
@@ -321,6 +323,7 @@ function populateActionSelection() {
         gridContainer.appendChild(button);
     });
 
+    container.appendChild(instruction);
     container.appendChild(gridContainer);
 }
 
@@ -441,13 +444,10 @@ function handleSearch(e) {
 
 function handleActionSearch(e) {
     const searchTerm = normalizeText(e.target.value);
-    const allActions = actionSelectionView.querySelectorAll('button[data-action]');
+    const allActions = actionSelectionView.querySelectorAll('.action-grid-container button[data-action]');
     allActions.forEach(btn => {
         const actionText = normalizeText(btn.textContent);
-        const parentDiv = btn.parentElement; 
-        if (parentDiv) {
-            btn.style.display = actionText.includes(searchTerm) ? 'block' : 'none';
-        }
+        btn.style.display = actionText.includes(searchTerm) ? 'block' : 'none';
     });
 }
 
