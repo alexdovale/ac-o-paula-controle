@@ -51,7 +51,7 @@ const documentsData = {
         sections: [
             { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos do Filho(a)/Alimentando(a)', docs: ['Certidão de Nascimento', 'Comprovantes de despesas (matrícula, escola, saúde, remédios)', 'Laudos de necessidades especiais (se aplicável)'] },
-            { title: 'Sobre o Réu (Alimentante)', docs: ['Endereço do(a) alimentante', 'Nome e endereço do trabalho do(a) alimentante (se souber)', 'Dados da(o) empregadora da parte ré (CNPJ, se possível)', 'Contracheque(s), extrato bancário ou IR do(a) alimentante (se conseguir)'] },
+            { title: 'Sobre o Réu (Alimentante)', docs: ['Endereço do(a) alimentante', 'Nome e endereço do trabalho do(a) alimentante (se souber)', 'Dados da(o) empregador(a) da parte ré (CNPJ, se possível)', 'Contracheque(s), extrato bancário ou IR do(a) alimentante (se conseguir)'] },
             { title: 'Para Depósito', docs: ['Dados bancários do(a) representante legal (para depósito da pensão)'] }
         ]
     },
@@ -104,6 +104,13 @@ const documentsData = {
             { title: 'Provas e Herdeiros', docs: ['Provas da existência da união estável (conforme item anterior)', 'Endereço dos herdeiros do falecido (réus)', 'Documentos que comprovem a inexistência de filhos ou testamento do de cujus'] }
         ]
     },
+    conversao_uniao_homoafetiva: {
+        title: 'Conversão de União Estável Homoafetiva em Casamento',
+        sections: [
+            { title: 'Documentação Comum (Ambos)', docs: ['Documentos de Identidade e CPF de ambos', 'Certidão de Nascimento/Casamento de ambos', 'Comprovante de Residência'] },
+            { title: 'Provas da União e Testemunhas', docs: ['Provas da união estável (fotos, extratos, declarações)', 'Dados das testemunhas do casamento (nome, RG, CPF, endereço, telefone)'] }
+        ]
+    },
     guarda: {
         title: 'Guarda (pedida pelos pais / por terceiros)',
         sections: [
@@ -133,6 +140,13 @@ const documentsData = {
         sections: [
             { title: 'Documentação Comum (Requerente/Futuro Curador)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Idoneidade Moral', 'Atestado médico de boa saúde física e mental', 'Declaração de Anuência dos demais familiares (se houver)'] },
             { title: 'Do Curatelando(a)', docs: ['RG e CPF', 'Certidão de Nascimento/Casamento', 'Laudos médicos ATUALIZADOS (com CID, indicando impossibilidade de exprimir vontade)', 'Relatórios de equipe multiprofissional/biopsicossocial (se houver)', 'Documentos de bens do(a) curatelando(a) (se possuir)'] }
+        ]
+    },
+    levantamento_curatela: {
+        title: 'Levantamento de Curatela',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência'] },
+            { title: 'Documentos do Caso', docs: ['Cópia da sentença ou termo de curatela', 'Laudos médicos ATUALIZADOS comprovando a cessação da incapacidade', 'Documentos que comprovem o retorno do(a) curatelado(a) ao convívio social'] }
         ]
     },
     tutela: {
@@ -182,6 +196,20 @@ const documentsData = {
             { title: 'Documentos do Caso', docs: ['Documentos que comprovem o dano e o nexo com a atuação/omissão do ente público (BO, laudos, fotos, notas fiscais)'] }
         ]
     },
+    previdencia_estadual_municipal: {
+        title: 'Previdência Social (estadual e municipal)',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Documentos Específicos', docs: ['Documentos específicos do benefício pleiteado ou contestado (ex: certidão de tempo de contribuição, laudos médicos)', 'Comprovante da negativa administrativa'] }
+        ]
+    },
+    questionamento_impostos_taxas: {
+        title: 'Questionamentos em Cobranças de Impostos, Taxas e Multas',
+        sections: [
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência'] },
+            { title: 'Documentos do Débito', docs: ['Cópia do débito/multa que se busca contestar', 'Documentos que comprovem a indevida cobrança ou o pagamento'] }
+        ]
+    },
 
     // --- VI. INFÂNCIA E JUVENTUDE ---
     vaga_escola_creche: {
@@ -196,6 +224,13 @@ const documentsData = {
         sections: [
             { title: 'Documentação Comum (Representante Legal)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência'] },
             { title: 'Documentos da Criança e do Pedido', docs: ['Certidão de Nascimento da criança/adolescente', 'Laudo médico comprovando a deficiência e a necessidade do profissional de apoio', 'Declaração da escola sobre a matrícula e a ausência do profissional', 'Plano Educacional Individualizado (PEI) (se houver)'] }
+        ]
+    },
+    transporte_gratuito: {
+        title: 'Transporte Gratuito (Infância e Juventude)',
+        sections: [
+            { title: 'Documentação Comum (Representante Legal)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência'] },
+            { title: 'Documentos da Criança/Adolescente', docs: ['Certidão de Nascimento', 'Laudo médico comprovando a deficiência/doença e a necessidade de transporte', 'Comprovante de negativa da solicitação administrativa de transporte'] }
         ]
     },
 
@@ -407,3 +442,4 @@ export function openDetailsModal(config) {
     handleBack(); // Reseta para a visão de seleção de ação
     modal.classList.remove('hidden');
 }
+
