@@ -274,11 +274,13 @@ let currentChecklistAction = null;
 const modal = document.getElementById('documents-modal');
 const assistedNameEl = document.getElementById('documents-assisted-name');
 const actionSelectionView = document.getElementById('document-action-selection');
+const actionSearchInput = document.getElementById('action-search-input'); // Novo: Campo de pesquisa de assunto
 const checklistView = document.getElementById('document-checklist-view');
 const checklistContainer = document.getElementById('checklist-container');
 const checklistTitle = document.getElementById('checklist-title');
 const backToActionSelectionBtn = document.getElementById('back-to-action-selection-btn');
 const saveChecklistBtn = document.getElementById('save-checklist-btn');
+const printChecklistBtn = document.getElementById('print-checklist-btn'); // Novo: Botão de impressão
 const checklistSearch = document.getElementById('checklist-search');
 const closeBtn = document.getElementById('close-documents-modal-btn');
 const cancelBtn = document.getElementById('cancel-checklist-btn');
@@ -360,6 +362,10 @@ function handleBack() {
     checklistView.classList.add('hidden');
     checklistView.classList.remove('flex');
     actionSelectionView.classList.remove('hidden');
+    if (actionSearchInput) {
+        actionSearchInput.value = '';
+        actionSearchInput.dispatchEvent(new Event('input'));
+    }
 }
 
 async function handleSave() {
@@ -397,6 +403,68 @@ function handleSearch(e) {
     });
 }
 
+/** Novo: Filtra a lista de assuntos/ações na tela de seleção. */
+function handleActionSearch(e) {
+    const searchTerm = normalizeText(e.target.value);
+    const allActions = actionSelectionView.querySelectorAll('button[data-action]');
+    allActions.forEach(btn => {
+        const actionText = normalizeText(btn.textContent);
+        const parentDiv = btn.parentElement; // Assumindo que o botão está em uma div para layout
+        if (parentDiv) {
+            parentDiv.style.display = actionText.includes(searchTerm) ? 'block' : 'none';
+        }
+    });
+}
+
+/** Novo: Gera uma versão para impressão do checklist. */
+function handlePrint() {
+    const title = checklistTitle.textContent;
+    const assistedName = assistedNameEl.textContent;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Imprimir Checklist</title>');
+    printWindow.document.write(`
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 2rem; line-height: 1.5; }
+            h1, h2 { color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
+            h1 { font-size: 1.875rem; }
+            h2 { font-size: 1.5rem; margin-top: 1.5rem; }
+            h4 { font-size: 1.125rem; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #374151; }
+            ul { list-style-type: none; padding-left: 0; }
+            li { margin-bottom: 0.5rem; font-size: 1rem; color: #4b5563; }
+        </style>
+    `);
+    printWindow.document.write('</head><body>');
+    printWindow.document.write(`<h1>Checklist de Documentos</h1>`);
+    printWindow.document.write(`<h2>Assistido(a): ${assistedName}</h2>`);
+    printWindow.document.write(`<h2>Assunto: ${title}</h2>`);
+
+    let printableHtml = '';
+    const sections = checklistContainer.querySelectorAll('div');
+    sections.forEach(section => {
+        const sectionTitle = section.querySelector('h4').textContent;
+        printableHtml += `<h4>${sectionTitle}</h4>`;
+        printableHtml += '<ul>';
+        const items = section.querySelectorAll('li');
+        items.forEach(item => {
+            const checkbox = item.querySelector('input');
+            const label = item.querySelector('label').textContent;
+            const symbol = checkbox.checked ? '☑' : '☐';
+            printableHtml += `<li>${symbol} ${label}</li>`;
+        });
+        printableHtml += '</ul>';
+    });
+
+    printWindow.document.write(printableHtml);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 250);
+}
+
 function closeModal() {
     modal.classList.add('hidden');
 }
@@ -420,6 +488,10 @@ export function setupDetailsModal(config) {
     checklistSearch.addEventListener('input', handleSearch);
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
+    
+    // Novos Listeners
+    if (actionSearchInput) actionSearchInput.addEventListener('input', handleActionSearch);
+    if (printChecklistBtn) printChecklistBtn.addEventListener('click', handlePrint);
 }
 
 /**
@@ -439,7 +511,19 @@ export function openDetailsModal(config) {
     }
 
     assistedNameEl.textContent = assisted.name;
-    handleBack(); // Reseta para a visão de seleção de ação
+
+    // Lógica para carregar checklist salvo ou mostrar seleção
+    if (assisted.documentChecklist && assisted.documentChecklist.action) {
+        const savedAction = assisted.documentChecklist.action;
+        renderChecklist(savedAction);
+        actionSelectionView.classList.add('hidden');
+        checklistView.classList.remove('hidden');
+        checklistView.classList.add('flex');
+    } else {
+        // Comportamento padrão: mostra a seleção de ação
+        handleBack(); 
+    }
+    
     modal.classList.remove('hidden');
 }
 
