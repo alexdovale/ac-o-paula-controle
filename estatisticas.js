@@ -1,5 +1,5 @@
 /**
- * estatisticas.js - Versão Módulo Corrigida e com PDF Melhorado
+ * estatisticas.js - Versão Módulo Corrigida, com PDF Melhorado e Responsiva
  * Este arquivo deve ser importado pelo seu script principal.
  * Requer: jspdf, jspdf-autotable, chart.js
  */
@@ -10,15 +10,62 @@ function makeModalInteractive(modal) {
     }
     modal.classList.add('interactive-modal-init', 'bg-white');
 
+    // --- INÍCIO DA MELHORIA DE RESPONSIVIDADE ---
+    // Adiciona uma folha de estilos na página para controlar a responsividade do modal.
+    // Isso é feito apenas uma vez para evitar duplicação.
+    if (!document.getElementById('statistics-responsive-styles')) {
+        const styleSheet = document.createElement("style");
+        styleSheet.id = 'statistics-responsive-styles';
+        styleSheet.innerHTML = `
+            /* Estilos para telas menores (ex: celulares com até 768px de largura) */
+            @media (max-width: 768px) {
+                #statistics-modal {
+                    /* Ocupa quase toda a tela para melhor visualização */
+                    width: 98vw !important;
+                    height: 95vh !important;
+                    max-height: 95vh !important;
+                    
+                    /* Reduz o tamanho mínimo para caber em telas pequenas */
+                    min-width: 300px !important;
+                    min-height: 400px !important;
+                    
+                    /* Desabilita o redimensionamento em telas touch, que é pouco prático */
+                    resize: none !important; 
+                }
+
+                /* Ajusta o layout interno para melhor uso do espaço vertical */
+                #statistics-content .grid {
+                    display: flex;
+                    flex-direction: column;
+                    padding: 8px !important;
+                    gap: 8px !important;
+                }
+
+                #statistics-content .lg\\:col-span-2,
+                #statistics-content .lg\\:col-span-3 {
+                    max-height: 50vh; /* Controla a altura máxima das colunas com scroll */
+                    overflow-y: auto;
+                }
+                
+                /* Ajusta o tamanho das fontes dos cards de resumo */
+                #statistics-content .text-2xl {
+                    font-size: 1.25rem; /* Reduz a fonte principal dos cards */
+                }
+                 #statistics-content .text-xs {
+                    font-size: 0.7rem; /* Reduz a fonte do subtítulo */
+                }
+            }
+        `;
+        document.head.appendChild(styleSheet);
+    }
+    // --- FIM DA MELHORIA DE RESPONSIVIDADE ---
+
     const content = document.getElementById('statistics-content');
     if (!content) {
-        // Se o conteúdo não existir no HTML, cria-o.
-        // Isso é crucial para a primeira inicialização.
         const newContent = document.createElement('div');
         newContent.id = 'statistics-content';
         modal.appendChild(newContent);
     }
-
 
     Object.assign(modal.style, {
         position: 'fixed', top: '50%', left: '50%',
@@ -160,27 +207,22 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
         console.error("Elemento do modal de estatísticas '#statistics-modal' não encontrado.");
         return;
     }
-
-    // --- INÍCIO DA CORREÇÃO ---
+    
     let content = document.getElementById('statistics-content');
     
-    // Garante que o modal seja interativo e tenha a estrutura base na primeira chamada.
     makeModalInteractive(modal);
     
-    // Atribui a referência a 'content' novamente, caso tenha sido criada por makeModalInteractive
     if (!content) {
         content = document.getElementById('statistics-content');
     }
 
-    // Garante que o estado visual está correto ao reabrir.
     if (modal.classList.contains('minimized')) {
         modal.classList.remove('minimized');
         modal.style.resize = 'both';
     }
     if (content) {
-        content.style.display = 'block'; // Garante que o conteúdo é visível
+        content.style.display = 'block'; 
     }
-    // --- FIM DA CORREÇÃO ---
 
     const modalTitle = modal.querySelector('#statistics-modal-header span');
     if (modalTitle) modalTitle.textContent = `Estatísticas - ${pautaName}`;
@@ -292,7 +334,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
     }).join('');
 
     const html = `
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 h-full p-4 overflow-hidden">
+    <div id="statistics-content-wrapper" class="grid grid-cols-1 lg:grid-cols-5 gap-4 h-full p-4 overflow-hidden">
         <div class="lg:col-span-2 flex flex-col gap-4 overflow-y-auto pr-2">
             <div class="bg-white p-4 rounded-lg border">
                 <h3 class="text-lg font-semibold text-gray-800 mb-3">Resumo Geral</h3>
@@ -469,10 +511,9 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     };
 
     const addSectionTitle = (title) => {
-        // Aumentado o buffer de verificação de espaço para 200pt.
         if (yPos > pageHeight - 200) { 
             doc.addPage();
-            yPos = margin + 30; // Posição inicial em nova página
+            yPos = margin + 30;
         }
         doc.setFont(FONT_BOLD, 'normal');
         doc.setFontSize(14);
@@ -482,9 +523,8 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     };
 
     // --- CONSTRUÇÃO DO PDF ---
-    yPos = margin + 30; // Posição Y inicial para o conteúdo na primeira página
+    yPos = margin + 30; 
 
-    // SEÇÃO DE RESUMO GERAL
     if (document.getElementById('export-general').checked) {
         addSectionTitle("Resumo Geral");
         doc.setFont(FONT_NORMAL, 'normal');
@@ -522,7 +562,6 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         yPos += cardHeight + 30;
     }
 
-    // GRÁFICOS DE ATENDIMENTOS POR GRUPO/COLABORADOR
     if (document.getElementById('export-collaborators').checked && Object.keys(statsData.statsByGroup).length > 0) {
         const sortedGroups = Object.entries(statsData.statsByGroup).sort(([, a], [, b]) => b.total - a.total);
 
@@ -536,7 +575,6 @@ async function exportStatisticsToPDF(pautaName, statsData) {
             const MAX_CHART_ITEMS = 15;
 
             if (sortedCollaborators.length > MAX_CHART_ITEMS) {
-                // Renderiza como tabela se a lista for muito longa
                 doc.autoTable({
                     startY: yPos,
                     head: [['Colaborador', 'Nº de Atendimentos']],
@@ -548,7 +586,6 @@ async function exportStatisticsToPDF(pautaName, statsData) {
                 });
                 yPos = doc.autoTable.previous.finalY + 20;
             } else {
-                // Renderiza como gráfico para listas menores
                 const labels = sortedCollaborators.map(item => item[0]);
                 const data = sortedCollaborators.map(item => item[1]);
 
@@ -602,8 +639,6 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         }
     }
 
-
-    // TABELA DE DEMANDAS POR ASSUNTO
     if (document.getElementById('export-subjects').checked && Object.keys(statsData.statsBySubject).length > 0) {
         addSectionTitle("Demandas por Assunto");
         const totalDemands = Object.values(statsData.statsBySubject).reduce((sum, data) => sum + data.total, 0);
@@ -629,7 +664,6 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         yPos = doc.autoTable.previous.finalY + 20;
     }
     
-    // TABELAS POR HORÁRIO
     const addTimeTableToPdf = (title, data, checkboxId, total, color) => {
         if (document.getElementById(checkboxId).checked && data.length > 0) {
             addSectionTitle(title);
@@ -651,8 +685,6 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     addTimeTableToPdf("Atendimentos por Horário", statsData.statsByTime, 'export-times', statsData.atendidosCount, COLOR_GREEN);
     addTimeTableToPdf("Faltosos por Horário", statsData.statsByTimeFaltosos, 'export-absentees-time', statsData.faltososCount, COLOR_RED);
 
-    // --- FINALIZAÇÃO ---
     addHeaderAndFooter();
     doc.save(`estatisticas_${pautaName.replace(/\s+/g, '_')}.pdf`);
 }
-
