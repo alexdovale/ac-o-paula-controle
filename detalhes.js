@@ -12,35 +12,35 @@ const documentsData = {
     obrigacao_fazer: {
         title: 'Ação de Obrigação de Fazer',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos Específicos do Caso', docs: ['Documentos que comprovem a obrigação (contrato, acordo, etc.)', 'Provas do descumprimento (e-mails, protocolos, fotos, etc.)', 'Se contra concessionária de serviço público: Faturas, protocolos de reclamação.'] }
         ]
     },
     declaratoria_nulidade: {
         title: 'Ação Declaratória de Nulidade',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos Específicos do Caso', docs: ['Documento ou ato jurídico a ser anulado (contrato, cobrança, multa)', 'Provas da ilegalidade ou abusividade (jurisprudências, extratos)', 'Se contra concessionária (ex: TOI da LIGHT): Cópia do TOI, histórico de consumo.'] }
         ]
     },
     indenizacao_danos: {
         title: 'Ação de Indenização (Danos Morais e Materiais)',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos Específicos do Caso', docs: ['Provas do evento danoso (boletim de ocorrência, fotos, vídeos)', 'Provas dos danos materiais (notas fiscais, orçamentos, recibos)', 'Provas dos danos morais (laudos psicológicos, atestados, testemunhas)', 'Se contra concessionária: Protocolos, notas de aparelhos queimados.'] }
         ]
     },
     revisional_debito: {
         title: 'Ação Revisional de Débito',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos Específicos do Caso', docs: ['Contrato ou documento que originou o débito', 'Faturas, extratos ou planilhas do débito', 'Provas de que os valores são indevidos (histórico de consumo, cálculos)', 'Se contra concessionária: Histórico de consumo, protocolos de reclamação.'] }
         ]
     },
     exigir_contas: {
         title: 'Ação de Exigir Contas',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR',  'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos Específicos do Caso', docs: ['Documento que comprove a relação de administração/gestão (termo de curatela, contrato)', 'Documentos que indiquem a movimentação de valores (extratos)', 'Provas da recusa em prestar contas ou suspeita de irregularidades.'] }
         ]
     },
@@ -49,7 +49,7 @@ const documentsData = {
     alimentos_fixacao_majoracao_oferta: {
         title: 'Alimentos (Fixação / Majoração / Oferta)',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos do Filho(a)/Alimentando(a)', docs: ['Certidão de Nascimento', 'Comprovantes de despesas (matrícula, escola, saúde, remédios)', 'Laudos de necessidades especiais (se aplicável)'] },
             { title: 'Sobre o Réu (Alimentante)', docs: ['Endereço do(a) alimentante', 'Nome e endereço do trabalho do(a) alimentante (se souber)', 'Dados da(o) empregador(a) da parte ré (CNPJ, se possível)', 'Contracheque(s), extrato bancário ou IR do(a) alimentante (se conseguir)'] },
             { title: 'Para Depósito', docs: ['Dados bancários do(a) representante legal (para depósito da pensão)'] }
@@ -58,7 +58,7 @@ const documentsData = {
     alimentos_gravidicos: {
         title: 'Ação de Alimentos Gravídicos',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos Específicos do Caso', docs: ['Comprovante de gravidez (ultrassom, atestado médico)', 'Provas do relacionamento com o suposto pai (fotos, mensagens, testemunhas)', 'Comprovantes das despesas da gravidez (exames, medicamentos, enxoval)'] },
             { title: 'Sobre o Suposto Pai', docs: ['Endereço do suposto pai', 'Informações sobre a profissão e possibilidade financeira do suposto pai'] }
         ]
@@ -66,7 +66,7 @@ const documentsData = {
     alimentos_avoengos: {
         title: 'Ação de Alimentos Avoengos (contra avós)',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos do Neto(a)/Alimentando(a)', docs: ['Certidão de Nascimento'] },
             { title: 'Sobre os Pais', docs: ['Provas da impossibilidade/insuficiência dos pais (desemprego, decisão judicial anterior, certidão de óbito)'] },
             { title: 'Sobre o(s) Avó(s) Réu(s)', docs: ['Endereço do(a) avó(ô) réu', 'Provas da capacidade financeira do(a) avó(ô) (contracheques, extratos, IR, etc.)'] }
@@ -185,28 +185,28 @@ const documentsData = {
     fornecimento_medicamentos: {
         title: 'Fornecimento de Medicamentos / Cirurgias / Exames',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos Médicos', docs: ['Receita médica ATUALIZADA (original)', 'Laudo médico DETALHADO (com CID, justificativa da imprescindibilidade, ineficácia de alternativas do SUS)', 'Comprovante de negativa de fornecimento pelo SUS ou plano de saúde', 'Orçamentos do medicamento/procedimento em locais particulares (mínimo de 3)', 'Carteirinha do plano de saúde (se for contra plano)'] }
         ]
     },
     indenizacao_poder_publico: {
         title: 'Indenizações contra o Poder Público',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Afirmação de Hipossuficiência'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência'] },
             { title: 'Documentos do Caso', docs: ['Documentos que comprovem o dano e o nexo com a atuação/omissão do ente público (BO, laudos, fotos, notas fiscais)'] }
         ]
     },
     previdencia_estadual_municipal: {
         title: 'Previdência Social (estadual e municipal)',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência',  'Afirmação de Hipossuficiência'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência'] },
             { title: 'Documentos Específicos', docs: ['Documentos específicos do benefício pleiteado ou contestado (ex: certidão de tempo de contribuição, laudos médicos)', 'Comprovante da negativa administrativa'] }
         ]
     },
     questionamento_impostos_taxas: {
         title: 'Questionamentos em Cobranças de Impostos, Taxas e Multas',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Afirmação de Hipossuficiência'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência', 'Afirmação de Hipossuficiência'] },
             { title: 'Documentos do Débito', docs: ['Cópia do débito/multa que se busca contestar', 'Documentos que comprovem a indevida cobrança ou o pagamento'] }
         ]
     },
@@ -469,55 +469,92 @@ function handleActionSearch(e) {
     });
 }
 
-function handlePrint() {
-    const title = checklistTitle.textContent;
-    const assistedName = assistedNameEl.textContent;
-
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Imprimir Checklist</title>');
-    printWindow.document.write(`
-        <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 2rem; line-height: 1.5; }
-            h1, h2 { color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
-            h1 { font-size: 1.875rem; }
-            h2 { font-size: 1.5rem; margin-top: 1.5rem; }
-            h4 { font-size: 1.125rem; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #374151; }
-            ul { list-style-type: none; padding-left: 0; }
-            li { margin-bottom: 0.5rem; font-size: 1rem; color: #4b5563; }
-        </style>
-    `);
-    printWindow.document.write('</head><body>');
-    printWindow.document.write(`<h1>Checklist de Documentos</h1>`);
-    printWindow.document.write(`<h2>Assistido(a): ${assistedName}</h2>`);
-    printWindow.document.write(`<h2>Assunto: ${title}</h2>`);
-
-    let printableHtml = '';
-    const sections = checklistContainer.querySelectorAll('div > div');
-    sections.forEach(section => {
-        const sectionTitleEl = section.querySelector('h4');
-        if (sectionTitleEl) {
-            printableHtml += `<h4>${sectionTitleEl.textContent}</h4>`;
-            printableHtml += '<ul>';
-            const items = section.querySelectorAll('li');
-            items.forEach(item => {
-                const checkbox = item.querySelector('input');
-                const label = item.querySelector('label').textContent;
-                const symbol = checkbox.checked ? '☑' : '☐';
-                printableHtml += `<li>${symbol} ${label}</li>`;
-            });
-            printableHtml += '</ul>';
+/**
+ * **NOVO**
+ * Carrega um script dinamicamente na página.
+ * Essencial para adicionar bibliotecas como jsPDF e html2canvas sem editar o HTML.
+ * @param {string} src - A URL do script a ser carregado.
+ * @returns {Promise}
+ */
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        // Se o script já existe, não carrega de novo
+        if (document.querySelector(`script[src="${src}"]`)) {
+            return resolve();
         }
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Falha ao carregar o script: ${src}`));
+        document.head.appendChild(script);
     });
-
-    printWindow.document.write(printableHtml);
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-    }, 250);
 }
+
+/**
+ * **MODIFICADO**
+ * Gera um arquivo PDF da lista de verificação de documentos e inicia o download.
+ * Substitui a função de impressão anterior.
+ */
+async function handleGeneratePdf() {
+    // Para uma melhor experiência do usuário, o botão pode ser desabilitado durante o processo
+    if (printChecklistBtn) {
+        printChecklistBtn.disabled = true;
+        printChecklistBtn.textContent = 'Gerando PDF...';
+    }
+
+    try {
+        // Garante que as bibliotecas jsPDF e html2canvas estejam carregadas
+        await Promise.all([
+            loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'),
+            loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js')
+        ]);
+
+        const { jsPDF } = window.jspdf;
+        const title = checklistTitle.textContent;
+        const assistedName = assistedNameEl.textContent;
+        
+        // Usa o html2canvas para capturar o container do checklist como uma imagem
+        const canvas = await html2canvas(checklistContainer);
+        const imgData = canvas.toDataURL('image/png');
+
+        // Cria um novo documento PDF
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'pt',
+            format: 'a4'
+        });
+
+        // Adiciona os títulos ao PDF
+        pdf.setFontSize(20).text('Checklist de Documentos', 40, 60);
+        pdf.setFontSize(14).text(`Assistido(a): ${assistedName}`, 40, 90);
+        pdf.setFontSize(14).text(`Assunto: ${title}`, 40, 110);
+        
+        // Calcula as dimensões da imagem para caber no PDF
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = imgHeight / imgWidth;
+        const finalImgWidth = pdfWidth - 80; // Margens de 40pt de cada lado
+        const finalImgHeight = finalImgWidth * ratio;
+
+        // Adiciona a imagem do checklist ao PDF
+        pdf.addImage(imgData, 'PNG', 40, 140, finalImgWidth, finalImgHeight);
+
+        // Inicia o download do PDF
+        pdf.save(`Checklist - ${assistedName} - ${title}.pdf`);
+
+    } catch (error) {
+        console.error("Erro ao gerar PDF:", error);
+        if (showNotification) showNotification("Não foi possível gerar o PDF.", "error");
+    } finally {
+        // Reabilita o botão após a conclusão
+        if (printChecklistBtn) {
+            printChecklistBtn.disabled = false;
+            printChecklistBtn.textContent = 'Baixar PDF'; // O ideal é que seu botão já tenha esse texto
+        }
+    }
+}
+
 
 function closeModal() {
     modal.classList.add('hidden');
@@ -538,7 +575,8 @@ export function setupDetailsModal(config) {
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
     
-    if (printChecklistBtn) printChecklistBtn.addEventListener('click', handlePrint);
+    // MODIFICADO: O botão agora chama a função de gerar PDF
+    if (printChecklistBtn) printChecklistBtn.addEventListener('click', handleGeneratePdf);
 }
 
 export function openDetailsModal(config) {
