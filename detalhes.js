@@ -289,6 +289,53 @@ const cancelBtn = document.getElementById('cancel-checklist-btn');
 // --- Funções Internas ---
 
 /**
+ * **NOVA FUNÇÃO**
+ * Preenche a área de seleção de ações com botões gerados dinamicamente
+ * a partir do objeto documentsData.
+ */
+function populateActionSelection() {
+    // Encontra o container onde os botões serão inseridos.
+    const container = document.getElementById('document-action-selection');
+    if (!container) return; // Se não encontrar o container, não faz nada.
+
+    // Verifica se os botões já foram criados para evitar duplicatas
+    if (container.querySelector('.grid')) {
+        return;
+    }
+
+    // Limpa qualquer conteúdo antigo e adiciona o parágrafo de instrução.
+    container.innerHTML = '<p class="text-gray-600 mb-4">Selecione o tipo de ação para ver a lista de documentos necessários:</p>';
+
+    // Cria a div que vai conter os botões no layout de grid.
+    const gridContainer = document.createElement('div');
+    gridContainer.className = 'grid grid-cols-1 md:grid-cols-2 gap-3';
+
+    // Itera sobre cada ação definida no objeto documentsData.
+    Object.keys(documentsData).forEach((actionKey, index) => {
+        const actionData = documentsData[actionKey];
+
+        // Cria o elemento botão.
+        const button = document.createElement('button');
+        button.dataset.action = actionKey; // Adiciona o data-attribute para o clique funcionar.
+        button.className = 'w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition';
+
+        // Cria o span interno com o título da ação.
+        const span = document.createElement('span');
+        span.className = 'font-semibold text-gray-800';
+        // Usa o número do índice + 1 para criar a numeração "1. ", "2. ", etc.
+        span.textContent = `${index + 1}. ${actionData.title}`;
+
+        // Monta o botão e o adiciona ao grid.
+        button.appendChild(span);
+        gridContainer.appendChild(button);
+    });
+
+    // Adiciona o grid completo ao container principal.
+    container.appendChild(gridContainer);
+}
+
+
+/**
  * Renderiza a lista de verificação de documentos para uma ação específica.
  * @param {string} actionKey - A chave da ação (ex: 'alimentos_fixacao').
  */
@@ -409,12 +456,11 @@ function handleActionSearch(e) {
     const allActions = actionSelectionView.querySelectorAll('button[data-action]');
     allActions.forEach(btn => {
         const actionText = normalizeText(btn.textContent);
-        const parentDiv = btn.parentElement; // Assumindo que o botão está em uma div para layout
-        if (parentDiv) {
-            parentDiv.style.display = actionText.includes(searchTerm) ? 'block' : 'none';
-        }
+        // O botão é o próprio item a ser escondido/mostrado, não um parente
+        btn.style.display = actionText.includes(searchTerm) ? 'block' : 'none';
     });
 }
+
 
 /** Novo: Gera uma versão para impressão do checklist. */
 function handlePrint() {
@@ -440,19 +486,22 @@ function handlePrint() {
     printWindow.document.write(`<h2>Assunto: ${title}</h2>`);
 
     let printableHtml = '';
-    const sections = checklistContainer.querySelectorAll('div');
+    const sections = checklistContainer.querySelectorAll('div > div'); // Seleciona as divs que contêm as seções
     sections.forEach(section => {
-        const sectionTitle = section.querySelector('h4').textContent;
-        printableHtml += `<h4>${sectionTitle}</h4>`;
-        printableHtml += '<ul>';
-        const items = section.querySelectorAll('li');
-        items.forEach(item => {
-            const checkbox = item.querySelector('input');
-            const label = item.querySelector('label').textContent;
-            const symbol = checkbox.checked ? '☑' : '☐';
-            printableHtml += `<li>${symbol} ${label}</li>`;
-        });
-        printableHtml += '</ul>';
+        const sectionTitleEl = section.querySelector('h4');
+        if (sectionTitleEl) {
+            const sectionTitle = sectionTitleEl.textContent;
+            printableHtml += `<h4>${sectionTitle}</h4>`;
+            printableHtml += '<ul>';
+            const items = section.querySelectorAll('li');
+            items.forEach(item => {
+                const checkbox = item.querySelector('input');
+                const label = item.querySelector('label').textContent;
+                const symbol = checkbox.checked ? '☑' : '☐';
+                printableHtml += `<li>${symbol} ${label}</li>`;
+            });
+            printableHtml += '</ul>';
+        }
     });
 
     printWindow.document.write(printableHtml);
@@ -499,6 +548,8 @@ export function setupDetailsModal(config) {
  * @param {object} config - Objeto de configuração com os dados da pauta atual.
  */
 export function openDetailsModal(config) {
+    populateActionSelection(); // *** MODIFICAÇÃO: Chama a função para criar os botões ***
+    
     currentAssistedId = config.assistedId;
     currentPautaId = config.pautaId;
     allAssisted = config.allAssisted;
@@ -526,4 +577,3 @@ export function openDetailsModal(config) {
     
     modal.classList.remove('hidden');
 }
-
