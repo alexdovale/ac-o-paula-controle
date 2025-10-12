@@ -1,17 +1,21 @@
 /**
  * estatisticas.js
- * * Este script lida com o cálculo e a exibição de estatísticas para a pauta,
+ * Este script lida com o cálculo e a exibição de estatísticas para a pauta,
  * incluindo a geração de gráficos e a exportação para PDF.
- * * COMO INTEGRAR:
+ *
+ * COMO INTEGRAR:
  * 1. Adicione as bibliotecas Chart.js e jsPDF ao seu `index.html` (antes do script principal):
  * <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
  * <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
  * <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
- * * 2. Adicione este arquivo `estatisticas.js` ao seu `index.html` (também antes do script principal):
+ *
+ * 2. Adicione este arquivo `estatisticas.js` ao seu `index.html` (também antes do script principal):
  * <script src="estatisticas.js"></script>
- * * 3. No seu `script type="module"` principal em `index.html`, encontre a função `showStatisticsModal`
+ *
+ * 3. No seu `script type="module"` principal em `index.html`, encontre a função `showStatisticsModal`
  * e substitua seu conteúdo pela chamada da nova função, passando os dados necessários.
- * * // Exemplo de como modificar a função existente em index.html:
+ *
+ * // Exemplo de como modificar a função existente em index.html:
  * const showStatisticsModal = () => {
  * // Chama a função do arquivo estatisticas.js
  * renderStatisticsModal(
@@ -20,7 +24,8 @@
  * document.getElementById('pauta-title').textContent
  * );
  * };
- * * // O evento de clique no botão "view-stats-btn" já está configurado para chamar `showStatisticsModal`,
+ *
+ * // O evento de clique no botão "view-stats-btn" já está configurado para chamar `showStatisticsModal`,
  * // então nenhuma outra alteração de evento é necessária.
  */
 
@@ -47,7 +52,8 @@ function makeModalInteractive(modal) {
         overflow: 'hidden', border: '1px solid #ddd',
         boxShadow: '0 5px 25px rgba(0,0,0,0.2)', borderRadius: '12px',
         minWidth: '600px', minHeight: '500px', display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        padding: '0' // ADICIONADO: Garante que não haja padding interno no container principal
     });
     
     if (document.getElementById('statistics-modal-header')) {
@@ -122,7 +128,8 @@ function makeModalInteractive(modal) {
         document.onmousemove = null;
     }
 
-    closeBtn.onclick = () => modal.classList.add('hidden');
+    // CORREÇÃO: Altera o estilo 'display' diretamente em vez de usar classe
+    closeBtn.onclick = () => modal.style.display = 'none';
 
     maxBtn.onclick = () => {
         if (modal.classList.contains('maximized')) {
@@ -185,7 +192,11 @@ function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
 
     destroyCharts();
     content.innerHTML = `<div class="flex items-center justify-center h-full"><p class="text-gray-600">Calculando estatísticas...</p></div>`;
-    modal.classList.remove('hidden');
+    
+    // CORREÇÃO: Mostra o modal definindo o display, para corresponder à lógica do botão de fechar
+    modal.style.display = 'flex';
+    modal.classList.remove('hidden'); // Remove a classe 'hidden' por segurança, caso ela exista
+
 
     const atendidos = allAssisted.filter(a => a.status === 'atendido');
     const faltosos = allAssisted.filter(a => a.status === 'faltoso');
@@ -244,9 +255,7 @@ function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
 
     const html = `
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 h-full p-4 overflow-hidden">
-        <!-- Coluna da Sidebar -->
         <div class="lg:col-span-1 flex flex-col gap-4 overflow-y-auto">
-            <!-- Resumo -->
             <div class="bg-white p-4 rounded-lg border">
                 <h3 class="text-lg font-semibold text-gray-800 mb-3">Resumo Geral</h3>
                 <div class="grid grid-cols-2 gap-3 text-center">
@@ -256,7 +265,6 @@ function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
                     ${delegationHTML}
                 </div>
             </div>
-            <!-- Exportar -->
             <div class="bg-white p-4 rounded-lg border">
                 <h3 class="text-lg font-semibold text-gray-800 mb-3">Exportar Relatório</h3>
                 <div class="space-y-2 text-sm">
@@ -270,8 +278,7 @@ function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
                     <button id="export-stats-pdf-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm transition-colors">Gerar PDF</button>
                 </div>
             </div>
-             <!-- Tabelas -->
-            ${sortedTimes.length > 0 ? `
+             ${sortedTimes.length > 0 ? `
             <div class="bg-white p-4 rounded-lg border">
                 <h3 class="text-md font-semibold text-gray-800 mb-2">Atendimentos por Horário</h3>
                 <div class="max-h-40 overflow-y-auto">
@@ -292,7 +299,6 @@ function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
                 </div>
             </div>` : ''}
         </div>
-        <!-- Coluna Principal com Gráficos -->
         <div class="lg:col-span-3 flex flex-col gap-4 overflow-y-auto">
             <div class="bg-white p-4 rounded-lg border flex-1 flex flex-col">
                 <h3 class="text-lg font-semibold text-gray-800 mb-2">Atendimentos por Colaborador</h3>
@@ -412,4 +418,3 @@ async function exportStatisticsToPDF(pautaName, statsData) {
 
     doc.save(`estatisticas_${pautaName.replace(/\s+/g, '_')}.pdf`);
 }
-
