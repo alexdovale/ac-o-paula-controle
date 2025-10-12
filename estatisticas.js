@@ -1,9 +1,10 @@
 /**
- * estatisticas.js - Versão Módulo Corrigida
+ * estatisticas.js - Versão Módulo Completa e Corrigida
  * Este arquivo deve ser importado pelo seu script principal.
  */
 
-// FUNÇÃO "AJUDANTE" QUE ESTAVA FALTANDO
+// Esta é a função que estava faltando ou não estava sendo encontrada.
+// Ela precisa estar neste arquivo para que a 'renderStatisticsModal' a encontre.
 function makeModalInteractive(modal) {
     if (!modal || modal.classList.contains('interactive-modal-init')) {
         return; 
@@ -223,7 +224,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     doc.save(`estatisticas_${pautaName.replace(/\s+/g, '_')}.pdf`);
 }
 
-// FUNÇÃO PRINCIPAL QUE SERÁ USADA PELO SEU SCRIPT
+// Esta é a única função que precisa ser exportada.
 export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
     const modal = document.getElementById('statistics-modal');
     
@@ -238,7 +239,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
     content.id = 'statistics-content';
     modal.appendChild(content);
 
-    // Esta chamada agora vai funcionar
+    // Esta chamada agora vai funcionar porque a função está no mesmo arquivo.
     makeModalInteractive(modal);
     
     const modalTitle = modal.querySelector('#statistics-modal-header span');
@@ -327,7 +328,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
                     <button id="export-stats-pdf-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm transition-colors">Gerar PDF</button>
                 </div>
             </div>
-             ${sortedTimes.length > 0 ? `
+            ${sortedTimes.length > 0 ? `
             <div class="bg-white p-4 rounded-lg border">
                 <h3 class="text-md font-semibold text-gray-800 mb-2">Atendimentos por Horário</h3>
                 <div class="max-h-40 overflow-y-auto">
