@@ -228,6 +228,8 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
     }, {});
 
     const totalDemandasGeral = Object.values(statsBySubject).reduce((sum, data) => sum + data.total, 0);
+    const totalDemandasAtendidos = Object.values(statsBySubject).reduce((sum, data) => sum + data.atendidos, 0);
+    const totalDemandasFaltosos = Object.values(statsBySubject).reduce((sum, data) => sum + data.faltosos, 0);
 
     const statsByTime = atendidos.filter(a => a.scheduledTime).reduce((acc, a) => {
         acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
@@ -305,7 +307,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
                 <h3 class="text-lg font-semibold text-gray-800 mb-3">Exportar Relatório</h3>
                 <div class="space-y-2 text-sm">
                     <label class="flex items-center"><input type="checkbox" id="export-general" class="mr-2 h-4 w-4 rounded" checked> Resumo</label>
-                    <label class="flex items-center"><input type="checkbox" id="export-collaborators" class="mr-2 h-4 w-4 rounded" checked> Gráfico por Colaborador</label>
+                    <label class="flex items-center"><input type="checkbox" id="export-collaborators" class="mr-2 h-4 w-4 rounded" checked> Por Colaborador</label>
                     <label class="flex items-center"><input type="checkbox" id="export-subjects" class="mr-2 h-4 w-4 rounded" checked> Por Assunto</label>
                     <label class="flex items-center"><input type="checkbox" id="export-times" class="mr-2 h-4 w-4 rounded" checked> Atend. por Horário</label>
                     <label class="flex items-center"><input type="checkbox" id="export-absentees-time" class="mr-2 h-4 w-4 rounded" checked> Faltosos por Horário</label>
@@ -361,6 +363,15 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
                                     <td class="px-4 py-2 text-right">${totalDemandasGeral > 0 ? ((data.total / totalDemandasGeral) * 100).toFixed(1) : 0}%</td>
                                 </tr>`).join('')}
                         </tbody>
+                        <tfoot class="bg-gray-100 font-bold">
+                            <tr class="border-t-2">
+                                <td class="px-4 py-2">Total</td>
+                                <td class="px-4 py-2 text-center">${totalDemandasGeral}</td>
+                                <td class="px-4 py-2 text-center text-green-600">${totalDemandasAtendidos}</td>
+                                <td class="px-4 py-2 text-center text-red-600">${totalDemandasFaltosos}</td>
+                                <td class="px-4 py-2 text-right">100%</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -529,7 +540,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         const sortedGroups = Object.entries(statsData.statsByGroup).sort(([, a], [, b]) => b.total - a.total);
 
         for (const [groupName, groupData] of sortedGroups) {
-            if (yPos > pageHeight - 200) { // Pre-check for space for title and a small chart
+            if (yPos > pageHeight - 200) { // Pre-check for space
                 doc.addPage();
                 yPos = margin + 20;
             }
@@ -539,51 +550,72 @@ async function exportStatisticsToPDF(pautaName, statsData) {
             const sortedCollaborators = Object.entries(groupData.collaborators).sort(([, a], [, b]) => b - a);
             if (sortedCollaborators.length === 0) continue;
 
-            const labels = sortedCollaborators.map(item => item[0]);
-            const data = sortedCollaborators.map(item => item[1]);
+            const MAX_CHART_ITEMS = 15; // Limite para decidir entre gráfico e tabela
 
-            const canvas = document.createElement('canvas');
-            canvas.width = 500;
-            canvas.height = Math.max(100, labels.length * 25 + 50);
-            const ctx = canvas.getContext('2d');
+            if (sortedCollaborators.length > MAX_CHART_ITEMS) {
+                // Renderiza como tabela se a lista for muito longa
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Colaborador', 'Nº de Atendimentos']],
+                    body: sortedCollaborators,
+                    theme: 'grid',
+                    headStyles: { fillColor: COLOR_SECONDARY, textColor: '#FFFFFF', fontStyle: 'bold' },
+                    didDrawPage: (data) => yPos = data.cursor.y,
+                    margin: { top: yPos, bottom: margin + 20 }
+                });
+                yPos = doc.autoTable.previous.finalY + 20;
+            } else {
+                // Renderiza como gráfico para listas menores
+                const labels = sortedCollaborators.map(item => item[0]);
+                const data = sortedCollaborators.map(item => item[1]);
 
-            const chart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Atendimentos',
-                        data: data,
-                        backgroundColor: 'rgba(79, 112, 156, 0.8)',
-                        borderColor: 'rgba(43, 58, 85, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: false,
-                    animation: false,
-                    plugins: {
-                        legend: { display: false },
-                        title: { display: false }
+                const canvas = document.createElement('canvas');
+                canvas.width = 500;
+                const chartHeight = Math.min(pageHeight / 2, Math.max(100, labels.length * 22 + 60)); // Altura ajustada e com limite
+                canvas.height = chartHeight;
+                const ctx = canvas.getContext('2d');
+
+                const chart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Atendimentos',
+                            data: data,
+                            backgroundColor: 'rgba(79, 112, 156, 0.8)',
+                            borderColor: 'rgba(43, 58, 85, 1)',
+                            borderWidth: 1
+                        }]
                     },
-                    scales: { x: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } } }
+                    options: {
+                        indexAxis: 'y',
+                        responsive: false,
+                        animation: false,
+                        plugins: {
+                            legend: { display: false },
+                            title: { display: false }
+                        },
+                        scales: { x: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } } }
+                    }
+                });
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                const imgData = canvas.toDataURL('image/png');
+                
+                if (yPos + chartHeight > pageHeight - margin) {
+                    doc.addPage();
+                    yPos = margin + 20;
                 }
-            });
-            
-            await new Promise(resolve => setTimeout(resolve, 500));
-            const imgData = canvas.toDataURL('image/png');
-            
-            if (yPos + canvas.height > pageHeight - margin) {
-                doc.addPage();
-                yPos = margin + 20;
+
+                const finalWidth = Math.min(canvas.width, pageWidth - margin * 2);
+                const finalHeight = finalWidth / (canvas.width / canvas.height);
+
+                doc.addImage(imgData, 'PNG', margin, yPos, finalWidth, finalHeight);
+                yPos += finalHeight + 20;
+
+                chart.destroy();
+                canvas.remove();
             }
-
-            doc.addImage(imgData, 'PNG', margin, yPos, canvas.width, canvas.height);
-            yPos += canvas.height + 20;
-
-            chart.destroy();
-            canvas.remove();
         }
     }
 
@@ -592,6 +624,9 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     if (document.getElementById('export-subjects').checked && Object.keys(statsData.statsBySubject).length > 0) {
         addSectionTitle("Demandas por Assunto");
         const totalDemands = Object.values(statsData.statsBySubject).reduce((sum, data) => sum + data.total, 0);
+        const totalAtendidos = Object.values(statsData.statsBySubject).reduce((sum, data) => sum + data.atendidos, 0);
+        const totalFaltosos = Object.values(statsData.statsBySubject).reduce((sum, data) => sum + data.faltosos, 0);
+
         doc.autoTable({
             startY: yPos,
             head: [['Assunto/Demanda', 'Total', 'Atendidos', 'Faltosos', '% do Total']],
@@ -601,8 +636,10 @@ async function exportStatisticsToPDF(pautaName, statsData) {
                     subject, data.total, data.atendidos, data.faltosos,
                     totalDemands > 0 ? ((data.total / totalDemands) * 100).toFixed(1) + '%' : '0%'
                 ]),
+            foot: [['Total Geral', totalDemands, totalAtendidos, totalFaltosos, '100%']],
             theme: 'grid',
             headStyles: { fillColor: COLOR_PRIMARY, textColor: '#FFFFFF', fontStyle: 'bold' },
+            footStyles: { fillColor: [240, 240, 240], textColor: COLOR_TEXT, fontStyle: 'bold' },
             didDrawPage: (data) => yPos = data.cursor.y,
             margin: { top: yPos, bottom: margin + 20 }
         });
@@ -635,3 +672,4 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     addHeaderAndFooter();
     doc.save(`estatisticas_${pautaName.replace(/\s+/g, '_')}.pdf`);
 }
+
