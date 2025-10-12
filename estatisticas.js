@@ -12,9 +12,13 @@ function makeModalInteractive(modal) {
 
     const content = document.getElementById('statistics-content');
     if (!content) {
-        console.error("#statistics-content não encontrado.");
-        return;
+        // Se o conteúdo não existir no HTML, cria-o.
+        // Isso é crucial para a primeira inicialização.
+        const newContent = document.createElement('div');
+        newContent.id = 'statistics-content';
+        modal.appendChild(newContent);
     }
+
 
     Object.assign(modal.style, {
         position: 'fixed', top: '50%', left: '50%',
@@ -67,11 +71,14 @@ function makeModalInteractive(modal) {
     buttons.append(minBtn, maxBtn, closeBtn);
     header.append(title, buttons);
 
-    content.style.flexGrow = '1';
-    content.style.overflow = 'hidden';
-    content.style.padding = '0';
-    content.classList.add('bg-gray-50');
-
+    const contentDiv = document.getElementById('statistics-content');
+    if (contentDiv) {
+        contentDiv.style.flexGrow = '1';
+        contentDiv.style.overflow = 'hidden';
+        contentDiv.style.padding = '0';
+        contentDiv.classList.add('bg-gray-50');
+    }
+    
     modal.prepend(header);
 
     let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
@@ -122,14 +129,15 @@ function makeModalInteractive(modal) {
     };
 
     minBtn.onclick = () => {
+        const contentDiv = document.getElementById('statistics-content');
         const isMinimized = modal.classList.toggle('minimized');
         if (isMinimized) {
             originalState.height = modal.style.height;
-            content.style.display = 'none';
+            if(contentDiv) contentDiv.style.display = 'none';
             modal.style.height = header.offsetHeight + 'px';
             modal.style.resize = 'none';
         } else {
-            content.style.display = 'block';
+            if(contentDiv) contentDiv.style.display = 'block';
             modal.style.height = originalState.height || '90vh';
             modal.style.resize = 'both';
         }
@@ -153,25 +161,40 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
         return;
     }
 
-    modal.innerHTML = '';
-
-    const content = document.createElement('div');
-    content.id = 'statistics-content';
-    modal.appendChild(content);
-
+    // --- INÍCIO DA CORREÇÃO ---
+    let content = document.getElementById('statistics-content');
+    
+    // Garante que o modal seja interativo e tenha a estrutura base na primeira chamada.
     makeModalInteractive(modal);
+    
+    // Atribui a referência a 'content' novamente, caso tenha sido criada por makeModalInteractive
+    if (!content) {
+        content = document.getElementById('statistics-content');
+    }
+
+    // Garante que o estado visual está correto ao reabrir.
+    if (modal.classList.contains('minimized')) {
+        modal.classList.remove('minimized');
+        modal.style.resize = 'both';
+    }
+    if (content) {
+        content.style.display = 'block'; // Garante que o conteúdo é visível
+    }
+    // --- FIM DA CORREÇÃO ---
 
     const modalTitle = modal.querySelector('#statistics-modal-header span');
     if (modalTitle) modalTitle.textContent = `Estatísticas - ${pautaName}`;
 
-    content.innerHTML = `<div class="flex items-center justify-center h-full"><p class="text-gray-600">Calculando estatísticas...</p></div>`;
+    if (content) {
+        content.innerHTML = `<div class="flex items-center justify-center h-full"><p class="text-gray-600">Calculando estatísticas...</p></div>`;
+    }
+    
     modal.style.display = 'flex';
     modal.classList.remove('hidden');
 
     const atendidos = allAssisted.filter(a => a.status === 'atendido');
     const faltosos = allAssisted.filter(a => a.status === 'faltoso');
 
-    // Alterado: Agrupa colaboradores por 'equipe' com base na estrutura do index.html
     const statsByGroup = atendidos.reduce((acc, a) => {
         const attendantIsObject = typeof a.attendant === 'object' && a.attendant !== null;
         const attendantName = attendantIsObject ? a.attendant.nome : (a.attendant || 'Não informado');
@@ -243,7 +266,6 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
             <p class="text-xs text-gray-600 mt-1">Tempo Médio (delegação)</p>
         </div>` : '';
 
-    // Alterado: Gera tabelas de colaboradores agrupadas
     const collaboratorsHTML = Object.entries(statsByGroup).sort(([,a],[,b]) => b.total - a.total).map(([groupName, groupData]) => {
         const collaboratorsRows = Object.entries(groupData.collaborators).sort(([,a],[,b]) => b-a).map(([name, count]) => `
             <tr class="border-b">
@@ -351,28 +373,30 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
         </div>
     </div>
     `;
-    content.innerHTML = html;
+    if(content) content.innerHTML = html;
 
     const exportBtn = document.getElementById('export-stats-pdf-btn');
-    exportBtn.addEventListener('click', () => {
-        exportBtn.textContent = 'Gerando PDF...';
-        exportBtn.disabled = true;
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            exportBtn.textContent = 'Gerando PDF...';
+            exportBtn.disabled = true;
 
-        exportStatisticsToPDF(pautaName, {
-            atendidosCount: atendidos.length,
-            faltososCount: faltosos.length,
-            avgTimeDirect,
-            avgTimeDelegated,
-            useDelegationFlow,
-            statsByGroup,
-            statsBySubject,
-            statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
-            statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
-        }).finally(() => {
-            exportBtn.textContent = 'Gerar PDF';
-            exportBtn.disabled = false;
+            exportStatisticsToPDF(pautaName, {
+                atendidosCount: atendidos.length,
+                faltososCount: faltosos.length,
+                avgTimeDirect,
+                avgTimeDelegated,
+                useDelegationFlow,
+                statsByGroup,
+                statsBySubject,
+                statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
+                statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
+            }).finally(() => {
+                exportBtn.textContent = 'Gerar PDF';
+                exportBtn.disabled = false;
+            });
         });
-    });
+    }
 }
 
 /**
