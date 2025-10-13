@@ -295,24 +295,16 @@ function populateActionSelection() {
     const container = document.getElementById('document-action-selection');
     if (!container) return;
 
-    // --- Caixa de Pesquisa (NOVO) ---
-    // Adiciona a caixa de pesquisa se ela ainda não existir.
     if (!container.querySelector('#action-search-input')) {
         const searchInput = document.createElement('input');
         searchInput.id = 'action-search-input';
         searchInput.type = 'text';
         searchInput.placeholder = 'Pesquisar por assunto...';
         searchInput.className = 'w-full p-2 border border-gray-300 rounded-md mb-4 focus:ring-blue-500 focus:border-blue-500';
-        
-        // Adiciona o evento de busca diretamente ao campo criado
         searchInput.addEventListener('input', handleActionSearch);
-
-        // Insere a caixa de pesquisa no início do container
         container.prepend(searchInput);
     }
 
-
-    // Evita recriar a lista de botões se ela já existir.
     if (container.querySelector('.action-grid-container')) {
         return;
     }
@@ -329,11 +321,9 @@ function populateActionSelection() {
         const button = document.createElement('button');
         button.dataset.action = actionKey;
         button.className = 'w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition';
-
         const span = document.createElement('span');
         span.className = 'font-semibold text-gray-800';
         span.textContent = `${index + 1}. ${actionData.title}`;
-
         button.appendChild(span);
         gridContainer.appendChild(button);
     });
@@ -403,10 +393,8 @@ const normalizeText = (str) => {
 function handleActionSelect(e) {
     const actionButton = e.target.closest('button[data-action]');
     if (!actionButton) return;
-
     const actionKey = actionButton.dataset.action;
     renderChecklist(actionKey);
-
     actionSelectionView.classList.add('hidden');
     checklistView.classList.remove('hidden');
     checklistView.classList.add('flex');
@@ -417,7 +405,6 @@ function handleBack() {
     checklistView.classList.remove('flex');
     actionSelectionView.classList.remove('hidden');
     
-    // Limpa o campo de busca ao voltar
     const searchInput = document.getElementById('action-search-input');
     if (searchInput) {
         searchInput.value = '';
@@ -430,15 +417,9 @@ async function handleSave() {
         if (showNotification) showNotification("Erro: Faltam dados para salvar.", "error");
         return;
     }
-
     const checkedCheckboxes = checklistContainer.querySelectorAll('input[type="checkbox"]:checked');
     const checkedIds = Array.from(checkedCheckboxes).map(cb => cb.id);
-
-    const checklistData = {
-        action: currentChecklistAction,
-        checkedIds: checkedIds
-    };
-
+    const checklistData = { action: currentChecklistAction, checkedIds: checkedIds };
     try {
         const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
@@ -469,12 +450,6 @@ function handleActionSearch(e) {
     });
 }
 
-/**
- * **NOVO**
- * Carrega um script dinamicamente na página.
- * @param {string} src - A URL do script a ser carregado.
- * @returns {Promise}
- */
 function loadScript(src) {
     return new Promise((resolve, reject) => {
         if (document.querySelector(`script[src="${src}"]`)) {
@@ -489,89 +464,112 @@ function loadScript(src) {
 }
 
 /**
- * **MÉTODO SUGERIDO (MELHORADO)**
- * Gera um PDF com layout de documento, incluindo todos os itens do checklist,
- * independentemente da barra de rolagem.
+ * **MÉTODO ATUALIZADO**
+ * Gera um arquivo DOCX (Word) com layout profissional e todos os itens.
  */
-async function handleGeneratePdf() {
+async function handleGenerateDocx() {
     if (printChecklistBtn) {
         printChecklistBtn.disabled = true;
-        printChecklistBtn.textContent = 'Gerando PDF...';
+        printChecklistBtn.textContent = 'Gerando DOCX...';
     }
 
     try {
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+        // Carrega as bibliotecas necessárias
+        await Promise.all([
+            loadScript('https://unpkg.com/docx@8.5.0/build/index.js'),
+            loadScript('https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js')
+        ]);
 
         const title = checklistTitle.textContent;
         const assistedName = assistedNameEl.textContent;
         const data = documentsData[currentChecklistAction];
-        
-        // Coleta todos os IDs dos checkboxes marcados na interface
         const checkedIds = Array.from(checklistContainer.querySelectorAll('input:checked')).map(cb => cb.id);
 
-        // --- Montagem do PDF ---
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const margin = 40;
-        let y = margin; // Posição vertical inicial
+        const { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel } = docx;
 
-        // Função para adicionar texto e controlar a quebra de página
-        const addText = (text, size, isBold, indent = 0) => {
-            if (y > pageHeight - margin) { // Verifica se precisa de nova página
-                pdf.addPage();
-                y = margin;
-            }
-            pdf.setFontSize(size);
-            pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
-            pdf.text(text, margin + indent, y);
-            y += size * 1.2; // Incrementa a posição vertical
-        };
+        const children = [
+            new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                    new TextRun({
+                        text: "Checklist de Documentos",
+                        bold: true,
+                        size: 32, // 16pt
+                        color: "333333",
+                    }),
+                ],
+            }),
+            new Paragraph({ text: "" }), // Espaçamento
+            new Paragraph({
+                children: [ new TextRun({ text: `Assistido(a): ${assistedName}`, size: 24 })], // 12pt
+            }),
+            new Paragraph({
+                children: [ new TextRun({ text: `Assunto: ${title}`, size: 24 })], // 12pt
+            }),
+            new Paragraph({ text: "" }), // Espaçamento
+        ];
 
-        // Títulos Principais
-        addText('Checklist de Documentos', 22, true);
-        y += 10;
-        addText(`Assistido(a): ${assistedName}`, 14, false);
-        addText(`Assunto: ${title}`, 14, false);
-        y += 20;
-
-        // Itera sobre as seções e documentos do objeto 'documentsData'
         data.sections.forEach((section, sectionIndex) => {
-            addText(section.title, 16, true); // Título da seção em negrito
-            y += 5;
+            children.push(new Paragraph({
+                children: [
+                    new TextRun({
+                        text: section.title,
+                        bold: true,
+                        size: 28, // 14pt
+                        color: "555555",
+                    }),
+                ],
+                spacing: { before: 200, after: 100 },
+            }));
 
             section.docs.forEach((docText, docIndex) => {
                 const checkboxId = `doc-${currentChecklistAction}-${sectionIndex}-${docIndex}`;
                 const isChecked = checkedIds.includes(checkboxId);
-                const symbol = isChecked ? '☑' : '☐'; // Usa caracteres que funcionam bem em PDF
+                const symbol = isChecked ? "☑" : "☐";
 
-                addText(`${symbol} ${docText}`, 12, false, 15); // Adiciona o texto com indentação
+                children.push(new Paragraph({
+                    indent: { left: 400 },
+                    children: [
+                        new TextRun({
+                            text: `${symbol}  `,
+                            font: "Wingdings 2", // Usa uma fonte que tem checkboxes bonitos, mas unicode é mais seguro
+                            size: 24, // 12pt
+                        }),
+                        new TextRun({
+                            text: docText,
+                            size: 24, // 12pt
+                        }),
+                    ],
+                }));
             });
-            y += 15; // Espaço entre seções
         });
 
-        pdf.save(`Checklist - ${assistedName} - ${title}.pdf`);
+        const doc = new Document({
+            sections: [{
+                properties: {},
+                children: children,
+            }],
+        });
+
+        const blob = await Packer.toBlob(doc);
+        saveAs(blob, `Checklist - ${assistedName} - ${title}.docx`);
 
     } catch (error) {
-        console.error("Erro ao gerar PDF:", error);
-        if (showNotification) showNotification("Não foi possível gerar o PDF.", "error");
+        console.error("Erro ao gerar DOCX:", error);
+        if (showNotification) showNotification("Não foi possível gerar o arquivo DOCX.", "error");
     } finally {
         if (printChecklistBtn) {
             printChecklistBtn.disabled = false;
-            printChecklistBtn.textContent = 'Baixar PDF';
+            printChecklistBtn.textContent = 'Baixar DOCX';
         }
     }
 }
-
 
 function closeModal() {
     modal.classList.add('hidden');
 }
 
-
 // --- Funções Exportadas ---
-
 export function setupDetailsModal(config) {
     db = config.db;
     getUpdatePayload = config.getUpdatePayload;
@@ -584,7 +582,7 @@ export function setupDetailsModal(config) {
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
     
-    if (printChecklistBtn) printChecklistBtn.addEventListener('click', handleGeneratePdf);
+    if (printChecklistBtn) printChecklistBtn.addEventListener('click', handleGenerateDocx);
 }
 
 export function openDetailsModal(config) {
@@ -615,3 +613,4 @@ export function openDetailsModal(config) {
     
     modal.classList.remove('hidden');
 }
+
