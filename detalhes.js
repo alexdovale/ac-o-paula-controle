@@ -702,3 +702,4 @@ export function openDetailsModal(config) {
     modal.classList.remove('hidden');
 }
 
+
