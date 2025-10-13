@@ -372,28 +372,76 @@ function renderChecklist(actionKey) {
         checklistContainer.appendChild(sectionDiv);
     });
 
-    // --- NOVO: Adiciona o campo de observação ---
-    const observationDiv = document.createElement('div');
-    observationDiv.className = 'mt-6';
+    // --- NOVO: Adiciona a seção de observações estruturadas ---
+    const observationContainer = document.createElement('div');
+    observationContainer.className = 'mt-6';
 
-    const observationLabel = document.createElement('label');
-    observationLabel.htmlFor = 'checklist-observation';
-    observationLabel.className = 'font-bold text-md text-gray-700 mb-2 block';
-    observationLabel.textContent = 'Observações';
+    const observationLabel = document.createElement('h4');
+    observationLabel.className = 'font-bold text-md text-gray-700 mb-2 mt-3 border-b pb-1';
+    observationLabel.textContent = 'Observações do Atendimento';
+    observationContainer.appendChild(observationLabel);
 
-    const observationTextarea = document.createElement('textarea');
-    observationTextarea.id = 'checklist-observation';
-    observationTextarea.className = 'w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 h-24';
-    observationTextarea.placeholder = 'Adicione informações relevantes aqui...';
+    const observationOptions = [
+        'Documentação Pendente',
+        'Orientações Prestadas',
+        'Assistido Ciente',
+        'Encaminhamento Realizado'
+    ];
 
-    // Preenche com a observação salva, se houver
-    if (savedChecklist && savedChecklist.observation) {
-        observationTextarea.value = savedChecklist.observation;
+    const optionsList = document.createElement('ul');
+    optionsList.className = 'space-y-2 mt-2';
+    observationContainer.appendChild(optionsList);
+
+    const savedObservations = savedChecklist?.observations?.selected || [];
+
+    observationOptions.forEach(optionText => {
+        const listItem = document.createElement('li');
+        const label = document.createElement('label');
+        label.className = 'flex items-center text-gray-800 cursor-pointer';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500 mr-3 observation-option';
+        checkbox.value = optionText;
+        if (savedObservations.includes(optionText)) {
+            checkbox.checked = true;
+        }
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(optionText));
+        listItem.appendChild(label);
+        optionsList.appendChild(listItem);
+    });
+
+    // Opção "Outras Observações" com campo de texto
+    const otherListItem = document.createElement('li');
+    const otherLabel = document.createElement('label');
+    otherLabel.className = 'flex items-center text-gray-800 cursor-pointer';
+    const otherCheckbox = document.createElement('input');
+    otherCheckbox.type = 'checkbox';
+    otherCheckbox.id = 'other-observation-checkbox';
+    otherCheckbox.className = 'h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500 mr-3';
+    
+    const otherTextarea = document.createElement('textarea');
+    otherTextarea.id = 'other-observation-text';
+    otherTextarea.className = 'w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 h-20 mt-2 hidden';
+    otherTextarea.placeholder = 'Especifique outras observações...';
+    
+    if (savedChecklist?.observations?.otherText) {
+        otherCheckbox.checked = true;
+        otherTextarea.value = savedChecklist.observations.otherText;
+        otherTextarea.classList.remove('hidden');
     }
 
-    observationDiv.appendChild(observationLabel);
-    observationDiv.appendChild(observationTextarea);
-    checklistContainer.appendChild(observationDiv);
+    otherCheckbox.addEventListener('change', () => {
+        otherTextarea.classList.toggle('hidden', !otherCheckbox.checked);
+    });
+
+    otherLabel.appendChild(otherCheckbox);
+    otherLabel.appendChild(document.createTextNode('Outras Observações'));
+    otherListItem.appendChild(otherLabel);
+    otherListItem.appendChild(otherTextarea);
+    optionsList.appendChild(otherListItem);
+
+    checklistContainer.appendChild(observationContainer);
 }
 
 const normalizeText = (str) => {
@@ -431,16 +479,33 @@ async function handleSave() {
         return;
     }
     const checkedCheckboxes = checklistContainer.querySelectorAll('input[type="checkbox"]:checked');
-    const checkedIds = Array.from(checkedCheckboxes).map(cb => cb.id);
+    const checkedIds = Array.from(checkedCheckboxes)
+        .filter(cb => !cb.classList.contains('observation-option') && cb.id !== 'other-observation-checkbox')
+        .map(cb => cb.id);
 
-    // --- NOVO: Captura o valor da observação ---
-    const observationText = document.getElementById('checklist-observation')?.value || '';
+    // --- NOVO: Captura as observações estruturadas ---
+    const selectedObservations = Array.from(checklistContainer.querySelectorAll('.observation-option:checked'))
+                                     .map(cb => cb.value);
+    
+    const otherCheckbox = document.getElementById('other-observation-checkbox');
+    let otherText = '';
+    if (otherCheckbox && otherCheckbox.checked) {
+        otherText = document.getElementById('other-observation-text')?.value || '';
+        // Adiciona "Outras Observações" à lista se não estiver lá, para consistência
+        if (!selectedObservations.includes('Outras Observações')) {
+            // Este texto não é salvo, apenas a presença do `otherText` indica que foi selecionado
+        }
+    }
     
     const checklistData = { 
         action: currentChecklistAction, 
         checkedIds: checkedIds,
-        observation: observationText // --- Adiciona a observação ao objeto salvo ---
+        observations: {
+            selected: selectedObservations,
+            otherText: otherText
+        }
     };
+
     try {
         const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
@@ -491,13 +556,11 @@ async function handleGenerateDocx() {
     }
 
     try {
-        // CORRIGIDO: Troca o CDN para um mais estável (jsdelivr)
         await Promise.all([
             loadScript('https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js'),
             loadScript('https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js')
         ]);
         
-        // CORRIGIDO: Garante que a biblioteca foi carregada antes de usar
         if (!window.docx) {
             throw new Error('A biblioteca docx não foi carregada.');
         }
@@ -505,43 +568,34 @@ async function handleGenerateDocx() {
         const title = checklistTitle.textContent;
         const assistedName = assistedNameEl.textContent;
         const data = documentsData[currentChecklistAction];
-        const checkedIds = Array.from(checklistContainer.querySelectorAll('input:checked')).map(cb => cb.id);
-        const observationText = document.getElementById('checklist-observation')?.value || '';
+        const checkedIds = Array.from(checklistContainer.querySelectorAll('input[type="checkbox"]:checked'))
+            .filter(cb => !cb.classList.contains('observation-option') && cb.id !== 'other-observation-checkbox')
+            .map(cb => cb.id);
+
+        // --- NOVO: Captura as observações para o DOCX ---
+        const selectedObservations = Array.from(checklistContainer.querySelectorAll('.observation-option:checked')).map(cb => cb.value);
+        const otherCheckbox = document.getElementById('other-observation-checkbox');
+        let otherText = '';
+        if (otherCheckbox && otherCheckbox.checked) {
+            otherText = document.getElementById('other-observation-text')?.value || '';
+        }
 
         const { Document, Packer, Paragraph, TextRun, AlignmentType } = window.docx;
 
         const children = [
             new Paragraph({
                 alignment: AlignmentType.CENTER,
-                children: [
-                    new TextRun({
-                        text: "Checklist de Documentos",
-                        bold: true,
-                        size: 32, // 16pt
-                        color: "333333",
-                    }),
-                ],
+                children: [ new TextRun({ text: "Checklist de Documentos", bold: true, size: 32, color: "333333" }) ],
             }),
             new Paragraph({ text: "" }),
-            new Paragraph({
-                children: [ new TextRun({ text: `Assistido(a): ${assistedName}`, size: 24 })], // 12pt
-            }),
-            new Paragraph({
-                children: [ new TextRun({ text: `Assunto: ${title}`, size: 24 })], // 12pt
-            }),
+            new Paragraph({ children: [ new TextRun({ text: `Assistido(a): ${assistedName}`, size: 24 })] }),
+            new Paragraph({ children: [ new TextRun({ text: `Assunto: ${title}`, size: 24 })] }),
             new Paragraph({ text: "" }),
         ];
 
         data.sections.forEach((section, sectionIndex) => {
             children.push(new Paragraph({
-                children: [
-                    new TextRun({
-                        text: section.title,
-                        bold: true,
-                        size: 28, // 14pt
-                        color: "555555",
-                    }),
-                ],
+                children: [ new TextRun({ text: section.title, bold: true, size: 28, color: "555555" }) ],
                 spacing: { before: 200, after: 100 },
             }));
 
@@ -549,51 +603,40 @@ async function handleGenerateDocx() {
                 const checkboxId = `doc-${currentChecklistAction}-${sectionIndex}-${docIndex}`;
                 const isChecked = checkedIds.includes(checkboxId);
                 const symbol = isChecked ? "☑" : "☐";
-
                 children.push(new Paragraph({
                     indent: { left: 400 },
                     children: [
-                        new TextRun({
-                            text: `${symbol}  `,
-                            size: 24, // 12pt
-                        }),
-                        new TextRun({
-                            text: docText,
-                            size: 24, // 12pt
-                        }),
+                        new TextRun({ text: `${symbol}  `, size: 24 }),
+                        new TextRun({ text: docText, size: 24 }),
                     ],
                 }));
             });
         });
 
-        if (observationText.trim() !== '') {
+        // --- NOVO: Adiciona a seção de observações ao DOCX ---
+        if (selectedObservations.length > 0 || otherText.trim() !== '') {
             children.push(new Paragraph({ text: "" })); 
             children.push(new Paragraph({
-                children: [
-                    new TextRun({
-                        text: "Observações",
-                        bold: true,
-                        size: 28, // 14pt
-                        color: "555555",
-                    }),
-                ],
+                children: [ new TextRun({ text: "Observações do Atendimento", bold: true, size: 28, color: "555555" }) ],
                 spacing: { before: 200, after: 100 },
             }));
             
-            observationText.split('\n').forEach(line => {
+            selectedObservations.forEach(obsText => {
                 children.push(new Paragraph({
-                    children: [new TextRun({ text: line, size: 24 })], // 12pt
+                    indent: { left: 400 },
+                    children: [ new TextRun({ text: `• ${obsText}`, size: 24 }) ],
                 }));
             });
+
+            if (otherText.trim() !== '') {
+                 children.push(new Paragraph({
+                    indent: { left: 400 },
+                    children: [ new TextRun({ text: `• Outras: ${otherText}`, size: 24 }) ],
+                }));
+            }
         }
 
-        const doc = new Document({
-            sections: [{
-                properties: {},
-                children: children,
-            }],
-        });
-
+        const doc = new Document({ sections: [{ properties: {}, children: children }] });
         const blob = await Packer.toBlob(doc);
         window.saveAs(blob, `Checklist - ${assistedName} - ${title}.docx`);
 
