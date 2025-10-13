@@ -491,11 +491,16 @@ async function handleGenerateDocx() {
     }
 
     try {
-        // Carrega as bibliotecas necessárias a partir de um CDN mais robusto
+        // CORRIGIDO: Troca o CDN para um mais estável (jsdelivr)
         await Promise.all([
             loadScript('https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js'),
             loadScript('https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js')
         ]);
+        
+        // CORRIGIDO: Garante que a biblioteca foi carregada antes de usar
+        if (!window.docx) {
+            throw new Error('A biblioteca docx não foi carregada.');
+        }
 
         const title = checklistTitle.textContent;
         const assistedName = assistedNameEl.textContent;
@@ -503,7 +508,6 @@ async function handleGenerateDocx() {
         const checkedIds = Array.from(checklistContainer.querySelectorAll('input:checked')).map(cb => cb.id);
         const observationText = document.getElementById('checklist-observation')?.value || '';
 
-        // Acessa a biblioteca a partir do objeto window para garantir
         const { Document, Packer, Paragraph, TextRun, AlignmentType } = window.docx;
 
         const children = [
@@ -562,9 +566,8 @@ async function handleGenerateDocx() {
             });
         });
 
-        // --- NOVO: Adiciona a seção de observação ao DOCX se houver texto ---
         if (observationText.trim() !== '') {
-            children.push(new Paragraph({ text: "" })); // Espaçamento
+            children.push(new Paragraph({ text: "" })); 
             children.push(new Paragraph({
                 children: [
                     new TextRun({
@@ -577,7 +580,6 @@ async function handleGenerateDocx() {
                 spacing: { before: 200, after: 100 },
             }));
             
-            // Adiciona cada linha da observação como um parágrafo
             observationText.split('\n').forEach(line => {
                 children.push(new Paragraph({
                     children: [new TextRun({ text: line, size: 24 })], // 12pt
