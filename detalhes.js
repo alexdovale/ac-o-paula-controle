@@ -287,10 +287,6 @@ const cancelBtn = document.getElementById('cancel-checklist-btn');
 
 // --- Funções Internas ---
 
-/**
- * Preenche a área de seleção de ações com botões gerados dinamicamente
- * a partir do objeto documentsData.
- */
 function populateActionSelection() {
     const container = document.getElementById('document-action-selection');
     if (!container) return;
@@ -332,11 +328,6 @@ function populateActionSelection() {
     container.appendChild(gridContainer);
 }
 
-
-/**
- * Renderiza a lista de verificação de documentos para uma ação específica.
- * @param {string} actionKey - A chave da ação (ex: 'alimentos_fixacao').
- */
 function renderChecklist(actionKey) {
     currentChecklistAction = actionKey;
     const data = documentsData[actionKey];
@@ -386,7 +377,6 @@ const normalizeText = (str) => {
     if (!str) return '';
     return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 };
-
 
 // --- Manipuladores de Eventos ---
 
@@ -463,10 +453,6 @@ function loadScript(src) {
     });
 }
 
-/**
- * **MÉTODO ATUALIZADO**
- * Gera um arquivo DOCX (Word) com layout profissional e todos os itens.
- */
 async function handleGenerateDocx() {
     if (printChecklistBtn) {
         printChecklistBtn.disabled = true;
@@ -474,9 +460,9 @@ async function handleGenerateDocx() {
     }
 
     try {
-        // Carrega as bibliotecas necessárias
+        // Carrega as bibliotecas necessárias a partir de um CDN mais robusto
         await Promise.all([
-            loadScript('https://unpkg.com/docx@8.5.0/build/index.js'),
+            loadScript('https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js'),
             loadScript('https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js')
         ]);
 
@@ -485,7 +471,8 @@ async function handleGenerateDocx() {
         const data = documentsData[currentChecklistAction];
         const checkedIds = Array.from(checklistContainer.querySelectorAll('input:checked')).map(cb => cb.id);
 
-        const { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel } = docx;
+        // Acessa a biblioteca a partir do objeto window para garantir
+        const { Document, Packer, Paragraph, TextRun, AlignmentType } = window.docx;
 
         const children = [
             new Paragraph({
@@ -499,14 +486,14 @@ async function handleGenerateDocx() {
                     }),
                 ],
             }),
-            new Paragraph({ text: "" }), // Espaçamento
+            new Paragraph({ text: "" }),
             new Paragraph({
                 children: [ new TextRun({ text: `Assistido(a): ${assistedName}`, size: 24 })], // 12pt
             }),
             new Paragraph({
                 children: [ new TextRun({ text: `Assunto: ${title}`, size: 24 })], // 12pt
             }),
-            new Paragraph({ text: "" }), // Espaçamento
+            new Paragraph({ text: "" }),
         ];
 
         data.sections.forEach((section, sectionIndex) => {
@@ -532,7 +519,6 @@ async function handleGenerateDocx() {
                     children: [
                         new TextRun({
                             text: `${symbol}  `,
-                            font: "Wingdings 2", // Usa uma fonte que tem checkboxes bonitos, mas unicode é mais seguro
                             size: 24, // 12pt
                         }),
                         new TextRun({
@@ -552,7 +538,7 @@ async function handleGenerateDocx() {
         });
 
         const blob = await Packer.toBlob(doc);
-        saveAs(blob, `Checklist - ${assistedName} - ${title}.docx`);
+        window.saveAs(blob, `Checklist - ${assistedName} - ${title}.docx`);
 
     } catch (error) {
         console.error("Erro ao gerar DOCX:", error);
