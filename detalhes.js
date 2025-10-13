@@ -556,11 +556,13 @@ async function handleGenerateDocx() {
     }
 
     try {
+        // CORRIGIDO: Troca o CDN para um mais estável (jsdelivr)
         await Promise.all([
             loadScript('https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js'),
             loadScript('https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js')
         ]);
         
+        // CORRIGIDO: Garante que a biblioteca foi carregada antes de usar
         if (!window.docx) {
             throw new Error('A biblioteca docx não foi carregada.');
         }
