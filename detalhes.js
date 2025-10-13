@@ -371,6 +371,29 @@ function renderChecklist(actionKey) {
         sectionDiv.appendChild(list);
         checklistContainer.appendChild(sectionDiv);
     });
+
+    // --- NOVO: Adiciona o campo de observação ---
+    const observationDiv = document.createElement('div');
+    observationDiv.className = 'mt-6';
+
+    const observationLabel = document.createElement('label');
+    observationLabel.htmlFor = 'checklist-observation';
+    observationLabel.className = 'font-bold text-md text-gray-700 mb-2 block';
+    observationLabel.textContent = 'Observações';
+
+    const observationTextarea = document.createElement('textarea');
+    observationTextarea.id = 'checklist-observation';
+    observationTextarea.className = 'w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 h-24';
+    observationTextarea.placeholder = 'Adicione informações relevantes aqui...';
+
+    // Preenche com a observação salva, se houver
+    if (savedChecklist && savedChecklist.observation) {
+        observationTextarea.value = savedChecklist.observation;
+    }
+
+    observationDiv.appendChild(observationLabel);
+    observationDiv.appendChild(observationTextarea);
+    checklistContainer.appendChild(observationDiv);
 }
 
 const normalizeText = (str) => {
@@ -409,7 +432,15 @@ async function handleSave() {
     }
     const checkedCheckboxes = checklistContainer.querySelectorAll('input[type="checkbox"]:checked');
     const checkedIds = Array.from(checkedCheckboxes).map(cb => cb.id);
-    const checklistData = { action: currentChecklistAction, checkedIds: checkedIds };
+
+    // --- NOVO: Captura o valor da observação ---
+    const observationText = document.getElementById('checklist-observation')?.value || '';
+    
+    const checklistData = { 
+        action: currentChecklistAction, 
+        checkedIds: checkedIds,
+        observation: observationText // --- Adiciona a observação ao objeto salvo ---
+    };
     try {
         const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
@@ -470,6 +501,7 @@ async function handleGenerateDocx() {
         const assistedName = assistedNameEl.textContent;
         const data = documentsData[currentChecklistAction];
         const checkedIds = Array.from(checklistContainer.querySelectorAll('input:checked')).map(cb => cb.id);
+        const observationText = document.getElementById('checklist-observation')?.value || '';
 
         // Acessa a biblioteca a partir do objeto window para garantir
         const { Document, Packer, Paragraph, TextRun, AlignmentType } = window.docx;
@@ -529,6 +561,29 @@ async function handleGenerateDocx() {
                 }));
             });
         });
+
+        // --- NOVO: Adiciona a seção de observação ao DOCX se houver texto ---
+        if (observationText.trim() !== '') {
+            children.push(new Paragraph({ text: "" })); // Espaçamento
+            children.push(new Paragraph({
+                children: [
+                    new TextRun({
+                        text: "Observações",
+                        bold: true,
+                        size: 28, // 14pt
+                        color: "555555",
+                    }),
+                ],
+                spacing: { before: 200, after: 100 },
+            }));
+            
+            // Adiciona cada linha da observação como um parágrafo
+            observationText.split('\n').forEach(line => {
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: line, size: 24 })], // 12pt
+                }));
+            });
+        }
 
         const doc = new Document({
             sections: [{
@@ -599,3 +654,4 @@ export function openDetailsModal(config) {
     
     modal.classList.remove('hidden');
 }
+
