@@ -2749,10 +2749,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         }
                     });
                     
-                    docPDF.save(`relatorio_${pautaName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
-                });
-                    });
-            document.getElementById('toggle-faltosos-btn').addEventListener('click', (e) => {
+                                     docPDF.save(`relatorio_${pautaName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+                        }); // <-- Este fecha o event listener
+                            }); // <-- ESTA CHAVE DE FECHAMENTO ESTÁ DUPLICADA! (Linha que provavelmente corresponde à 3505)
+                            
+                document.getElementById('toggle-faltosos-btn').addEventListener('click', (e) => {
+                // ...
                 const btn = e.currentTarget;
                 const pautaColumn = document.getElementById('pauta-column');
                 const faltososColumn = document.getElementById('faltosos-column');
@@ -3624,6 +3626,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
