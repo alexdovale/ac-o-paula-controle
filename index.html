@@ -1149,9 +1149,20 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
 
+            // Trecho corrigido na função togglePautaLock:
+
             const actionPanelButtons = document.querySelectorAll('#actions-panel button');
+            
             actionPanelButtons.forEach(btn => {
-                btn.disabled = isClosed;
+                // 1. O botão Reabrir Pauta só deve estar visível se a pauta estiver fechada
+                if (btn.id === 'reopen-pauta-btn') {
+                    // Se for o botão de reabrir, ele deve estar SEMPRE ativo quando visível
+                    btn.disabled = false; 
+                } 
+                // 2. Todos os outros botões (Fechar Pauta, Editar, Zerar, etc.) são desabilitados
+                else {
+                    btn.disabled = isClosed;
+                }
             });
 
             const actionButtons = document.querySelectorAll('.check-in-btn, .delegate-finalization-btn, .attend-directly-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn, .toggle-confirmed-atendido, .toggle-confirmed-faltoso'); // Adicionado
@@ -3499,6 +3510,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
