@@ -2625,7 +2625,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             
                 // ==========================================================
-                // FUNÇÕES DE UTILIDADE PARA O PDF
+                // FUNÇÕES DE UTILIDADE PARA O PDF (Definidas LOCALMENTE)
                 // ==========================================================
             
                 const cleanString = (str) => String(str || '').replace(/"/g, '');
@@ -2642,8 +2642,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             
                 /**
                  * Calcula e formata a duração para HH:mm ou X min.
-                 * @param {number} totalMinutes - Total de minutos de duração.
-                 * @returns {string} Duração formatada.
                  */
                 const calculateDuration = (totalMinutes) => {
                     if (totalMinutes === null || totalMinutes < 0) return 'N/A';
@@ -2673,7 +2671,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 docPDF.text(`Total de Assuntos: ${totalSubjects}`, 150, 36);
             
             
-                // NOVA ORDEM DE COLUNAS: Agendado e Chegou vêm antes de Finalizado
+                // ORDEM DE COLUNAS: Agendado e Chegou vêm antes de Finalizado
                 const tableColumn = ["#", "Nome", "Agendado", "Chegou", "Finalizado", "Duração", "Assunto Principal", "Atendente", "Confirmado"]; 
                 const tableRows = [];
             
@@ -2696,6 +2694,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                              duration = calculateDuration(totalMins);
                         }
                         
+                        // Uso de toLocaleTimeString de forma segura
                         formattedAttendedTime = attendedDate.toLocaleTimeString('pt-BR', { 
                             hour: '2-digit', 
                             minute: '2-digit' 
@@ -2735,22 +2734,22 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 // Configuração para ajuste automático das colunas (widths)
                 docPDF.autoTable(tableColumn, tableRows, { 
                     startY: 42,
-                    styles: { fontSize: 8, overflow: 'linebreak' }, // Reduz o tamanho da fonte para caber mais
+                    styles: { fontSize: 8, overflow: 'linebreak' },
                     columnStyles: {
                         0: { cellWidth: 20 },   // #
-                        1: { cellWidth: 'auto' }, // Nome (ajusta automaticamente)
+                        1: { cellWidth: 'auto' }, // Nome 
                         2: { cellWidth: 60 },   // Agendado
                         3: { cellWidth: 60 },   // Chegou
                         4: { cellWidth: 60 },   // Finalizado
                         5: { cellWidth: 50 },   // Duração
-                        6: { cellWidth: 150 },  // Assunto (espaço maior)
+                        6: { cellWidth: 150 },  // Assunto 
                         7: { cellWidth: 'auto' }, // Atendente
                         8: { cellWidth: 'auto' } // Confirmado
                     }
                 });
                 
                 docPDF.save(`relatorio_${pautaName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
-            });
+            }); // FIM DO EVENT LISTENER
                 });
             document.getElementById('toggle-faltosos-btn').addEventListener('click', (e) => {
                 const btn = e.currentTarget;
@@ -3624,6 +3623,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
