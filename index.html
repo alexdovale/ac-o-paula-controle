@@ -590,20 +590,17 @@
                     </div>
                     <div class="overflow-x-auto">
                         <table id="collaborators-list-table-modal" class="w-full text-sm text-left text-gray-500">
-                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                                <tr>
-                                    <th scope="col" class="py-3 px-6">Nome</th>
-                                    <!-- COLUNAS ADICIONADAS NA TABELA -->
-                                    <th scope="col" class="py-3 px-6">Cargo</th>
-                                    <th scope="col" class="py-3 px-6">Equipe</th>
-                                    <th scope="col" class="py-3 px-6">Email</th>
-                                    <th scope="col" class="py-3 px-6">Deslocamento</th>
-                                    <th scope="col" class="py-3 px-6">Presença</th>
-                                    <th scope="col" class="py-3 px-6">Horário</th>
-                                    <th scope="col" class="py-3 px-6">WhatsApp</th>
-                                    <th scope="col" class="py-3 px-6">Ações</th>
-                                </tr>
-                            </thead>
+                          <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="py-3 px-6">Nome</th>
+                                        <th scope="col" class="py-3 px-6">Cargo</th>
+                                        <th scope="col" class="py-3 px-6">Equipe</th>
+                                        <th scope="col" class="py-3 px-6">Presença</th>       <th scope="col" class="py-3 px-6">Horário</th>
+                                        <th scope="col" class="py-3 px-6">Email</th>          <th scope="col" class="py-3 px-6">Deslocamento</th>
+                                        <th scope="col" class="py-3 px-6">WhatsApp</th>
+                                        <th scope="col" class="py-3 px-6">Ações</th>
+                                    </tr>
+                                </thead>
                             <tbody>
                                 <!-- As linhas da tabela serão preenchidas via JavaScript -->
                             </tbody>
@@ -880,7 +877,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     </div>
                     <div class="flex space-x-4">
                         <button id="cancel-checklist-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
-                        <button id="print-checklist-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">DOCX</button>
+                        <button id="print-checklist-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">PDF</button>
                         <button id="save-checklist-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar</button>
                     </div>
                 </div>
@@ -1624,26 +1621,25 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
 
                 newRow.innerHTML = `
-                    <td class="py-4 px-6 font-medium text-gray-900">${nomeElement}</td>
-                    <td class="py-4 px-6">${colaborador.email || 'N/A'}</td> <!-- Exibe o email -->
-                    <td class="py-4 px-6">${deslocamentoTexto}</td>
-                    <td class="py-4 px-6"><input type="checkbox" class="checkin-checkbox" data-id="${colaborador.id}" ${colaborador.presente ? 'checked' : ''} ${isPautaClosed ? 'disabled' : ''}></td>
-                    <td class="py-4 px-6">${colaborador.horario || '--:--'}</td>
-                    <td class="py-4 px-6">
-                        <a href="https://wa.me/55${colaborador.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Bom dia! Poderia, por gentileza, informar se já está chegando? Estamos quase saindo.`)}" 
-                            class="text-blue-600 hover:underline" target="_blank">
-                            Mensagem
-                        </a>
-                    </td>
-                    <td class="py-4 px-6 space-x-2">
-                        <button class="edit-collaborator-btn text-gray-500 hover:text-gray-900" data-id="${colaborador.id}" title="Editar" ${isPautaClosed ? 'disabled' : ''}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                        </button>
-                        <button class="delete-collaborator-btn text-red-500 hover:text-red-700" data-id="${colaborador.id}" title="Excluir" ${isPautaClosed ? 'disabled' : ''}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                        </button>
-                    </td>
-                `;
+                            <td class="py-4 px-6 font-medium text-gray-900">${nomeElement}</td>
+                            <td class="py-4 px-6">${colaborador.cargo || 'N/A'}</td>     <td class="py-4 px-6">${colaborador.equipe || 'N/A'}</td>     <td class="py-4 px-6">                                      <input type="checkbox" class="checkin-checkbox" data-id="${colaborador.id}" ${colaborador.presente ? 'checked' : ''} ${isPautaClosed ? 'disabled' : ''}>
+                            </td>
+                            <td class="py-4 px-6">${colaborador.horario || '--:--'}</td> <td class="py-4 px-6">${colaborador.email || 'N/A'}</td>       <td class="py-4 px-6">${deslocamentoTexto}</td>
+                            <td class="py-4 px-6">
+                                <a href="https://wa.me/55${colaborador.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Bom dia! Poderia, por gentileza, informar se já está chegando? Estamos quase saindo.`)}" 
+                                    class="text-blue-600 hover:underline" target="_blank">
+                                    Mensagem
+                                </a>
+                            </td>
+                            <td class="py-4 px-6 space-x-2">
+                                <button class="edit-collaborator-btn text-gray-500 hover:text-gray-900" data-id="${colaborador.id}" title="Editar" ${isPautaClosed ? 'disabled' : ''}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                </button>
+                                <button class="delete-collaborator-btn text-red-500 hover:text-red-700" data-id="${colaborador.id}" title="Excluir" ${isPautaClosed ? 'disabled' : ''}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                </button>
+                            </td>
+                        `;
                 collaboratorListTableBodyModal.appendChild(newRow);
             });
             
@@ -3503,6 +3499,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
