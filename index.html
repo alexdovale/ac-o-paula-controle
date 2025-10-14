@@ -2638,18 +2638,48 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const tableRows = [];
 
                 atendidos.forEach((item, index) => {
+                    // ----------------------------------------------------
+                    // 1. Lógica de Data Segura e Cálculo de Duração
+                    // ----------------------------------------------------
+                    
+                    // Cria datas válidas, tratando strings ou Timestamps de forma segura.
+                    // Nota: Estamos replicando a lógica de conversão do formatTime para uso local no PDF.
+                    const getSafeDate = (timeValue) => {
+                        if (!timeValue) return null;
+                        if (typeof timeValue === 'object' && timeValue.seconds) {
+                            return new Date(timeValue.seconds * 1000);
+                        }
+                        const date = new Date(timeValue);
+                        return isNaN(date.getTime()) ? null : date;
+                    };
+                    
+                    const arrivalDate = getSafeDate(item.arrivalTime);
+                    const attendedDate = getSafeDate(item.attendedTime);
+                    
                     let duration = 'N/A';
-                    if (item.arrivalTime && item.attendedTime) {
-                        const diffMs = new Date(item.attendedTime) - new Date(item.arrivalTime);
+                    let formattedAttendedTime = 'N/A';
+
+                    if (arrivalDate && attendedDate) {
+                        const diffMs = attendedDate.getTime() - arrivalDate.getTime();
                         const diffMins = Math.round(diffMs / 60000);
-                         if (!isNaN(diffMins) && diffMins >= 0) {
+                        
+                        if (diffMins >= 0) {
                              duration = `${diffMins} min`;
-                         }
+                        }
+                        
+                        // Formatação segura do horário finalizado
+                        formattedAttendedTime = attendedDate.toLocaleTimeString('pt-BR', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        });
                     }
 
                     const cleanString = (str) => String(str || '').replace(/"/g, '');
+                    const confirmedStatus = item.isConfirmed ? `Sim (${item.confirmationDetails?.confirmedBy || 'N/A'})` : 'Não';
                     
-                    const confirmedStatus = item.isConfirmed ? `Sim (${item.confirmationDetails?.confirmedBy || 'N/A'})` : 'Não'; // Detalhes da confirmação
+                    // ----------------------------------------------------
+                    // 2. Criação da Linha da Tabela
+                    // ----------------------------------------------------
 
                     const rowData = [
                         index + 1,
@@ -2657,9 +2687,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         cleanString(item.cpf),
                         cleanString(item.subject),
                         cleanString(item.attendant) || 'N/A',
-                        item.attendedTime ? new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-                        duration,
-                        confirmedStatus // Adicionado ao PDF
+                        formattedAttendedTime, // Usa o horário formatado ou 'N/A'
+                        duration,              // Usa a duração calculada ou 'N/A'
+                        confirmedStatus
                     ];
                     tableRows.push(rowData);
                 });
@@ -3540,6 +3570,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
