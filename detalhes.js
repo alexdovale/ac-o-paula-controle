@@ -549,109 +549,83 @@ function loadScript(src) {
     });
 }
 
-async function handleGenerateDocx() {
+// --- ** FUNÇÃO DE GERAR PDF (MÉTODO RECOMENDADO) ** ---
+async function handleGeneratePdf() {
     if (printChecklistBtn) {
         printChecklistBtn.disabled = true;
-        printChecklistBtn.textContent = 'Gerando DOCX...';
+        printChecklistBtn.textContent = 'Gerando PDF...';
     }
 
     try {
-        // CORRIGIDO: Troca o CDN para um mais estável (jsdelivr)
         await Promise.all([
-            loadScript('https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js'),
-            loadScript('https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js')
+            loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'),
+            loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js')
         ]);
         
-        // CORRIGIDO: Garante que a biblioteca foi carregada antes de usar
-        if (!window.docx) {
-            throw new Error('A biblioteca docx não foi carregada.');
+        if (!window.jspdf || !window.html2canvas) {
+            throw new Error('Bibliotecas de PDF não foram carregadas.');
         }
 
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+        
         const title = checklistTitle.textContent;
         const assistedName = assistedNameEl.textContent;
-        const data = documentsData[currentChecklistAction];
-        const checkedIds = Array.from(checklistContainer.querySelectorAll('input[type="checkbox"]:checked'))
-            .filter(cb => !cb.classList.contains('observation-option') && cb.id !== 'other-observation-checkbox')
-            .map(cb => cb.id);
+        const source = checklistContainer;
 
-        // --- NOVO: Captura as observações para o DOCX ---
-        const selectedObservations = Array.from(checklistContainer.querySelectorAll('.observation-option:checked')).map(cb => cb.value);
-        const otherCheckbox = document.getElementById('other-observation-checkbox');
-        let otherText = '';
-        if (otherCheckbox && otherCheckbox.checked) {
-            otherText = document.getElementById('other-observation-text')?.value || '';
-        }
-
-        const { Document, Packer, Paragraph, TextRun, AlignmentType } = window.docx;
-
-        const children = [
-            new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [ new TextRun({ text: "Checklist de Documentos", bold: true, size: 32, color: "333333" }) ],
-            }),
-            new Paragraph({ text: "" }),
-            new Paragraph({ children: [ new TextRun({ text: `Assistido(a): ${assistedName}`, size: 24 })] }),
-            new Paragraph({ children: [ new TextRun({ text: `Assunto: ${title}`, size: 24 })] }),
-            new Paragraph({ text: "" }),
-        ];
-
-        data.sections.forEach((section, sectionIndex) => {
-            children.push(new Paragraph({
-                children: [ new TextRun({ text: section.title, bold: true, size: 28, color: "555555" }) ],
-                spacing: { before: 200, after: 100 },
-            }));
-
-            section.docs.forEach((docText, docIndex) => {
-                const checkboxId = `doc-${currentChecklistAction}-${sectionIndex}-${docIndex}`;
-                const isChecked = checkedIds.includes(checkboxId);
-                const symbol = isChecked ? "☑" : "☐";
-                children.push(new Paragraph({
-                    indent: { left: 400 },
-                    children: [
-                        new TextRun({ text: `${symbol}  `, size: 24 }),
-                        new TextRun({ text: docText, size: 24 }),
-                    ],
-                }));
-            });
-        });
-
-        // --- NOVO: Adiciona a seção de observações ao DOCX ---
-        if (selectedObservations.length > 0 || otherText.trim() !== '') {
-            children.push(new Paragraph({ text: "" })); 
-            children.push(new Paragraph({
-                children: [ new TextRun({ text: "Observações do Atendimento", bold: true, size: 28, color: "555555" }) ],
-                spacing: { before: 200, after: 100 },
-            }));
-            
-            selectedObservations.forEach(obsText => {
-                children.push(new Paragraph({
-                    indent: { left: 400 },
-                    children: [ new TextRun({ text: `• ${obsText}`, size: 24 }) ],
-                }));
-            });
-
-            if (otherText.trim() !== '') {
-                 children.push(new Paragraph({
-                    indent: { left: 400 },
-                    children: [ new TextRun({ text: `• Outras: ${otherText}`, size: 24 }) ],
-                }));
+        // --- Cria um cabeçalho para o PDF ---
+        pdf.setFontSize(22);
+        pdf.setFont("helvetica", "bold");
+        pdf.text("Checklist de Documentos", pdf.internal.pageSize.getWidth() / 2, 60, { align: 'center' });
+        
+        pdf.setFontSize(14);
+        pdf.setFont("helvetica", "normal");
+        pdf.text(`Assistido(a): ${assistedName}`, 40, 90);
+        pdf.text(`Assunto: ${title}`, 40, 110);
+        
+        // --- Usa html2canvas para capturar o conteúdo ---
+        const canvas = await html2canvas(source, {
+            scale: 2, // Aumenta a resolução da imagem
+            useCORS: true,
+            onclone: (document) => {
+                // Garante que todo o conteúdo seja visível para a captura
+                const clonedContainer = document.getElementById('checklist-container');
+                clonedContainer.style.maxHeight = 'none';
+                clonedContainer.style.overflow = 'visible';
             }
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = 515; // Largura da imagem no PDF (A4 - margens)
+        const pageHeight = 842; // Altura da página A4 em pt
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 140; // Posição inicial abaixo do cabeçalho
+
+        pdf.addImage(imgData, 'PNG', 40, position, imgWidth, imgHeight);
+        heightLeft -= (pageHeight - position - 40); // 40 de margem inferior
+
+        // Adiciona páginas extras se o conteúdo for muito grande
+        while (heightLeft > 0) {
+            position = -imgHeight + heightLeft;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 40, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
         }
 
-        const doc = new Document({ sections: [{ properties: {}, children: children }] });
-        const blob = await Packer.toBlob(doc);
-        window.saveAs(blob, `Checklist - ${assistedName} - ${title}.docx`);
+        pdf.save(`Checklist - ${assistedName} - ${title}.pdf`);
 
     } catch (error) {
-        console.error("Erro ao gerar DOCX:", error);
-        if (showNotification) showNotification("Não foi possível gerar o arquivo DOCX.", "error");
+        console.error("Erro ao gerar PDF:", error);
+        if (showNotification) showNotification("Não foi possível gerar o arquivo PDF.", "error");
     } finally {
         if (printChecklistBtn) {
             printChecklistBtn.disabled = false;
-            printChecklistBtn.textContent = 'Baixar DOCX';
+            printChecklistBtn.textContent = 'Baixar PDF';
         }
     }
 }
+
 
 function closeModal() {
     modal.classList.add('hidden');
@@ -670,7 +644,7 @@ export function setupDetailsModal(config) {
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
     
-    if (printChecklistBtn) printChecklistBtn.addEventListener('click', handleGenerateDocx);
+    if (printChecklistBtn) printChecklistBtn.addEventListener('click', handleGeneratePdf);
 }
 
 export function openDetailsModal(config) {
@@ -701,5 +675,4 @@ export function openDetailsModal(config) {
     
     modal.classList.remove('hidden');
 }
-
 
