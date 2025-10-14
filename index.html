@@ -1132,8 +1132,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             const buttonsToDisable = [
                 'form-agendamento', 'file-upload', 'add-assisted-btn',
-                'download-pdf-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento',
-                'actions-toggle'
+                'download-pdf-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento'
             ];
 
             buttonsToDisable.forEach(id => {
@@ -1151,20 +1150,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             // Trecho corrigido na função togglePautaLock:
 
+            // Dentro da função togglePautaLock, após o bloco buttonsToDisable:
+
             const actionPanelButtons = document.querySelectorAll('#actions-panel button');
             
             actionPanelButtons.forEach(btn => {
-                // 1. O botão Reabrir Pauta só deve estar visível se a pauta estiver fechada
                 if (btn.id === 'reopen-pauta-btn') {
-                    // Se for o botão de reabrir, ele deve estar SEMPRE ativo quando visível
-                    btn.disabled = false; 
-                } 
-                // 2. Todos os outros botões (Fechar Pauta, Editar, Zerar, etc.) são desabilitados
-                else {
-                    btn.disabled = isClosed;
+                    // Se a pauta está fechada, o REABRIR é o único que deve estar ativo
+                    btn.disabled = false;
+                } else {
+                    // Todos os outros botões do menu Ações (Zerar, Fechar, Editar) ficam desativados
+                    btn.disabled = isClosed; 
                 }
             });
-
             const actionButtons = document.querySelectorAll('.check-in-btn, .delegate-finalization-btn, .attend-directly-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn, .toggle-confirmed-atendido, .toggle-confirmed-faltoso'); // Adicionado
             actionButtons.forEach(btn => {
                 btn.disabled = isClosed;
@@ -3510,6 +3508,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
