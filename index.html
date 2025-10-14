@@ -18,9 +18,7 @@
     <!-- Para o PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-    <!---Sorteio -->
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script> 
-
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
@@ -437,11 +435,11 @@
                         <span class="block text-sm text-gray-500">Atende estritamente na ordem em que a chegada foi marcada.</span>
                     </span>
                 </label>
-                 <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="radio" name="ordemAtendimento" value="manual" class="h-5 w-5 text-green-600 focus:ring-green-500">
+                 <label class="flex items-center p-4 border rounded-lg cursor-not-allowed bg-gray-100 opacity-60">
+                    <input type="radio" name="ordemAtendimento" value="manual" class="h-5 w-5 text-green-600 focus:ring-green-500" disabled>
                     <span class="ml-3">
                         <span class="font-semibold text-gray-800">Ordem Manual</span>
-                        <span class="block text-sm text-gray-500">Permite arrastar e reordenar a fila.</span>
+                        <span class="block text-sm text-gray-500">Permite arrastar e reordenar a fila (Em breve).</span>
                     </span>
                 </label>
             </div>
@@ -1160,46 +1158,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     minute: '2-digit' 
                 });
             }
-
-         // =========================================================
-        // FUNÇÃO C) IMPLEMENTAR A FUNÇÃO saveManualOrder (PERSISTÊNCIA)
-        // =========================================================
-        /**
-         * Salva a nova ordem manual da fila no Firebase.
-         * @param {HTMLCollection} items - A lista atualizada de elementos HTML na coluna.
-         */
-        async function saveManualOrder(items) {
-            if (!currentPautaId) return;
-
-            const batch = writeBatch(db);
-            const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
-
-            Array.from(items).forEach((item, index) => {
-                // Procura pelo elemento que contém o ID do assistido (geralmente o botão ou um div com o data-id)
-                const assistedElement = item.querySelector('[data-id]');
-                if (!assistedElement) return;
-
-                const assistedId = assistedElement.dataset.id;
-                const docRef = doc(collectionRef, assistedId);
-
-                // Atualiza o índice de ordenação manual
-                batch.update(docRef, { 
-                    manualOrderIndex: index,
-                    // Dados de rastreio
-                    lastActionBy: currentUserName,
-                    lastActionTimestamp: new Date().toISOString()
-                });
-            });
-
-            try {
-                await batch.commit();
-                showNotification("Ordem da fila atualizada manualmente.");
-            } catch (error) {
-                console.error("Erro ao salvar ordem manual:", error);
-                showNotification("Erro ao salvar ordem manual.", 'error');
-            }
-        }
-        
         const togglePautaLock = (isClosed) => {
             const isOwner = auth.currentUser?.uid === currentPautaOwnerId;
             isPautaClosed = isClosed;
@@ -1290,23 +1248,40 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
             faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
 
-aguardando.sort((a, b) => {
+            aguardando.sort((a, b) => {
                 const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
 
-                // =========================================================
-                // 1. MODO MANUAL (Ordem por Arrastar/Soltar)
-                // =========================================================
-                if (pautaOrder === 'manual') {
-                    // Ordena estritamente pelo índice manual. Se nulo/undefined, joga para o final.
-                    const indexA = a.manualOrderIndex !== undefined && a.manualOrderIndex !== null ? a.manualOrderIndex : Infinity;
-                    const indexB = b.manualOrderIndex !== undefined && b.manualOrderIndex !== null ? b.manualOrderIndex : Infinity;
-                    return indexA - indexB;
+                if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+                if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+                if (a.priority === 'URGENTE' && b.priority === 'URGENTE') {
+                     const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
+                     const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
+                     return arrivalA - arrivalB;
                 }
-                
-                // =========================================================
-                // 2. PRIORIDADE URGENTE (Funciona em 'padrao' e 'chegada')
-                // =========================================================
 
+                if (pautaOrder === 'chegada') {
+                    const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
+                    const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
+                    if (arrivalA !== arrivalB) return arrivalA - arrivalB;
+                    return (a.createdAt || 0) - (b.createdAt || 0);
+                } else { // 'padrao'
+                    const order = { 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
+                    const priorityDiff = order[a.priority] - order[b.priority];
+                    if (priorityDiff !== 0) return priorityDiff;
+
+                    if (a.priority === 'Máxima' && a.type === 'agendamento') {
+                        const scheduledA = a.scheduledTime || '23:59';
+                        const scheduledB = b.scheduledTime || '23:59';
+                        if (scheduledA.localeCompare(scheduledB) !== 0) return scheduledA.localeCompare(scheduledB);
+                    }
+
+                    const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
+                    const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
+                    if (arrivalA !== arrivalB) return arrivalA - arrivalB;
+
+                    return (a.createdAt || 0) - (b.createdAt || 0);
+                }
+            });
             // Ordenação para "Em Atendimento" - mais recente primeiro, ou por colaborador
             emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
 
@@ -1936,31 +1911,6 @@ aguardando.sort((a, b) => {
                     mainContent.classList.add('lg:grid-cols-3');
                 }
 
-            }
-
-            // =========================================================
-            // INICIALIZAÇÃO DO SORTABLEJS (Ponto de Inserção)
-            // =========================================================
-            const aguardandoList = document.getElementById('aguardando-list');
-            
-            if (currentPautaData?.ordemAtendimento === 'manual') {
-                // Verifica se já foi inicializado para evitar duplicidade
-                if (aguardandoList && !aguardandoList.sortable) {
-                     aguardandoList.sortable = new Sortable(aguardandoList, {
-                         animation: 150,
-                         ghostClass: 'bg-yellow-200',
-                         onEnd: function (evt) {
-                             // AÇÃO CHAVE: Salva a nova ordem no Firebase após o "soltar"
-                             saveManualOrder(aguardandoList.children); 
-                         }
-                     });
-                }
-            } else {
-                // Destrói o Sortable se for Padrão ou Chegada, liberando o recurso
-                if (aguardandoList && aguardandoList.sortable) {
-                     aguardandoList.sortable.destroy();
-                     aguardandoList.sortable = null;
-                }
             }
              if (pautaType === 'agendado') {
                  tabAgendamento.classList.remove('hidden');
@@ -2992,15 +2942,14 @@ aguardando.sort((a, b) => {
                             document.getElementById('edit-attendant-modal').classList.remove('hidden');
                         }
                     }
-                       // NOVO CÓDIGO
-                   if (button.classList.contains('view-details-btn')) {
+                   // NOVO CÓDIGO
+                    if (button.classList.contains('view-details-btn')) {
                         openDetailsModal({
                             assistedId: id,
                             pautaId: currentPautaId,
                             allAssisted: allAssisted
                         });
-                    } // <-- AQUI FECHA O 'if'
-                    
+                    }
                     if (button.classList.contains('manage-demands-btn')) {
                         assistedIdToHandle = id;
                         showDemandsModal(id);
@@ -3551,10 +3500,6 @@ aguardando.sort((a, b) => {
                 
                 editSubjectInput.value = selectedText;
             });
-            
-        }); // <-- Este fecha o editSubjectInput.addEventListener('change', ...)
-        
-        }); // <-- ESTE É O FECHAMENTO QUE FALTAVA para o DOMContentLoaded!
     </script>
 
 <!-- Modal de Anotações -->
@@ -3676,24 +3621,3 @@ aguardando.sort((a, b) => {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
