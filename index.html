@@ -1306,87 +1306,7 @@ aguardando.sort((a, b) => {
                 // =========================================================
                 // 2. PRIORIDADE URGENTE (Funciona em 'padrao' e 'chegada')
                 // =========================================================
-                if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-                if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-                // Desempate para URGENTE: quem chegou primeiro
-                if (a.priority === 'URGENTE' && b.priority === 'URGENTE') {
-                    const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
-                    const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                    return arrivalA - arrivalB;
-                }
 
-                // =========================================================
-                // 3. MODO ORDEM DE CHEGADA (Pura)
-                // =========================================================
-                if (pautaOrder === 'chegada') {
-                    const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
-                    const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                    if (arrivalA !== arrivalB) return arrivalA - arrivalB;
-                    // Desempate final por criação
-                    return (a.createdAt || 0) - (b.createdAt || 0); 
-                } 
-                
-                // =========================================================
-                // 4. MODO PADRÃO (Priority-based - Default)
-                // =========================================================
-                const order = { 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
-                const priorityDiff = order[a.priority] - order[b.priority];
-                if (priorityDiff !== 0) return priorityDiff; // Ordena por Máxima (-), Média (0), Mínima (+)
-
-                // Desempate para Máxima: Por Horário Agendado
-                if (a.priority === 'Máxima' && a.type === 'agendamento') {
-                    const scheduledA = a.scheduledTime || '23:59';
-                    const scheduledB = b.scheduledTime || '23:59';
-                    if (scheduledA.localeCompare(scheduledB) !== 0) return scheduledA.localeCompare(scheduledB);
-                }
-
-                // Desempate final (para todas as prioridades iguais): Por Horário de Chegada
-                const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
-                const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                if (arrivalA !== arrivalB) return arrivalA - arrivalB;
-
-                // Desempate absoluto: Por criação (quem foi registrado primeiro)
-                return (a.createdAt || 0) - (b.createdAt || 0);
-            });
-            // ----------------------------------------------------------------------------------
-            
-            // Ordenação para "Em Atendimento" - mais recente primeiro, ou por colaborador
-            emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
-
-            // ... (O restante da função renderAssistedList continua)
-
-                
-                if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-                if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-                if (a.priority === 'URGENTE' && b.priority === 'URGENTE') {
-                     const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
-                     const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                     return arrivalA - arrivalB;
-                }
-
-                if (pautaOrder === 'chegada') {
-                    const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
-                    const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                    if (arrivalA !== arrivalB) return arrivalA - arrivalB;
-                    return (a.createdAt || 0) - (b.createdAt || 0);
-                } else { // 'padrao'
-                    const order = { 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
-                    const priorityDiff = order[a.priority] - order[b.priority];
-                    if (priorityDiff !== 0) return priorityDiff;
-
-                    if (a.priority === 'Máxima' && a.type === 'agendamento') {
-                        const scheduledA = a.scheduledTime || '23:59';
-                        const scheduledB = b.scheduledTime || '23:59';
-                        if (scheduledA.localeCompare(scheduledB) !== 0) return scheduledA.localeCompare(scheduledB);
-                    }
-
-                    const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
-                    const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                    if (arrivalA !== arrivalB) return arrivalA - arrivalB;
-
-                    return (a.createdAt || 0) - (b.createdAt || 0);
-                }
-            });
             // Ordenação para "Em Atendimento" - mais recente primeiro, ou por colaborador
             emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
 
@@ -3756,6 +3676,7 @@ aguardando.sort((a, b) => {
 
 </body>
 </html>
+
 
 
 
