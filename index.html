@@ -1125,7 +1125,39 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             if (diffMinutes <= 20) return 'Média';
             return 'Mínima';
         };
-
+            /**
+             * Garante a formatação segura de strings de data ISO ou Timestamp.
+             * No fluxo de delegação, attendedTime pode ser uma string ISO ou um objeto Timestamp.
+             * @param {string | object} timeStamp - A string de data (ISO) ou objeto Timestamp do Firebase.
+             * @returns {string} O horário formatado (HH:mm) ou 'N/A'.
+             */
+            function formatTime(timeStamp) {
+                if (!timeStamp) return 'N/A';
+            
+                let date;
+            
+                // 1. Verifica se é um objeto Timestamp do Firebase (muito comum em delegação)
+                if (typeof timeStamp === 'object' && timeStamp.seconds) {
+                    // Converte o Timestamp do Firebase para milissegundos
+                    date = new Date(timeStamp.seconds * 1000);
+                } 
+                // 2. Tenta usar a string diretamente (funciona se for ISO 8601)
+                else {
+                    date = new Date(timeStamp);
+                }
+                
+                // 3. Última verificação de validade
+                if (isNaN(date) || date.getTime() === 0) {
+                    // Se ainda for inválido (pode ser o caso do "Invalid Date")
+                    return 'N/A'; 
+                }
+            
+                // Retorna o horário formatado (ex: 10:30)
+                return date.toLocaleTimeString('pt-BR', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+            }
         const togglePautaLock = (isClosed) => {
             const isOwner = auth.currentUser?.uid === currentPautaOwnerId;
             isPautaClosed = isClosed;
@@ -1369,7 +1401,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         <div class="text-xs text-gray-600 grid grid-cols-3 gap-2 text-center border-y py-2">
                             <div><strong>Agendado:</strong><br>${a.scheduledTime || 'N/A'}</div>
                             <div><strong>Chegou:</strong><br>${a.arrivalTime ? new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</div>
-                            <div><strong>Finalizado:</strong><br>${a.attendedTime ? new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</div>
+                            <div><strong>Finalizado:</strong><br>${formatTime(a.attendedTime)}</div>
                         </div>
                         ${demandasInfo}
                         <div class="flex justify-between items-center mt-2">
@@ -3508,6 +3540,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
