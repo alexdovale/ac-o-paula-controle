@@ -1290,40 +1290,70 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
             faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
 
-            aguardando.sort((a, b) => {
+aguardando.sort((a, b) => {
                 const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
 
                 // =========================================================
-                // D) NOVO BLOCO PARA ORDEM MANUAL (Prioridade Máxima)
+                // 1. MODO MANUAL (Ordem por Arrastar/Soltar)
                 // =========================================================
                 if (pautaOrder === 'manual') {
-                    // Ordena estritamente pelo índice manual. Se o índice for nulo ou undefined, joga para o final (Infinity)
+                    // Ordena estritamente pelo índice manual. Se nulo/undefined, joga para o final.
                     const indexA = a.manualOrderIndex !== undefined && a.manualOrderIndex !== null ? a.manualOrderIndex : Infinity;
                     const indexB = b.manualOrderIndex !== undefined && b.manualOrderIndex !== null ? b.manualOrderIndex : Infinity;
                     return indexA - indexB;
                 }
-                // =========================================================
                 
-                // LÓGICA EXISTENTE PARA ORDEM DE CHEGADA
+                // =========================================================
+                // 2. PRIORIDADE URGENTE (Funciona em 'padrao' e 'chegada')
+                // =========================================================
+                if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+                if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+                // Desempate para URGENTE: quem chegou primeiro
+                if (a.priority === 'URGENTE' && b.priority === 'URGENTE') {
+                    const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
+                    const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
+                    return arrivalA - arrivalB;
+                }
+
+                // =========================================================
+                // 3. MODO ORDEM DE CHEGADA (Pura)
+                // =========================================================
                 if (pautaOrder === 'chegada') {
-                    const timeA = new Date(a.arrivalTime || a.scheduledTime).getTime();
-                    const timeB = new Date(b.arrivalTime || b.scheduledTime).getTime();
-                    return timeA - timeB; // Ordem de chegada pura
+                    const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
+                    const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
+                    if (arrivalA !== arrivalB) return arrivalA - arrivalB;
+                    // Desempate final por criação
+                    return (a.createdAt || 0) - (b.createdAt || 0); 
                 } 
                 
-                // LÓGICA EXISTENTE PARA MODO PADRÃO (Priority-based)
-                const priorityA = getPriorityLevel(a);
-                const priorityB = getPriorityLevel(b);
-        
-                if (priorityA !== priorityB) {
-                    return priorityB - priorityA; // Do maior para o menor (3, 2, 1)
+                // =========================================================
+                // 4. MODO PADRÃO (Priority-based - Default)
+                // =========================================================
+                const order = { 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
+                const priorityDiff = order[a.priority] - order[b.priority];
+                if (priorityDiff !== 0) return priorityDiff; // Ordena por Máxima (-), Média (0), Mínima (+)
+
+                // Desempate para Máxima: Por Horário Agendado
+                if (a.priority === 'Máxima' && a.type === 'agendamento') {
+                    const scheduledA = a.scheduledTime || '23:59';
+                    const scheduledB = b.scheduledTime || '23:59';
+                    if (scheduledA.localeCompare(scheduledB) !== 0) return scheduledA.localeCompare(scheduledB);
                 }
-        
-                // Critério de desempate: Ordem de Chegada
-                const arrivalA = new Date(a.arrivalTime);
-                const arrivalB = new Date(b.arrivalTime);
-                return arrivalA - arrivalB;
+
+                // Desempate final (para todas as prioridades iguais): Por Horário de Chegada
+                const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
+                const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
+                if (arrivalA !== arrivalB) return arrivalA - arrivalB;
+
+                // Desempate absoluto: Por criação (quem foi registrado primeiro)
+                return (a.createdAt || 0) - (b.createdAt || 0);
             });
+            // ----------------------------------------------------------------------------------
+            
+            // Ordenação para "Em Atendimento" - mais recente primeiro, ou por colaborador
+            emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
+
+            // ... (O restante da função renderAssistedList continua)
 
                 
                 if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
@@ -3726,6 +3756,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
