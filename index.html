@@ -3043,13 +3043,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         }
                     }
                    // NOVO CÓDIGO
-                    if (button.classList.contains('view-details-btn')) {
+                   if (button.classList.contains('view-details-btn')) {
                         openDetailsModal({
                             assistedId: id,
                             pautaId: currentPautaId,
                             allAssisted: allAssisted
                         });
-                    }
+                    } // <-- AQUI FECHA O 'if'
                     if (button.classList.contains('manage-demands-btn')) {
                         assistedIdToHandle = id;
                         showDemandsModal(id);
@@ -3725,6 +3725,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
