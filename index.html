@@ -18,7 +18,9 @@
     <!-- Para o PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-    
+    <!---Sorteio -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script> 
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
@@ -435,11 +437,11 @@
                         <span class="block text-sm text-gray-500">Atende estritamente na ordem em que a chegada foi marcada.</span>
                     </span>
                 </label>
-                 <label class="flex items-center p-4 border rounded-lg cursor-not-allowed bg-gray-100 opacity-60">
-                    <input type="radio" name="ordemAtendimento" value="manual" class="h-5 w-5 text-green-600 focus:ring-green-500" disabled>
+                 <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="radio" name="ordemAtendimento" value="manual" class="h-5 w-5 text-green-600 focus:ring-green-500">
                     <span class="ml-3">
                         <span class="font-semibold text-gray-800">Ordem Manual</span>
-                        <span class="block text-sm text-gray-500">Permite arrastar e reordenar a fila (Em breve).</span>
+                        <span class="block text-sm text-gray-500">Permite arrastar e reordenar a fila.</span>
                     </span>
                 </label>
             </div>
@@ -1158,6 +1160,46 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     minute: '2-digit' 
                 });
             }
+
+         // =========================================================
+        // FUNÇÃO C) IMPLEMENTAR A FUNÇÃO saveManualOrder (PERSISTÊNCIA)
+        // =========================================================
+        /**
+         * Salva a nova ordem manual da fila no Firebase.
+         * @param {HTMLCollection} items - A lista atualizada de elementos HTML na coluna.
+         */
+        async function saveManualOrder(items) {
+            if (!currentPautaId) return;
+
+            const batch = writeBatch(db);
+            const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
+
+            Array.from(items).forEach((item, index) => {
+                // Procura pelo elemento que contém o ID do assistido (geralmente o botão ou um div com o data-id)
+                const assistedElement = item.querySelector('[data-id]');
+                if (!assistedElement) return;
+
+                const assistedId = assistedElement.dataset.id;
+                const docRef = doc(collectionRef, assistedId);
+
+                // Atualiza o índice de ordenação manual
+                batch.update(docRef, { 
+                    manualOrderIndex: index,
+                    // Dados de rastreio
+                    lastActionBy: currentUserName,
+                    lastActionTimestamp: new Date().toISOString()
+                });
+            });
+
+            try {
+                await batch.commit();
+                showNotification("Ordem da fila atualizada manualmente.");
+            } catch (error) {
+                console.error("Erro ao salvar ordem manual:", error);
+                showNotification("Erro ao salvar ordem manual.", 'error');
+            }
+        }
+        
         const togglePautaLock = (isClosed) => {
             const isOwner = auth.currentUser?.uid === currentPautaOwnerId;
             isPautaClosed = isClosed;
@@ -1251,6 +1293,39 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             aguardando.sort((a, b) => {
                 const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
 
+                // =========================================================
+                // D) NOVO BLOCO PARA ORDEM MANUAL (Prioridade Máxima)
+                // =========================================================
+                if (pautaOrder === 'manual') {
+                    // Ordena estritamente pelo índice manual. Se o índice for nulo ou undefined, joga para o final (Infinity)
+                    const indexA = a.manualOrderIndex !== undefined && a.manualOrderIndex !== null ? a.manualOrderIndex : Infinity;
+                    const indexB = b.manualOrderIndex !== undefined && b.manualOrderIndex !== null ? b.manualOrderIndex : Infinity;
+                    return indexA - indexB;
+                }
+                // =========================================================
+                
+                // LÓGICA EXISTENTE PARA ORDEM DE CHEGADA
+                if (pautaOrder === 'chegada') {
+                    const timeA = new Date(a.arrivalTime || a.scheduledTime).getTime();
+                    const timeB = new Date(b.arrivalTime || b.scheduledTime).getTime();
+                    return timeA - timeB; // Ordem de chegada pura
+                } 
+                
+                // LÓGICA EXISTENTE PARA MODO PADRÃO (Priority-based)
+                const priorityA = getPriorityLevel(a);
+                const priorityB = getPriorityLevel(b);
+        
+                if (priorityA !== priorityB) {
+                    return priorityB - priorityA; // Do maior para o menor (3, 2, 1)
+                }
+        
+                // Critério de desempate: Ordem de Chegada
+                const arrivalA = new Date(a.arrivalTime);
+                const arrivalB = new Date(b.arrivalTime);
+                return arrivalA - arrivalB;
+            });
+
+                
                 if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
                 if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
                 if (a.priority === 'URGENTE' && b.priority === 'URGENTE') {
@@ -1911,6 +1986,31 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     mainContent.classList.add('lg:grid-cols-3');
                 }
 
+            }
+
+            // =========================================================
+            // INICIALIZAÇÃO DO SORTABLEJS (Ponto de Inserção)
+            // =========================================================
+            const aguardandoList = document.getElementById('aguardando-list');
+            
+            if (currentPautaData?.ordemAtendimento === 'manual') {
+                // Verifica se já foi inicializado para evitar duplicidade
+                if (aguardandoList && !aguardandoList.sortable) {
+                     aguardandoList.sortable = new Sortable(aguardandoList, {
+                         animation: 150,
+                         ghostClass: 'bg-yellow-200',
+                         onEnd: function (evt) {
+                             // AÇÃO CHAVE: Salva a nova ordem no Firebase após o "soltar"
+                             saveManualOrder(aguardandoList.children); 
+                         }
+                     });
+                }
+            } else {
+                // Destrói o Sortable se for Padrão ou Chegada, liberando o recurso
+                if (aguardandoList && aguardandoList.sortable) {
+                     aguardandoList.sortable.destroy();
+                     aguardandoList.sortable = null;
+                }
             }
              if (pautaType === 'agendado') {
                  tabAgendamento.classList.remove('hidden');
@@ -3621,6 +3721,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
