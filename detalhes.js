@@ -1,5 +1,5 @@
 /**
- * detalhes.js - Versão Módulo com Responsividade e PDF Melhorado
+ * detalhes.js
  * Este módulo gerencia toda a funcionalidade do modal "Ver Detalhes",
  * incluindo a exibição da lista de documentos e o checklist.
  */
@@ -281,174 +281,11 @@ const backToActionSelectionBtn = document.getElementById('back-to-action-selecti
 const saveChecklistBtn = document.getElementById('save-checklist-btn');
 const printChecklistBtn = document.getElementById('print-checklist-btn');
 const checklistSearch = document.getElementById('checklist-search');
-// Botões do cabeçalho do modal são selecionados dentro de makeDetailsModalInteractive
-// const closeBtn = document.getElementById('close-documents-modal-btn'); 
+const closeBtn = document.getElementById('close-documents-modal-btn');
 const cancelBtn = document.getElementById('cancel-checklist-btn');
 
 
 // --- Funções Internas ---
-
-function makeDetailsModalInteractive(modal) {
-    if (!modal || modal.classList.contains('interactive-modal-init')) {
-        return;
-    }
-    modal.classList.add('interactive-modal-init', 'bg-white');
-
-    // --- INÍCIO DA MELHORIA DE RESPONSIVIDADE ---
-    if (!document.getElementById('details-responsive-styles')) {
-        const styleSheet = document.createElement("style");
-        styleSheet.id = 'details-responsive-styles';
-        styleSheet.innerHTML = `
-            /* Estilos para telas menores (ex: celulares) */
-            @media (max-width: 768px) {
-                #documents-modal {
-                    width: 100vw !important;
-                    height: 100vh !important;
-                    max-width: 100vw !important;
-                    max-height: 100vh !important;
-                    top: 0 !important;
-                    left: 0 !important;
-                    transform: none !important;
-                    border-radius: 0 !important;
-                    resize: none !important;
-                    min-width: 0 !important;
-                    min-height: 0 !important;
-                }
-                /* Ajusta o container do conteúdo para ter padding e rolar */
-                #documents-modal-content-wrapper {
-                    padding: 8px;
-                    overflow-y: auto;
-                    flex-grow: 1;
-                }
-            }
-        `;
-        document.head.appendChild(styleSheet);
-    }
-    // --- FIM DA MELHORIA DE RESPONSIVIDADE ---
-
-    Object.assign(modal.style, {
-        position: 'fixed', top: '50%', left: '50%',
-        transform: 'translate(-50%, -50%)', width: '90vw', height: '90vh',
-        maxWidth: '1200px', maxHeight: '95vh', resize: 'both',
-        overflow: 'hidden', border: '1px solid #ddd',
-        boxShadow: '0 5px 25px rgba(0,0,0,0.2)', borderRadius: '12px',
-        minWidth: '500px', minHeight: '400px', display: 'flex',
-        flexDirection: 'column',
-    });
-    
-    // Evita recriar o cabeçalho
-    if (document.getElementById('details-modal-header')) {
-        return;
-    }
-
-    const header = document.createElement('div');
-    header.id = 'details-modal-header';
-    Object.assign(header.style, {
-        backgroundColor: '#f7f7f7', padding: '10px 15px', cursor: 'move',
-        borderBottom: '1px solid #ddd', display: 'flex',
-        justifyContent: 'space-between', alignItems: 'center',
-        borderTopLeftRadius: '12px', borderTopRightRadius: '12px',
-        flexShrink: '0'
-    });
-
-    const titleEl = document.createElement('span');
-    titleEl.id = "documents-assisted-name-header"; // ID para fácil acesso
-    titleEl.style.fontWeight = 'bold';
-    titleEl.style.color = '#333';
-
-    const buttons = document.createElement('div');
-    const minBtn = document.createElement('button');
-    minBtn.innerHTML = '&#95;';
-    minBtn.title = 'Minimizar';
-    const maxBtn = document.createElement('button');
-    maxBtn.innerHTML = '&#9723;';
-    maxBtn.title = 'Maximizar/Restaurar';
-    const closeBtn = document.createElement('button');
-    closeBtn.innerHTML = '&times;';
-    closeBtn.title = 'Fechar';
-
-    [minBtn, maxBtn, closeBtn].forEach(btn => {
-        Object.assign(btn.style, {
-            background: 'none', border: 'none', fontSize: '18px',
-            cursor: 'pointer', marginLeft: '10px', fontWeight: 'bold',
-            lineHeight: '1', color: '#555'
-        });
-    });
-
-    buttons.append(minBtn, maxBtn, closeBtn);
-    header.append(titleEl, buttons);
-    
-    const originalContent = modal.querySelector(':scope > div:not(#details-modal-header)');
-    if(originalContent){
-        originalContent.style.flexGrow = '1';
-        originalContent.style.overflow = 'hidden';
-    }
-
-    modal.prepend(header);
-
-    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-    let originalState = {};
-
-    header.onmousedown = function (e) {
-        if (e.target.tagName === 'BUTTON') return;
-        e.preventDefault();
-        pos3 = e.clientX;
-        pos4 = e.clientY;
-        document.onmouseup = closeDragElement;
-        document.onmousemove = elementDrag;
-    };
-
-    function elementDrag(e) {
-        e.preventDefault();
-        pos1 = pos3 - e.clientX;
-        pos2 = pos4 - e.clientY;
-        pos3 = e.clientX;
-        pos4 = e.clientY;
-        modal.style.top = (modal.offsetTop - pos2) + "px";
-        modal.style.left = (modal.offsetLeft - pos1) + "px";
-        modal.style.transform = 'none';
-    }
-
-    function closeDragElement() {
-        document.onmouseup = null;
-        document.onmousemove = null;
-    }
-
-    closeBtn.onclick = closeModal;
-
-    maxBtn.onclick = () => {
-        if (modal.classList.contains('maximized')) {
-            Object.assign(modal.style, originalState);
-            modal.classList.remove('maximized');
-            maxBtn.innerHTML = '&#9723;';
-        } else {
-            originalState = {
-                width: modal.style.width, height: modal.style.height, top: modal.style.top, left: modal.style.left, transform: modal.style.transform
-            };
-            Object.assign(modal.style, {
-                width: '100vw', height: '100vh', top: '0px', left: '0px', transform: 'none', borderRadius: '0'
-            });
-            modal.classList.add('maximized');
-            maxBtn.innerHTML = '&#10064;';
-        }
-    };
-
-    minBtn.onclick = () => {
-        const contentDiv = modal.querySelector(':scope > div:not(#details-modal-header)');
-        const isMinimized = modal.classList.toggle('minimized');
-        if (isMinimized) {
-            originalState.height = modal.style.height;
-            if(contentDiv) contentDiv.style.display = 'none';
-            modal.style.height = header.offsetHeight + 'px';
-            modal.style.resize = 'none';
-        } else {
-            if(contentDiv) contentDiv.style.display = 'flex';
-            modal.style.height = originalState.height || '90vh';
-            modal.style.resize = 'both';
-        }
-    };
-}
-
 
 function populateActionSelection() {
     const container = document.getElementById('document-action-selection');
@@ -648,7 +485,7 @@ async function handleSave() {
 
     // --- NOVO: Captura as observações estruturadas ---
     const selectedObservations = Array.from(checklistContainer.querySelectorAll('.observation-option:checked'))
-                                              .map(cb => cb.value);
+                                     .map(cb => cb.value);
     
     const otherCheckbox = document.getElementById('other-observation-checkbox');
     let otherText = '';
@@ -750,7 +587,6 @@ async function handleGeneratePdf() {
         const canvas = await html2canvas(source, {
             scale: 2, // Aumenta a resolução da imagem
             useCORS: true,
-            backgroundColor: '#ffffff', // Define o fundo como branco
             onclone: (document) => {
                 // Garante que todo o conteúdo seja visível para a captura
                 const clonedContainer = document.getElementById('checklist-container');
@@ -801,15 +637,11 @@ export function setupDetailsModal(config) {
     getUpdatePayload = config.getUpdatePayload;
     showNotification = config.showNotification;
 
-    // Garante que o modal seja interativo
-    makeDetailsModalInteractive(modal);
-
     actionSelectionView.addEventListener('click', handleActionSelect);
     backToActionSelectionBtn.addEventListener('click', handleBack);
     saveChecklistBtn.addEventListener('click', handleSave);
     checklistSearch.addEventListener('input', handleSearch);
-    // O botão de fechar agora é criado dinamicamente em makeDetailsModalInteractive
-    // closeBtn.addEventListener('click', closeModal); 
+    closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
     
     if (printChecklistBtn) printChecklistBtn.addEventListener('click', handleGeneratePdf);
@@ -830,12 +662,6 @@ export function openDetailsModal(config) {
     }
 
     assistedNameEl.textContent = assisted.name;
-    // Atualiza também o nome no cabeçalho
-    const headerTitle = document.getElementById('documents-assisted-name-header');
-    if (headerTitle) {
-        headerTitle.textContent = `Detalhes de: ${assisted.name}`;
-    }
-
 
     if (assisted.documentChecklist && assisted.documentChecklist.action) {
         const savedAction = assisted.documentChecklist.action;
@@ -849,3 +675,4 @@ export function openDetailsModal(config) {
     
     modal.classList.remove('hidden');
 }
+
