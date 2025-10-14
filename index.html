@@ -2608,153 +2608,151 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 event.target.value = '';
             });
 
-                document.getElementById('download-pdf-btn').addEventListener('click', () => {
-                    // Configuração para Paisagem ('l' de landscape) e formato A4
-                    const { jsPDF } = window.jspdf;
-                    const docPDF = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' }); 
-                
-                    const pautaName = document.getElementById('pauta-title').textContent;
-                    const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-                    const atendidos = allAssisted
-                        .filter(a => a.status === 'atendido' && a.type === currentMode)
-                        .sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
-                
-                    if (atendidos.length === 0) {
-                        showNotification("Não há atendidos para gerar o relatório.", "info");
-                        return;
-                    }
-                
-                    // ==========================================================
-                    // FUNÇÕES DE UTILIDADE PARA O PDF
-                    // ==========================================================
-                
-                    const cleanString = (str) => String(str || '').replace(/"/g, '');
-                
-                    // Função robusta para obter objeto Date ou null
-                    const getSafeDate = (timeValue) => {
-                        if (!timeValue) return null;
-                        if (typeof timeValue === 'object' && timeValue.seconds) {
-                            return new Date(timeValue.seconds * 1000);
-                        }
-                        const date = new Date(timeValue);
-                        return isNaN(date.getTime()) ? null : date;
-                    };
-                
-                    /**
-                     * Calcula e formata a duração para HH:mm ou X min.
-                     * @param {number} totalMinutes - Total de minutos de duração.
-                     * @returns {string} Duração formatada.
-                     */
-                    const calculateDuration = (totalMinutes) => {
-                        if (totalMinutes === null || totalMinutes < 0) return 'N/A';
-                        
-                        if (totalMinutes >= 60) {
-                            const hours = Math.floor(totalMinutes / 60);
-                            const minutes = totalMinutes % 60;
-                            const h = String(hours).padStart(2, '0');
-                            const m = String(minutes).padStart(2, '0');
-                            return `${h}:${m}`; // Ex: 01:30
-                        }
-                        return `${totalMinutes} min`; // Ex: 45 min
-                    };
-                    
-                    // ==========================================================
-                    // INÍCIO DA GERAÇÃO DO PDF
-                    // ==========================================================
-                
-                    docPDF.setFontSize(18);
-                    docPDF.text(`Relatório de Atendidos - ${pautaName}`, 14, 22);
-                    docPDF.setFontSize(11);
-                    docPDF.setTextColor(100);
-                
-                    const totalSubjects = atendidos.reduce((acc, a) => acc + 1 + (a.demandas?.quantidade || 0), 0);
-                    docPDF.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
-                    docPDF.text(`Total de Atendidos: ${atendidos.length}`, 14, 36);
-                    docPDF.text(`Total de Assuntos: ${totalSubjects}`, 150, 36);
-                
-                
-                    // NOVA ORDEM DE COLUNAS: Agendado e Chegou vêm antes de Finalizado
-                    const tableColumn = ["#", "Nome", "Agendado", "Chegou", "Finalizado", "Duração", "Assunto Principal", "Atendente", "Confirmado"]; 
-                    const tableRows = [];
-                
-                    atendidos.forEach((item, index) => {
-                        
-                        const arrivalDate = getSafeDate(item.arrivalTime);
-                        const attendedDate = getSafeDate(item.attendedTime);
-                        
-                        let duration = 'N/A';
-                        let formattedAttendedTime = 'N/A';
-                
-                        // ----------------------------------------------------
-                        // 1. Cálculo de Duração e Formatação do Finalizado
-                        // ----------------------------------------------------
-                        if (arrivalDate && attendedDate) {
-                            const diffMs = attendedDate.getTime() - arrivalDate.getTime();
-                            const totalMins = Math.round(diffMs / 60000);
-                            
-                            if (totalMins >= 0) {
-                                 duration = calculateDuration(totalMins);
-                            }
-                            
-                            formattedAttendedTime = attendedDate.toLocaleTimeString('pt-BR', { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                            });
-                        }
-                        
-                        // ----------------------------------------------------
-                        // 2. Formatação Agendado e Chegou
-                        // ----------------------------------------------------
-                        const scheduledTimeStr = item.scheduledTime || (item.type === 'avulso' ? 'Avulso' : 'N/A');
-                        const arrivalTimeStr = arrivalDate ? arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
-                
-                        // Garante que o campo de Agendado/Chegada reflita o status Avulso se for o caso
-                        const finalScheduledTimeStr = item.type === 'avulso' ? 'Avulso' : scheduledTimeStr;
-                        const finalArrivalTimeStr = item.type === 'avulso' && arrivalTimeStr === 'N/A' ? 'Avulso' : arrivalTimeStr;
-                
-                
-                        const confirmedStatus = item.isConfirmed ? `Sim (${item.confirmationDetails?.confirmedBy || 'N/A'})` : 'Não';
-                        
-                        // ----------------------------------------------------
-                        // 3. Montagem da Linha de Dados (NOVA ORDEM)
-                        // ----------------------------------------------------
-                        const rowData = [
-                            index + 1,
-                            cleanString(item.name),
-                            finalScheduledTimeStr,  // Coluna 3: Agendado
-                            finalArrivalTimeStr,    // Coluna 4: Chegou
-                            formattedAttendedTime,  // Coluna 5: Finalizado
-                            duration,               // Coluna 6: Duração
-                            cleanString(item.subject),  // Coluna 7: Assunto Principal
-                            cleanString(item.attendant) || 'N/A', // Coluna 8: Atendente
-                            confirmedStatus         // Coluna 9: Confirmado
-                        ];
-                        tableRows.push(rowData);
-                    });
-                
-                    // Configuração para ajuste automático das colunas (widths)
-                    docPDF.autoTable(tableColumn, tableRows, { 
-                        startY: 42,
-                        styles: { fontSize: 8, overflow: 'linebreak' }, // Reduz o tamanho da fonte para caber mais
-                        columnStyles: {
-                            0: { cellWidth: 20 },   // #
-                            1: { cellWidth: 'auto' }, // Nome (ajusta automaticamente)
-                            2: { cellWidth: 60 },   // Agendado
-                            3: { cellWidth: 60 },   // Chegou
-                            4: { cellWidth: 60 },   // Finalizado
-                            5: { cellWidth: 50 },   // Duração
-                            6: { cellWidth: 150 },  // Assunto (espaço maior)
-                            7: { cellWidth: 'auto' }, // Atendente
-                            8: { cellWidth: 'auto' } // Confirmado
-                        }
-                    });
-                    
-                       // Fechamento CORRETO do event listener do PDF
-            docPDF.save(`relatorio_${pautaName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
-            }); // <--- Deve haver APENAS um '});' aqui.
+            document.getElementById('download-pdf-btn').addEventListener('click', () => {
+                // Configuração para Paisagem ('l' de landscape) e formato A4
+                const { jsPDF } = window.jspdf;
+                const docPDF = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' }); 
             
-            // AGORA, o script continua com os outros event listeners:
-            document.getElementById('toggle-faltosos-btn').addEventListener('click', (e) => { 
+                const pautaName = document.getElementById('pauta-title').textContent;
+                const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
+                const atendidos = allAssisted
+                    .filter(a => a.status === 'atendido' && a.type === currentMode)
+                    .sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
+            
+                if (atendidos.length === 0) {
+                    showNotification("Não há atendidos para gerar o relatório.", "info");
+                    return;
+                }
+            
+                // ==========================================================
+                // FUNÇÕES DE UTILIDADE PARA O PDF
+                // ==========================================================
+            
+                const cleanString = (str) => String(str || '').replace(/"/g, '');
+            
+                // Função robusta para obter objeto Date ou null
+                const getSafeDate = (timeValue) => {
+                    if (!timeValue) return null;
+                    if (typeof timeValue === 'object' && timeValue.seconds) {
+                        return new Date(timeValue.seconds * 1000);
+                    }
+                    const date = new Date(timeValue);
+                    return isNaN(date.getTime()) ? null : date;
+                };
+            
+                /**
+                 * Calcula e formata a duração para HH:mm ou X min.
+                 * @param {number} totalMinutes - Total de minutos de duração.
+                 * @returns {string} Duração formatada.
+                 */
+                const calculateDuration = (totalMinutes) => {
+                    if (totalMinutes === null || totalMinutes < 0) return 'N/A';
+                    
+                    if (totalMinutes >= 60) {
+                        const hours = Math.floor(totalMinutes / 60);
+                        const minutes = totalMinutes % 60;
+                        const h = String(hours).padStart(2, '0');
+                        const m = String(minutes).padStart(2, '0');
+                        return `${h}:${m}`; // Ex: 01:30
+                    }
+                    return `${totalMinutes} min`; // Ex: 45 min
+                };
+                
+                // ==========================================================
+                // INÍCIO DA GERAÇÃO DO PDF
+                // ==========================================================
+            
+                docPDF.setFontSize(18);
+                docPDF.text(`Relatório de Atendidos - ${pautaName}`, 14, 22);
+                docPDF.setFontSize(11);
+                docPDF.setTextColor(100);
+            
+                const totalSubjects = atendidos.reduce((acc, a) => acc + 1 + (a.demandas?.quantidade || 0), 0);
+                docPDF.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
+                docPDF.text(`Total de Atendidos: ${atendidos.length}`, 14, 36);
+                docPDF.text(`Total de Assuntos: ${totalSubjects}`, 150, 36);
+            
+            
+                // NOVA ORDEM DE COLUNAS: Agendado e Chegou vêm antes de Finalizado
+                const tableColumn = ["#", "Nome", "Agendado", "Chegou", "Finalizado", "Duração", "Assunto Principal", "Atendente", "Confirmado"]; 
+                const tableRows = [];
+            
+                atendidos.forEach((item, index) => {
+                    
+                    const arrivalDate = getSafeDate(item.arrivalTime);
+                    const attendedDate = getSafeDate(item.attendedTime);
+                    
+                    let duration = 'N/A';
+                    let formattedAttendedTime = 'N/A';
+            
+                    // ----------------------------------------------------
+                    // 1. Cálculo de Duração e Formatação do Finalizado
+                    // ----------------------------------------------------
+                    if (arrivalDate && attendedDate) {
+                        const diffMs = attendedDate.getTime() - arrivalDate.getTime();
+                        const totalMins = Math.round(diffMs / 60000);
+                        
+                        if (totalMins >= 0) {
+                             duration = calculateDuration(totalMins);
+                        }
+                        
+                        formattedAttendedTime = attendedDate.toLocaleTimeString('pt-BR', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        });
+                    }
+                    
+                    // ----------------------------------------------------
+                    // 2. Formatação Agendado e Chegou
+                    // ----------------------------------------------------
+                    const scheduledTimeStr = item.scheduledTime || (item.type === 'avulso' ? 'Avulso' : 'N/A');
+                    const arrivalTimeStr = arrivalDate ? arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+            
+                    // Garante que o campo de Agendado/Chegada reflita o status Avulso se for o caso
+                    const finalScheduledTimeStr = item.type === 'avulso' ? 'Avulso' : scheduledTimeStr;
+                    const finalArrivalTimeStr = item.type === 'avulso' && arrivalTimeStr === 'N/A' ? 'Avulso' : arrivalTimeStr;
+            
+            
+                    const confirmedStatus = item.isConfirmed ? `Sim (${item.confirmationDetails?.confirmedBy || 'N/A'})` : 'Não';
+                    
+                    // ----------------------------------------------------
+                    // 3. Montagem da Linha de Dados (NOVA ORDEM)
+                    // ----------------------------------------------------
+                    const rowData = [
+                        index + 1,
+                        cleanString(item.name),
+                        finalScheduledTimeStr,  // Coluna 3: Agendado
+                        finalArrivalTimeStr,    // Coluna 4: Chegou
+                        formattedAttendedTime,  // Coluna 5: Finalizado
+                        duration,               // Coluna 6: Duração
+                        cleanString(item.subject),  // Coluna 7: Assunto Principal
+                        cleanString(item.attendant) || 'N/A', // Coluna 8: Atendente
+                        confirmedStatus         // Coluna 9: Confirmado
+                    ];
+                    tableRows.push(rowData);
+                });
+            
+                // Configuração para ajuste automático das colunas (widths)
+                docPDF.autoTable(tableColumn, tableRows, { 
+                    startY: 42,
+                    styles: { fontSize: 8, overflow: 'linebreak' }, // Reduz o tamanho da fonte para caber mais
+                    columnStyles: {
+                        0: { cellWidth: 20 },   // #
+                        1: { cellWidth: 'auto' }, // Nome (ajusta automaticamente)
+                        2: { cellWidth: 60 },   // Agendado
+                        3: { cellWidth: 60 },   // Chegou
+                        4: { cellWidth: 60 },   // Finalizado
+                        5: { cellWidth: 50 },   // Duração
+                        6: { cellWidth: 150 },  // Assunto (espaço maior)
+                        7: { cellWidth: 'auto' }, // Atendente
+                        8: { cellWidth: 'auto' } // Confirmado
+                    }
+                });
+                
+                docPDF.save(`relatorio_${pautaName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+            });
+                });
+            document.getElementById('toggle-faltosos-btn').addEventListener('click', (e) => {
                 const btn = e.currentTarget;
                 const pautaColumn = document.getElementById('pauta-column');
                 const faltososColumn = document.getElementById('faltosos-column');
@@ -3626,10 +3624,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
-
-
-
-
 
 
 
