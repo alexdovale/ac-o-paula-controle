@@ -1,8 +1,7 @@
 /**
- * estatisticas.js - Versão Módulo Corrigida e Completa
- * Inclui: Responsividade, Modal Interativo (arrastar/redimensionar),
- * Cálculos Estatísticos e Exportação para PDF.
- * Requer: jspdf, jspdf-autotable, chart.js (já carregados no index.html)
+ * estatisticas.js - Versão Módulo Corrigida, com PDF Melhorado, Responsiva e Agendados por Horário
+ * Este arquivo deve ser importado pelo seu script principal.
+ * Requer: jspdf, jspdf-autotable, chart.js
  */
 
 function makeModalInteractive(modal) {
@@ -12,42 +11,79 @@ function makeModalInteractive(modal) {
     modal.classList.add('interactive-modal-init', 'bg-white');
 
     // --- INÍCIO DA MELHORIA DE RESPONSIVIDADE ---
+    // Estilos injetados para garantir que o modal e seu conteúdo se adaptem a diferentes tamanhos de tela.
     if (!document.getElementById('statistics-responsive-styles')) {
         const styleSheet = document.createElement("style");
         styleSheet.id = 'statistics-responsive-styles';
         styleSheet.innerHTML = `
-            /* Estilos para telas menores (ex: celulares com até 768px de largura) */
-            @media (max-width: 768px) {
-                #statistics-modal {
-                    width: 98vw !important;
-                    height: 95vh !important;
-                    max-height: 95vh !important;
-                    min-width: 300px !important;
-                    min-height: 400px !important;
-                    resize: none !important; 
-                }
-                #statistics-content-wrapper { /* Novo ID usado no HTML gerado */
+            /* Estilos aprimorados para responsividade */
+            
+            /* Em telas de tablet e menores (abaixo de 1024px) */
+            @media (max-width: 1024px) {
+                /* O container principal do conteúdo passa a ser rolável */
+                #statistics-content-wrapper {
+                    overflow-y: auto !important;
                     display: flex;
                     flex-direction: column;
+                }
+                /* Desativa o scroll individual das colunas internas para evitar rolagem dupla */
+                #statistics-content-wrapper > .lg\\:col-span-2,
+                #statistics-content-wrapper > .lg\\:col-span-3 {
+                    overflow-y: visible !important;
+                }
+            }
+
+            /* Em telas de celular (abaixo de 768px) */
+            @media (max-width: 768px) {
+                /* O modal ocupa a tela inteira para uma melhor experiência mobile */
+                #statistics-modal {
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    max-width: 100vw !important;
+                    max-height: 100vh !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    transform: none !important;
+                    border-radius: 0 !important;
+                    resize: none !important;
+                    min-width: 0 !important;
+                    min-height: 0 !important;
+                }
+
+                #statistics-content-wrapper {
                     padding: 8px !important;
-                    gap: 8px !important;
-                    overflow-y: auto; /* Garante rolagem do conteúdo interno */
-                    height: 100%;
                 }
-                #statistics-content-wrapper > div {
-                    flex-shrink: 0; /* Impede que os cards encolham demais */
+
+                /* Força os cards de resumo a terem no máximo 2 colunas */
+                #statistics-content .summary-cards {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
                 }
-                #statistics-content-wrapper .lg\\:col-span-2,
-                #statistics-content-wrapper .lg\\:col-span-3 {
-                    max-height: 80vh; /* Altura máxima para rolagem no mobile */
-                    overflow-y: auto;
-                    width: 100%;
+
+                /* Ajusta o tamanho das fontes para melhor leitura */
+                #statistics-content h3 {
+                    font-size: 1.125rem; /* text-lg */
                 }
-                #statistics-content-wrapper .text-2xl {
-                    font-size: 1.25rem;
+                #statistics-content .text-2xl {
+                    font-size: 1.25rem; /* text-xl */
                 }
-                #statistics-content-wrapper .text-xs {
-                    font-size: 0.7rem;
+                #statistics-content .text-xs {
+                    font-size: 0.75rem; /* text-xs */
+                }
+                 /* Reduz o tamanho das tabelas para caber mais conteúdo na tela */
+                #statistics-content .max-h-40 { max-height: 12rem !important; }
+                #statistics-content .max-h-\\[30vh\\] { max-height: 35vh !important; }
+                #statistics-content .max-h-\\[50vh\\] { max-height: 40vh !important; }
+            }
+
+            /* Ajustes finos para telas muito pequenas (abaixo de 480px) */
+            @media (max-width: 480px) {
+                /* Em telas bem pequenas, os cards de resumo ficam em coluna única */
+                #statistics-content .summary-cards {
+                    grid-template-columns: repeat(1, minmax(0, 1fr));
+                }
+
+                #statistics-content-wrapper {
+                    padding: 4px !important;
                 }
             }
         `;
@@ -62,7 +98,6 @@ function makeModalInteractive(modal) {
         modal.appendChild(newContent);
     }
 
-    // Estilos padrão do modal
     Object.assign(modal.style, {
         position: 'fixed', top: '50%', left: '50%',
         transform: 'translate(-50%, -50%)', width: '90vw', height: '90vh',
@@ -78,15 +113,13 @@ function makeModalInteractive(modal) {
         return;
     }
 
-    // --- CRIAÇÃO DO CABEÇALHO (DRAG BAR) ---
     const header = document.createElement('div');
     header.id = 'statistics-modal-header';
     Object.assign(header.style, {
         backgroundColor: '#f7f7f7', padding: '10px 15px', cursor: 'move',
         borderBottom: '1px solid #ddd', display: 'flex',
         justifyContent: 'space-between', alignItems: 'center',
-        borderTopLeftRadius: '12px', borderTopRightRadius: '12px',
-        flexShrink: '0' // Impede que o cabeçalho encolha
+        borderTopLeftRadius: '12px', borderTopRightRadius: '12px'
     });
 
     const title = document.createElement('span');
@@ -126,7 +159,6 @@ function makeModalInteractive(modal) {
     
     modal.prepend(header);
 
-    // --- LÓGICA DE ARRASTAR (DRAG) ---
     let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
     let originalState = {};
 
@@ -155,7 +187,6 @@ function makeModalInteractive(modal) {
         document.onmousemove = null;
     }
 
-    // --- LÓGICA DE BOTÕES (Fechar, Maximizar, Minimizar) ---
     closeBtn.onclick = () => modal.style.display = 'none';
 
     maxBtn.onclick = () => {
@@ -237,14 +268,9 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
     const atendidos = allAssisted.filter(a => a.status === 'atendido');
     const faltosos = allAssisted.filter(a => a.status === 'faltoso');
 
-    // -----------------------------------------------------
-    // CÁLCULO: Atendimentos por Colaborador
-    // -----------------------------------------------------
     const statsByGroup = atendidos.reduce((acc, a) => {
         const attendantIsObject = typeof a.attendant === 'object' && a.attendant !== null;
-        // Tenta pegar o nome da propriedade 'nome' se for um objeto, senão usa a string attendant
         const attendantName = attendantIsObject ? a.attendant.nome : (a.attendant || 'Não informado');
-        // Tenta agrupar por equipe se for um objeto, senão usa 'Sem Grupo'
         const groupName = attendantIsObject && a.attendant.equipe ? `Equipe ${a.attendant.equipe}` : 'Sem Grupo';
 
         if (!acc[groupName]) {
@@ -258,11 +284,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
         return acc;
     }, {});
     
-    // -----------------------------------------------------
-    // CÁLCULO: Demandas por Assunto (Inclui Principal + Adicionais)
-    // -----------------------------------------------------
     const statsBySubject = allAssisted.reduce((acc, a) => {
-        // Inclui o assunto principal e as demandas adicionais na contagem
         const demandasDoAssistido = (a.subject ? [a.subject] : []).concat(a.demandas?.descricoes || []);
         demandasDoAssistido.forEach(demanda => {
             if (!acc[demanda]) {
@@ -282,43 +304,35 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
     const totalDemandasAtendidos = Object.values(statsBySubject).reduce((sum, data) => sum + data.atendidos, 0);
     const totalDemandasFaltosos = Object.values(statsBySubject).reduce((sum, data) => sum + data.faltosos, 0);
 
-    // -----------------------------------------------------
-    // CÁLCULO: Contagens por Horário
-    // -----------------------------------------------------
-    // Atendidos por Horário (scheduledTime)
     const statsByTime = atendidos.filter(a => a.scheduledTime).reduce((acc, a) => {
         acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
         return acc;
     }, {});
     const sortedTimes = Object.keys(statsByTime).sort();
 
-    // Faltosos por Horário (scheduledTime)
     const statsByTimeFaltosos = faltosos.filter(a => a.scheduledTime).reduce((acc, a) => {
         acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
         return acc;
     }, {});
     const sortedTimesFaltosos = Object.keys(statsByTimeFaltosos).sort();
 
-    // Todos Agendados por Horário (scheduledTime)
+    // NOVO: Cálculo de todos os agendados por horário
     const statsByScheduledTime = allAssisted.filter(a => a.scheduledTime).reduce((acc, a) => {
         acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
         return acc;
     }, {});
     const sortedScheduledTimes = Object.keys(statsByScheduledTime).sort();
 
-    // -----------------------------------------------------
-    // CÁLCULO: Tempo Médio de Atendimento
-    // -----------------------------------------------------
     let totalDelegatedMinutes = 0, delegatedCount = 0;
     let totalDirectMinutes = 0, directCount = 0;
 
     atendidos.forEach(a => {
         const minutes = getTimeDifferenceInMinutes(a.arrivalTime, a.attendedTime);
-        if (minutes !== null && minutes >= 0) { // Garante tempo positivo
-            if (useDelegationFlow && a.inAttendanceTime) { // Se usou o fluxo Em Atendimento
+        if (minutes !== null) {
+            if (useDelegationFlow && a.inAttendanceTime) {
                 totalDelegatedMinutes += minutes;
                 delegatedCount++;
-            } else { // Atendimento direto (mesmo que avulso, conta no direto)
+            } else {
                 totalDirectMinutes += minutes;
                 directCount++;
             }
@@ -327,10 +341,6 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
 
     const avgTimeDelegated = delegatedCount > 0 ? Math.round(totalDelegatedMinutes / delegatedCount) : 0;
     const avgTimeDirect = directCount > 0 ? Math.round(totalDirectMinutes / directCount) : 0;
-
-    // -----------------------------------------------------
-    // GERAÇÃO DO HTML (VISUALIZAÇÃO NO MODAL)
-    // -----------------------------------------------------
 
     const delegationHTML = useDelegationFlow ? `
         <div class="bg-indigo-100 p-3 rounded-lg text-center border border-indigo-200">
@@ -366,7 +376,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
         <div class="lg:col-span-2 flex flex-col gap-4 overflow-y-auto pr-2">
             <div class="bg-white p-4 rounded-lg border">
                 <h3 class="text-lg font-semibold text-gray-800 mb-3">Resumo Geral</h3>
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-center">
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-center summary-cards">
                     <div class="bg-green-100 p-3 rounded-lg border border-green-200"><p class="text-2xl font-bold text-green-700">${atendidos.length}</p><p class="text-xs text-gray-600 mt-1">Atendidos</p></div>
                     <div class="bg-red-100 p-3 rounded-lg border border-red-200"><p class="text-2xl font-bold text-red-700">${faltosos.length}</p><p class="text-xs text-gray-600 mt-1">Faltosos</p></div>
                     <div class="bg-blue-100 p-3 rounded-lg border border-blue-200"><p class="text-2xl font-bold text-blue-700">${avgTimeDirect} min</p><p class="text-xs text-gray-600 mt-1">Tempo Médio (direto)</p></div>
@@ -424,7 +434,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
         <div class="lg:col-span-3 flex flex-col gap-4 overflow-y-auto pr-2">
             <div class="bg-white p-4 rounded-lg border">
                 <h3 class="text-lg font-semibold text-gray-800 mb-2">Demandas por Assunto</h3>
-                 <div class="max-h-[50vh] overflow-y-auto">
+                   <div class="max-h-[50vh] overflow-y-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
                             <tr>
@@ -468,9 +478,6 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
     `;
     if(content) content.innerHTML = html;
 
-    // -----------------------------------------------------
-    // LISTENER PARA EXPORTAÇÃO DE PDF
-    // -----------------------------------------------------
     const exportBtn = document.getElementById('export-stats-pdf-btn');
     if (exportBtn) {
         exportBtn.addEventListener('click', () => {
@@ -519,14 +526,13 @@ async function exportStatisticsToPDF(pautaName, statsData) {
 
     const FONT_NORMAL = 'Helvetica';
     const FONT_BOLD = 'Helvetica-Bold';
-    const COLOR_PRIMARY = '#16a34a'; // Verde do SIGEP
-    const COLOR_SECONDARY = '#34d399'; // Verde Claro
+    const COLOR_PRIMARY = '#2B3A55';
+    const COLOR_SECONDARY = '#4F709C';
     const COLOR_TEXT = '#333333';
     const COLOR_GRAY = '#7f8c8d';
     const COLOR_GREEN = '#27ae60';
     const COLOR_RED = '#c0392b';
     const COLOR_BLUE = '#2980b9';
-    const COLOR_INDIGO = '#6366f1';
 
     // --- FUNÇÕES AUXILIARES ---
 
@@ -542,7 +548,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
             doc.text(titleLines, margin, margin - 10);
             
             // Linha do Cabeçalho
-            doc.setDrawColor(COLOR_PRIMARY);
+            doc.setDrawColor(COLOR_SECONDARY);
             doc.line(margin, margin + (titleLines.length * 12), pageWidth - margin, margin + (titleLines.length * 12));
 
             // Rodapé
@@ -557,7 +563,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     };
 
     const addSectionTitle = (title) => {
-        if (yPos > pageHeight - 50) { // Garante que o título não fique no final da página
+        if (yPos > pageHeight - 200) { 
             doc.addPage();
             yPos = margin + 30;
         }
@@ -581,7 +587,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
             { label: 'Tempo Médio (direto)', value: `${statsData.avgTimeDirect} min`, color: COLOR_BLUE },
         ];
         if(statsData.useDelegationFlow) {
-            summaryItems.push({ label: 'Tempo Médio (delegação)', value: `${statsData.avgTimeDelegated} min`, color: COLOR_INDIGO });
+            summaryItems.push({ label: 'Tempo Médio (delegação)', value: `${statsData.avgTimeDelegated} min`, color: '#8e44ad' });
         }
 
         const cardWidth = (pageWidth - margin * 2 - (summaryItems.length -1) * 10) / summaryItems.length;
@@ -609,27 +615,29 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     }
 
     if (document.getElementById('export-collaborators').checked && Object.keys(statsData.statsByGroup).length > 0) {
-        
-        for (const [groupName, groupData] of Object.entries(statsData.statsByGroup)) {
+        const sortedGroups = Object.entries(statsData.statsByGroup).sort(([, a], [, b]) => b.total - a.total);
+
+        for (const [groupName, groupData] of sortedGroups) {
+            
+            addSectionTitle(`Grupo: ${groupName} (Total de Atendimentos: ${groupData.total})`);
+            
             const sortedCollaborators = Object.entries(groupData.collaborators).sort(([, a], [, b]) => b - a);
             if (sortedCollaborators.length === 0) continue;
-            
-            addSectionTitle(`Atendimentos por Colaborador (${groupName})`);
-            
-            // Usa a tabela (autoTable) para mais de 15 itens
-            if (sortedCollaborators.length > 15) {
+
+            const MAX_CHART_ITEMS = 15;
+
+            if (sortedCollaborators.length > MAX_CHART_ITEMS) {
                 doc.autoTable({
                     startY: yPos,
                     head: [['Colaborador', 'Nº de Atendimentos']],
                     body: sortedCollaborators,
                     theme: 'grid',
-                    headStyles: { fillColor: COLOR_PRIMARY, textColor: '#FFFFFF', fontStyle: 'bold' },
+                    headStyles: { fillColor: COLOR_SECONDARY, textColor: '#FFFFFF', fontStyle: 'bold' },
                     didDrawPage: (data) => { if(data.pageNumber > 1) yPos = margin + 30 },
                     margin: { top: yPos, bottom: margin + 20 }
                 });
                 yPos = doc.autoTable.previous.finalY + 20;
             } else {
-                // Usa o gráfico de barras para até 15 itens
                 const labels = sortedCollaborators.map(item => item[0]);
                 const data = sortedCollaborators.map(item => item[1]);
 
@@ -646,8 +654,8 @@ async function exportStatisticsToPDF(pautaName, statsData) {
                         datasets: [{
                             label: 'Atendimentos',
                             data: data,
-                            backgroundColor: 'rgba(22, 163, 74, 0.8)', // Cor do SIGEP
-                            borderColor: 'rgba(22, 163, 74, 1)',
+                            backgroundColor: 'rgba(79, 112, 156, 0.8)',
+                            borderColor: 'rgba(43, 58, 85, 1)',
                             borderWidth: 1
                         }]
                     },
@@ -684,10 +692,10 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     }
 
     if (document.getElementById('export-subjects').checked && Object.keys(statsData.statsBySubject).length > 0) {
-        addSectionTitle("Demandas por Assunto (Principal + Adicionais)");
-        const totalDemands = statsData.totalDemandasGeral;
-        const totalAtendidos = statsData.totalDemandasAtendidos;
-        const totalFaltosos = statsData.totalDemandasFaltosos;
+        addSectionTitle("Demandas por Assunto");
+        const totalDemands = Object.values(statsData.statsBySubject).reduce((sum, data) => sum + data.total, 0);
+        const totalAtendidos = Object.values(statsData.statsBySubject).reduce((sum, data) => sum + data.atendidos, 0);
+        const totalFaltosos = Object.values(statsData.statsBySubject).reduce((sum, data) => sum + data.faltosos, 0);
 
         doc.autoTable({
             startY: yPos,
@@ -708,7 +716,6 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         yPos = doc.autoTable.previous.finalY + 20;
     }
     
-    // Função genérica para adicionar tabelas de horário
     const addTimeTableToPdf = (title, data, checkboxId, total, color) => {
         if (document.getElementById(checkboxId).checked && data.length > 0) {
             addSectionTitle(title);
@@ -727,10 +734,10 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         }
     };
     
-    addTimeTableToPdf("Total de Agendados por Horário", statsData.statsByScheduledTime, 'export-scheduled-time', statsData.agendadosCount, COLOR_BLUE);
-    addTimeTableToPdf("Atendimentos Concluídos por Horário", statsData.statsByTime, 'export-times', statsData.atendidosCount, COLOR_GREEN);
-    addTimeTableToPdf("Faltosos Registrados por Horário", statsData.statsByTimeFaltosos, 'export-absentees-time', statsData.faltososCount, COLOR_RED);
+    addTimeTableToPdf("Agendados por Horário", statsData.statsByScheduledTime, 'export-scheduled-time', statsData.agendadosCount, COLOR_BLUE);
+    addTimeTableToPdf("Atendimentos por Horário", statsData.statsByTime, 'export-times', statsData.atendidosCount, COLOR_GREEN);
+    addTimeTableToPdf("Faltosos por Horário", statsData.statsByTimeFaltosos, 'export-absentees-time', statsData.faltososCount, COLOR_RED);
 
     addHeaderAndFooter();
-    doc.save(`estatisticas_${pautaName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`);
+    doc.save(`estatisticas_${pautaName.replace(/\s+/g, '_')}.pdf`);
 }
