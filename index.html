@@ -2609,41 +2609,27 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
 
             document.getElementById('download-pdf-btn').addEventListener('click', () => {
-                const { jsPDF } = window.jspdf;
-                const docPDF = new jsPDF();
-
-                const pautaName = document.getElementById('pauta-title').textContent;
-                const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-                const atendidos = allAssisted
-                    .filter(a => a.status === 'atendido' && a.type === currentMode)
-                    .sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
-
-                if (atendidos.length === 0) {
-                    showNotification("Não há atendidos para gerar o relatório.", "info");
-                    return;
-                }
-
-                docPDF.setFontSize(18);
-                docPDF.text(`Relatório de Atendidos - ${pautaName}`, 14, 22);
-                docPDF.setFontSize(11);
-                docPDF.setTextColor(100);
-
-                const totalSubjects = atendidos.reduce((acc, a) => acc + 1 + (a.demandas?.quantidade || 0), 0);
-                docPDF.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
-                docPDF.text(`Total de Atendidos: ${atendidos.length}`, 14, 36);
-                docPDF.text(`Total de Assuntos: ${totalSubjects}`, 100, 36);
-
-
-                const tableColumn = ["#", "Nome", "CPF", "Assunto Principal", "Atendente", "Finalizado", "Duração", "Confirmado"]; // Adicionado "Confirmado"
-                const tableRows = [];
-
-                atendidos.forEach((item, index) => {
-                    // ----------------------------------------------------
-                    // 1. Lógica de Data Segura e Cálculo de Duração
-                    // ----------------------------------------------------
-                    
-                    // Cria datas válidas, tratando strings ou Timestamps de forma segura.
-                    // Nota: Estamos replicando a lógica de conversão do formatTime para uso local no PDF.
+                    const { jsPDF } = window.jspdf;
+                    const docPDF = new jsPDF();
+                
+                    const pautaName = document.getElementById('pauta-title').textContent;
+                    const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
+                    const atendidos = allAssisted
+                        .filter(a => a.status === 'atendido' && a.type === currentMode)
+                        .sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
+                
+                    if (atendidos.length === 0) {
+                        showNotification("Não há atendidos para gerar o relatório.", "info");
+                        return;
+                    }
+                
+                    // ==========================================================
+                    // FUNÇÕES DE UTILIDADE PARA O PDF
+                    // ==========================================================
+                
+                    const cleanString = (str) => String(str || '').replace(/"/g, '');
+                
+                    // Função robusta para obter objeto Date ou null
                     const getSafeDate = (timeValue) => {
                         if (!timeValue) return null;
                         if (typeof timeValue === 'object' && timeValue.seconds) {
@@ -2652,52 +2638,98 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         const date = new Date(timeValue);
                         return isNaN(date.getTime()) ? null : date;
                     };
-                    
-                    const arrivalDate = getSafeDate(item.arrivalTime);
-                    const attendedDate = getSafeDate(item.attendedTime);
-                    
-                    let duration = 'N/A';
-                    let formattedAttendedTime = 'N/A';
-
-                    if (arrivalDate && attendedDate) {
-                        const diffMs = attendedDate.getTime() - arrivalDate.getTime();
-                        const diffMins = Math.round(diffMs / 60000);
+                
+                    /**
+                     * Calcula e formata a duração para HH:mm ou X min.
+                     * @param {number} totalMinutes - Total de minutos de duração.
+                     * @returns {string} Duração formatada.
+                     */
+                    const calculateDuration = (totalMinutes) => {
+                        if (totalMinutes === null || totalMinutes < 0) return 'N/A';
                         
-                        if (diffMins >= 0) {
-                             duration = `${diffMins} min`;
+                        if (totalMinutes >= 60) {
+                            const hours = Math.floor(totalMinutes / 60);
+                            const minutes = totalMinutes % 60;
+                            const h = String(hours).padStart(2, '0');
+                            const m = String(minutes).padStart(2, '0');
+                            return `${h}:${m}`; // Ex: 01:30
+                        }
+                        return `${totalMinutes} min`; // Ex: 45 min
+                    };
+                    
+                    // ==========================================================
+                    // INÍCIO DA GERAÇÃO DO PDF
+                    // ==========================================================
+                
+                    docPDF.setFontSize(18);
+                    docPDF.text(`Relatório de Atendidos - ${pautaName}`, 14, 22);
+                    docPDF.setFontSize(11);
+                    docPDF.setTextColor(100);
+                
+                    const totalSubjects = atendidos.reduce((acc, a) => acc + 1 + (a.demandas?.quantidade || 0), 0);
+                    docPDF.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
+                    docPDF.text(`Total de Atendidos: ${atendidos.length}`, 14, 36);
+                    docPDF.text(`Total de Assuntos: ${totalSubjects}`, 100, 36);
+                
+                
+                    // NOVA ESTRUTURA DA COLUNA COM A NOVA COLUNA
+                    const tableColumn = ["#", "Nome", "Agendado/Chegou", "Assunto Principal", "Atendente", "Finalizado", "Duração", "Confirmado"]; 
+                    const tableRows = [];
+                
+                    atendidos.forEach((item, index) => {
+                        
+                        const arrivalDate = getSafeDate(item.arrivalTime);
+                        const attendedDate = getSafeDate(item.attendedTime);
+                        
+                        let duration = 'N/A';
+                        let formattedAttendedTime = 'N/A';
+                
+                        // ----------------------------------------------------
+                        // 1. Cálculo de Duração e Formatação do Finalizado
+                        // ----------------------------------------------------
+                        if (arrivalDate && attendedDate) {
+                            const diffMs = attendedDate.getTime() - arrivalDate.getTime();
+                            const totalMins = Math.round(diffMs / 60000);
+                            
+                            if (totalMins >= 0) {
+                                 duration = calculateDuration(totalMins); // Usa a nova função de HH:mm
+                            }
+                            
+                            formattedAttendedTime = attendedDate.toLocaleTimeString('pt-BR', { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                            });
                         }
                         
-                        // Formatação segura do horário finalizado
-                        formattedAttendedTime = attendedDate.toLocaleTimeString('pt-BR', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                        });
-                    }
-
-                    const cleanString = (str) => String(str || '').replace(/"/g, '');
-                    const confirmedStatus = item.isConfirmed ? `Sim (${item.confirmationDetails?.confirmedBy || 'N/A'})` : 'Não';
-                    
-                    // ----------------------------------------------------
-                    // 2. Criação da Linha da Tabela
-                    // ----------------------------------------------------
-
-                    const rowData = [
-                        index + 1,
-                        cleanString(item.name),
-                        cleanString(item.cpf),
-                        cleanString(item.subject),
-                        cleanString(item.attendant) || 'N/A',
-                        formattedAttendedTime, // Usa o horário formatado ou 'N/A'
-                        duration,              // Usa a duração calculada ou 'N/A'
-                        confirmedStatus
-                    ];
-                    tableRows.push(rowData);
+                        // ----------------------------------------------------
+                        // 2. Coluna Agendado/Chegou (Formato combinado)
+                        // ----------------------------------------------------
+                        let scheduledArrivalInfo = 'N/A';
+                        if (item.type === 'avulso') {
+                             scheduledArrivalInfo = `Avulso | ${arrivalDate ? arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}`;
+                        } else {
+                             const arrivalTimeStr = arrivalDate ? arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                             scheduledArrivalInfo = `${item.scheduledTime || 'N/A'} / ${arrivalTimeStr}`;
+                        }
+                        
+                        const confirmedStatus = item.isConfirmed ? `Sim (${item.confirmationDetails?.confirmedBy || 'N/A'})` : 'Não';
+                        
+                        const rowData = [
+                            index + 1,
+                            cleanString(item.name),
+                            scheduledArrivalInfo, // NOVA COLUNA
+                            cleanString(item.subject),
+                            cleanString(item.attendant) || 'N/A',
+                            formattedAttendedTime,
+                            duration,
+                            confirmedStatus
+                        ];
+                        tableRows.push(rowData);
+                    });
+                
+                    docPDF.autoTable(tableColumn, tableRows, { startY: 42 });
+                    docPDF.save(`relatorio_${pautaName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
                 });
-
-                docPDF.autoTable(tableColumn, tableRows, { startY: 42 });
-                docPDF.save(`relatorio_${pautaName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
-            });
-
             document.getElementById('toggle-faltosos-btn').addEventListener('click', (e) => {
                 const btn = e.currentTarget;
                 const pautaColumn = document.getElementById('pauta-column');
@@ -3570,6 +3602,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
