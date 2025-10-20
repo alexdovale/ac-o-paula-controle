@@ -286,6 +286,29 @@ const closeBtn = document.getElementById('close-documents-modal-btn');
 const cancelBtn = document.getElementById('cancel-checklist-btn');
 
 
+// --- Configuração Interna de IDs de CEP ---
+
+const CEP_CONFIG = [
+    { 
+        // Endereço do Assistido
+        cepFieldId: 'cep-assistido',
+        streetFieldId: 'rua-assistido',
+        neighborhoodFieldId: 'bairro-assistido',
+        cityFieldId: 'cidade-assistido',
+        stateFieldId: 'estado-assistido'
+    },
+    { 
+        // Endereço da Parte Contrária (Réu)
+        cepFieldId: 'cep-reu',
+        streetFieldId: 'rua-reu',
+        neighborhoodFieldId: 'bairro-reu',
+        cityFieldId: 'cidade-reu',
+        stateFieldId: 'estado-reu'
+    }
+    // Adicione mais objetos aqui se você tiver outros conjuntos de campos de endereço,
+    // garantindo que os IDs correspondam ao seu HTML.
+];
+
 // --- Funções Internas ---
 
 function populateActionSelection() {
@@ -492,6 +515,48 @@ async function getAddressByCep(cep) {
     }
 }
 
+/**
+ * Adiciona o listener para o campo de CEP.
+ * *Função interna usada para inicializar os listeners definidos em CEP_CONFIG.*
+ */
+function setupCepIntegrationInternal({ cepFieldId, streetFieldId, neighborhoodFieldId, cityFieldId, stateFieldId }) {
+    const cepInput = document.getElementById(cepFieldId);
+    
+    if (cepInput) {
+        cepInput.addEventListener('blur', async (e) => { 
+            const cep = e.target.value;
+            
+            // Elementos para manipulação
+            const streetInput = document.getElementById(streetFieldId);
+            const neighborhoodInput = document.getElementById(neighborhoodFieldId);
+            const cityInput = document.getElementById(cityFieldId);
+            const stateInput = document.getElementById(stateFieldId);
+
+            // Limpa e informa que está buscando
+            if (streetInput) streetInput.value = 'Buscando...'; 
+            if (neighborhoodInput) neighborhoodInput.value = '';
+            if (cityInput) cityInput.value = '';
+            if (stateInput) stateInput.value = '';
+            
+            const address = await getAddressByCep(cep);
+
+            if (address) {
+                // Preenche os campos do formulário
+                if (streetInput) streetInput.value = address.logradouro || '';
+                if (neighborhoodInput) neighborhoodInput.value = address.bairro || '';
+                if (cityInput) cityInput.value = address.localidade || '';
+                if (stateInput) stateInput.value = address.uf || '';
+                if (showNotification) showNotification("Endereço preenchido com sucesso.", "success");
+            } else {
+                // Se falhar, limpa o campo de logradouro e notifica o usuário
+                if (streetInput) streetInput.value = ''; 
+                if (showNotification) showNotification("CEP não encontrado ou inválido. Digite o endereço manualmente.", "warning");
+            }
+        });
+    }
+}
+
+
 // --- Manipuladores de Eventos ---
 
 function handleActionSelect(e) {
@@ -672,52 +737,7 @@ function closeModal() {
 
 // --- Funções Exportadas ---
 
-/**
- * Adiciona o listener para o campo de CEP.
- * Você deve chamar esta função no seu código principal para CADA conjunto de campos de endereço.
- * * @param {string} cepFieldId ID do campo de CEP.
- * @param {string} streetFieldId ID do campo de Logradouro (Rua).
- * @param {string} neighborhoodFieldId ID do campo de Bairro.
- * @param {string} cityFieldId ID do campo de Cidade.
- * @param {string} stateFieldId ID do campo de Estado (UF).
- */
-export function setupCepIntegration(cepFieldId, streetFieldId, neighborhoodFieldId, cityFieldId, stateFieldId) {
-    const cepInput = document.getElementById(cepFieldId);
-    
-    if (cepInput) {
-        // Usa o evento 'blur' (quando o campo perde o foco) para disparar a busca
-        cepInput.addEventListener('blur', async (e) => { 
-            const cep = e.target.value;
-            
-            // Limpa e informa que está buscando
-            const streetInput = document.getElementById(streetFieldId);
-            const neighborhoodInput = document.getElementById(neighborhoodFieldId);
-            const cityInput = document.getElementById(cityFieldId);
-            const stateInput = document.getElementById(stateFieldId);
-
-            if (streetInput) streetInput.value = 'Buscando...'; 
-            if (neighborhoodInput) neighborhoodInput.value = '';
-            if (cityInput) cityInput.value = '';
-            if (stateInput) stateInput.value = '';
-            
-            const address = await getAddressByCep(cep);
-
-            if (address) {
-                // Preenche os campos do formulário
-                if (streetInput) streetInput.value = address.logradouro || '';
-                if (neighborhoodInput) neighborhoodInput.value = address.bairro || '';
-                if (cityInput) cityInput.value = address.localidade || '';
-                if (stateInput) stateInput.value = address.uf || '';
-                if (showNotification) showNotification("Endereço preenchido com sucesso.", "success");
-            } else {
-                // Se falhar, limpa o campo de logradouro e notifica o usuário
-                if (streetInput) streetInput.value = ''; 
-                if (showNotification) showNotification("CEP não encontrado ou inválido. Digite o endereço manualmente.", "warning");
-            }
-        });
-    }
-}
-
+// Removemos a exportação de setupCepIntegration, pois ela agora é interna.
 
 export function setupDetailsModal(config) {
     db = config.db;
@@ -732,6 +752,9 @@ export function setupDetailsModal(config) {
     cancelBtn.addEventListener('click', closeModal);
     
     if (printChecklistBtn) printChecklistBtn.addEventListener('click', handleGeneratePdf);
+    
+    // NOVO: Inicializa a integração de CEP para todos os conjuntos de IDs definidos
+    CEP_CONFIG.forEach(setupCepIntegrationInternal);
 }
 
 export function openDetailsModal(config) {
