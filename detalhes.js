@@ -287,26 +287,25 @@ const cancelBtn = document.getElementById('cancel-checklist-btn');
 
 
 // --- Configuração Interna de IDs de CEP ---
-
+// IMPORTANTE: Adicionei uma configuração para o endereço do Assistido (Requente) 
+// e da Parte Contrária (Réu), referenciando os IDs que você deve ter no HTML.
 const CEP_CONFIG = [
     { 
-        // Endereço do Assistido
-        cepFieldId: 'cep-assistido',
-        streetFieldId: 'rua-assistido',
-        neighborhoodFieldId: 'bairro-assistido',
-        cityFieldId: 'cidade-assistido',
-        stateFieldId: 'estado-assistido'
-    },
-    { 
-        // Endereço da Parte Contrária (Réu)
+        // 1. Endereço da Parte Contrária (Réu)
         cepFieldId: 'cep-reu',
         streetFieldId: 'rua-reu',
         neighborhoodFieldId: 'bairro-reu',
         cityFieldId: 'cidade-reu',
         stateFieldId: 'estado-reu'
+    },
+    { 
+        // 2. Endereço do Assistido/Requerente (Se você adicionar esses campos também)
+        cepFieldId: 'cep-assistido',
+        streetFieldId: 'rua-assistido',
+        neighborhoodFieldId: 'bairro-assistido',
+        cityFieldId: 'cidade-assistido',
+        stateFieldId: 'estado-assistido'
     }
-    // Adicione mais objetos aqui se você tiver outros conjuntos de campos de endereço,
-    // garantindo que os IDs correspondam ao seu HTML.
 ];
 
 // --- Funções Internas ---
@@ -472,6 +471,13 @@ function renderChecklist(actionKey) {
     otherListItem.appendChild(otherTextarea);
 
     checklistContainer.appendChild(observationContainer);
+    
+    // NOVO: Torna a seção de endereço do Réu visível se existir no DOM
+    const addressEditor = document.getElementById('address-editor-container');
+    if (addressEditor) {
+        checklistContainer.appendChild(addressEditor); 
+        addressEditor.classList.remove('hidden'); 
+    }
 }
 
 const normalizeText = (str) => {
@@ -523,6 +529,15 @@ function setupCepIntegrationInternal({ cepFieldId, streetFieldId, neighborhoodFi
     const cepInput = document.getElementById(cepFieldId);
     
     if (cepInput) {
+        cepInput.addEventListener('input', (e) => {
+             // Formata o CEP automaticamente (opcional, mas melhora a UX)
+             let value = e.target.value.replace(/\D/g, '');
+             if (value.length > 5) {
+                 value = value.substring(0, 5) + '-' + value.substring(5, 8);
+             }
+             e.target.value = value;
+        });
+
         cepInput.addEventListener('blur', async (e) => { 
             const cep = e.target.value;
             
@@ -532,7 +547,7 @@ function setupCepIntegrationInternal({ cepFieldId, streetFieldId, neighborhoodFi
             const cityInput = document.getElementById(cityFieldId);
             const stateInput = document.getElementById(stateFieldId);
 
-            // Limpa e informa que está buscando
+            // Tenta limpar e informar que está buscando, se os campos existirem
             if (streetInput) streetInput.value = 'Buscando...'; 
             if (neighborhoodInput) neighborhoodInput.value = '';
             if (cityInput) cityInput.value = '';
@@ -579,6 +594,11 @@ function handleBack() {
         searchInput.value = '';
         searchInput.dispatchEvent(new Event('input'));
     }
+    // Oculta a seção de edição de endereço ao voltar para a seleção de ação
+    const addressEditor = document.getElementById('address-editor-container');
+    if (addressEditor) {
+        addressEditor.classList.add('hidden');
+    }
 }
 
 async function handleSave() {
@@ -601,26 +621,52 @@ async function handleSave() {
         otherText = document.getElementById('other-observation-text')?.value || '';
     }
     
+    // --- Captura dados de endereço (Réu) ---
+    const capturedAddress = captureAddressData(CEP_CONFIG[0]); // Captura o primeiro CEP_CONFIG (Réu)
+    
     const checklistData = { 
         action: currentChecklistAction, 
         checkedIds: checkedIds,
         observations: {
             selected: selectedObservations,
             otherText: otherText
-        }
+        },
+        addressData: capturedAddress // Novo campo para salvar endereço
     };
 
     try {
         const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
         await updateDoc(docRef, getUpdatePayload({ documentChecklist: checklistData }));
-        showNotification("Checklist salvo com sucesso!", "success");
+        showNotification("Checklist e Endereço salvos com sucesso!", "success");
         closeModal();
     } catch (error) {
-        console.error("Erro ao salvar o checklist: ", error);
-        showNotification("Erro ao salvar o checklist.", "error");
+        console.error("Erro ao salvar o checklist e endereço: ", error);
+        showNotification("Erro ao salvar o checklist e endereço.", "error");
     }
 }
+
+// NOVO: Função auxiliar para capturar dados de endereço
+function captureAddressData({ cepFieldId, streetFieldId, neighborhoodFieldId, cityFieldId, stateFieldId }) {
+    const cep = document.getElementById(cepFieldId)?.value || '';
+    const street = document.getElementById(streetFieldId)?.value || '';
+    const neighborhood = document.getElementById(neighborhoodFieldId)?.value || '';
+    const city = document.getElementById(cityFieldId)?.value || '';
+    const state = document.getElementById(stateFieldId)?.value || '';
+    const number = document.getElementById(cepFieldId.replace('cep', 'numero'))?.value || ''; // Captura o campo número
+
+    if (!cep && !street && !number) return null; // Retorna nulo se não houver dados
+
+    return {
+        cep: cep,
+        rua: street,
+        numero: number,
+        bairro: neighborhood,
+        cidade: city,
+        estado: state
+    };
+}
+
 
 function handleSearch(e) {
     const searchTerm = normalizeText(e.target.value);
@@ -783,5 +829,35 @@ export function openDetailsModal(config) {
         handleBack(); 
     }
     
+    // NOVO: Preenche os campos de endereço ao abrir o modal, se houver dados salvos
+    if (assisted.documentChecklist?.addressData) {
+        fillAddressFields(CEP_CONFIG[0], assisted.documentChecklist.addressData);
+    } else {
+         clearAddressFields(CEP_CONFIG[0]);
+    }
+    
     modal.classList.remove('hidden');
+}
+
+// NOVO: Função para preencher os campos de endereço com dados salvos (se houver)
+function fillAddressFields(config, data) {
+    if (document.getElementById(config.cepFieldId)) document.getElementById(config.cepFieldId).value = data.cep || '';
+    if (document.getElementById(config.streetFieldId)) document.getElementById(config.streetFieldId).value = data.rua || '';
+    if (document.getElementById(config.neighborhoodFieldId)) document.getElementById(config.neighborhoodFieldId).value = data.bairro || '';
+    if (document.getElementById(config.cityFieldId)) document.getElementById(config.cityFieldId).value = data.cidade || '';
+    if (document.getElementById(config.stateFieldId)) document.getElementById(config.stateFieldId).value = data.estado || '';
+    // Adiciona o campo número (assumindo o ID segue o padrão: 'cep-reu' -> 'numero-reu')
+    const numberFieldId = config.cepFieldId.replace('cep', 'numero');
+    if (document.getElementById(numberFieldId)) document.getElementById(numberFieldId).value = data.numero || '';
+}
+
+// NOVO: Função para limpar campos (útil para garantir que o formulário está vazio ao abrir)
+function clearAddressFields(config) {
+    if (document.getElementById(config.cepFieldId)) document.getElementById(config.cepFieldId).value = '';
+    if (document.getElementById(config.streetFieldId)) document.getElementById(config.streetFieldId).value = '';
+    if (document.getElementById(config.neighborhoodFieldId)) document.getElementById(config.neighborhoodFieldId).value = '';
+    if (document.getElementById(config.cityFieldId)) document.getElementById(config.cityFieldId).value = '';
+    if (document.getElementById(config.stateFieldId)) document.getElementById(config.stateFieldId).value = '';
+    const numberFieldId = config.cepFieldId.replace('cep', 'numero');
+    if (document.getElementById(numberFieldId)) document.getElementById(numberFieldId).value = '';
 }
