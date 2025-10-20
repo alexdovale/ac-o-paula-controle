@@ -2,6 +2,7 @@
  * detalhes.js
  * Este módulo gerencia toda a funcionalidade do modal "Ver Detalhes",
  * incluindo a exibição da lista de documentos e o checklist.
+ * * Versão revisada para melhor estrutura e compatibilidade (responsividade).
  */
 
 // --- Dados e Estado do Módulo ---
@@ -291,17 +292,22 @@ function populateActionSelection() {
     const container = document.getElementById('document-action-selection');
     if (!container) return;
 
-    if (!container.querySelector('#action-search-input')) {
-        const searchInput = document.createElement('input');
+    // Garante que a barra de pesquisa esteja no topo
+    let searchInput = document.getElementById('action-search-input');
+    if (!searchInput) {
+        searchInput = document.createElement('input');
         searchInput.id = 'action-search-input';
         searchInput.type = 'text';
         searchInput.placeholder = 'Pesquisar por assunto...';
-        searchInput.className = 'w-full p-2 border border-gray-300 rounded-md mb-4 focus:ring-blue-500 focus:border-blue-500';
+        // w-full garante a largura máxima em todos os dispositivos
+        searchInput.className = 'w-full p-2 border border-gray-300 rounded-md mb-4 focus:ring-blue-500 focus:border-blue-500'; 
         searchInput.addEventListener('input', handleActionSearch);
         container.prepend(searchInput);
     }
 
-    if (container.querySelector('.action-grid-container')) {
+    let gridContainer = container.querySelector('.action-grid-container');
+    if (gridContainer) {
+        // Se o grid e a instrução já foram criados, não precisa recriar.
         return;
     }
     
@@ -309,14 +315,16 @@ function populateActionSelection() {
     instruction.className = 'text-gray-600 mb-4';
     instruction.textContent = 'Selecione o tipo de ação para ver a lista de documentos necessários:';
 
-    const gridContainer = document.createElement('div');
-    gridContainer.className = 'grid grid-cols-1 md:grid-cols-2 gap-3 action-grid-container';
+    gridContainer = document.createElement('div');
+    // Melhoria de responsividade: 1 coluna padrão, 2 colunas em telas médias (md) e 3 em telas grandes (lg)
+    gridContainer.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 action-grid-container'; 
 
     Object.keys(documentsData).forEach((actionKey, index) => {
         const actionData = documentsData[actionKey];
         const button = document.createElement('button');
         button.dataset.action = actionKey;
-        button.className = 'w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition';
+        // w-full garante que o botão se ajuste à largura da sua coluna no grid
+        button.className = 'w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition'; 
         const span = document.createElement('span');
         span.className = 'font-semibold text-gray-800';
         span.textContent = `${index + 1}. ${actionData.title}`;
@@ -567,6 +575,7 @@ async function handleGeneratePdf() {
         }
 
         const { jsPDF } = window.jspdf;
+        // Configuração de orientação e unidade
         const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
         
         const title = checklistTitle.textContent;
@@ -585,10 +594,11 @@ async function handleGeneratePdf() {
         
         // --- Usa html2canvas para capturar o conteúdo ---
         const canvas = await html2canvas(source, {
-            scale: 2, // Aumenta a resolução da imagem
+            scale: 2, // Aumenta a resolução da imagem para qualidade
             useCORS: true,
             onclone: (document) => {
-                // Garante que todo o conteúdo seja visível para a captura
+                // Garante que todo o conteúdo seja visível para a captura,
+                // desativando o limite de altura/scroll, o que é crucial para telas menores.
                 const clonedContainer = document.getElementById('checklist-container');
                 clonedContainer.style.maxHeight = 'none';
                 clonedContainer.style.overflow = 'visible';
@@ -648,6 +658,8 @@ export function setupDetailsModal(config) {
 }
 
 export function openDetailsModal(config) {
+    // A chamada de populateActionSelection() garante que os elementos DOM para o grid
+    // de ações e a pesquisa sejam criados se ainda não existirem.
     populateActionSelection();
     
     currentAssistedId = config.assistedId;
@@ -663,6 +675,7 @@ export function openDetailsModal(config) {
 
     assistedNameEl.textContent = assisted.name;
 
+    // Se houver um checklist salvo, abre diretamente na visualização do checklist.
     if (assisted.documentChecklist && assisted.documentChecklist.action) {
         const savedAction = assisted.documentChecklist.action;
         renderChecklist(savedAction);
@@ -670,9 +683,9 @@ export function openDetailsModal(config) {
         checklistView.classList.remove('hidden');
         checklistView.classList.add('flex');
     } else {
+        // Caso contrário, volta para a seleção de ação.
         handleBack(); 
     }
     
     modal.classList.remove('hidden');
 }
-
