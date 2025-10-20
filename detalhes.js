@@ -287,7 +287,7 @@ const cancelBtn = document.getElementById('cancel-checklist-btn');
 
 
 // --- Configuração Interna de IDs de CEP (Chaves para ViaCEP) ---
-
+// IMPORTANTE: Assumimos que o HTML no index tem estes IDs
 const CEP_CONFIG = [
     { 
         // 1. Endereço da Parte Contrária (Réu)
@@ -307,7 +307,144 @@ const CEP_CONFIG = [
     }
 ];
 
-// --- Funções Internas de Lógica e Renderização ---
+// --- Funções Auxiliares (Utilitários) ---
+
+const normalizeText = (str) => {
+    if (!str) return '';
+    return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+};
+
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        if (document.querySelector(`script[src="${src}"]`)) {
+            return resolve();
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Falha ao carregar o script: ${src}`));
+        document.head.appendChild(script);
+    });
+}
+
+
+// --- Funções de Integração de CEP (ViaCEP) ---
+
+/**
+ * Busca o endereço completo usando a API ViaCEP.
+ */
+async function getAddressByCep(cep) {
+    const cleanCep = cep.replace(/\D/g, ''); 
+    if (cleanCep.length !== 8) {
+        return null;
+    }
+
+    const url = `https://viacep.com.br/ws/${cleanCep}/json/`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.erro) {
+            return null;
+        }
+
+        return {
+            logradouro: data.logradouro,
+            bairro: data.bairro,
+            localidade: data.localidade,
+            uf: data.uf
+        };
+    } catch (error) {
+        console.error("Erro ao buscar CEP:", error);
+        if (showNotification) showNotification("Falha na conexão ou erro ao buscar CEP.", "error");
+        return null;
+    }
+}
+
+/**
+ * Adiciona o listener para o campo de CEP e implementa a lógica de busca.
+ */
+function setupCepIntegrationInternal({ cepFieldId, streetFieldId, neighborhoodFieldId, cityFieldId, stateFieldId }) {
+    const cepInput = document.getElementById(cepFieldId);
+    
+    if (cepInput) {
+        // 1. Formatação do CEP em tempo real (opcional)
+        cepInput.addEventListener('input', (e) => {
+             let value = e.target.value.replace(/\D/g, '');
+             if (value.length > 5) {
+                 value = value.substring(0, 5) + '-' + value.substring(5, 8);
+             }
+             e.target.value = value;
+        });
+
+        // 2. Ação de busca ao perder o foco (blur)
+        cepInput.addEventListener('blur', async (e) => { 
+            const cep = e.target.value;
+            
+            // Elementos para manipulação
+            const streetInput = document.getElementById(streetFieldId);
+            const neighborhoodInput = document.getElementById(neighborhoodFieldId);
+            const cityInput = document.getElementById(cityFieldId);
+            const stateInput = document.getElementById(stateFieldId);
+
+            // Tenta limpar e informar que está buscando, se os campos existirem
+            if (streetInput) streetInput.value = 'Buscando...'; 
+            if (neighborhoodInput) neighborhoodInput.value = '';
+            if (cityInput) cityInput.value = '';
+            if (stateInput) stateInput.value = '';
+            
+            const address = await getAddressByCep(cep);
+
+            if (address) {
+                // Preenche os campos do formulário
+                if (streetInput) streetInput.value = address.logradouro || '';
+                if (neighborhoodInput) neighborhoodInput.value = address.bairro || '';
+                if (cityInput) cityInput.value = address.localidade || '';
+                if (stateInput) stateInput.value = address.uf || '';
+                if (showNotification) showNotification("Endereço preenchido com sucesso.", "success");
+            } else {
+                // Se falhar, limpa o campo de logradouro e notifica o usuário
+                if (streetInput) streetInput.value = ''; 
+                if (showNotification) showNotification("CEP não encontrado ou inválido. Digite o endereço manualmente.", "warning");
+            }
+        });
+    }
+}
+
+
+// --- Funções de Manipulação de Dados Salvos (Preencher/Limpar) ---
+
+// NOVO: Função para preencher os campos de endereço com dados salvos (se houver)
+function fillAddressFields(config, data) {
+    // Verifica se data e config existem antes de tentar preencher
+    if (!data || !config) return; 
+
+    if (document.getElementById(config.cepFieldId)) document.getElementById(config.cepFieldId).value = data.cep || '';
+    if (document.getElementById(config.streetFieldId)) document.getElementById(config.streetFieldId).value = data.rua || '';
+    if (document.getElementById(config.neighborhoodFieldId)) document.getElementById(config.neighborhoodFieldId).value = data.bairro || '';
+    if (document.getElementById(config.cityFieldId)) document.getElementById(config.cityFieldId).value = data.cidade || '';
+    if (document.getElementById(config.stateFieldId)) document.getElementById(config.stateFieldId).value = data.estado || '';
+    // Adiciona o campo número (assumindo o ID segue o padrão: 'cep-reu' -> 'numero-reu')
+    const numberFieldId = config.cepFieldId.replace('cep', 'numero');
+    if (document.getElementById(numberFieldId)) document.getElementById(numberFieldId).value = data.numero || '';
+}
+
+// NOVO: Função para limpar campos (útil para garantir que o formulário está vazio ao abrir)
+function clearAddressFields(config) {
+    if (!config) return;
+
+    if (document.getElementById(config.cepFieldId)) document.getElementById(config.cepFieldId).value = '';
+    if (document.getElementById(config.streetFieldId)) document.getElementById(config.streetFieldId).value = '';
+    if (document.getElementById(config.neighborhoodFieldId)) document.getElementById(config.neighborhoodFieldId).value = '';
+    if (document.getElementById(config.cityFieldId)) document.getElementById(config.cityFieldId).value = '';
+    if (document.getElementById(config.stateFieldId)) document.getElementById(config.stateFieldId).value = '';
+    const numberFieldId = config.cepFieldId.replace('cep', 'numero');
+    if (document.getElementById(numberFieldId)) document.getElementById(numberFieldId).value = '';
+}
+
+
+// --- Funções de Lógica e Renderização ---
 
 function populateActionSelection() {
     const container = document.getElementById('document-action-selection');
@@ -320,7 +457,6 @@ function populateActionSelection() {
         searchInput.id = 'action-search-input';
         searchInput.type = 'text';
         searchInput.placeholder = 'Pesquisar por assunto...';
-        // w-full garante a largura máxima em todos os dispositivos
         searchInput.className = 'w-full p-2 border border-gray-300 rounded-md mb-4 focus:ring-blue-500 focus:border-blue-500'; 
         searchInput.addEventListener('input', handleActionSearch);
         container.prepend(searchInput);
@@ -336,14 +472,12 @@ function populateActionSelection() {
     instruction.textContent = 'Selecione o tipo de ação para ver a lista de documentos necessários:';
 
     gridContainer = document.createElement('div');
-    // Melhoria de responsividade: 1 coluna padrão, 2 colunas em telas médias (md) e 3 em telas grandes (lg)
     gridContainer.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 action-grid-container'; 
 
     Object.keys(documentsData).forEach((actionKey, index) => {
         const actionData = documentsData[actionKey];
         const button = document.createElement('button');
         button.dataset.action = actionKey;
-        // w-full garante que o botão se ajuste à largura da sua coluna no grid
         button.className = 'w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition'; 
         const span = document.createElement('span');
         span.className = 'font-semibold text-gray-800';
@@ -480,99 +614,8 @@ function renderChecklist(actionKey) {
     }
 }
 
-const normalizeText = (str) => {
-    if (!str) return '';
-    return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-};
 
-// --- Funções para Integração de CEP (ViaCEP) ---
-
-/**
- * Busca o endereço completo usando a API ViaCEP.
- * @param {string} cep O número do CEP a ser consultado (somente dígitos).
- * @returns {object|null} Objeto com dados do endereço ou null em caso de erro.
- */
-async function getAddressByCep(cep) {
-    const cleanCep = cep.replace(/\D/g, ''); 
-    if (cleanCep.length !== 8) {
-        return null;
-    }
-
-    const url = `https://viacep.com.br/ws/${cleanCep}/json/`;
-
-    try {
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (data.erro) {
-            return null;
-        }
-
-        return {
-            logradouro: data.logradouro,
-            bairro: data.bairro,
-            localidade: data.localidade,
-            uf: data.uf
-        };
-    } catch (error) {
-        console.error("Erro ao buscar CEP:", error);
-        if (showNotification) showNotification("Falha na conexão ou erro ao buscar CEP.", "error");
-        return null;
-    }
-}
-
-/**
- * Adiciona o listener para o campo de CEP e implementa a lógica de busca.
- */
-function setupCepIntegrationInternal({ cepFieldId, streetFieldId, neighborhoodFieldId, cityFieldId, stateFieldId }) {
-    const cepInput = document.getElementById(cepFieldId);
-    
-    if (cepInput) {
-        // Formatação do CEP
-        cepInput.addEventListener('input', (e) => {
-             let value = e.target.value.replace(/\D/g, '');
-             if (value.length > 5) {
-                 value = value.substring(0, 5) + '-' + value.substring(5, 8);
-             }
-             e.target.value = value;
-        });
-
-        // Ação de busca ao perder o foco
-        cepInput.addEventListener('blur', async (e) => { 
-            const cep = e.target.value;
-            
-            // Elementos para manipulação
-            const streetInput = document.getElementById(streetFieldId);
-            const neighborhoodInput = document.getElementById(neighborhoodFieldId);
-            const cityInput = document.getElementById(cityFieldId);
-            const stateInput = document.getElementById(stateFieldId);
-
-            // Tenta limpar e informar que está buscando, se os campos existirem
-            if (streetInput) streetInput.value = 'Buscando...'; 
-            if (neighborhoodInput) neighborhoodInput.value = '';
-            if (cityInput) cityInput.value = '';
-            if (stateInput) stateInput.value = '';
-            
-            const address = await getAddressByCep(cep);
-
-            if (address) {
-                // Preenche os campos do formulário
-                if (streetInput) streetInput.value = address.logradouro || '';
-                if (neighborhoodInput) neighborhoodInput.value = address.bairro || '';
-                if (cityInput) cityInput.value = address.localidade || '';
-                if (stateInput) stateInput.value = address.uf || '';
-                if (showNotification) showNotification("Endereço preenchido com sucesso.", "success");
-            } else {
-                // Se falhar, limpa o campo de logradouro e notifica o usuário
-                if (streetInput) streetInput.value = ''; 
-                if (showNotification) showNotification("CEP não encontrado ou inválido. Digite o endereço manualmente.", "warning");
-            }
-        });
-    }
-}
-
-
-// --- Funções de Manipulação de Dados e Eventos ---
+// --- Funções de Manipulação de Eventos ---
 
 function handleActionSelect(e) {
     const actionButton = e.target.closest('button[data-action]');
@@ -671,7 +714,6 @@ function captureAddressData({ cepFieldId, streetFieldId, neighborhoodFieldId, ci
     };
 }
 
-
 function handleSearch(e) {
     const searchTerm = normalizeText(e.target.value);
     const allDocs = checklistContainer.querySelectorAll('li');
@@ -681,20 +723,18 @@ function handleSearch(e) {
     });
 }
 
-function loadScript(src) {
-    return new Promise((resolve, reject) => {
-        if (document.querySelector(`script[src="${src}"]`)) {
-            return resolve();
-        }
-        const script = document.createElement('script');
-        script.src = src;
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error(`Falha ao carregar o script: ${src}`));
-        document.head.appendChild(script);
+function handleActionSearch(e) {
+    const searchTerm = normalizeText(e.target.value);
+    const allActions = actionSelectionView.querySelectorAll('.action-grid-container button[data-action]');
+    allActions.forEach(btn => {
+        const actionText = normalizeText(btn.textContent);
+        btn.style.display = actionText.includes(searchTerm) ? 'block' : 'none';
     });
 }
 
-// --- ** FUNÇÃO DE GERAR PDF (MÉTODO RECOMENDADO) ** ---
+
+// --- Funções de Geração de PDF ---
+
 async function handleGeneratePdf() {
     if (printChecklistBtn) {
         printChecklistBtn.disabled = true;
@@ -776,31 +816,8 @@ function closeModal() {
     modal.classList.add('hidden');
 }
 
-// NOVO: Função para preencher os campos de endereço com dados salvos (se houver)
-function fillAddressFields(config, data) {
-    if (document.getElementById(config.cepFieldId)) document.getElementById(config.cepFieldId).value = data.cep || '';
-    if (document.getElementById(config.streetFieldId)) document.getElementById(config.streetFieldId).value = data.rua || '';
-    if (document.getElementById(config.neighborhoodFieldId)) document.getElementById(config.neighborhoodFieldId).value = data.bairro || '';
-    if (document.getElementById(config.cityFieldId)) document.getElementById(config.cityFieldId).value = data.cidade || '';
-    if (document.getElementById(config.stateFieldId)) document.getElementById(config.stateFieldId).value = data.estado || '';
-    // Adiciona o campo número (assumindo o ID segue o padrão: 'cep-reu' -> 'numero-reu')
-    const numberFieldId = config.cepFieldId.replace('cep', 'numero');
-    if (document.getElementById(numberFieldId)) document.getElementById(numberFieldId).value = data.numero || '';
-}
 
-// NOVO: Função para limpar campos (útil para garantir que o formulário está vazio ao abrir)
-function clearAddressFields(config) {
-    if (document.getElementById(config.cepFieldId)) document.getElementById(config.cepFieldId).value = '';
-    if (document.getElementById(config.streetFieldId)) document.getElementById(config.streetFieldId).value = '';
-    if (document.getElementById(config.neighborhoodFieldId)) document.getElementById(config.neighborhoodFieldId).value = '';
-    if (document.getElementById(config.cityFieldId)) document.getElementById(config.cityFieldId).value = '';
-    if (document.getElementById(config.stateFieldId)) document.getElementById(config.stateFieldId).value = '';
-    const numberFieldId = config.cepFieldId.replace('cep', 'numero');
-    if (document.getElementById(numberFieldId)) document.getElementById(numberFieldId).value = '';
-}
-
-
-// --- Funções Exportadas ---
+// --- Funções Exportadas do Módulo ---
 
 export function setupDetailsModal(config) {
     db = config.db;
@@ -817,7 +834,6 @@ export function setupDetailsModal(config) {
     if (printChecklistBtn) printChecklistBtn.addEventListener('click', handleGeneratePdf);
     
     // NOVO: Inicializa a integração de CEP para todos os conjuntos de IDs definidos
-    // Este código ativa os listeners 'blur' e 'input' nos campos CEP definidos em CEP_CONFIG.
     CEP_CONFIG.forEach(setupCepIntegrationInternal);
 }
 
@@ -848,12 +864,19 @@ export function openDetailsModal(config) {
     }
     
     // NOVO: Preenche os campos de endereço ao abrir o modal, se houver dados salvos
-    // Usamos CEP_CONFIG[0] (Réu) e CEP_CONFIG[1] (Assistido)
+    // Usamos CEP_CONFIG[0] (Réu)
     if (assisted.documentChecklist?.addressData) {
         fillAddressFields(CEP_CONFIG[0], assisted.documentChecklist.addressData);
     } else {
          clearAddressFields(CEP_CONFIG[0]);
     }
+    // Preenche/Limpa o endereço do assistido (CEP_CONFIG[1])
+    // Este código está comentado, pois o seu HTML não possui os campos para o assistido no modal de detalhes.
+    // if (assisted.documentChecklist?.assistedAddressData) {
+    //    fillAddressFields(CEP_CONFIG[1], assisted.documentChecklist.assistedAddressData);
+    // } else {
+    //     clearAddressFields(CEP_CONFIG[1]);
+    // }
     
     modal.classList.remove('hidden');
 }
