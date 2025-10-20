@@ -834,6 +834,7 @@ export function setupDetailsModal(config) {
     if (printChecklistBtn) printChecklistBtn.addEventListener('click', handleGeneratePdf);
     
     // NOVO: Inicializa a integração de CEP para todos os conjuntos de IDs definidos
+    // Este código ativa os listeners 'blur' e 'input' nos campos CEP definidos em CEP_CONFIG.
     CEP_CONFIG.forEach(setupCepIntegrationInternal);
 }
 
@@ -870,13 +871,9 @@ export function openDetailsModal(config) {
     } else {
          clearAddressFields(CEP_CONFIG[0]);
     }
-    // Preenche/Limpa o endereço do assistido (CEP_CONFIG[1])
-    // Este código está comentado, pois o seu HTML não possui os campos para o assistido no modal de detalhes.
-    // if (assisted.documentChecklist?.assistedAddressData) {
-    //    fillAddressFields(CEP_CONFIG[1], assisted.documentChecklist.assistedAddressData);
-    // } else {
-    //     clearAddressFields(CEP_CONFIG[1]);
-    // }
+    
+    // Limpa o endereço do assistido (CEP_CONFIG[1]) se não for usado/salvo
+    clearAddressFields(CEP_CONFIG[1]); 
     
     modal.classList.remove('hidden');
 }
