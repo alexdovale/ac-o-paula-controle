@@ -1,8 +1,8 @@
 /**
  * detalhes.js
  * Este módulo gerencia toda a funcionalidade do modal "Ver Detalhes",
- * incluindo a exibição da lista de documentos, o checklist E a integração de CEP
- * (através da função exportada setupCepIntegration).
+ * incluindo a exibição da lista de documentos, o checklist e a integração de CEP
+ * (utilizando a API ViaCEP).
  */
 
 // --- Dados e Estado do Módulo ---
@@ -286,9 +286,8 @@ const closeBtn = document.getElementById('close-documents-modal-btn');
 const cancelBtn = document.getElementById('cancel-checklist-btn');
 
 
-// --- Configuração Interna de IDs de CEP ---
-// IMPORTANTE: Adicionei uma configuração para o endereço do Assistido (Requente) 
-// e da Parte Contrária (Réu), referenciando os IDs que você deve ter no HTML.
+// --- Configuração Interna de IDs de CEP (Chaves para ViaCEP) ---
+
 const CEP_CONFIG = [
     { 
         // 1. Endereço da Parte Contrária (Réu)
@@ -299,7 +298,7 @@ const CEP_CONFIG = [
         stateFieldId: 'estado-reu'
     },
     { 
-        // 2. Endereço do Assistido/Requerente (Se você adicionar esses campos também)
+        // 2. Endereço do Assistido/Requerente (Se você adicionar este HTML)
         cepFieldId: 'cep-assistido',
         streetFieldId: 'rua-assistido',
         neighborhoodFieldId: 'bairro-assistido',
@@ -308,7 +307,7 @@ const CEP_CONFIG = [
     }
 ];
 
-// --- Funções Internas ---
+// --- Funções Internas de Lógica e Renderização ---
 
 function populateActionSelection() {
     const container = document.getElementById('document-action-selection');
@@ -366,7 +365,8 @@ function renderChecklist(actionKey) {
     const savedChecklist = assisted?.documentChecklist;
 
     checklistTitle.textContent = data.title;
-    checklistContainer.innerHTML = '';
+    // Limpa o conteúdo (incluindo o editor de endereço que pode ter sido anexado)
+    checklistContainer.innerHTML = ''; 
     checklistSearch.value = '';
 
     data.sections.forEach((section, sectionIndex) => {
@@ -472,7 +472,7 @@ function renderChecklist(actionKey) {
 
     checklistContainer.appendChild(observationContainer);
     
-    // NOVO: Torna a seção de endereço do Réu visível se existir no DOM
+    // NOVO: Adiciona e torna visível a seção de edição de endereço (Réu), se existir no DOM
     const addressEditor = document.getElementById('address-editor-container');
     if (addressEditor) {
         checklistContainer.appendChild(addressEditor); 
@@ -485,7 +485,7 @@ const normalizeText = (str) => {
     return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 };
 
-// --- Funções para Integração de CEP ---
+// --- Funções para Integração de CEP (ViaCEP) ---
 
 /**
  * Busca o endereço completo usando a API ViaCEP.
@@ -522,15 +522,14 @@ async function getAddressByCep(cep) {
 }
 
 /**
- * Adiciona o listener para o campo de CEP.
- * *Função interna usada para inicializar os listeners definidos em CEP_CONFIG.*
+ * Adiciona o listener para o campo de CEP e implementa a lógica de busca.
  */
 function setupCepIntegrationInternal({ cepFieldId, streetFieldId, neighborhoodFieldId, cityFieldId, stateFieldId }) {
     const cepInput = document.getElementById(cepFieldId);
     
     if (cepInput) {
+        // Formatação do CEP
         cepInput.addEventListener('input', (e) => {
-             // Formata o CEP automaticamente (opcional, mas melhora a UX)
              let value = e.target.value.replace(/\D/g, '');
              if (value.length > 5) {
                  value = value.substring(0, 5) + '-' + value.substring(5, 8);
@@ -538,6 +537,7 @@ function setupCepIntegrationInternal({ cepFieldId, streetFieldId, neighborhoodFi
              e.target.value = value;
         });
 
+        // Ação de busca ao perder o foco
         cepInput.addEventListener('blur', async (e) => { 
             const cep = e.target.value;
             
@@ -572,7 +572,7 @@ function setupCepIntegrationInternal({ cepFieldId, streetFieldId, neighborhoodFi
 }
 
 
-// --- Manipuladores de Eventos ---
+// --- Funções de Manipulação de Dados e Eventos ---
 
 function handleActionSelect(e) {
     const actionButton = e.target.closest('button[data-action]');
@@ -622,7 +622,8 @@ async function handleSave() {
     }
     
     // --- Captura dados de endereço (Réu) ---
-    const capturedAddress = captureAddressData(CEP_CONFIG[0]); // Captura o primeiro CEP_CONFIG (Réu)
+    // Usamos CEP_CONFIG[0] que foi definido para o Réu
+    const capturedAddress = captureAddressData(CEP_CONFIG[0]); 
     
     const checklistData = { 
         action: currentChecklistAction, 
@@ -646,16 +647,19 @@ async function handleSave() {
     }
 }
 
-// NOVO: Função auxiliar para capturar dados de endereço
+// NOVO: Função auxiliar para capturar dados de endereço de um conjunto de IDs
 function captureAddressData({ cepFieldId, streetFieldId, neighborhoodFieldId, cityFieldId, stateFieldId }) {
+    // A função é mais robusta, pois ela inferirá o ID do campo 'número'
+    const numberFieldId = cepFieldId.replace('cep', 'numero');
+    
     const cep = document.getElementById(cepFieldId)?.value || '';
     const street = document.getElementById(streetFieldId)?.value || '';
     const neighborhood = document.getElementById(neighborhoodFieldId)?.value || '';
     const city = document.getElementById(cityFieldId)?.value || '';
     const state = document.getElementById(stateFieldId)?.value || '';
-    const number = document.getElementById(cepFieldId.replace('cep', 'numero'))?.value || ''; // Captura o campo número
+    const number = document.getElementById(numberFieldId)?.value || ''; 
 
-    if (!cep && !street && !number) return null; // Retorna nulo se não houver dados
+    if (!cep && !street && !number && !city) return null; // Retorna nulo se não houver dados relevantes
 
     return {
         cep: cep,
@@ -674,15 +678,6 @@ function handleSearch(e) {
     allDocs.forEach(li => {
         const labelText = normalizeText(li.textContent);
         li.style.display = labelText.includes(searchTerm) ? 'block' : 'none';
-    });
-}
-
-function handleActionSearch(e) {
-    const searchTerm = normalizeText(e.target.value);
-    const allActions = actionSelectionView.querySelectorAll('.action-grid-container button[data-action]');
-    allActions.forEach(btn => {
-        const actionText = normalizeText(btn.textContent);
-        btn.style.display = actionText.includes(searchTerm) ? 'block' : 'none';
     });
 }
 
@@ -781,9 +776,31 @@ function closeModal() {
     modal.classList.add('hidden');
 }
 
-// --- Funções Exportadas ---
+// NOVO: Função para preencher os campos de endereço com dados salvos (se houver)
+function fillAddressFields(config, data) {
+    if (document.getElementById(config.cepFieldId)) document.getElementById(config.cepFieldId).value = data.cep || '';
+    if (document.getElementById(config.streetFieldId)) document.getElementById(config.streetFieldId).value = data.rua || '';
+    if (document.getElementById(config.neighborhoodFieldId)) document.getElementById(config.neighborhoodFieldId).value = data.bairro || '';
+    if (document.getElementById(config.cityFieldId)) document.getElementById(config.cityFieldId).value = data.cidade || '';
+    if (document.getElementById(config.stateFieldId)) document.getElementById(config.stateFieldId).value = data.estado || '';
+    // Adiciona o campo número (assumindo o ID segue o padrão: 'cep-reu' -> 'numero-reu')
+    const numberFieldId = config.cepFieldId.replace('cep', 'numero');
+    if (document.getElementById(numberFieldId)) document.getElementById(numberFieldId).value = data.numero || '';
+}
 
-// Removemos a exportação de setupCepIntegration, pois ela agora é interna.
+// NOVO: Função para limpar campos (útil para garantir que o formulário está vazio ao abrir)
+function clearAddressFields(config) {
+    if (document.getElementById(config.cepFieldId)) document.getElementById(config.cepFieldId).value = '';
+    if (document.getElementById(config.streetFieldId)) document.getElementById(config.streetFieldId).value = '';
+    if (document.getElementById(config.neighborhoodFieldId)) document.getElementById(config.neighborhoodFieldId).value = '';
+    if (document.getElementById(config.cityFieldId)) document.getElementById(config.cityFieldId).value = '';
+    if (document.getElementById(config.stateFieldId)) document.getElementById(config.stateFieldId).value = '';
+    const numberFieldId = config.cepFieldId.replace('cep', 'numero');
+    if (document.getElementById(numberFieldId)) document.getElementById(numberFieldId).value = '';
+}
+
+
+// --- Funções Exportadas ---
 
 export function setupDetailsModal(config) {
     db = config.db;
@@ -800,6 +817,7 @@ export function setupDetailsModal(config) {
     if (printChecklistBtn) printChecklistBtn.addEventListener('click', handleGeneratePdf);
     
     // NOVO: Inicializa a integração de CEP para todos os conjuntos de IDs definidos
+    // Este código ativa os listeners 'blur' e 'input' nos campos CEP definidos em CEP_CONFIG.
     CEP_CONFIG.forEach(setupCepIntegrationInternal);
 }
 
@@ -830,6 +848,7 @@ export function openDetailsModal(config) {
     }
     
     // NOVO: Preenche os campos de endereço ao abrir o modal, se houver dados salvos
+    // Usamos CEP_CONFIG[0] (Réu) e CEP_CONFIG[1] (Assistido)
     if (assisted.documentChecklist?.addressData) {
         fillAddressFields(CEP_CONFIG[0], assisted.documentChecklist.addressData);
     } else {
@@ -837,27 +856,4 @@ export function openDetailsModal(config) {
     }
     
     modal.classList.remove('hidden');
-}
-
-// NOVO: Função para preencher os campos de endereço com dados salvos (se houver)
-function fillAddressFields(config, data) {
-    if (document.getElementById(config.cepFieldId)) document.getElementById(config.cepFieldId).value = data.cep || '';
-    if (document.getElementById(config.streetFieldId)) document.getElementById(config.streetFieldId).value = data.rua || '';
-    if (document.getElementById(config.neighborhoodFieldId)) document.getElementById(config.neighborhoodFieldId).value = data.bairro || '';
-    if (document.getElementById(config.cityFieldId)) document.getElementById(config.cityFieldId).value = data.cidade || '';
-    if (document.getElementById(config.stateFieldId)) document.getElementById(config.stateFieldId).value = data.estado || '';
-    // Adiciona o campo número (assumindo o ID segue o padrão: 'cep-reu' -> 'numero-reu')
-    const numberFieldId = config.cepFieldId.replace('cep', 'numero');
-    if (document.getElementById(numberFieldId)) document.getElementById(numberFieldId).value = data.numero || '';
-}
-
-// NOVO: Função para limpar campos (útil para garantir que o formulário está vazio ao abrir)
-function clearAddressFields(config) {
-    if (document.getElementById(config.cepFieldId)) document.getElementById(config.cepFieldId).value = '';
-    if (document.getElementById(config.streetFieldId)) document.getElementById(config.streetFieldId).value = '';
-    if (document.getElementById(config.neighborhoodFieldId)) document.getElementById(config.neighborhoodFieldId).value = '';
-    if (document.getElementById(config.cityFieldId)) document.getElementById(config.cityFieldId).value = '';
-    if (document.getElementById(config.stateFieldId)) document.getElementById(config.stateFieldId).value = '';
-    const numberFieldId = config.cepFieldId.replace('cep', 'numero');
-    if (document.getElementById(numberFieldId)) document.getElementById(numberFieldId).value = '';
 }
