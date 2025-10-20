@@ -1,8 +1,8 @@
 /**
  * detalhes.js
  * Este módulo gerencia toda a funcionalidade do modal "Ver Detalhes",
- * incluindo a exibição da lista de documentos e o checklist.
- * * Versão revisada para melhor estrutura e compatibilidade (responsividade).
+ * incluindo a exibição da lista de documentos, o checklist E a integração de CEP
+ * (através da função exportada setupCepIntegration).
  */
 
 // --- Dados e Estado do Módulo ---
@@ -186,7 +186,7 @@ const documentsData = {
     fornecimento_medicamentos: {
         title: 'Fornecimento de Medicamentos / Cirurgias / Exames',
         sections: [
-            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
+            { title: 'Documentação Comum (Requerente)', docs: ['Carteira de Identidade (RG)', 'CPF', 'Comprovante de Residência (com declaração, se em nome de terceiros)', 'Carteira de Trabalho', 'Contracheques (3 últimos meses)', 'Extrato bancário (3 últimos meses)', 'Última Declaração de IR', 'Declaração de Hipossuficiência', 'Comprovante Bolsa Família/LOAS (se houver)'] },
             { title: 'Documentos Médicos', docs: ['Receita médica ATUALIZADA (original)', 'Laudo médico DETALHADO (com CID, justificativa da imprescindibilidade, ineficácia de alternativas do SUS)', 'Comprovante de negativa de fornecimento pelo SUS ou plano de saúde', 'Orçamentos do medicamento/procedimento em locais particulares (mínimo de 3)', 'Carteirinha do plano de saúde (se for contra plano)'] }
         ]
     },
@@ -307,7 +307,6 @@ function populateActionSelection() {
 
     let gridContainer = container.querySelector('.action-grid-container');
     if (gridContainer) {
-        // Se o grid e a instrução já foram criados, não precisa recriar.
         return;
     }
     
@@ -380,7 +379,7 @@ function renderChecklist(actionKey) {
         checklistContainer.appendChild(sectionDiv);
     });
 
-    // --- NOVO: Adiciona a seção de observações estruturadas ---
+    // --- Adiciona a seção de observações estruturadas ---
     const observationContainer = document.createElement('div');
     observationContainer.className = 'mt-6';
 
@@ -446,8 +445,8 @@ function renderChecklist(actionKey) {
     otherLabel.appendChild(otherCheckbox);
     otherLabel.appendChild(document.createTextNode('Outras Observações'));
     otherListItem.appendChild(otherLabel);
-    otherListItem.appendChild(otherTextarea);
     optionsList.appendChild(otherListItem);
+    otherListItem.appendChild(otherTextarea);
 
     checklistContainer.appendChild(observationContainer);
 }
@@ -456,6 +455,42 @@ const normalizeText = (str) => {
     if (!str) return '';
     return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 };
+
+// --- Funções para Integração de CEP ---
+
+/**
+ * Busca o endereço completo usando a API ViaCEP.
+ * @param {string} cep O número do CEP a ser consultado (somente dígitos).
+ * @returns {object|null} Objeto com dados do endereço ou null em caso de erro.
+ */
+async function getAddressByCep(cep) {
+    const cleanCep = cep.replace(/\D/g, ''); 
+    if (cleanCep.length !== 8) {
+        return null;
+    }
+
+    const url = `https://viacep.com.br/ws/${cleanCep}/json/`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.erro) {
+            return null;
+        }
+
+        return {
+            logradouro: data.logradouro,
+            bairro: data.bairro,
+            localidade: data.localidade,
+            uf: data.uf
+        };
+    } catch (error) {
+        console.error("Erro ao buscar CEP:", error);
+        if (showNotification) showNotification("Falha na conexão ou erro ao buscar CEP.", "error");
+        return null;
+    }
+}
 
 // --- Manipuladores de Eventos ---
 
@@ -491,7 +526,7 @@ async function handleSave() {
         .filter(cb => !cb.classList.contains('observation-option') && cb.id !== 'other-observation-checkbox')
         .map(cb => cb.id);
 
-    // --- NOVO: Captura as observações estruturadas ---
+    // --- Captura as observações estruturadas ---
     const selectedObservations = Array.from(checklistContainer.querySelectorAll('.observation-option:checked'))
                                      .map(cb => cb.value);
     
@@ -499,10 +534,6 @@ async function handleSave() {
     let otherText = '';
     if (otherCheckbox && otherCheckbox.checked) {
         otherText = document.getElementById('other-observation-text')?.value || '';
-        // Adiciona "Outras Observações" à lista se não estiver lá, para consistência
-        if (!selectedObservations.includes('Outras Observações')) {
-            // Este texto não é salvo, apenas a presença do `otherText` indica que foi selecionado
-        }
     }
     
     const checklistData = { 
@@ -575,7 +606,6 @@ async function handleGeneratePdf() {
         }
 
         const { jsPDF } = window.jspdf;
-        // Configuração de orientação e unidade
         const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
         
         const title = checklistTitle.textContent;
@@ -594,11 +624,10 @@ async function handleGeneratePdf() {
         
         // --- Usa html2canvas para capturar o conteúdo ---
         const canvas = await html2canvas(source, {
-            scale: 2, // Aumenta a resolução da imagem para qualidade
+            scale: 2, 
             useCORS: true,
             onclone: (document) => {
-                // Garante que todo o conteúdo seja visível para a captura,
-                // desativando o limite de altura/scroll, o que é crucial para telas menores.
+                // Garante que todo o conteúdo seja visível para a captura
                 const clonedContainer = document.getElementById('checklist-container');
                 clonedContainer.style.maxHeight = 'none';
                 clonedContainer.style.overflow = 'visible';
@@ -642,6 +671,54 @@ function closeModal() {
 }
 
 // --- Funções Exportadas ---
+
+/**
+ * Adiciona o listener para o campo de CEP.
+ * Você deve chamar esta função no seu código principal para CADA conjunto de campos de endereço.
+ * * @param {string} cepFieldId ID do campo de CEP.
+ * @param {string} streetFieldId ID do campo de Logradouro (Rua).
+ * @param {string} neighborhoodFieldId ID do campo de Bairro.
+ * @param {string} cityFieldId ID do campo de Cidade.
+ * @param {string} stateFieldId ID do campo de Estado (UF).
+ */
+export function setupCepIntegration(cepFieldId, streetFieldId, neighborhoodFieldId, cityFieldId, stateFieldId) {
+    const cepInput = document.getElementById(cepFieldId);
+    
+    if (cepInput) {
+        // Usa o evento 'blur' (quando o campo perde o foco) para disparar a busca
+        cepInput.addEventListener('blur', async (e) => { 
+            const cep = e.target.value;
+            
+            // Limpa e informa que está buscando
+            const streetInput = document.getElementById(streetFieldId);
+            const neighborhoodInput = document.getElementById(neighborhoodFieldId);
+            const cityInput = document.getElementById(cityFieldId);
+            const stateInput = document.getElementById(stateFieldId);
+
+            if (streetInput) streetInput.value = 'Buscando...'; 
+            if (neighborhoodInput) neighborhoodInput.value = '';
+            if (cityInput) cityInput.value = '';
+            if (stateInput) stateInput.value = '';
+            
+            const address = await getAddressByCep(cep);
+
+            if (address) {
+                // Preenche os campos do formulário
+                if (streetInput) streetInput.value = address.logradouro || '';
+                if (neighborhoodInput) neighborhoodInput.value = address.bairro || '';
+                if (cityInput) cityInput.value = address.localidade || '';
+                if (stateInput) stateInput.value = address.uf || '';
+                if (showNotification) showNotification("Endereço preenchido com sucesso.", "success");
+            } else {
+                // Se falhar, limpa o campo de logradouro e notifica o usuário
+                if (streetInput) streetInput.value = ''; 
+                if (showNotification) showNotification("CEP não encontrado ou inválido. Digite o endereço manualmente.", "warning");
+            }
+        });
+    }
+}
+
+
 export function setupDetailsModal(config) {
     db = config.db;
     getUpdatePayload = config.getUpdatePayload;
@@ -658,8 +735,6 @@ export function setupDetailsModal(config) {
 }
 
 export function openDetailsModal(config) {
-    // A chamada de populateActionSelection() garante que os elementos DOM para o grid
-    // de ações e a pesquisa sejam criados se ainda não existirem.
     populateActionSelection();
     
     currentAssistedId = config.assistedId;
@@ -675,7 +750,6 @@ export function openDetailsModal(config) {
 
     assistedNameEl.textContent = assisted.name;
 
-    // Se houver um checklist salvo, abre diretamente na visualização do checklist.
     if (assisted.documentChecklist && assisted.documentChecklist.action) {
         const savedAction = assisted.documentChecklist.action;
         renderChecklist(savedAction);
@@ -683,7 +757,6 @@ export function openDetailsModal(config) {
         checklistView.classList.remove('hidden');
         checklistView.classList.add('flex');
     } else {
-        // Caso contrário, volta para a seleção de ação.
         handleBack(); 
     }
     
