@@ -1742,20 +1742,23 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
         });
 
-        collaboratorFormModal.addEventListener('submit', async (event) => {
+       collaboratorFormModal.addEventListener('submit', async (event) => {
             event.preventDefault();
             const nome = collaboratorNameModal.value;
+            
             // --- INÍCIO DA CORREÇÃO: CAPTURANDO CARGO E EQUIPE ---
             const cargo = document.getElementById('collaborator-role-modal').value;
             const equipe = document.getElementById('collaborator-team-modal').value;
             // --- FIM DA CORREÇÃO ---
-            const email = collaboratorEmailModal.value.trim() || null; // Capture email, allow null
+
+            const email = collaboratorEmailModal.value.trim() || null;
             const telefone = collaboratorPhoneModal.value;
             const transporte = collaboratorFormModal.querySelector('input[name="transporte-colaborador"]:checked').value;
             const localEncontro = collaboratorFormModal.querySelector('input[name="localEncontro-colaborador"]:checked')?.value || '';
             const observacao = collaboratorObsModal.value;
 
-            const collaboratorData = { nome, email, telefone, transporte, localEncontro, observacao }; // Inclui email
+            // Incluindo Cargo e Equipe no objeto de dados
+            const collaboratorData = { nome, cargo, equipe, email, telefone, transporte, localEncontro, observacao }; 
 
             try {
                 const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
@@ -1764,6 +1767,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     await updateDoc(collaboratorRef, collaboratorData);
                     showNotification("Colaborador atualizado com sucesso!");
                 } else {
+                    // Adiciona o novo colaborador com todos os dados
                     await addDoc(collaboratorsCollectionRef, { ...collaboratorData, presente: false, horario: '--:--' });
                     showNotification("Colaborador adicionado com sucesso!");
                 }
@@ -1773,7 +1777,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 showNotification("Erro ao salvar colaborador.", "error");
             }
         });
-
         function addEventListenersToModalListActions() {
             document.querySelectorAll('#collaborators-modal .checkin-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', async (e) => {
@@ -1791,12 +1794,20 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", docId);
                     const docSnap = await getDoc(collaboratorRef);
                     if (docSnap.exists()) {
-                        const colaborador = docSnap.data();
+                       const colaborador = docSnap.data();
                         editCollaboratorId = docId;
                         collaboratorNameModal.value = colaborador.nome;
                         collaboratorEmailModal.value = colaborador.email || ''; // Preenche o campo de email
                         collaboratorPhoneModal.value = colaborador.telefone;
                         collaboratorObsModal.value = colaborador.observacao || '';
+                        
+                        // --- INÍCIO DA CORREÇÃO: PREENCHE CARGO E EQUIPE AO EDITAR ---
+                        const roleSelect = document.getElementById('collaborator-role-modal');
+                        if(roleSelect) roleSelect.value = colaborador.cargo || ''; 
+                        
+                        const teamSelect = document.getElementById('collaborator-team-modal');
+                        if(teamSelect) teamSelect.value = colaborador.equipe || '';
+                        // --- FIM DA CORREÇÃO ---
                         
                         const transporteRadio = document.querySelector(`input[name="transporte-colaborador"][value="${colaborador.transporte}"]`);
                         if (transporteRadio) {
@@ -3650,6 +3661,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
