@@ -2588,13 +2588,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         return;
                     }
 
-                    const firstLineParts = lines[0].split(';').map(item => item.trim().replace(/^"|"$/g, ''));
-                    if (firstLineParts.length >= 3) {
-                         const potentialTime = firstLineParts[1].trim();
-                         if (!/^\d{1,2}:\d{2}$/.test(potentialTime)) {
-                             lines.shift();
-                         }
-                    }
+                   const firstLineParts = lines[0].split(';').map(item => item.trim().replace(/^"|"$/g, ''));
+                        if (firstLineParts.length >= 3) {
+                            const potentialTime = firstLineParts[1].trim();
+                            // Verifica se o segundo campo (índice 1) da primeira linha NÃO é um horário válido (HH:MM)
+                            if (!/^\d{1,2}:\d{2}$/.test(potentialTime)) {
+                                lines.shift(); // Se não for horário, remove a primeira linha (considerando-a o cabeçalho)
+                            }
+                        }
 
                     if (lines.length === 0) {
                         showNotification("O arquivo CSV contém apenas um cabeçalho ou está vazio.", "error");
@@ -3661,6 +3662,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
