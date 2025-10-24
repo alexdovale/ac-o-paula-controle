@@ -1748,6 +1748,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         collaboratorFormModal.addEventListener('submit', async (event) => {
             event.preventDefault();
             const nome = collaboratorNameModal.value;
+            // --- INÍCIO DA CORREÇÃO: CAPTURANDO CARGO E EQUIPE ---
+            const cargo = document.getElementById('collaborator-role-modal').value;
+            const equipe = document.getElementById('collaborator-team-modal').value;
+            // --- FIM DA CORREÇÃO ---
             const email = collaboratorEmailModal.value.trim() || null; // Capture email, allow null
             const telefone = collaboratorPhoneModal.value;
             const transporte = collaboratorFormModal.querySelector('input[name="transporte-colaborador"]:checked').value;
@@ -3649,5 +3653,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
