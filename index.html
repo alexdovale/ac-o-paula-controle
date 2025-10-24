@@ -1689,12 +1689,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                      nomeElement = `<strong>${colaborador.nome}</strong>`;
                 }
 
-                newRow.innerHTML = `
+             newRow.innerHTML = `
                             <td class="py-4 px-6 font-medium text-gray-900">${nomeElement}</td>
-                            <td class="py-4 px-6">${colaborador.cargo || 'N/A'}</td>     <td class="py-4 px-6">${colaborador.equipe || 'N/A'}</td>     <td class="py-4 px-6">                                      <input type="checkbox" class="checkin-checkbox" data-id="${colaborador.id}" ${colaborador.presente ? 'checked' : ''} ${isPautaClosed ? 'disabled' : ''}>
-                            </td>
-                            <td class="py-4 px-6">${colaborador.horario || '--:--'}</td> <td class="py-4 px-6">${colaborador.email || 'N/A'}</td>       <td class="py-4 px-6">${deslocamentoTexto}</td>
-                            <td class="py-4 px-6">
+                            <td class="py-4 px-6">${colaborador.cargo || 'N/A'}</td>     <td class="py-4 px-6">${colaborador.equipe || 'N/A'}</td>     <td class="py-4 px-6"><input type="checkbox" class="checkin-checkbox" data-id="${colaborador.id}" ${colaborador.presente ? 'checked' : ''} ${isPautaClosed ? 'disabled' : ''}></td> <td class="py-4 px-6">${colaborador.horario || '--:--'}</td> <td class="py-4 px-6">${colaborador.email || 'N/A'}</td>       <td class="py-4 px-6">${deslocamentoTexto}</td>                <td class="py-4 px-6">
                                 <a href="https://wa.me/55${colaborador.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Bom dia! Poderia, por gentileza, informar se já está chegando? Estamos quase saindo.`)}" 
                                     class="text-blue-600 hover:underline" target="_blank">
                                     Mensagem
@@ -3653,6 +3650,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
