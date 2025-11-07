@@ -296,6 +296,7 @@ const CEP_CONFIG = [
         neighborhoodFieldId: 'bairro-reu',
         cityFieldId: 'cidade-reu',
         stateFieldId: 'estado-reu'
+        // IDs para numero, telefone e email serão inferidos (ex: 'numero-reu')
     },
     { 
         // 2. Endereço do Assistido/Requerente (Se você adicionar este HTML)
@@ -415,7 +416,7 @@ function setupCepIntegrationInternal({ cepFieldId, streetFieldId, neighborhoodFi
 
 // --- Funções de Manipulação de Dados Salvos (Preencher/Limpar) ---
 
-// NOVO: Função para preencher os campos de endereço com dados salvos (se houver)
+// ATUALIZADO: Preenche os campos de endereço, número, telefone e email
 function fillAddressFields(config, data) {
     // Verifica se data e config existem antes de tentar preencher
     if (!data || !config) return; 
@@ -425,12 +426,18 @@ function fillAddressFields(config, data) {
     if (document.getElementById(config.neighborhoodFieldId)) document.getElementById(config.neighborhoodFieldId).value = data.bairro || '';
     if (document.getElementById(config.cityFieldId)) document.getElementById(config.cityFieldId).value = data.cidade || '';
     if (document.getElementById(config.stateFieldId)) document.getElementById(config.stateFieldId).value = data.estado || '';
-    // Adiciona o campo número (assumindo o ID segue o padrão: 'cep-reu' -> 'numero-reu')
+    
+    // Inferindo IDs de campos adicionais
     const numberFieldId = config.cepFieldId.replace('cep', 'numero');
+    const telefoneFieldId = config.cepFieldId.replace('cep', 'telefone');
+    const emailFieldId = config.cepFieldId.replace('cep', 'email');
+
     if (document.getElementById(numberFieldId)) document.getElementById(numberFieldId).value = data.numero || '';
+    if (document.getElementById(telefoneFieldId)) document.getElementById(telefoneFieldId).value = data.telefone || '';
+    if (document.getElementById(emailFieldId)) document.getElementById(emailFieldId).value = data.email || '';
 }
 
-// NOVO: Função para limpar campos (útil para garantir que o formulário está vazio ao abrir)
+// ATUALIZADO: Limpa campos de endereço, número, telefone e email
 function clearAddressFields(config) {
     if (!config) return;
 
@@ -439,8 +446,15 @@ function clearAddressFields(config) {
     if (document.getElementById(config.neighborhoodFieldId)) document.getElementById(config.neighborhoodFieldId).value = '';
     if (document.getElementById(config.cityFieldId)) document.getElementById(config.cityFieldId).value = '';
     if (document.getElementById(config.stateFieldId)) document.getElementById(config.stateFieldId).value = '';
+    
+    // Inferindo IDs de campos adicionais
     const numberFieldId = config.cepFieldId.replace('cep', 'numero');
+    const telefoneFieldId = config.cepFieldId.replace('cep', 'telefone');
+    const emailFieldId = config.cepFieldId.replace('cep', 'email');
+    
     if (document.getElementById(numberFieldId)) document.getElementById(numberFieldId).value = '';
+    if (document.getElementById(telefoneFieldId)) document.getElementById(telefoneFieldId).value = '';
+    if (document.getElementById(emailFieldId)) document.getElementById(emailFieldId).value = '';
 }
 
 
@@ -548,7 +562,6 @@ function renderChecklist(actionKey) {
         'Documentação Pendente',
         'Orientações Prestadas',
         'Assistido Ciente',
-        'Encaminhamento Realizado'
     ];
 
     const optionsList = document.createElement('ul');
@@ -656,7 +669,7 @@ async function handleSave() {
 
     // --- Captura as observações estruturadas ---
     const selectedObservations = Array.from(checklistContainer.querySelectorAll('.observation-option:checked'))
-                                     .map(cb => cb.value);
+                                             .map(cb => cb.value);
     
     const otherCheckbox = document.getElementById('other-observation-checkbox');
     let otherText = '';
@@ -675,25 +688,27 @@ async function handleSave() {
             selected: selectedObservations,
             otherText: otherText
         },
-        addressData: capturedAddress // Novo campo para salvar endereço
+        addressData: capturedAddress // Salva endereço, telefone e email
     };
 
     try {
         const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
         await updateDoc(docRef, getUpdatePayload({ documentChecklist: checklistData }));
-        showNotification("Checklist e Endereço salvos com sucesso!", "success");
+        showNotification("Checklist e Dados salvos com sucesso!", "success");
         closeModal();
     } catch (error) {
-        console.error("Erro ao salvar o checklist e endereço: ", error);
-        showNotification("Erro ao salvar o checklist e endereço.", "error");
+        console.error("Erro ao salvar o checklist e dados: ", error);
+        showNotification("Erro ao salvar o checklist e dados.", "error");
     }
 }
 
-// NOVO: Função auxiliar para capturar dados de endereço de um conjunto de IDs
+// ATUALIZADO: Função auxiliar para capturar dados de endereço, num, tel e email
 function captureAddressData({ cepFieldId, streetFieldId, neighborhoodFieldId, cityFieldId, stateFieldId }) {
-    // A função é mais robusta, pois ela inferirá o ID do campo 'número'
+    // A função é mais robusta, pois ela inferirá os IDs dos campos
     const numberFieldId = cepFieldId.replace('cep', 'numero');
+    const telefoneFieldId = cepFieldId.replace('cep', 'telefone');
+    const emailFieldId = cepFieldId.replace('cep', 'email');
     
     const cep = document.getElementById(cepFieldId)?.value || '';
     const street = document.getElementById(streetFieldId)?.value || '';
@@ -701,8 +716,11 @@ function captureAddressData({ cepFieldId, streetFieldId, neighborhoodFieldId, ci
     const city = document.getElementById(cityFieldId)?.value || '';
     const state = document.getElementById(stateFieldId)?.value || '';
     const number = document.getElementById(numberFieldId)?.value || ''; 
+    const telefone = document.getElementById(telefoneFieldId)?.value || '';
+    const email = document.getElementById(emailFieldId)?.value || '';
 
-    if (!cep && !street && !number && !city) return null; // Retorna nulo se não houver dados relevantes
+    // Retorna nulo se nenhum dado relevante foi preenchido
+    if (!cep && !street && !number && !city && !neighborhood && !telefone && !email) return null; 
 
     return {
         cep: cep,
@@ -710,7 +728,9 @@ function captureAddressData({ cepFieldId, streetFieldId, neighborhoodFieldId, ci
         numero: number,
         bairro: neighborhood,
         cidade: city,
-        estado: state
+        estado: state,
+        telefone: telefone,
+        email: email
     };
 }
 
@@ -791,6 +811,7 @@ async function handleGeneratePdf() {
         heightLeft -= (pageHeight - position - 40); // 40 de margem inferior
 
         // Adiciona páginas extras se o conteúdo for muito grande
+        // Esta é a lógica de quebra de página que você solicitou
         while (heightLeft > 0) {
             position = -imgHeight + heightLeft;
             pdf.addPage();
@@ -864,7 +885,7 @@ export function openDetailsModal(config) {
         handleBack(); 
     }
     
-    // NOVO: Preenche os campos de endereço ao abrir o modal, se houver dados salvos
+    // ATUALIZADO: Preenche os campos de endereço (Réu) ao abrir o modal
     // Usamos CEP_CONFIG[0] (Réu)
     if (assisted.documentChecklist?.addressData) {
         fillAddressFields(CEP_CONFIG[0], assisted.documentChecklist.addressData);
