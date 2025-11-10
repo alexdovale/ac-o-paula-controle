@@ -468,7 +468,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
                 </div>
             </div>
             <div class="bg-white p-4 rounded-lg border">
-                <h3 class="text-lg font-semibold text-gray-800 mb-2">Atendimentos por Colaborador</h3>
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">Atendimentos por Grupo (Equipe)</h3>
                 <div class="max-h-[30vh] overflow-y-auto">
                     ${collaboratorsHTML}
                 </div>
