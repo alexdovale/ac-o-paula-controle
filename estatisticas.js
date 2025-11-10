@@ -387,7 +387,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
                 <h3 class="text-lg font-semibold text-gray-800 mb-3">Exportar Relatório</h3>
                 <div class="space-y-2 text-sm">
                     <label class="flex items-center"><input type="checkbox" id="export-general" class="mr-2 h-4 w-4 rounded" checked> Resumo</label>
-                    <label class="flex items-center"><input type="checkbox" id="export-collaborators" class="mr-2 h-4 w-4 rounded" checked> **Por Colaborador (Geral e por Equipe)**</label>
+                    <label class="flex items-center"><input type="checkbox" id="export-collaborators" class="mr-2 h-4 w-4 rounded" checked> **Por Colaborador/Equipe**</label>
                     <label class="flex items-center"><input type="checkbox" id="export-subjects" class="mr-2 h-4 w-4 rounded" checked> Por Assunto</label>
                     <label class="flex items-center"><input type="checkbox" id="export-scheduled-time" class="mr-2 h-4 w-4 rounded" checked> Agendados por Horário</label>
                     <label class="flex items-center"><input type="checkbox" id="export-times" class="mr-2 h-4 w-4 rounded" checked> Atend. por Horário</label>
@@ -468,7 +468,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
                 </div>
             </div>
             <div class="bg-white p-4 rounded-lg border">
-                <h3 class="text-lg font-semibold text-gray-800 mb-2">Atendimentos por Grupo (Equipe)</h3>
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">Atendimentos por Equipe</h3>
                 <div class="max-h-[30vh] overflow-y-auto">
                     ${collaboratorsHTML}
                 </div>
@@ -619,7 +619,8 @@ async function exportStatisticsToPDF(pautaName, statsData) {
 
         for (const [groupName, groupData] of sortedGroups) {
             
-            addSectionTitle(`Grupo: ${groupName} (Total de Atendimentos: ${groupData.total})`);
+            // Título de seção usa o groupName que já vem como "Equipe X" ou "Sem Grupo"
+            addSectionTitle(`Equipe/Grupo: ${groupName} (Total de Atendimentos: ${groupData.total})`);
             
             const sortedCollaborators = Object.entries(groupData.collaborators).sort(([, a], [, b]) => b - a);
             if (sortedCollaborators.length === 0) continue;
@@ -642,7 +643,8 @@ async function exportStatisticsToPDF(pautaName, statsData) {
                 const data = sortedCollaborators.map(item => item[1]);
 
                 const canvas = document.createElement('canvas');
-                canvas.width = 500;
+                // LARGURA REDUZIDA PARA MAIS ESPAÇO PARA OS NOMES
+                canvas.width = 400; 
                 const chartHeight = Math.min(pageHeight / 2, Math.max(100, labels.length * 22 + 60)); 
                 canvas.height = chartHeight;
                 const ctx = canvas.getContext('2d');
@@ -667,19 +669,24 @@ async function exportStatisticsToPDF(pautaName, statsData) {
                             legend: { display: false },
                             title: { display: false }
                         },
-                        scales: { x: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } } }
+                        scales: { 
+                            x: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
+                            y: { ticks: { autoSkip: false }, grid: { drawOnChartArea: false } } // Ajuste para nomes
+                        }
                     }
                 });
                 
                 await new Promise(resolve => setTimeout(resolve, 500));
                 const imgData = canvas.toDataURL('image/png');
                 
+                // QUEBRA DE PÁGINA ANTES DO GRÁFICO SE NÃO COUBER
                 if (yPos + chartHeight > pageHeight - margin) {
                     doc.addPage();
                     yPos = margin + 30;
                 }
 
-                const finalWidth = Math.min(canvas.width, pageWidth - margin * 2);
+                // LARGURA DA IMAGEM É 80% DA ÁREA DISPONÍVEL
+                const finalWidth = Math.min(canvas.width, (pageWidth - margin * 2) * 0.8);
                 const finalHeight = finalWidth / (canvas.width / canvas.height);
 
                 doc.addImage(imgData, 'PNG', margin, yPos, finalWidth, finalHeight);
