@@ -230,7 +230,7 @@ function getTimeDifferenceInMinutes(startTimeISO, endTimeISO) {
     return Math.round((end - start) / 60000);
 }
 
-// FUNÇÃO PRINCIPAL QUE SERÁ USADA PELO SEU SCRIPT
+// FUNÇÃO PRINCIPAL QUE SERÁ USADA PELO SEU SCRIP
 export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName) {
     const modal = document.getElementById('statistics-modal');
 
@@ -563,7 +563,8 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     };
 
     const addSectionTitle = (title) => {
-        if (yPos > pageHeight - 200) { 
+        // MODIFICAÇÃO: Aumentar o espaço de segurança antes de adicionar nova página
+        if (yPos > pageHeight - 150) { 
             doc.addPage();
             yPos = margin + 30;
         }
@@ -619,7 +620,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
 
         for (const [groupName, groupData] of sortedGroups) {
             
-            // Título de seção usa o groupName que já vem como "Equipe X" ou "Sem Grupo"
+            // MODIFICAÇÃO: Título de seção para Equipe/Grupo
             addSectionTitle(`Equipe/Grupo: ${groupName} (Total de Atendimentos: ${groupData.total})`);
             
             const sortedCollaborators = Object.entries(groupData.collaborators).sort(([, a], [, b]) => b - a);
@@ -643,8 +644,9 @@ async function exportStatisticsToPDF(pautaName, statsData) {
                 const data = sortedCollaborators.map(item => item[1]);
 
                 const canvas = document.createElement('canvas');
-                // LARGURA REDUZIDA PARA MAIS ESPAÇO PARA OS NOMES
+                // LARGURA REDUZIDA PARA MAIS ESPAÇO PARA O TEXTO
                 canvas.width = 400; 
+                // Altura ajustada: 22pt por item, mais 60pt de margem/eixos
                 const chartHeight = Math.min(pageHeight / 2, Math.max(100, labels.length * 22 + 60)); 
                 canvas.height = chartHeight;
                 const ctx = canvas.getContext('2d');
@@ -671,7 +673,8 @@ async function exportStatisticsToPDF(pautaName, statsData) {
                         },
                         scales: { 
                             x: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
-                            y: { ticks: { autoSkip: false }, grid: { drawOnChartArea: false } } // Ajuste para nomes
+                            // Ajuste para garantir que os rótulos do eixo Y (nomes) sejam exibidos
+                            y: { ticks: { autoSkip: false, mirror: true, padding: -30 }, grid: { drawOnChartArea: false } }
                         }
                     }
                 });
@@ -679,19 +682,20 @@ async function exportStatisticsToPDF(pautaName, statsData) {
                 await new Promise(resolve => setTimeout(resolve, 500));
                 const imgData = canvas.toDataURL('image/png');
                 
-                // QUEBRA DE PÁGINA ANTES DO GRÁFICO SE NÃO COUBER
-                if (yPos + chartHeight > pageHeight - margin) {
+                // NOVO CÁLCULO DE QUEBRA DE PÁGINA (GARANTE ESPAÇO PARA O GRÁFICO)
+                // Se a posição Y + a altura do gráfico ultrapassa o limite da página, adiciona uma nova.
+                if (yPos + chartHeight + 20 > pageHeight - margin) { 
                     doc.addPage();
                     yPos = margin + 30;
                 }
 
-                // LARGURA DA IMAGEM É 80% DA ÁREA DISPONÍVEL
-                const finalWidth = Math.min(canvas.width, (pageWidth - margin * 2) * 0.8);
-                const finalHeight = finalWidth / (canvas.width / canvas.height);
+                // Largura final que preenche a área disponível do documento (página - margens)
+                const finalWidth = pageWidth - margin * 2;
+                const finalHeight = finalWidth / (canvas.width / canvas.height); // Mantém a proporção do canvas
 
                 doc.addImage(imgData, 'PNG', margin, yPos, finalWidth, finalHeight);
-                yPos += finalHeight + 20;
-
+                yPos += finalHeight + 20; // Avança a posição Y
+                
                 chart.destroy();
                 canvas.remove();
             }
