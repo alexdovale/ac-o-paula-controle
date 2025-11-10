@@ -1123,6 +1123,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                    (assisted.scheduledTime && assisted.scheduledTime.includes(term)) ||
                    (arrivalTimeFormatted && arrivalTimeFormatted.includes(term)) ||
                    (assisted.assignedCollaborator?.name && normalizeText(assisted.assignedCollaborator.name).includes(term));
+                    // NOVO CAMPO ADICIONADO: Pesquisar por "Atendente" (attendant)
+                   (assisted.attendant && normalizeText(assisted.attendant).includes(normalizedTerm)) ||
+                   (assisted.assignedCollaborator?.name && normalizeText(assisted.assignedCollaborator.name).includes(normalizedTerm));
         };
 
         const getPriorityClass = (priority) => ({'URGENTE':'priority-urgente','Máxima':'priority-maxima','Média':'priority-media','Mínima':'priority-minima'}[priority]||'');
@@ -3676,6 +3679,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
