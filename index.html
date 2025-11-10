@@ -3176,9 +3176,30 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
 
                 // Ação de confirmar atendimento (antiga, agora para "Finalizar Diretamente")
+                // NOVO CÓDIGO SUGERIDO (Linha 1845)
                 if (button.id === 'confirm-attendant-btn') {
                     const attendantName = document.getElementById('attendant-name').value.trim();
-                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ status: 'atendido', attendant: attendantName, attendedTime: new Date().toISOString() }));
+                    
+                    // 1. Tenta encontrar o colaborador completo na lista (incluindo cargo e equipe)
+                    const selectedCollab = colaboradores.find(c => c.nome === attendantName);
+                    
+                    let attendantData;
+                
+                    if (selectedCollab) {
+                        // Se encontrado, usa o objeto completo
+                        attendantData = { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe };
+                    } else {
+                        // Se não encontrado, usa o nome como string (cairá em 'Sem Grupo' se for o caso)
+                        attendantData = attendantName;
+                    }
+                
+                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ 
+                        status: 'atendido', 
+                        // ATUALIZAÇÃO: Salva o objeto completo se encontrado, senão salva o nome string.
+                        attendant: attendantData, 
+                        attendedTime: new Date().toISOString() 
+                    }));
+                    
                     button.closest('.fixed').classList.add('hidden');
                 }
                 if (button.id === 'confirm-priority-reason-btn') {
@@ -3199,9 +3220,26 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload(updatedData));
                     button.closest('.fixed').classList.add('hidden');
                 }
+                // NOVO CÓDIGO SUGERIDO (Linha 1897)
                 if (button.id === 'confirm-edit-attendant-btn') {
                     const attendantName = document.getElementById('edit-attendant-name').value.trim();
-                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ attendant: attendantName }));
+                    
+                    // 1. Tenta encontrar o colaborador completo na lista
+                    const selectedCollab = colaboradores.find(c => c.nome === attendantName);
+                    
+                    let attendantData;
+                
+                    if (selectedCollab) {
+                        attendantData = { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe };
+                    } else {
+                        attendantData = attendantName;
+                    }
+                
+                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ 
+                        // ATUALIZAÇÃO: Salva o objeto completo se encontrado
+                        attendant: attendantData 
+                    }));
+                    
                     button.closest('.fixed').classList.add('hidden');
                 }
                 if (button.id === 'confirm-reset-btn') {
@@ -3687,6 +3725,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
