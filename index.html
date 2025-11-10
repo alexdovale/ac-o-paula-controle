@@ -1111,20 +1111,28 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         };
         
         // FUNÇÃO DE PESQUISA MELHORADA
-        const searchFilter = (assisted, term) => {
+       const searchFilter = (assisted, term) => {
             if (!term) return true;
             
             // Formata a data de chegada para HH:MM para permitir a pesquisa
             const arrivalTimeFormatted = assisted.arrivalTime ? new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
-
-            return normalizeText(assisted.name).includes(term) ||
-                   (assisted.cpf && normalizeText(assisted.cpf).includes(term)) ||
-                   normalizeText(assisted.subject).includes(term) ||
-                   (assisted.scheduledTime && assisted.scheduledTime.includes(term)) ||
-                   (arrivalTimeFormatted && arrivalTimeFormatted.includes(term)) ||
-                   (assisted.assignedCollaborator?.name && normalizeText(assisted.assignedCollaborator.name).includes(term));
-                    // NOVO CAMPO ADICIONADO: Pesquisar por "Atendente" (attendant)
-                   (assisted.attendant && normalizeText(assisted.attendant).includes(normalizedTerm)) ||
+        
+            const normalizedTerm = normalizeText(term);
+        
+            // Converte o campo attendant para string, caso seja um objeto com nome.
+            // O campo attendant pode ser uma string (padrão) ou, em fluxos complexos, um objeto.
+            const attendantName = (typeof assisted.attendant === 'object' && assisted.attendant !== null) 
+                                  ? assisted.attendant.name || assisted.attendant.nome || '' 
+                                  : assisted.attendant || '';
+        
+            return normalizeText(assisted.name).includes(normalizedTerm) ||
+                   (assisted.cpf && normalizeText(assisted.cpf).includes(normalizedTerm)) ||
+                   normalizeText(assisted.subject).includes(normalizedTerm) ||
+                   (assisted.scheduledTime && assisted.scheduledTime.includes(normalizedTerm)) ||
+                   (arrivalTimeFormatted && arrivalTimeFormatted.includes(normalizedTerm)) ||
+                   // NOVO: Usa a variável attendantName (que garante que o campo é string)
+                   (attendantName && normalizeText(attendantName).includes(normalizedTerm)) ||
+                   // Campo Colaborador Atribuído
                    (assisted.assignedCollaborator?.name && normalizeText(assisted.assignedCollaborator.name).includes(normalizedTerm));
         };
 
@@ -3679,6 +3687,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
