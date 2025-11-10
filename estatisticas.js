@@ -271,7 +271,9 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
     const statsByGroup = atendidos.reduce((acc, a) => {
         const attendantIsObject = typeof a.attendant === 'object' && a.attendant !== null;
         const attendantName = attendantIsObject ? a.attendant.nome : (a.attendant || 'Não informado');
-        const groupName = attendantIsObject && a.attendant.equipe ? `Equipe ${a.attendant.equipe}` : 'Sem Grupo';
+        
+        // MODIFICAÇÃO: Renomeia 'Sem Grupo' para 'Equipe Não Definida'
+        const groupName = attendantIsObject && a.attendant.equipe ? `Equipe ${a.attendant.equipe}` : 'Equipe Não Definida';
 
         if (!acc[groupName]) {
             acc[groupName] = { collaborators: {}, total: 0 };
@@ -620,7 +622,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
 
         for (const [groupName, groupData] of sortedGroups) {
             
-            // MODIFICAÇÃO: Título de seção para Equipe/Grupo
+            // Título de seção usa o groupName que já vem como "Equipe X" ou "Equipe Não Definida"
             addSectionTitle(`Equipe/Grupo: ${groupName} (Total de Atendimentos: ${groupData.total})`);
             
             const sortedCollaborators = Object.entries(groupData.collaborators).sort(([, a], [, b]) => b - a);
@@ -644,7 +646,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
                 const data = sortedCollaborators.map(item => item[1]);
 
                 const canvas = document.createElement('canvas');
-                // LARGURA REDUZIDA PARA MAIS ESPAÇO PARA O TEXTO
+                // LARGURA REDUZIDA PARA MAIS ESPAÇO PARA O TEXTO (400pt para 595pt de largura da página)
                 canvas.width = 400; 
                 // Altura ajustada: 22pt por item, mais 60pt de margem/eixos
                 const chartHeight = Math.min(pageHeight / 2, Math.max(100, labels.length * 22 + 60)); 
@@ -674,7 +676,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
                         scales: { 
                             x: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
                             // Ajuste para garantir que os rótulos do eixo Y (nomes) sejam exibidos
-                            y: { ticks: { autoSkip: false, mirror: true, padding: -30 }, grid: { drawOnChartArea: false } }
+                            y: { ticks: { autoSkip: false }, grid: { drawOnChartArea: false } }
                         }
                     }
                 });
@@ -691,7 +693,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
 
                 // Largura final que preenche a área disponível do documento (página - margens)
                 const finalWidth = pageWidth - margin * 2;
-                const finalHeight = finalWidth / (canvas.width / canvas.height); // Mantém a proporção do canvas
+                const finalHeight = finalWidth / (canvas.width / canvas.height); // Mantém a proporção do canvas (finalWidth / 400 * chartHeight)
 
                 doc.addImage(imgData, 'PNG', margin, yPos, finalWidth, finalHeight);
                 yPos += finalHeight + 20; // Avança a posição Y
