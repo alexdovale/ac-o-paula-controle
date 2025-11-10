@@ -1362,18 +1362,26 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 card.innerHTML = `
                     <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
                     <div class="flex justify-between items-start">
-                        <div>
-                            <p class="font-bold text-lg">${index + 1}. ${a.name}</p>
-                            <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
-                            <p class="text-sm text-gray-500">${arrival}</p>
-                            <button data-id="${a.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-sm hover:underline font-semibold py-1">Ver Detalhes</button>
-                        </div>
-                    </div>
-                    <div class="mt-3 grid grid-cols-2 lg:grid-cols-3 gap-2">
-                        ${atenderButton}
-                        ${a.priority !== 'URGENTE' ? `<button data-id="${a.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : ''}
-                        <button data-id="${a.id}" class="edit-assisted-btn bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar</button>
-                    </div>
+                                <div>
+                                    <p class="font-bold text-lg">${index + 1}. ${a.name}</p>
+                                    <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
+                                    <p class="text-sm text-gray-500">${arrival}</p>
+                                    ${a.priority === 'URGENTE' && a.priorityReason ? 
+                                        `<p class="text-sm text-red-600 font-semibold mt-1">Motivo Urgente: 
+                                             <span class="font-normal text-red-500">${a.priorityReason}</span>
+                                         </p>` 
+                                        : ''}
+                                    <button data-id="${a.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-sm hover:underline font-semibold py-1">Ver Detalhes</button>
+                                </div>
+                            </div>
+                            <div class="mt-3 grid grid-cols-2 lg:grid-cols-3 gap-2">
+                                ${atenderButton}
+                                ${a.priority === 'URGENTE' 
+                                    ? `<button data-id="${a.id}" class="unpriority-btn bg-yellow-500 text-white font-semibold py-2 rounded-lg hover:bg-yellow-600 text-sm">Desfazer Prioridade</button>` 
+                                    : `<button data-id="${a.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>`}
+                                <button data-id="${a.id}" class="edit-assisted-btn bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar</button>
+                            </div>
+                    
                     ${returnToPautaBtn ? `<div class="mt-2">${returnToPautaBtn}</div>` : ''}
                     ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
                     `;
@@ -2964,6 +2972,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
                     if (button.classList.contains('delete-btn')) { if(confirm("Tem certeza que deseja apagar este registro permanentemente?")) { await deleteDoc(docRef); showNotification("Registro apagado."); }}
                     if (button.classList.contains('priority-btn')) { assistedIdToHandle = id; document.getElementById('priority-reason-modal').classList.remove('hidden'); }
+                    if (button.classList.contains('unpriority-btn')) { 
+                        if(confirm("Tem certeza que deseja remover o status de Prioridade Urgente? A prioridade será recalculada.")) {
+                            await updateDoc(docRef, getUpdatePayload({ priority: null, priorityReason: null })); 
+                            showNotification("Prioridade Urgente removida. Recalculando prioridade."); 
+                        }
+                    }
                     if (button.classList.contains('edit-assisted-btn')) { 
                         assistedIdToHandle = id; 
                         const assisted = allAssisted.find(a => a.id === id); 
