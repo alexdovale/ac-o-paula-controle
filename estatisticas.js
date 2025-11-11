@@ -572,6 +572,91 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         doc.text(title, margin, yPos);
         yPos += 20;
     };
+    
+    /**
+     * NOVA FUNÇÃO: Adiciona tabelas de tempo (Atendidos e Faltosos) lado a lado.
+     * @param {object} doc - Instância do jsPDF.
+     * @param {string} title - Título da seção.
+     * @param {Array} dataAtendidos - Dados de atendidos.
+     * @param {number} totalAtendidos - Total de atendidos.
+     * @param {Array} dataFaltosos - Dados de faltosos.
+     * @param {number} totalFaltosos - Total de faltosos.
+     */
+    const addHorizontalTimeTables = (doc, title, dataAtendidos, totalAtendidos, dataFaltosos, totalFaltosos) => {
+        
+        const spaceForTitle = 30;
+        const totalSpaceNeeded = Math.max(
+            dataAtendidos.length * 18 + 70, // Altura da tabela de Atendidos
+            dataFaltosos.length * 18 + 70 // Altura da tabela de Faltosos
+        ) + spaceForTitle;
+
+        // Seção para quebra de página
+        if (yPos + totalSpaceNeeded > pageHeight - margin) {
+            doc.addPage();
+            yPos = margin + 30;
+        }
+
+        // Título principal sobre as duas colunas
+        addSectionTitle(title);
+        yPos -= 5; // Ajuste de espaçamento
+
+        const tableWidth = (pageWidth - margin * 3) / 2; // Margem no centro
+        const startXLeft = margin;
+        const startXRight = margin * 2 + tableWidth;
+
+        // --- 1. Tabela de Atendidos por Horário (Esquerda) ---
+        if (dataAtendidos.length > 0) {
+            
+            // Subtítulo
+            doc.setFont(FONT_BOLD, 'normal');
+            doc.setFontSize(12);
+            doc.setTextColor(COLOR_GREEN);
+            doc.text("Atendidos por Horário", startXLeft, yPos);
+            yPos += 5; // Ajuste
+
+            doc.autoTable({
+                startY: yPos,
+                startX: startXLeft,
+                tableWidth: tableWidth,
+                head: [['Horário', 'Quantidade']],
+                body: dataAtendidos.map(item => [item.time, item.count]),
+                foot: [['Total', totalAtendidos]],
+                theme: 'grid',
+                headStyles: { fillColor: COLOR_GREEN, textColor: '#FFFFFF', fontStyle: 'bold' },
+                footStyles: { fillColor: [220, 255, 220], textColor: COLOR_TEXT, fontStyle: 'bold' },
+                margin: { left: startXLeft, right: pageWidth - (startXLeft + tableWidth), top: yPos }
+            });
+        }
+        
+        // --- 2. Tabela de Faltosos por Horário (Direita) ---
+        if (dataFaltosos.length > 0) {
+            
+            // Subtítulo
+            doc.setFont(FONT_BOLD, 'normal');
+            doc.setFontSize(12);
+            doc.setTextColor(COLOR_RED);
+            doc.text("Faltosos por Horário", startXRight, yPos);
+            yPos += 5; // Ajuste
+            
+            doc.autoTable({
+                startY: yPos,
+                startX: startXRight,
+                tableWidth: tableWidth,
+                head: [['Horário', 'Quantidade']],
+                body: dataFaltosos.map(item => [item.time, item.count]),
+                foot: [['Total', totalFaltosos]],
+                theme: 'grid',
+                headStyles: { fillColor: COLOR_RED, textColor: '#FFFFFF', fontStyle: 'bold' },
+                footStyles: { fillColor: [255, 220, 220], textColor: COLOR_TEXT, fontStyle: 'bold' },
+                margin: { left: startXRight, right: pageWidth - (startXRight + tableWidth), top: yPos }
+            });
+        }
+
+        // Atualiza o Y para a posição final da tabela mais baixa + 20pt de espaço
+        const finalYLeft = dataAtendidos.length > 0 ? doc.autoTable.previous.finalY : yPos;
+        const finalYRight = dataFaltosos.length > 0 ? doc.autoTable.previous.finalY : yPos;
+        yPos = Math.max(finalYLeft, finalYRight) + 20; 
+    };
 
     // --- CONSTRUÇÃO DO PDF ---
     yPos = margin + 30; 
@@ -645,7 +730,68 @@ async function exportStatisticsToPDF(pautaName, statsData) {
             yPos = doc.autoTable.previous.finalY + 20; 
         }
     }
-    // FIM DA SEÇÃO DE EXPORTAÇÃO
+    
+    // --- 3. EXECUTA AS TABELAS LADO A LADO ---
+    if (document.getElementById('export-times').checked && document.getElementById('export-absentees-time').checked) {
+        addHorizontalTimeTables(
+            doc,
+            "Atendimentos e Faltosos por Horário de Chegada",
+            statsData.statsByTime, // Atendidos por Horário
+            statsData.atendidosCount,
+            statsData.statsByTimeFaltosos, // Faltosos por Horário
+            statsData.faltososCount
+        );
+    } else {
+        // Se a opção de exibição lado a lado não for selecionada, volta ao modo vertical padrão.
+        
+        // Removendo a antiga lógica addTimeTableToPdf e gerando as tabelas diretamente
+        
+        const addVerticalTable = (title, data, checkboxId, total, color) => {
+            if (document.getElementById(checkboxId).checked && data.length > 0) {
+                if (yPos > pageHeight - 150) { doc.addPage(); yPos = margin + 30; }
+                addSectionTitle(title);
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Horário', 'Quantidade']],
+                    body: data.map(item => [item.time, item.count]),
+                    foot: [['Total', total]],
+                    theme: 'grid',
+                    headStyles: { fillColor: color, textColor: '#FFFFFF', fontStyle: 'bold' },
+                    footStyles: { fillColor: [240, 240, 240], textColor: COLOR_TEXT, fontStyle: 'bold' },
+                    didDrawPage: (data) => { if(data.pageNumber > 1) yPos = margin + 30 },
+                    margin: { top: yPos, bottom: margin + 20 }
+                });
+                yPos = doc.autoTable.previous.finalY + 20;
+            }
+        };
+
+        // Renderiza sequencialmente (Atendidos por Horário e Faltosos por Horário)
+        addVerticalTable("Atendimentos por Horário", statsData.statsByTime, 'export-times', statsData.atendidosCount, COLOR_GREEN);
+        addVerticalTable("Faltosos por Horário", statsData.statsByTimeFaltosos, 'export-absentees-time', statsData.faltososCount, COLOR_RED);
+    }
+    
+    // Apenas para manter o último relatório de horário (Agendados)
+    const addVerticalTable = (title, data, checkboxId, total, color) => {
+        if (document.getElementById(checkboxId).checked && data.length > 0) {
+            if (yPos > pageHeight - 150) { doc.addPage(); yPos = margin + 30; }
+            addSectionTitle(title);
+            doc.autoTable({
+                startY: yPos,
+                head: [['Horário', 'Quantidade']],
+                body: data.map(item => [item.time, item.count]),
+                foot: [['Total', total]],
+                theme: 'grid',
+                headStyles: { fillColor: color, textColor: '#FFFFFF', fontStyle: 'bold' },
+                footStyles: { fillColor: [240, 240, 240], textColor: COLOR_TEXT, fontStyle: 'bold' },
+                didDrawPage: (data) => { if(data.pageNumber > 1) yPos = margin + 30 },
+                margin: { top: yPos, bottom: margin + 20 }
+            });
+            yPos = doc.autoTable.previous.finalY + 20;
+        }
+    };
+    
+    addVerticalTable("Agendados por Horário", statsData.statsByScheduledTime, 'export-scheduled-time', statsData.agendadosCount, COLOR_BLUE);
+
 
     if (document.getElementById('export-subjects').checked && Object.keys(statsData.statsBySubject).length > 0) {
         addSectionTitle("Demandas por Assunto");
@@ -672,37 +818,6 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         yPos = doc.autoTable.previous.finalY + 20;
     }
     
-    // FUNÇÃO QUE CONTÉM A TABELA DE FALTOSOS E OUTROS RELATÓRIOS TEMPORAIS
-    const addTimeTableToPdf = (title, data, checkboxId, total, color) => {
-        if (document.getElementById(checkboxId).checked && data.length > 0) {
-            
-            // VERIFICA ESPAÇO E QUEBRA PÁGINA ANTES DO TÍTULO
-            if (yPos > pageHeight - 150) { 
-                doc.addPage();
-                yPos = margin + 30;
-            }
-            
-            addSectionTitle(title);
-            
-            doc.autoTable({
-                startY: yPos,
-                head: [['Horário', 'Quantidade']],
-                body: data.map(item => [item.time, item.count]),
-                foot: [['Total', total]],
-                theme: 'grid',
-                headStyles: { fillColor: color, textColor: '#FFFFFF', fontStyle: 'bold' },
-                footStyles: { fillColor: [240, 240, 240], textColor: COLOR_TEXT, fontStyle: 'bold' },
-                didDrawPage: (data) => { if(data.pageNumber > 1) yPos = margin + 30 },
-                margin: { top: yPos, bottom: margin + 20 }
-            });
-            yPos = doc.autoTable.previous.finalY + 20;
-        }
-    };
-    
-    addTimeTableToPdf("Agendados por Horário", statsData.statsByScheduledTime, 'export-scheduled-time', statsData.agendadosCount, COLOR_BLUE);
-    addTimeTableToPdf("Atendimentos por Horário", statsData.statsByTime, 'export-times', statsData.atendidosCount, COLOR_GREEN);
-    addTimeTableToPdf("Faltosos por Horário", statsData.statsByTimeFaltosos, 'export-absentees-time', statsData.faltososCount, COLOR_RED);
-
     addHeaderAndFooter();
     doc.save(`estatisticas_${pautaName.replace(/\s+/g, '_')}.pdf`);
 }
