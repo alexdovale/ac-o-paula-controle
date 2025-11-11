@@ -1,3 +1,5 @@
+// Código Completo e Corrigido do detalhes.js
+
 /**
  * detalhes.js
  * Este módulo gerencia toda a funcionalidade do modal "Ver Detalhes",
@@ -762,72 +764,155 @@ async function handleGeneratePdf() {
     }
 
     try {
+        // Carrega apenas as bibliotecas necessárias para TABLE PDF (jsPDF + autoTable)
         await Promise.all([
             loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'),
-            loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js')
+            loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js')
         ]);
         
-        if (!window.jspdf || !window.html2canvas) {
-            throw new Error('Bibliotecas de PDF não foram carregadas.');
+        if (!window.jspdf || !window.jspdf.autoTable) {
+            throw new Error('Bibliotecas de PDF não foram carregadas corretamente.');
         }
 
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+        const margin = 40;
+        let yPos = 40;
         
+        const FONT_NORMAL = 'helvetica';
+        const FONT_BOLD = 'helvetica';
+        const COLOR_PRIMARY = '#10B981'; // Tailwind Green 500
+
         const title = checklistTitle.textContent;
         const assistedName = assistedNameEl.textContent;
-        const source = checklistContainer;
+        const assisted = allAssisted.find(a => a.id === currentAssistedId);
+        const savedChecklist = assisted?.documentChecklist;
 
-        // --- Cria um cabeçalho para o PDF ---
-        pdf.setFontSize(22);
-        pdf.setFont("helvetica", "bold");
-        pdf.text("Checklist de Documentos", pdf.internal.pageSize.getWidth() / 2, 60, { align: 'center' });
+        // --- 1. CABEÇALHO ---
+        pdf.setFont(FONT_BOLD, "bold");
+        pdf.setFontSize(18);
+        pdf.setTextColor(COLOR_PRIMARY);
+        pdf.text("Checklist de Documentos", margin, yPos);
+        yPos += 25;
         
-        pdf.setFontSize(14);
-        pdf.setFont("helvetica", "normal");
-        pdf.text(`Assistido(a): ${assistedName}`, 40, 90);
-        pdf.text(`Assunto: ${title}`, 40, 110);
+        pdf.setFont(FONT_NORMAL, "normal");
+        pdf.setFontSize(10);
+        pdf.setTextColor('#333333');
+        pdf.text(`Assistido(a): ${assistedName}`, margin, yPos);
+        yPos += 15;
+        pdf.text(`Assunto: ${title}`, margin, yPos);
+        yPos += 30;
         
-        // --- Usa html2canvas para capturar o conteúdo ---
-        const canvas = await html2canvas(source, {
-            scale: 2, 
-            useCORS: true,
-            onclone: (document) => {
-                // Garante que todo o conteúdo seja visível para a captura
-                const clonedContainer = document.getElementById('checklist-container');
-                clonedContainer.style.maxHeight = 'none';
-                clonedContainer.style.overflow = 'visible';
-            }
-        });
-        
-        const imgData = canvas.toDataURL('image/png');
-        const imgWidth = 515; // Largura da imagem no PDF (A4 - margens)
-        const pageHeight = 842; // Altura da página A4 em pt
-        const imgHeight = canvas.height * imgWidth / canvas.width;
-        let heightLeft = imgHeight;
-        let position = 140; // Posição inicial abaixo do cabeçalho
+        // --- 2. SEÇÕES DO CHECKLIST (TABELAS) ---
+        const data = documentsData[currentChecklistAction];
 
-        pdf.addImage(imgData, 'PNG', 40, position, imgWidth, imgHeight);
-        heightLeft -= (pageHeight - position - 40); // 40 de margem inferior
+        if (data && data.sections) {
+            data.sections.forEach((section, index) => {
+                const bodyData = section.docs.map(docText => {
+                    let status = '❌ Pendente';
+                    if (savedChecklist && savedChecklist.checkedIds) {
+                        const checkboxId = `doc-${currentChecklistAction}-${index}-${section.docs.indexOf(docText)}`;
+                        if (savedChecklist.checkedIds.includes(checkboxId)) {
+                            status = '✅ OK';
+                        }
+                    }
+                    return [status, docText];
+                });
 
-        // Adiciona páginas extras se o conteúdo for muito grande
-        // Esta é a lógica de quebra de página que você solicitou
-        while (heightLeft > 0) {
-            position = -imgHeight + heightLeft;
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 40, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
+                // Título da Seção como cabeçalho de tabela
+                pdf.autoTable({
+                    startY: yPos,
+                    head: [[section.title]],
+                    body: bodyData,
+                    theme: 'grid',
+                    styles: { cellPadding: 5, fontSize: 9 },
+                    headStyles: { fillColor: [240, 240, 240], textColor: '#333333', fontStyle: 'bold' },
+                    columnStyles: { 0: { cellWidth: 50, fontStyle: 'bold' } },
+                    didDrawPage: (data) => { 
+                        // Reinicia yPos se houver quebra de página
+                        if(data.pageNumber > 1) yPos = margin + 30 
+                    },
+                    margin: { top: yPos, bottom: margin }
+                });
+                yPos = pdf.autoTable.previous.finalY + 10; // Espaçamento entre seções
+            });
         }
+        
+        // --- 3. OBSERVAÇÕES E DADOS ADICIONAIS ---
+        yPos += 15;
+        pdf.setFont(FONT_BOLD, "bold");
+        pdf.setFontSize(12);
+        pdf.text("Observações do Atendimento:", margin, yPos);
+        yPos += 15;
+        pdf.setFont(FONT_NORMAL, "normal");
+        pdf.setFontSize(10);
+        
+        // Lista as observações selecionadas
+        const obsBody = [];
+        if (savedChecklist?.observations?.selected?.length > 0) {
+            savedChecklist.observations.selected.forEach(obs => {
+                 obsBody.push(['✅', obs]);
+            });
+        }
+        if (savedChecklist?.observations?.otherText) {
+            obsBody.push(['📝', savedChecklist.observations.otherText]);
+        }
+        
+        if (obsBody.length > 0) {
+            pdf.autoTable({
+                startY: yPos,
+                body: obsBody,
+                theme: 'plain',
+                styles: { fontSize: 10, cellPadding: 3, textColor: '#333333' },
+                columnStyles: { 0: { cellWidth: 15, fontStyle: 'bold' } },
+                didDrawPage: (data) => { if(data.pageNumber > 1) yPos = margin + 30 },
+                margin: { top: yPos, bottom: margin }
+            });
+            yPos = pdf.autoTable.previous.finalY + 10;
+        }
+
+        // Dados de Endereço (Réu)
+        if (savedChecklist?.addressData) {
+            yPos += 10;
+            pdf.setFont(FONT_BOLD, "bold");
+            pdf.setFontSize(12);
+            pdf.text("Dados da Parte Contrária (Réu):", margin, yPos);
+            yPos += 15;
+            pdf.setFont(FONT_NORMAL, "normal");
+            pdf.setFontSize(10);
+            
+            const address = savedChecklist.addressData;
+            const addressBody = [
+                ['CEP', address.cep],
+                ['Endereço', `${address.rua || 'N/A'}, Nº ${address.numero || 'S/N'}`],
+                ['Bairro', address.bairro || 'N/A'],
+                ['Cidade/UF', `${address.cidade || 'N/A'} / ${address.estado || 'N/A'}`],
+                ['Telefone', address.telefone || 'N/A'],
+                ['Email', address.email || 'N/A']
+            ];
+            
+            pdf.autoTable({
+                startY: yPos,
+                body: addressBody,
+                theme: 'plain',
+                styles: { fontSize: 10, cellPadding: 3, textColor: '#333333' },
+                columnStyles: { 0: { cellWidth: 60, fontStyle: 'bold' } },
+                didDrawPage: (data) => { if(data.pageNumber > 1) yPos = margin + 30 },
+                margin: { top: yPos, bottom: margin }
+            });
+            yPos = pdf.autoTable.previous.finalY + 10;
+        }
+
 
         pdf.save(`Checklist - ${assistedName} - ${title}.pdf`);
 
     } catch (error) {
         console.error("Erro ao gerar PDF:", error);
-        if (showNotification) showNotification("Não foi possível gerar o arquivo PDF.", "error");
+        if (showNotification) showNotification("Não foi possível gerar o arquivo PDF. Verifique se as bibliotecas jspdf e autotable estão carregadas.", "error");
     } finally {
         if (printChecklistBtn) {
             printChecklistBtn.disabled = false;
-            printChecklistBtn.textContent = 'Baixar PDF';
+            printChecklistBtn.textContent = 'PDF';
         }
     }
 }
@@ -852,10 +937,10 @@ export function setupDetailsModal(config) {
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
     
+    // ATUALIZADO: Chama a nova função de geração de PDF via Tabela
     if (printChecklistBtn) printChecklistBtn.addEventListener('click', handleGeneratePdf);
     
     // NOVO: Inicializa a integração de CEP para todos os conjuntos de IDs definidos
-    // Este código ativa os listeners 'blur' e 'input' nos campos CEP definidos em CEP_CONFIG.
     CEP_CONFIG.forEach(setupCepIntegrationInternal);
 }
 
