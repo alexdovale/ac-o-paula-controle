@@ -515,10 +515,6 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
 async function exportStatisticsToPDF(pautaName, statsData) {
     const { jsPDF } = window.jspdf;
     
-    // OBS: Chart.js não é mais estritamente necessário para esta seção, mas a verificação é mantida
-    // caso as outras seções do PDF dependam dele (embora não dependam).
-    // if (!window.Chart) { alert('A biblioteca Chart.js é necessária e não foi encontrada.'); return; } 
-
     // --- CONFIGURAÇÕES E ESTILOS ---
     const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -617,13 +613,16 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         yPos += cardHeight + 30;
     }
 
-    // NOVA SEÇÃO DE EXPORTAÇÃO: SOMENTE TABELAS
+    // SEÇÃO DE EXPORTAÇÃO: SOMENTE TABELAS (Equipe/Colaborador)
     if (document.getElementById('export-collaborators').checked && Object.keys(statsData.statsByGroup).length > 0) {
         const sortedGroups = Object.entries(statsData.statsByGroup).sort(([, a], [, b]) => b.total - a.total);
 
         for (const [groupName, groupData] of sortedGroups) {
             
-            addSectionTitle(`Equipe/Grupo: ${groupName} (Total de Atendimentos: ${groupData.total})`);
+            const totalColaboradores = Object.keys(groupData.collaborators).length; // Conta quantos colaboradores há neste grupo
+            
+            // NOVO TÍTULO COM AS DUAS INFORMAÇÕES SEPARADAS
+            addSectionTitle(`Equipe/Grupo: ${groupName} | Colaboradores: ${totalColaboradores} | Total de Atendimentos: ${groupData.total}`);
             
             const sortedCollaborators = Object.entries(groupData.collaborators).sort(([, a], [, b]) => b - a);
             if (sortedCollaborators.length === 0) continue;
@@ -646,7 +645,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
             yPos = doc.autoTable.previous.finalY + 20; 
         }
     }
-    // FIM DA NOVA SEÇÃO DE EXPORTAÇÃO
+    // FIM DA SEÇÃO DE EXPORTAÇÃO
 
     if (document.getElementById('export-subjects').checked && Object.keys(statsData.statsBySubject).length > 0) {
         addSectionTitle("Demandas por Assunto");
@@ -673,9 +672,18 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         yPos = doc.autoTable.previous.finalY + 20;
     }
     
+    // FUNÇÃO QUE CONTÉM A TABELA DE FALTOSOS E OUTROS RELATÓRIOS TEMPORAIS
     const addTimeTableToPdf = (title, data, checkboxId, total, color) => {
         if (document.getElementById(checkboxId).checked && data.length > 0) {
+            
+            // VERIFICA ESPAÇO E QUEBRA PÁGINA ANTES DO TÍTULO
+            if (yPos > pageHeight - 150) { 
+                doc.addPage();
+                yPos = margin + 30;
+            }
+            
             addSectionTitle(title);
+            
             doc.autoTable({
                 startY: yPos,
                 head: [['Horário', 'Quantidade']],
