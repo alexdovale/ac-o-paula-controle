@@ -227,7 +227,7 @@ function getTimeDifferenceInMinutes(startTimeISO, endTimeISO) {
     const start = new Date(startTimeISO);
     const end = new Date(endTimeISO);
     if (isNaN(start) || isNaN(end)) return null;
-    return Math.round((end - start) / 60000);
+    return Math.round((end - end) / 60000);
 }
 
 // FUNÇÃO PRINCIPAL QUE SERÁ USADA PELO SEU SCRIP
@@ -730,44 +730,19 @@ async function exportStatisticsToPDF(pautaName, statsData) {
             yPos = doc.autoTable.previous.finalY + 20; 
         }
     }
+    // FIM DA SEÇÃO DE EXPORTAÇÃO
     
     // --- 3. EXECUTA AS TABELAS LADO A LADO ---
-    if (document.getElementById('export-times').checked && document.getElementById('export-absentees-time').checked) {
+    if (document.getElementById('export-times').checked || document.getElementById('export-absentees-time').checked) {
+        // Gera as duas tabelas lado a lado se pelo menos um dos checkboxes estiver marcado
         addHorizontalTimeTables(
             doc,
             "Atendimentos e Faltosos por Horário de Chegada",
-            statsData.statsByTime, // Atendidos por Horário
+            statsData.statsByTime, 
             statsData.atendidosCount,
-            statsData.statsByTimeFaltosos, // Faltosos por Horário
+            statsData.statsByTimeFaltosos, 
             statsData.faltososCount
         );
-    } else {
-        // Se a opção de exibição lado a lado não for selecionada, volta ao modo vertical padrão.
-        
-        // Removendo a antiga lógica addTimeTableToPdf e gerando as tabelas diretamente
-        
-        const addVerticalTable = (title, data, checkboxId, total, color) => {
-            if (document.getElementById(checkboxId).checked && data.length > 0) {
-                if (yPos > pageHeight - 150) { doc.addPage(); yPos = margin + 30; }
-                addSectionTitle(title);
-                doc.autoTable({
-                    startY: yPos,
-                    head: [['Horário', 'Quantidade']],
-                    body: data.map(item => [item.time, item.count]),
-                    foot: [['Total', total]],
-                    theme: 'grid',
-                    headStyles: { fillColor: color, textColor: '#FFFFFF', fontStyle: 'bold' },
-                    footStyles: { fillColor: [240, 240, 240], textColor: COLOR_TEXT, fontStyle: 'bold' },
-                    didDrawPage: (data) => { if(data.pageNumber > 1) yPos = margin + 30 },
-                    margin: { top: yPos, bottom: margin + 20 }
-                });
-                yPos = doc.autoTable.previous.finalY + 20;
-            }
-        };
-
-        // Renderiza sequencialmente (Atendidos por Horário e Faltosos por Horário)
-        addVerticalTable("Atendimentos por Horário", statsData.statsByTime, 'export-times', statsData.atendidosCount, COLOR_GREEN);
-        addVerticalTable("Faltosos por Horário", statsData.statsByTimeFaltosos, 'export-absentees-time', statsData.faltososCount, COLOR_RED);
     }
     
     // Apenas para manter o último relatório de horário (Agendados)
