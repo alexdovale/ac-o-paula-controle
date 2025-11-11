@@ -1,5 +1,3 @@
-// Código Completo e Corrigido do detalhes.js
-
 /**
  * detalhes.js
  * Este módulo gerencia toda a funcionalidade do modal "Ver Detalhes",
@@ -755,7 +753,7 @@ function handleActionSearch(e) {
 }
 
 
-// --- Funções de Geração de PDF ---
+// --- Funções de Geração de PDF (CORRIGIDA PARA USAR SOMENTE TABELAS) ---
 
 async function handleGeneratePdf() {
     if (printChecklistBtn) {
@@ -765,6 +763,7 @@ async function handleGeneratePdf() {
 
     try {
         // Carrega apenas as bibliotecas necessárias para TABLE PDF (jsPDF + autoTable)
+        // Isso resolve o erro de carregamento e elimina a dependência de imagem (html2canvas)
         await Promise.all([
             loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'),
             loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js')
@@ -811,6 +810,7 @@ async function handleGeneratePdf() {
                 const bodyData = section.docs.map(docText => {
                     let status = '❌ Pendente';
                     if (savedChecklist && savedChecklist.checkedIds) {
+                        // Constrói o ID do checkbox para verificar o status de OK/Pendente
                         const checkboxId = `doc-${currentChecklistAction}-${index}-${section.docs.indexOf(docText)}`;
                         if (savedChecklist.checkedIds.includes(checkboxId)) {
                             status = '✅ OK';
