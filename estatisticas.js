@@ -514,10 +514,10 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
  */
 async function exportStatisticsToPDF(pautaName, statsData) {
     const { jsPDF } = window.jspdf;
-    if (!window.Chart) {
-        alert('A biblioteca Chart.js é necessária e não foi encontrada.');
-        return;
-    }
+    
+    // OBS: Chart.js não é mais estritamente necessário para esta seção, mas a verificação é mantida
+    // caso as outras seções do PDF dependam dele (embora não dependam).
+    // if (!window.Chart) { alert('A biblioteca Chart.js é necessária e não foi encontrada.'); return; } 
 
     // --- CONFIGURAÇÕES E ESTILOS ---
     const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
@@ -565,7 +565,7 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     };
 
     const addSectionTitle = (title) => {
-        // MODIFICAÇÃO: Aumentar o espaço de segurança antes de adicionar nova página
+        // Aumentar o espaço de segurança antes de adicionar nova página
         if (yPos > pageHeight - 150) { 
             doc.addPage();
             yPos = margin + 30;
@@ -617,92 +617,36 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         yPos += cardHeight + 30;
     }
 
+    // NOVA SEÇÃO DE EXPORTAÇÃO: SOMENTE TABELAS
     if (document.getElementById('export-collaborators').checked && Object.keys(statsData.statsByGroup).length > 0) {
         const sortedGroups = Object.entries(statsData.statsByGroup).sort(([, a], [, b]) => b.total - a.total);
 
         for (const [groupName, groupData] of sortedGroups) {
             
-            // Título de seção usa o groupName que já vem como "Equipe X" ou "Equipe Não Definida"
             addSectionTitle(`Equipe/Grupo: ${groupName} (Total de Atendimentos: ${groupData.total})`);
             
             const sortedCollaborators = Object.entries(groupData.collaborators).sort(([, a], [, b]) => b - a);
             if (sortedCollaborators.length === 0) continue;
 
-            const MAX_CHART_ITEMS = 15;
-
-            if (sortedCollaborators.length > MAX_CHART_ITEMS) {
-                doc.autoTable({
-                    startY: yPos,
-                    head: [['Colaborador', 'Nº de Atendimentos']],
-                    body: sortedCollaborators,
-                    theme: 'grid',
-                    headStyles: { fillColor: COLOR_SECONDARY, textColor: '#FFFFFF', fontStyle: 'bold' },
-                    didDrawPage: (data) => { if(data.pageNumber > 1) yPos = margin + 30 },
-                    margin: { top: yPos, bottom: margin + 20 }
-                });
-                yPos = doc.autoTable.previous.finalY + 20;
-            } else {
-                const labels = sortedCollaborators.map(item => item[0]);
-                const data = sortedCollaborators.map(item => item[1]);
-
-                const canvas = document.createElement('canvas');
-                // LARGURA REDUZIDA PARA MAIS ESPAÇO PARA O TEXTO (400pt para 595pt de largura da página)
-                canvas.width = 400; 
-                // Altura ajustada: 22pt por item, mais 60pt de margem/eixos
-                const chartHeight = Math.min(pageHeight / 2, Math.max(100, labels.length * 22 + 60)); 
-                canvas.height = chartHeight;
-                const ctx = canvas.getContext('2d');
-
-                const chart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Atendimentos',
-                            data: data,
-                            backgroundColor: 'rgba(79, 112, 156, 0.8)',
-                            borderColor: 'rgba(43, 58, 85, 1)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        indexAxis: 'y',
-                        responsive: false,
-                        animation: false,
-                        plugins: {
-                            legend: { display: false },
-                            title: { display: false }
-                        },
-                        scales: { 
-                            x: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
-                            // Ajuste para garantir que os rótulos do eixo Y (nomes) sejam exibidos
-                            y: { ticks: { autoSkip: false }, grid: { drawOnChartArea: false } }
-                        }
-                    }
-                });
-                
-                await new Promise(resolve => setTimeout(resolve, 500));
-                const imgData = canvas.toDataURL('image/png');
-                
-                // NOVO CÁLCULO DE QUEBRA DE PÁGINA (GARANTE ESPAÇO PARA O GRÁFICO)
-                // Se a posição Y + a altura do gráfico ultrapassa o limite da página, adiciona uma nova.
-                if (yPos + chartHeight + 20 > pageHeight - margin) { 
-                    doc.addPage();
-                    yPos = margin + 30;
-                }
-
-                // Largura final que preenche a área disponível do documento (página - margens)
-                const finalWidth = pageWidth - margin * 2;
-                const finalHeight = finalWidth / (canvas.width / canvas.height); // Mantém a proporção do canvas (finalWidth / 400 * chartHeight)
-
-                doc.addImage(imgData, 'PNG', margin, yPos, finalWidth, finalHeight);
-                yPos += finalHeight + 20; // Avança a posição Y
-                
-                chart.destroy();
-                canvas.remove();
-            }
+            // FORÇA O USO DE TABELA PARA TODOS OS CASOS (SEM GRÁFICO)
+            doc.autoTable({
+                startY: yPos,
+                head: [['Colaborador', 'Nº de Atendimentos']],
+                body: sortedCollaborators,
+                theme: 'grid',
+                headStyles: { fillColor: COLOR_SECONDARY, textColor: '#FFFFFF', fontStyle: 'bold' },
+                didDrawPage: (data) => { 
+                    // Redefine o Y após quebra de página
+                    if(data.pageNumber > 1) yPos = margin + 30 
+                },
+                // Garante que o título do grupo (acima) não seja cortado
+                margin: { top: yPos, bottom: margin + 20 } 
+            });
+            // Atualiza o Y para a posição final da tabela
+            yPos = doc.autoTable.previous.finalY + 20; 
         }
     }
+    // FIM DA NOVA SEÇÃO DE EXPORTAÇÃO
 
     if (document.getElementById('export-subjects').checked && Object.keys(statsData.statsBySubject).length > 0) {
         addSectionTitle("Demandas por Assunto");
