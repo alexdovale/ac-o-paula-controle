@@ -227,7 +227,7 @@ function getTimeDifferenceInMinutes(startTimeISO, endTimeISO) {
     const start = new Date(startTimeISO);
     const end = new Date(endTimeISO);
     if (isNaN(start) || isNaN(end)) return null;
-    return Math.round((end - end) / 60000);
+    return Math.round((end - start) / 60000);
 }
 
 // FUNÇÃO PRINCIPAL QUE SERÁ USADA PELO SEU SCRIP
@@ -285,6 +285,40 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
         
         return acc;
     }, {});
+    
+    // NOVO: Agregação plana de colaboradores (para a seção "Atendimentos por Colaborador (Total)")
+    const statsByCollaboratorFlat = {};
+    Object.values(statsByGroup).forEach(groupData => {
+        Object.entries(groupData.collaborators).forEach(([name, count]) => {
+            statsByCollaboratorFlat[name] = count;
+        });
+    });
+    const sortedFlatCollaborators = Object.entries(statsByCollaboratorFlat).sort(([, a], [, b]) => b - a);
+    
+    // NOVO: Geração do HTML para a lista plana
+    const collaboratorsFlatHTML = sortedFlatCollaborators.length > 0 ? `
+        <div class="bg-white p-4 rounded-lg border">
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Atendimentos por Colaborador (Total)</h3>
+            <div class="max-h-[30vh] overflow-y-auto">
+                <table class="w-full text-sm text-left mb-4">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-200">
+                        <tr>
+                            <th class="px-4 py-2">Colaborador</th>
+                            <th class="px-4 py-2 text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sortedFlatCollaborators.map(([name, count]) => `
+                            <tr class="border-b">
+                                <td class="px-4 py-2 font-medium">${name}</td>
+                                <td class="px-4 py-2 text-right">${count}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    ` : '';
     
     const statsBySubject = allAssisted.reduce((acc, a) => {
         const demandasDoAssistido = (a.subject ? [a.subject] : []).concat(a.demandas?.descricoes || []);
@@ -412,7 +446,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
             </div>` : ''}
             ${sortedTimes.length > 0 ? `
             <div class="bg-white p-4 rounded-lg border">
-                <h3 class="text-md font-semibold text-gray-800 mb-2">Atendimentos por Horário</h3>
+                <h3 class="text-md font-semibold text-gray-800 mb-2">Atendimentos por Horário (Chegada)</h3>
                 <div class="max-h-40 overflow-y-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0"><tr><th class="px-4 py-2">Horário</th><th class="px-4 py-2 text-right">Qtd</th></tr></thead>
@@ -423,7 +457,7 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
             </div>` : ''}
             ${sortedTimesFaltosos.length > 0 ? `
             <div class="bg-white p-4 rounded-lg border">
-                <h3 class="text-md font-semibold text-red-800 mb-2">Faltosos por Horário</h3>
+                <h3 class="text-md font-semibold text-red-800 mb-2">Faltosos por Horário (Agendado)</h3>
                 <div class="max-h-40 overflow-y-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-red-700 uppercase bg-red-100 sticky top-0"><tr><th class="px-4 py-2">Horário</th><th class="px-4 py-2 text-right">Qtd</th></tr></thead>
@@ -469,6 +503,9 @@ export function renderStatisticsModal(allAssisted, useDelegationFlow, pautaName)
                     </table>
                 </div>
             </div>
+            
+            ${collaboratorsFlatHTML}
+            
             <div class="bg-white p-4 rounded-lg border">
                 <h3 class="text-lg font-semibold text-gray-800 mb-2">Atendimentos por Equipe</h3>
                 <div class="max-h-[30vh] overflow-y-auto">
@@ -546,8 +583,8 @@ async function exportStatisticsToPDF(pautaName, statsData) {
             doc.text(titleLines, margin, margin - 10);
             
             // Linha do Cabeçalho
-            doc.setDrawColor(COLOR_SECONDARY);
-            doc.line(margin, margin + (titleLines.length * 12), pageWidth - margin, margin + (titleLines.length * 12));
+           // doc.setDrawColor(COLOR_SECONDARY);
+           // doc.line(margin, margin + (titleLines.length * 12), pageWidth - margin, margin + (titleLines.length * 12));
 
             // Rodapé
             const footerText = `Página ${i} de ${pageCount}`;
@@ -575,12 +612,6 @@ async function exportStatisticsToPDF(pautaName, statsData) {
     
     /**
      * NOVA FUNÇÃO: Adiciona tabelas de tempo (Atendidos e Faltosos) lado a lado.
-     * @param {object} doc - Instância do jsPDF.
-     * @param {string} title - Título da seção.
-     * @param {Array} dataAtendidos - Dados de atendidos.
-     * @param {number} totalAtendidos - Total de atendidos.
-     * @param {Array} dataFaltosos - Dados de faltosos.
-     * @param {number} totalFaltosos - Total de faltosos.
      */
     const addHorizontalTimeTables = (doc, title, dataAtendidos, totalAtendidos, dataFaltosos, totalFaltosos) => {
         
@@ -731,10 +762,9 @@ async function exportStatisticsToPDF(pautaName, statsData) {
         }
     }
     // FIM DA SEÇÃO DE EXPORTAÇÃO
-    
-    // --- 3. EXECUTA AS TABELAS LADO A LADO ---
+
+    // --- 3. EXECUTA AS TABELAS LADO A LADO (Atendidos e Faltosos por Horário) ---
     if (document.getElementById('export-times').checked || document.getElementById('export-absentees-time').checked) {
-        // Gera as duas tabelas lado a lado se pelo menos um dos checkboxes estiver marcado
         addHorizontalTimeTables(
             doc,
             "Atendimentos e Faltosos por Horário de Chegada",
