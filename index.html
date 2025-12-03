@@ -409,6 +409,8 @@
             <h2 class="text-2xl font-bold mb-4">Criar Nova Pauta</h2>
             <label for="create-pauta-name-input" class="block text-sm font-medium text-gray-700 mb-2">Nome da Pauta</label>
             <input type="text" id="create-pauta-name-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
+            <label for="vara-nucleo-id-input" class="block text-sm font-medium text-gray-700 mb-2">ID da Vara/Núcleo (Ex: 1ªVCivel)</label>
+            <input type="text" id="vara-nucleo-id-input" placeholder="Ex: Civel3, Familia1" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
             <div class="flex justify-end space-x-4">
                 <button id="cancel-create-pauta-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
                 <button id="next-to-ordem-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Avançar</button>
@@ -1098,7 +1100,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         let colaboradores = []; // Esta é a lista de colaboradores (da lista de presença)
         let editCollaboratorId = null; // ID do colaborador sendo editado na lista de presença
         let unsubscribeFromCollaborators = () => {};
-
+        let currentVaraNucleoId = null; // <--- NOVO: ID da Vara/Núcleo da pauta atual (Ex: "Família3") 
+        
         const loadingContainer = document.getElementById('loading-container');
         const loginContainer = document.getElementById('login-container');
         const pautaSelectionContainer = document.getElementById('pauta-selection-container');
@@ -1940,6 +1943,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 currentPautaData = pautaData;
                 currentPautaOwnerId = pautaData.owner;
                 isPautaClosed = pautaData.isClosed || false;
+                // NOVO: Salva o ID da Vara/Núcleo da pauta principal
+                currentVaraNucleoId = pautaData.varaNucleoId || null;
                 
                 const ordem = currentPautaData.ordemAtendimento || 'padrao';
                 document.getElementById('logic-explanation-padrao').classList.toggle('hidden', ordem !== 'padrao');
@@ -2517,6 +2522,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
                 const ordemAtendimento = document.querySelector('input[name="ordemAtendimento"]:checked').value;
                 const useDelegationFlow = document.querySelector('input[name="useDelegationFlow"]:checked').value === 'true'; // Novo campo
+
+                // --- CORREÇÃO: Captura o ID da Vara/Núcleo ---
+                const varaNucleoId = document.getElementById('vara-nucleo-id-input').value.trim();
+                if (!varaNucleoId) {
+                    showNotification("O ID da Vara/Núcleo é obrigatório para o controle de fila.", "error");
+                    return;
+                }
+                // --- FIM CORREÇÃO ---
                 const user = auth.currentUser;
                 
                 if (!user) {
@@ -2534,6 +2547,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         ownerEmail: user.email,
                         members: [user.uid],
                         memberEmails: [user.email],
+                        varaNucleoId: varaNucleoId, // <--- CAMPO SALVO NO FIREBASE
                         isClosed: false,
                         createdAt: new Date().toISOString()
                     });
@@ -3725,6 +3739,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
