@@ -1293,37 +1293,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             aguardando.sort((a, b) => {
                 const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
 
-                if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-                if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-                if (a.priority === 'URGENTE' && b.priority === 'URGENTE') {
-                     const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
-                     const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                     return arrivalA - arrivalB;
-                }
 
-                if (pautaOrder === 'chegada') {
-                    const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
-                    const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                    if (arrivalA !== arrivalB) return arrivalA - arrivalB;
-                    return (a.createdAt || 0) - (b.createdAt || 0);
-                } else { // 'padrao'
-                    const order = { 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
-                    const priorityDiff = order[a.priority] - order[b.priority];
-                    if (priorityDiff !== 0) return priorityDiff;
-
-                    if (a.priority === 'Máxima' && a.type === 'agendamento') {
-                        const scheduledA = a.scheduledTime || '23:59';
-                        const scheduledB = b.scheduledTime || '23:59';
-                        if (scheduledA.localeCompare(scheduledB) !== 0) return scheduledA.localeCompare(scheduledB);
-                    }
-
-                    const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
-                    const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                    if (arrivalA !== arrivalB) return arrivalA - arrivalB;
-
-                    return (a.createdAt || 0) - (b.createdAt || 0);
-                }
-            });
             // Ordenação para "Em Atendimento" - mais recente primeiro, ou por colaborador
             emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
 
@@ -3739,6 +3709,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
