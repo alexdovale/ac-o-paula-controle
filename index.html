@@ -409,7 +409,8 @@
             <h2 class="text-2xl font-bold mb-4">Criar Nova Pauta</h2>
             <label for="create-pauta-name-input" class="block text-sm font-medium text-gray-700 mb-2">Nome da Pauta</label>
             <input type="text" id="create-pauta-name-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
-            <label for="vara-nucleo-id-input" class="block text-sm font-medium text-gray-700 mb-2">ID da Vara/Núcleo (Ex: 1ªVCivel)</label>
+            
+            <label for="vara-nucleo-id-input" class="block text-sm font-medium text-gray-700 mb-2">ID da Vara/Núcleo (Obrigatório)</label>            
             <input type="text" id="vara-nucleo-id-input" placeholder="Ex: Civel3, Familia1" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
             <div class="flex justify-end space-x-4">
                 <button id="cancel-create-pauta-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
@@ -1100,7 +1101,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         let colaboradores = []; // Esta é a lista de colaboradores (da lista de presença)
         let editCollaboratorId = null; // ID do colaborador sendo editado na lista de presença
         let unsubscribeFromCollaborators = () => {};
-        let currentVaraNucleoId = null; // <--- NOVO: ID da Vara/Núcleo da pauta atual (Ex: "Família3") 
+        let currentVaraNucleoId = null; // <--- NOVO: ID da Vara/Núcleo da pauta aberta     
         
         const loadingContainer = document.getElementById('loading-container');
         const loginContainer = document.getElementById('login-container');
@@ -1281,7 +1282,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const faltososSearchTerm = normalizeText(document.getElementById('faltosos-search').value);
 
             const pauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && searchFilter(a, pautaSearchTerm));
-            const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm));
+            const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm) &&  a.varaNucleoId === currentVaraNucleoId );            
             const emAtendimento = allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode && searchFilter(a, emAtendimentoSearchTerm));
             const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && searchFilter(a, atendidosSearchTerm));
             const faltosos = allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento' && searchFilter(a, faltososSearchTerm));
@@ -2492,14 +2493,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
                 const ordemAtendimento = document.querySelector('input[name="ordemAtendimento"]:checked').value;
                 const useDelegationFlow = document.querySelector('input[name="useDelegationFlow"]:checked').value === 'true'; // Novo campo
-
-                // --- CORREÇÃO: Captura o ID da Vara/Núcleo ---
+                
+                // --- CORREÇÃO: Captura e valida o ID da Vara/Núcleo ---
                 const varaNucleoId = document.getElementById('vara-nucleo-id-input').value.trim();
                 if (!varaNucleoId) {
                     showNotification("O ID da Vara/Núcleo é obrigatório para o controle de fila.", "error");
                     return;
                 }
                 // --- FIM CORREÇÃO ---
+                
                 const user = auth.currentUser;
                 
                 if (!user) {
@@ -2512,7 +2514,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         name: pautaName,
                         type: pautaType,
                         ordemAtendimento: ordemAtendimento,
-                        useDelegationFlow: useDelegationFlow, // Salva a escolha
+                        useDelegationFlow: useDelegationFlow,
                         owner: user.uid,
                         ownerEmail: user.email,
                         members: [user.uid],
@@ -3111,14 +3113,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         status: hasArrived ? 'aguardando' : 'pauta',
         scheduledTime: scheduledTimeValue,
         arrivalTime: hasArrived ? arrivalDate.toISOString() : null,
-        assignedCollaborator: null, // Novo campo
-        inAttendanceTime: null, // Novo campo
-        finalizadoPeloColaborador: false, // Novo campo
-        isConfirmed: false, // Novo campo
-        confirmationDetails: null, // Novo campo
+        varaNucleoId: currentVaraNucleoId, // <--- ADICIONADO AQUI
+        assignedCollaborator: null,
+        inAttendanceTime: null, 
+        finalizadoPeloColaborador: false, 
+        isConfirmed: false,
+        confirmationDetails: null, 
         createdAt: new Date().toISOString()
     });
-
     await addDoc(collectionRef, newAssisted);
     showNotification("Assistido adicionado com sucesso!");
     document.getElementById('form-agendamento').reset();
@@ -3132,8 +3134,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const [hours, minutes] = arrivalTimeInput.split(':');
                     const arrivalDate = new Date();
                     arrivalDate.setHours(hours, minutes, 0, 0);
+                    const updatePayload = getUpdatePayload({ // <-- CRIAMOS O OBJETO DE PAYLOAD
+                        status: 'aguardando', 
+                        arrivalTime: arrivalDate.toISOString(),
+                        varaNucleoId: currentVaraNucleoId // <--- ADICIONADO AQUI
+                    });
 
-                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ status: 'aguardando', arrivalTime: arrivalDate.toISOString() }));
+                    //MEXER>. await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ status: 'aguardando', arrivalTime: arrivalDate.toISOString() }));
+                    await updateDoc(doc(collectionRef, assistedIdToHandle), updatePayload);
                     button.closest('.fixed').classList.add('hidden');
                 }
                 
@@ -3709,6 +3717,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
