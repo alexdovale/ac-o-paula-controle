@@ -11,11 +11,8 @@
     <link rel="apple-touch-icon" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <link rel="manifest" href="manifest.json">
 
-    <!-- Para os gráficos -->    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Para o PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     
@@ -145,7 +142,6 @@
                     </div>
 
                     <div class="relative flex items-center">
-                        <!-- MENU DE AÇÕES ATUALIZADO -->
                         <div id="actions-panel" class="absolute top-full right-0 mt-2 w-64 p-2 bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-200 ease-out transform origin-top-right opacity-0 scale-95 pointer-events-none z-20 space-y-1">
                             
                             <button id="view-stats-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-cyan-700 bg-cyan-100 rounded-lg hover:bg-cyan-200 transition-colors whitespace-nowrap">
@@ -293,7 +289,7 @@
                     </div>
                     <div id="pauta-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
-                <div class="bg-white rounded-lg shadow-md flex flex-col">
+                <div id="aguardando-column" class="bg-white rounded-lg shadow-md flex flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
                            <span>⏳ Aguardando Atendimento</span>
@@ -303,9 +299,7 @@
                     </div>
                     <div id="aguardando-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
-                <!-- Nova Coluna: Em Atendimento -->
-                <div id="em-atendimento-column" class="bg-white rounded-lg shadow-md flex flex-col hidden"> <!-- Inicialmente escondida, visibilidade controlada pelo JS -->
-                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                <div id="em-atendimento-column" class="bg-white rounded-lg shadow-md flex flex-col hidden"> <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
                             <span>👩‍💻 Em Atendimento</span>
                             <span id="em-atendimento-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
@@ -314,7 +308,6 @@
                     </div>
                     <div id="em-atendimento-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
-                <!-- Fim da Nova Coluna: Em Atendimento -->
                 <div id="atendidos-column" class="bg-white rounded-lg shadow-md flex flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <div class="flex justify-between items-center mb-3">
@@ -453,7 +446,6 @@
         </div>
     </div>
 
-    <!-- NOVO MODAL: Fluxo de Delegação -->
     <div id="delegation-flow-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Fluxo de Atendimento</h2>
@@ -474,31 +466,27 @@
                     </span>
                 </label>
             </div>
-    <!-- CRIAÇÃO SALA -->
+            
             <div id="room-management-section" class="mt-6 p-4 bg-gray-100 rounded-lg border hidden">
                 <h3 class="text-lg font-bold mb-3 text-gray-800">Gerenciar Salas/Pontos de Atendimento</h3>
                 <p class="text-sm text-gray-600 mb-2">Adicione os nomes dos locais (Salas, Andares, Balcão) separados por vírgula.</p>
 
-            <div class="flex gap-2 mb-3">
-                <input type="text" id="new-location-name-input" placeholder="Ex: Sala 1, 2º Andar Cível" class="flex-grow p-2 border border-gray-300 rounded-lg">
-                <button type="button" id="add-location-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Adicionar</button>
+                <div class="flex gap-2 mb-3">
+                    <input type="text" id="new-location-name-input" placeholder="Ex: Sala 1, 2º Andar Cível" class="flex-grow p-2 border border-gray-300 rounded-lg">
+                    <button type="button" id="add-location-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Adicionar</button>
+                </div>
+                
+                <div id="locations-tag-container" class="flex flex-wrap gap-2 text-sm mt-4">
+                    <span class="text-gray-500">Locais serão exibidos aqui.</span>
+                </div>
+                <input type="hidden" id="final-location-list" name="finalLocationList"> 
             </div>
-    
-        <div id="locations-tag-container" class="flex flex-wrap gap-2 text-sm mt-4">
-            <span class="text-gray-500">Locais serão exibidos aqui.</span>
-        </div>
-        <input type="hidden" id="final-location-list" name="finalLocationList"> 
-    </div>
-    <div class="flex justify-end space-x-4 mt-6">
-        </div>
             <div class="flex justify-end space-x-4 mt-6">
                 <button id="cancel-delegation-flow-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Voltar</button>
                 <button id="confirm-create-pauta-final-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Criar Pauta</button>
             </div>
         </div>
     </div>
-    <!-- FIM NOVO MODAL -->
-
     <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -523,9 +511,7 @@
         </div>
     </div>
     
-    <!-- MODAL DE GERENCIAR COLABORADORES (LISTA DE PRESENÇA) - INTEGRADO -->
-   <!-- MODAL DE GERENCIAR COLABORADORES (LISTA DE PRESENÇA) - ATUALIZADO -->
-<div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
     <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-6xl flex flex-col" style="max-height: 90vh;">
         <div class="flex justify-between items-center mb-4 flex-shrink-0">
             <h2 class="text-2xl font-bold text-gray-800">Lista de Presença de Colaboradores</h2>
@@ -543,7 +529,6 @@
                                 <input type="text" id="collaborator-name-modal" name="nome-colaborador" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
                             </div>
 
-                            <!-- CAMPO CARGO ADICIONADO -->
                             <div>
                                 <label for="collaborator-role-modal" class="block text-sm font-medium text-gray-700">Cargo:</label>
                                 <select id="collaborator-role-modal" name="cargo-colaborador" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
@@ -554,7 +539,6 @@
                                 </select>
                             </div>
 
-                            <!-- CAMPO EQUIPE ATUALIZADO PARA SELECT -->
                             <div>
                                 <label for="collaborator-team-modal" class="block text-sm font-medium text-gray-700">Equipe:</label>
                                 <select id="collaborator-team-modal" name="equipe-colaborador" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
@@ -622,8 +606,7 @@
                                     </tr>
                                 </thead>
                             <tbody>
-                                <!-- As linhas da tabela serão preenchidas via JavaScript -->
-                            </tbody>
+                                </tbody>
                         </table>
                     </div>
                     <div class="flex justify-between items-center mt-4">
@@ -635,14 +618,11 @@
         </div>
     </div>
 </div>
-<!-- FIM MODAL DE GERENCIAR COLABORADORES -->
-    
-    <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4"></div>
+<div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4"></div>
     <div id="arrival-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold mb-4">Confirmar Horário de Chegada</h2><p class="mb-4 text-gray-600">Por favor, informe o horário de chegada do assistido.</p><input type="time" id="arrival-time-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6"><div class="flex justify-end space-x-4"><button id="cancel-arrival-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button><button id="confirm-arrival-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button></div></div>
     </div>
 
-    <!-- Modal de Finalização de Atendimento (Antigo) - Mantido para 'Finalizar Diretamente' ou 'Editar Atendente' -->
     <div id="attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Finalizar Atendimento</h2>
@@ -656,7 +636,6 @@
         </div>
     </div>
 
-    <!-- NOVO MODAL: Selecionar Colaborador -->
     <div id="select-collaborator-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Atender Assistido</h2>
@@ -670,9 +649,6 @@
             </div>
         </div>
     </div>
-    <!-- FIM NOVO MODAL -->
-
-    <!-- NOVO MODAL: Delegar Finalização por Email -->
     <div id="delegate-email-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Delegar Finalização de Atendimento</h2>
@@ -688,8 +664,6 @@
             </div>
         </div>
     </div>
-    <!-- FIM NOVO MODAL -->
-
     <div id="reset-confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg space-y-4">
             <h2 class="text-2xl font-bold text-gray-800">Zerar Pauta</h2>
@@ -875,7 +849,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
 
-    <!-- ***** INÍCIO DO HTML DO MODAL DE DETALHES ***** -->
     <div id="documents-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl flex flex-col" style="max-height: 90vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -886,8 +859,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
 
             <div id="document-action-selection" class="flex-grow overflow-y-auto scrollable-content pr-2">
-                <!-- O conteúdo será inserido aqui pelo detalhes.js -->
-            </div>
+                </div>
 
             <div id="document-checklist-view" class="hidden flex-grow flex flex-col">
                 <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -909,40 +881,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
         </div>
     </div>
-    <div id="address-editor-container" class="mt-8 p-4 bg-gray-50 rounded-lg border hidden">
-    <h3 class="text-lg font-bold text-gray-800 mb-4">Endereço da Parte Contrária (Réu)</h3>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="md:col-span-1">
-            <label for="cep-reu" class="block text-sm font-medium text-gray-700">CEP</label>
-            <input type="text" id="cep-reu" placeholder="Digite o CEP" maxlength="9" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-        </div>
-        <div class="md:col-span-2">
-            <label for="rua-reu" class="block text-sm font-medium text-gray-700">Rua/Avenida</label>
-            <input type="text" id="rua-reu" placeholder="Rua será preenchida" class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-200" readonly>
-        </div>
-        <div class="md:col-span-1">
-            <label for="numero-reu" class="block text-sm font-medium text-gray-700">Número</label>
-            <input type="text" id="numero-reu" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-        </div>
-        <div class="md:col-span-1">
-            <label for="bairro-reu" class="block text-sm font-medium text-gray-700">Bairro</label>
-            <input type="text" id="bairro-reu" class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-200" readonly>
-        </div>
-        <div class="md:col-span-1">
-            <label for="cidade-reu" class="block text-sm font-medium text-gray-700">Cidade/UF</label>
-            <div class="flex gap-2">
-                <input type="text" id="cidade-reu" class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-200" readonly>
-                <input type="text" id="estado-reu" maxlength="2" class="mt-1 block w-1/3 p-2 border border-gray-300 rounded-md bg-gray-200" readonly>
-            </div>
-        </div>
-    </div>
-</div>
-    <!-- ***** FIM DO HTML DO MODAL DE DETALHES ***** -->
-    
- <!-- Modal de Estatísticas (Container) -->
     <div id="statistics-modal" class="hidden z-50">
-        <!-- O conteúdo, incluindo cabeçalho e botões, será gerado dinamicamente pelo script 'estatisticas.js' -->
-    </div>
+        </div>
     
 
     <script type="module">
@@ -1117,9 +1057,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         // Variáveis para a lógica de Colaboradores (lista de presença)
         let colaboradores = []; // Esta é a lista de colaboradores (da lista de presença)
         let editCollaboratorId = null; // ID do colaborador sendo editado na lista de presença
+        let unsubscribeFromCollaborators = () => {};
         let currentVaraNucleoId = null; // <--- NOVO: ID da Vara/Núcleo da pauta aberta
         let allLocations = []; // <--- NOVO: Lista de locais (Salas/Andares) definidos na pauta
-
+        
         const loadingContainer = document.getElementById('loading-container');
         const loginContainer = document.getElementById('login-container');
         const pautaSelectionContainer = document.getElementById('pauta-selection-container');
@@ -1130,94 +1071,20 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             if (!str) return '';
             return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
         };
-
-        // =========================================================
-        // FUNÇÕES DE UTILIDADE PARA ORDEM MANUAL E LOCAIS
-        // =========================================================
-        
-        // Função já discutida para salvar a ordem manual (MANTIDA)
-        async function saveManualOrder(items) { /* ... */ }
-        
-        /**
-         * Gerencia a lista dinâmica de locais de atendimento (Tags).
-         * (Esta função deve ser inserida após normalizeText ou getPriorityLevel, aproximadamente linha 400).
-         */
-        function updateLocationTags() {
-            const input = document.getElementById('new-location-name-input');
-            const container = document.getElementById('locations-tag-container');
-            const hiddenInput = document.getElementById('final-location-list');
-            
-            const rawInput = input.value.split(',');
-            allLocations = rawInput.map(l => l.trim()).filter(l => l !== '');
-            
-            container.innerHTML = '';
-            
-            if (allLocations.length === 0) {
-                 container.innerHTML = '<span class="text-gray-500">Locais serão exibidos aqui.</span>';
-            }
-        
-            allLocations.forEach(location => {
-                const tag = document.createElement('span');
-                tag.className = 'flex items-center gap-1 bg-gray-200 text-gray-800 px-2 py-1 rounded-full';
-                tag.textContent = location;
-                
-                const removeBtn = document.createElement('button');
-                removeBtn.type = 'button';
-                removeBtn.className = 'text-red-500 hover:text-red-700 font-bold ml-1';
-                removeBtn.innerHTML = '&times;';
-                
-                removeBtn.addEventListener('click', () => {
-                    const newLocations = rawInput.filter(l => l.trim() !== location).join(', ');
-                    input.value = newLocations;
-                    updateLocationTags();
-                });
-                
-                tag.appendChild(removeBtn);
-                container.appendChild(tag);
-            });
-        
-            // Salva a lista final no campo oculto (usando '|' como separador para salvar no Firebase)
-            hiddenInput.value = allLocations.join('|');
-            input.value = allLocations.join(', '); // Atualiza o input com a formatação limpa
-        }
-        
-        
-        // Adicionar listener de input para atualizar a visualização das tags em tempo real
-        document.getElementById('new-location-name-input')?.addEventListener('input', () => {
-            updateLocationTags();
-        });
-        
-        document.getElementById('delegation-flow-modal')?.addEventListener('click', (e) => {
-            if (e.target.id === 'add-location-btn') {
-                updateLocationTags();
-            }
-        });
-
         
         // FUNÇÃO DE PESQUISA MELHORADA
-       const searchFilter = (assisted, term) => {
+        const searchFilter = (assisted, term) => {
             if (!term) return true;
             
             // Formata a data de chegada para HH:MM para permitir a pesquisa
             const arrivalTimeFormatted = assisted.arrivalTime ? new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
-        
-            const normalizedTerm = normalizeText(term);
-        
-            // Converte o campo attendant para string, caso seja um objeto com nome.
-            // O campo attendant pode ser uma string (padrão) ou, em fluxos complexos, um objeto.
-            const attendantName = (typeof assisted.attendant === 'object' && assisted.attendant !== null) 
-                                  ? assisted.attendant.name || assisted.attendant.nome || '' 
-                                  : assisted.attendant || '';
-        
-            return normalizeText(assisted.name).includes(normalizedTerm) ||
-                   (assisted.cpf && normalizeText(assisted.cpf).includes(normalizedTerm)) ||
-                   normalizeText(assisted.subject).includes(normalizedTerm) ||
-                   (assisted.scheduledTime && assisted.scheduledTime.includes(normalizedTerm)) ||
-                   (arrivalTimeFormatted && arrivalTimeFormatted.includes(normalizedTerm)) ||
-                   // NOVO: Usa a variável attendantName (que garante que o campo é string)
-                   (attendantName && normalizeText(attendantName).includes(normalizedTerm)) ||
-                   // Campo Colaborador Atribuído
-                   (assisted.assignedCollaborator?.name && normalizeText(assisted.assignedCollaborator.name).includes(normalizedTerm));
+
+            return normalizeText(assisted.name).includes(term) ||
+                   (assisted.cpf && normalizeText(assisted.cpf).includes(term)) ||
+                   normalizeText(assisted.subject).includes(term) ||
+                   (assisted.scheduledTime && assisted.scheduledTime.includes(term)) ||
+                   (arrivalTimeFormatted && arrivalTimeFormatted.includes(term)) ||
+                   (assisted.assignedCollaborator?.name && normalizeText(assisted.assignedCollaborator.name).includes(term));
         };
 
         const getPriorityClass = (priority) => ({'URGENTE':'priority-urgente','Máxima':'priority-maxima','Média':'priority-media','Mínima':'priority-minima'}[priority]||'');
@@ -1281,207 +1148,138 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     minute: '2-digit' 
                 });
             }
-        const togglePautaLock = (isClosed) => {
-            const isOwner = auth.currentUser?.uid === currentPautaOwnerId;
-            isPautaClosed = isClosed;
+        
+        // =========================================================
+        // FUNÇÕES DE UTILIDADE PARA ORDEM MANUAL E LOCAIS
+        // =========================================================
 
-            const buttonsToDisable = [
-                'form-agendamento', 'file-upload', 'add-assisted-btn',
-                'download-pdf-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento'
-            ];
+        /**
+         * Salva a nova ordem manual da fila no Firebase.
+         */
+        async function saveManualOrder(items) {
+            if (!currentPautaId) return;
 
-            buttonsToDisable.forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    if (isClosed) {
-                        element.classList.add('pointer-events-none', 'opacity-50');
-                        element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = true);
-                    } else {
-                        element.classList.remove('pointer-events-none', 'opacity-50');
-                        element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = false);
-                    }
-                }
+            const batch = writeBatch(db);
+            const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
+
+            Array.from(items).forEach((item, index) => {
+                const assistedElement = item.querySelector('[data-id]');
+                if (!assistedElement) return;
+
+                const assistedId = assistedElement.dataset.id;
+                const docRef = doc(collectionRef, assistedId);
+
+                batch.update(docRef, { 
+                    manualOrderIndex: index,
+                    lastActionBy: currentUserName,
+                    lastActionTimestamp: new Date().toISOString()
+                });
             });
 
-            // Trecho corrigido na função togglePautaLock:
+            try {
+                await batch.commit();
+                showNotification("Ordem da fila atualizada manualmente.");
+            } catch (error) {
+                console.error("Erro ao salvar ordem manual:", error);
+                showNotification("Erro ao salvar ordem manual.", 'error');
+            }
+        }
 
-            // Dentro da função togglePautaLock, após o bloco buttonsToDisable:
-
-            const actionPanelButtons = document.querySelectorAll('#actions-panel button');
+        /**
+         * Gerencia a lista dinâmica de locais de atendimento (Tags).
+         */
+        function updateLocationTags() {
+            const input = document.getElementById('new-location-name-input');
+            const container = document.getElementById('locations-tag-container');
+            const hiddenInput = document.getElementById('final-location-list');
             
-            actionPanelButtons.forEach(btn => {
-                if (btn.id === 'reopen-pauta-btn') {
-                    // Se a pauta está fechada, o REABRIR é o único que deve estar ativo
-                    btn.disabled = false;
-                } else {
-                    // Todos os outros botões do menu Ações (Zerar, Fechar, Editar) ficam desativados
-                    btn.disabled = isClosed; 
-                }
-            });
-            const actionButtons = document.querySelectorAll('.check-in-btn, .delegate-finalization-btn, .attend-directly-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn, .toggle-confirmed-atendido, .toggle-confirmed-faltoso'); // Adicionado
-            actionButtons.forEach(btn => {
-                btn.disabled = isClosed;
-            });
-
-            if (isClosed) {
-                document.getElementById('closed-pauta-alert').classList.remove('hidden');
-                document.getElementById('close-pauta-btn').classList.add('hidden');
-                document.getElementById('reopen-pauta-btn').classList.remove('hidden');
-            } else {
-                document.getElementById('closed-pauta-alert').classList.add('hidden');
-                document.getElementById('close-pauta-btn').classList.remove('hidden');
-                document.getElementById('reopen-pauta-btn').classList.add('hidden');
+            const rawInput = input.value.split(',');
+            allLocations = rawInput.map(l => l.trim()).filter(l => l !== '');
+            
+            container.innerHTML = '';
+            
+            if (allLocations.length === 0) {
+                 container.innerHTML = '<span class="text-gray-500">Locais serão exibidos aqui.</span>';
             }
 
-            if (!isOwner) {
-                document.getElementById('close-pauta-btn').classList.add('hidden');
-                document.getElementById('reopen-pauta-btn').classList.add('hidden');
-            }
-        };
-
-        const renderAssistedList = () => {
-            allAssisted.forEach(a => {
-                if (a.status === 'aguardando' && a.priority !== 'URGENTE') {
-                    a.priority = getPriorityLevel(a);
-                }
-            });
-
-            const pautaList = document.getElementById('pauta-list');
-            const aguardandoList = document.getElementById('aguardando-list');
-            const emAtendimentoList = document.getElementById('em-atendimento-list');
-            const atendidosList = document.getElementById('atendidos-list');
-            const faltososList = document.getElementById('faltosos-list');
-            [pautaList, aguardandoList, emAtendimentoList, atendidosList, faltososList].forEach(el => el.innerHTML = '');
-
-            const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-
-            const pautaSearchTerm = normalizeText(document.getElementById('pauta-search').value);
-            const aguardandoSearchTerm = normalizeText(document.getElementById('aguardando-search').value);
-            const emAtendimentoSearchTerm = normalizeText(document.getElementById('em-atendimento-search').value);
-            const atendidosSearchTerm = normalizeText(document.getElementById('atendidos-search').value);
-            const faltososSearchTerm = normalizeText(document.getElementById('faltosos-search').value);
-
-            const pauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && searchFilter(a, pautaSearchTerm));
-            const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm) && (a.varaNucleoId === currentVaraNucleoId) );
-            const emAtendimento = allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode && searchFilter(a, emAtendimentoSearchTerm));
-            const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && searchFilter(a, atendidosSearchTerm));
-            const faltosos = allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento' && searchFilter(a, faltososSearchTerm));
-
-            pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
-            atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
-            faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
-
-            aguardando.sort((a, b) => {
-                const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
-
-                if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-                if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-                if (a.priority === 'URGENTE' && b.priority === 'URGENTE') {
-                     const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
-                     const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                     return arrivalA - arrivalB;
-                }
-
-                if (pautaOrder === 'chegada') {
-                    const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
-                    const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                    if (arrivalA !== arrivalB) return arrivalA - arrivalB;
-                    return (a.createdAt || 0) - (b.createdAt || 0);
-                } else { // 'padrao'
-                    const order = { 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
-                    const priorityDiff = order[a.priority] - order[b.priority];
-                    if (priorityDiff !== 0) return priorityDiff;
-
-                    if (a.priority === 'Máxima' && a.type === 'agendamento') {
-                        const scheduledA = a.scheduledTime || '23:59';
-                        const scheduledB = b.scheduledTime || '23:59';
-                        if (scheduledA.localeCompare(scheduledB) !== 0) return scheduledA.localeCompare(scheduledB);
-                    }
-
-                    const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
-                    const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                    if (arrivalA !== arrivalB) return arrivalA - arrivalB;
-
-                    return (a.createdAt || 0) - (b.createdAt || 0);
-                }
-            });
-            // Ordenação para "Em Atendimento" - mais recente primeiro, ou por colaborador
-            emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
-
-
-            document.getElementById('pauta-count').textContent = pauta.length;
-            document.getElementById('aguardando-count').textContent = aguardando.length;
-            document.getElementById('em-atendimento-count').textContent = emAtendimento.length;
-            document.getElementById('faltosos-count').textContent = faltosos.length;
-            document.getElementById('atendidos-count').textContent = atendidos.length;
-
-            const render = (el, data, generator) => {
-                // Ajustado o espaçamento entre os cards
-                if(data.length === 0) el.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum resultado.</p>`;
-                else data.forEach((item, index) => el.appendChild(generator(item, index)));
-            };
-
-            render(pautaList, pauta, a => {
-                const card = document.createElement('div');
-                card.className = 'relative bg-gray-50 p-4 rounded-lg shadow-sm border';
-                card.innerHTML = `
-                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
-                    <p class="font-bold text-lg">${a.name}</p>
-                    ${a.cpf ? `<p class="text-sm text-gray-500">CPF: <strong>${a.cpf}</strong></p>` : ''}
-                    <p>Assunto: <strong>${a.subject}</strong></p>
-                    <p>Agendado: <strong>${a.scheduledTime}</strong></p>
-                    <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
-                        <button data-id="${a.id}" class="check-in-btn bg-green-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-600">Marcar Chegada</button>
-                        <button data-id="${a.id}" class="faltou-btn bg-yellow-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-yellow-600">Faltou</button>
-                        <button data-id="${a.id}" class="edit-assisted-btn col-span-2 bg-gray-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-600">Editar Dados</button>
-                    </div>
-                    ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
-                `;
-                return card;
-            });
-
-            render(aguardandoList, aguardando, (a, index) => {
-                const card = document.createElement('div');
-                card.className = `relative bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)}`;
-                const arrival = a.type === 'agendamento' && a.scheduledTime ? `Agendado: ${a.scheduledTime} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : `Chegada: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-                const returnToPautaBtn = a.type === 'agendamento' ? `<button data-id="${a.id}" class="return-to-pauta-btn w-full bg-gray-400 text-white font-semibold py-1 rounded-lg hover:bg-gray-500 text-xs mt-1">Voltar p/ Pauta</button>` : '';
+            allLocations.forEach(location => {
+                const tag = document.createElement('span');
+                tag.className = 'flex items-center gap-1 bg-gray-200 text-gray-800 px-2 py-1 rounded-full';
+                tag.textContent = location;
                 
-                let atenderButton;
-                if (currentPautaData?.useDelegationFlow) {
-                    atenderButton = `<button data-id="${a.id}" data-name="${a.name}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`;
-                } else {
-                    atenderButton = `<button data-id="${a.id}" data-name="${a.name}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`;
-                }
-
-
-                card.innerHTML = `
-                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
-                    <div class="flex justify-between items-start">
-                                <div>
-                                    <p class="font-bold text-lg">${index + 1}. ${a.name}</p>
-                                    <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
-                                    <p class="text-sm text-gray-500">${arrival}</p>
-                                    ${a.priority === 'URGENTE' && a.priorityReason ? 
-                                        `<p class="text-sm text-red-600 font-semibold mt-1">Motivo da Prioridade: 
-                                             <span class="font-normal text-red-500">${a.priorityReason}</span>
-                                         </p>` 
-                                        : ''}
-                                    <button data-id="${a.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-sm hover:underline font-semibold py-1">Ver Detalhes</button>
-                                </div>
-                            </div>
-                            <div class="mt-3 grid grid-cols-2 lg:grid-cols-3 gap-2">
-                                ${atenderButton}
-                                ${a.priority === 'URGENTE' 
-                                    ? `<button data-id="${a.id}" class="unpriority-btn bg-yellow-500 text-white font-semibold py-2 rounded-lg hover:bg-yellow-600 text-sm">Desfazer Prioridade</button>` 
-                                    : `<button data-id="${a.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>`}
-                                <button data-id="${a.id}" class="edit-assisted-btn bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar</button>
-                            </div>
-                    
-                    ${returnToPautaBtn ? `<div class="mt-2">${returnToPautaBtn}</div>` : ''}
-                    ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
-                    `;
-                return card;
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'text-red-500 hover:text-red-700 font-bold ml-1';
+                removeBtn.innerHTML = '&times;';
+                
+                removeBtn.addEventListener('click', () => {
+                    const newLocations = rawInput.filter(l => l.trim() !== location).join(', ');
+                    input.value = newLocations;
+                    updateLocationTags();
+                });
+                
+                tag.appendChild(removeBtn);
+                container.appendChild(tag);
             });
+
+            // Salva a lista final no campo oculto (usando '|' como separador para salvar no Firebase)
+            hiddenInput.value = allLocations.join('|');
+            input.value = allLocations.join(', '); // Atualiza o input com a formatação limpa
+        }
+        
+        // --- FUNÇÃO PARA CRIAR COLUNA DINÂMICA (Para o Roteamento por Sala) ---
+        // Adapte esta função para criar o CARD do assistido (use o template existente do aguardando)
+        function createDynamicColumn(listId, title, assistedList) {
+             const column = document.createElement('div');
+             column.className = 'w-full md:w-1/3 p-2 flex-shrink-0';
+             
+             const header = document.createElement('h3');
+             header.className = 'text-lg font-bold mb-3 p-2 rounded-t-lg bg-yellow-400 text-gray-800 flex justify-between items-center';
+             header.innerHTML = `${title} <span class="bg-gray-800 text-yellow-400 text-sm font-semibold px-2 py-0.5 rounded-full">${assistedList.length}</span>`;
+             column.appendChild(header);
+
+             const list = document.createElement('div');
+             list.id = listId;
+             list.className = 'p-2 space-y-2 overflow-y-auto column-content bg-yellow-100 rounded-b-lg';
+             list.style.maxHeight = '60vh';
+             
+             // Usa a lógica de renderização existente para preencher a coluna
+             if (assistedList.length > 0) {
+                 assistedList.forEach((assisted, index) => {
+                     // *** REUTILIZE A LÓGICA DE CRIAÇÃO DE CARD DA FUNÇÃO RENDER EXISTENTE ***
+                     const card = document.createElement('div');
+                     card.className = `relative bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(getPriorityLevel(assisted))}`;
+                     const arrival = assisted.type === 'agendamento' && assisted.scheduledTime ? `Agendado: ${assisted.scheduledTime} | Chegou: ${new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : `Chegada: ${new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+                     const atenderButton = `<button data-id="${assisted.id}" data-name="${assisted.name}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`;
+
+                     card.innerHTML = `
+                         <button data-id="${assisted.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
+                         <div class="flex justify-between items-start">
+                             <div>
+                                 <p class="font-bold text-lg">${index + 1}. ${assisted.name}</p>
+                                 <p class="text-sm">Assunto: <strong>${assisted.subject}</strong></p>
+                                 <p class="text-sm text-gray-500">${arrival}</p>
+                                 <button data-id="${assisted.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-sm hover:underline font-semibold py-1">Ver Detalhes</button>
+                             </div>
+                         </div>
+                         <div class="mt-3 grid grid-cols-2 lg:grid-cols-3 gap-2">
+                             ${atenderButton}
+                             ${assisted.priority !== 'URGENTE' ? `<button data-id="${assisted.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : ''}
+                             <button data-id="${assisted.id}" class="edit-assisted-btn bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar</button>
+                         </div>
+                     `;
+
+                     list.appendChild(card);
+                 });
+             } else {
+                 list.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum resultado.</p>`;
+             }
+             
+             column.appendChild(list);
+             return column;
+         }
+
+// ... (resto do seu código)
             
             // Renderizar a nova coluna "Em Atendimento"
             render(emAtendimentoList, emAtendimento, (a, index) => {
@@ -3831,6 +3629,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
