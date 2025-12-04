@@ -3225,7 +3225,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         status: hasArrived ? 'aguardando' : 'pauta',
         scheduledTime: scheduledTimeValue,
         arrivalTime: hasArrived ? arrivalDate.toISOString() : null,
-        varaNucleoId: varaNucleoId, // <--- ID DA VARA HERDADO
+        varaNucleoId: currentVaraNucleoId, // <--- ADICIONADO AQUI
         assignedLocation: null, // <--- NOVO: Local de destino (será atribuído na recepção)
         assignedCollaborator: null, // Novo campo
         inAttendanceTime: null, // Novo campo
@@ -3252,7 +3252,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const updatePayload = getUpdatePayload({ 
                         status: 'aguardando', 
                         arrivalTime: arrivalDate.toISOString(),
-                        varaNucleoId: currentVaraNucleoId // <--- ADICIONADO O ROTEAMENTO DE UNIDADE
+                        varaNucleoId: currentVaraNucleoId // <--- ADICIONADO AQUI
                     });
                     
                     await updateDoc(doc(collectionRef, assistedIdToHandle), updatePayload);
@@ -3831,6 +3831,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
