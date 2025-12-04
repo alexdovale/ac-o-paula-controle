@@ -409,6 +409,9 @@
             <h2 class="text-2xl font-bold mb-4">Criar Nova Pauta</h2>
             <label for="create-pauta-name-input" class="block text-sm font-medium text-gray-700 mb-2">Nome da Pauta</label>
             <input type="text" id="create-pauta-name-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
+            
+            <label for="vara-nucleo-id-input" class="block text-sm font-medium text-gray-700 mb-2">ID da Vara/Núcleo (Obrigatório)</label>
+            <input type="text" id="vara-nucleo-id-input" placeholder="Ex: Civel3, Familia1 (Usado no filtro de fila)" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
             <div class="flex justify-end space-x-4">
                 <button id="cancel-create-pauta-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
                 <button id="next-to-ordem-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Avançar</button>
@@ -471,6 +474,23 @@
                     </span>
                 </label>
             </div>
+    <!-- CRIAÇÃO SALA -->
+            <div id="room-management-section" class="mt-6 p-4 bg-gray-100 rounded-lg border hidden">
+                <h3 class="text-lg font-bold mb-3 text-gray-800">Gerenciar Salas/Pontos de Atendimento</h3>
+                <p class="text-sm text-gray-600 mb-2">Adicione os nomes dos locais (Salas, Andares, Balcão) separados por vírgula.</p>
+
+            <div class="flex gap-2 mb-3">
+                <input type="text" id="new-location-name-input" placeholder="Ex: Sala 1, 2º Andar Cível" class="flex-grow p-2 border border-gray-300 rounded-lg">
+                <button type="button" id="add-location-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Adicionar</button>
+            </div>
+    
+        <div id="locations-tag-container" class="flex flex-wrap gap-2 text-sm mt-4">
+            <span class="text-gray-500">Locais serão exibidos aqui.</span>
+        </div>
+        <input type="hidden" id="final-location-list" name="finalLocationList"> 
+    </div>
+    <div class="flex justify-end space-x-4 mt-6">
+        </div>
             <div class="flex justify-end space-x-4 mt-6">
                 <button id="cancel-delegation-flow-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Voltar</button>
                 <button id="confirm-create-pauta-final-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Criar Pauta</button>
@@ -1097,7 +1117,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         // Variáveis para a lógica de Colaboradores (lista de presença)
         let colaboradores = []; // Esta é a lista de colaboradores (da lista de presença)
         let editCollaboratorId = null; // ID do colaborador sendo editado na lista de presença
-        let unsubscribeFromCollaborators = () => {};
+        let currentVaraNucleoId = null; // <--- NOVO: ID da Vara/Núcleo da pauta aberta
+        let allLocations = []; // <--- NOVO: Lista de locais (Salas/Andares) definidos na pauta
 
         const loadingContainer = document.getElementById('loading-container');
         const loginContainer = document.getElementById('login-container');
@@ -1109,6 +1130,69 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             if (!str) return '';
             return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
         };
+
+        // =========================================================
+        // FUNÇÕES DE UTILIDADE PARA ORDEM MANUAL E LOCAIS
+        // =========================================================
+        
+        // Função já discutida para salvar a ordem manual (MANTIDA)
+        async function saveManualOrder(items) { /* ... */ }
+        
+        /**
+         * Gerencia a lista dinâmica de locais de atendimento (Tags).
+         * (Esta função deve ser inserida após normalizeText ou getPriorityLevel, aproximadamente linha 400).
+         */
+        function updateLocationTags() {
+            const input = document.getElementById('new-location-name-input');
+            const container = document.getElementById('locations-tag-container');
+            const hiddenInput = document.getElementById('final-location-list');
+            
+            const rawInput = input.value.split(',');
+            allLocations = rawInput.map(l => l.trim()).filter(l => l !== '');
+            
+            container.innerHTML = '';
+            
+            if (allLocations.length === 0) {
+                 container.innerHTML = '<span class="text-gray-500">Locais serão exibidos aqui.</span>';
+            }
+        
+            allLocations.forEach(location => {
+                const tag = document.createElement('span');
+                tag.className = 'flex items-center gap-1 bg-gray-200 text-gray-800 px-2 py-1 rounded-full';
+                tag.textContent = location;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'text-red-500 hover:text-red-700 font-bold ml-1';
+                removeBtn.innerHTML = '&times;';
+                
+                removeBtn.addEventListener('click', () => {
+                    const newLocations = rawInput.filter(l => l.trim() !== location).join(', ');
+                    input.value = newLocations;
+                    updateLocationTags();
+                });
+                
+                tag.appendChild(removeBtn);
+                container.appendChild(tag);
+            });
+        
+            // Salva a lista final no campo oculto (usando '|' como separador para salvar no Firebase)
+            hiddenInput.value = allLocations.join('|');
+            input.value = allLocations.join(', '); // Atualiza o input com a formatação limpa
+        }
+        
+        
+        // Adicionar listener de input para atualizar a visualização das tags em tempo real
+        document.getElementById('new-location-name-input')?.addEventListener('input', () => {
+            updateLocationTags();
+        });
+        
+        document.getElementById('delegation-flow-modal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'add-location-btn') {
+                updateLocationTags();
+            }
+        });
+
         
         // FUNÇÃO DE PESQUISA MELHORADA
        const searchFilter = (assisted, term) => {
@@ -1278,6 +1362,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const faltososSearchTerm = normalizeText(document.getElementById('faltosos-search').value);
 
             const pauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && searchFilter(a, pautaSearchTerm));
+            const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm) && // FILTRO: Apenas exibe o aguardando se o ID do núcleo coincidir (a.varaNucleoId === currentVaraNucleoId) );
             const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm));
             const emAtendimento = allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode && searchFilter(a, emAtendimentoSearchTerm));
             const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && searchFilter(a, atendidosSearchTerm));
@@ -2517,11 +2602,23 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
                 const ordemAtendimento = document.querySelector('input[name="ordemAtendimento"]:checked').value;
                 const useDelegationFlow = document.querySelector('input[name="useDelegationFlow"]:checked').value === 'true'; // Novo campo
+                // --- 1. Captura e valida o ID da Vara/Núcleo ---
+                const varaNucleoId = document.getElementById('vara-nucleo-id-input').value.trim();
+                if (!varaNucleoId) {
+                    showNotification("O ID da Vara/Núcleo é obrigatório para o controle de fila.", "error");
+                    return;
+                }
+                
+                // --- 2. Captura a lista de locais (do campo oculto) ---
+                const locationsListRaw = document.getElementById('final-location-list').value;
+                const availableLocations = locationsListRaw ? locationsListRaw.split('|') : [];
+                // --- FIM CAPTURA ---
                 const user = auth.currentUser;
                 
-                if (!user) {
-                    showNotification("Você precisa estar logado para criar uma pauta.", "error");
-                    return;
+                // 3. Validação dos Locais de Atendimento (se for fluxo de delegação/roteamento)
+                if (useDelegationFlow && availableLocations.length === 0) {
+                     showNotification("Se o fluxo de delegação está ativo, adicione ao menos um Ponto de Atendimento/Sala.", "error");
+                     return;
                 }
 
                 try {
@@ -2530,10 +2627,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         type: pautaType,
                         ordemAtendimento: ordemAtendimento,
                         useDelegationFlow: useDelegationFlow, // Salva a escolha
+                        availableLocations: availableLocations, // <--- LISTA DE SALAS SALVA AQUI
                         owner: user.uid,
                         ownerEmail: user.email,
                         members: [user.uid],
                         memberEmails: [user.email],
+                        varaNucleoId: varaNucleoId, // <--- ID DA VARA SALVO AQUI
                         isClosed: false,
                         createdAt: new Date().toISOString()
                     });
@@ -3127,6 +3226,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         status: hasArrived ? 'aguardando' : 'pauta',
         scheduledTime: scheduledTimeValue,
         arrivalTime: hasArrived ? arrivalDate.toISOString() : null,
+        varaNucleoId: varaNucleoId, // <--- ID DA VARA HERDADO
+        assignedLocation: null, // <--- NOVO: Local de destino (será atribuído na recepção)
         assignedCollaborator: null, // Novo campo
         inAttendanceTime: null, // Novo campo
         finalizadoPeloColaborador: false, // Novo campo
@@ -3142,14 +3243,20 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     document.getElementById('arrival-time-wrapper').classList.add('hidden');
 }
 
-                if (button.id === 'confirm-arrival-btn') {
+            if (button.id === 'confirm-arrival-btn') {
                     const arrivalTimeInput = document.getElementById('arrival-time-input').value;
                     if (!arrivalTimeInput) { showNotification("Por favor, informe o horário.", "error"); return; }
                     const [hours, minutes] = arrivalTimeInput.split(':');
                     const arrivalDate = new Date();
                     arrivalDate.setHours(hours, minutes, 0, 0);
 
-                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ status: 'aguardando', arrivalTime: arrivalDate.toISOString() }));
+                    const updatePayload = getUpdatePayload({ 
+                        status: 'aguardando', 
+                        arrivalTime: arrivalDate.toISOString(),
+                        varaNucleoId: currentVaraNucleoId // <--- ADICIONADO O ROTEAMENTO DE UNIDADE
+                    });
+                    
+                    await updateDoc(doc(collectionRef, assistedIdToHandle), updatePayload);
                     button.closest('.fixed').classList.add('hidden');
                 }
                 
@@ -3725,3 +3832,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
