@@ -282,63 +282,49 @@
                      <button type="button" id="add-assisted-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition shadow-md w-full lg:w-auto">Adicionar</button>
                 </div>
             </form>
-            <main id="main-content" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full">
+            <main id="main-content" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 w-full">
+                
                 <div id="pauta-column" class="bg-white rounded-lg shadow-md flex-col">
-                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-                        <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
-                            <span>📋 Pauta</span>
-                            <span id="pauta-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
-                        </h3>
-                        <input type="search" id="pauta-search" placeholder="Pesquisar por nome, CPF, horário..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                    <div class="text-xl font-semibold mb-3 p-4 rounded-t-lg bg-green-600 text-white flex justify-between items-center">
+                        <span>📝 Pauta de Agendamento</span>
+                        <span id="pauta-count" class="bg-white text-green-600 text-sm font-semibold px-2 py-0.5 rounded-full">0</span>
                     </div>
-                    <div id="pauta-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                    <div class="p-4 space-y-4 overflow-y-auto column-content" id="pauta-list" style="max-height: 60vh;">
+                        </div>
                 </div>
-                <div class="bg-white rounded-lg shadow-md flex flex-col">
-                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-                        <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
-                           <span>⏳ Aguardando Atendimento</span>
-                           <span id="aguardando-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
-                        </h3>
-                        <input type="search" id="aguardando-search" placeholder="Pesquisar por nome, CPF, horário..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+            
+                <div id="dynamic-columns-container" class="lg:col-span-3 xl:col-span-4 flex flex-wrap gap-4 w-full">
+                    
+                    <div id="aguardando-dynamic-container" class="flex flex-wrap gap-4 w-full">
+                        </div>
+                    
+                    <div id="em-atendimento-column" class="bg-white rounded-lg shadow-md flex flex-col w-full hidden">
+                        <div class="text-xl font-semibold mb-3 p-4 rounded-t-lg bg-indigo-600 text-white flex justify-between items-center">
+                            <span>👨‍💼 Em Atendimento</span>
+                            <span id="em-atendimento-count" class="bg-white text-indigo-600 text-sm font-semibold px-2 py-0.5 rounded-full">0</span>
+                        </div>
+                        <div class="p-4 space-y-4 overflow-y-auto column-content" id="em-atendimento-list" style="max-height: 60vh;">
+                            </div>
                     </div>
-                    <div id="aguardando-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
-                </div>
-                <!-- Nova Coluna: Em Atendimento -->
-                <div id="em-atendimento-column" class="bg-white rounded-lg shadow-md flex flex-col hidden"> <!-- Inicialmente escondida, visibilidade controlada pelo JS -->
-                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-                        <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
-                            <span>👩‍💻 Em Atendimento</span>
-                            <span id="em-atendimento-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
-                        </h3>
-                        <input type="search" id="em-atendimento-search" placeholder="Pesquisar por nome, colaborador..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
-                    </div>
-                    <div id="em-atendimento-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
-                </div>
-                <!-- Fim da Nova Coluna: Em Atendimento -->
+            
+                </div> 
+                
                 <div id="atendidos-column" class="bg-white rounded-lg shadow-md flex flex-col">
-                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-                        <div class="flex justify-between items-center mb-3">
-                             <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center w-full">
-                                 <span>✅ Atendidos</span>
-                                 <span id="atendidos-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
-                             </h3>
-                            <button id="download-pdf-btn" class="ml-4 flex-shrink-0 bg-blue-600 text-white font-bold py-1 px-3 rounded-lg hover:bg-blue-700 text-sm">PDF</button>
-                        </div>
-                        <input type="search" id="atendidos-search" placeholder="Pesquisar por nome, CPF, horário..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                    <div class="text-xl font-semibold mb-3 p-4 rounded-t-lg bg-gray-500 text-white flex justify-between items-center">
+                        <span>✅ Atendidos</span>
+                        <span id="atendidos-count" class="bg-white text-gray-500 text-sm font-semibold px-2 py-0.5 rounded-full">0</span>
                     </div>
-                    <div id="atendidos-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                    <div class="p-4 space-y-4 overflow-y-auto column-content" id="atendidos-list" style="max-height: 60vh;">
+                        </div>
                 </div>
-                 <div id="faltosos-column" class="bg-white rounded-lg shadow-md flex flex-col hidden">
-                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-                        <div class="flex justify-between items-center mb-3">
-                            <h3 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                                🚫 Faltosos
-                                <span id="faltosos-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
-                            </h3>
-                        </div>
-                        <input type="search" id="faltosos-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                
+                <div id="faltosos-column" class="bg-white rounded-lg shadow-md flex flex-col hidden">
+                    <div class="text-xl font-semibold mb-3 p-4 rounded-t-lg bg-red-600 text-white flex justify-between items-center">
+                        <span>❌ Faltosos</span>
+                        <span id="faltosos-count" class="bg-white text-red-600 text-sm font-semibold px-2 py-0.5 rounded-full">0</span>
                     </div>
-                    <div id="faltosos-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                    <div class="p-4 space-y-4 overflow-y-auto column-content" id="faltosos-list" style="max-height: 60vh;">
+                        </div>
                 </div>
             </main>
             <div class="mt-8 flex justify-center">
@@ -3725,3 +3711,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
