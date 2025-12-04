@@ -1362,7 +1362,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const faltososSearchTerm = normalizeText(document.getElementById('faltosos-search').value);
 
             const pauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && searchFilter(a, pautaSearchTerm));
-            const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm) && // FILTRO: Apenas exibe o aguardando se o ID do núcleo coincidir (a.varaNucleoId === currentVaraNucleoId) );
+            const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm) && (a.varaNucleoId === currentVaraNucleoId) );
             const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm));
             const emAtendimento = allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode && searchFilter(a, emAtendimentoSearchTerm));
             const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && searchFilter(a, atendidosSearchTerm));
@@ -3832,4 +3832,5 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
