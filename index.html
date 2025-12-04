@@ -910,7 +910,23 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         <!-- O conteúdo, incluindo cabeçalho e botões, será gerado dinamicamente pelo script 'estatisticas.js' -->
     </div>
     
-
+    <div id="assign-location-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Encaminhar Atendimento</h2>
+            <p class="mb-4 text-gray-600">Selecione o local para onde o assistido <strong id="assisted-to-route-name"></strong> deve ser encaminhado:</p>
+            
+            <div class="mb-6">
+                <label for="location-select-dropdown" class="block text-sm font-medium text-gray-700 mb-2">Local de Destino</label>
+                <select id="location-select-dropdown" class="w-full p-3 border border-gray-300 rounded-lg" required>
+                    </select>
+            </div>
+            
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-location-assign-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-location-assign-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar Roteamento</button>
+            </div>
+        </div>
+    </div>
     <script type="module">
         // Importando as funções do novo módulo de detalhes
         import { setupDetailsModal, openDetailsModal } from './detalhes.js';
@@ -3711,4 +3727,5 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
