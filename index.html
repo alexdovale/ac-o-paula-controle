@@ -619,8 +619,29 @@
     
     <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4"></div>
     <div id="arrival-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold mb-4">Confirmar Horário de Chegada</h2><p class="mb-4 text-gray-600">Por favor, informe o horário de chegada do assistido.</p><input type="time" id="arrival-time-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6"><div class="flex justify-end space-x-4"><button id="cancel-arrival-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button><button id="confirm-arrival-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button></div></div>
-    </div>
+            <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+                <h2 class="text-2xl font-bold mb-4">Confirmar Chegada</h2>
+                <p class="mb-4 text-gray-600">Por favor, informe o horário de chegada do assistido.</p>
+                <input type="time" id="arrival-time-input" class="w-full p-3 border border-gray-300 rounded-lg mb-4">
+    
+                <div id="location-selection-wrapper" class="hidden mb-6">
+                    <label for="assisted-location" class="block text-sm font-medium text-gray-700 mb-2">Local de Atendimento:</label>
+                    <select id="assisted-location" class="w-full p-3 border border-gray-300 rounded-lg">
+                        <option value="Andar/Geral">Andar/Geral (Padrão)</option>
+                        <option value="Sala 1">Sala 1</option>
+                        <option value="Sala 2">Sala 2</option>
+                        <option value="Sala 3">Sala 3</option>
+                        <option value="Sala 4">Sala 4</option>
+                        <option value="Sala 5">Sala 5</option>
+                        <option value="Sala 6">Sala 6</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button id="cancel-arrival-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                    <button id="confirm-arrival-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button>
+                </div>
+            </div>
+        </div>
 
     <!-- Modal de Finalização de Atendimento (Antigo) - Mantido para 'Finalizar Diretamente' ou 'Editar Atendente' -->
     <div id="attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
@@ -1369,6 +1390,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     atenderButton = `<button data-id="${a.id}" data-name="${a.name}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`;
                 }
 
+                const locationText = (currentPautaData?.useMultipleLocations && a.assistedLocation) 
+                    ? `<p class="text-sm text-blue-600 font-semibold mt-1">Local: <strong>${a.assistedLocation}</strong></p>` 
+                    : '';
 
                 card.innerHTML = `
                     <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
@@ -1377,27 +1401,23 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                                     <p class="font-bold text-lg">${index + 1}. ${a.name}</p>
                                     <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
                                     <p class="text-sm text-gray-500">${arrival}</p>
-                                    ${a.priority === 'URGENTE' && a.priorityReason ? 
-                                        `<p class="text-sm text-red-600 font-semibold mt-1">Motivo da Prioridade: 
-                                             <span class="font-normal text-red-500">${a.priorityReason}</span>
-                                         </p>` 
+                                    ${locationText} ${a.priority === 'URGENTE' && a.priorityReason ? 
+                                        // ...
                                         : ''}
                                     <button data-id="${a.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-sm hover:underline font-semibold py-1">Ver Detalhes</button>
                                 </div>
                             </div>
                             <div class="mt-3 grid grid-cols-2 lg:grid-cols-3 gap-2">
                                 ${atenderButton}
-                                ${a.priority === 'URGENTE' 
-                                    ? `<button data-id="${a.id}" class="unpriority-btn bg-yellow-500 text-white font-semibold py-2 rounded-lg hover:bg-yellow-600 text-sm">Desfazer Prioridade</button>` 
-                                    : `<button data-id="${a.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>`}
-                                <button data-id="${a.id}" class="edit-assisted-btn bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar</button>
+                                // ...
                             </div>
                     
                     ${returnToPautaBtn ? `<div class="mt-2">${returnToPautaBtn}</div>` : ''}
                     ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
                     `;
                 return card;
-            });
+                
+
             
             // Renderizar a nova coluna "Em Atendimento"
             render(emAtendimentoList, emAtendimento, (a, index) => {
@@ -1940,6 +1960,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 currentPautaData = pautaData;
                 currentPautaOwnerId = pautaData.owner;
                 isPautaClosed = pautaData.isClosed || false;
+                // NOVO CAMPO DE CONFIGURAÇÃO DE LOCALIZAÇÃO
+                currentPautaData.useMultipleLocations = pautaData.useMultipleLocations || false;
                 
                 const ordem = currentPautaData.ordemAtendimento || 'padrao';
                 document.getElementById('logic-explanation-padrao').classList.toggle('hidden', ordem !== 'padrao');
@@ -2494,42 +2516,78 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
             });
             
-            document.getElementById('cancel-ordem-btn').addEventListener('click', () => {
-                document.getElementById('ordem-atendimento-modal').classList.add('hidden');
-                document.getElementById('create-pauta-modal').classList.remove('hidden');
-            });
-
-            // Adicionado: Botão para ir para o modal de delegação
+      // Adicionado: Botão para ir para o modal de delegação
             document.getElementById('next-to-delegation-btn').addEventListener('click', () => {
                 document.getElementById('ordem-atendimento-modal').classList.add('hidden');
                 document.getElementById('delegation-flow-modal').classList.remove('hidden');
             });
-
+            
+            // NOVO PASSO: Botão para ir para o modal de LOCALIZAÇÃO
+            document.getElementById('confirm-create-pauta-final-btn').addEventListener('click', () => {
+                document.getElementById('delegation-flow-modal').classList.add('hidden');
+                document.getElementById('location-flow-modal').classList.remove('hidden');
+            });
+            
             // Adicionado: Botão de voltar do modal de delegação
             document.getElementById('cancel-delegation-flow-btn').addEventListener('click', () => {
                 document.getElementById('delegation-flow-modal').classList.add('hidden');
                 document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
             });
             
-            // Lógica final de criação da pauta, agora no modal de delegação
-            document.getElementById('confirm-create-pauta-final-btn').addEventListener('click', async () => {
+            // NOVO: Botão de voltar do modal de localização
+            document.getElementById('cancel-location-flow-btn').addEventListener('click', () => {
+                document.getElementById('location-flow-modal').classList.add('hidden');
+                document.getElementById('delegation-flow-modal').classList.remove('hidden');
+            });
+            
+            <div id="location-flow-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+                    <h2 class="text-2xl font-bold mb-4">Local de Atendimento</h2>
+                    <p class="text-gray-600 mb-6">O assistido aguardará em uma fila geral (Andar/Geral) ou em salas específicas?</p>
+                    <div class="space-y-3">
+                        <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="useMultipleLocations" value="false" class="h-5 w-5 text-green-600 focus:ring-green-500" checked>
+                            <span class="ml-3">
+                                <span class="font-semibold text-gray-800">Fila Geral (Andar/Geral)</span>
+                                <span class="block text-sm text-gray-500">Todos aguardam no mesmo local. Foco em atendimento rápido.</span>
+                            </span>
+                        </label>
+                        <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="useMultipleLocations" value="true" class="h-5 w-5 text-red-600 focus:ring-red-500">
+                            <span class="ml-3">
+                                <span class="font-semibold text-gray-800">Salas/Locais Específicos</span>
+                                <span class="block text-sm text-gray-500">Permite atribuir o assistido a uma sala ou local específico ao marcar a chegada.</span>
+                            </span>
+                        </label>
+                    </div>
+                    <div class="flex justify-end space-x-4 mt-6">
+                        <button id="cancel-location-flow-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Voltar</button>
+                        <button id="confirm-location-flow-final-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Criar Pauta</button>
+                    </div>
+                </div>
+            </div>
+            
+            // Lógica final de criação da pauta, AGORA NO MODAL DE LOCALIZAÇÃO
+            document.getElementById('confirm-location-flow-final-btn').addEventListener('click', async () => {
                 const pautaName = document.getElementById('create-pauta-name-input').value.trim();
                 const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
                 const ordemAtendimento = document.querySelector('input[name="ordemAtendimento"]:checked').value;
-                const useDelegationFlow = document.querySelector('input[name="useDelegationFlow"]:checked').value === 'true'; // Novo campo
+                const useDelegationFlow = document.querySelector('#delegation-flow-modal input[name="useDelegationFlow"]:checked').value === 'true'; // Pega do modal anterior
+                const useMultipleLocations = document.querySelector('#location-flow-modal input[name="useMultipleLocations"]:checked').value === 'true'; // NOVO CAMPO
                 const user = auth.currentUser;
-                
+            
                 if (!user) {
                     showNotification("Você precisa estar logado para criar uma pauta.", "error");
                     return;
                 }
-
+            
                 try {
                     await addDoc(collection(db, "pautas"), {
                         name: pautaName,
                         type: pautaType,
                         ordemAtendimento: ordemAtendimento,
-                        useDelegationFlow: useDelegationFlow, // Salva a escolha
+                        useDelegationFlow: useDelegationFlow,
+                        useMultipleLocations: useMultipleLocations, // SALVA NOVO CAMPO
                         owner: user.uid,
                         ownerEmail: user.email,
                         members: [user.uid],
@@ -2539,14 +2597,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     });
                     showNotification("Pauta criada com sucesso!");
                     document.getElementById('create-pauta-name-input').value = '';
-                    document.getElementById('delegation-flow-modal').classList.add('hidden'); // Fecha o modal final
+                    document.getElementById('location-flow-modal').classList.add('hidden'); // Fecha o modal final
                 } catch (error) {
                     console.error("Error creating pauta:", error);
                     showNotification("Erro ao criar pauta.", "error");
                 }
             });
-
-            // --- LÓGICA DE EVENTOS GERAIS E MODAIS ---
+                        // --- LÓGICA DE EVENTOS GERAIS E MODAIS ---
             document.getElementById('privacy-policy-link').addEventListener('click', e => {
                 e.preventDefault();
                 document.getElementById('privacy-policy-modal').classList.remove('hidden');
@@ -2893,8 +2950,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         return;
                     }
 
-                    if (button.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5); }
-                    
+                    if (button.classList.contains('check-in-btn')) { 
+                        assistedIdToHandle = id; 
+                        document.getElementById('arrival-modal').classList.remove('hidden'); 
+                        document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5); 
+                        
+                        // NOVO: Mostra o seletor de local se a opção estiver ativa na pauta
+                        document.getElementById('location-selection-wrapper').classList.toggle('hidden', !currentPautaData?.useMultipleLocations);
+                        document.getElementById('assisted-location').value = 'Andar/Geral'; // Reseta o valor
+                    }                    
                     // Lógica para o botão "Atender" na coluna "Aguardando"
                     if (button.classList.contains('select-collaborator-btn')) { // Fluxo de delegação ativado
                         assistedIdToHandle = id;
@@ -3104,43 +3168,43 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         if (isScheduled && !scheduledTimeValue && !hasArrived) { // Só é obrigatório se for agendado e AINDA não chegou
             showNotification("Por favor, informe o horário agendado.", "error");
             return;
+            }
+        } else { 
+            isScheduled = false;
+            hasArrived = true;
+            scheduledTimeValue = null;
         }
-    } else { 
-        isScheduled = false;
-        hasArrived = true;
-        scheduledTimeValue = null;
-    }
-
-    let arrivalDate = null;
-    if (hasArrived) {
-        const timeInput = document.getElementById('arrival-time').value;
-        const [hours, minutes] = timeInput.split(':');
-        arrivalDate = new Date();
-        arrivalDate.setHours(hours, minutes);
-    }
     
-    const newAssisted = getUpdatePayload({
-        name,
-        cpf: document.getElementById('assisted-cpf').value.trim(),
-        subject: document.getElementById('assisted-subject').value.trim(),
-        type: currentMode,
-        status: hasArrived ? 'aguardando' : 'pauta',
-        scheduledTime: scheduledTimeValue,
-        arrivalTime: hasArrived ? arrivalDate.toISOString() : null,
-        assignedCollaborator: null, // Novo campo
-        inAttendanceTime: null, // Novo campo
-        finalizadoPeloColaborador: false, // Novo campo
-        isConfirmed: false, // Novo campo
-        confirmationDetails: null, // Novo campo
-        createdAt: new Date().toISOString()
-    });
-
-    await addDoc(collectionRef, newAssisted);
-    showNotification("Assistido adicionado com sucesso!");
-    document.getElementById('form-agendamento').reset();
-    document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-    document.getElementById('arrival-time-wrapper').classList.add('hidden');
-}
+        let arrivalDate = null;
+        if (hasArrived) {
+            const timeInput = document.getElementById('arrival-time').value;
+            const [hours, minutes] = timeInput.split(':');
+            arrivalDate = new Date();
+            arrivalDate.setHours(hours, minutes);
+        }
+        
+        const newAssisted = getUpdatePayload({
+            name,
+            cpf: document.getElementById('assisted-cpf').value.trim(),
+            subject: document.getElementById('assisted-subject').value.trim(),
+            type: currentMode,
+            status: hasArrived ? 'aguardando' : 'pauta',
+            scheduledTime: scheduledTimeValue,
+            arrivalTime: hasArrived ? arrivalDate.toISOString() : null,
+            assignedCollaborator: null, // Novo campo
+            inAttendanceTime: null, // Novo campo
+            finalizadoPeloColaborador: false, // Novo campo
+            isConfirmed: false, // Novo campo
+            confirmationDetails: null, // Novo campo
+            createdAt: new Date().toISOString()
+        });
+    
+        await addDoc(collectionRef, newAssisted);
+        showNotification("Assistido adicionado com sucesso!");
+        document.getElementById('form-agendamento').reset();
+        document.getElementById('scheduled-time-wrapper').classList.add('hidden');
+        document.getElementById('arrival-time-wrapper').classList.add('hidden');
+    }
 
                 if (button.id === 'confirm-arrival-btn') {
                     const arrivalTimeInput = document.getElementById('arrival-time-input').value;
@@ -3148,8 +3212,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const [hours, minutes] = arrivalTimeInput.split(':');
                     const arrivalDate = new Date();
                     arrivalDate.setHours(hours, minutes, 0, 0);
+                    
+                    // NOVO: Obtém o local de atendimento
+                    const assistedLocation = currentPautaData?.useMultipleLocations 
+                        ? document.getElementById('assisted-location').value 
+                        : null;
+                    
+                    const updateData = { 
+                        status: 'aguardando', 
+                        arrivalTime: arrivalDate.toISOString(),
+                        assistedLocation: assistedLocation // SALVA O NOVO CAMPO
+                    };
 
-                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ status: 'aguardando', arrivalTime: arrivalDate.toISOString() }));
+                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload(updateData));
                     button.closest('.fixed').classList.add('hidden');
                 }
                 
@@ -3725,3 +3800,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
