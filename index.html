@@ -11,11 +11,8 @@
     <link rel="apple-touch-icon" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <link rel="manifest" href="manifest.json">
 
-    <!-- Para os gráficos -->    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Para o PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     
@@ -145,7 +142,6 @@
                     </div>
 
                     <div class="relative flex items-center">
-                        <!-- MENU DE AÇÕES ATUALIZADO -->
                         <div id="actions-panel" class="absolute top-full right-0 mt-2 w-64 p-2 bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-200 ease-out transform origin-top-right opacity-0 scale-95 pointer-events-none z-20 space-y-1">
                             
                             <button id="view-stats-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-cyan-700 bg-cyan-100 rounded-lg hover:bg-cyan-200 transition-colors whitespace-nowrap">
@@ -303,9 +299,7 @@
                     </div>
                     <div id="aguardando-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
-                <!-- Nova Coluna: Em Atendimento -->
-                <div id="em-atendimento-column" class="bg-white rounded-lg shadow-md flex flex-col hidden"> <!-- Inicialmente escondida, visibilidade controlada pelo JS -->
-                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                <div id="em-atendimento-column" class="bg-white rounded-lg shadow-md flex flex-col hidden"> <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
                             <span>👩‍💻 Em Atendimento</span>
                             <span id="em-atendimento-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
@@ -314,7 +308,6 @@
                     </div>
                     <div id="em-atendimento-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
-                <!-- Fim da Nova Coluna: Em Atendimento -->
                 <div id="atendidos-column" class="bg-white rounded-lg shadow-md flex flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <div class="flex justify-between items-center mb-3">
@@ -450,7 +443,6 @@
         </div>
     </div>
 
-    <!-- NOVO MODAL: Fluxo de Delegação -->
     <div id="delegation-flow-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Fluxo de Atendimento</h2>
@@ -473,12 +465,36 @@
             </div>
             <div class="flex justify-end space-x-4 mt-6">
                 <button id="cancel-delegation-flow-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Voltar</button>
-                <button id="confirm-create-pauta-final-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Criar Pauta</button>
+                <button id="confirm-create-pauta-final-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Avançar</button>
             </div>
         </div>
     </div>
-    <!-- FIM NOVO MODAL -->
-
+    <div id="location-flow-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Local de Atendimento</h2>
+            <p class="text-gray-600 mb-6">O assistido aguardará em uma fila geral (Andar/Geral) ou em salas específicas?</p>
+            <div class="space-y-3">
+                <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="radio" name="useMultipleLocations" value="false" class="h-5 w-5 text-green-600 focus:ring-green-500" checked>
+                    <span class="ml-3">
+                        <span class="font-semibold text-gray-800">Fila Geral (Andar/Geral)</span>
+                        <span class="block text-sm text-gray-500">Todos aguardam no mesmo local. Foco em atendimento rápido.</span>
+                    </span>
+                </label>
+                <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="radio" name="useMultipleLocations" value="true" class="h-5 w-5 text-red-600 focus:ring-red-500">
+                    <span class="ml-3">
+                        <span class="font-semibold text-gray-800">Salas/Locais Específicos</span>
+                        <span class="block text-sm text-gray-500">Permite atribuir o assistido a uma sala ou local específico ao marcar a chegada.</span>
+                    </span>
+                </label>
+            </div>
+            <div class="flex justify-end space-x-4 mt-6">
+                <button id="cancel-location-flow-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Voltar</button>
+                <button id="confirm-location-flow-final-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Criar Pauta</button>
+            </div>
+        </div>
+    </div>
     <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -503,9 +519,7 @@
         </div>
     </div>
     
-    <!-- MODAL DE GERENCIAR COLABORADORES (LISTA DE PRESENÇA) - INTEGRADO -->
-   <!-- MODAL DE GERENCIAR COLABORADORES (LISTA DE PRESENÇA) - ATUALIZADO -->
-<div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
     <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-6xl flex flex-col" style="max-height: 90vh;">
         <div class="flex justify-between items-center mb-4 flex-shrink-0">
             <h2 class="text-2xl font-bold text-gray-800">Lista de Presença de Colaboradores</h2>
@@ -523,7 +537,6 @@
                                 <input type="text" id="collaborator-name-modal" name="nome-colaborador" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
                             </div>
 
-                            <!-- CAMPO CARGO ADICIONADO -->
                             <div>
                                 <label for="collaborator-role-modal" class="block text-sm font-medium text-gray-700">Cargo:</label>
                                 <select id="collaborator-role-modal" name="cargo-colaborador" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
@@ -534,7 +547,6 @@
                                 </select>
                             </div>
 
-                            <!-- CAMPO EQUIPE ATUALIZADO PARA SELECT -->
                             <div>
                                 <label for="collaborator-team-modal" class="block text-sm font-medium text-gray-700">Equipe:</label>
                                 <select id="collaborator-team-modal" name="equipe-colaborador" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
@@ -602,8 +614,7 @@
                                     </tr>
                                 </thead>
                             <tbody>
-                                <!-- As linhas da tabela serão preenchidas via JavaScript -->
-                            </tbody>
+                                </tbody>
                         </table>
                     </div>
                     <div class="flex justify-between items-center mt-4">
@@ -615,9 +626,7 @@
         </div>
     </div>
 </div>
-<!-- FIM MODAL DE GERENCIAR COLABORADORES -->
-    
-    <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4"></div>
+<div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4"></div>
     <div id="arrival-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
             <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
                 <h2 class="text-2xl font-bold mb-4">Confirmar Chegada</h2>
@@ -643,7 +652,6 @@
             </div>
         </div>
 
-    <!-- Modal de Finalização de Atendimento (Antigo) - Mantido para 'Finalizar Diretamente' ou 'Editar Atendente' -->
     <div id="attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Finalizar Atendimento</h2>
@@ -657,7 +665,6 @@
         </div>
     </div>
 
-    <!-- NOVO MODAL: Selecionar Colaborador -->
     <div id="select-collaborator-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Atender Assistido</h2>
@@ -671,9 +678,6 @@
             </div>
         </div>
     </div>
-    <!-- FIM NOVO MODAL -->
-
-    <!-- NOVO MODAL: Delegar Finalização por Email -->
     <div id="delegate-email-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Delegar Finalização de Atendimento</h2>
@@ -689,8 +693,6 @@
             </div>
         </div>
     </div>
-    <!-- FIM NOVO MODAL -->
-
     <div id="reset-confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg space-y-4">
             <h2 class="text-2xl font-bold text-gray-800">Zerar Pauta</h2>
@@ -876,7 +878,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
 
-    <!-- ***** INÍCIO DO HTML DO MODAL DE DETALHES ***** -->
     <div id="documents-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl flex flex-col" style="max-height: 90vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -887,8 +888,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
 
             <div id="document-action-selection" class="flex-grow overflow-y-auto scrollable-content pr-2">
-                <!-- O conteúdo será inserido aqui pelo detalhes.js -->
-            </div>
+                </div>
 
             <div id="document-checklist-view" class="hidden flex-grow flex flex-col">
                 <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -938,12 +938,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
 </div>
-    <!-- ***** FIM DO HTML DO MODAL DE DETALHES ***** -->
-    
- <!-- Modal de Estatísticas (Container) -->
     <div id="statistics-modal" class="hidden z-50">
-        <!-- O conteúdo, incluindo cabeçalho e botões, será gerado dinamicamente pelo script 'estatisticas.js' -->
-    </div>
+        </div>
     
 
     <script type="module">
@@ -2527,7 +2523,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('delegation-flow-modal').classList.remove('hidden');
             });
             
-            // NOVO PASSO: Botão para ir para o modal de LOCALIZAÇÃO
+            // NOVO PASSO: Botão para ir para o modal de LOCALIZAÇÃO (Antigo confirm-create-pauta-final-btn)
             document.getElementById('confirm-create-pauta-final-btn').addEventListener('click', () => {
                 document.getElementById('delegation-flow-modal').classList.add('hidden');
                 document.getElementById('location-flow-modal').classList.remove('hidden');
@@ -2545,34 +2541,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('delegation-flow-modal').classList.remove('hidden');
             });
             
-            <div id="location-flow-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-                <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-                    <h2 class="text-2xl font-bold mb-4">Local de Atendimento</h2>
-                    <p class="text-gray-600 mb-6">O assistido aguardará em uma fila geral (Andar/Geral) ou em salas específicas?</p>
-                    <div class="space-y-3">
-                        <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-                            <input type="radio" name="useMultipleLocations" value="false" class="h-5 w-5 text-green-600 focus:ring-green-500" checked>
-                            <span class="ml-3">
-                                <span class="font-semibold text-gray-800">Fila Geral (Andar/Geral)</span>
-                                <span class="block text-sm text-gray-500">Todos aguardam no mesmo local. Foco em atendimento rápido.</span>
-                            </span>
-                        </label>
-                        <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-                            <input type="radio" name="useMultipleLocations" value="true" class="h-5 w-5 text-red-600 focus:ring-red-500">
-                            <span class="ml-3">
-                                <span class="font-semibold text-gray-800">Salas/Locais Específicos</span>
-                                <span class="block text-sm text-gray-500">Permite atribuir o assistido a uma sala ou local específico ao marcar a chegada.</span>
-                            </span>
-                        </label>
-                    </div>
-                    <div class="flex justify-end space-x-4 mt-6">
-                        <button id="cancel-location-flow-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Voltar</button>
-                        <button id="confirm-location-flow-final-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Criar Pauta</button>
-                    </div>
-                </div>
-            </div>
-            
-            // Lógica final de criação da pauta, AGORA NO MODAL DE LOCALIZAÇÃO
+            // Lógica final de criação da pauta, AGORA NO MODAL DE LOCALIZAÇÃO (confirm-location-flow-final-btn)
             document.getElementById('confirm-location-flow-final-btn').addEventListener('click', async () => {
                 const pautaName = document.getElementById('create-pauta-name-input').value.trim();
                 const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
@@ -2751,6 +2720,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 // ==========================================================
             
                 const cleanString = (str) => String(str || '').replace(/"/g, '');
+                
+                // Função auxiliar para obter o nome do atendente, lidando com o formato objeto/string
+                const getAttendantName = (attendant) => {
+                    if (!attendant) return 'N/A';
+                    if (typeof attendant === 'object') {
+                        // Assume que o nome está em 'nome' ou 'name' se for objeto
+                        return attendant.nome || attendant.name || 'N/A'; 
+                    }
+                    return String(attendant);
+                };
             
                 // Função robusta para obter objeto Date ou null
                 const getSafeDate = (timeValue) => {
@@ -2847,7 +2826,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         formattedAttendedTime,  // Coluna 5: Finalizado
                         duration,               // Coluna 6: Duração
                         cleanString(item.subject),  // Coluna 7: Assunto Principal
-                        cleanString(item.attendant) || 'N/A', // Coluna 8: Atendente
+                        getAttendantName(item.attendant), // Coluna 8: Atendente (CORRIGIDO)
                         confirmedStatus         // Coluna 9: Confirmado
                     ];
                     tableRows.push(rowData);
@@ -3102,7 +3081,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         showNotification(`Status de confirmação atualizado para ${newConfirmedState ? 'Confirmado' : 'Não Confirmado'}.`, 'info');
                     }
 
-                    // NOVO: Lógica para "Voltar p/ Em Atendimento" de "Atendidos"
+                    // NOVO: Lógica para "Voltar p/ Em Atendimento" de "Atendidos" - LÓGICA CORRIGIDA
                     if (button.classList.contains('return-from-atendido-btn')) {
                         const currentAssisted = allAssisted.find(a => a.id === id);
                         let updateData = {
@@ -3111,19 +3090,26 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             attendedTime: null,
                             finalizadoPeloColaborador: false,
                             isConfirmed: false,
-                            confirmationDetails: null
+                            confirmationDetails: null,
+                            // Limpa campos de delegação (para garantir consistência, embora deva estar vazios se voltando para 'aguardando')
+                            assignedCollaborator: null, 
+                            inAttendanceTime: null
                         };
 
                         if (currentPautaData?.useDelegationFlow) {
                             // Se o fluxo de delegação está ativo, volta para "Em Atendimento"
                             updateData.status = 'emAtendimento';
-                            // Mantém o assignedCollaborator e inAttendanceTime que já estavam
-                            updateData.attendant = currentAssisted.attendant; // Mantém o atendente que finalizou
+                            // Mantém o assignedCollaborator e inAttendanceTime que já estavam, mas limpa os campos de FINALIZAÇÃO
+                            updateData.assignedCollaborator = currentAssisted.assignedCollaborator;
+                            updateData.inAttendanceTime = currentAssisted.inAttendanceTime;
+                            updateData.attendant = null; 
+                            updateData.attendedTime = null; 
                         }
                         
                         await updateDoc(docRef, getUpdatePayload(updateData));
                         showNotification(`Atendimento de ${currentAssisted.name} revertido para ${currentPautaData?.useDelegationFlow ? 'Em Atendimento' : 'Aguardando'}.`, 'info');
                     }
+
 
                 }
 
@@ -3805,5 +3791,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
-
-
