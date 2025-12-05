@@ -422,11 +422,24 @@
             <label for="create-pauta-name-input" class="block text-sm font-medium text-gray-700 mb-2">Nome da Pauta</label>
             <input type="text" id="create-pauta-name-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
             
-            <!-- CONFIGURAÇÃO DE SALAS (HIDDEN BY DEFAULT) -->
+            <!-- CONFIGURAÇÃO DE SALAS PERSONALIZADAS -->
             <div id="room-config-container" class="hidden mb-6">
-                <label for="room-count-input" class="block text-sm font-medium text-gray-700 mb-2">Quantidade de Salas</label>
-                <input type="number" id="room-count-input" min="1" max="10" value="2" class="w-full p-3 border border-gray-300 rounded-lg">
-                <p class="text-xs text-gray-500 mt-1">Serão criadas: Sala 1, Sala 2, etc.</p>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Defina as Salas ou Locais</label>
+                
+                <div class="flex gap-2 mb-3">
+                    <input type="text" id="custom-room-input" placeholder="Ex: Vara de Família, 2º Andar..." class="flex-1 p-3 border border-gray-300 rounded-lg" />
+                    <button id="add-custom-room-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">
+                        Adicionar
+                    </button>
+                </div>
+
+                <!-- Lista onde aparecerão as salas adicionadas -->
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-3" style="min-height: 100px;">
+                    <p id="no-rooms-msg" class="text-gray-400 text-sm text-center mt-4">Nenhum local adicionado ainda.</p>
+                    <ul id="custom-rooms-list" class="space-y-2">
+                        <!-- Itens serão inseridos aqui via JavaScript -->
+                    </ul>
+                </div>
             </div>
 
             <div class="flex justify-end space-x-4">
@@ -1126,6 +1139,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         let assistedIdToHandle = null;
         let assistedNameToHandle = null; // Adicionado para passar o nome para o modal de seleção de colaborador
         
+        let customRoomsList = []; // Array para guardar os nomes das salas
+
         // Variáveis para o novo modal de delegação de e-mail
         let assistedIdForDelegation = null;
         let assistedNameForDelegation = null;
@@ -2565,6 +2580,56 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
 
+            // --- LÓGICA DE SALAS PERSONALIZADAS ---
+            const customRoomInput = document.getElementById('custom-room-input');
+            const customRoomsListEl = document.getElementById('custom-rooms-list');
+            const noRoomsMsg = document.getElementById('no-rooms-msg');
+
+            // Função para desenhar a lista de salas
+            const renderCustomRooms = () => {
+                customRoomsListEl.innerHTML = '';
+                if (customRoomsList.length === 0) {
+                    noRoomsMsg.classList.remove('hidden');
+                } else {
+                    noRoomsMsg.classList.add('hidden');
+                    customRoomsList.forEach((roomName, index) => {
+                        const li = document.createElement('li');
+                        li.className = "flex justify-between items-center bg-white border border-gray-200 p-2 rounded shadow-sm";
+                        li.innerHTML = `
+                            <span class="font-medium text-gray-700">🏢 ${roomName}</span>
+                            <button type="button" class="remove-room-btn text-red-500 hover:text-red-700 text-sm font-bold px-2" data-index="${index}">Remover</button>
+                        `;
+                        customRoomsListEl.appendChild(li);
+                    });
+                }
+            };
+
+            // Botão Adicionar Sala
+            document.getElementById('add-custom-room-btn').addEventListener('click', (e) => {
+                e.preventDefault(); // Evita recarregar a página
+                const name = customRoomInput.value.trim();
+                if (name) {
+                    // Evita duplicatas
+                    if (!customRoomsList.includes(name)) {
+                        customRoomsList.push(name);
+                        renderCustomRooms();
+                        customRoomInput.value = '';
+                        customRoomInput.focus();
+                    } else {
+                        showNotification("Este local já foi adicionado.", "error");
+                    }
+                }
+            });
+
+            // Botão Remover Sala (Delegação de evento)
+            customRoomsListEl.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove-room-btn')) {
+                    const index = e.target.dataset.index;
+                    customRoomsList.splice(index, 1);
+                    renderCustomRooms();
+                }
+            });
+
             // --- NOVO FLUXO DE CRIAÇÃO DE PAUTA COM ORDEM DE ATENDIMENTO E DELEGAÇÃO ---
             document.getElementById('create-pauta-btn').addEventListener('click', () => {
                 document.getElementById('pauta-type-modal').classList.remove('hidden');
@@ -2581,10 +2646,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const createModal = document.getElementById('create-pauta-modal');
                     createModal.dataset.pautaType = type;
                     
-                    // Exibe configuração de salas se for multisala
                     const roomConfig = document.getElementById('room-config-container');
                     if (type === 'multisala') {
                         roomConfig.classList.remove('hidden');
+                        customRoomsList = []; // Zera a lista
+                        renderCustomRooms(); // Atualiza visualmente
+                        document.getElementById('custom-room-input').value = '';
                     } else {
                         roomConfig.classList.add('hidden');
                     }
@@ -2640,10 +2707,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 // Lógica para salas
                 let pautaRooms = [];
                 if (pautaType === 'multisala') {
-                    const count = parseInt(document.getElementById('room-count-input').value) || 2;
-                    for(let i=1; i<=count; i++) {
-                        pautaRooms.push(`Sala ${i}`);
+                    if (customRoomsList.length === 0) {
+                        showNotification("Por favor, adicione pelo menos um local/sala.", "error");
+                        return;
                     }
+                    pautaRooms = [...customRoomsList];
                 }
 
                 try {
@@ -3282,6 +3350,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         finalizadoPeloColaborador: false, // Novo campo
         isConfirmed: false, // Novo campo
         confirmationDetails: null, // Novo campo
+        room: assignedRoom, // Salva a sala se for avulso
         createdAt: new Date().toISOString()
     });
 
@@ -3292,29 +3361,29 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     document.getElementById('arrival-time-wrapper').classList.add('hidden');
 }
 
-        if (button.id === 'confirm-arrival-btn') {
-                            const arrivalTimeInput = document.getElementById('arrival-time-input').value;
-                            if (!arrivalTimeInput) { showNotification("Por favor, informe o horário.", "error"); return; }
-                            const [hours, minutes] = arrivalTimeInput.split(':');
-                            const arrivalDate = new Date();
-                            arrivalDate.setHours(hours, minutes, 0, 0);
-        
-                            // --- INÍCIO DA CORREÇÃO ---
-                            let roomData = null;
-                            // Se for pauta multi-salas, pega o valor do select
-                            if (currentPautaData?.type === 'multisala') {
-                                roomData = document.getElementById('arrival-room-select').value;
-                            }
-        
-                            await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ 
-                                status: 'aguardando', 
-                                arrivalTime: arrivalDate.toISOString(),
-                                room: roomData // <--- ADICIONADO: Agora salva a sala no banco
-                            }));
-                            // --- FIM DA CORREÇÃO ---
-        
-                            button.closest('.fixed').classList.add('hidden');
-                        }
+                if (button.id === 'confirm-arrival-btn') {
+                    const arrivalTimeInput = document.getElementById('arrival-time-input').value;
+                    if (!arrivalTimeInput) { showNotification("Por favor, informe o horário.", "error"); return; }
+                    const [hours, minutes] = arrivalTimeInput.split(':');
+                    const arrivalDate = new Date();
+                    arrivalDate.setHours(hours, minutes, 0, 0);
+
+                    // --- INÍCIO DA CORREÇÃO ---
+                    let roomData = null;
+                    // Se for pauta multi-salas, pega o valor do select
+                    if (currentPautaData?.type === 'multisala') {
+                        roomData = document.getElementById('arrival-room-select').value;
+                    }
+
+                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ 
+                        status: 'aguardando', 
+                        arrivalTime: arrivalDate.toISOString(),
+                        room: roomData // <--- ADICIONADO: Agora salva a sala no banco
+                    }));
+                    // --- FIM DA CORREÇÃO ---
+
+                    button.closest('.fixed').classList.add('hidden');
+                }
                 
                 // Lógica do novo modal de seleção de colaborador
                 if (button.id === 'confirm-select-collaborator-btn') {
@@ -3888,6 +3957,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
