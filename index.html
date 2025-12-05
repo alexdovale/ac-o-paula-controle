@@ -1,3 +1,13 @@
+Aqui está o código **completo e atualizado**.
+
+Esta versão inclui:
+1.  **Pauta Multi-Salas:** Criação com nomes personalizados.
+2.  **Seleção de Sala:** No check-in e no cadastro avulso.
+3.  **Renomear Sala:** Funcionalidade nova para clicar no lápis ao lado do nome da sala na coluna "Aguardando" e alterar o nome (atualizando todos os assistidos daquela sala automaticamente).
+
+Basta copiar e colar no seu arquivo.
+
+```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1351,6 +1361,60 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             return card;
         };
 
+        // --- FUNÇÃO PARA RENOMEAR SALA ---
+        const renamePautaRoom = async (oldName, newName) => {
+            if (!currentPautaId || !oldName || !newName || oldName === newName) return;
+
+            // 1. Atualizar a lista de salas no documento da Pauta
+            const pautaRef = doc(db, "pautas", currentPautaId);
+            const pautaSnap = await getDoc(pautaRef);
+            
+            if (!pautaSnap.exists()) return;
+
+            const pautaData = pautaSnap.data();
+            let updatedRooms = pautaData.rooms || [];
+            
+            // Verifica se o novo nome já existe (para evitar duplicatas)
+            if (updatedRooms.includes(newName)) {
+                showNotification("Já existe uma sala com esse nome.", "error");
+                return;
+            }
+
+            // Substitui o nome antigo pelo novo mantendo a posição
+            const roomIndex = updatedRooms.indexOf(oldName);
+            if (roomIndex !== -1) {
+                updatedRooms[roomIndex] = newName;
+            }
+
+            try {
+                // Inicia um Batch (lote) para fazer tudo de uma vez
+                const batch = writeBatch(db);
+
+                // A. Atualiza a lista de salas na pauta
+                batch.update(pautaRef, { rooms: updatedRooms });
+
+                // B. Busca todos os assistidos que estão na sala antiga
+                const attendancesRef = collection(db, "pautas", currentPautaId, "attendances");
+                const q = query(attendancesRef, where("room", "==", oldName));
+                const querySnapshot = await getDocs(q);
+
+                // C. Atualiza cada assistido para a sala nova
+                querySnapshot.forEach((docSnap) => {
+                    batch.update(docSnap.ref, { 
+                        room: newName,
+                        lastActionBy: currentUserName,
+                        lastActionTimestamp: new Date().toISOString()
+                    });
+                });
+
+                await batch.commit();
+                showNotification(`Sala renomeada para "${newName}" com sucesso!`);
+            } catch (error) {
+                console.error("Erro ao renomear sala:", error);
+                showNotification("Erro ao renomear a sala.", "error");
+            }
+        };
+
         const renderAssistedList = () => {
             allAssisted.forEach(a => {
                 if (a.status === 'aguardando' && a.priority !== 'URGENTE') {
@@ -1463,10 +1527,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     // Filtra pessoas desta sala
                     const peopleInRoom = aguardando.filter(a => a.room === roomName);
                     
-                    // Cria cabeçalho da sala
+                    // Cria cabeçalho da sala (COM BOTÃO DE EDITAR)
                     const roomHeader = document.createElement('div');
-                    roomHeader.className = "bg-blue-100 text-blue-800 font-bold px-3 py-2 rounded-md mt-4 mb-2 text-sm uppercase flex justify-between items-center";
-                    roomHeader.innerHTML = `<span>🏢 ${roomName}</span> <span class="bg-white text-blue-800 px-2 rounded-full text-xs">${peopleInRoom.length}</span>`;
+                    roomHeader.className = "bg-blue-100 text-blue-800 font-bold px-3 py-2 rounded-md mt-4 mb-2 text-sm uppercase flex justify-between items-center group";
+                    
+                    roomHeader.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <span>🏢 ${roomName}</span>
+                            <button class="edit-room-name-btn text-blue-400 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity" data-room="${roomName}" title="Renomear Sala">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                            </button>
+                        </div>
+                        <span class="bg-white text-blue-800 px-2 rounded-full text-xs">${peopleInRoom.length}</span>
+                    `;
                     aguardandoList.appendChild(roomHeader);
 
                     if (peopleInRoom.length === 0) {
@@ -3065,6 +3138,24 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             document.body.addEventListener('click', async (e) => {
                 const button = e.target.closest('button');
+                
+                // --- NOVO: Botão de Renomear Sala ---
+                const editRoomBtn = e.target.closest('.edit-room-name-btn');
+                if (editRoomBtn) {
+                    if (isPautaClosed) {
+                        showNotification("A pauta está fechada.", "error");
+                        return;
+                    }
+                    const oldName = editRoomBtn.dataset.room;
+                    const newName = prompt(`Renomear "${oldName}" para:`, oldName);
+                    
+                    if (newName && newName.trim() !== "" && newName !== oldName) {
+                        await renamePautaRoom(oldName, newName.trim());
+                    }
+                    return; // Para não processar outros cliques
+                }
+                // ------------------------------------
+
                 if (!button) return;
 
                 // Adiciona o listener para o botão de estatísticas
@@ -3957,6 +4048,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
