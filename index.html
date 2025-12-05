@@ -1402,14 +1402,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                                     <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
                                     <p class="text-sm text-gray-500">${arrival}</p>
                                     ${locationText} ${a.priority === 'URGENTE' && a.priorityReason ? 
-                                        // ...
-                                        : ''}
+                                        `<p class="text-sm text-red-600 font-semibold mt-1">Motivo da Prioridade: 
+                                             <span class="font-normal text-red-500">${a.priorityReason}</span>
+                                         </p>` 
+                                       : ''}
                                     <button data-id="${a.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-sm hover:underline font-semibold py-1">Ver Detalhes</button>
                                 </div>
                             </div>
                             <div class="mt-3 grid grid-cols-2 lg:grid-cols-3 gap-2">
                                 ${atenderButton}
-                                // ...
+                                ${a.priority === 'URGENTE' 
+                                    ? `<button data-id="${a.id}" class="unpriority-btn bg-yellow-500 text-white font-semibold py-2 rounded-lg hover:bg-yellow-600 text-sm">Desfazer Prioridade</button>` 
+                                    : `<button data-id="${a.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>`}
+                                <button data-id="${a.id}" class="edit-assisted-btn bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar</button>
                             </div>
                     
                     ${returnToPautaBtn ? `<div class="mt-2">${returnToPautaBtn}</div>` : ''}
@@ -3800,4 +3805,5 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
