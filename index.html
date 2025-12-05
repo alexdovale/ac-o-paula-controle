@@ -282,49 +282,63 @@
                      <button type="button" id="add-assisted-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition shadow-md w-full lg:w-auto">Adicionar</button>
                 </div>
             </form>
-            <main id="main-content" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 w-full">
-                
+            <main id="main-content" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full">
                 <div id="pauta-column" class="bg-white rounded-lg shadow-md flex-col">
-                    <div class="text-xl font-semibold mb-3 p-4 rounded-t-lg bg-green-600 text-white flex justify-between items-center">
-                        <span>📝 Pauta de Agendamento</span>
-                        <span id="pauta-count" class="bg-white text-green-600 text-sm font-semibold px-2 py-0.5 rounded-full">0</span>
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                        <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
+                            <span>📋 Pauta</span>
+                            <span id="pauta-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                        </h3>
+                        <input type="search" id="pauta-search" placeholder="Pesquisar por nome, CPF, horário..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
-                    <div class="p-4 space-y-4 overflow-y-auto column-content" id="pauta-list" style="max-height: 60vh;">
-                        </div>
+                    <div id="pauta-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
-            
-                <div id="dynamic-columns-container" class="lg:col-span-3 xl:col-span-4 flex flex-wrap gap-4 w-full">
-                    
-                    <div id="aguardando-dynamic-container" class="flex flex-wrap gap-4 w-full">
-                        </div>
-                    
-                    <div id="em-atendimento-column" class="bg-white rounded-lg shadow-md flex flex-col w-full hidden">
-                        <div class="text-xl font-semibold mb-3 p-4 rounded-t-lg bg-indigo-600 text-white flex justify-between items-center">
-                            <span>👨‍💼 Em Atendimento</span>
-                            <span id="em-atendimento-count" class="bg-white text-indigo-600 text-sm font-semibold px-2 py-0.5 rounded-full">0</span>
-                        </div>
-                        <div class="p-4 space-y-4 overflow-y-auto column-content" id="em-atendimento-list" style="max-height: 60vh;">
-                            </div>
+                <div class="bg-white rounded-lg shadow-md flex flex-col">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                        <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
+                           <span>⏳ Aguardando Atendimento</span>
+                           <span id="aguardando-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                        </h3>
+                        <input type="search" id="aguardando-search" placeholder="Pesquisar por nome, CPF, horário..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
-            
-                </div> 
-                
+                    <div id="aguardando-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                </div>
+                <!-- Nova Coluna: Em Atendimento -->
+                <div id="em-atendimento-column" class="bg-white rounded-lg shadow-md flex flex-col hidden"> <!-- Inicialmente escondida, visibilidade controlada pelo JS -->
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                        <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
+                            <span>👩‍💻 Em Atendimento</span>
+                            <span id="em-atendimento-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                        </h3>
+                        <input type="search" id="em-atendimento-search" placeholder="Pesquisar por nome, colaborador..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div id="em-atendimento-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                </div>
+                <!-- Fim da Nova Coluna: Em Atendimento -->
                 <div id="atendidos-column" class="bg-white rounded-lg shadow-md flex flex-col">
-                    <div class="text-xl font-semibold mb-3 p-4 rounded-t-lg bg-gray-500 text-white flex justify-between items-center">
-                        <span>✅ Atendidos</span>
-                        <span id="atendidos-count" class="bg-white text-gray-500 text-sm font-semibold px-2 py-0.5 rounded-full">0</span>
-                    </div>
-                    <div class="p-4 space-y-4 overflow-y-auto column-content" id="atendidos-list" style="max-height: 60vh;">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                        <div class="flex justify-between items-center mb-3">
+                             <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center w-full">
+                                 <span>✅ Atendidos</span>
+                                 <span id="atendidos-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                             </h3>
+                            <button id="download-pdf-btn" class="ml-4 flex-shrink-0 bg-blue-600 text-white font-bold py-1 px-3 rounded-lg hover:bg-blue-700 text-sm">PDF</button>
                         </div>
+                        <input type="search" id="atendidos-search" placeholder="Pesquisar por nome, CPF, horário..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div id="atendidos-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
-                
-                <div id="faltosos-column" class="bg-white rounded-lg shadow-md flex flex-col hidden">
-                    <div class="text-xl font-semibold mb-3 p-4 rounded-t-lg bg-red-600 text-white flex justify-between items-center">
-                        <span>❌ Faltosos</span>
-                        <span id="faltosos-count" class="bg-white text-red-600 text-sm font-semibold px-2 py-0.5 rounded-full">0</span>
-                    </div>
-                    <div class="p-4 space-y-4 overflow-y-auto column-content" id="faltosos-list" style="max-height: 60vh;">
+                 <div id="faltosos-column" class="bg-white rounded-lg shadow-md flex flex-col hidden">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                                🚫 Faltosos
+                                <span id="faltosos-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                            </h3>
                         </div>
+                        <input type="search" id="faltosos-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div id="faltosos-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
             </main>
             <div class="mt-8 flex justify-center">
@@ -910,23 +924,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         <!-- O conteúdo, incluindo cabeçalho e botões, será gerado dinamicamente pelo script 'estatisticas.js' -->
     </div>
     
-    <div id="assign-location-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-            <h2 class="text-2xl font-bold mb-4">Encaminhar Atendimento</h2>
-            <p class="mb-4 text-gray-600">Selecione o local para onde o assistido <strong id="assisted-to-route-name"></strong> deve ser encaminhado:</p>
-            
-            <div class="mb-6">
-                <label for="location-select-dropdown" class="block text-sm font-medium text-gray-700 mb-2">Local de Destino</label>
-                <select id="location-select-dropdown" class="w-full p-3 border border-gray-300 rounded-lg" required>
-                    </select>
-            </div>
-            
-            <div class="flex justify-end space-x-4">
-                <button id="cancel-location-assign-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
-                <button id="confirm-location-assign-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar Roteamento</button>
-            </div>
-        </div>
-    </div>
+
     <script type="module">
         // Importando as funções do novo módulo de detalhes
         import { setupDetailsModal, openDetailsModal } from './detalhes.js';
@@ -1257,168 +1255,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
         };
 
-
-        /**
-         * NOVO: Cria a coluna HTML para o Roteamento Dinâmico (Sala 1, Sala 2, etc.)
-         */
-        function createDynamicColumn(listId, title, assistedList) {
-            const column = document.createElement('div');
-            // Define a largura da coluna em 1/3 para caber 3 colunas por linha no desktop
-            column.className = 'w-full sm:w-1/2 lg:w-1/3 p-2 flex-shrink-0'; 
-            
-            const header = document.createElement('div');
-            header.className = 'text-xl font-semibold mb-3 p-2 rounded-t-lg bg-yellow-400 text-gray-800 flex justify-between items-center';
-            header.innerHTML = `
-                <span>${title}</span> 
-                <span class="bg-gray-800 text-yellow-400 text-sm font-semibold px-2 py-0.5 rounded-full">${assistedList.length}</span>
-            `;
-            column.appendChild(header);
-        
-            const listContainer = document.createElement('div');
-            listContainer.id = listId;
-            listContainer.className = 'p-2 space-y-2 overflow-y-auto column-content bg-yellow-100 rounded-b-lg';
-            listContainer.style.maxHeight = '60vh'; 
-            
-            // --- LÓGICA DE RENDERIZAÇÃO DOS CARTÕES (ADAPTADA DO SEU CÓDIGO) ---
-            if (assistedList.length > 0) {
-                 listContainer.innerHTML = assistedList.map((assisted, index) => {
-                     const priorityClass = getPriorityClass(getPriorityLevel(assisted));
-                     const arrival = assisted.type === 'agendamento' && assisted.scheduledTime ? `Agendado: ${assisted.scheduledTime} | Chegou: ${new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : `Chegada: ${new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-                     
-                     // O botão aqui é para iniciar o atendimento no local roteado
-                     let atenderButton = `<button data-id="${assisted.id}" data-name="${assisted.name}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`;
-                     
-                     return `
-                        <div class="relative bg-white p-4 rounded-lg shadow-sm ${priorityClass}">
-                            <button data-id="${assisted.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <p class="font-bold text-lg">${index + 1}. ${assisted.name}</p>
-                                    <p class="text-sm">Assunto: <strong>${assisted.subject}</strong></p>
-                                    <p class="text-sm text-gray-500">${arrival}</p>
-                                    ${assisted.assignedCollaborator ? `<p class="text-sm text-indigo-600 font-semibold">Delegado para: ${assisted.assignedCollaboratorName}</p>` : ''}
-                                    <button data-id="${assisted.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-sm hover:underline font-semibold py-1">Ver Detalhes</button>
-                                </div>
-                            </div>
-                            <div class="mt-3 grid grid-cols-2 lg:grid-cols-3 gap-2">
-                                ${atenderButton}
-                                ${assisted.priority !== 'URGENTE' ? `<button data-id="${assisted.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>` : ''}
-                                <button data-id="${assisted.id}" class="edit-assisted-btn bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar</button>
-                            </div>
-                        </div>
-                     `;
-                 }).join('');
-            } else {
-                listContainer.innerHTML = `<p class="text-gray-500 text-center p-4">Ninguém aguardando neste local.</p>`;
-            }
-            
-            column.appendChild(listContainer);
-            return column;
-        }
-    const renderAssistedList = () => {
-        // 1. CÁLCULO DE PRIORIDADE
-        allAssisted.forEach(a => {
-            if (a.status === 'aguardando' && a.priority !== 'URGENTE') {
-                a.priority = getPriorityLevel(a);
-            }
-        });
-    
-        // 2. OBTENÇÃO DOS ELEMENTOS E FILTROS
-        const pautaList = document.getElementById('pauta-list');
-        const emAtendimentoList = document.getElementById('em-atendimento-list');
-        const atendidosList = document.getElementById('atendidos-list');
-        const faltososList = document.getElementById('faltosos-list');
-    
-        // Limpa apenas as listas fixas
-        [pautaList, emAtendimentoList, atendidosList, faltososList].forEach(el => el.innerHTML = ''); 
-    
-        // Variáveis de filtro e ordenação
-        const currentVaraNucleoId = currentPautaData?.varaNucleoId || null;
-        const locationsToRender = currentPautaData?.availableLocations || []; 
-        const pauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && searchFilter(a, pautaSearchTerm));
-        const emAtendimento = allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode && searchFilter(a, emAtendimentoSearchTerm));
-        const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && searchFilter(a, atendidosSearchTerm));
-        const faltosos = allAssisted.filter(a => a.status === 'faltou' && a.type === currentMode && searchFilter(a, faltososSearchTerm));
-        
-        // ORDENAÇÕES
-        const sortedPauta = pauta.sort(sortByTimeAndManualOrder);
-        const sortedEmAtendimento = emAtendimento.sort(sortByTimeAndManualOrder);
-        const sortedAtendidos = atendidos.sort((a, b) => b.finishTime - a.finishTime); 
-    
-        // 3. RENDERIZAÇÃO DA PAUTA
-        pautaList.innerHTML = sortedPauta.map((assisted, index) => render(assisted, index + 1, 'pauta')).join('');
-        document.getElementById('pauta-count').textContent = pauta.length;
-    
-        // 4. CRIAÇÃO DAS COLUNAS DE AGUARDANDO (DINÂMICAS)
-        const aguardandoDynamicContainer = document.getElementById('aguardando-dynamic-container');
-        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-        
-        // Limpa o container dinâmico de Aguardando
-        aguardandoDynamicContainer.innerHTML = ''; 
-        
-        if (locationsToRender.length > 0) {
-            // ROTEAMENTO POR SALA ATIVO
-            emAtendimentoColumn.classList.add('hidden'); // Oculta a coluna Em Atendimento fixa
-            
-            locationsToRender.forEach(locationName => {
-                const locationId = normalizeText(locationName);
-                
-                // FILTRA assistidos que estão 'aguardando' E têm o 'assignedLocation' como esta sala
-                const aguardandoLocation = allAssisted.filter(a => 
-                    a.status === 'aguardando' && 
-                    a.type === currentMode && 
-                    searchFilter(a, aguardandoSearchTerm) &&
-                    (a.varaNucleoId === currentVaraNucleoId) && 
-                    (a.assignedLocation === locationName) 
-                );
-    
-                // Adiciona a nova coluna de Sala à interface
-                const newColumn = createDynamicColumn(
-                    `aguardando-list-${locationId}`, 
-                    `Aguardando: ${locationName}`, 
-                    aguardandoLocation 
-                );
-                aguardandoDynamicContainer.appendChild(newColumn);
-            });
-            
-        } else {
-            // FALLBACK: ROTEAMENTO POR SALA INATIVO (Volta ao fluxo antigo)
-            
-            // 4.1. RENDERIZAÇÃO DA COLUNA AGUARDANDO (FALLBACK)
-            const aguardando = allAssisted.filter(a => 
-                a.status === 'aguardando' && 
-                a.type === currentMode && 
-                searchFilter(a, aguardandoSearchTerm) &&
-                (a.varaNucleoId === currentVaraNucleoId) &&
-                !a.assignedLocation // Ninguém está roteado, então exibe na fila geral
-            );
-        
-                    const fallbackColumn = createDynamicColumn(
-                        'aguardando-list-geral',
-                        '⏳ Aguardando Atendimento',
-                        aguardando
-                    );
-                    aguardandoDynamicContainer.appendChild(fallbackColumn);
-                    
-                    // 4.2. RENDERIZAÇÃO DA COLUNA EM ATENDIMENTO (Re-exibida no fallback)
-                    emAtendimentoColumn.classList.remove('hidden');
-                    emAtendimentoList.innerHTML = sortedEmAtendimento.map((assisted, index) => render(assisted, index + 1, 'emAtendimento')).join('');
-                    document.getElementById('em-atendimento-count').textContent = emAtendimento.length;
+        const renderAssistedList = () => {
+            allAssisted.forEach(a => {
+                if (a.status === 'aguardando' && a.priority !== 'URGENTE') {
+                    a.priority = getPriorityLevel(a);
                 }
-                
-                // 5. RENDERIZAÇÃO DE ATENDIDOS E FALTOSOS
-                atendidosList.innerHTML = sortedAtendidos.map((assisted, index) => render(assisted, index + 1, 'atendido')).join('');
-                document.getElementById('atendidos-count').textContent = atendidos.length;
-            
-                faltososList.innerHTML = faltosos.map((assisted, index) => render(assisted, index + 1, 'faltou')).join('');
-                document.getElementById('faltosos-count').textContent = faltosos.length;
-            
-                // 6. FINALIZAÇÃO
-                updateStats(allAssisted, currentPautaData, currentMode);
-                makeSortable();
-                updateUiVisibility(currentMode, isDelegationEnabled); 
-                
-            }; // FIM DA FUNÇÃO renderAssistedList
+            });
 
             const pautaList = document.getElementById('pauta-list');
             const aguardandoList = document.getElementById('aguardando-list');
@@ -1668,7 +1510,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
 
             togglePautaLock(isPautaClosed);
-
+        };
 
         const showNotification = (message, type = 'success') => {
             const colors = { info: 'blue', error: 'red', success: 'green' };
@@ -3054,60 +2896,39 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (button.classList.contains('check-in-btn')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5); }
                     
                     // Lógica para o botão "Atender" na coluna "Aguardando"
-                    if (button.classList.contains('select-collaborator-btn')) { // Este botão agora pode abrir o ROTEAMENTO ou SELEÇÃO
-                        const id = button.dataset.id;
-                        const name = button.dataset.name;
+                    if (button.classList.contains('select-collaborator-btn')) { // Fluxo de delegação ativado
                         assistedIdToHandle = id;
-                        assistedNameToHandle = name;
+                        assistedNameToHandle = button.dataset.name;
+                        document.getElementById('assisted-to-attend-name').textContent = assistedNameToHandle;
                         
-                        // NOVO: Verifica se há locais de roteamento definidos na pauta
-                        if (currentPautaData?.availableLocations?.length > 0) {
-                            // 1. Abre o modal de atribuição de local
-                            document.getElementById('assisted-to-route-name').textContent = assistedNameToHandle;
-                            const locationDropdown = document.getElementById('location-select-dropdown');
-                            locationDropdown.innerHTML = '<option value="" disabled selected>Selecione um Local</option>';
-                    
-                            // Popula o dropdown com os locais salvos no Firebase (availableLocations)
-                            currentPautaData.availableLocations.forEach(location => {
-                                 const option = document.createElement('option');
-                                 option.value = location; // O valor é o nome do local
-                                 option.textContent = location;
-                                 locationDropdown.appendChild(option);
-                            });
-                    
-                            document.getElementById('assign-location-modal').classList.remove('hidden');
-                            
+                        const collaboratorSelectionList = document.getElementById('collaborator-selection-list');
+                        collaboratorSelectionList.innerHTML = '';
+                        // Adiciona uma opção "Não atribuir"
+                        const noAssignLabel = document.createElement('label');
+                        noAssignLabel.className = 'flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50';
+                        noAssignLabel.innerHTML = `
+                            <input type="radio" name="selectedCollaborator" value="null" data-name="Não atribuído" class="h-5 w-5 text-gray-600 focus:ring-gray-500" checked>
+                            <span class="ml-3 font-semibold text-gray-800">Não atribuir colaborador</span>
+                        `;
+                        collaboratorSelectionList.appendChild(noAssignLabel);
+
+                        if (colaboradores.length === 0) {
+                            const noCollabMessage = document.createElement('p');
+                            noCollabMessage.className = 'text-gray-500 text-center mt-2';
+                            noCollabMessage.textContent = 'Nenhum colaborador registrado. Adicione um na seção "Colaboradores" para atribuir.';
+                            collaboratorSelectionList.appendChild(noCollabMessage);
                         } else {
-                            // Se NÃO há locais de roteamento definidos, usa o fluxo antigo (selecionar colaborador)
-                            openCollaboratorSelectionModal(id, name); 
+                            colaboradores.forEach(collab => {
+                                const label = document.createElement('label');
+                                label.className = 'flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50';
+                                label.innerHTML = `
+                                    <input type="radio" name="selectedCollaborator" value="${collab.id}" data-name="${collab.nome}" class="h-5 w-5 text-blue-600 focus:ring-blue-500">
+                                    <span class="ml-3 font-semibold text-gray-800">${collab.nome}</span>
+                                `;
+                                collaboratorSelectionList.appendChild(label);
+                            });
                         }
-                    }
-                    
-                    // ... (Resto dos listeners existentes)
-                    
-                    // NOVO LISTENER: Botão de confirmação de roteamento de Local/Sala
-                    if (button.id === 'confirm-location-assign-btn') {
-                        const selectedLocation = document.getElementById('location-select-dropdown').value;
-                        if (!selectedLocation) {
-                            showNotification("Por favor, selecione um local de destino.", "error");
-                            return;
-                        }
-                        
-                        // Passo 1: Atribui o Local ao assistido e o mantém em Aguardando, mas com o filtro de Sala
-                        await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({
-                            status: 'aguardando', // Status permanece 'aguardando'
-                            assignedLocation: selectedLocation, // <--- CAMPO CRÍTICO: Roteamento por sala
-                            assignedCollaborator: null, // Limpa o colaborador, pois só foi roteado para o local
-                            assignedCollaboratorName: null
-                        }));
-                    
-                        showNotification(`Assistido encaminhado para: ${selectedLocation}.`);
-                        document.getElementById('assign-location-modal').classList.add('hidden');
-                    }
-                    
-                    // NOVO LISTENER: Botão para cancelar o roteamento
-                    if (button.id === 'cancel-location-assign-btn') {
-                        document.getElementById('assign-location-modal').classList.add('hidden');
+                        document.getElementById('select-collaborator-modal').classList.remove('hidden');
                     }
 
                     // Botão "Atender" para o fluxo antigo (sem delegação)
@@ -3331,69 +3152,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ status: 'aguardando', arrivalTime: arrivalDate.toISOString() }));
                     button.closest('.fixed').classList.add('hidden');
                 }
-
-                // APROXIMADAMENTE LINHA 1500 (Dentro do document.body.addEventListener('click', async (e) => { ... }))
-
-// ... (código existente antes do bloco '.select-collaborator-btn')
-
-// Lógica para o botão "Atender" na coluna "Aguardando"
-if (button.classList.contains('select-collaborator-btn')) { // Este botão agora pode abrir o ROTEAMENTO ou SELEÇÃO
-    const id = button.dataset.id;
-    const name = button.dataset.name;
-    assistedIdToHandle = id;
-    assistedNameToHandle = name;
-    
-    // NOVO: Verifica se há locais de roteamento definidos na pauta
-    if (currentPautaData?.availableLocations?.length > 0) {
-        // 1. Abre o modal de atribuição de local
-        document.getElementById('assisted-to-route-name').textContent = assistedNameToHandle;
-        const locationDropdown = document.getElementById('location-select-dropdown');
-        locationDropdown.innerHTML = '<option value="" disabled selected>Selecione um Local</option>';
-
-        // Popula o dropdown com os locais salvos no Firebase (availableLocations)
-        currentPautaData.availableLocations.forEach(location => {
-             const option = document.createElement('option');
-             option.value = location; // O valor é o nome do local
-             option.textContent = location;
-             locationDropdown.appendChild(option);
-        });
-
-        document.getElementById('assign-location-modal').classList.remove('hidden');
-        
-    } else {
-        // Se NÃO há locais de roteamento definidos, usa o fluxo antigo (selecionar colaborador)
-        openCollaboratorSelectionModal(id, name); 
-    }
-}
-
-// ... (Resto dos listeners existentes)
-
-// NOVO LISTENER: Botão de confirmação de roteamento de Local/Sala
-if (button.id === 'confirm-location-assign-btn') {
-    const selectedLocation = document.getElementById('location-select-dropdown').value;
-    if (!selectedLocation) {
-        showNotification("Por favor, selecione um local de destino.", "error");
-        return;
-    }
-    
-    // Passo 1: Atribui o Local ao assistido e o mantém em Aguardando, mas com o filtro de Sala
-    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({
-        status: 'aguardando', // Status permanece 'aguardando'
-        assignedLocation: selectedLocation, // <--- CAMPO CRÍTICO: Roteamento por sala
-        assignedCollaborator: null, // Limpa o colaborador, pois só foi roteado para o local
-        assignedCollaboratorName: null
-    }));
-
-    showNotification(`Assistido encaminhado para: ${selectedLocation}.`);
-    document.getElementById('assign-location-modal').classList.add('hidden');
-}
-
-// NOVO LISTENER: Botão para cancelar o roteamento
-if (button.id === 'cancel-location-assign-btn') {
-    document.getElementById('assign-location-modal').classList.add('hidden');
-}
-
-// ... (Resto dos listeners, como if (button.id === 'confirm-select-collaborator-btn') { ... })
+                
                 // Lógica do novo modal de seleção de colaborador
                 if (button.id === 'confirm-select-collaborator-btn') {
                     const selectedCollaboratorRadio = document.querySelector('#collaborator-selection-list input[name="selectedCollaborator"]:checked');
@@ -3966,9 +3725,3 @@ if (button.id === 'cancel-location-assign-btn') {
 
 </body>
 </html>
-
-
-
-
-
-
