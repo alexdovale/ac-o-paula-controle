@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acompanhamento de Pauta - SIGAP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }</style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+    <div id="loading" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        <p class="mt-4 text-gray-600">Carregando pauta...</p>
+    </div>
+
+    <div id="error-screen" class="hidden fixed inset-0 bg-gray-100 flex flex-col items-center justify-center text-center p-4">
+        <h1 class="text-4xl font-bold text-gray-400 mb-4">Pauta Indisponível</h1>
+        <p class="text-gray-600 text-lg">Esta pauta é privada ou não existe.</p>
+    </div>
+
+    <div id="app-content" class="hidden max-w-7xl mx-auto">
+        <header class="mb-8 text-center bg-white p-6 rounded-xl shadow-sm">
+            <h1 id="pauta-title" class="text-3xl font-bold text-gray-800"></h1>
+            <p class="text-gray-500 mt-2">Acompanhamento em Tempo Real</p>
+            <div id="last-update" class="text-xs text-gray-400 mt-1"></div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Coluna Aguardando -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden flex flex-col h-[80vh]">
+                <div class="bg-yellow-500 p-4 text-white">
+                    <h2 class="text-2xl font-bold flex justify-between">
+                        <span>⏳ Aguardando</span>
+                        <span id="count-aguardando" class="bg-white text-yellow-600 px-3 rounded-full text-lg">0</span>
+                    </h2>
+                </div>
+                <div id="list-aguardando" class="p-4 overflow-y-auto flex-1 space-y-3 bg-gray-50"></div>
+            </div>
+
+            <!-- Coluna Em Atendimento -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden flex flex-col h-[80vh]">
+                <div class="bg-green-600 p-4 text-white">
+                    <h2 class="text-2xl font-bold flex justify-between">
+                        <span>🚀 Em Atendimento</span>
+                        <span id="count-atendimento" class="bg-white text-green-600 px-3 rounded-full text-lg">0</span>
+                    </h2>
+                </div>
+                <div id="list-atendimento" class="p-4 overflow-y-auto flex-1 space-y-3 bg-gray-50"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Pegar ID da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const pautaId = urlParams.get('id');
+
+        const loading = document.getElementById('loading');
+        const errorScreen = document.getElementById('error-screen');
+        const appContent = document.getElementById('app-content');
+        const listAguardando = document.getElementById('list-aguardando');
+        const listAtendimento = document.getElementById('list-atendimento');
+        
+        let maskNames = false;
+        let pautaRooms = [];
+
+        function formatName(name) {
+            if (!maskNames) return name;
+            const parts = name.split(' ');
+            if (parts.length === 1) return name;
+            return `${parts[0]} ${parts[1].charAt(0)}...`;
+        }
+
+        function createCard(item, isAtendimento = false) {
+            const div = document.createElement('div');
+            const borderColor = isAtendimento ? 'border-green-500' : (item.priority === 'URGENTE' ? 'border-red-500' : 'border-gray-200');
+            const bgColor = isAtendimento ? 'bg-green-50' : 'bg-white';
+            
+            let salaBadge = '';
+            if (item.room) {
+                salaBadge = `<span class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded ml-2 uppercase">${item.room}</span>`;
+            }
+
+            let collabInfo = '';
+            if (isAtendimento && item.assignedCollaborator) {
+                collabInfo = `<p class="text-sm text-gray-600 mt-1">Com: <strong>${item.assignedCollaborator.name}</strong></p>`;
+            }
+
+            div.className = `p-4 rounded-lg border-l-4 shadow-sm ${borderColor} ${bgColor} transition-all`;
+            div.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <h3 class="text-xl font-bold text-gray-800">${formatName(item.name)}</h3>
+                    ${item.priority === 'URGENTE' && !isAtendimento ? '<span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded">URGENTE</span>' : ''}
+                </div>
+                <div class="flex items-center mt-1">
+                    <p class="text-sm text-gray-500 truncate max-w-[200px]">${item.subject}</p>
+                    ${salaBadge}
+                </div>
+                ${collabInfo}
+            `;
+            return div;
+        }
+
+        if (!pautaId) {
+            loading.classList.add('hidden');
+            errorScreen.classList.remove('hidden');
+        } else {
+            // 1. Escutar dados da Pauta (para ver se é pública e pegar configs)
+            onSnapshot(doc(db, "pautas", pautaId), (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    
+                    if (!data.isPublic) {
+                        appContent.classList.add('hidden');
+                        errorScreen.classList.remove('hidden');
+                        loading.classList.add('hidden');
+                        return;
+                    }
+
+                    // Se for pública
+                    errorScreen.classList.add('hidden');
+                    appContent.classList.remove('hidden');
+                    loading.classList.add('hidden');
+
+                    document.getElementById('pauta-title').textContent = data.name;
+                    maskNames = data.maskNames || false;
+                    pautaRooms = data.rooms || [];
+
+                } else {
+                    loading.classList.add('hidden');
+                    errorScreen.classList.remove('hidden');
+                }
+            }, (error) => {
+                console.error(error);
+                loading.classList.add('hidden');
+                errorScreen.classList.remove('hidden');
+            });
+
+            // 2. Escutar os atendimentos em tempo real
+            onSnapshot(collection(db, "pautas", pautaId, "attendances"), (snapshot) => {
+                const allItems = snapshot.docs.map(d => d.data());
+                
+                // Filtrar
+                const aguardando = allItems.filter(i => i.status === 'aguardando');
+                const emAtendimento = allItems.filter(i => i.status === 'emAtendimento');
+
+                // Ordenar Aguardando (Mesma lógica do admin simplificada)
+                aguardando.sort((a, b) => {
+                    if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+                    if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+                    const timeA = a.arrivalTime ? new Date(a.arrivalTime) : new Date(a.createdAt);
+                    const timeB = b.arrivalTime ? new Date(b.arrivalTime) : new Date(b.createdAt);
+                    return timeA - timeB;
+                });
+
+                // Ordenar Em Atendimento (Mais recente primeiro)
+                emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
+
+                // Renderizar
+                document.getElementById('count-aguardando').textContent = aguardando.length;
+                document.getElementById('count-atendimento').textContent = emAtendimento.length;
+                document.getElementById('last-update').textContent = `Atualizado às ${new Date().toLocaleTimeString()}`;
+
+                listAguardando.innerHTML = '';
+                listAtendimento.innerHTML = '';
+
+                // Se houver salas, agrupar aguardando por salas (visualização melhor)
+                if (pautaRooms.length > 0) {
+                    pautaRooms.forEach(room => {
+                        const inRoom = aguardando.filter(x => x.room === room);
+                        if(inRoom.length > 0) {
+                            const header = document.createElement('div');
+                            header.className = "text-sm font-bold text-gray-500 uppercase tracking-wider mt-2 mb-1 px-1";
+                            header.textContent = room;
+                            listAguardando.appendChild(header);
+                            inRoom.forEach(item => listAguardando.appendChild(createCard(item)));
+                        }
+                    });
+                    // Sem sala
+                    const noRoom = aguardando.filter(x => !x.room);
+                    if(noRoom.length > 0) {
+                        const header = document.createElement('div');
+                        header.className = "text-sm font-bold text-gray-500 uppercase tracking-wider mt-2 mb-1 px-1";
+                        header.textContent = "Geral";
+                        listAguardando.appendChild(header);
+                        noRoom.forEach(item => listAguardando.appendChild(createCard(item)));
+                    }
+                } else {
+                    aguardando.forEach(item => listAguardando.appendChild(createCard(item)));
+                }
+
+                emAtendimento.forEach(item => listAtendimento.appendChild(createCard(item, true)));
+
+            });
+        }
+    </script>
+</body>
+</html>
