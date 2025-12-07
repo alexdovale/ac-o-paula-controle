@@ -7,7 +7,12 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }</style>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        /* Animação suave para o modal */
+        .modal-enter { animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen flex flex-col">
 
@@ -17,7 +22,7 @@
         <p class="mt-4 text-gray-600">Carregando pauta...</p>
     </div>
 
-    <!-- Tela de Erro (Privada ou Inexistente) -->
+    <!-- Tela de Erro -->
     <div id="error-screen" class="hidden fixed inset-0 bg-gray-100 flex flex-col items-center justify-center text-center p-4">
         <div class="bg-white p-8 rounded-xl shadow-lg max-w-md">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -34,7 +39,6 @@
         <!-- CABEÇALHO -->
         <header class="mb-6 bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4">
             
-            <!-- Título e Status -->
             <div class="text-center md:text-left">
                 <h1 id="pauta-title" class="text-2xl md:text-3xl font-bold text-gray-800"></h1>
                 <div class="flex items-center justify-center md:justify-start gap-2 mt-1">
@@ -46,21 +50,23 @@
                 </div>
             </div>
 
-            <!-- NOVO: Contador de Atendidos -->
-            <div class="bg-blue-50 border border-blue-100 px-6 py-3 rounded-lg flex flex-col items-center justify-center shadow-sm min-w-[150px]">
-                <span class="text-xs font-bold text-blue-400 uppercase tracking-wider">Total Atendidos</span>
+            <!-- Botão Total Atendidos (Clicável) -->
+            <button id="open-atendidos-btn" class="group bg-blue-50 hover:bg-blue-100 border border-blue-100 transition-all px-6 py-3 rounded-lg flex flex-col items-center justify-center shadow-sm min-w-[150px] cursor-pointer">
+                <div class="flex items-center gap-1">
+                    <span class="text-xs font-bold text-blue-400 uppercase tracking-wider group-hover:text-blue-600">Total Atendidos</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-blue-400 group-hover:text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                </div>
                 <span id="total-atendidos-count" class="text-3xl font-bold text-blue-700 leading-none mt-1">0</span>
-            </div>
+            </button>
 
-            <!-- Hora da Última Atualização -->
             <div id="last-update" class="text-xs text-gray-400 font-mono"></div>
         </header>
 
-        <!-- COLUNAS -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
+        <!-- GRID PRINCIPAL -->
+        <div id="main-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0 transition-all duration-300">
             
             <!-- Coluna Aguardando -->
-            <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-[65vh] lg:h-[75vh]">
+            <div id="col-aguardando" class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-[65vh] lg:h-[75vh]">
                 <div class="bg-yellow-500 p-4 text-white shadow-sm z-10 flex justify-between items-center">
                     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -68,13 +74,11 @@
                     </h2>
                     <span id="count-aguardando" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 px-3 py-1 rounded-full text-lg font-bold">0</span>
                 </div>
-                <div id="list-aguardando" class="p-4 overflow-y-auto flex-1 space-y-3 bg-gray-50">
-                    <!-- Cards inseridos via JS -->
-                </div>
+                <div id="list-aguardando" class="p-4 overflow-y-auto flex-1 space-y-3 bg-gray-50"></div>
             </div>
 
-            <!-- Coluna Em Atendimento -->
-            <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-[65vh] lg:h-[75vh]">
+            <!-- Coluna Em Atendimento (Pode ser escondida) -->
+            <div id="col-atendimento" class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-[65vh] lg:h-[75vh]">
                 <div class="bg-green-600 p-4 text-white shadow-sm z-10 flex justify-between items-center">
                     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
@@ -82,11 +86,40 @@
                     </h2>
                     <span id="count-atendimento" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 px-3 py-1 rounded-full text-lg font-bold">0</span>
                 </div>
-                <div id="list-atendimento" class="p-4 overflow-y-auto flex-1 space-y-3 bg-gray-50">
-                    <!-- Cards inseridos via JS -->
-                </div>
+                <div id="list-atendimento" class="p-4 overflow-y-auto flex-1 space-y-3 bg-gray-50"></div>
             </div>
 
+        </div>
+    </div>
+
+    <!-- MODAL DE LISTA DE ATENDIDOS -->
+    <div id="atendidos-modal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl modal-enter flex flex-col max-h-[85vh]">
+            <!-- Header Modal -->
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-blue-50 rounded-t-2xl">
+                <div class="flex items-center gap-3">
+                    <div class="bg-blue-100 p-2 rounded-lg text-blue-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">Histórico de Atendidos</h2>
+                        <p class="text-xs text-gray-500">Listagem por ordem de finalização</p>
+                    </div>
+                </div>
+                <button id="close-atendidos-btn" class="text-gray-400 hover:text-gray-600 hover:bg-white p-2 rounded-full transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            
+            <!-- Lista Modal -->
+            <div id="list-atendidos-content" class="p-4 overflow-y-auto flex-1 space-y-2 bg-gray-50/50">
+                <p class="text-center text-gray-400 py-4">Nenhum atendimento finalizado ainda.</p>
+            </div>
+
+            <!-- Footer Modal -->
+            <div class="p-4 border-t border-gray-100 bg-white rounded-b-2xl text-right">
+                <button id="close-modal-footer-btn" class="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-colors">Fechar</button>
+            </div>
         </div>
     </div>
 
@@ -100,20 +133,30 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Pegar ID da URL (?id=xyz...)
         const urlParams = new URLSearchParams(window.location.search);
         const pautaId = urlParams.get('id');
 
+        // Elementos DOM
         const loading = document.getElementById('loading');
         const errorScreen = document.getElementById('error-screen');
         const appContent = document.getElementById('app-content');
         const listAguardando = document.getElementById('list-aguardando');
         const listAtendimento = document.getElementById('list-atendimento');
+        const mainGrid = document.getElementById('main-grid');
+        const colAtendimento = document.getElementById('col-atendimento');
         
+        // Modal
+        const modal = document.getElementById('atendidos-modal');
+        const listAtendidosContent = document.getElementById('list-atendidos-content');
+        const openModalBtn = document.getElementById('open-atendidos-btn');
+        const closeModalBtn = document.getElementById('close-atendidos-btn');
+        const closeModalFooterBtn = document.getElementById('close-modal-footer-btn');
+
         let maskNames = false;
         let pautaRooms = [];
+        let globalAtendidosList = []; // Para guardar a lista e renderizar no modal
 
-        // Função para ocultar sobrenomes (João da Silva -> João D...)
+        // Função para formatar nome
         function formatName(name) {
             if (!maskNames || !name) return name;
             const parts = name.trim().split(' ');
@@ -121,34 +164,17 @@
             return `${parts[0]} ${parts[parts.length - 1].charAt(0)}...`; 
         }
 
-        // Função para criar o Card Visual
+        // Função para criar card (Aguardando / Em Atendimento)
         function createCard(item, isAtendimento = false) {
             const div = document.createElement('div');
+            let borderColor = isAtendimento ? 'border-l-4 border-green-500' : (item.priority === 'URGENTE' ? 'border-l-4 border-red-500' : 'border-l-4 border-gray-300');
+            let bgColor = isAtendimento ? 'bg-green-50' : (item.priority === 'URGENTE' ? 'bg-red-50' : 'bg-white');
             
-            // Estilos visuais
-            let borderColor = 'border-l-4 border-gray-300';
-            let bgColor = 'bg-white';
+            let salaBadge = item.room ? `<span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded ml-auto uppercase tracking-wide border border-blue-200">📍 ${item.room}</span>` : '';
             
-            if (isAtendimento) {
-                borderColor = 'border-l-4 border-green-500';
-                bgColor = 'bg-green-50';
-            } else if (item.priority === 'URGENTE') {
-                borderColor = 'border-l-4 border-red-500';
-                bgColor = 'bg-red-50';
-            }
-
-            let salaBadge = '';
-            if (item.room) {
-                salaBadge = `<span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded ml-auto uppercase tracking-wide border border-blue-200">📍 ${item.room}</span>`;
-            }
-
             let collabInfo = '';
             if (isAtendimento && item.assignedCollaborator) {
-                collabInfo = `
-                    <div class="mt-2 pt-2 border-t border-green-200 flex items-center text-sm text-green-800">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                        <span class="font-semibold">${item.assignedCollaborator.name}</span>
-                    </div>`;
+                collabInfo = `<div class="mt-2 pt-2 border-t border-green-200 flex items-center text-sm text-green-800"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg><span class="font-semibold">${item.assignedCollaborator.name}</span></div>`;
             }
 
             div.className = `p-4 rounded-lg shadow-sm ${borderColor} ${bgColor} transition-all hover:shadow-md`;
@@ -157,7 +183,6 @@
                     <h3 class="text-lg font-bold text-gray-800 break-words leading-tight">${formatName(item.name)}</h3>
                     ${item.priority === 'URGENTE' && !isAtendimento ? '<span class="shrink-0 bg-red-100 text-red-700 text-[10px] font-extrabold px-2 py-1 rounded border border-red-200 animate-pulse">URGENTE</span>' : ''}
                 </div>
-                
                 <div class="flex items-center justify-between mt-1">
                     <p class="text-sm text-gray-500 truncate mr-2" title="${item.subject || ''}">${item.subject || 'Sem assunto'}</p>
                     ${salaBadge}
@@ -167,23 +192,71 @@
             return div;
         }
 
-        // Lógica Principal
+        // Função para criar card do Modal (Atendidos)
+        function createAtendidoRow(item, index) {
+            const div = document.createElement('div');
+            div.className = "bg-white p-3 rounded-lg border border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 hover:bg-blue-50 transition-colors";
+            
+            const timeStr = item.attendedTime ? new Date(item.attendedTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
+            const attendant = typeof item.attendant === 'object' && item.attendant ? item.attendant.nome : (item.attendant || 'N/A');
+
+            div.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <span class="bg-gray-100 text-gray-600 font-mono text-xs px-2 py-1 rounded-md border border-gray-300">#${index}</span>
+                    <div>
+                        <p class="font-bold text-gray-800">${formatName(item.name)}</p>
+                        <p class="text-xs text-gray-500">${item.subject || 'Sem assunto'}</p>
+                    </div>
+                </div>
+                <div class="text-right flex flex-col sm:items-end w-full sm:w-auto mt-2 sm:mt-0 pl-9 sm:pl-0">
+                    <span class="text-sm font-semibold text-green-700 flex items-center gap-1 sm:justify-end">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                        ${timeStr}
+                    </span>
+                    <span class="text-xs text-gray-400">Por: ${attendant}</span>
+                </div>
+            `;
+            return div;
+        }
+
+        // Renderiza o modal
+        function renderModal() {
+            listAtendidosContent.innerHTML = '';
+            if (globalAtendidosList.length === 0) {
+                listAtendidosContent.innerHTML = '<div class="flex flex-col items-center justify-center py-10 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg><p>Nenhum atendimento finalizado.</p></div>';
+                return;
+            }
+            // Inverte para mostrar os últimos primeiro
+            globalAtendidosList.forEach((item, index) => {
+                // O índice visual é invertido (o mais recente é o número maior) ou sequencial, depende da preferência.
+                // Aqui vamos mostrar sequencial baseado na lista ordenada (Recentes no topo)
+                listAtendidosContent.appendChild(createAtendidoRow(item, globalAtendidosList.length - index));
+            });
+        }
+
+        // Eventos do Modal
+        openModalBtn.addEventListener('click', () => { renderModal(); modal.classList.remove('hidden'); });
+        const closeModal = () => modal.classList.add('hidden');
+        closeModalBtn.addEventListener('click', closeModal);
+        closeModalFooterBtn.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
+
+
+        // Inicialização
         if (!pautaId) {
             loading.classList.add('hidden');
             errorScreen.classList.remove('hidden');
         } else {
-            // 1. Monitorar configurações da Pauta
+            // 1. Pauta Info
             onSnapshot(doc(db, "pautas", pautaId), (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    
                     if (!data.isPublic) {
                         appContent.classList.add('hidden');
                         errorScreen.classList.remove('hidden');
                         loading.classList.add('hidden');
                         return;
                     }
-
                     errorScreen.classList.add('hidden');
                     appContent.classList.remove('hidden');
                     loading.classList.add('hidden');
@@ -192,26 +265,41 @@
                     maskNames = data.maskNames || false;
                     pautaRooms = data.rooms || [];
 
+                    // --- LÓGICA DE VISIBILIDADE DAS COLUNAS ---
+                    if (data.useDelegationFlow) {
+                        // Modo com Delegação: Mostra as duas colunas
+                        colAtendimento.classList.remove('hidden');
+                        mainGrid.classList.remove('grid-cols-1');
+                        mainGrid.classList.add('lg:grid-cols-2');
+                    } else {
+                        // Modo Direto: Esconde "Em Atendimento", "Aguardando" ocupa tudo
+                        colAtendimento.classList.add('hidden');
+                        mainGrid.classList.remove('lg:grid-cols-2');
+                        mainGrid.classList.add('grid-cols-1');
+                    }
+
                 } else {
                     loading.classList.add('hidden');
                     errorScreen.classList.remove('hidden');
                 }
             }, (error) => {
-                console.error("Erro ao carregar pauta:", error);
+                console.error(error);
                 loading.classList.add('hidden');
                 errorScreen.classList.remove('hidden');
             });
 
-            // 2. Monitorar a Lista de Atendimentos
+            // 2. Atendimentos
             onSnapshot(collection(db, "pautas", pautaId, "attendances"), (snapshot) => {
                 const allItems = snapshot.docs.map(d => d.data());
                 
-                // Filtros
                 const aguardando = allItems.filter(i => i.status === 'aguardando');
                 const emAtendimento = allItems.filter(i => i.status === 'emAtendimento');
-                const atendidos = allItems.filter(i => i.status === 'atendido'); // NOVO: Filtro para atendidos
+                const atendidos = allItems.filter(i => i.status === 'atendido');
 
-                // Ordenação Inteligente (Aguardando)
+                // Atualizar Global List para o Modal (Ordenado por hora de fim desc)
+                globalAtendidosList = atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
+
+                // Ordenação Aguardando
                 aguardando.sort((a, b) => {
                     if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
                     if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
@@ -220,23 +308,20 @@
                     return timeA - timeB;
                 });
 
-                // Ordenação (Em Atendimento)
+                // Ordenação Em Atendimento
                 emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
 
-                // Atualizar Contadores
+                // Counters
                 document.getElementById('count-aguardando').textContent = aguardando.length;
                 document.getElementById('count-atendimento').textContent = emAtendimento.length;
-                
-                // NOVO: Atualizar contador de Atendidos
                 document.getElementById('total-atendidos-count').textContent = atendidos.length;
-
                 document.getElementById('last-update').textContent = `Atualizado às ${new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}`;
 
-                // Renderizar Listas
+                // Renders
                 listAguardando.innerHTML = '';
                 listAtendimento.innerHTML = '';
 
-                // Agrupamento por Sala
+                // Render Aguardando
                 if (pautaRooms.length > 0) {
                     pautaRooms.forEach(room => {
                         const inRoom = aguardando.filter(x => x.room === room);
@@ -248,7 +333,6 @@
                             inRoom.forEach(item => listAguardando.appendChild(createCard(item)));
                         }
                     });
-
                     const noRoom = aguardando.filter(x => !x.room || !pautaRooms.includes(x.room));
                     if(noRoom.length > 0) {
                         const header = document.createElement('div');
@@ -257,25 +341,15 @@
                         listAguardando.appendChild(header);
                         noRoom.forEach(item => listAguardando.appendChild(createCard(item)));
                     }
-                    
-                    if (aguardando.length === 0) {
-                        listAguardando.innerHTML = '<div class="text-center text-gray-400 mt-10 py-10">Ninguém aguardando no momento.</div>';
-                    }
-
+                    if (aguardando.length === 0) listAguardando.innerHTML = '<div class="text-center text-gray-400 mt-10 py-10">Ninguém aguardando no momento.</div>';
                 } else {
-                    if (aguardando.length === 0) {
-                        listAguardando.innerHTML = '<div class="text-center text-gray-400 mt-10 py-10">Ninguém aguardando no momento.</div>';
-                    } else {
-                        aguardando.forEach(item => listAguardando.appendChild(createCard(item)));
-                    }
+                    if (aguardando.length === 0) listAguardando.innerHTML = '<div class="text-center text-gray-400 mt-10 py-10">Ninguém aguardando no momento.</div>';
+                    else aguardando.forEach(item => listAguardando.appendChild(createCard(item)));
                 }
 
-                if (emAtendimento.length === 0) {
-                    listAtendimento.innerHTML = '<div class="text-center text-gray-400 mt-10 py-10">Nenhum atendimento em andamento.</div>';
-                } else {
-                    emAtendimento.forEach(item => listAtendimento.appendChild(createCard(item, true)));
-                }
-
+                // Render Em Atendimento
+                if (emAtendimento.length === 0) listAtendimento.innerHTML = '<div class="text-center text-gray-400 mt-10 py-10">Nenhum atendimento em andamento.</div>';
+                else emAtendimento.forEach(item => listAtendimento.appendChild(createCard(item, true)));
             });
         }
     </script>
