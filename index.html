@@ -146,6 +146,12 @@
                     <div class="relative flex items-center">
                         <!-- MENU DE AÇÕES ATUALIZADO -->
                         <div id="actions-panel" class="absolute top-full right-0 mt-2 w-64 p-2 bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-200 ease-out transform origin-top-right opacity-0 scale-95 pointer-events-none z-20 space-y-1">
+
+                            <button id="share-pauta-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-pink-700 bg-pink-100 rounded-lg hover:bg-pink-200 transition-colors whitespace-nowrap">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                                <span>Compartilhamento Externo</span>
+                            </button>
+
                             
                             <button id="view-stats-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-cyan-700 bg-cyan-100 rounded-lg hover:bg-cyan-200 transition-colors whitespace-nowrap">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-cyan-500"><path d="M3 3v18h18"/><path d="M18.7 8a6 6 0 0 0-8.4 0L3 15.6V21h5.4l7.3-7.3Z"/></svg>
@@ -320,20 +326,6 @@
                     <div id="em-atendimento-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
                 <!-- Fim da Nova Coluna: Em Atendimento -->
-
-                <!-- NOVA COLUNA: AGUARDANDO DISTRIBUIÇÃO -->
-                <div id="distribuicao-column" class="bg-white rounded-lg shadow-md flex flex-col hidden">
-                    <div class="p-4 border-b border-gray-200 bg-cyan-50 rounded-t-lg">
-                        <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
-                            <span>⚖️ Aguardando Distribuição</span>
-                            <span id="distribuicao-count" class="text-base font-normal bg-white text-gray-700 px-2 rounded-full border">0</span>
-                        </h3>
-                        <input type="search" id="distribuicao-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-cyan-500">
-                    </div>
-                    <div id="distribuicao-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
-                </div>
-                <!-- Fim da Nova Coluna -->
-
                 <div id="atendidos-column" class="bg-white rounded-lg shadow-md flex flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <div class="flex justify-between items-center mb-3">
@@ -497,45 +489,69 @@
         </div>
     </div>
 
-    <!-- MODAL: Fluxo de Delegação (ATUALIZADO) -->
+<!-- Modal de Compartilhamento Externo -->
+<div id="share-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+        <h2 class="text-2xl font-bold mb-4 text-gray-800">Compartilhamento Externo</h2>
+        <p class="text-gray-600 mb-6 text-sm">Gere um link público para que assistidos e colaboradores vejam a fila em tempo real (apenas leitura).</p>
+        
+        <div class="flex items-center justify-between mb-6 bg-gray-50 p-4 rounded-lg border">
+            <span class="font-medium text-gray-700">Status do Link:</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="share-toggle" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                <span id="share-status-text" class="ml-3 text-sm font-medium text-gray-900">Privado</span>
+            </label>
+        </div>
+
+        <div id="share-link-container" class="hidden space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase">Link Público</label>
+                <div class="flex mt-1">
+                    <input type="text" id="share-link-input" readonly class="w-full p-2 border border-gray-300 rounded-l-lg bg-gray-100 text-sm text-gray-600">
+                    <button id="copy-share-link-btn" class="bg-blue-600 text-white px-4 rounded-r-lg hover:bg-blue-700 font-bold text-sm">Copiar</button>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <input type="checkbox" id="mask-names-check" class="h-4 w-4 text-pink-600 border-gray-300 rounded">
+                <label for="mask-names-check" class="text-sm text-gray-700">Ocultar Sobrenomes (Privacidade/LGPD)</label>
+            </div>
+            
+            <a id="open-external-btn" href="#" target="_blank" class="block w-full text-center py-2 border border-pink-600 text-pink-600 rounded-lg hover:bg-pink-50 font-bold mt-2">
+                Abrir Visualização
+            </a>
+        </div>
+
+        <div class="flex justify-end mt-6">
+            <button id="close-share-modal-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
+        </div>
+    </div>
+</div>
+
+
+    
+    <!-- NOVO MODAL: Fluxo de Delegação -->
     <div id="delegation-flow-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Fluxo de Atendimento</h2>
-            <p class="text-gray-600 mb-6">Como será o encerramento dos atendimentos?</p>
-            
-            <div class="space-y-4">
-                <!-- Opção 1: Delegação (Padrão) -->
-                <div>
-                    <label class="flex items-center p-4 border rounded-t-lg cursor-pointer hover:bg-gray-50 bg-green-50 border-green-200">
-                        <input type="radio" name="useDelegationFlow" value="true" class="h-5 w-5 text-green-600 focus:ring-green-500" checked>
-                        <span class="ml-3">
-                            <span class="font-semibold text-gray-800">Fluxo com Delegação (Colaboradores)</span>
-                            <span class="block text-sm text-gray-500">Cria a coluna "Em Atendimento".</span>
-                        </span>
-                    </label>
-                    
-                    <!-- SUB-OPÇÃO: Distribuição (Só aparece se Delegação estiver marcada) -->
-                    <div id="distribution-option-container" class="p-4 border-x border-b rounded-b-lg bg-white ml-8 border-t-0">
-                        <label class="flex items-start space-x-3 cursor-pointer">
-                            <input type="checkbox" id="check-use-distribution" class="h-5 w-5 text-cyan-600 focus:ring-cyan-500 rounded mt-1">
-                            <div class="flex-1">
-                                <span class="font-semibold text-gray-700 block">Habilitar Fila de Distribuição?</span>
-                                <span class="text-xs text-gray-500">Adiciona a coluna "Aguardando Distribuição" para processos que precisam de assinatura/protocolo antes de finalizar.</span>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Opção 2: Finalizar Direto -->
+            <p class="text-gray-600 mb-6">Deseja utilizar a coluna "Em Atendimento" para delegar a finalização a um colaborador?</p>
+            <div class="space-y-3">
+                <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="radio" name="useDelegationFlow" value="true" class="h-5 w-5 text-green-600 focus:ring-green-500" checked>
+                    <span class="ml-3">
+                        <span class="font-semibold text-gray-800">Sim, usar fluxo de delegação</span>
+                        <span class="block text-sm text-gray-500">Permite atribuir e delegar a finalização para outro colaborador.</span>
+                    </span>
+                </label>
                 <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
                     <input type="radio" name="useDelegationFlow" value="false" class="h-5 w-5 text-red-600 focus:ring-red-500">
                     <span class="ml-3">
-                        <span class="font-semibold text-gray-800">Finalizar Diretamente</span>
-                        <span class="block text-sm text-gray-500">Do "Aguardando" vai direto para "Atendidos".</span>
+                        <span class="font-semibold text-gray-800">Não, finalizar diretamente</span>
+                        <span class="block text-sm text-gray-500">Pular a coluna "Em Atendimento", indo direto para "Atendidos".</span>
                     </span>
                 </label>
             </div>
-
             <div class="flex justify-end space-x-4 mt-6">
                 <button id="cancel-delegation-flow-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Voltar</button>
                 <button id="confirm-create-pauta-final-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Criar Pauta</button>
@@ -543,24 +559,6 @@
         </div>
     </div>
     <!-- FIM NOVO MODAL -->
-
-    <!-- Modal de Conclusão de Distribuição -->
-    <div id="distribution-finish-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-            <h2 class="text-2xl font-bold mb-4 text-cyan-800">Concluir Distribuição</h2>
-            <p class="mb-4 text-gray-600">O processo foi distribuído. Por favor, insira o número (opcional).</p>
-            
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700">Número do Processo</label>
-                <input type="text" id="dist-process-number" placeholder="0000.00.00.0000" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500">
-            </div>
-
-            <div class="flex justify-end space-x-4">
-                <button id="cancel-dist-finish-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-400">Cancelar</button>
-                <button id="confirm-dist-finish-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700">Salvar e Finalizar</button>
-            </div>
-        </div>
-    </div>
 
     <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh;">
@@ -1465,25 +1463,21 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const pautaList = document.getElementById('pauta-list');
             const aguardandoList = document.getElementById('aguardando-list');
             const emAtendimentoList = document.getElementById('em-atendimento-list');
-            const distribuicaoList = document.getElementById('distribuicao-list'); // Lista de Distribuição
             const atendidosList = document.getElementById('atendidos-list');
             const faltososList = document.getElementById('faltosos-list');
-            
-            [pautaList, aguardandoList, emAtendimentoList, distribuicaoList, atendidosList, faltososList].forEach(el => el.innerHTML = '');
+            [pautaList, aguardandoList, emAtendimentoList, atendidosList, faltososList].forEach(el => el.innerHTML = '');
 
             const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
 
             const pautaSearchTerm = normalizeText(document.getElementById('pauta-search').value);
             const aguardandoSearchTerm = normalizeText(document.getElementById('aguardando-search').value);
             const emAtendimentoSearchTerm = normalizeText(document.getElementById('em-atendimento-search').value);
-            const distribuicaoSearchTerm = normalizeText(document.getElementById('distribuicao-search').value);
             const atendidosSearchTerm = normalizeText(document.getElementById('atendidos-search').value);
             const faltososSearchTerm = normalizeText(document.getElementById('faltosos-search').value);
 
             const pauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && searchFilter(a, pautaSearchTerm));
             const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm));
             const emAtendimento = allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode && searchFilter(a, emAtendimentoSearchTerm));
-            const distribuicao = allAssisted.filter(a => a.status === 'aguardando_distribuicao' && a.type === currentMode && searchFilter(a, distribuicaoSearchTerm));
             const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && searchFilter(a, atendidosSearchTerm));
             const faltosos = allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento' && searchFilter(a, faltososSearchTerm));
 
@@ -1532,7 +1526,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             document.getElementById('pauta-count').textContent = pauta.length;
             document.getElementById('aguardando-count').textContent = aguardando.length;
             document.getElementById('em-atendimento-count').textContent = emAtendimento.length;
-            document.getElementById('distribuicao-count').textContent = distribuicao.length;
             document.getElementById('faltosos-count').textContent = faltosos.length;
             document.getElementById('atendidos-count').textContent = atendidos.length;
 
@@ -1622,16 +1615,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 card.className = `relative bg-purple-50 p-4 rounded-lg shadow-sm border-purple-200`;
                 const inAttendanceTime = new Date(a.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 const assignedCollabText = a.assignedCollaborator?.name ? `Colaborador: <strong>${a.assignedCollaborator.name}</strong>` : 'Colaborador: Não atribuído';
-                
-                // Verifica se a pauta atual usa distribuição
-                const showDistBtn = currentPautaData?.useDistribution; 
-
-                const distributionBtnHTML = showDistBtn ? `
-                    <button data-id="${a.id}" class="send-to-distribution-btn bg-cyan-600 text-white font-semibold py-2 px-3 rounded-lg hover:bg-cyan-700 flex justify-center items-center gap-2">
-                        <span>📝</span> Enviar p/ Assinatura e Distribuição
-                    </button>
-                ` : '';
-
                 card.innerHTML = `
                     <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
                     <p class="font-bold text-lg">${index + 1}. ${a.name}</p>
@@ -1639,66 +1622,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
                     <p class="text-sm">${assignedCollabText}</p>
                     <p class="text-sm text-gray-500">Início: ${inAttendanceTime}</p>
-                    <div class="mt-3 grid grid-cols-1 gap-2 text-sm">
+                    <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
                         <button data-id="${a.id}" data-name="${a.name}" data-collaborator-name="${a.assignedCollaborator?.name || 'Não informado'}" data-collaborator-id="${a.assignedCollaborator?.id || ''}" class="delegate-finalization-btn bg-indigo-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-indigo-600">Delegar Finalização</button>
-                        
                         <button data-id="${a.id}" data-name="${a.name}" data-collaborator-name="${a.assignedCollaborator?.name || 'Não informado'}" class="attend-directly-btn bg-green-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-600">Finalizar Diretamente</button>
-                        
-                        ${distributionBtnHTML}
-
                         <button data-id="${a.id}" class="return-to-aguardando-from-emAtendimento-btn col-span-2 bg-gray-400 text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-500">Voltar p/ Aguardando</button>
                     </div>
                     ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
-                `;
-                return card;
-            });
-
-            // Renderização da coluna de Distribuição
-            render(distribuicaoList, distribuicao, (a, index) => {
-                const card = document.createElement('div');
-                
-                const isSigned = a.distributionStatus === 'signed';
-                const cardBg = isSigned ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200';
-                
-                card.className = `relative p-4 rounded-lg shadow-sm border ${cardBg}`;
-
-                const statusBadge = isSigned 
-                    ? `<span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded border border-green-300">📄 PRONTO P/ PROTOCOLO</span>`
-                    : `<span class="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded border border-yellow-300 animate-pulse">✍️ AGUARDANDO ASSINATURA</span>`;
-
-                card.innerHTML = `
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="font-bold text-lg text-gray-800">${index + 1}. ${a.name}</span>
-                    </div>
-                    <div class="mb-2">${statusBadge}</div>
-                    <p class="text-sm text-gray-600">Assunto: <strong>${a.subject}</strong></p>
-                    <p class="text-xs text-gray-500 mt-1">Enviado por: ${a.lastActionBy || '...'}</p>
-                    
-                    <div class="mt-4 space-y-2">
-                        <!-- Botão para enviar link por e-mail específico de distribuição -->
-                        <button data-id="${a.id}" data-name="${a.name}" class="email-dist-link-btn w-full bg-cyan-100 text-cyan-700 font-bold py-2 px-3 rounded hover:bg-cyan-200 text-sm flex justify-center items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4Zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1H2Zm13 2.383-4.708 2.825L15 11.105V5.383Zm-.034 6.876-5.64-3.471L8 9.583l-1.326-.795-5.64 3.47A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.741ZM1 11.105l4.708-2.897L1 5.383v5.722Z"/></svg>
-                            Enviar Link para Colaborador
-                        </button>
-
-                        ${!isSigned ? `
-                            <button data-id="${a.id}" class="mark-signed-btn w-full bg-blue-600 text-white font-bold py-2 px-3 rounded hover:bg-blue-700 text-sm shadow-sm">
-                                Já Assinou? (Marcar Pronto)
-                            </button>
-                        ` : `
-                            <button data-id="${a.id}" class="open-dist-modal-btn w-full bg-green-600 text-white font-bold py-2 px-3 rounded hover:bg-green-700 text-sm shadow-sm flex justify-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5z"/></svg>
-                                Informar Nº Processo e Finalizar
-                            </button>
-                            <button data-id="${a.id}" class="undo-signed-btn w-full text-xs text-gray-500 hover:text-red-500 hover:underline">
-                                Desmarcar assinatura
-                            </button>
-                        `}
-                        
-                        <button data-id="${a.id}" class="return-to-atendimento-btn w-full bg-white border border-gray-300 text-gray-600 font-semibold py-1 px-3 rounded hover:bg-gray-100 text-xs mt-2">
-                            Voltar p/ Atendimento
-                        </button>
-                    </div>
                 `;
                 return card;
             });
@@ -1731,7 +1660,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             <div><strong>Chegou:</strong><br>${a.arrivalTime ? new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</div>
                             <div><strong>Finalizado:</strong><br>${formatTime(a.attendedTime)}</div>
                         </div>
-                        ${a.processNumber ? `<p class="text-sm font-bold text-blue-700 bg-blue-50 p-1 rounded text-center">Processo: ${a.processNumber}</p>` : ''}
                         ${demandasInfo}
                         <div class="flex justify-between items-center mt-2">
                             <p class="text-sm">Por: <strong>${a.attendant || 'Não informado'}</strong></p>
@@ -2568,7 +2496,90 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const actionsToggle = document.getElementById('actions-toggle');
             const actionsPanel = document.getElementById('actions-panel');
             const actionsArrow = document.getElementById('actions-arrow');
-
+            // Referências
+            const shareModal = document.getElementById('share-modal');
+            const shareToggle = document.getElementById('share-toggle');
+            const shareStatusText = document.getElementById('share-status-text');
+            const shareLinkContainer = document.getElementById('share-link-container');
+            const shareLinkInput = document.getElementById('share-link-input');
+            const maskNamesCheck = document.getElementById('mask-names-check');
+            
+            // 1. Abrir Modal
+            document.getElementById('share-pauta-btn').addEventListener('click', () => {
+                if (!currentPautaData) return;
+                
+                shareModal.classList.remove('hidden');
+                
+                // Carregar estado atual
+                const isPublic = currentPautaData.isPublic || false;
+                const maskNames = currentPautaData.maskNames || false;
+                
+                shareToggle.checked = isPublic;
+                maskNamesCheck.checked = maskNames;
+                updateShareUI(isPublic);
+            });
+            
+            // 2. Função Visual
+            function updateShareUI(isPublic) {
+                shareStatusText.textContent = isPublic ? "Público" : "Privado";
+                if (isPublic) {
+                    shareLinkContainer.classList.remove('hidden');
+                    // Gera o link para o arquivo acompanhamento.html
+                    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                    const link = `${baseUrl}/acompanhamento.html?id=${currentPautaId}`;
+                    shareLinkInput.value = link;
+                    document.getElementById('open-external-btn').href = link;
+                } else {
+                    shareLinkContainer.classList.add('hidden');
+                }
+            }
+            
+            // 3. Alternar Público/Privado
+            shareToggle.addEventListener('change', async (e) => {
+                const isPublic = e.target.checked;
+                updateShareUI(isPublic);
+                
+                try {
+                    const pautaRef = doc(db, "pautas", currentPautaId);
+                    await updateDoc(pautaRef, { isPublic: isPublic });
+                    
+                    // Atualiza a variável local
+                    currentPautaData.isPublic = isPublic;
+                    
+                    showNotification(isPublic ? "Link público ativado." : "Link público desativado.");
+                } catch (error) {
+                    console.error(error);
+                    showNotification("Erro ao atualizar status.", "error");
+                    // Reverte visualmente se der erro
+                    e.target.checked = !isPublic;
+                    updateShareUI(!isPublic);
+                }
+            });
+            
+            // 4. Alternar Mascara de Nomes (LGPD)
+            maskNamesCheck.addEventListener('change', async (e) => {
+                const mask = e.target.checked;
+                try {
+                    const pautaRef = doc(db, "pautas", currentPautaId);
+                    await updateDoc(pautaRef, { maskNames: mask });
+                    currentPautaData.maskNames = mask;
+                    showNotification("Configuração de privacidade atualizada.");
+                } catch (error) {
+                    showNotification("Erro ao salvar configuração.", "error");
+                }
+            });
+            
+            // 5. Copiar Link
+            document.getElementById('copy-share-link-btn').addEventListener('click', () => {
+                shareLinkInput.select();
+                document.execCommand('copy');
+                showNotification("Link copiado!", "info");
+            });
+            
+            document.getElementById('close-share-modal-btn').addEventListener('click', () => {
+                shareModal.classList.add('hidden');
+            });
+            
             function showPanel() {
                 if(actionsPanel && actionsArrow) {
                     actionsPanel.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
@@ -2874,43 +2885,24 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
             });
             
-            // Lógica visual do Modal de Criação (Esconder/Mostrar opção de distribuição)
-            document.querySelectorAll('input[name="useDelegationFlow"]').forEach(radio => {
-                radio.addEventListener('change', (e) => {
-                    const distContainer = document.getElementById('distribution-option-container');
-                    if (e.target.value === 'true') {
-                        distContainer.classList.remove('opacity-50', 'pointer-events-none');
-                        document.getElementById('check-use-distribution').disabled = false;
-                    } else {
-                        distContainer.classList.add('opacity-50', 'pointer-events-none');
-                        document.getElementById('check-use-distribution').disabled = true;
-                        document.getElementById('check-use-distribution').checked = false;
-                    }
-                });
-            });
-
-            // Lógica final de criação da pauta
+            // Lógica final de criação da pauta, agora no modal de delegação
             document.getElementById('confirm-create-pauta-final-btn').addEventListener('click', async () => {
                 const pautaName = document.getElementById('create-pauta-name-input').value.trim();
                 const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
                 const ordemAtendimento = document.querySelector('input[name="ordemAtendimento"]:checked').value;
-                const useDelegationFlow = document.querySelector('input[name="useDelegationFlow"]:checked').value === 'true';
-                
-                // --- NOVO: Captura se usa distribuição ---
-                const useDistribution = document.getElementById('check-use-distribution').checked; 
-                
+                const useDelegationFlow = document.querySelector('input[name="useDelegationFlow"]:checked').value === 'true'; // Novo campo
                 const user = auth.currentUser;
                 
                 if (!user) {
-                    showNotification("Você precisa estar logado.", "error");
+                    showNotification("Você precisa estar logado para criar uma pauta.", "error");
                     return;
                 }
                 
-                // Lógica de Salas (mantida)
+                // Lógica para salas
                 let pautaRooms = [];
                 if (pautaType === 'multisala') {
                     if (customRoomsList.length === 0) {
-                        showNotification("Adicione ao menos uma sala.", "error");
+                        showNotification("Por favor, adicione pelo menos um local/sala.", "error");
                         return;
                     }
                     pautaRooms = [...customRoomsList];
@@ -2921,21 +2913,20 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         name: pautaName,
                         type: pautaType,
                         ordemAtendimento: ordemAtendimento,
-                        useDelegationFlow: useDelegationFlow,
-                        useDistribution: useDistribution, // <--- SALVANDO NO BANCO
+                        useDelegationFlow: useDelegationFlow, // Salva a escolha
                         owner: user.uid,
                         ownerEmail: user.email,
                         members: [user.uid],
                         memberEmails: [user.email],
                         isClosed: false,
                         createdAt: new Date().toISOString(),
-                        rooms: pautaRooms
+                        rooms: pautaRooms // Salva as salas
                     });
                     showNotification("Pauta criada com sucesso!");
                     document.getElementById('create-pauta-name-input').value = '';
-                    document.getElementById('delegation-flow-modal').classList.add('hidden');
+                    document.getElementById('delegation-flow-modal').classList.add('hidden'); // Fecha o modal final
                 } catch (error) {
-                    console.error("Erro:", error);
+                    console.error("Error creating pauta:", error);
                     showNotification("Erro ao criar pauta.", "error");
                 }
             });
@@ -3391,22 +3382,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         const assignedCollab = colaboradores.find(c => c.id === assignedCollabId);
                         document.getElementById('collaborator-email-input').value = assignedCollab?.email || ''; // Preenche se encontrar, senão vazio
 
-                        // Define que é um link padrão
-                        document.getElementById('send-delegate-email-btn').dataset.type = 'standard';
                         document.getElementById('delegate-email-modal').classList.remove('hidden');
-                    }
-
-                    // --- NOVO: Listener para abrir o modal de e-mail com o link de DISTRIBUIÇÃO ---
-                    if (button.classList.contains('email-dist-link-btn')) {
-                        assistedIdForDelegation = id;
-                        assistedNameForDelegation = button.dataset.name;
-                        
-                        // Configura o modal de e-mail para usar o link de distribuição
-                        document.getElementById('delegate-assisted-name').textContent = assistedNameForDelegation;
-                        document.getElementById('delegate-email-modal').classList.remove('hidden');
-                        
-                        // IMPORTANTE: Precisamos sinalizar que é um link de DISTRIBUIÇÃO
-                        document.getElementById('send-delegate-email-btn').dataset.type = 'distribution';
                     }
 
                     // Lógica para o botão 'Finalizar Diretamente' na coluna 'Em Atendimento'
@@ -3429,48 +3405,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (button.classList.contains('return-to-pauta-from-faltoso-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'pauta' })); showNotification("Revertido para a pauta."); }
                     if (button.classList.contains('return-to-aguardando-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', attendant: null, attendedTime: null, assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
                     if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
-                    
-                    // --- NOVAS AÇÕES DA COLUNA DISTRIBUIÇÃO ---
-                    
-                    // 1. Enviar de "Em Atendimento" para "Aguardando Distribuição"
-                    if (button.classList.contains('send-to-distribution-btn')) {
-                        await updateDoc(doc(collectionRef, id), getUpdatePayload({ 
-                            status: 'aguardando_distribuicao',
-                            distributionStatus: 'pending_signature', // Começa pendente de assinatura
-                            distributionStartTime: new Date().toISOString()
-                        }));
-                        showNotification("Enviado para fila de assinatura/distribuição.");
-                    }
-
-                    // 2. Marcar que o assistido ASSINOU (Muda o card de amarelo para verde)
-                    if (button.classList.contains('mark-signed-btn')) {
-                        await updateDoc(doc(collectionRef, id), getUpdatePayload({ 
-                            distributionStatus: 'signed' 
-                        }));
-                        showNotification("Marcado como Pronto para Protocolo.");
-                    }
-
-                    // 3. Desmarcar assinatura (caso tenha clicado errado)
-                    if (button.classList.contains('undo-signed-btn')) {
-                        await updateDoc(doc(collectionRef, id), getUpdatePayload({ 
-                            distributionStatus: 'pending_signature' 
-                        }));
-                    }
-
-                    // 4. Abrir Modal para colocar o número do processo
-                    if (button.classList.contains('open-dist-modal-btn')) {
-                        assistedIdToHandle = id; // Salva o ID globalmente
-                        document.getElementById('dist-process-number').value = ''; // Limpa input anterior
-                        document.getElementById('distribution-finish-modal').classList.remove('hidden');
-                    }
-                    
-                    // 5. Retornar de Distribuição para Atendimento
-                    if (button.classList.contains('return-to-atendimento-btn')) {
-                        await updateDoc(doc(collectionRef, id), getUpdatePayload({ 
-                            status: 'emAtendimento' 
-                        }));
-                    }
-
                     if (button.classList.contains('delete-btn')) { if(confirm("Tem certeza que deseja apagar este registro permanentemente?")) { await deleteDoc(docRef); showNotification("Registro apagado."); }}
                     if (button.classList.contains('priority-btn')) { assistedIdToHandle = id; document.getElementById('priority-reason-modal').classList.remove('hidden'); }
                     if (button.classList.contains('unpriority-btn')) { 
@@ -3512,7 +3446,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
 
                     // Lógica para os novos botões de "Confirmado"
-                               // Lógica para os novos botões de "Confirmado"
                     if (button.classList.contains('toggle-confirmed-atendido') || button.classList.contains('toggle-confirmed-faltoso')) {
                         const currentAssisted = allAssisted.find(a => a.id === id);
                         const newConfirmedState = !(currentAssisted.isConfirmed || false); // Inverte o estado
@@ -4236,5 +4169,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
-
-
