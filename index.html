@@ -146,6 +146,12 @@
                     <div class="relative flex items-center">
                         <!-- MENU DE AÇÕES ATUALIZADO -->
                         <div id="actions-panel" class="absolute top-full right-0 mt-2 w-64 p-2 bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-200 ease-out transform origin-top-right opacity-0 scale-95 pointer-events-none z-20 space-y-1">
+
+                            <button id="share-pauta-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-pink-700 bg-pink-100 rounded-lg hover:bg-pink-200 transition-colors whitespace-nowrap">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                                <span>Compartilhamento Externo</span>
+                            </button>
+
                             
                             <button id="view-stats-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-cyan-700 bg-cyan-100 rounded-lg hover:bg-cyan-200 transition-colors whitespace-nowrap">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-cyan-500"><path d="M3 3v18h18"/><path d="M18.7 8a6 6 0 0 0-8.4 0L3 15.6V21h5.4l7.3-7.3Z"/></svg>
@@ -483,6 +489,48 @@
         </div>
     </div>
 
+<!-- Modal de Compartilhamento Externo -->
+<div id="share-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+        <h2 class="text-2xl font-bold mb-4 text-gray-800">Compartilhamento Externo</h2>
+        <p class="text-gray-600 mb-6 text-sm">Gere um link público para que assistidos e colaboradores vejam a fila em tempo real (apenas leitura).</p>
+        
+        <div class="flex items-center justify-between mb-6 bg-gray-50 p-4 rounded-lg border">
+            <span class="font-medium text-gray-700">Status do Link:</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="share-toggle" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                <span id="share-status-text" class="ml-3 text-sm font-medium text-gray-900">Privado</span>
+            </label>
+        </div>
+
+        <div id="share-link-container" class="hidden space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase">Link Público</label>
+                <div class="flex mt-1">
+                    <input type="text" id="share-link-input" readonly class="w-full p-2 border border-gray-300 rounded-l-lg bg-gray-100 text-sm text-gray-600">
+                    <button id="copy-share-link-btn" class="bg-blue-600 text-white px-4 rounded-r-lg hover:bg-blue-700 font-bold text-sm">Copiar</button>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <input type="checkbox" id="mask-names-check" class="h-4 w-4 text-pink-600 border-gray-300 rounded">
+                <label for="mask-names-check" class="text-sm text-gray-700">Ocultar Sobrenomes (Privacidade/LGPD)</label>
+            </div>
+            
+            <a id="open-external-btn" href="#" target="_blank" class="block w-full text-center py-2 border border-pink-600 text-pink-600 rounded-lg hover:bg-pink-50 font-bold mt-2">
+                Abrir Visualização
+            </a>
+        </div>
+
+        <div class="flex justify-end mt-6">
+            <button id="close-share-modal-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
+        </div>
+    </div>
+</div>
+
+
+    
     <!-- NOVO MODAL: Fluxo de Delegação -->
     <div id="delegation-flow-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
@@ -2448,7 +2496,90 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const actionsToggle = document.getElementById('actions-toggle');
             const actionsPanel = document.getElementById('actions-panel');
             const actionsArrow = document.getElementById('actions-arrow');
-
+            // Referências
+            const shareModal = document.getElementById('share-modal');
+            const shareToggle = document.getElementById('share-toggle');
+            const shareStatusText = document.getElementById('share-status-text');
+            const shareLinkContainer = document.getElementById('share-link-container');
+            const shareLinkInput = document.getElementById('share-link-input');
+            const maskNamesCheck = document.getElementById('mask-names-check');
+            
+            // 1. Abrir Modal
+            document.getElementById('share-pauta-btn').addEventListener('click', () => {
+                if (!currentPautaData) return;
+                
+                shareModal.classList.remove('hidden');
+                
+                // Carregar estado atual
+                const isPublic = currentPautaData.isPublic || false;
+                const maskNames = currentPautaData.maskNames || false;
+                
+                shareToggle.checked = isPublic;
+                maskNamesCheck.checked = maskNames;
+                updateShareUI(isPublic);
+            });
+            
+            // 2. Função Visual
+            function updateShareUI(isPublic) {
+                shareStatusText.textContent = isPublic ? "Público" : "Privado";
+                if (isPublic) {
+                    shareLinkContainer.classList.remove('hidden');
+                    // Gera o link para o arquivo acompanhamento.html
+                    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                    const link = `${baseUrl}/acompanhamento.html?id=${currentPautaId}`;
+                    shareLinkInput.value = link;
+                    document.getElementById('open-external-btn').href = link;
+                } else {
+                    shareLinkContainer.classList.add('hidden');
+                }
+            }
+            
+            // 3. Alternar Público/Privado
+            shareToggle.addEventListener('change', async (e) => {
+                const isPublic = e.target.checked;
+                updateShareUI(isPublic);
+                
+                try {
+                    const pautaRef = doc(db, "pautas", currentPautaId);
+                    await updateDoc(pautaRef, { isPublic: isPublic });
+                    
+                    // Atualiza a variável local
+                    currentPautaData.isPublic = isPublic;
+                    
+                    showNotification(isPublic ? "Link público ativado." : "Link público desativado.");
+                } catch (error) {
+                    console.error(error);
+                    showNotification("Erro ao atualizar status.", "error");
+                    // Reverte visualmente se der erro
+                    e.target.checked = !isPublic;
+                    updateShareUI(!isPublic);
+                }
+            });
+            
+            // 4. Alternar Mascara de Nomes (LGPD)
+            maskNamesCheck.addEventListener('change', async (e) => {
+                const mask = e.target.checked;
+                try {
+                    const pautaRef = doc(db, "pautas", currentPautaId);
+                    await updateDoc(pautaRef, { maskNames: mask });
+                    currentPautaData.maskNames = mask;
+                    showNotification("Configuração de privacidade atualizada.");
+                } catch (error) {
+                    showNotification("Erro ao salvar configuração.", "error");
+                }
+            });
+            
+            // 5. Copiar Link
+            document.getElementById('copy-share-link-btn').addEventListener('click', () => {
+                shareLinkInput.select();
+                document.execCommand('copy');
+                showNotification("Link copiado!", "info");
+            });
+            
+            document.getElementById('close-share-modal-btn').addEventListener('click', () => {
+                shareModal.classList.add('hidden');
+            });
+            
             function showPanel() {
                 if(actionsPanel && actionsArrow) {
                     actionsPanel.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
@@ -4038,6 +4169,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
 
