@@ -11,7 +11,7 @@
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .modal-enter { animation: fadeIn 0.2s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        /* Cursor pointer nos cards */
+        /* Cursor pointer nos cards para indicar que são clicáveis */
         .card-interactive { cursor: pointer; }
     </style>
 </head>
@@ -78,7 +78,7 @@
                 <div id="list-aguardando" class="p-4 overflow-y-auto flex-1 space-y-3 bg-gray-50"></div>
             </div>
 
-            <!-- Coluna Em Atendimento (Pode ser escondida) -->
+            <!-- Coluna Em Atendimento (Inclui Aguardando Distribuição) -->
             <div id="col-atendimento" class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-[65vh] lg:h-[75vh]">
                 <div class="bg-green-600 p-4 text-white shadow-sm z-10 flex justify-between items-center">
                     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2">
@@ -114,17 +114,17 @@
                     <div id="modal-service-info" class="hidden">
                         <div class="flex gap-4 mb-3">
                             <div class="bg-blue-50 p-3 rounded-lg flex-1">
-                                <p class="text-xs text-blue-500 uppercase tracking-wide">Qtd. Casos</p>
-                                <p id="modal-qtd" class="text-2xl font-bold text-blue-700">0</p>
+                                <p class="text-xs text-blue-500 uppercase tracking-wide font-bold">Quantidade de Casos</p>
+                                <p id="modal-qtd" class="text-3xl font-bold text-blue-700">0</p>
                             </div>
                         </div>
                         <div>
-                            <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Descrição / Casos</p>
+                            <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Descrição / Observações</p>
                             <div id="modal-details" class="bg-gray-50 p-3 rounded-lg text-sm text-gray-700 whitespace-pre-wrap border border-gray-100 max-h-40 overflow-y-auto">...</div>
                         </div>
                     </div>
 
-                    <div id="modal-no-info" class="text-center py-4 text-gray-400 text-sm italic">
+                    <div id="modal-no-info" class="text-center py-6 text-gray-400 text-sm italic bg-gray-50 rounded-lg">
                         Nenhuma informação adicional registrada pelo servidor.
                     </div>
                 </div>
@@ -132,7 +132,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE LISTA DE ATENDIDOS (EXISTENTE) -->
+    <!-- MODAL DE LISTA DE ATENDIDOS -->
     <div id="atendidos-modal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
         <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl modal-enter flex flex-col max-h-[85vh]">
             <!-- Header Modal -->
@@ -192,8 +192,8 @@
 
         let maskNames = false;
         let pautaRooms = [];
-        let globalAtendidosList = []; // Para guardar a lista e renderizar no modal
-        let allItemsGlobal = []; // Para buscar dados para o modal de detalhes
+        let globalAtendidosList = []; 
+        let allItemsGlobal = []; // Guarda todos os itens para acesso rápido pelo Modal
 
         // Função para formatar nome
         function formatName(name) {
@@ -203,7 +203,7 @@
             return `${parts[0]} ${parts[parts.length - 1].charAt(0)}...`; 
         }
 
-        // Função para abrir modal de detalhes
+        // --- FUNÇÃO PARA ABRIR O MODAL DE DETALHES ---
         window.openDetails = (itemId) => {
             const item = allItemsGlobal.find(i => i.id === itemId);
             if (!item) return;
@@ -214,10 +214,11 @@
             const serviceInfo = document.getElementById('modal-service-info');
             const noInfo = document.getElementById('modal-no-info');
 
+            // Verifica se tem Quantidade ou Detalhes salvos
             if (item.serviceQuantity || item.serviceDetails) {
                 serviceInfo.classList.remove('hidden');
                 noInfo.classList.add('hidden');
-                document.getElementById('modal-qtd').textContent = item.serviceQuantity || '0';
+                document.getElementById('modal-qtd').textContent = item.serviceQuantity || '-';
                 document.getElementById('modal-details').textContent = item.serviceDetails || '-';
             } else {
                 serviceInfo.classList.add('hidden');
@@ -227,13 +228,13 @@
             detailsModal.classList.remove('hidden');
         };
 
+        // Fechar modal de detalhes
         closeDetailsBtn.addEventListener('click', () => {
             detailsModal.classList.add('hidden');
         });
         detailsModal.addEventListener('click', (e) => {
             if (e.target === detailsModal) detailsModal.classList.add('hidden');
         });
-
 
         // Função para criar card (Aguardando / Em Atendimento)
         function createCard(item, isAtendimento = false) {
@@ -248,15 +249,16 @@
                 collabInfo = `<div class="mt-2 pt-2 border-t border-green-200 flex items-center text-sm text-green-800"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg><span class="font-semibold">${item.assignedCollaborator.name}</span></div>`;
             }
 
-            // Badge se tiver detalhes registrados
-            let detailsBadge = (item.serviceQuantity || item.serviceDetails) ? `<span class="text-[10px] bg-cyan-100 text-cyan-800 px-1.5 py-0.5 rounded ml-2 border border-cyan-200" title="Ver detalhes">📝</span>` : '';
+            // Badge visual se houver detalhes registrados
+            let detailsBadge = (item.serviceQuantity || item.serviceDetails) ? `<span class="text-[10px] bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded ml-2 border border-cyan-200 font-semibold" title="Clique para ver detalhes">📝 Ver Detalhes</span>` : '';
 
-            div.className = `card-interactive p-4 rounded-lg shadow-sm ${borderColor} ${bgColor} transition-all hover:shadow-md`;
-            div.onclick = () => window.openDetails(item.id); // Torna clicável
+            // Adiciona classe interativa e evento de clique
+            div.className = `card-interactive p-4 rounded-lg shadow-sm ${borderColor} ${bgColor} transition-all hover:shadow-md hover:-translate-y-1`;
+            div.onclick = () => window.openDetails(item.id);
 
             div.innerHTML = `
                 <div class="flex justify-between items-start mb-1 gap-2">
-                    <h3 class="text-lg font-bold text-gray-800 break-words leading-tight flex items-center">
+                    <h3 class="text-lg font-bold text-gray-800 break-words leading-tight flex flex-wrap items-center gap-2">
                         ${formatName(item.name)}
                         ${detailsBadge}
                     </h3>
@@ -271,11 +273,13 @@
             return div;
         }
 
-        // Função para criar card do Modal (Atendidos)
+        // Função para criar card do Modal (Histórico Atendidos)
         function createAtendidoRow(item, index) {
             const div = document.createElement('div');
             div.className = "bg-white p-3 rounded-lg border border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 hover:bg-blue-50 transition-colors cursor-pointer";
-            div.onclick = () => window.openDetails(item.id); // Torna clicável também no histórico
+            
+            // Torna clicável para ver detalhes também no histórico
+            div.onclick = () => window.openDetails(item.id);
 
             const timeStr = item.attendedTime ? new Date(item.attendedTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
             const attendant = typeof item.attendant === 'object' && item.attendant ? item.attendant.nome : (item.attendant || 'N/A');
@@ -286,7 +290,7 @@
                 <div class="flex items-center gap-3">
                     <span class="bg-gray-100 text-gray-600 font-mono text-xs px-2 py-1 rounded-md border border-gray-300">#${index}</span>
                     <div>
-                        <p class="font-bold text-gray-800 flex items-center gap-1">${formatName(item.name)} ${detailsBadge}</p>
+                        <p class="font-bold text-gray-800 flex items-center gap-2">${formatName(item.name)} <span class="text-xs">${detailsBadge}</span></p>
                         <p class="text-xs text-gray-500">${item.subject || 'Sem assunto'}</p>
                     </div>
                 </div>
@@ -301,7 +305,6 @@
             return div;
         }
 
-        // Renderiza o modal de atendidos
         function renderModal() {
             listAtendidosContent.innerHTML = '';
             if (globalAtendidosList.length === 0) {
@@ -313,7 +316,6 @@
             });
         }
 
-        // Eventos do Modal
         openModalBtn.addEventListener('click', () => { renderModal(); modal.classList.remove('hidden'); });
         const closeModal = () => modal.classList.add('hidden');
         closeModalBtn.addEventListener('click', closeModal);
@@ -345,12 +347,10 @@
 
                     // --- LÓGICA DE VISIBILIDADE DAS COLUNAS ---
                     if (data.useDelegationFlow) {
-                        // Modo com Delegação: Mostra as duas colunas
                         colAtendimento.classList.remove('hidden');
                         mainGrid.classList.remove('grid-cols-1');
                         mainGrid.classList.add('lg:grid-cols-2');
                     } else {
-                        // Modo Direto: Esconde "Em Atendimento", "Aguardando" ocupa tudo
                         colAtendimento.classList.add('hidden');
                         mainGrid.classList.remove('lg:grid-cols-2');
                         mainGrid.classList.add('grid-cols-1');
@@ -369,16 +369,17 @@
             // 2. Atendimentos
             onSnapshot(collection(db, "pautas", pautaId, "attendances"), (snapshot) => {
                 const allItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                allItemsGlobal = allItems; // Salva globalmente para o modal de detalhes
+                allItemsGlobal = allItems; // Salva para o modal
                 
                 const aguardando = allItems.filter(i => i.status === 'aguardando');
-                const emAtendimento = allItems.filter(i => i.status === 'emAtendimento' || i.status === 'aguardando_distribuicao'); // Agrupa distribuição no painel público como "Em Atendimento" para simplificar, ou filtra separado se preferir
+                
+                // Agrupa "Em Atendimento" e "Aguardando Distribuição" na mesma coluna visual
+                const emAtendimento = allItems.filter(i => i.status === 'emAtendimento' || i.status === 'aguardando_distribuicao'); 
+                
                 const atendidos = allItems.filter(i => i.status === 'atendido');
 
-                // Atualizar Global List para o Modal (Ordenado por hora de fim desc)
                 globalAtendidosList = atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
 
-                // Ordenação Aguardando
                 aguardando.sort((a, b) => {
                     if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
                     if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
@@ -387,16 +388,13 @@
                     return timeA - timeB;
                 });
 
-                // Ordenação Em Atendimento
                 emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
 
-                // Counters
                 document.getElementById('count-aguardando').textContent = aguardando.length;
                 document.getElementById('count-atendimento').textContent = emAtendimento.length;
                 document.getElementById('total-atendidos-count').textContent = atendidos.length;
                 document.getElementById('last-update').textContent = `Atualizado às ${new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}`;
 
-                // Renders
                 listAguardando.innerHTML = '';
                 listAtendimento.innerHTML = '';
 
