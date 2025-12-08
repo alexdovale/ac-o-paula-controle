@@ -1,43 +1,50 @@
 /**
  * detalhes.js
  * Gerencia o modal de detalhes, checklist e dados da parte contrária.
+ * Versão: Renda Organizada + PDF Completo + Dados do Réu
  */
 
-// --- 1. CONSTANTES DE DOCUMENTAÇÃO (Listas Padrão) ---
+// --- 1. CONSTANTES DE DOCUMENTAÇÃO ---
 
+// Documentos Básicos (sempre strings simples)
 const BASE_DOCS = [
     'Carteira de Identidade (RG) ou Habilitação (CNH)', 
     'CPF', 
     'Comprovante de Residência (Atualizado - últimos 3 meses)'
 ];
 
-const INCOME_DOCS = [
-    '--- TRABALHADOR FORMAL (CLT / SERVIDOR) ---',
+// Lista de Renda ESTRUTURADA (Objetos para títulos, Strings para documentos)
+const INCOME_DOCS_STRUCTURED = [
+    { type: 'title', text: '1. TRABALHADOR FORMAL (CLT / SERVIDOR)' },
     'Contracheque (3 últimos meses)',
     'Carteira de Trabalho (Física ou Digital - Print das telas)',
     'Extrato Analítico do FGTS',
-    '--- APOSENTADO / PENSIONISTA / BPC-LOAS ---',
-    'Extrato de Pagamento de Benefício (Meu INSS)',
-    'Histórico de Crédito - HISCRE (Meu INSS)',
+
+    { type: 'title', text: '2. APOSENTADO / PENSIONISTA / BPC-LOAS' },
+    'Extrato de Pagamento de Benefício (Portal Meu INSS)',
+    'Histórico de Crédito - HISCRE (Portal Meu INSS)',
     'Extrato bancário da conta onde recebe o benefício',
-    '--- AUTÔNOMO / INFORMAL ---',
+
+    { type: 'title', text: '3. AUTÔNOMO / TRABALHADOR INFORMAL' },
     'Declaração de Hipossuficiência (Próprio Punho - informando média mensal)',
     'Extratos Bancários (3 últimos meses)',
     'Comprovante de Inscrição no CadÚnico',
     'Consulta de Restituição IRPF (Prova de Isenção)',
-    '--- DESEMPREGADO ---',
+
+    { type: 'title', text: '4. DESEMPREGADO' },
     'Carteira de Trabalho (Página da baixa do último emprego)',
     'Comprovante de Seguro-Desemprego (se estiver recebendo)',
     'Declaração de Hipossuficiência (Informando ausência de renda)',
-    'Extrato do CNIS (Meu INSS - prova ausência de vínculo)',
-    '--- PROVAS GERAIS (HIPOSSUFICIÊNCIA) ---',
+    'Extrato do CNIS (Meu INSS - prova ausência de vínculo ativo)',
+
+    { type: 'title', text: '5. PROVAS GERAIS (HIPOSSUFICIÊNCIA)' },
     'Extrato do Bolsa Família',
     'Folha Resumo do CadÚnico',
     'Declaração de IRPF Completa + Recibo (se declarar)'
 ];
 
-// Lista Combinada: Identificação + Renda (Será usada em quase todas as ações)
-const COMMON_DOCS_FULL = [...BASE_DOCS, ...INCOME_DOCS];
+// Combinação para uso nas seções
+const COMMON_DOCS_FULL = [...BASE_DOCS, ...INCOME_DOCS_STRUCTURED];
 
 
 // --- 2. DADOS DOS TIPOS DE AÇÃO ---
@@ -68,16 +75,16 @@ const documentsData = {
     revisional_debito: {
         title: 'Ação Revisional de Débito',
         sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, 
             { title: 'Específicos do Caso', docs: ['Contrato de empréstimo/financiamento', 'Planilha de evolução da dívida', 'Extratos comprovando os descontos'] }
         ]
     },
     exigir_contas: {
         title: 'Ação de Exigir Contas',
         sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, 
             { title: 'Específicos do Caso', docs: ['Documento que prova a gestão de bens pelo réu', 'Provas da recusa em prestar contas'] }
-        ]
+        ] 
     },
 
     // --- FAMÍLIA ---
@@ -107,7 +114,7 @@ const documentsData = {
     divorcio_consensual: {
         title: 'Divórcio Consensual',
         sections: [
-            { title: 'Documentação (Ambos)', docs: ['RG e CPF de ambos', 'Comprovante de Residência de ambos', 'Certidão de Casamento (Atualizada - 90 dias)', ...INCOME_DOCS] },
+            { title: 'Documentação (Ambos)', docs: ['RG e CPF de ambos', 'Comprovante de Residência de ambos', 'Certidão de Casamento (Atualizada - 90 dias)', ...INCOME_DOCS_STRUCTURED] },
             { title: 'Filhos e Bens', docs: ['Certidão de Nascimento dos filhos', 'Documento do Imóvel (RGI ou Compra e Venda)', 'CRLV de Veículos'] }
         ]
     },
@@ -138,14 +145,14 @@ const documentsData = {
     conversao_uniao_homoafetiva: {
         title: 'Conversão de União Estável em Casamento',
         sections: [
-            { title: 'Documentação (Ambos)', docs: ['RG/CPF e Comprovante de Residência de ambos', 'Certidões de Nascimento atualizadas', ...INCOME_DOCS] }
+            { title: 'Documentação (Ambos)', docs: ['RG/CPF e Comprovante de Residência de ambos', 'Certidões de Nascimento atualizadas', ...INCOME_DOCS_STRUCTURED] }
         ]
     },
     guarda: {
         title: 'Ação de Guarda',
         sections: [
             { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Da Criança', docs: ['Certidão de Nascimento', 'Comprovante de matrícula escolar', 'Cartão de vacinação'] },
+            { title: 'Da Criança', docs: ['Certidão de Nascimento', 'Comprovante de matrícula escolar', 'Carteira de vacinação'] },
             { title: 'Do Caso', docs: ['Relatório do Conselho Tutelar (se houver)', 'Provas de maus tratos/negligência da outra parte (se houver)'] }
         ]
     },
@@ -154,7 +161,7 @@ const documentsData = {
         sections: [
             { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
             { title: 'Da Criança', docs: ['Certidão de Nascimento', 'Endereço onde a criança reside'] }
-        ]
+        ] 
     },
     investigacao_paternidade: {
         title: 'Investigação de Paternidade',
@@ -433,6 +440,7 @@ function renderReuForm(actionKey) {
         </div>
         ` : ''}
     `;
+
     return container;
 }
 
@@ -466,6 +474,7 @@ function populateActionSelection() {
         btn.innerHTML = `<span class="font-semibold text-gray-700">${documentsData[key].title}</span>`;
         grid.appendChild(btn);
     });
+
     container.appendChild(grid);
 }
 
@@ -481,24 +490,37 @@ function renderChecklist(actionKey) {
     checklistContainer.innerHTML = '';
     checklistSearch.value = '';
 
-    // 1. Lista de Documentos (Gera HTML da checklist)
+    // 1. Lista de Documentos
     data.sections.forEach((section, sIdx) => {
         const div = document.createElement('div');
         div.innerHTML = `<h4 class="font-bold text-gray-700 mt-4 mb-2 border-b">${section.title}</h4>`;
         const ul = document.createElement('ul');
         ul.className = 'space-y-2';
         
-        section.docs.forEach((docName, dIdx) => {
+        section.docs.forEach((docItem, dIdx) => {
             const li = document.createElement('li');
-            const id = `doc-${actionKey}-${sIdx}-${dIdx}`;
-            const isChecked = saved?.checkedIds?.includes(id) ? 'checked' : '';
             
-            li.innerHTML = `
-                <label class="flex items-center cursor-pointer">
-                    <input type="checkbox" id="${id}" class="h-5 w-5 text-green-600 rounded border-gray-300 mr-2" ${isChecked}>
-                    <span class="text-sm">${docName}</span>
-                </label>
-            `;
+            // VERIFICAÇÃO DE TIPO: Se for objeto com 'type: title', é título. Se for string, é doc.
+            if (typeof docItem === 'object' && docItem.type === 'title') {
+                // Renderiza Título de Categoria (sem checkbox)
+                li.innerHTML = `
+                    <div class="font-bold text-blue-700 text-sm mt-3 mb-1 bg-blue-50 p-1 rounded">
+                        ${docItem.text}
+                    </div>
+                `;
+            } else {
+                // Renderiza Documento com Checkbox
+                const docText = typeof docItem === 'string' ? docItem : docItem.text; // Fallback
+                const id = `doc-${actionKey}-${sIdx}-${dIdx}`;
+                const isChecked = saved?.checkedIds?.includes(id) ? 'checked' : '';
+                
+                li.innerHTML = `
+                    <label class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
+                        <input type="checkbox" id="${id}" class="h-5 w-5 text-green-600 rounded border-gray-300 mr-2" ${isChecked}>
+                        <span class="text-sm text-gray-700">${docText}</span>
+                    </label>
+                `;
+            }
             ul.appendChild(li);
         });
         div.appendChild(ul);
@@ -510,6 +532,7 @@ function renderChecklist(actionKey) {
     obsDiv.className = 'mt-6 bg-yellow-50 p-4 rounded-lg border border-yellow-100';
     obsDiv.innerHTML = `<h4 class="font-bold text-gray-800 mb-2">Status da Documentação</h4>`;
     
+    // Lista de opções atualizada (NOME ALTERADO)
     const obsOptions = ['Documentação Pendente', 'Documentos Organizados', 'Assistido Ciente'];
     const savedObs = saved?.observations?.selected || [];
 
@@ -524,6 +547,7 @@ function renderChecklist(actionKey) {
     // Outras observações
     const otherText = saved?.observations?.otherText || '';
     const showOther = !!otherText;
+    
     const otherDiv = document.createElement('div');
     otherDiv.className = 'mt-2';
     otherDiv.innerHTML = `
@@ -533,18 +557,22 @@ function renderChecklist(actionKey) {
         </label>
         <textarea id="text-other" class="w-full mt-2 p-2 border rounded text-sm ${showOther ? '' : 'hidden'}" rows="2" placeholder="Descreva...">${otherText}</textarea>
     `;
+    
     otherDiv.querySelector('#check-other').addEventListener('change', (e) => {
         document.getElementById('text-other').classList.toggle('hidden', !e.target.checked);
     });
+    
     obsDiv.appendChild(otherDiv);
     checklistContainer.appendChild(obsDiv);
 
-    // 3. Formulário do Réu (Geração e Listener)
+    // 3. Formulário do Réu (Dinâmico)
     const reuForm = renderReuForm(actionKey);
     checklistContainer.appendChild(reuForm);
+
+    // Ativar Listener do CEP no formulário recém-criado
     setupCepListener('cep-reu', { rua: 'rua-reu', bairro: 'bairro-reu', cidade: 'cidade-reu', uf: 'estado-reu' });
 
-    // 4. Preenchimento de Dados Salvos
+    // 4. Preencher dados salvos do Réu
     if (saved?.reuData) {
         fillReuData(saved.reuData);
     }
@@ -568,7 +596,11 @@ function fillReuData(data) {
 }
 
 function getReuData() {
-    const getVal = (id) => document.getElementById(id)?.value || '';
+    const getVal = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.value : '';
+    };
+
     const ids = ['cpf-reu', 'telefone-reu', 'email-reu', 'cep-reu', 'rua-reu', 'empresa-reu'];
     const hasData = ids.some(id => getVal(id) !== '');
 
@@ -594,9 +626,11 @@ async function handleSave() {
 
     // Salva checkboxes
     const checkedIds = Array.from(checklistContainer.querySelectorAll('input[type="checkbox"][id^="doc-"]:checked')).map(cb => cb.id);
+    
     // Salva observações
     const obsSelected = Array.from(checklistContainer.querySelectorAll('.obs-opt:checked')).map(cb => cb.value);
     const otherText = document.getElementById('check-other')?.checked ? document.getElementById('text-other').value : '';
+
     // Salva dados do Réu
     const reuData = getReuData();
 
@@ -662,7 +696,6 @@ function closeModal() {
 async function handleGeneratePdf() {
     if (printChecklistBtn) printChecklistBtn.textContent = "Gerando...";
     
-    // Importação dinâmica para não pesar o carregamento inicial
     const { jsPDF } = window.jspdf || await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
     
     const doc = new jsPDF();
@@ -739,14 +772,15 @@ async function handleGeneratePdf() {
         y += lines.length * 5;
     }
 
-    // --- 3. Dados da Parte Contrária (Réu) - BLOCO NOVO ---
+    // --- 3. Dados da Parte Contrária (Réu) - BLOCO COMPLETO ---
     
-    // Tenta pegar os dados salvos ou os que estão na tela agora
+    // Pega os dados que estão na tela (getReuData) ou usa os salvos se disponíveis
+    // Nota: O getReuData pega o que está preenchido nos inputs agora.
     const reuData = getReuData(); 
 
     if (reuData) { // Só imprime se houver dados
         y += 15;
-        if (y > pageHeight - 60) { doc.addPage(); y = 20; }
+        if (y > pageHeight - 100) { doc.addPage(); y = 20; } // Garante espaço para o bloco
 
         // Linha divisória
         doc.setLineWidth(0.5);
