@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel do Colaborador - SIGAP</title>
-    <!-- Favicon atualizado -->
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -18,14 +17,26 @@
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
 
+    <!-- Loading -->
     <div id="loading" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
         <div class="loader"></div>
-        <p class="mt-4 text-gray-600 font-medium">Carregando dados...</p>
+        <p class="mt-4 text-gray-600 font-medium">Verificando link...</p>
     </div>
 
+    <!-- Tela de Link Expirado / Já Finalizado -->
+    <div id="expired-container" class="hidden bg-white p-8 rounded-xl shadow-lg text-center max-w-md w-full">
+        <div class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-gray-100 mb-6">
+            <svg class="h-10 w-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">Acesso Bloqueado</h2>
+        <p class="text-gray-600">Este atendimento já foi finalizado e registrado no sistema.</p>
+        <p class="text-sm text-gray-400 mt-4">Se você precisa fazer alterações, entre em contato com a gerência da pauta.</p>
+    </div>
+
+    <!-- Painel Principal -->
     <div id="main-card" class="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden hidden flex flex-col h-[90vh] md:h-auto">
         
-        <!-- Cabeçalho com Logo -->
+        <!-- Cabeçalho -->
         <div class="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white text-center flex-shrink-0">
             <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" class="h-16 w-auto mx-auto mb-3 bg-white rounded-lg p-1 shadow-md">
             <h1 class="text-xl font-bold">Painel do Colaborador</h1>
@@ -63,7 +74,6 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Houve demanda adicional?</label>
                     <div class="flex gap-2">
-                        <!-- Input com a lista correta do sistema -->
                         <input type="text" id="new-demand-input" list="subjects-list-external" class="flex-grow p-2 border border-gray-300 rounded-lg text-sm" placeholder="Selecione o assunto...">
                         <datalist id="subjects-list-external"></datalist>
                         <button id="add-demand-btn" class="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-bold hover:bg-gray-300">Add</button>
@@ -88,13 +98,11 @@
                     <p class="text-center text-gray-400 py-8">Carregando lista de documentos...</p>
                 </div>
                 
-                <!-- Planilha de Despesas (Se houver) -->
                 <div id="expense-container" class="hidden">
                     <h3 class="font-bold text-gray-800 mb-2 border-b pb-1">Planilha de Despesas</h3>
                     <div id="expense-content" class="bg-green-50 p-3 rounded text-sm text-gray-700 space-y-1 border border-green-100"></div>
                 </div>
                 
-                <!-- Dados do Réu -->
                 <div id="reu-data-container" class="mt-6 border-t pt-4 hidden">
                     <h3 class="font-bold text-gray-800 mb-2">Dados da Parte Contrária (Réu)</h3>
                     <div id="reu-data-content" class="text-sm text-gray-600 space-y-1 bg-gray-50 p-3 rounded border"></div>
@@ -103,10 +111,11 @@
 
         </div>
         
+        <!-- Tela de Sucesso -->
         <div id="success-overlay" class="absolute inset-0 bg-white flex flex-col items-center justify-center z-50 hidden">
             <div class="text-green-500 text-6xl mb-4">✓</div>
             <h3 class="text-2xl font-bold text-gray-800">Sucesso!</h3>
-            <p class="text-gray-500">Atendimento registrado.</p>
+            <p class="text-gray-500">Atendimento registrado e encerrado.</p>
         </div>
 
     </div>
@@ -115,12 +124,9 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- ÁRVORE DE ASSUNTOS (COMPLETA DO SISTEMA) ---
+        // --- ÁRVORE DE ASSUNTOS (COMPLETA) ---
         const subjectTree = [
-            { text: "Orientação Jurídica" },
-            { text: "Atendimento Jurídico Integral e Gratuito" },
-            { text: "Ajuizamento e Acompanhamento de Ações Judiciais" },
-            { text: "Consultas Processuais" },
+            { text: "Orientação Jurídica" }, { text: "Atendimento Jurídico Integral e Gratuito" }, { text: "Ajuizamento e Acompanhamento de Ações Judiciais" }, { text: "Consultas Processuais" },
             { text: "Processos Cíveis (gerais)", children: [ { text: "Ação de Obrigação de Fazer" }, { text: "Ação Declaratória de Nulidade" }, { text: "Ação de Indenização (Danos Morais e Materiais)" }, { text: "Ação Revisional de Débito" }, { text: "Ação de Exigir Contas" } ] },
             { text: "Processos de Família", children: [ { text: "Alimentos", children: [ { text: "Ação de Fixação de Alimentos" }, { text: "Ação de Majoração de Alimentos" }, { text: "Ação de Oferta de Alimentos" }, { text: "Ação de Alimentos Gravídicos" }, { text: "Ação de Alimentos Avoengos (contra avós)" } ] }, { text: "Divórcio", children: [ { text: "Divórcio Consensual" }, { text: "Divórcio Litigioso" } ] }, { text: "União Estável", children: [ { text: "Reconhecimento e Dissolução de União Estável" }, { text: "Reconhecimento / Dissolução de União Estável Post Mortem" }, { text: "Conversão de União Estável Homoafetiva em Casamento" } ] }, { text: "Guarda", children: [ { text: "Guarda (pedida pelos pais)" }, { text: "Guarda (pedida por outra pessoa que não o pai ou a mãe)" }, { text: "Guarda Compartilhada" } ] }, { text: "Regulamentação de Convivência Familiar (Visitas)" }, { text: "Investigação de Paternidade (DNA)", children: [ { text: "Investigação de Paternidade Cumulada com Alimentos" }, { text: "Investigação de Paternidade Pós Morte" } ] }, { text: "Curatela", children: [ { text: "Procedimento de Fixação dos Limites da Curatela (antiga interdição)" }, { text: "Levantamento de Curatela" } ] }, { text: "Tutela" }, { text: "Adoção" } ] },
             { text: "Processos Criminais", children: [ { text: "Defesa de Acusados em Processo Criminal" }, { text: "Acompanhamento do Cumprimento da Pena (Execução Penal)" }, { text: "Atuação em Audiência de Custódia" } ] },
@@ -135,19 +141,16 @@
             { text: "Apoio Psicossocial" }, { text: "Defesa de Direitos Homoafetivos" }
         ];
 
-        function flattenTreeWithObjects(nodes, parentPrefix = '') {
+        function flattenTreeWithObjects(nodes) {
             let flatList = [];
             nodes.forEach(node => {
-                const currentValue = parentPrefix ? `${parentPrefix} > ${node.text}` : node.text;
-                flatList.push({ value: currentValue });
-                if (node.children) {
-                    flatList = flatList.concat(flattenTreeWithObjects(node.children, currentValue));
-                }
+                flatList.push({ value: node.text });
+                if (node.children) flatList = flatList.concat(flattenTreeWithObjects(node.children));
             });
             return flatList;
         }
 
-        // --- DADOS DOS DOCUMENTOS (Checklist) ---
+        // --- DADOS DOS DOCUMENTOS ---
         const BASE_DOCS = ['RG/CNH', 'CPF', 'Comprovante de Residência'];
         const INCOME_DOCS = ['Contracheque', 'CTPS', 'Extrato INSS', 'Extrato Bancário', 'Declaração Hipossuficiência', 'IRPF'];
         const COMMON_DOCS = [...BASE_DOCS, ...INCOME_DOCS];
@@ -184,8 +187,8 @@
         const contentFinish = document.getElementById('content-finish');
         const contentDocs = document.getElementById('content-docs');
         const datalist = document.getElementById('subjects-list-external');
+        const expiredContainer = document.getElementById('expired-container'); // NOVO CONTAINER
 
-        // PREENCHE A LISTA DE ASSUNTOS CORRETA
         const flatSubjects = flattenTreeWithObjects(subjectTree);
         flatSubjects.forEach(subject => {
             const option = document.createElement('option');
@@ -200,9 +203,19 @@
             const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
 
             getDoc(docRef).then((docSnap) => {
+                loading.classList.add('hidden');
+                
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    loading.classList.add('hidden');
+
+                    // --- VERIFICAÇÃO DE SEGURANÇA ---
+                    if (data.finalizadoPeloColaborador === true) {
+                        // Se já finalizou, mostra tela de bloqueio e para.
+                        expiredContainer.classList.remove('hidden');
+                        return; // INTERROMPE O SCRIPT
+                    }
+                    // ---------------------------------
+
                     mainCard.classList.remove('hidden');
 
                     document.getElementById('assisted-name').textContent = data.name;
@@ -220,9 +233,9 @@
             }).catch(err => {
                 console.error(err);
                 alert("Erro ao carregar dados.");
+                loading.classList.add('hidden');
             });
 
-            // TABS
             tabFinish.addEventListener('click', () => {
                 tabFinish.className = "flex-1 py-3 text-center text-sm tab-active transition";
                 tabDocs.className = "flex-1 py-3 text-center text-sm tab-inactive transition";
@@ -237,7 +250,6 @@
                 contentFinish.classList.add('hidden');
             });
 
-            // CHECKLIST
             function renderChecklist(data) {
                 const checklistContainer = document.getElementById('checklist-container');
                 checklistContainer.innerHTML = '';
@@ -252,12 +264,11 @@
                 }
                 const template = documentsData[actionKey] || documentsData['default'];
                 const savedChecklist = data.documentChecklist || {};
-                const docTypes = savedChecklist.docTypes || {}; // TIPO: Físico/Digital
+                const docTypes = savedChecklist.docTypes || {};
 
                 const obs = savedChecklist.observations?.selected || [];
                 document.getElementById('doc-status-text').textContent = obs.length > 0 ? obs.join(', ') : 'Não verificado';
 
-                // Renderiza Documentos
                 template.sections.forEach((section, sIdx) => {
                     const div = document.createElement('div');
                     div.innerHTML = `<h4 class="font-bold text-gray-700 text-xs uppercase border-b pb-1 mb-2">${section.title}</h4>`;
@@ -266,11 +277,8 @@
                     
                     section.docs.forEach((docName, dIdx) => {
                         const li = document.createElement('li');
-                        // Busca aproximada do ID
                         const potentialId = `doc-${savedChecklist.action || actionKey}-${sIdx}-${dIdx}`;
                         const isChecked = savedChecklist.checkedIds?.includes(potentialId);
-                        
-                        // Tipo Salvo
                         const type = docTypes[potentialId] || '';
                         
                         const icon = isChecked ? '<span class="text-green-600 font-bold">✓</span>' : '<span class="text-gray-300">○</span>';
@@ -292,7 +300,6 @@
                     checklistContainer.appendChild(div);
                 });
 
-                // Dados do Réu
                 if (savedChecklist.reuData) {
                     const r = savedChecklist.reuData;
                     const rContainer = document.getElementById('reu-data-container');
@@ -300,11 +307,9 @@
                     rContainer.classList.remove('hidden');
                     
                     let html = '';
-                    if (r.nome) html += `<p><strong>Nome:</strong> ${r.nome}</p>`; // NOME MOSTRADO AQUI
+                    if (r.nome) html += `<p><strong>Nome:</strong> ${r.nome}</p>`;
                     if (r.cpf) html += `<p><strong>CPF:</strong> ${r.cpf}</p>`;
                     if (r.telefone) html += `<p><strong>Tel:</strong> ${r.telefone}</p>`;
-                    
-                    // Monta endereço
                     let end = [r.rua, r.numero, r.bairro, r.cidade, r.uf].filter(Boolean).join(', ');
                     if (end) html += `<p><strong>Endereço:</strong> ${end}</p>`;
                     if (r.empresa) html += `<p><strong>Empresa:</strong> ${r.empresa}</p>`;
@@ -312,10 +317,8 @@
                     rContent.innerHTML = html || '<p class="italic">Dados vazios.</p>';
                 }
 
-                // Planilha de Despesas
                 if (savedChecklist.expenseData) {
                     const ex = savedChecklist.expenseData;
-                    // Verifica se tem algum valor
                     if (Object.values(ex).some(val => val && val !== '')) {
                         const exContainer = document.getElementById('expense-container');
                         const exContent = document.getElementById('expense-content');
@@ -335,7 +338,6 @@
                 }
             }
 
-            // FINALIZAR
             const addDemandBtn = document.getElementById('add-demand-btn');
             const newDemandInput = document.getElementById('new-demand-input');
             const demandsList = document.getElementById('demands-list');
@@ -374,10 +376,11 @@
                     status: 'atendido',
                     attendant: attendantName,
                     attendedTime: new Date().toISOString(),
-                    finalizadoPeloColaborador: true,
+                    finalizadoPeloColaborador: true, // MARCA COMO FINALIZADO PARA BLOQUEAR ACESSO FUTURO
                     demandas: { descricoes: finalDemands, quantidade: finalDemands.length }
                 });
 
+                document.getElementById('main-card').classList.add('hidden');
                 document.getElementById('success-overlay').classList.remove('hidden');
             });
         }
