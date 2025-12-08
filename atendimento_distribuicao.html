@@ -33,6 +33,30 @@
                 <p id="assisted-subject" class="text-sm text-gray-500 mt-1">...</p>
             </div>
 
+            <!-- REGISTRO DE ATIVIDADES (NOVO) -->
+            <!-- Aparece durante o processo para o servidor preencher -->
+            <div id="activity-log-section" class="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200 hidden">
+                <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z"/><path d="M3 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 8a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 8zm0 2.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z"/></svg>
+                    Registro de Atividades
+                </h3>
+                
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase">Quantidade de Atendimentos/Casos</label>
+                        <input type="number" id="input-qtd" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500" placeholder="Ex: 1, 2...">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase">Descrição dos Casos</label>
+                        <textarea id="input-details" rows="3" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500" placeholder="Descreva brevemente o que foi feito ou os casos tratados..."></textarea>
+                    </div>
+                    <button id="btn-save-details" class="w-full bg-gray-200 text-gray-700 font-bold py-2 rounded hover:bg-gray-300 text-xs">
+                        Salvar Detalhes
+                    </button>
+                    <p id="save-msg" class="text-xs text-green-600 text-center hidden">Dados salvos!</p>
+                </div>
+            </div>
+
             <!-- ETAPA 1: PENDENTE DE ASSINATURA -->
             <div id="step-signature" class="hidden text-center space-y-6">
                 <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -52,7 +76,7 @@
                     <p class="text-xs">Distribua a ação no tribunal e informe o número.</p>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Nº do Processo (Opcional)</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nº do Processo</label>
                     <input type="text" id="input-process" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500" placeholder="0000.00.00.0000">
                 </div>
                 <button id="btn-finish" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow transition">
@@ -68,24 +92,16 @@
             </div>
 
         </div>
-        
-        <!-- Footer -->
-        <div class="bg-gray-50 px-6 py-4 text-center text-xs text-gray-400 border-t">
-            Acesso Seguro via Link Temporário
-        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // CONFIGURAÇÃO DO FIREBASE (Igual ao seu index.html)
         const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
-        
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Pega parâmetros da URL
         const urlParams = new URLSearchParams(window.location.search);
         const pautaId = urlParams.get('pautaId');
         const assistidoId = urlParams.get('assistidoId');
@@ -96,9 +112,10 @@
         const stepSignature = document.getElementById('step-signature');
         const stepProtocol = document.getElementById('step-protocol');
         const stepDone = document.getElementById('step-done');
+        const activitySection = document.getElementById('activity-log-section');
 
         if (!pautaId || !assistidoId) {
-            alert("Link inválido. Verifique o endereço.");
+            alert("Link inválido.");
             loading.classList.add('hidden');
         } else {
             const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
@@ -113,59 +130,72 @@
                     document.getElementById('assisted-name').textContent = data.name;
                     document.getElementById('assisted-subject').textContent = data.subject;
 
+                    // Preencher inputs se já existirem dados
+                    if (data.serviceQuantity) document.getElementById('input-qtd').value = data.serviceQuantity;
+                    if (data.serviceDetails) document.getElementById('input-details').value = data.serviceDetails;
+
                     // Lógica de Exibição das Etapas
                     stepSignature.classList.add('hidden');
                     stepProtocol.classList.add('hidden');
                     stepDone.classList.add('hidden');
+                    activitySection.classList.add('hidden'); // Esconde por padrão
 
                     if (data.status === 'atendido') {
-                        // Se já foi finalizado
                         stepDone.classList.remove('hidden');
                     } else if (data.distributionStatus === 'signed') {
-                        // Se já assinou, mostra etapa de protocolo
                         stepProtocol.classList.remove('hidden');
+                        activitySection.classList.remove('hidden'); // Mostra na etapa de protocolo
                     } else {
                         // Padrão: Aguardando Assinatura
                         stepSignature.classList.remove('hidden');
+                        activitySection.classList.remove('hidden'); // Mostra na etapa de assinatura
                     }
                 } else {
-                    loading.classList.add('hidden');
-                    alert("Atendimento não encontrado ou já removido.");
-                }
-            }, (error) => {
-                console.error("Erro ao carregar:", error);
-                loading.classList.add('hidden');
-                alert("Erro de conexão.");
-            });
-
-            // AÇÃO 1: Marcar como Assinado
-            document.getElementById('btn-signed').addEventListener('click', async () => {
-                try {
-                    await updateDoc(docRef, { 
-                        distributionStatus: 'signed' 
-                    });
-                } catch (error) {
-                    alert("Erro ao atualizar.");
+                    alert("Atendimento não encontrado.");
                 }
             });
 
-            // AÇÃO 2: Finalizar com Número do Processo
-            document.getElementById('btn-finish').addEventListener('click', async () => {
-                const processNumber = document.getElementById('input-process').value.trim();
+            // AÇÃO: Salvar Detalhes Parcialmente
+            document.getElementById('btn-save-details').addEventListener('click', async () => {
+                const qtd = document.getElementById('input-qtd').value;
+                const details = document.getElementById('input-details').value;
                 
-                try {
-                    await updateDoc(docRef, {
-                        status: 'atendido',
-                        processNumber: processNumber,
-                        attendedTime: new Date().toISOString(),
-                        // Mantém o atendente original se existir, ou usa o nome do link, ou "Externo"
-                        attendant: collabName || "Colaborador Externo",
-                        lastActionBy: collabName || "Externo",
-                        lastActionTimestamp: new Date().toISOString()
-                    });
-                } catch (error) {
-                    alert("Erro ao finalizar.");
-                }
+                await updateDoc(docRef, { 
+                    serviceQuantity: qtd,
+                    serviceDetails: details
+                });
+                
+                const msg = document.getElementById('save-msg');
+                msg.classList.remove('hidden');
+                setTimeout(() => msg.classList.add('hidden'), 2000);
+            });
+
+            // AÇÃO: Marcar como Assinado
+            document.getElementById('btn-signed').addEventListener('click', async () => {
+                // Salva os detalhes também ao avançar
+                const qtd = document.getElementById('input-qtd').value;
+                const details = document.getElementById('input-details').value;
+                await updateDoc(docRef, { 
+                    distributionStatus: 'signed',
+                    serviceQuantity: qtd,
+                    serviceDetails: details
+                });
+            });
+
+            // AÇÃO: Finalizar com Número
+            document.getElementById('btn-finish').addEventListener('click', async () => {
+                const processNumber = document.getElementById('input-process').value;
+                const qtd = document.getElementById('input-qtd').value;
+                const details = document.getElementById('input-details').value;
+
+                await updateDoc(docRef, {
+                    status: 'atendido',
+                    processNumber: processNumber,
+                    attendedTime: new Date().toISOString(),
+                    attendant: collabName,
+                    serviceQuantity: qtd, // Garante que salva ao finalizar
+                    serviceDetails: details
+                });
             });
         }
     </script>
