@@ -11,7 +11,7 @@
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .modal-enter { animation: fadeIn 0.2s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        /* Cursor pointer nos cards para indicar que são clicáveis */
+        /* Cursor pointer nos cards */
         .card-interactive { cursor: pointer; }
     </style>
 </head>
@@ -78,7 +78,7 @@
                 <div id="list-aguardando" class="p-4 overflow-y-auto flex-1 space-y-3 bg-gray-50"></div>
             </div>
 
-            <!-- Coluna Em Atendimento (Inclui Aguardando Distribuição) -->
+            <!-- Coluna Em Atendimento (Pode ser escondida) -->
             <div id="col-atendimento" class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-[65vh] lg:h-[75vh]">
                 <div class="bg-green-600 p-4 text-white shadow-sm z-10 flex justify-between items-center">
                     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2">
@@ -93,7 +93,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE DETALHES DO ASSISTIDO (NOVO) -->
+    <!-- MODAL DE DETALHES DO ASSISTIDO -->
     <div id="details-modal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
         <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl modal-enter flex flex-col">
             <div class="p-6">
@@ -106,7 +106,7 @@
                 
                 <div class="space-y-4">
                     <div class="bg-gray-50 p-3 rounded-lg">
-                        <p class="text-xs text-gray-500 uppercase tracking-wide">Assunto</p>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Assunto Principal</p>
                         <p id="modal-subject" class="text-gray-800 font-medium">...</p>
                     </div>
 
@@ -114,13 +114,13 @@
                     <div id="modal-service-info" class="hidden">
                         <div class="flex gap-4 mb-3">
                             <div class="bg-blue-50 p-3 rounded-lg flex-1">
-                                <p class="text-xs text-blue-500 uppercase tracking-wide font-bold">Quantidade de Casos</p>
+                                <p class="text-xs text-blue-500 uppercase tracking-wide font-bold">Total de Demandas</p>
                                 <p id="modal-qtd" class="text-3xl font-bold text-blue-700">0</p>
                             </div>
                         </div>
                         <div>
-                            <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Descrição / Observações</p>
-                            <div id="modal-details" class="bg-gray-50 p-3 rounded-lg text-sm text-gray-700 whitespace-pre-wrap border border-gray-100 max-h-40 overflow-y-auto">...</div>
+                            <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Demandas Adicionais / Observações</p>
+                            <div id="modal-details" class="bg-gray-50 p-3 rounded-lg text-sm text-gray-700 whitespace-pre-wrap border border-gray-100 max-h-60 overflow-y-auto">...</div>
                         </div>
                     </div>
 
@@ -132,7 +132,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE LISTA DE ATENDIDOS -->
+    <!-- MODAL DE LISTA DE ATENDIDOS (HISTÓRICO) -->
     <div id="atendidos-modal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
         <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl modal-enter flex flex-col max-h-[85vh]">
             <!-- Header Modal -->
@@ -192,8 +192,8 @@
 
         let maskNames = false;
         let pautaRooms = [];
-        let globalAtendidosList = []; 
-        let allItemsGlobal = []; // Guarda todos os itens para acesso rápido pelo Modal
+        let globalAtendidosList = []; // Para guardar a lista e renderizar no modal
+        let allItemsGlobal = []; // Para buscar dados para o modal de detalhes
 
         // Função para formatar nome
         function formatName(name) {
@@ -214,12 +214,33 @@
             const serviceInfo = document.getElementById('modal-service-info');
             const noInfo = document.getElementById('modal-no-info');
 
-            // Verifica se tem Quantidade ou Detalhes salvos
-            if (item.serviceQuantity || item.serviceDetails) {
+            let displayQtd = '0';
+            let displayDetails = '';
+            let hasInfo = false;
+
+            // 1. Verifica se veio do Atendimento Externo (campo 'demandas')
+            if (item.demandas && item.demandas.descricoes && item.demandas.descricoes.length > 0) {
+                hasInfo = true;
+                // A quantidade é o assunto principal (1) + demandas adicionais
+                // Mas geralmente o campo 'quantidade' no objeto demandas já soma. 
+                // Se for array de strings:
+                displayQtd = item.demandas.quantidade || (item.demandas.descricoes.length);
+                
+                // Formata a lista com bullet points
+                displayDetails = item.demandas.descricoes.map(d => `• ${d}`).join('\n');
+            } 
+            // 2. Verifica se veio do Fluxo de Distribuição (campos serviceQuantity/serviceDetails)
+            else if (item.serviceQuantity || item.serviceDetails) {
+                hasInfo = true;
+                displayQtd = item.serviceQuantity || '-';
+                displayDetails = item.serviceDetails || '-';
+            }
+
+            if (hasInfo) {
                 serviceInfo.classList.remove('hidden');
                 noInfo.classList.add('hidden');
-                document.getElementById('modal-qtd').textContent = item.serviceQuantity || '-';
-                document.getElementById('modal-details').textContent = item.serviceDetails || '-';
+                document.getElementById('modal-qtd').textContent = displayQtd;
+                document.getElementById('modal-details').textContent = displayDetails;
             } else {
                 serviceInfo.classList.add('hidden');
                 noInfo.classList.remove('hidden');
@@ -228,13 +249,13 @@
             detailsModal.classList.remove('hidden');
         };
 
-        // Fechar modal de detalhes
         closeDetailsBtn.addEventListener('click', () => {
             detailsModal.classList.add('hidden');
         });
         detailsModal.addEventListener('click', (e) => {
             if (e.target === detailsModal) detailsModal.classList.add('hidden');
         });
+
 
         // Função para criar card (Aguardando / Em Atendimento)
         function createCard(item, isAtendimento = false) {
@@ -249,10 +270,10 @@
                 collabInfo = `<div class="mt-2 pt-2 border-t border-green-200 flex items-center text-sm text-green-800"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg><span class="font-semibold">${item.assignedCollaborator.name}</span></div>`;
             }
 
-            // Badge visual se houver detalhes registrados
-            let detailsBadge = (item.serviceQuantity || item.serviceDetails) ? `<span class="text-[10px] bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded ml-2 border border-cyan-200 font-semibold" title="Clique para ver detalhes">📝 Ver Detalhes</span>` : '';
+            // Verifica se tem detalhes para mostrar o ícone
+            let hasDetails = (item.serviceQuantity || item.serviceDetails || (item.demandas?.descricoes?.length > 0));
+            let detailsBadge = hasDetails ? `<span class="text-[10px] bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded ml-2 border border-cyan-200 font-semibold flex items-center gap-1" title="Ver detalhes"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> Detalhes</span>` : '';
 
-            // Adiciona classe interativa e evento de clique
             div.className = `card-interactive p-4 rounded-lg shadow-sm ${borderColor} ${bgColor} transition-all hover:shadow-md hover:-translate-y-1`;
             div.onclick = () => window.openDetails(item.id);
 
@@ -277,20 +298,19 @@
         function createAtendidoRow(item, index) {
             const div = document.createElement('div');
             div.className = "bg-white p-3 rounded-lg border border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 hover:bg-blue-50 transition-colors cursor-pointer";
-            
-            // Torna clicável para ver detalhes também no histórico
-            div.onclick = () => window.openDetails(item.id);
+            div.onclick = () => window.openDetails(item.id); 
 
             const timeStr = item.attendedTime ? new Date(item.attendedTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
             const attendant = typeof item.attendant === 'object' && item.attendant ? item.attendant.nome : (item.attendant || 'N/A');
 
-            let detailsBadge = (item.serviceQuantity || item.serviceDetails) ? `📝` : '';
+            let hasDetails = (item.serviceQuantity || item.serviceDetails || (item.demandas?.descricoes?.length > 0));
+            let detailsBadge = hasDetails ? `📝` : '';
 
             div.innerHTML = `
                 <div class="flex items-center gap-3">
                     <span class="bg-gray-100 text-gray-600 font-mono text-xs px-2 py-1 rounded-md border border-gray-300">#${index}</span>
                     <div>
-                        <p class="font-bold text-gray-800 flex items-center gap-2">${formatName(item.name)} <span class="text-xs">${detailsBadge}</span></p>
+                        <p class="font-bold text-gray-800 flex items-center gap-1">${formatName(item.name)} <span class="text-xs" title="Tem detalhes">${detailsBadge}</span></p>
                         <p class="text-xs text-gray-500">${item.subject || 'Sem assunto'}</p>
                     </div>
                 </div>
@@ -305,6 +325,7 @@
             return div;
         }
 
+        // Renderiza o modal de atendidos
         function renderModal() {
             listAtendidosContent.innerHTML = '';
             if (globalAtendidosList.length === 0) {
@@ -369,17 +390,19 @@
             // 2. Atendimentos
             onSnapshot(collection(db, "pautas", pautaId, "attendances"), (snapshot) => {
                 const allItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                allItemsGlobal = allItems; // Salva para o modal
+                allItemsGlobal = allItems; // Salva globalmente para o modal de detalhes
                 
                 const aguardando = allItems.filter(i => i.status === 'aguardando');
                 
-                // Agrupa "Em Atendimento" e "Aguardando Distribuição" na mesma coluna visual
+                // Agrupa "Em Atendimento" e "Aguardando Distribuição"
                 const emAtendimento = allItems.filter(i => i.status === 'emAtendimento' || i.status === 'aguardando_distribuicao'); 
                 
                 const atendidos = allItems.filter(i => i.status === 'atendido');
 
+                // Atualizar Global List para o Modal (Ordenado por hora de fim desc)
                 globalAtendidosList = atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
 
+                // Ordenação Aguardando
                 aguardando.sort((a, b) => {
                     if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
                     if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
@@ -388,13 +411,16 @@
                     return timeA - timeB;
                 });
 
+                // Ordenação Em Atendimento
                 emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
 
+                // Counters
                 document.getElementById('count-aguardando').textContent = aguardando.length;
                 document.getElementById('count-atendimento').textContent = emAtendimento.length;
                 document.getElementById('total-atendidos-count').textContent = atendidos.length;
                 document.getElementById('last-update').textContent = `Atualizado às ${new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}`;
 
+                // Renders
                 listAguardando.innerHTML = '';
                 listAtendimento.innerHTML = '';
 
