@@ -1,7 +1,7 @@
 /**
  * detalhes.js
- * Gerencia o modal de detalhes, checklist, dados do Réu (com Nome e RG) e Planilha de Despesas.
- * Versão: Nome do Réu Adicionado
+ * Gerencia o modal de detalhes, checklist, dados do Réu e Planilha de Despesas.
+ * Versão: IRPF Detalhado (Cenários 1 e 2)
  */
 
 // --- 1. CONSTANTES DE DOCUMENTAÇÃO ---
@@ -27,7 +27,6 @@ const INCOME_DOCS_STRUCTURED = [
     'Declaração de Hipossuficiência (Próprio Punho - informando média mensal)',
     'Extratos Bancários (3 últimos meses)',
     'Comprovante de Inscrição no CadÚnico',
-    'Consulta de Restituição IRPF (Prova de Isenção)',
 
     { type: 'title', text: '4. DESEMPREGADO' },
     'Carteira de Trabalho (Página da baixa do último emprego)',
@@ -35,10 +34,11 @@ const INCOME_DOCS_STRUCTURED = [
     'Declaração de Hipossuficiência (Informando ausência de renda)',
     'Extrato do CNIS (Meu INSS - prova ausência de vínculo ativo)',
 
-    { type: 'title', text: '5. PROVAS GERAIS (HIPOSSUFICIÊNCIA)' },
+    { type: 'title', text: '5. PROVAS GERAIS E IMPOSTO DE RENDA' },
     'Extrato do Bolsa Família',
     'Folha Resumo do CadÚnico',
-    'Declaração de IRPF Completa + Recibo (se declarar)'
+    'IRPF - Cenário 1 (Declarante): Cópia da Declaração de IR',
+    'IRPF - Cenário 2 (Isento): Declaração de Isenção de Imposto de Renda'
 ];
 
 const COMMON_DOCS_FULL = [...BASE_DOCS, ...INCOME_DOCS_STRUCTURED];
@@ -171,7 +171,6 @@ function renderReuForm(actionKey) {
     container.innerHTML = `
         <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Dados da Parte Contrária (Réu)</h3>
         
-        <!-- NOME COMPLETO (NOVO) -->
         <div class="mb-4">
             <label class="block text-sm font-bold text-gray-700">Nome Completo</label>
             <input type="text" id="nome-reu" placeholder="Nome completo do Réu" class="mt-1 block w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500">
@@ -293,6 +292,7 @@ function renderChecklist(actionKey) {
     const showOther = !!otherText;
     obsDiv.innerHTML += `<div class="mt-2"><label class="flex items-center cursor-pointer"><input type="checkbox" id="check-other" class="h-4 w-4 text-yellow-600 mr-2" ${showOther ? 'checked' : ''}> Outras Observações</label><textarea id="text-other" class="w-full mt-2 p-2 border rounded text-sm ${showOther ? '' : 'hidden'}" rows="2">${otherText}</textarea></div>`;
     
+    // Adicionar listener ao checkbox recém-criado
     const checkOther = obsDiv.querySelector('#check-other');
     if(checkOther) {
         checkOther.addEventListener('change', (e) => document.getElementById('text-other').classList.toggle('hidden', !e.target.checked));
@@ -310,7 +310,7 @@ function renderChecklist(actionKey) {
 
 function fillReuData(data) {
     const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val || ''; };
-    setVal('nome-reu', data.nome); // Nome Adicionado
+    setVal('nome-reu', data.nome);
     setVal('cpf-reu', data.cpf); setVal('rg-reu', data.rg); setVal('telefone-reu', data.telefone); setVal('email-reu', data.email);
     setVal('cep-reu', data.cep); setVal('rua-reu', data.rua); setVal('numero-reu', data.numero);
     setVal('bairro-reu', data.bairro); setVal('cidade-reu', data.cidade); setVal('estado-reu', data.uf);
@@ -322,7 +322,7 @@ function getReuData() {
     const ids = ['nome-reu', 'cpf-reu', 'rg-reu', 'telefone-reu', 'email-reu', 'cep-reu', 'rua-reu', 'empresa-reu'];
     if (!ids.some(id => getVal(id) !== '')) return null;
     return {
-        nome: getVal('nome-reu'), // Nome Adicionado
+        nome: getVal('nome-reu'),
         cpf: getVal('cpf-reu'), rg: getVal('rg-reu'), telefone: getVal('telefone-reu'), email: getVal('email-reu'),
         cep: getVal('cep-reu'), rua: getVal('rua-reu'), numero: getVal('numero-reu'),
         bairro: getVal('bairro-reu'), cidade: getVal('cidade-reu'), uf: getVal('estado-reu'),
@@ -401,7 +401,7 @@ async function handleGeneratePdf() {
             if (valStr) {
                 doc.text(`${cat.label}`, 20, y);
                 doc.text(`${valStr}`, pageWidth - 30, y, { align: 'right' });
-                y += 5; // Espaço
+                y += 5; 
                 doc.setDrawColor(200); doc.line(20, y, pageWidth - 20, y); doc.setDrawColor(0);
                 y += 10;
                 total += parseCurrency(valStr);
@@ -428,10 +428,8 @@ async function handleGeneratePdf() {
         doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text("Dados da Parte Contrária (Réu)", 15, y); y += 10;
         doc.setFontSize(11); doc.setFont("helvetica", "normal");
         const printField = (l, v) => { if (v && v.trim()) { doc.text(`${l}: ${v}`, 20, y); y += 6; } };
-        
-        printField("Nome", reuData.nome); // NOME PRIMEIRO
+        printField("Nome", reuData.nome);
         printField("CPF", reuData.cpf); printField("RG", reuData.rg); printField("Telefone", reuData.telefone); printField("E-mail", reuData.email);
-        
         let end = [reuData.rua, reuData.numero, reuData.bairro, reuData.cidade, reuData.uf].filter(Boolean).join(', ');
         if (reuData.cep) end += ` (CEP: ${reuData.cep})`;
         if (end.length > 5) { const lines = doc.splitTextToSize(`Endereço: ${end}`, pageWidth - 40); doc.text(lines, 20, y); y += lines.length * 6; }
