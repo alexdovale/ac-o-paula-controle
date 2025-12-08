@@ -1,6 +1,7 @@
 /**
  * detalhes.js
  * Gerencia o modal de detalhes, checklist, dados do Réu (com RG) e Planilha de Despesas.
+ * Versão: Planilha de Gastos com Linhas Divisórias no PDF
  */
 
 // --- 1. CONSTANTES DE DOCUMENTAÇÃO ---
@@ -63,7 +64,7 @@ const ACTIONS_WITH_WORK_INFO = [
 ];
 
 // --- 2. DADOS DOS TIPOS DE AÇÃO ---
-// (Mantive a estrutura anterior resumida aqui, mas o funcionamento é igual)
+
 const documentsData = {
     obrigacao_fazer: { title: 'Ação de Obrigação de Fazer', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Contrato/Acordo', 'Provas do descumprimento'] }] },
     declaratoria_nulidade: { title: 'Ação Declaratória de Nulidade', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Documento a anular', 'Provas da ilegalidade'] }] },
@@ -109,7 +110,6 @@ let showNotification = null;
 let allAssisted = [];
 let currentChecklistAction = null;
 
-// Seletores
 const modal = document.getElementById('documents-modal');
 const assistedNameEl = document.getElementById('documents-assisted-name');
 const actionSelectionView = document.getElementById('document-action-selection');
@@ -123,10 +123,9 @@ const checklistSearch = document.getElementById('checklist-search');
 const closeBtn = document.getElementById('close-documents-modal-btn');
 const cancelBtn = document.getElementById('cancel-checklist-btn');
 
-// --- 4. UTILITÁRIOS E VIACEP ---
+// --- 4. UTILITÁRIOS ---
 
 const normalizeText = (str) => str ? str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : '';
-
 const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 const parseCurrency = (str) => !str ? 0 : parseFloat(str.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
 
@@ -160,25 +159,21 @@ function setupCepListener(cepInputId, fields) {
     });
 }
 
-// --- 5. COMPONENTES DE UI (Com RG adicionado) ---
+// --- 5. COMPONENTES UI ---
 
 function renderReuForm(actionKey) {
     const showWorkInfo = ACTIONS_WITH_WORK_INFO.includes(actionKey);
     const container = document.createElement('div');
     container.id = 'dynamic-reu-form';
     container.className = 'mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg';
-
     container.innerHTML = `
         <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Dados da Parte Contrária (Réu)</h3>
-        
-        <!-- CPF, RG, Tel, Email (4 colunas agora) -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div><label class="block text-sm text-gray-700">CPF</label><input type="text" id="cpf-reu" class="mt-1 block w-full p-2 border rounded-md"></div>
             <div><label class="block text-sm text-gray-700">RG</label><input type="text" id="rg-reu" class="mt-1 block w-full p-2 border rounded-md"></div>
             <div><label class="block text-sm text-gray-700">Telefone/Zap</label><input type="text" id="telefone-reu" class="mt-1 block w-full p-2 border rounded-md"></div>
             <div><label class="block text-sm text-gray-700">E-mail</label><input type="email" id="email-reu" class="mt-1 block w-full p-2 border rounded-md"></div>
         </div>
-
         <h4 class="text-sm font-semibold text-gray-600 mb-2">Endereço</h4>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div><label class="block text-xs text-gray-500">CEP</label><input type="text" id="cep-reu" maxlength="9" class="w-full p-2 border rounded-md"></div>
@@ -187,15 +182,7 @@ function renderReuForm(actionKey) {
             <div><label class="block text-xs text-gray-500">Bairro</label><input type="text" id="bairro-reu" class="w-full p-2 border rounded-md bg-gray-100"></div>
             <div><label class="block text-xs text-gray-500">Cidade/UF</label><div class="flex gap-2"><input type="text" id="cidade-reu" class="w-full p-2 border rounded-md bg-gray-100"><input type="text" id="estado-reu" class="w-16 p-2 border rounded-md bg-gray-100"></div></div>
         </div>
-        ${showWorkInfo ? `
-        <div class="border-t pt-4 mt-4">
-            <h4 class="text-sm font-semibold text-blue-700 mb-2">Dados Profissionais</h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label class="block text-sm text-gray-700">Empresa/Empregador</label><input type="text" id="empresa-reu" class="mt-1 w-full p-2 border rounded-md"></div>
-                <div><label class="block text-sm text-gray-700">Endereço Trabalho</label><input type="text" id="endereco-trabalho-reu" class="mt-1 w-full p-2 border rounded-md"></div>
-            </div>
-        </div>` : ''}
-    `;
+        ${showWorkInfo ? `<div class="border-t pt-4 mt-4"><h4 class="text-sm font-semibold text-blue-700 mb-2">Dados Profissionais</h4><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="block text-sm text-gray-700">Empresa/Empregador</label><input type="text" id="empresa-reu" class="mt-1 w-full p-2 border rounded-md"></div><div><label class="block text-sm text-gray-700">Endereço Trabalho</label><input type="text" id="endereco-trabalho-reu" class="mt-1 w-full p-2 border rounded-md"></div></div></div>` : ''}`;
     return container;
 }
 
@@ -229,31 +216,20 @@ function calculateExpenseTotal() {
     document.getElementById('expense-total').textContent = formatCurrency(total);
 }
 
-// --- 6. RENDERIZAÇÃO GERAL ---
+// --- 6. RENDERIZAÇÃO LÓGICA ---
 
 function populateActionSelection() {
     const container = document.getElementById('document-action-selection');
     if (!container) return;
     let searchInput = document.getElementById('action-search-input');
     if (!searchInput) {
-        searchInput = document.createElement('input');
-        searchInput.id = 'action-search-input';
-        searchInput.type = 'text';
-        searchInput.placeholder = 'Pesquisar assunto...';
-        searchInput.className = 'w-full p-2 border border-gray-300 rounded-md mb-4 focus:ring-green-500';
-        searchInput.addEventListener('input', handleActionSearch);
-        container.prepend(searchInput);
+        searchInput = document.createElement('input'); searchInput.id = 'action-search-input'; searchInput.type = 'text'; searchInput.placeholder = 'Pesquisar assunto...'; searchInput.className = 'w-full p-2 border border-gray-300 rounded-md mb-4 focus:ring-green-500'; searchInput.addEventListener('input', handleActionSearch); container.prepend(searchInput);
     }
     let grid = container.querySelector('.action-grid');
     if (grid) return;
-    grid = document.createElement('div');
-    grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-3 action-grid';
+    grid = document.createElement('div'); grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-3 action-grid';
     Object.keys(documentsData).forEach((key) => {
-        const btn = document.createElement('button');
-        btn.dataset.action = key;
-        btn.className = 'text-left p-3 bg-white border hover:bg-green-50 hover:border-green-300 rounded-lg transition shadow-sm';
-        btn.innerHTML = `<span class="font-semibold text-gray-700">${documentsData[key].title}</span>`;
-        grid.appendChild(btn);
+        const btn = document.createElement('button'); btn.dataset.action = key; btn.className = 'text-left p-3 bg-white border hover:bg-green-50 hover:border-green-300 rounded-lg transition shadow-sm'; btn.innerHTML = `<span class="font-semibold text-gray-700">${documentsData[key].title}</span>`; grid.appendChild(btn);
     });
     container.appendChild(grid);
 }
@@ -306,11 +282,14 @@ function renderChecklist(actionKey) {
     });
     const otherText = saved?.observations?.otherText || '';
     const showOther = !!otherText;
-    const otherDiv = document.createElement('div');
-    otherDiv.className = 'mt-2';
-    otherDiv.innerHTML = `<label class="flex items-center cursor-pointer"><input type="checkbox" id="check-other" class="h-4 w-4 text-yellow-600 mr-2" ${showOther ? 'checked' : ''}> Outras Observações</label><textarea id="text-other" class="w-full mt-2 p-2 border rounded text-sm ${showOther ? '' : 'hidden'}" rows="2">${otherText}</textarea>`;
-    otherDiv.querySelector('#check-other').addEventListener('change', (e) => document.getElementById('text-other').classList.toggle('hidden', !e.target.checked));
-    obsDiv.appendChild(otherDiv);
+    obsDiv.innerHTML += `<div class="mt-2"><label class="flex items-center cursor-pointer"><input type="checkbox" id="check-other" class="h-4 w-4 text-yellow-600 mr-2" ${showOther ? 'checked' : ''}> Outras Observações</label><textarea id="text-other" class="w-full mt-2 p-2 border rounded text-sm ${showOther ? '' : 'hidden'}" rows="2">${otherText}</textarea></div>`;
+    
+    // Adicionar listener ao checkbox recém-criado
+    const checkOther = obsDiv.querySelector('#check-other');
+    if(checkOther) {
+        checkOther.addEventListener('change', (e) => document.getElementById('text-other').classList.toggle('hidden', !e.target.checked));
+    }
+    
     checklistContainer.appendChild(obsDiv);
 
     const reuForm = renderReuForm(actionKey);
@@ -367,7 +346,7 @@ async function handleSave() {
     } catch (e) { console.error(e); if (showNotification) showNotification("Erro ao salvar.", "error"); }
 }
 
-// --- 8. EVENTOS UI ---
+// --- 8. EVENTOS ---
 function handleActionSelect(e) { const btn = e.target.closest('button[data-action]'); if (!btn) return; renderChecklist(btn.dataset.action); actionSelectionView.classList.add('hidden'); checklistView.classList.remove('hidden'); checklistView.classList.add('flex'); }
 function handleBack() { checklistView.classList.add('hidden'); checklistView.classList.remove('flex'); actionSelectionView.classList.remove('hidden'); }
 function handleActionSearch(e) { const term = normalizeText(e.target.value); actionSelectionView.querySelectorAll('.action-grid button').forEach(btn => btn.style.display = normalizeText(btn.textContent).includes(term) ? 'block' : 'none'); }
@@ -403,19 +382,31 @@ async function handleGeneratePdf() {
     if (expenses && Object.values(expenses).some(v => v)) {
         y += 10; if (y > pageHeight - 150) { doc.addPage(); y = 20; }
         doc.line(15, y, pageWidth - 15, y); y += 10;
-        doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Planilha de Despesas (Criança)", 15, y); y += 8;
+        doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Planilha de Despesas (Criança)", 15, y); y += 10;
         doc.setFont("helvetica", "normal"); doc.setFontSize(10);
         let total = 0;
+        
         EXPENSE_CATEGORIES.forEach(cat => {
             const valStr = expenses[cat.id];
             if (valStr) {
-                doc.text(`${cat.label}:`, 20, y);
+                doc.text(`${cat.label}`, 20, y);
                 doc.text(`${valStr}`, pageWidth - 30, y, { align: 'right' });
+                y += 5; // Espaço após texto
+                // LINHA DIVISÓRIA CINZA
+                doc.setDrawColor(200); 
+                doc.line(20, y, pageWidth - 20, y);
+                doc.setDrawColor(0); // Reset cor
+                y += 10; // Espaço para próxima linha
                 total += parseCurrency(valStr);
-                y += 6;
+                if (y > pageHeight - 40) { doc.addPage(); y = 20; }
             }
         });
-        y += 2; doc.setFont("helvetica", "bold"); doc.text("TOTAL MENSAL:", 20, y); doc.text(formatCurrency(total), pageWidth - 30, y, { align: 'right' }); y += 8;
+        
+        y += 5;
+        doc.setFont("helvetica", "bold");
+        doc.text("TOTAL MENSAL:", 20, y);
+        doc.text(formatCurrency(total), pageWidth - 30, y, { align: 'right' });
+        y += 10;
     }
 
     y += 10; if (y > pageHeight - 40) { doc.addPage(); y = 20; }
