@@ -1,7 +1,6 @@
 /**
  * detalhes.js
- * Gerencia o modal de detalhes, checklist, dados do Réu e Planilha de Despesas.
- * Versão: IRPF Detalhado (Cenários 1 e 2)
+ * Gerencia o modal de detalhes, checklist (Físico/Digital), dados do Réu e Planilha de Despesas.
  */
 
 // --- 1. CONSTANTES DE DOCUMENTAÇÃO ---
@@ -76,10 +75,10 @@ const documentsData = {
     alimentos_avoengos: { title: 'Alimentos Avoengos', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Certidão de Nascimento', 'Prova da impossibilidade dos pais', 'Planilha de Gastos'] }] },
     divorcio_consensual: { title: 'Divórcio Consensual', sections: [{ title: 'Documentação (Ambos)', docs: ['RG/CPF ambos', 'Comp. Residência ambos', 'Certidão Casamento', ...INCOME_DOCS_STRUCTURED] }, { title: 'Filhos/Bens', docs: ['Certidão Nascimento Filhos', 'Documentos Bens'] }] },
     divorcio_litigioso: { title: 'Divórcio Litigioso', sections: [{ title: 'Documentação Pessoal e Renda', docs: [...COMMON_DOCS_FULL, 'Certidão de Casamento'] }, { title: 'Filhos/Bens', docs: ['Certidão Nascimento Filhos', 'Documentos Bens', 'Planilha de Gastos (se houver alimentos)'] }, { title: 'Sobre o Cônjuge', docs: ['Endereço', 'Trabalho'] }] },
-    uniao_estavel_reconhecimento_dissolucao: { title: 'União Estável (Reconhecimento/Dissolução)', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Provas', docs: ['Certidão filhos', 'Contas conjuntas', 'Fotos', 'Testemunhas'] }] },
-    uniao_estavel_post_mortem: { title: 'União Estável Post Mortem', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Do Falecido', docs: ['Certidão de Óbito', 'Bens deixados'] }] },
+    uniao_estavel_reconhecimento_dissolucao: { title: 'União Estável (Reconhecimento/Dissolução)', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Provas', docs: ['Certidão filhos', 'Contas conjuntas', 'Fotos', 'Testemunhas'] }, { title: 'Bens', docs: ['Documentos dos bens'] }] },
+    uniao_estavel_post_mortem: { title: 'União Estável Post Mortem', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Do Falecido', docs: ['Certidão de Óbito', 'Bens deixados'] }, { title: 'Provas da União', docs: ['(Mesmas provas da união estável comum)'] }] },
     conversao_uniao_homoafetiva: { title: 'Conversão União Estável em Casamento', sections: [{ title: 'Documentação (Ambos)', docs: ['RG/CPF', 'Certidões Nascimento', ...INCOME_DOCS_STRUCTURED] }] },
-    guarda: { title: 'Ação de Guarda', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Da Criança', docs: ['Certidão Nascimento', 'Matrícula Escolar', 'Cartão Vacina'] }] },
+    guarda: { title: 'Ação de Guarda', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Da Criança', docs: ['Certidão Nascimento', 'Matrícula Escolar', 'Cartão Vacina'] }, { title: 'Do Caso', docs: ['Relatório Conselho Tutelar', 'Provas de risco'] }] },
     regulamentacao_convivencia: { title: 'Regulamentação de Visitas', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Da Criança', docs: ['Certidão Nascimento', 'Endereço atual'] }] },
     investigacao_paternidade: { title: 'Investigação de Paternidade', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Da Criança', docs: ['Certidão Nascimento (sem pai)'] }, { title: 'Suposto Pai', docs: ['Nome', 'Endereço', 'Indícios'] }] },
     curatela: { title: 'Curatela (Interdição)', sections: [{ title: 'Documentação Pessoal e Renda (Curador)', docs: COMMON_DOCS_FULL }, { title: 'Do Curatelando', docs: ['RG e CPF', 'Certidão Nascimento/Casamento', 'Renda (INSS)', 'Laudo Médico (CID)'] }] },
@@ -260,18 +259,58 @@ function renderChecklist(actionKey) {
         ul.className = 'space-y-2';
         section.docs.forEach((docItem, dIdx) => {
             const li = document.createElement('li');
+            
+            // Lógica para Título vs Documento com Checkbox e Tipo
             if (typeof docItem === 'object' && docItem.type === 'title') {
                 li.innerHTML = `<div class="font-bold text-blue-700 text-sm mt-3 mb-1 bg-blue-50 p-1 rounded">${docItem.text}</div>`;
             } else {
                 const docText = typeof docItem === 'string' ? docItem : docItem.text;
                 const id = `doc-${actionKey}-${sIdx}-${dIdx}`;
                 const isChecked = saved?.checkedIds?.includes(id) ? 'checked' : '';
-                li.innerHTML = `<label class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded"><input type="checkbox" id="${id}" class="h-5 w-5 text-green-600 rounded border-gray-300 mr-2" ${isChecked}><span class="text-sm text-gray-700">${docText}</span></label>`;
+                
+                // Tipo Salvo (Físico ou Digital)
+                const savedType = saved?.docTypes ? saved.docTypes[id] : '';
+                
+                li.innerHTML = `
+                    <div class="flex flex-col mb-1 border-b border-gray-50 pb-1">
+                        <label class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
+                            <input type="checkbox" id="${id}" class="doc-checkbox h-5 w-5 text-green-600 rounded border-gray-300 mr-2" ${isChecked}>
+                            <span class="text-sm text-gray-700 flex-1">${docText}</span>
+                        </label>
+                        <!-- Seletor Físico/Digital (Oculto até marcar) -->
+                        <div id="type-${id}" class="ml-8 mt-1 text-xs text-gray-600 flex gap-4 ${isChecked ? '' : 'hidden'}">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="radio" name="type-${id}" value="Físico" class="doc-type-radio mr-1" ${savedType === 'Físico' ? 'checked' : ''}> Físico
+                            </label>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="radio" name="type-${id}" value="Digital" class="doc-type-radio mr-1" ${savedType === 'Digital' ? 'checked' : ''}> Digital
+                            </label>
+                        </div>
+                    </div>
+                `;
             }
             ul.appendChild(li);
         });
         div.appendChild(ul);
         checklistContainer.appendChild(div);
+    });
+    
+    // Listener para mostrar/esconder opções de tipo
+    checklistContainer.querySelectorAll('.doc-checkbox').forEach(cb => {
+        cb.addEventListener('change', (e) => {
+            const typeDiv = document.getElementById(`type-${e.target.id}`);
+            if (typeDiv) {
+                if (e.target.checked) {
+                    typeDiv.classList.remove('hidden');
+                    // Seleciona 'Físico' por padrão se nada estiver selecionado
+                    if (!typeDiv.querySelector('input:checked')) {
+                        typeDiv.querySelector('input[value="Físico"]').checked = true;
+                    }
+                } else {
+                    typeDiv.classList.add('hidden');
+                }
+            }
+        });
     });
 
     if (ACTIONS_WITH_EXPENSES.includes(actionKey)) {
@@ -292,7 +331,6 @@ function renderChecklist(actionKey) {
     const showOther = !!otherText;
     obsDiv.innerHTML += `<div class="mt-2"><label class="flex items-center cursor-pointer"><input type="checkbox" id="check-other" class="h-4 w-4 text-yellow-600 mr-2" ${showOther ? 'checked' : ''}> Outras Observações</label><textarea id="text-other" class="w-full mt-2 p-2 border rounded text-sm ${showOther ? '' : 'hidden'}" rows="2">${otherText}</textarea></div>`;
     
-    // Adicionar listener ao checkbox recém-criado
     const checkOther = obsDiv.querySelector('#check-other');
     if(checkOther) {
         checkOther.addEventListener('change', (e) => document.getElementById('text-other').classList.toggle('hidden', !e.target.checked));
@@ -344,10 +382,34 @@ function getExpenseData() {
 
 async function handleSave() {
     if (!currentAssistedId || !currentPautaId) return;
-    const checkedIds = Array.from(checklistContainer.querySelectorAll('input[type="checkbox"][id^="doc-"]:checked')).map(cb => cb.id);
+
+    // Capturar checkboxes e tipos
+    const checkedCheckboxes = checklistContainer.querySelectorAll('.doc-checkbox:checked');
+    const checkedIds = [];
+    const docTypes = {};
+
+    checkedCheckboxes.forEach(cb => {
+        checkedIds.push(cb.id);
+        const radio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
+        if (radio) {
+            docTypes[cb.id] = radio.value;
+        }
+    });
+
     const obsSelected = Array.from(checklistContainer.querySelectorAll('.obs-opt:checked')).map(cb => cb.value);
     const otherText = document.getElementById('check-other')?.checked ? document.getElementById('text-other').value : '';
-    const payload = { documentChecklist: { action: currentChecklistAction, checkedIds: checkedIds, observations: { selected: obsSelected, otherText: otherText }, reuData: getReuData(), expenseData: getExpenseData() } };
+
+    const payload = { 
+        documentChecklist: { 
+            action: currentChecklistAction, 
+            checkedIds: checkedIds, 
+            docTypes: docTypes, // Salva tipos
+            observations: { selected: obsSelected, otherText: otherText }, 
+            reuData: getReuData(), 
+            expenseData: getExpenseData() 
+        } 
+    };
+
     try {
         const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), getUpdatePayload(payload));
@@ -378,11 +440,17 @@ async function handleGeneratePdf() {
 
     doc.setFont("helvetica", "bold"); doc.text("Documentos Entregues:", 15, y); y += 8;
     doc.setFont("helvetica", "normal"); doc.setFontSize(10);
-    const checked = checklistContainer.querySelectorAll('input[type="checkbox"][id^="doc-"]:checked');
+    
+    // Captura checkboxes marcados
+    const checked = checklistContainer.querySelectorAll('.doc-checkbox:checked');
     if (checked.length > 0) {
         checked.forEach(cb => {
             const text = cb.nextElementSibling.textContent.trim();
-            const lines = doc.splitTextToSize(`- ${text}`, pageWidth - 30);
+            // Pega o tipo (Físico/Digital)
+            const typeRadio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
+            const typeStr = typeRadio ? ` [${typeRadio.value}]` : '';
+
+            const lines = doc.splitTextToSize(`- ${text}${typeStr}`, pageWidth - 30);
             if (y + (lines.length * 5) > pageHeight - 20) { doc.addPage(); y = 20; }
             doc.text(lines, 20, y); y += lines.length * 5;
         });
@@ -402,7 +470,10 @@ async function handleGeneratePdf() {
                 doc.text(`${cat.label}`, 20, y);
                 doc.text(`${valStr}`, pageWidth - 30, y, { align: 'right' });
                 y += 5; 
-                doc.setDrawColor(200); doc.line(20, y, pageWidth - 20, y); doc.setDrawColor(0);
+                // LINHA MENOR (CENTRALIZADA E CURTA)
+                doc.setDrawColor(200); 
+                doc.line(40, y, pageWidth - 40, y); // Margem de 40 de cada lado = linha menor
+                doc.setDrawColor(0);
                 y += 10;
                 total += parseCurrency(valStr);
                 if (y > pageHeight - 40) { doc.addPage(); y = 20; }
