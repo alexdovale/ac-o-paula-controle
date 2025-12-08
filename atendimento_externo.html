@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel do Colaborador - SIGAP</title>
-    <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
+    <!-- Favicon atualizado -->
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -24,8 +25,9 @@
 
     <div id="main-card" class="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden hidden flex flex-col h-[90vh] md:h-auto">
         
-        <!-- Cabeçalho -->
+        <!-- Cabeçalho com Logo -->
         <div class="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white text-center flex-shrink-0">
+            <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" class="h-16 w-auto mx-auto mb-3 bg-white rounded-lg p-1 shadow-md">
             <h1 class="text-xl font-bold">Painel do Colaborador</h1>
             <p class="text-xs opacity-90 mt-1">SIGAP - Acesso Externo</p>
         </div>
@@ -47,23 +49,28 @@
             
             <!-- ABA 1: FINALIZAR -->
             <div id="content-finish" class="space-y-6">
+                
                 <div class="bg-blue-50 border-l-4 border-blue-500 p-4 text-blue-700 rounded-r">
                     <p class="font-bold text-sm">Responsável pelo Atendimento</p>
                     <p class="text-xs mt-1">Confirme seu nome antes de finalizar.</p>
                 </div>
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Seu Nome</label>
                     <input type="text" id="attendant-name" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" placeholder="Nome do Defensor/Servidor">
                 </div>
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Houve demanda adicional?</label>
                     <div class="flex gap-2">
+                        <!-- Input com a lista correta do sistema -->
                         <input type="text" id="new-demand-input" list="subjects-list-external" class="flex-grow p-2 border border-gray-300 rounded-lg text-sm" placeholder="Selecione o assunto...">
                         <datalist id="subjects-list-external"></datalist>
                         <button id="add-demand-btn" class="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-bold hover:bg-gray-300">Add</button>
                     </div>
                     <ul id="demands-list" class="mt-3 space-y-2 text-sm text-gray-600"></ul>
                 </div>
+
                 <div class="pt-4 border-t">
                     <button id="finish-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition transform active:scale-95 text-lg">
                         Finalizar e Salvar
@@ -72,20 +79,15 @@
             </div>
 
             <!-- ABA 2: DOCUMENTOS -->
-            <div id="content-docs" class="hidden space-y-6">
-                <!-- Status -->
-                <div id="checklist-status" class="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-yellow-800 text-sm">
-                    <p><strong>Status:</strong> <span id="doc-status-text">Não verificado</span></p>
+            <div id="content-docs" class="hidden space-y-4">
+                <div id="checklist-status" class="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-yellow-800 text-sm mb-4">
+                    <p><strong>Status da Documentação:</strong> <span id="doc-status-text">Não verificado</span></p>
                 </div>
 
-                <!-- Lista de Docs -->
-                <div>
-                    <h3 class="font-bold text-gray-800 mb-3 border-b pb-1">Documentos Entregues</h3>
-                    <div id="checklist-container" class="space-y-4">
-                        <p class="text-center text-gray-400 py-4 text-sm">Carregando...</p>
-                    </div>
+                <div id="checklist-container" class="space-y-4">
+                    <p class="text-center text-gray-400 py-8">Carregando lista de documentos...</p>
                 </div>
-
+                
                 <!-- Planilha de Despesas (Se houver) -->
                 <div id="expense-container" class="hidden">
                     <h3 class="font-bold text-gray-800 mb-2 border-b pb-1">Planilha de Despesas</h3>
@@ -93,9 +95,9 @@
                 </div>
                 
                 <!-- Dados do Réu -->
-                <div id="reu-data-container" class="hidden">
-                    <h3 class="font-bold text-gray-800 mb-2 border-b pb-1">Dados da Parte Contrária (Réu)</h3>
-                    <div id="reu-data-content" class="bg-gray-50 p-3 rounded text-sm text-gray-600 space-y-2 border border-gray-200"></div>
+                <div id="reu-data-container" class="mt-6 border-t pt-4 hidden">
+                    <h3 class="font-bold text-gray-800 mb-2">Dados da Parte Contrária (Réu)</h3>
+                    <div id="reu-data-content" class="text-sm text-gray-600 space-y-1 bg-gray-50 p-3 rounded border"></div>
                 </div>
             </div>
 
@@ -113,9 +115,12 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- ÁRVORE DE ASSUNTOS (COMPLETA) ---
+        // --- ÁRVORE DE ASSUNTOS (COMPLETA DO SISTEMA) ---
         const subjectTree = [
-            { text: "Orientação Jurídica" }, { text: "Atendimento Jurídico Integral e Gratuito" }, { text: "Ajuizamento e Acompanhamento de Ações Judiciais" }, { text: "Consultas Processuais" },
+            { text: "Orientação Jurídica" },
+            { text: "Atendimento Jurídico Integral e Gratuito" },
+            { text: "Ajuizamento e Acompanhamento de Ações Judiciais" },
+            { text: "Consultas Processuais" },
             { text: "Processos Cíveis (gerais)", children: [ { text: "Ação de Obrigação de Fazer" }, { text: "Ação Declaratória de Nulidade" }, { text: "Ação de Indenização (Danos Morais e Materiais)" }, { text: "Ação Revisional de Débito" }, { text: "Ação de Exigir Contas" } ] },
             { text: "Processos de Família", children: [ { text: "Alimentos", children: [ { text: "Ação de Fixação de Alimentos" }, { text: "Ação de Majoração de Alimentos" }, { text: "Ação de Oferta de Alimentos" }, { text: "Ação de Alimentos Gravídicos" }, { text: "Ação de Alimentos Avoengos (contra avós)" } ] }, { text: "Divórcio", children: [ { text: "Divórcio Consensual" }, { text: "Divórcio Litigioso" } ] }, { text: "União Estável", children: [ { text: "Reconhecimento e Dissolução de União Estável" }, { text: "Reconhecimento / Dissolução de União Estável Post Mortem" }, { text: "Conversão de União Estável Homoafetiva em Casamento" } ] }, { text: "Guarda", children: [ { text: "Guarda (pedida pelos pais)" }, { text: "Guarda (pedida por outra pessoa que não o pai ou a mãe)" }, { text: "Guarda Compartilhada" } ] }, { text: "Regulamentação de Convivência Familiar (Visitas)" }, { text: "Investigação de Paternidade (DNA)", children: [ { text: "Investigação de Paternidade Cumulada com Alimentos" }, { text: "Investigação de Paternidade Pós Morte" } ] }, { text: "Curatela", children: [ { text: "Procedimento de Fixação dos Limites da Curatela (antiga interdição)" }, { text: "Levantamento de Curatela" } ] }, { text: "Tutela" }, { text: "Adoção" } ] },
             { text: "Processos Criminais", children: [ { text: "Defesa de Acusados em Processo Criminal" }, { text: "Acompanhamento do Cumprimento da Pena (Execução Penal)" }, { text: "Atuação em Audiência de Custódia" } ] },
@@ -130,16 +135,19 @@
             { text: "Apoio Psicossocial" }, { text: "Defesa de Direitos Homoafetivos" }
         ];
 
-        function flattenTreeWithObjects(nodes) {
+        function flattenTreeWithObjects(nodes, parentPrefix = '') {
             let flatList = [];
             nodes.forEach(node => {
-                flatList.push({ value: node.text });
-                if (node.children) flatList = flatList.concat(flattenTreeWithObjects(node.children));
+                const currentValue = parentPrefix ? `${parentPrefix} > ${node.text}` : node.text;
+                flatList.push({ value: currentValue });
+                if (node.children) {
+                    flatList = flatList.concat(flattenTreeWithObjects(node.children, currentValue));
+                }
             });
             return flatList;
         }
 
-        // --- DADOS DOS DOCUMENTOS ---
+        // --- DADOS DOS DOCUMENTOS (Checklist) ---
         const BASE_DOCS = ['RG/CNH', 'CPF', 'Comprovante de Residência'];
         const INCOME_DOCS = ['Contracheque', 'CTPS', 'Extrato INSS', 'Extrato Bancário', 'Declaração Hipossuficiência', 'IRPF'];
         const COMMON_DOCS = [...BASE_DOCS, ...INCOME_DOCS];
@@ -158,12 +166,12 @@
             saude: 'Saúde', vestuario: 'Vestuário', lazer: 'Lazer', outras: 'Outras'
         };
 
-        // --- CONFIGURAÇÃO ---
+        // --- CONFIGURAÇÃO FIREBASE ---
         const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // --- LÓGICA ---
+        // --- LÓGICA PRINCIPAL ---
         const urlParams = new URLSearchParams(window.location.search);
         const pautaId = urlParams.get('pautaId');
         const assistidoId = urlParams.get('assistidoId');
@@ -177,6 +185,7 @@
         const contentDocs = document.getElementById('content-docs');
         const datalist = document.getElementById('subjects-list-external');
 
+        // PREENCHE A LISTA DE ASSUNTOS CORRETA
         const flatSubjects = flattenTreeWithObjects(subjectTree);
         flatSubjects.forEach(subject => {
             const option = document.createElement('option');
@@ -213,6 +222,7 @@
                 alert("Erro ao carregar dados.");
             });
 
+            // TABS
             tabFinish.addEventListener('click', () => {
                 tabFinish.className = "flex-1 py-3 text-center text-sm tab-active transition";
                 tabDocs.className = "flex-1 py-3 text-center text-sm tab-inactive transition";
@@ -227,6 +237,7 @@
                 contentFinish.classList.add('hidden');
             });
 
+            // CHECKLIST
             function renderChecklist(data) {
                 const checklistContainer = document.getElementById('checklist-container');
                 checklistContainer.innerHTML = '';
@@ -255,24 +266,13 @@
                     
                     section.docs.forEach((docName, dIdx) => {
                         const li = document.createElement('li');
+                        // Busca aproximada do ID
+                        const potentialId = `doc-${savedChecklist.action || actionKey}-${sIdx}-${dIdx}`;
+                        const isChecked = savedChecklist.checkedIds?.includes(potentialId);
                         
-                        // ID aproximado para visualização
-                        // (Nota: A lógica ideal seria salvar o checklist com IDs fixos, mas para visualização rápida isso resolve)
-                        let isChecked = false;
-                        let type = '';
+                        // Tipo Salvo
+                        const type = docTypes[potentialId] || '';
                         
-                        // Varre IDs salvos para ver se algum "parece" com este documento
-                        if (savedChecklist.checkedIds) {
-                            savedChecklist.checkedIds.forEach(savedId => {
-                                // Exemplo de ID salvo: doc-divorcio_litigioso-0-1
-                                // Se o índice final bater, assumimos que é este doc.
-                                if (savedId.endsWith(`-${sIdx}-${dIdx}`)) {
-                                    isChecked = true;
-                                    type = docTypes[savedId] || '';
-                                }
-                            });
-                        }
-
                         const icon = isChecked ? '<span class="text-green-600 font-bold">✓</span>' : '<span class="text-gray-300">○</span>';
                         const style = isChecked ? 'text-gray-800 font-medium' : 'text-gray-400';
                         const typeBadge = type ? `<span class="text-xs bg-blue-100 text-blue-700 px-1 rounded ml-2">${type}</span>` : '';
@@ -300,7 +300,7 @@
                     rContainer.classList.remove('hidden');
                     
                     let html = '';
-                    if (r.nome) html += `<p><strong>Nome:</strong> ${r.nome}</p>`;
+                    if (r.nome) html += `<p><strong>Nome:</strong> ${r.nome}</p>`; // NOME MOSTRADO AQUI
                     if (r.cpf) html += `<p><strong>CPF:</strong> ${r.cpf}</p>`;
                     if (r.telefone) html += `<p><strong>Tel:</strong> ${r.telefone}</p>`;
                     
@@ -335,6 +335,7 @@
                 }
             }
 
+            // FINALIZAR
             const addDemandBtn = document.getElementById('add-demand-btn');
             const newDemandInput = document.getElementById('new-demand-input');
             const demandsList = document.getElementById('demands-list');
