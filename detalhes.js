@@ -3,176 +3,287 @@
  * Gerencia o modal de detalhes, checklist e dados da parte contrária.
  */
 
-// --- CONSTANTES DE DOCUMENTAÇÃO ---
+// --- 1. CONSTANTES DE DOCUMENTAÇÃO (Listas Padrão) ---
 
-// Lista base de documentos de identificação
 const BASE_DOCS = [
-    'Carteira de Identidade (RG)', 
+    'Carteira de Identidade (RG) ou Habilitação (CNH)', 
     'CPF', 
-    'Comprovante de Residência (atualizado)'
+    'Comprovante de Residência (Atualizado - últimos 3 meses)'
 ];
 
-// Nova lista detalhada de Comprovação de Renda
 const INCOME_DOCS = [
     '--- TRABALHADOR FORMAL (CLT / SERVIDOR) ---',
     'Contracheque (3 últimos meses)',
-    'Carteira de Trabalho (Física ou Digital)',
+    'Carteira de Trabalho (Física ou Digital - Print das telas)',
     'Extrato Analítico do FGTS',
-    '--- APOSENTADO / PENSIONISTA / INSS ---',
+    '--- APOSENTADO / PENSIONISTA / BPC-LOAS ---',
     'Extrato de Pagamento de Benefício (Meu INSS)',
     'Histórico de Crédito - HISCRE (Meu INSS)',
-    'Extrato da conta onde recebe o benefício',
+    'Extrato bancário da conta onde recebe o benefício',
     '--- AUTÔNOMO / INFORMAL ---',
-    'Declaração de Hipossuficiência (Próprio Punho)',
+    'Declaração de Hipossuficiência (Próprio Punho - informando média mensal)',
     'Extratos Bancários (3 últimos meses)',
     'Comprovante de Inscrição no CadÚnico',
-    'Prova de Isenção do Imposto de Renda',
+    'Consulta de Restituição IRPF (Prova de Isenção)',
     '--- DESEMPREGADO ---',
-    'Carteira de Trabalho (Baixa do último emprego)',
-    'Comprovante de Seguro-Desemprego',
-    'Declaração de Hipossuficiência (Ausência de renda)',
-    'Extrato do CNIS (Meu INSS)',
-    '--- PROVAS GERAIS ---',
+    'Carteira de Trabalho (Página da baixa do último emprego)',
+    'Comprovante de Seguro-Desemprego (se estiver recebendo)',
+    'Declaração de Hipossuficiência (Informando ausência de renda)',
+    'Extrato do CNIS (Meu INSS - prova ausência de vínculo)',
+    '--- PROVAS GERAIS (HIPOSSUFICIÊNCIA) ---',
     'Extrato do Bolsa Família',
     'Folha Resumo do CadÚnico',
-    'Declaração de IRPF (Completa + Recibo)',
-    'Comprovante de Isenção de IRPF'
+    'Declaração de IRPF Completa + Recibo (se declarar)'
 ];
 
-// Combinação para uso geral
+// Lista Combinada: Identificação + Renda (Será usada em quase todas as ações)
 const COMMON_DOCS_FULL = [...BASE_DOCS, ...INCOME_DOCS];
 
 
-// --- Dados e Estado do Módulo ---
+// --- 2. DADOS DOS TIPOS DE AÇÃO ---
 
 const documentsData = {
-    // --- II. PROCESSOS CÍVEIS (Gerais) ---
+    // --- CÍVEL ---
     obrigacao_fazer: { 
         title: 'Ação de Obrigação de Fazer', 
         sections: [
-            { title: 'Documentação Comum e Renda', docs: COMMON_DOCS_FULL }, 
-            { title: 'Específicos', docs: ['Provas da obrigação (contratos, acordos)', 'Provas do descumprimento (fotos, mensagens, protocolos)'] }
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, 
+            { title: 'Específicos do Caso', docs: ['Contrato ou acordo descumprido', 'Protocolos de atendimento', 'Troca de e-mails/mensagens', 'Fotos/Vídeos do problema'] }
         ] 
     },
     declaratoria_nulidade: { 
         title: 'Ação Declaratória de Nulidade', 
         sections: [
-            { title: 'Documentação Comum e Renda', docs: COMMON_DOCS_FULL }, 
-            { title: 'Específicos', docs: ['Documento a ser anulado (multa, contrato)', 'Provas da ilegalidade'] }
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, 
+            { title: 'Específicos do Caso', docs: ['Cópia do contrato/multa a ser anulado', 'Comprovantes de pagamento indevido', 'Laudos ou pareces (se houver)'] }
         ] 
     },
     indenizacao_danos: { 
-        title: 'Ação de Indenização', 
+        title: 'Ação de Indenização (Danos)', 
         sections: [
-            { title: 'Documentação Comum e Renda', docs: COMMON_DOCS_FULL }, 
-            { title: 'Específicos', docs: ['Provas do dano (fotos, laudos)', 'Boletim de Ocorrência (se houver)', 'Notas fiscais de prejuízos materiais', 'Testemunhas'] }
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, 
+            { title: 'Específicos do Caso', docs: ['Boletim de Ocorrência (se aplicável)', 'Fotos/Vídeos dos danos', 'Três orçamentos (para dano material)', 'Notas fiscais de gastos', 'Nome e endereço de testemunhas'] }
         ] 
     },
-    
-    // --- III. PROCESSOS DE FAMÍLIA ---
+    revisional_debito: {
+        title: 'Ação Revisional de Débito',
+        sections: [
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Específicos do Caso', docs: ['Contrato de empréstimo/financiamento', 'Planilha de evolução da dívida', 'Extratos comprovando os descontos'] }
+        ]
+    },
+    exigir_contas: {
+        title: 'Ação de Exigir Contas',
+        sections: [
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Específicos do Caso', docs: ['Documento que prova a gestão de bens pelo réu', 'Provas da recusa em prestar contas'] }
+        ]
+    },
+
+    // --- FAMÍLIA ---
     alimentos_fixacao_majoracao_oferta: {
         title: 'Alimentos (Fixação / Majoração / Oferta)',
         sections: [
-            { title: 'Documentação Comum e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Do Alimentando', docs: ['Certidão de Nascimento', 'Comprovantes de despesas (escola, saúde, vestuário)'] },
-            { title: 'Sobre o Réu', docs: ['Endereço completo', 'Dados de trabalho/renda (se souber)'] }
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Do Alimentando (Filho)', docs: ['Certidão de Nascimento', 'Comprovantes de despesas (Escola, Curso, Natação)', 'Comprovantes de saúde (Plano, remédios, tratamentos)', 'Notas fiscais de vestuário/alimentação'] },
+            { title: 'Sobre o Réu', docs: ['Endereço completo (Indispensável)', 'Informações sobre trabalho/renda do réu (Nome da empresa, endereço)'] }
         ]
     },
     alimentos_gravidicos: {
         title: 'Ação de Alimentos Gravídicos',
         sections: [
-            { title: 'Documentação Comum e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Comprovante de gravidez (exames, ultrassom)', 'Indícios de paternidade (conversas, fotos)', 'Despesas da gestação (médico, enxoval)'] }
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Da Gestação', docs: ['Exame Beta HCG / Ultrassom', 'Cartão de Pré-Natal', 'Receitas médicas e notas de medicamentos', 'Orçamento de enxoval/parto'] },
+            { title: 'Do Suposto Pai', docs: ['Indícios de paternidade (Conversas WhatsApp, Fotos juntos, Testemunhas)', 'Endereço e Local de Trabalho do Réu'] }
+        ]
+    },
+    alimentos_avoengos: {
+        title: 'Alimentos Avoengos (Contra Avós)',
+        sections: [
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Específicos', docs: ['Certidão de Nascimento do Neto', 'Prova da impossibilidade dos pais pagarem (prisão, morte, desaparecimento)', 'Endereço dos Avós'] }
+        ]
+    },
+    divorcio_consensual: {
+        title: 'Divórcio Consensual',
+        sections: [
+            { title: 'Documentação (Ambos)', docs: ['RG e CPF de ambos', 'Comprovante de Residência de ambos', 'Certidão de Casamento (Atualizada - 90 dias)', ...INCOME_DOCS] },
+            { title: 'Filhos e Bens', docs: ['Certidão de Nascimento dos filhos', 'Documento do Imóvel (RGI ou Compra e Venda)', 'CRLV de Veículos'] }
         ]
     },
     divorcio_litigioso: {
         title: 'Divórcio Litigioso',
         sections: [
-            { title: 'Documentação Comum e Renda', docs: [...COMMON_DOCS_FULL, 'Certidão de Casamento (Atualizada)'] },
-            { title: 'Bens e Filhos', docs: ['Documentos dos bens (imóveis, veículos)', 'Certidão de Nascimento dos filhos', 'Comprovantes de despesas dos filhos'] }
+            { title: 'Documentação Pessoal e Renda', docs: [...COMMON_DOCS_FULL, 'Certidão de Casamento (Atualizada - 90 dias)'] },
+            { title: 'Filhos e Bens', docs: ['Certidão de Nascimento dos filhos', 'Comprovantes de despesas dos filhos', 'Documentos dos bens a partilhar (RGI, CRLV, Extratos)'] },
+            { title: 'Sobre o Cônjuge (Réu)', docs: ['Endereço atual', 'Local de trabalho'] }
         ]
     },
-    divorcio_consensual: { 
-        title: 'Divórcio Consensual', 
+    uniao_estavel_reconhecimento_dissolucao: {
+        title: 'União Estável (Reconhecimento/Dissolução)',
         sections: [
-            { title: 'Documentação (Ambos)', docs: ['RG e CPF de ambos', 'Comprovante de Residência de ambos', 'Certidão de Casamento (Atualizada)', 'Declaração de Hipossuficiência', ...INCOME_DOCS] }
-        ] 
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Provas da União', docs: ['Certidão de Nascimento dos filhos em comum', 'Contas em nome de ambos no mesmo endereço', 'Fotos do casal', 'Declarações de testemunhas', 'Seguro de vida/Plano de saúde como dependente'] },
+            { title: 'Bens', docs: ['Documentos dos bens adquiridos durante a união'] }
+        ]
+    },
+    uniao_estavel_post_mortem: {
+        title: 'União Estável Post Mortem',
+        sections: [
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Do Falecido', docs: ['Certidão de Óbito', 'Certidão de bens deixados'] },
+            { title: 'Provas da União', docs: ['(Mesmas provas da união estável comum)'] }
+        ]
+    },
+    conversao_uniao_homoafetiva: {
+        title: 'Conversão de União Estável em Casamento',
+        sections: [
+            { title: 'Documentação (Ambos)', docs: ['RG/CPF e Comprovante de Residência de ambos', 'Certidões de Nascimento atualizadas', ...INCOME_DOCS] }
+        ]
+    },
+    guarda: {
+        title: 'Ação de Guarda',
+        sections: [
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Da Criança', docs: ['Certidão de Nascimento', 'Comprovante de matrícula escolar', 'Cartão de vacinação'] },
+            { title: 'Do Caso', docs: ['Relatório do Conselho Tutelar (se houver)', 'Provas de maus tratos/negligência da outra parte (se houver)'] }
+        ]
+    },
+    regulamentacao_convivencia: {
+        title: 'Regulamentação de Visitas',
+        sections: [
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Da Criança', docs: ['Certidão de Nascimento', 'Endereço onde a criança reside'] }
+        ]
     },
     investigacao_paternidade: {
         title: 'Investigação de Paternidade',
         sections: [
-            { title: 'Documentação Comum e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Certidão de Nascimento do filho', 'Indícios de paternidade', 'Nome e endereço de testemunhas'] }
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Da Criança', docs: ['Certidão de Nascimento (sem o nome do pai)'] },
+            { title: 'Sobre o Suposto Pai', docs: ['Nome completo', 'Endereço residencial ou trabalho', 'Provas do relacionamento (se houver)'] }
         ]
     },
-    guarda: { 
-        title: 'Guarda', 
+    curatela: {
+        title: 'Curatela (Interdição)',
         sections: [
-            { title: 'Documentação Comum e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Certidão de Nascimento da Criança', 'Comprovante de matrícula escolar', 'Carteira de vacinação', 'Provas da situação de risco (se houver)'] }
-        ] 
+            { title: 'Documentação Pessoal e Renda (Curador)', docs: COMMON_DOCS_FULL },
+            { title: 'Do Curatelando', docs: ['RG e CPF', 'Certidão de Nascimento/Casamento', 'Comprovante de Renda (Benefício INSS)', 'Laudo Médico Atualizado (com CID e expressa menção à incapacidade)'] }
+        ]
     },
-    regulamentacao_convivencia: { 
-        title: 'Regulamentação de Visitas', 
+    levantamento_curatela: {
+        title: 'Levantamento de Curatela',
         sections: [
-            { title: 'Documentação Comum e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Certidão de Nascimento da Criança', 'Endereço atual da criança'] }
-        ] 
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Específicos', docs: ['Cópia da sentença de interdição', 'Laudo médico atestando a recuperação da capacidade'] }
+        ]
     },
-    curatela: { 
-        title: 'Curatela', 
+    tutela: {
+        title: 'Tutela (Menor)',
         sections: [
-            { title: 'Documentação Comum e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Do Curatelando', docs: ['RG e CPF', 'Certidão de Nascimento/Casamento', 'Laudo Médico Atualizado (com CID)', 'Comprovante de Renda/Benefício'] }
-        ] 
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Do Menor', docs: ['Certidão de Nascimento', 'Certidão de Óbito dos pais (ou comprovante de destituição do poder familiar)'] }
+        ]
     },
-    
-    // --- IV. PROCESSOS CRIMINAIS ---
+    adocao: {
+        title: 'Adoção',
+        sections: [
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Específicos', docs: ['Certidão de Casamento/Nascimento dos adotantes', 'Certidão de Nascimento da criança', 'Atestado de Sanidade Física e Mental', 'Certidões Negativas Cíveis e Criminais'] }
+        ]
+    },
+
+    // --- CRIMINAL ---
     defesa_criminal_custodia: {
         title: 'Defesa Criminal / Audiência de Custódia',
         sections: [
-            { title: 'Documentação', docs: [...BASE_DOCS, 'Comprovante de Residência', ...INCOME_DOCS] },
-            { title: 'Do Caso', docs: ['Auto de Prisão em Flagrante / BO', 'Nome de Testemunhas', 'Comprovante de trabalho lícito (se houver)'] }
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Do Caso', docs: ['Auto de Prisão em Flagrante / BO', 'Comprovante de Residência Fixa', 'Carteira de Trabalho Assinada (para pedir liberdade)', 'Nome e endereço de testemunhas'] }
         ]
     },
-    execucao_penal: { 
-        title: 'Execução Penal', 
+    execucao_penal: {
+        title: 'Execução Penal (VPL, Livramento, Progressão)',
         sections: [
-            { title: 'Documentos', docs: ['RG/CPF Familiar', 'Carteira de Visitante', 'Sentença', 'Número do Processo de Execução (PEP)', 'Atestados de trabalho/estudo'] }
-        ] 
+            { title: 'Documentação Pessoal e Renda (Familiar)', docs: COMMON_DOCS_FULL },
+            { title: 'Do Preso', docs: ['Carteira de Visitante', 'Carta do preso', 'Número do Processo de Execução (PEP)', 'Certidão Carcerária (se tiver)'] }
+        ]
     },
 
-    // --- V. FAZENDA PÚBLICA ---
+    // --- FAZENDA PÚBLICA ---
     fornecimento_medicamentos: {
-        title: 'Fornecimento de Medicamentos/Saúde',
+        title: 'Medicamentos / Saúde',
         sections: [
-            { title: 'Documentação Comum e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Médicos', docs: ['Laudo Médico detalhado (com CID)', 'Receita Médica atualizada', 'Negativa do SUS/Plano', 'Orçamentos (3 farmácias)'] }
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Médicos', docs: ['Laudo Médico (com CID e justificativa)', 'Receita Médica (Original e Atual)', 'Negativa da Secretaria de Saúde/Plano', 'Três orçamentos de farmácias diferentes'] }
+        ]
+    },
+    indenizacao_poder_publico: {
+        title: 'Indenização contra o Estado',
+        sections: [
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Específicos', docs: ['Provas do fato (BO, Fotos, Laudos)', 'Comprovantes de gastos/danos'] }
+        ]
+    },
+    previdencia_estadual_municipal: {
+        title: 'Previdência (RPPS)',
+        sections: [
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Específicos', docs: ['Processo administrativo do benefício', 'Portaria de aposentadoria/pensão'] }
+        ]
+    },
+    questionamento_impostos_taxas: {
+        title: 'Contestação de Impostos/Taxas',
+        sections: [
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Específicos', docs: ['Carnê do IPTU/Taxa', 'Notificação da Dívida Ativa', 'Comprovantes de pagamento (se houver)'] }
         ]
     },
 
-    // --- VI. INFÂNCIA E JUVENTUDE ---
-    vaga_escola_creche: { 
-        title: 'Vaga em Escola/Creche', 
+    // --- INFÂNCIA ---
+    vaga_escola_creche: {
+        title: 'Vaga em Creche/Escola',
         sections: [
-            { title: 'Documentação Comum e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Da Criança', docs: ['Certidão de Nascimento', 'Cartão de Vacina', 'Número do protocolo da inscrição na rede pública', 'Negativa da escola'] }
-        ] 
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Da Criança', docs: ['Certidão de Nascimento', 'Cartão de Vacinação', 'Comprovante de Inscrição/Negativa da escola', 'Número do protocolo 1746 (se Rio)'] }
+        ]
+    },
+    apoio_escolar: {
+        title: 'Profissional de Apoio Escolar (Mediador)',
+        sections: [
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Da Criança', docs: ['Certidão de Nascimento', 'Laudo Médico (CID + Necessidade de mediador)', 'Comprovante de Matrícula'] }
+        ]
+    },
+    transporte_gratuito: {
+        title: 'Transporte Gratuito (Passe Livre)',
+        sections: [
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Do Requerente', docs: ['Laudo Médico (CID + Necessidade de transporte)', 'Negativa do Riocard/Fetranspor'] }
+        ]
     },
 
-    // --- Outros ---
+    // --- REGISTROS ---
     retificacao_registro_civil: {
         title: 'Retificação de Registro Civil',
         sections: [
-            { title: 'Documentação Comum e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Certidão a ser retificada (Original)', 'Documentos que comprovam o erro'] }
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Específicos', docs: ['Certidão a ser retificada (Original)', 'Documentos que provam o erro (outras certidões, batistério, documentos escolares)'] }
         ]
     },
+    
+    // --- ALVARÁ ---
     alvara_levantamento_valores: {
         title: 'Alvará (Levantamento de Valores)',
         sections: [
-            { title: 'Documentação Comum e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Do Falecido', docs: ['Certidão de Óbito', 'Certidão de Dependentes (INSS)', 'Extrato das contas (PIS/FGTS/Banco)'] }
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Do Falecido', docs: ['Certidão de Óbito', 'Certidão de Dependentes Habilitados (INSS) ou Negativa', 'Extratos de PIS/FGTS/Conta Bancária'] }
+        ]
+    },
+    alvara_viagem_menor: {
+        title: 'Alvará de Viagem (Menor)',
+        sections: [
+            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
+            { title: 'Viagem', docs: ['Passagens/Reserva', 'Endereço de destino', 'Documentos de quem acompanhará', 'Endereço do genitor que nega/ausente'] }
         ]
     }
 };
@@ -187,6 +298,8 @@ const ACTIONS_WITH_WORK_INFO = [
     'investigacao_paternidade'
 ];
 
+// --- 3. ESTADO GLOBAL ---
+
 let currentAssistedId = null;
 let currentPautaId = null;
 let db = null;
@@ -195,7 +308,7 @@ let showNotification = null;
 let allAssisted = [];
 let currentChecklistAction = null;
 
-// --- Seletores de DOM ---
+// Seletores
 const modal = document.getElementById('documents-modal');
 const assistedNameEl = document.getElementById('documents-assisted-name');
 const actionSelectionView = document.getElementById('document-action-selection');
@@ -209,10 +322,10 @@ const checklistSearch = document.getElementById('checklist-search');
 const closeBtn = document.getElementById('close-documents-modal-btn');
 const cancelBtn = document.getElementById('cancel-checklist-btn');
 
-// --- Utilitários ---
+// --- 4. UTILITÁRIOS E VIACEP ---
+
 const normalizeText = (str) => str ? str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : '';
 
-// --- Integração ViaCEP ---
 async function getAddressByCep(cep) {
     const cleanCep = cep.replace(/\D/g, ''); 
     if (cleanCep.length !== 8) return null;
@@ -247,7 +360,8 @@ function setupCepListener(cepInputId, fields) {
     });
 }
 
-// --- Geração Dinâmica do Formulário do Réu ---
+// --- 5. RENDERIZAÇÃO DO FORMULÁRIO DO RÉU ---
+
 function renderReuForm(actionKey) {
     const showWorkInfo = ACTIONS_WITH_WORK_INFO.includes(actionKey);
 
@@ -319,11 +433,10 @@ function renderReuForm(actionKey) {
         </div>
         ` : ''}
     `;
-
     return container;
 }
 
-// --- Renderização Principal ---
+// --- 6. RENDERIZAÇÃO DA CHECKLIST ---
 
 function populateActionSelection() {
     const container = document.getElementById('document-action-selection');
@@ -353,7 +466,6 @@ function populateActionSelection() {
         btn.innerHTML = `<span class="font-semibold text-gray-700">${documentsData[key].title}</span>`;
         grid.appendChild(btn);
     });
-
     container.appendChild(grid);
 }
 
@@ -369,7 +481,7 @@ function renderChecklist(actionKey) {
     checklistContainer.innerHTML = '';
     checklistSearch.value = '';
 
-    // 1. Lista de Documentos
+    // 1. Lista de Documentos (Gera HTML da checklist)
     data.sections.forEach((section, sIdx) => {
         const div = document.createElement('div');
         div.innerHTML = `<h4 class="font-bold text-gray-700 mt-4 mb-2 border-b">${section.title}</h4>`;
@@ -398,7 +510,6 @@ function renderChecklist(actionKey) {
     obsDiv.className = 'mt-6 bg-yellow-50 p-4 rounded-lg border border-yellow-100';
     obsDiv.innerHTML = `<h4 class="font-bold text-gray-800 mb-2">Status da Documentação</h4>`;
     
-    // Lista de opções atualizada (NOME ALTERADO)
     const obsOptions = ['Documentação Pendente', 'Documentos Organizados', 'Assistido Ciente'];
     const savedObs = saved?.observations?.selected || [];
 
@@ -413,7 +524,6 @@ function renderChecklist(actionKey) {
     // Outras observações
     const otherText = saved?.observations?.otherText || '';
     const showOther = !!otherText;
-    
     const otherDiv = document.createElement('div');
     otherDiv.className = 'mt-2';
     otherDiv.innerHTML = `
@@ -423,32 +533,27 @@ function renderChecklist(actionKey) {
         </label>
         <textarea id="text-other" class="w-full mt-2 p-2 border rounded text-sm ${showOther ? '' : 'hidden'}" rows="2" placeholder="Descreva...">${otherText}</textarea>
     `;
-    
     otherDiv.querySelector('#check-other').addEventListener('change', (e) => {
         document.getElementById('text-other').classList.toggle('hidden', !e.target.checked);
     });
-    
     obsDiv.appendChild(otherDiv);
     checklistContainer.appendChild(obsDiv);
 
-    // 3. Formulário do Réu (Dinâmico)
+    // 3. Formulário do Réu (Geração e Listener)
     const reuForm = renderReuForm(actionKey);
     checklistContainer.appendChild(reuForm);
-
-    // Ativar Listener do CEP no formulário recém-criado
     setupCepListener('cep-reu', { rua: 'rua-reu', bairro: 'bairro-reu', cidade: 'cidade-reu', uf: 'estado-reu' });
 
-    // 4. Preencher dados salvos do Réu
+    // 4. Preenchimento de Dados Salvos
     if (saved?.reuData) {
         fillReuData(saved.reuData);
     }
 }
 
-// --- Manipulação de Dados ---
+// --- 7. MANIPULAÇÃO DE DADOS (GET/SET) ---
 
 function fillReuData(data) {
     const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val || ''; };
-    
     setVal('cpf-reu', data.cpf);
     setVal('telefone-reu', data.telefone);
     setVal('email-reu', data.email);
@@ -464,8 +569,6 @@ function fillReuData(data) {
 
 function getReuData() {
     const getVal = (id) => document.getElementById(id)?.value || '';
-    
-    // Verifica se há algum dado preenchido
     const ids = ['cpf-reu', 'telefone-reu', 'email-reu', 'cep-reu', 'rua-reu', 'empresa-reu'];
     const hasData = ids.some(id => getVal(id) !== '');
 
@@ -489,14 +592,12 @@ function getReuData() {
 async function handleSave() {
     if (!currentAssistedId || !currentPautaId) return;
 
-    // Checklist
+    // Salva checkboxes
     const checkedIds = Array.from(checklistContainer.querySelectorAll('input[type="checkbox"][id^="doc-"]:checked')).map(cb => cb.id);
-    
-    // Observações
+    // Salva observações
     const obsSelected = Array.from(checklistContainer.querySelectorAll('.obs-opt:checked')).map(cb => cb.value);
     const otherText = document.getElementById('check-other')?.checked ? document.getElementById('text-other').value : '';
-
-    // Dados do Réu
+    // Salva dados do Réu
     const reuData = getReuData();
 
     const payload = {
@@ -519,7 +620,7 @@ async function handleSave() {
     }
 }
 
-// --- Eventos de Navegação ---
+// --- 8. EVENTOS DE UI ---
 
 function handleActionSelect(e) {
     const btn = e.target.closest('button[data-action]');
@@ -556,17 +657,20 @@ function closeModal() {
     modal.classList.add('hidden');
 }
 
-// --- PDF Generation (Atualizado para incluir dados do Réu) ---
+// --- 9. GERAÇÃO DE PDF (COMPLETA) ---
+
 async function handleGeneratePdf() {
     if (printChecklistBtn) printChecklistBtn.textContent = "Gerando...";
     
+    // Importação dinâmica para não pesar o carregamento inicial
     const { jsPDF } = window.jspdf || await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
     
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     let y = 20;
 
-    // Cabeçalho
+    // --- Cabeçalho ---
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.text("Checklist de Atendimento", pageWidth / 2, y, { align: "center" });
@@ -579,60 +683,75 @@ async function handleGeneratePdf() {
     doc.text(`Ação: ${checklistTitle.textContent}`, 15, y);
     y += 15;
     
-    // 1. Itens do Checklist
+    // --- 1. Itens da Checklist (Marcados) ---
     doc.setFont("helvetica", "bold");
     doc.text("Documentos Entregues:", 15, y);
     y += 8;
     doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
     
+    // Pega todos os checkboxes de documentos marcados
     const checked = checklistContainer.querySelectorAll('input[type="checkbox"][id^="doc-"]:checked');
+    
     if (checked.length > 0) {
         checked.forEach(cb => {
+            // Pega o texto do span vizinho ao checkbox
             const text = cb.nextElementSibling.textContent.trim();
+            
             // Quebra de linha se texto for longo
             const lines = doc.splitTextToSize(`- ${text}`, pageWidth - 30);
-            doc.text(lines, 20, y);
-            y += lines.length * 6;
             
-            if (y > 270) { doc.addPage(); y = 20; }
+            // Verifica quebra de página
+            if (y + (lines.length * 5) > pageHeight - 20) { doc.addPage(); y = 20; }
+            
+            doc.text(lines, 20, y);
+            y += lines.length * 5;
         });
     } else {
         doc.text("- Nenhum documento marcado.", 20, y);
         y += 7;
     }
 
-    // 2. Observações
-    y += 8;
-    if (y > 270) { doc.addPage(); y = 20; }
+    // --- 2. Observações ---
+    y += 10;
+    if (y > pageHeight - 40) { doc.addPage(); y = 20; }
     
     doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
     doc.text("Status / Observações:", 15, y);
     y += 8;
     doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
     
     const obs = checklistContainer.querySelectorAll('.obs-opt:checked');
-    obs.forEach(cb => {
-        doc.text(`[X] ${cb.value}`, 20, y);
-        y += 6;
-    });
+    if (obs.length > 0) {
+        obs.forEach(cb => {
+            doc.text(`[X] ${cb.value}`, 20, y);
+            y += 6;
+        });
+    }
 
     const other = document.getElementById('text-other');
     if (other && !other.classList.contains('hidden') && other.value) {
         const lines = doc.splitTextToSize(`Obs: ${other.value}`, pageWidth - 30);
+        if (y + (lines.length * 5) > pageHeight - 20) { doc.addPage(); y = 20; }
         doc.text(lines, 20, y);
-        y += lines.length * 6;
+        y += lines.length * 5;
     }
 
-    // 3. Dados da Parte Contrária (NOVO BLOCO)
-    const reuData = getReuData();
-    if (reuData) {
-        y += 10;
-        if (y > 240) { doc.addPage(); y = 20; }
+    // --- 3. Dados da Parte Contrária (Réu) - BLOCO NOVO ---
+    
+    // Tenta pegar os dados salvos ou os que estão na tela agora
+    const reuData = getReuData(); 
+
+    if (reuData) { // Só imprime se houver dados
+        y += 15;
+        if (y > pageHeight - 60) { doc.addPage(); y = 20; }
 
         // Linha divisória
         doc.setLineWidth(0.5);
         doc.line(15, y, pageWidth - 15, y);
-        y += 10;
+        y += 15;
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(13);
@@ -641,15 +760,16 @@ async function handleGeneratePdf() {
         doc.setFontSize(11);
         doc.setFont("helvetica", "normal");
 
+        // Função auxiliar para imprimir campos
         const printField = (label, value) => {
-            if (value) {
+            if (value && value.trim() !== "") {
                 doc.text(`${label}: ${value}`, 20, y);
                 y += 6;
             }
         };
 
         printField("CPF", reuData.cpf);
-        printField("Telefone", reuData.telefone);
+        printField("Telefone/WhatsApp", reuData.telefone);
         printField("E-mail", reuData.email);
         
         // Monta endereço
@@ -662,6 +782,7 @@ async function handleGeneratePdf() {
         
         if (end && end.length > 5) {
             const endLines = doc.splitTextToSize(`Endereço: ${end}`, pageWidth - 40);
+            if (y + (endLines.length * 6) > pageHeight - 20) { doc.addPage(); y = 20; }
             doc.text(endLines, 20, y);
             y += endLines.length * 6;
         }
@@ -669,6 +790,7 @@ async function handleGeneratePdf() {
         // Dados Profissionais
         if (reuData.empresa || reuData.enderecoTrabalho) {
             y += 4;
+            if (y > pageHeight - 40) { doc.addPage(); y = 20; }
             doc.setFont("helvetica", "bold");
             doc.text("Dados Profissionais:", 20, y);
             y += 6;
@@ -678,11 +800,12 @@ async function handleGeneratePdf() {
         }
     }
     
+    // Salvar
     doc.save(`Checklist_${normalizeText(assistedNameEl.textContent).replace(/\s+/g, '_')}.pdf`);
-    if (printChecklistBtn) printChecklistBtn.textContent = "PDF";
+    if (printChecklistBtn) printChecklistBtn.textContent = "Baixar PDF";
 }
 
-// --- Exports ---
+// --- 10. EXPORTS ---
 
 export function setupDetailsModal(config) {
     db = config.db;
