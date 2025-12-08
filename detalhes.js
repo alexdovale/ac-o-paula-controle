@@ -1,6 +1,7 @@
 /**
  * detalhes.js
  * Gerencia o modal de detalhes, checklist (Físico/Digital), dados do Réu e Planilha de Despesas.
+ * Versão: Planilha de Despesas Condicional (Divórcios) + Checkbox Físico/Digital
  */
 
 // --- 1. CONSTANTES DE DOCUMENTAÇÃO ---
@@ -52,9 +53,20 @@ const EXPENSE_CATEGORIES = [
     { id: 'outras', label: '7. OUTRAS DESPESAS', desc: 'Babá, pet, cursos livres, etc.' }
 ];
 
-const ACTIONS_WITH_EXPENSES = [
-    'alimentos_fixacao_majoracao_oferta', 'alimentos_gravidicos', 'alimentos_avoengos',
-    'divorcio_litigioso', 'divorcio_consensual', 'investigacao_paternidade', 'guarda'
+// Ações onde a planilha SEMPRE aparece
+const ACTIONS_ALWAYS_EXPENSES = [
+    'alimentos_fixacao_majoracao_oferta', 
+    'alimentos_gravidicos', 
+    'alimentos_avoengos',
+    'investigacao_paternidade', 
+    'guarda'
+];
+
+// Ações onde a planilha é CONDICIONAL (precisa marcar "Tem Filhos Menores")
+const ACTIONS_CONDITIONAL_EXPENSES = [
+    'divorcio_litigioso', 
+    'divorcio_consensual',
+    'uniao_estavel_reconhecimento_dissolucao'
 ];
 
 const ACTIONS_WITH_WORK_INFO = [
@@ -70,11 +82,16 @@ const documentsData = {
     indenizacao_danos: { title: 'Ação de Indenização', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['BO', 'Fotos/Vídeos', 'Orçamentos', 'Notas Fiscais', 'Testemunhas'] }] },
     revisional_debito: { title: 'Ação Revisional de Débito', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Contrato', 'Planilha da dívida', 'Extratos'] }] },
     exigir_contas: { title: 'Ação de Exigir Contas', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Prova da gestão de bens', 'Recusa em prestar contas'] }] },
+    
+    // FAMÍLIA
     alimentos_fixacao_majoracao_oferta: { title: 'Alimentos (Fixação / Majoração / Oferta)', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Do Alimentando', docs: ['Certidão de Nascimento', 'Comprovantes de despesas (Planilha abaixo)'] }, { title: 'Sobre o Réu', docs: ['Endereço completo', 'Dados de trabalho'] }] },
     alimentos_gravidicos: { title: 'Ação de Alimentos Gravídicos', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Da Gestação', docs: ['Exame Beta HCG / Ultrassom', 'Pré-Natal', 'Gastos (Planilha abaixo)'] }, { title: 'Do Suposto Pai', docs: ['Indícios de paternidade', 'Endereço/Trabalho'] }] },
     alimentos_avoengos: { title: 'Alimentos Avoengos', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Certidão de Nascimento', 'Prova da impossibilidade dos pais', 'Planilha de Gastos'] }] },
-    divorcio_consensual: { title: 'Divórcio Consensual', sections: [{ title: 'Documentação (Ambos)', docs: ['RG/CPF ambos', 'Comp. Residência ambos', 'Certidão Casamento', ...INCOME_DOCS_STRUCTURED] }, { title: 'Filhos/Bens', docs: ['Certidão Nascimento Filhos', 'Documentos Bens'] }] },
-    divorcio_litigioso: { title: 'Divórcio Litigioso', sections: [{ title: 'Documentação Pessoal e Renda', docs: [...COMMON_DOCS_FULL, 'Certidão de Casamento'] }, { title: 'Filhos/Bens', docs: ['Certidão Nascimento Filhos', 'Documentos Bens', 'Planilha de Gastos (se houver alimentos)'] }, { title: 'Sobre o Cônjuge', docs: ['Endereço', 'Trabalho'] }] },
+    
+    // DIVÓRCIOS (Planilha Condicional)
+    divorcio_consensual: { title: 'Divórcio Consensual', sections: [{ title: 'Documentação (Ambos)', docs: ['RG/CPF ambos', 'Comp. Residência ambos', 'Certidão Casamento', ...INCOME_DOCS_STRUCTURED] }, { title: 'Bens', docs: ['Documento do Imóvel (RGI)', 'CRLV de Veículos'] }] },
+    divorcio_litigioso: { title: 'Divórcio Litigioso', sections: [{ title: 'Documentação Pessoal e Renda', docs: [...COMMON_DOCS_FULL, 'Certidão de Casamento'] }, { title: 'Bens', docs: ['Documentos dos bens a partilhar'] }, { title: 'Sobre o Cônjuge', docs: ['Endereço', 'Trabalho'] }] },
+    
     uniao_estavel_reconhecimento_dissolucao: { title: 'União Estável (Reconhecimento/Dissolução)', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Provas', docs: ['Certidão filhos', 'Contas conjuntas', 'Fotos', 'Testemunhas'] }, { title: 'Bens', docs: ['Documentos dos bens'] }] },
     uniao_estavel_post_mortem: { title: 'União Estável Post Mortem', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Do Falecido', docs: ['Certidão de Óbito', 'Bens deixados'] }, { title: 'Provas da União', docs: ['(Mesmas provas da união estável comum)'] }] },
     conversao_uniao_homoafetiva: { title: 'Conversão União Estável em Casamento', sections: [{ title: 'Documentação (Ambos)', docs: ['RG/CPF', 'Certidões Nascimento', ...INCOME_DOCS_STRUCTURED] }] },
@@ -196,7 +213,7 @@ function renderReuForm(actionKey) {
 function renderExpenseTable() {
     const container = document.createElement('div');
     container.id = 'expense-table-container';
-    container.className = 'mt-6 p-4 bg-green-50 border border-green-200 rounded-lg';
+    container.className = 'mt-4 p-4 bg-green-50 border border-green-200 rounded-lg';
     let rowsHtml = '';
     EXPENSE_CATEGORIES.forEach(cat => {
         rowsHtml += `
@@ -206,7 +223,7 @@ function renderExpenseTable() {
                 <td class="p-3"><input type="text" id="expense-${cat.id}" class="expense-input w-full p-2 border rounded text-right" placeholder="R$ 0,00" oninput="formatExpenseInput(this)"></td>
             </tr>`;
     });
-    container.innerHTML = `<h3 class="text-lg font-bold text-green-800 mb-2">Planilha de Despesas</h3><div class="overflow-x-auto"><table class="w-full text-left border-collapse"><thead><tr class="bg-green-100 text-green-800 text-xs uppercase"><th class="p-3 w-1/4">Categoria</th><th class="p-3 w-1/2">Orientação</th><th class="p-3 w-1/4 text-right">Valor</th></tr></thead><tbody>${rowsHtml}</tbody><tfoot><tr class="bg-green-200 font-bold text-green-900"><td colspan="2" class="p-3 text-right">TOTAL:</td><td class="p-3 text-right" id="expense-total">R$ 0,00</td></tr></tfoot></table></div>`;
+    container.innerHTML = `<h3 class="text-lg font-bold text-green-800 mb-2">Planilha de Despesas (Criança)</h3><div class="overflow-x-auto"><table class="w-full text-left border-collapse"><thead><tr class="bg-green-100 text-green-800 text-xs uppercase"><th class="p-3 w-1/4">Categoria</th><th class="p-3 w-1/2">Orientação</th><th class="p-3 w-1/4 text-right">Valor</th></tr></thead><tbody>${rowsHtml}</tbody><tfoot><tr class="bg-green-200 font-bold text-green-900"><td colspan="2" class="p-3 text-right">TOTAL:</td><td class="p-3 text-right" id="expense-total">R$ 0,00</td></tr></tfoot></table></div>`;
     return container;
 }
 
@@ -252,6 +269,7 @@ function renderChecklist(actionKey) {
     checklistContainer.innerHTML = '';
     checklistSearch.value = '';
 
+    // 1. Lista de Docs (Com Seletor Físico/Digital)
     data.sections.forEach((section, sIdx) => {
         const div = document.createElement('div');
         div.innerHTML = `<h4 class="font-bold text-gray-700 mt-4 mb-2 border-b">${section.title}</h4>`;
@@ -259,16 +277,12 @@ function renderChecklist(actionKey) {
         ul.className = 'space-y-2';
         section.docs.forEach((docItem, dIdx) => {
             const li = document.createElement('li');
-            
-            // Lógica para Título vs Documento com Checkbox e Tipo
             if (typeof docItem === 'object' && docItem.type === 'title') {
                 li.innerHTML = `<div class="font-bold text-blue-700 text-sm mt-3 mb-1 bg-blue-50 p-1 rounded">${docItem.text}</div>`;
             } else {
                 const docText = typeof docItem === 'string' ? docItem : docItem.text;
                 const id = `doc-${actionKey}-${sIdx}-${dIdx}`;
                 const isChecked = saved?.checkedIds?.includes(id) ? 'checked' : '';
-                
-                // Tipo Salvo (Físico ou Digital)
                 const savedType = saved?.docTypes ? saved.docTypes[id] : '';
                 
                 li.innerHTML = `
@@ -277,14 +291,9 @@ function renderChecklist(actionKey) {
                             <input type="checkbox" id="${id}" class="doc-checkbox h-5 w-5 text-green-600 rounded border-gray-300 mr-2" ${isChecked}>
                             <span class="text-sm text-gray-700 flex-1">${docText}</span>
                         </label>
-                        <!-- Seletor Físico/Digital (Oculto até marcar) -->
                         <div id="type-${id}" class="ml-8 mt-1 text-xs text-gray-600 flex gap-4 ${isChecked ? '' : 'hidden'}">
-                            <label class="flex items-center cursor-pointer">
-                                <input type="radio" name="type-${id}" value="Físico" class="doc-type-radio mr-1" ${savedType === 'Físico' ? 'checked' : ''}> Físico
-                            </label>
-                            <label class="flex items-center cursor-pointer">
-                                <input type="radio" name="type-${id}" value="Digital" class="doc-type-radio mr-1" ${savedType === 'Digital' ? 'checked' : ''}> Digital
-                            </label>
+                            <label class="flex items-center cursor-pointer"><input type="radio" name="type-${id}" value="Físico" class="doc-type-radio mr-1" ${savedType === 'Físico' ? 'checked' : ''}> Físico</label>
+                            <label class="flex items-center cursor-pointer"><input type="radio" name="type-${id}" value="Digital" class="doc-type-radio mr-1" ${savedType === 'Digital' ? 'checked' : ''}> Digital</label>
                         </div>
                     </div>
                 `;
@@ -294,18 +303,14 @@ function renderChecklist(actionKey) {
         div.appendChild(ul);
         checklistContainer.appendChild(div);
     });
-    
-    // Listener para mostrar/esconder opções de tipo
+
     checklistContainer.querySelectorAll('.doc-checkbox').forEach(cb => {
         cb.addEventListener('change', (e) => {
             const typeDiv = document.getElementById(`type-${e.target.id}`);
             if (typeDiv) {
                 if (e.target.checked) {
                     typeDiv.classList.remove('hidden');
-                    // Seleciona 'Físico' por padrão se nada estiver selecionado
-                    if (!typeDiv.querySelector('input:checked')) {
-                        typeDiv.querySelector('input[value="Físico"]').checked = true;
-                    }
+                    if (!typeDiv.querySelector('input:checked')) typeDiv.querySelector('input[value="Físico"]').checked = true;
                 } else {
                     typeDiv.classList.add('hidden');
                 }
@@ -313,11 +318,40 @@ function renderChecklist(actionKey) {
         });
     });
 
-    if (ACTIONS_WITH_EXPENSES.includes(actionKey)) {
+    // 2. Planilha de Despesas (Lógica Condicional e "Sempre")
+    const isAlways = ACTIONS_ALWAYS_EXPENSES.includes(actionKey);
+    const isConditional = ACTIONS_CONDITIONAL_EXPENSES.includes(actionKey);
+    const savedHasMinors = saved?.hasMinors || false;
+
+    if (isAlways) {
         checklistContainer.appendChild(renderExpenseTable());
         if (saved?.expenseData) fillExpenseData(saved.expenseData);
+    } else if (isConditional) {
+        // Cria Toggle
+        const toggleDiv = document.createElement('div');
+        toggleDiv.className = 'mt-6 bg-blue-50 p-3 rounded-lg border border-blue-200';
+        toggleDiv.innerHTML = `
+            <label class="flex items-center cursor-pointer font-bold text-blue-800">
+                <input type="checkbox" id="check-has-minors" class="h-5 w-5 text-blue-600 rounded mr-2" ${savedHasMinors ? 'checked' : ''}>
+                Há filhos menores envolvidos?
+            </label>
+            <div id="conditional-expense-wrapper" class="${savedHasMinors ? '' : 'hidden'}"></div>
+        `;
+        checklistContainer.appendChild(toggleDiv);
+
+        const wrapper = toggleDiv.querySelector('#conditional-expense-wrapper');
+        const checkbox = toggleDiv.querySelector('#check-has-minors');
+        
+        // Renderiza a tabela dentro do wrapper
+        wrapper.appendChild(renderExpenseTable());
+        if (saved?.expenseData) fillExpenseData(saved.expenseData);
+
+        checkbox.addEventListener('change', (e) => {
+            wrapper.classList.toggle('hidden', !e.target.checked);
+        });
     }
 
+    // 3. Observações
     const obsDiv = document.createElement('div');
     obsDiv.className = 'mt-6 bg-yellow-50 p-4 rounded-lg border border-yellow-100';
     obsDiv.innerHTML = `<h4 class="font-bold text-gray-800 mb-2">Status da Documentação</h4>`;
@@ -331,13 +365,10 @@ function renderChecklist(actionKey) {
     const showOther = !!otherText;
     obsDiv.innerHTML += `<div class="mt-2"><label class="flex items-center cursor-pointer"><input type="checkbox" id="check-other" class="h-4 w-4 text-yellow-600 mr-2" ${showOther ? 'checked' : ''}> Outras Observações</label><textarea id="text-other" class="w-full mt-2 p-2 border rounded text-sm ${showOther ? '' : 'hidden'}" rows="2">${otherText}</textarea></div>`;
     
-    const checkOther = obsDiv.querySelector('#check-other');
-    if(checkOther) {
-        checkOther.addEventListener('change', (e) => document.getElementById('text-other').classList.toggle('hidden', !e.target.checked));
-    }
-    
+    obsDiv.querySelector('#check-other').addEventListener('change', (e) => document.getElementById('text-other').classList.toggle('hidden', !e.target.checked));
     checklistContainer.appendChild(obsDiv);
 
+    // 4. Réu
     const reuForm = renderReuForm(actionKey);
     checklistContainer.appendChild(reuForm);
     setupCepListener('cep-reu', { rua: 'rua-reu', bairro: 'bairro-reu', cidade: 'cidade-reu', uf: 'estado-reu' });
@@ -375,6 +406,11 @@ function fillExpenseData(data) {
 
 function getExpenseData() {
     if (!document.getElementById('expense-table-container')) return null;
+    
+    // Verifica se está visível (para o caso condicional)
+    const wrapper = document.getElementById('conditional-expense-wrapper');
+    if (wrapper && wrapper.classList.contains('hidden')) return null;
+
     const data = {};
     EXPENSE_CATEGORIES.forEach(cat => { const input = document.getElementById(`expense-${cat.id}`); if(input) data[cat.id] = input.value; });
     return data;
@@ -383,27 +419,26 @@ function getExpenseData() {
 async function handleSave() {
     if (!currentAssistedId || !currentPautaId) return;
 
-    // Capturar checkboxes e tipos
+    // Checkboxes + Tipos
     const checkedCheckboxes = checklistContainer.querySelectorAll('.doc-checkbox:checked');
     const checkedIds = [];
     const docTypes = {};
-
     checkedCheckboxes.forEach(cb => {
         checkedIds.push(cb.id);
         const radio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
-        if (radio) {
-            docTypes[cb.id] = radio.value;
-        }
+        if (radio) docTypes[cb.id] = radio.value;
     });
 
     const obsSelected = Array.from(checklistContainer.querySelectorAll('.obs-opt:checked')).map(cb => cb.value);
     const otherText = document.getElementById('check-other')?.checked ? document.getElementById('text-other').value : '';
+    const hasMinors = document.getElementById('check-has-minors')?.checked || false;
 
     const payload = { 
         documentChecklist: { 
             action: currentChecklistAction, 
-            checkedIds: checkedIds, 
-            docTypes: docTypes, // Salva tipos
+            checkedIds: checkedIds,
+            docTypes: docTypes,
+            hasMinors: hasMinors,
             observations: { selected: obsSelected, otherText: otherText }, 
             reuData: getReuData(), 
             expenseData: getExpenseData() 
@@ -441,14 +476,13 @@ async function handleGeneratePdf() {
     doc.setFont("helvetica", "bold"); doc.text("Documentos Entregues:", 15, y); y += 8;
     doc.setFont("helvetica", "normal"); doc.setFontSize(10);
     
-    // Captura checkboxes marcados
+    // Imprime docs com TIPO (Físico/Digital)
     const checked = checklistContainer.querySelectorAll('.doc-checkbox:checked');
     if (checked.length > 0) {
         checked.forEach(cb => {
             const text = cb.nextElementSibling.textContent.trim();
-            // Pega o tipo (Físico/Digital)
-            const typeRadio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
-            const typeStr = typeRadio ? ` [${typeRadio.value}]` : '';
+            const radio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
+            const typeStr = radio ? ` [${radio.value}]` : '';
 
             const lines = doc.splitTextToSize(`- ${text}${typeStr}`, pageWidth - 30);
             if (y + (lines.length * 5) > pageHeight - 20) { doc.addPage(); y = 20; }
@@ -456,8 +490,13 @@ async function handleGeneratePdf() {
         });
     } else { doc.text("- Nenhum documento marcado.", 20, y); y += 7; }
 
+    // Planilha de Despesas (Condicional e Sempre)
     const expenses = getExpenseData();
-    if (expenses && Object.values(expenses).some(v => v)) {
+    // Só imprime se houver dados e se não for condicional oculta
+    const shouldPrint = ACTIONS_ALWAYS_EXPENSES.includes(currentChecklistAction) || 
+                        (ACTIONS_CONDITIONAL_EXPENSES.includes(currentChecklistAction) && document.getElementById('check-has-minors')?.checked);
+
+    if (shouldPrint && expenses && Object.values(expenses).some(v => v)) {
         y += 10; if (y > pageHeight - 150) { doc.addPage(); y = 20; }
         doc.line(15, y, pageWidth - 15, y); y += 10;
         doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Planilha de Despesas (Criança)", 15, y); y += 10;
@@ -470,9 +509,9 @@ async function handleGeneratePdf() {
                 doc.text(`${cat.label}`, 20, y);
                 doc.text(`${valStr}`, pageWidth - 30, y, { align: 'right' });
                 y += 5; 
-                // LINHA MENOR (CENTRALIZADA E CURTA)
+                // LINHA MENOR CENTRALIZADA
                 doc.setDrawColor(200); 
-                doc.line(40, y, pageWidth - 40, y); // Margem de 40 de cada lado = linha menor
+                doc.line(50, y, pageWidth - 50, y); 
                 doc.setDrawColor(0);
                 y += 10;
                 total += parseCurrency(valStr);
