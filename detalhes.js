@@ -1,7 +1,7 @@
 /**
  * detalhes.js
- * Gerencia o modal de detalhes, checklist, dados do Réu (com RG) e Planilha de Despesas.
- * Versão: Planilha de Gastos com Linhas Divisórias no PDF
+ * Gerencia o modal de detalhes, checklist, dados do Réu (com Nome e RG) e Planilha de Despesas.
+ * Versão: Nome do Réu Adicionado
  */
 
 // --- 1. CONSTANTES DE DOCUMENTAÇÃO ---
@@ -126,6 +126,7 @@ const cancelBtn = document.getElementById('cancel-checklist-btn');
 // --- 4. UTILITÁRIOS ---
 
 const normalizeText = (str) => str ? str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : '';
+
 const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 const parseCurrency = (str) => !str ? 0 : parseFloat(str.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
 
@@ -166,8 +167,16 @@ function renderReuForm(actionKey) {
     const container = document.createElement('div');
     container.id = 'dynamic-reu-form';
     container.className = 'mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg';
+
     container.innerHTML = `
         <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Dados da Parte Contrária (Réu)</h3>
+        
+        <!-- NOME COMPLETO (NOVO) -->
+        <div class="mb-4">
+            <label class="block text-sm font-bold text-gray-700">Nome Completo</label>
+            <input type="text" id="nome-reu" placeholder="Nome completo do Réu" class="mt-1 block w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div><label class="block text-sm text-gray-700">CPF</label><input type="text" id="cpf-reu" class="mt-1 block w-full p-2 border rounded-md"></div>
             <div><label class="block text-sm text-gray-700">RG</label><input type="text" id="rg-reu" class="mt-1 block w-full p-2 border rounded-md"></div>
@@ -284,7 +293,6 @@ function renderChecklist(actionKey) {
     const showOther = !!otherText;
     obsDiv.innerHTML += `<div class="mt-2"><label class="flex items-center cursor-pointer"><input type="checkbox" id="check-other" class="h-4 w-4 text-yellow-600 mr-2" ${showOther ? 'checked' : ''}> Outras Observações</label><textarea id="text-other" class="w-full mt-2 p-2 border rounded text-sm ${showOther ? '' : 'hidden'}" rows="2">${otherText}</textarea></div>`;
     
-    // Adicionar listener ao checkbox recém-criado
     const checkOther = obsDiv.querySelector('#check-other');
     if(checkOther) {
         checkOther.addEventListener('change', (e) => document.getElementById('text-other').classList.toggle('hidden', !e.target.checked));
@@ -302,6 +310,7 @@ function renderChecklist(actionKey) {
 
 function fillReuData(data) {
     const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val || ''; };
+    setVal('nome-reu', data.nome); // Nome Adicionado
     setVal('cpf-reu', data.cpf); setVal('rg-reu', data.rg); setVal('telefone-reu', data.telefone); setVal('email-reu', data.email);
     setVal('cep-reu', data.cep); setVal('rua-reu', data.rua); setVal('numero-reu', data.numero);
     setVal('bairro-reu', data.bairro); setVal('cidade-reu', data.cidade); setVal('estado-reu', data.uf);
@@ -310,9 +319,10 @@ function fillReuData(data) {
 
 function getReuData() {
     const getVal = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
-    const ids = ['cpf-reu', 'rg-reu', 'telefone-reu', 'email-reu', 'cep-reu', 'rua-reu', 'empresa-reu'];
+    const ids = ['nome-reu', 'cpf-reu', 'rg-reu', 'telefone-reu', 'email-reu', 'cep-reu', 'rua-reu', 'empresa-reu'];
     if (!ids.some(id => getVal(id) !== '')) return null;
     return {
+        nome: getVal('nome-reu'), // Nome Adicionado
         cpf: getVal('cpf-reu'), rg: getVal('rg-reu'), telefone: getVal('telefone-reu'), email: getVal('email-reu'),
         cep: getVal('cep-reu'), rua: getVal('rua-reu'), numero: getVal('numero-reu'),
         bairro: getVal('bairro-reu'), cidade: getVal('cidade-reu'), uf: getVal('estado-reu'),
@@ -391,22 +401,14 @@ async function handleGeneratePdf() {
             if (valStr) {
                 doc.text(`${cat.label}`, 20, y);
                 doc.text(`${valStr}`, pageWidth - 30, y, { align: 'right' });
-                y += 5; // Espaço após texto
-                // LINHA DIVISÓRIA CINZA
-                doc.setDrawColor(200); 
-                doc.line(20, y, pageWidth - 20, y);
-                doc.setDrawColor(0); // Reset cor
-                y += 10; // Espaço para próxima linha
+                y += 5; // Espaço
+                doc.setDrawColor(200); doc.line(20, y, pageWidth - 20, y); doc.setDrawColor(0);
+                y += 10;
                 total += parseCurrency(valStr);
                 if (y > pageHeight - 40) { doc.addPage(); y = 20; }
             }
         });
-        
-        y += 5;
-        doc.setFont("helvetica", "bold");
-        doc.text("TOTAL MENSAL:", 20, y);
-        doc.text(formatCurrency(total), pageWidth - 30, y, { align: 'right' });
-        y += 10;
+        y += 5; doc.setFont("helvetica", "bold"); doc.text("TOTAL MENSAL:", 20, y); doc.text(formatCurrency(total), pageWidth - 30, y, { align: 'right' }); y += 10;
     }
 
     y += 10; if (y > pageHeight - 40) { doc.addPage(); y = 20; }
@@ -426,7 +428,10 @@ async function handleGeneratePdf() {
         doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text("Dados da Parte Contrária (Réu)", 15, y); y += 10;
         doc.setFontSize(11); doc.setFont("helvetica", "normal");
         const printField = (l, v) => { if (v && v.trim()) { doc.text(`${l}: ${v}`, 20, y); y += 6; } };
+        
+        printField("Nome", reuData.nome); // NOME PRIMEIRO
         printField("CPF", reuData.cpf); printField("RG", reuData.rg); printField("Telefone", reuData.telefone); printField("E-mail", reuData.email);
+        
         let end = [reuData.rua, reuData.numero, reuData.bairro, reuData.cidade, reuData.uf].filter(Boolean).join(', ');
         if (reuData.cep) end += ` (CEP: ${reuData.cep})`;
         if (end.length > 5) { const lines = doc.splitTextToSize(`Endereço: ${end}`, pageWidth - 40); doc.text(lines, 20, y); y += lines.length * 6; }
