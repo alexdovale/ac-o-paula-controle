@@ -1,7 +1,7 @@
 /**
  * detalhes.js
  * Gerencia o modal de detalhes, checklist (Físico/Digital), dados do Réu e Planilha de Despesas.
- * Versão: Planilha de Despesas Condicional (Divórcios) + Checkbox Físico/Digital
+ * Versão: PDF Compacto (Tentativa de 1 Página)
  */
 
 // --- 1. CONSTANTES DE DOCUMENTAÇÃO ---
@@ -53,20 +53,13 @@ const EXPENSE_CATEGORIES = [
     { id: 'outras', label: '7. OUTRAS DESPESAS', desc: 'Babá, pet, cursos livres, etc.' }
 ];
 
-// Ações onde a planilha SEMPRE aparece
 const ACTIONS_ALWAYS_EXPENSES = [
-    'alimentos_fixacao_majoracao_oferta', 
-    'alimentos_gravidicos', 
-    'alimentos_avoengos',
-    'investigacao_paternidade', 
-    'guarda'
+    'alimentos_fixacao_majoracao_oferta', 'alimentos_gravidicos', 'alimentos_avoengos',
+    'investigacao_paternidade', 'guarda'
 ];
 
-// Ações onde a planilha é CONDICIONAL (precisa marcar "Tem Filhos Menores")
 const ACTIONS_CONDITIONAL_EXPENSES = [
-    'divorcio_litigioso', 
-    'divorcio_consensual',
-    'uniao_estavel_reconhecimento_dissolucao'
+    'divorcio_litigioso', 'divorcio_consensual', 'uniao_estavel_reconhecimento_dissolucao'
 ];
 
 const ACTIONS_WITH_WORK_INFO = [
@@ -82,16 +75,11 @@ const documentsData = {
     indenizacao_danos: { title: 'Ação de Indenização', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['BO', 'Fotos/Vídeos', 'Orçamentos', 'Notas Fiscais', 'Testemunhas'] }] },
     revisional_debito: { title: 'Ação Revisional de Débito', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Contrato', 'Planilha da dívida', 'Extratos'] }] },
     exigir_contas: { title: 'Ação de Exigir Contas', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Prova da gestão de bens', 'Recusa em prestar contas'] }] },
-    
-    // FAMÍLIA
     alimentos_fixacao_majoracao_oferta: { title: 'Alimentos (Fixação / Majoração / Oferta)', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Do Alimentando', docs: ['Certidão de Nascimento', 'Comprovantes de despesas (Planilha abaixo)'] }, { title: 'Sobre o Réu', docs: ['Endereço completo', 'Dados de trabalho'] }] },
     alimentos_gravidicos: { title: 'Ação de Alimentos Gravídicos', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Da Gestação', docs: ['Exame Beta HCG / Ultrassom', 'Pré-Natal', 'Gastos (Planilha abaixo)'] }, { title: 'Do Suposto Pai', docs: ['Indícios de paternidade', 'Endereço/Trabalho'] }] },
     alimentos_avoengos: { title: 'Alimentos Avoengos', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Certidão de Nascimento', 'Prova da impossibilidade dos pais', 'Planilha de Gastos'] }] },
-    
-    // DIVÓRCIOS (Planilha Condicional)
-    divorcio_consensual: { title: 'Divórcio Consensual', sections: [{ title: 'Documentação (Ambos)', docs: ['RG/CPF ambos', 'Comp. Residência ambos', 'Certidão Casamento', ...INCOME_DOCS_STRUCTURED] }, { title: 'Bens', docs: ['Documento do Imóvel (RGI)', 'CRLV de Veículos'] }] },
-    divorcio_litigioso: { title: 'Divórcio Litigioso', sections: [{ title: 'Documentação Pessoal e Renda', docs: [...COMMON_DOCS_FULL, 'Certidão de Casamento'] }, { title: 'Bens', docs: ['Documentos dos bens a partilhar'] }, { title: 'Sobre o Cônjuge', docs: ['Endereço', 'Trabalho'] }] },
-    
+    divorcio_consensual: { title: 'Divórcio Consensual', sections: [{ title: 'Documentação (Ambos)', docs: ['RG/CPF ambos', 'Comp. Residência ambos', 'Certidão Casamento', ...INCOME_DOCS_STRUCTURED] }, { title: 'Filhos/Bens', docs: ['Certidão Nascimento Filhos', 'Documentos Bens'] }] },
+    divorcio_litigioso: { title: 'Divórcio Litigioso', sections: [{ title: 'Documentação Pessoal e Renda', docs: [...COMMON_DOCS_FULL, 'Certidão de Casamento'] }, { title: 'Filhos/Bens', docs: ['Certidão Nascimento Filhos', 'Documentos Bens', 'Planilha de Gastos (se houver alimentos)'] }, { title: 'Sobre o Cônjuge', docs: ['Endereço', 'Trabalho'] }] },
     uniao_estavel_reconhecimento_dissolucao: { title: 'União Estável (Reconhecimento/Dissolução)', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Provas', docs: ['Certidão filhos', 'Contas conjuntas', 'Fotos', 'Testemunhas'] }, { title: 'Bens', docs: ['Documentos dos bens'] }] },
     uniao_estavel_post_mortem: { title: 'União Estável Post Mortem', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Do Falecido', docs: ['Certidão de Óbito', 'Bens deixados'] }, { title: 'Provas da União', docs: ['(Mesmas provas da união estável comum)'] }] },
     conversao_uniao_homoafetiva: { title: 'Conversão União Estável em Casamento', sections: [{ title: 'Documentação (Ambos)', docs: ['RG/CPF', 'Certidões Nascimento', ...INCOME_DOCS_STRUCTURED] }] },
@@ -327,7 +315,6 @@ function renderChecklist(actionKey) {
         checklistContainer.appendChild(renderExpenseTable());
         if (saved?.expenseData) fillExpenseData(saved.expenseData);
     } else if (isConditional) {
-        // Cria Toggle
         const toggleDiv = document.createElement('div');
         toggleDiv.className = 'mt-6 bg-blue-50 p-3 rounded-lg border border-blue-200';
         toggleDiv.innerHTML = `
@@ -341,8 +328,6 @@ function renderChecklist(actionKey) {
 
         const wrapper = toggleDiv.querySelector('#conditional-expense-wrapper');
         const checkbox = toggleDiv.querySelector('#check-has-minors');
-        
-        // Renderiza a tabela dentro do wrapper
         wrapper.appendChild(renderExpenseTable());
         if (saved?.expenseData) fillExpenseData(saved.expenseData);
 
@@ -407,7 +392,6 @@ function fillExpenseData(data) {
 function getExpenseData() {
     if (!document.getElementById('expense-table-container')) return null;
     
-    // Verifica se está visível (para o caso condicional)
     const wrapper = document.getElementById('conditional-expense-wrapper');
     if (wrapper && wrapper.classList.contains('hidden')) return null;
 
@@ -419,7 +403,6 @@ function getExpenseData() {
 async function handleSave() {
     if (!currentAssistedId || !currentPautaId) return;
 
-    // Checkboxes + Tipos
     const checkedCheckboxes = checklistContainer.querySelectorAll('.doc-checkbox:checked');
     const checkedIds = [];
     const docTypes = {};
@@ -469,8 +452,8 @@ async function handleGeneratePdf() {
     const pageHeight = doc.internal.pageSize.getHeight();
     let y = 20;
 
-    doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.text("Checklist de Atendimento", pageWidth / 2, y, { align: "center" }); y += 15;
-    doc.setFontSize(12); doc.setFont("helvetica", "normal"); doc.text(`Assistido(a): ${assistedNameEl.textContent}`, 15, y); y += 7;
+    doc.setFontSize(14); doc.setFont("helvetica", "bold"); doc.text("Checklist de Atendimento", pageWidth / 2, y, { align: "center" }); y += 15;
+    doc.setFontSize(11); doc.setFont("helvetica", "normal"); doc.text(`Assistido(a): ${assistedNameEl.textContent}`, 15, y); y += 7;
     doc.text(`Ação: ${checklistTitle.textContent}`, 15, y); y += 15;
 
     doc.setFont("helvetica", "bold"); doc.text("Documentos Entregues:", 15, y); y += 8;
@@ -485,22 +468,22 @@ async function handleGeneratePdf() {
             const typeStr = radio ? ` [${radio.value}]` : '';
 
             const lines = doc.splitTextToSize(`- ${text}${typeStr}`, pageWidth - 30);
-            if (y + (lines.length * 5) > pageHeight - 20) { doc.addPage(); y = 20; }
-            doc.text(lines, 20, y); y += lines.length * 5;
+            if (y + (lines.length * 4) > pageHeight - 20) { doc.addPage(); y = 20; }
+            doc.text(lines, 20, y); y += lines.length * 4.5;
         });
     } else { doc.text("- Nenhum documento marcado.", 20, y); y += 7; }
 
-    // Planilha de Despesas (Condicional e Sempre)
+    // Planilha de Despesas Compacta
     const expenses = getExpenseData();
-    // Só imprime se houver dados e se não for condicional oculta
     const shouldPrint = ACTIONS_ALWAYS_EXPENSES.includes(currentChecklistAction) || 
                         (ACTIONS_CONDITIONAL_EXPENSES.includes(currentChecklistAction) && document.getElementById('check-has-minors')?.checked);
 
     if (shouldPrint && expenses && Object.values(expenses).some(v => v)) {
-        y += 10; if (y > pageHeight - 150) { doc.addPage(); y = 20; }
-        doc.line(15, y, pageWidth - 15, y); y += 10;
-        doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Planilha de Despesas (Criança)", 15, y); y += 10;
-        doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+        y += 8; if (y > pageHeight - 120) { doc.addPage(); y = 20; }
+        doc.setLineWidth(0.5); doc.line(15, y, pageWidth - 15, y); y += 10;
+        
+        doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.text("Planilha de Despesas (Criança)", 15, y); y += 8;
+        doc.setFont("helvetica", "normal"); doc.setFontSize(9);
         let total = 0;
         
         EXPENSE_CATEGORIES.forEach(cat => {
@@ -508,44 +491,53 @@ async function handleGeneratePdf() {
             if (valStr) {
                 doc.text(`${cat.label}`, 20, y);
                 doc.text(`${valStr}`, pageWidth - 30, y, { align: 'right' });
-                y += 5; 
-                // LINHA MENOR CENTRALIZADA
-                doc.setDrawColor(200); 
-                doc.line(50, y, pageWidth - 50, y); 
+                y += 4; 
+                // LINHA MENOR E CENTRALIZADA
+                doc.setLineWidth(0.1); doc.setDrawColor(200); 
+                doc.line(40, y, pageWidth - 40, y); 
                 doc.setDrawColor(0);
-                y += 10;
+                y += 8;
                 total += parseCurrency(valStr);
-                if (y > pageHeight - 40) { doc.addPage(); y = 20; }
+                if (y > pageHeight - 30) { doc.addPage(); y = 20; }
             }
         });
-        y += 5; doc.setFont("helvetica", "bold"); doc.text("TOTAL MENSAL:", 20, y); doc.text(formatCurrency(total), pageWidth - 30, y, { align: 'right' }); y += 10;
+        y += 4; doc.setFont("helvetica", "bold"); doc.text("TOTAL MENSAL:", 20, y); doc.text(formatCurrency(total), pageWidth - 30, y, { align: 'right' }); y += 10;
     }
 
-    y += 10; if (y > pageHeight - 40) { doc.addPage(); y = 20; }
-    doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Status / Observações:", 15, y); y += 8;
-    doc.setFont("helvetica", "normal"); doc.setFontSize(10);
-    checklistContainer.querySelectorAll('.obs-opt:checked').forEach(cb => { doc.text(`[X] ${cb.value}`, 20, y); y += 6; });
+    y += 8; if (y > pageHeight - 40) { doc.addPage(); y = 20; }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.text("Status / Observações:", 15, y); y += 6;
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    checklistContainer.querySelectorAll('.obs-opt:checked').forEach(cb => { doc.text(`[X] ${cb.value}`, 20, y); y += 5; });
     const other = document.getElementById('text-other');
     if (other && !other.classList.contains('hidden') && other.value) {
         const lines = doc.splitTextToSize(`Obs: ${other.value}`, pageWidth - 30);
-        doc.text(lines, 20, y); y += lines.length * 5;
+        doc.text(lines, 20, y); y += lines.length * 4.5;
     }
 
     const reuData = getReuData();
     if (reuData) {
-        y += 10; if (y > pageHeight - 100) { doc.addPage(); y = 20; }
-        doc.line(15, y, pageWidth - 15, y); y += 10;
-        doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text("Dados da Parte Contrária (Réu)", 15, y); y += 10;
-        doc.setFontSize(11); doc.setFont("helvetica", "normal");
-        const printField = (l, v) => { if (v && v.trim()) { doc.text(`${l}: ${v}`, 20, y); y += 6; } };
-        printField("Nome", reuData.nome);
-        printField("CPF", reuData.cpf); printField("RG", reuData.rg); printField("Telefone", reuData.telefone); printField("E-mail", reuData.email);
+        y += 10; if (y > pageHeight - 80) { doc.addPage(); y = 20; }
+        doc.setLineWidth(0.5); doc.line(15, y, pageWidth - 15, y); y += 10;
+        doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Dados da Parte Contrária (Réu)", 15, y); y += 8;
+        doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+        
+        // DADOS EM LINHA (Compactação)
+        const line1 = `Nome: ${reuData.nome}`;
+        doc.text(line1, 20, y); y += 5;
+        
+        const line2 = `CPF: ${reuData.cpf}   RG: ${reuData.rg}   Tel: ${reuData.telefone}`;
+        doc.text(line2, 20, y); y += 5;
+        
+        if (reuData.email) { doc.text(`E-mail: ${reuData.email}`, 20, y); y += 5; }
+        
         let end = [reuData.rua, reuData.numero, reuData.bairro, reuData.cidade, reuData.uf].filter(Boolean).join(', ');
         if (reuData.cep) end += ` (CEP: ${reuData.cep})`;
-        if (end.length > 5) { const lines = doc.splitTextToSize(`Endereço: ${end}`, pageWidth - 40); doc.text(lines, 20, y); y += lines.length * 6; }
+        if (end.length > 5) { const lines = doc.splitTextToSize(`Endereço: ${end}`, pageWidth - 40); doc.text(lines, 20, y); y += lines.length * 4.5; }
+        
         if (reuData.empresa || reuData.enderecoTrabalho) {
-            y += 4; doc.setFont("helvetica", "bold"); doc.text("Dados Profissionais:", 20, y); y += 6; doc.setFont("helvetica", "normal");
-            printField("Empresa", reuData.empresa); printField("End. Trabalho", reuData.enderecoTrabalho);
+            y += 3; doc.setFont("helvetica", "bold"); doc.text("Dados Profissionais:", 20, y); y += 5; doc.setFont("helvetica", "normal");
+            if (reuData.empresa) { doc.text(`Empresa: ${reuData.empresa}`, 20, y); y += 5; }
+            if (reuData.enderecoTrabalho) { doc.text(`End. Trabalho: ${reuData.enderecoTrabalho}`, 20, y); }
         }
     }
     
