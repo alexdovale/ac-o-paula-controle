@@ -64,14 +64,10 @@
                 <div class="bg-gray-50 p-4 rounded-lg border">
                     <label for="new-demand-input" class="block text-sm font-medium text-gray-700 mb-1">Se sim, adicione aqui:</label>
                     <div class="flex flex-col sm:flex-row gap-2">
-                        <!-- =================================================================== -->
-                        <!-- INÍCIO DA ALTERAÇÃO HTML -->
-                        <!-- =================================================================== -->
-                        <input type="text" id="new-demand-input" list="subjects-list-external" placeholder="Ex: Ação de Partilha de Bens" class="flex-grow p-2 border border-gray-300 rounded-lg">
+                        <!-- CAMPO COM DATALIST -->
+                        <input type="text" id="new-demand-input" list="subjects-list-external" placeholder="Digite ou selecione o assunto..." class="flex-grow p-2 border border-gray-300 rounded-lg">
                         <datalist id="subjects-list-external"></datalist>
-                        <!-- =================================================================== -->
-                        <!-- FIM DA ALTERAÇÃO HTML -->
-                        <!-- =================================================================== -->
+                        
                         <button id="add-demand-btn" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 flex-shrink-0">Adicionar</button>
                     </div>
                     <div id="demands-list-container" class="mt-3">
@@ -96,141 +92,132 @@
         import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ===================================================================
-        // INÍCIO DO JAVASCRIPT ADICIONADO
+        // ÁRVORE DE ASSUNTOS (Igual ao Index.html)
         // ===================================================================
         const subjectTree = [
-            { text: "Orientação Jurídica", description: "Prestação de informações e esclarecimentos gerais sobre direitos, deveres e as leis, auxiliando o cidadão a entender sua situação e as possíveis soluções legais." },
-            { text: "Atendimento Jurídico Integral e Gratuito", description: "O serviço principal da Defensoria, oferecido a pessoas que não possuem condições financeiras para contratar um advogado, abrangendo todas as etapas e necessidades legais." },
-            { text: "Ajuizamento e Acompanhamento de Ações Judiciais", description: "Início de processos legais perante o Poder Judiciário e o monitoramento de seu andamento até a decisão final." },
-            { text: "Consultas Processuais", description: "Fornecimento de informações sobre o status e o andamento de processos judiciais ou administrativos em que o assistido é parte." },
+            { text: "Orientação Jurídica", description: "Prestação de informações e esclarecimentos gerais sobre direitos, deveres e as leis." },
+            { text: "Atendimento Jurídico Integral e Gratuito", description: "O serviço principal da Defensoria." },
+            { text: "Ajuizamento e Acompanhamento de Ações Judiciais", description: "Início de processos legais." },
+            { text: "Consultas Processuais", description: "Informações sobre status de processos." },
             {
                 text: "Processos Cíveis (gerais)",
-                description: "Atuação em demandas judiciais que não se enquadram em áreas especializadas, como disputas de vizinhança, regularização de imóveis, questões condominiais, aluguel, despejo, indenizações diversas e problemas de posse.",
                 children: [
-                    { text: "Ação de Obrigação de Fazer", description: "Ação para exigir que alguém (ou uma empresa/órgão) cumpra uma determinada tarefa ou realize um serviço." },
-                    { text: "Ação Declaratória de Nulidade", description: "Ação para pedir que a justiça declare a invalidade de um ato jurídico (ex: contrato, multa, cobrança)." },
-                    { text: "Ação de Indenização (Danos Morais e Materiais)", description: "Ação para buscar compensação financeira por prejuízos sofridos (perdas materiais) e/ou por abalos psicológicos, honra ou dignidade (danos morais)." },
-                    { text: "Ação Revisional de Débito", description: "Ação para contestar e pedir a alteração de valores de dívidas ou cobranças consideradas abusivas ou indevidas." },
-                    { text: "Ação de Exigir Contas", description: "Ação para solicitar que uma pessoa (ex: antigo curador, administrador) apresente detalhes e comprovantes de como administrou valores ou bens de outra." }
+                    { text: "Ação de Obrigação de Fazer" },
+                    { text: "Ação Declaratória de Nulidade" },
+                    { text: "Ação de Indenização (Danos Morais e Materiais)" },
+                    { text: "Ação Revisional de Débito" },
+                    { text: "Ação de Exigir Contas" }
                 ]
             },
             {
                 text: "Processos de Família",
-                description: "Atuação em questões jurídicas que envolvem relações familiares.",
                 children: [
-                    { text: "Alimentos", description: "Ação para solicitar ou ajustar a pensão alimentícia.", children: [
-                        { text: "Ação de Fixação de Alimentos", description: "Para determinar, pela primeira vez, o valor da pensão alimentícia." },
-                        { text: "Ação de Majoração de Alimentos", description: "Para pedir o aumento do valor da pensão alimentícia." },
-                        { text: "Ação de Oferta de Alimentos", description: "Para que o devedor ofereça formalmente um valor de pensão, buscando regularizar a situação." },
-                        { text: "Ação de Alimentos Gravídicos", description: "Para que o futuro pai preste auxílio financeiro à gestante para cobrir despesas da gravidez." },
-                        { text: "Ação de Alimentos Avoengos (contra avós)", description: "Para pedir pensão alimentícia aos avós, em caráter subsidiário e complementar, quando os pais não podem ou não conseguem arcar." }
+                    { text: "Alimentos", children: [
+                        { text: "Ação de Fixação de Alimentos" },
+                        { text: "Ação de Majoração de Alimentos" },
+                        { text: "Ação de Oferta de Alimentos" },
+                        { text: "Ação de Alimentos Gravídicos" },
+                        { text: "Ação de Alimentos Avoengos (contra avós)" }
                     ]},
-                    { text: "Divórcio", description: "Ação para dissolver o vínculo matrimonial.", children: [
-                        { text: "Divórcio Consensual", description: "Quando ambos os cônjuges concordam com todos os termos da separação (partilha, guarda, etc.)." },
-                        { text: "Divórcio Litigioso", description: "Quando os cônjuges não chegam a um acordo sobre um ou mais termos da separação." }
+                    { text: "Divórcio", children: [
+                        { text: "Divórcio Consensual" },
+                        { text: "Divórcio Litigioso" }
                     ]},
-                    { text: "União Estável", description: "Ação para reconhecer ou dissolver a união estável.", children: [
-                        { text: "Reconhecimento e Dissolução de União Estável", description: "Para formalizar judicialmente o início e o fim de uma união estável." },
-                        { text: "Reconhecimento / Dissolução de União Estável Post Mortem", description: "Para reconhecer e/ou dissolver uma união estável após o falecimento de um dos companheiros." },
-                        { text: "Conversão de União Estável Homoafetiva em Casamento", description: "Para formalizar o casamento a partir de uma união estável entre pessoas do mesmo sexo." }
+                    { text: "União Estável", children: [
+                        { text: "Reconhecimento e Dissolução de União Estável" },
+                        { text: "Reconhecimento / Dissolução de União Estável Post Mortem" },
+                        { text: "Conversão de União Estável Homoafetiva em Casamento" }
                     ]},
-                    { text: "Guarda", description: "Ação para definir quem será responsável pelos cuidados e decisões sobre uma criança ou adolescente.", children: [
-                        { text: "Guarda (pedida pelos pais)", description: "Quando os próprios genitores buscam a formalização da guarda." },
-                        { text: "Guarda (pedida por outra pessoa que não o pai ou a mãe)", description: "Quando um terceiro (ex: avó, tio) busca a guarda de uma criança/adolescente, geralmente em situações excepcionais de incapacidade ou risco com os pais." },
-                        { text: "Guarda Compartilhada", description: "Modalidade em que ambos os pais exercem a autoridade parental, mesmo separados, tomando decisões conjuntas sobre os filhos." }
+                    { text: "Guarda", children: [
+                        { text: "Guarda (pedida pelos pais)" },
+                        { text: "Guarda (pedida por outra pessoa que não o pai ou a mãe)" },
+                        { text: "Guarda Compartilhada" }
                     ]},
-                    { text: "Regulamentação de Convivência Familiar (Visitas)", description: "Ação para definir judicialmente os dias e horários em que o pai/mãe (ou avós/terceiros) terá contato com a criança/adolescente."},
-                    { text: "Investigação de Paternidade (DNA)", description: "Ação para buscar o reconhecimento judicial da paternidade biológica.", children: [
-                        { text: "Investigação de Paternidade Cumulada com Alimentos", description: "Ação que, além de buscar o reconhecimento, já pede a fixação de pensão alimentícia." },
-                        { text: "Investigação de Paternidade Pós Morte", description: "Ação de reconhecimento de paternidade após o falecimento do suposto pai." }
+                    { text: "Regulamentação de Convivência Familiar (Visitas)" },
+                    { text: "Investigação de Paternidade (DNA)", children: [
+                        { text: "Investigação de Paternidade Cumulada com Alimentos" },
+                        { text: "Investigação de Paternidade Pós Morte" }
                     ]},
-                    { text: "Curatela", description: "Medida judicial que nomeia um curador para gerir atos negociais e patrimoniais de um adulto que não pode exprimir sua vontade.", children: [
-                        { text: "Procedimento de Fixação dos Limites da Curatela (antiga interdição)", description: "Processo para instituir a curatela, definindo os atos para os quais a pessoa precisará de assistência." },
-                        { text: "Levantamento de Curatela", description: "Ação para encerrar a curatela quando a causa da incapacidade cessa ou a pessoa recupera a autonomia." }
+                    { text: "Curatela", children: [
+                        { text: "Procedimento de Fixação dos Limites da Curatela (antiga interdição)" },
+                        { text: "Levantamento de Curatela" }
                     ]},
-                    { text: "Tutela", description: "Medida judicial que nomeia um tutor para cuidar de um menor que não tem pais ou cujos pais perderam o poder familiar." },
-                    { text: "Adoção", description: "Processo judicial para estabelecer um novo vínculo de filiação, em que uma criança ou adolescente se torna filho legal de pais adotivos." }
+                    { text: "Tutela" },
+                    { text: "Adoção" }
                 ]
             },
             {
                 text: "Processos Criminais",
-                description: "Atuação jurídica relacionada a crimes.",
                 children: [
-                    { text: "Defesa de Acusados em Processo Criminal", description: "Representação legal de pessoas que respondem a acusações criminais." },
-                    { text: "Acompanhamento do Cumprimento da Pena (Execução Penal)", description: "Atuação em favor de pessoas condenadas, para garantir seus direitos durante o cumprimento da pena (regime, progressão, benefícios)." },
-                    { text: "Atuação em Audiência de Custódia", description: "Assistência a pessoas presas em flagrante, avaliando a legalidade da prisão e buscando medidas alternativas." }
+                    { text: "Defesa de Acusados em Processo Criminal" },
+                    { text: "Acompanhamento do Cumprimento da Pena (Execução Penal)" },
+                    { text: "Atuação em Audiência de Custódia" }
                 ]
             },
             {
                 text: "Processos de Fazenda Pública",
-                description: "Demandas contra o Estado (União, Estados, Municípios) e seus órgãos.",
                 children: [
-                    { text: "Fornecimento de Medicamentos", description: "Ação para compelir o Poder Público a fornecer medicamentos essenciais." },
-                    { text: "Indenizações contra o Poder Público", description: "Ações para buscar compensação por danos causados por atos ou omissões do Estado." },
-                    { text: "Previdência Social (estadual e municipal)", description: "Atuação em questões relacionadas a benefícios previdenciários de regimes próprios." },
-                    { text: "Questionamentos em Cobranças de Impostos, Taxas e Multas", description: "Ações para contestar cobranças indevidas de tributos ou multas por entes públicos." }
+                    { text: "Fornecimento de Medicamentos" },
+                    { text: "Indenizações contra o Poder Público" },
+                    { text: "Previdência Social (estadual e municipal)" },
+                    { text: "Questionamentos em Cobranças de Impostos, Taxas e Multas" }
                 ]
             },
             {
                 text: "Processos de Infância e Juventude",
-                description: "Ações focadas nos direitos de crianças e adolescentes.",
                 children: [
-                    { text: "Vaga em Escolas e Creches", description: "Ação para garantir o acesso à educação, pleiteando matrícula em creches ou escolas públicas/conveniadas." },
-                    { text: "Profissionais de Apoio Escolar", description: "Ação para garantir a presença de mediadores ou outros profissionais de apoio para alunos com deficiência na escola." },
-                    { text: "Obrigação de Fazer (genérica)", description: "Ação para exigir que um órgão cumpra uma obrigação específica em favor da criança/adolescente." },
-                    { text: "Transporte (demanda de transporte gratuito)", description: "Ação para garantir o direito de transporte gratuito para crianças/adolescentes com deficiência ou necessidades específicas." }
+                    { text: "Vaga em Escolas e Creches" },
+                    { text: "Profissionais de Apoio Escolar" },
+                    { text: "Obrigação de Fazer (genérica)" },
+                    { text: "Transporte (demanda de transporte gratuito)" }
                 ]
             },
-            { text: "Processos Relacionados a Direitos Humanos", description: "Atuação em casos de violação de direitos fundamentais." },
-            { text: "Mediação e Conciliação", description: "Métodos de resolução de conflitos em que um terceiro imparcial auxilia as partes a chegarem a um acordo, evitando ou encerrando o processo judicial." },
+            { text: "Processos Relacionados a Direitos Humanos" },
+            { text: "Mediação e Conciliação" },
             {
                 text: "Facilitação de Acesso à Documentação Básica",
-                description: "Auxílio na obtenção de documentos essenciais para o exercício da cidadania.",
                 children: [
-                    { text: "Emissão de Carteira de Identidade (1ª e 2ª via)", description: "Apoio no processo para obter ou renovar o RG, incluindo gratuidade se necessário." },
-                    { text: "Emissão de Certidões (Nascimento, Casamento, Óbito - 1ª e 2ª via)", description: "Auxílio na obtenção de certidões, com foco na gratuidade para hipossuficientes." },
-                    { text: "Obtenção de 'Nada Consta'", description: "Apoio para obter certidões que atestam a inexistência de pendências legais." }
+                    { text: "Emissão de Carteira de Identidade (1ª e 2ª via)" },
+                    { text: "Emissão de Certidões (Nascimento, Casamento, Óbito - 1ª e 2ª via)" },
+                    { text: "Obtenção de 'Nada Consta'" }
                 ]
             },
             {
                 text: "Atendimento em Demandas de Saúde (CRLS)",
-                description: "Atuação na Câmara de Resolução de Litígios de Saúde, buscando soluções administrativas para acesso a medicamentos e procedimentos.",
                 children: [
-                    { text: "Acesso a Medicamentos", description: "Conseguir o fornecimento de medicamentos pelo SUS ou plano de saúde." },
-                    { text: "Agendamento de Procedimentos Cirúrgicos ou Exames", description: "Agilizar a realização de procedimentos médicos." }
+                    { text: "Acesso a Medicamentos" },
+                    { text: "Agendamento de Procedimentos Cirúrgicos ou Exames" }
                 ]
             },
             {
                 text: "Orientação sobre Execução Penal",
-                description: "Esclarecimentos sobre os direitos de pessoas que cumprem pena.",
                 children: [
-                    { text: "Progressão de Regime", description: "Orientação sobre a mudança para regimes de pena menos rigorosos (Fechado, Semiaberto, Aberto)." },
-                    { text: "Visita Periódica ao Lar (VPL)", description: "Orientação sobre o direito a saídas temporárias para convivência familiar." },
-                    { text: "Trabalho/Estudo Extramuros", description: "Orientação sobre a possibilidade de trabalhar ou estudar fora do estabelecimento prisional." },
-                    { text: "Livramento Condicional", description: "Orientação sobre a liberdade antecipada sob condições." },
-                    { text: "Indulto", description: "Orientação sobre o perdão da pena concedido por decreto presidencial." }
+                    { text: "Progressão de Regime" },
+                    { text: "Visita Periódica ao Lar (VPL)" },
+                    { text: "Trabalho/Estudo Extramuros" },
+                    { text: "Livramento Condicional" },
+                    { text: "Indulto" }
                 ]
             },
             {
                 text: "Retificação de Registro Civil",
-                description: "Ações para corrigir informações em documentos civis.",
                 children: [
-                    { text: "Retificação de Dados Registrais (Nascimento, Casamento, Óbito)", description: "Correção de erros ou omissões em certidões." },
-                    { text: "Alteração de Gênero e Nome", description: "Processo para pessoas transgênero alterarem o nome e/ou gênero em seus documentos." }
+                    { text: "Retificação de Dados Registrais (Nascimento, Casamento, Óbito)" },
+                    { text: "Alteração de Gênero e Nome" }
                 ]
             },
             {
                 text: "Alvará Judicial",
-                description: "Medida judicial simplificada para fins específicos.",
                 children: [
-                    { text: "Alvará para Levantamento de Valores (FGTS, PIS/PASEP)", description: "Para autorizar o saque de valores específicos." },
-                    { text: "Alvará para Autorização de Viagem ao Exterior (para menor)", description: "Para suprir o consentimento de um dos pais em viagens internacionais de menores." }
+                    { text: "Alvará para Levantamento de Valores (FGTS, PIS/PASEP)" },
+                    { text: "Alvará para Autorização de Viagem ao Exterior (para menor)" }
                 ]
             },
-            { text: "Apoio Psicossocial", description: "Prestação de suporte que considera os aspectos psicológicos e sociais do assistido, integrando-o ao atendimento jurídico." },
-            { text: "Defesa de Direitos Homoafetivos", description: "Atuação específica para a promoção e defesa dos direitos de pessoas LGBT." }
+            { text: "Apoio Psicossocial" },
+            { text: "Defesa de Direitos Homoafetivos" }
         ];
 
+        // Função para transformar a árvore em lista plana (ex: "Família > Alimentos")
         function flattenTreeWithObjects(nodes, parentPrefix = '') {
             let flatList = [];
             nodes.forEach(node => {
@@ -242,9 +229,6 @@
             });
             return flatList;
         }
-        // ===================================================================
-        // FIM DO JAVASCRIPT ADICIONADO
-        // ===================================================================
 
         // --- ELEMENTOS DO DOM ---
         const loadingContainer = document.getElementById('loading-container');
@@ -255,9 +239,8 @@
 
         // --- LÓGICA PRINCIPAL ---
         document.addEventListener('DOMContentLoaded', async () => {
-            // ===================================================================
-            // INÍCIO DA LÓGICA DE PREENCHIMENTO DO DATALIST
-            // ===================================================================
+            
+            // 1. Preencher o Datalist com os assuntos
             const datalist = document.getElementById('subjects-list-external');
             const flatSubjects = flattenTreeWithObjects(subjectTree);
             flatSubjects.forEach(subject => {
@@ -265,10 +248,8 @@
                 option.value = subject.value;
                 datalist.appendChild(option);
             });
-            // ===================================================================
-            // FIM DA LÓGICA DE PREENCHIMENTO DO DATALIST
-            // ===================================================================
 
+            // 2. Capturar Parâmetros da URL
             const params = new URLSearchParams(window.location.search);
             const pautaId = params.get('pautaId');
             const assistidoId = params.get('assistidoId');
@@ -281,7 +262,7 @@
             }
 
             try {
-                // Cole aqui a configuração do seu Firebase
+                // CONFIGURAÇÃO DO FIREBASE (INSIRA SUAS CHAVES AQUI SE NECESSÁRIO)
                 const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
                 const app = initializeApp(firebaseConfig);
                 const db = getFirestore(app);
@@ -330,7 +311,15 @@
             document.getElementById('assistido-name-summary').textContent = assistido.name;
             document.getElementById('assistido-subject').textContent = assistido.subject || 'Não informado';
             
-            document.getElementById('attendant-name').value = collaboratorName || assistido.attendant || '';
+            // Preenche o nome do atendente se disponível
+            const attendantField = document.getElementById('attendant-name');
+            if (collaboratorName) {
+                attendantField.value = collaboratorName;
+            } else if (typeof assistido.attendant === 'object' && assistido.attendant) {
+                attendantField.value = assistido.attendant.nome;
+            } else {
+                attendantField.value = assistido.attendant || '';
+            }
         }
 
         function setupEventListeners(docRef, assistido) {
@@ -342,15 +331,7 @@
             const existingDemands = assistido.demandas?.descricoes || [];
             existingDemands.forEach(addDemandToList);
 
-            addDemandBtn.addEventListener('click', () => {
-                const demandText = newDemandInput.value.trim();
-                if (demandText) {
-                    addDemandToList(demandText);
-                    newDemandInput.value = '';
-                }
-            });
-            
-            // Lógica para formatar o texto do assunto ao selecionar da lista
+            // Lógica para limpar o input ao selecionar da lista (Família > Alimentos -> Alimentos)
             newDemandInput.addEventListener('change', () => {
                 const originalValue = newDemandInput.value;
                 if (originalValue.includes(' > ')) {
@@ -359,9 +340,24 @@
                 }
             });
 
+            addDemandBtn.addEventListener('click', () => {
+                const demandText = newDemandInput.value.trim();
+                if (demandText) {
+                    addDemandToList(demandText);
+                    newDemandInput.value = '';
+                }
+            });
+            
+             newDemandInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addDemandBtn.click();
+                }
+            });
+
             function addDemandToList(demandText) {
                 const li = document.createElement('li');
-                li.className = 'flex justify-between items-center p-2 bg-white rounded-md text-sm shadow-sm';
+                li.className = 'flex justify-between items-center p-2 bg-white rounded-md text-sm shadow-sm border border-gray-100';
                 li.textContent = demandText;
 
                 const removeBtn = document.createElement('button');
@@ -372,22 +368,17 @@
                 li.appendChild(removeBtn);
                 demandsList.appendChild(li);
             }
-            
-             newDemandInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addDemandBtn.click();
-                }
-            });
 
             finishBtn.addEventListener('click', async () => {
                 finishBtn.disabled = true;
                 finishBtn.textContent = 'Salvando...';
 
                 const attendantName = document.getElementById('attendant-name').value.trim();
-                const additionalDemands = Array.from(demandsList.querySelectorAll('li')).map(li => li.firstChild.textContent);
+                const additionalDemands = Array.from(demandsList.querySelectorAll('li')).map(li => li.firstChild.textContent.replace('Remover', '').trim());
                 
+                // Combina demandas existentes com novas
                 const existingDemands = assistido.demandas?.descricoes || [];
+                // Remove duplicatas
                 const allDemands = [...new Set([...existingDemands, ...additionalDemands])];
 
                 const demandasObject = {
@@ -398,8 +389,8 @@
                 try {
                     await updateDoc(docRef, {
                         status: 'atendido',
-                        attendant: attendantName,
-                        attendedTime: new Date(),
+                        attendant: attendantName, // Salva o nome confirmado pelo colaborador
+                        attendedTime: new Date().toISOString(),
                         finalizadoPeloColaborador: true,
                         demandas: demandasObject
                     });
