@@ -3,279 +3,413 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acompanhamento de Pauta - SIGAP</title>
-    <!-- Tailwind CSS -->
+    <title>Finalização de Atendimento - SIGEP</title>
+
+    <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
+    <meta name="theme-color" content="#16a34a"/>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }</style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
+        .loader { border: 6px solid #f3f3f3; border-top: 6px solid #16a34a; border-radius: 50%; width: 50px; height: 50px; animation: spin 1.5s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
 </head>
-<body class="p-4 md:p-8 min-h-screen flex flex-col">
+<body class="flex items-center justify-center min-h-screen p-4">
 
     <!-- Tela de Carregamento -->
-    <div id="loading" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-        <p class="mt-4 text-gray-600">Carregando pauta...</p>
+    <div id="loading-container" class="text-center">
+        <div class="loader mx-auto"></div>
+        <p class="mt-4 text-gray-700 font-semibold">Carregando informações do atendimento...</p>
     </div>
 
-    <!-- Tela de Erro (Privada ou Inexistente) -->
-    <div id="error-screen" class="hidden fixed inset-0 bg-gray-100 flex flex-col items-center justify-center text-center p-4">
-        <div class="bg-white p-8 rounded-xl shadow-lg max-w-md">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            <h1 class="text-2xl font-bold text-gray-800 mb-2">Acesso Restrito</h1>
-            <p class="text-gray-600">Esta pauta não está pública no momento ou o link está incorreto.</p>
-        </div>
+    <!-- Tela de Erro -->
+    <div id="error-container" class="hidden text-center bg-white p-8 rounded-xl shadow-lg max-w-lg w-full">
+         <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="mx-auto h-20 w-auto mb-4">
+        <h2 class="text-2xl font-bold text-red-600 mb-4">Ocorreu um Erro</h2>
+        <p id="error-message" class="text-gray-600">Não foi possível carregar os dados do atendimento. Por favor, verifique se o link está correto ou contate o suporte.</p>
+    </div>
+
+    <!-- Tela de Sucesso -->
+    <div id="success-container" class="hidden text-center bg-white p-8 rounded-xl shadow-lg max-w-lg w-full">
+         <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="mx-auto h-20 w-auto mb-4">
+        <h2 class="text-2xl font-bold text-green-600 mb-4">Registro de Atendimento Salvo!</h2>
+        <p class="text-gray-600">Obrigado por sua confirmação. Os detalhes do atendimento foram finalizados com sucesso.</p>
     </div>
 
     <!-- Conteúdo Principal -->
-    <div id="app-content" class="hidden w-full max-w-7xl mx-auto flex-1 flex flex-col h-full">
-        
-        <!-- CABEÇALHO -->
-        <header class="mb-6 bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4">
-            
-            <!-- Título e Status -->
-            <div class="text-center md:text-left">
-                <h1 id="pauta-title" class="text-2xl md:text-3xl font-bold text-gray-800"></h1>
-                <div class="flex items-center justify-center md:justify-start gap-2 mt-1">
-                    <span class="relative flex h-2.5 w-2.5">
-                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-                    </span>
-                    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Atualização em tempo real</p>
+    <div id="main-container" class="hidden bg-white p-6 md:p-8 rounded-xl shadow-lg w-full max-w-2xl">
+        <div class="text-center mb-6">
+             <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="mx-auto h-20 w-auto mb-4">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Finalizar Atendimento</h1>
+            <p class="text-gray-500 mt-2">Olá, <strong id="collaborator-name-header" class="text-gray-700">Colaborador(a)</strong>! Por favor, confirme os detalhes do atendimento para <strong id="assistido-name-header" class="text-gray-700"></strong>.</p>
+        </div>
+
+        <div class="space-y-6">
+            <!-- Card de Resumo -->
+            <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg">
+                <h3 class="font-semibold text-gray-700 mb-2">Resumo do Atendimento</h3>
+                 <p class="text-sm"><span class="text-gray-500">Assistido(a):</span> <strong id="assistido-name-summary" class="text-gray-800"></strong></p>
+                <p class="text-sm"><span class="text-gray-500">Assunto Principal:</span> <strong id="assistido-subject" class="text-gray-800"></strong></p>
+            </div>
+
+            <!-- Formulário de Confirmação -->
+            <div>
+                <label for="attendant-name" class="block text-sm font-medium text-gray-700 mb-1">Seu Nome (Atendente):</label>
+                <input type="text" id="attendant-name" placeholder="Seu nome como Defensor/Servidor" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition">
+            </div>
+
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">Houve mais alguma demanda/matéria?</h3>
+                <div class="bg-gray-50 p-4 rounded-lg border">
+                    <label for="new-demand-input" class="block text-sm font-medium text-gray-700 mb-1">Se sim, adicione aqui:</label>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <!-- =================================================================== -->
+                        <!-- INÍCIO DA ALTERAÇÃO HTML -->
+                        <!-- =================================================================== -->
+                        <input type="text" id="new-demand-input" list="subjects-list-external" placeholder="Ex: Ação de Partilha de Bens" class="flex-grow p-2 border border-gray-300 rounded-lg">
+                        <datalist id="subjects-list-external"></datalist>
+                        <!-- =================================================================== -->
+                        <!-- FIM DA ALTERAÇÃO HTML -->
+                        <!-- =================================================================== -->
+                        <button id="add-demand-btn" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 flex-shrink-0">Adicionar</button>
+                    </div>
+                    <div id="demands-list-container" class="mt-3">
+                         <ul id="demands-list" class="space-y-2">
+                            <!-- Itens adicionados aparecerão aqui -->
+                         </ul>
+                    </div>
                 </div>
             </div>
 
-            <!-- NOVO: Contador de Atendidos -->
-            <div class="bg-blue-50 border border-blue-100 px-6 py-3 rounded-lg flex flex-col items-center justify-center shadow-sm min-w-[150px]">
-                <span class="text-xs font-bold text-blue-400 uppercase tracking-wider">Total Atendidos</span>
-                <span id="total-atendidos-count" class="text-3xl font-bold text-blue-700 leading-none mt-1">0</span>
+            <!-- Botão de Finalizar -->
+            <div class="border-t pt-6">
+                <button id="finish-btn" class="w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition shadow-md">
+                    Finalizar e Salvar Registro
+                </button>
             </div>
-
-            <!-- Hora da Última Atualização -->
-            <div id="last-update" class="text-xs text-gray-400 font-mono"></div>
-        </header>
-
-        <!-- COLUNAS -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
-            
-            <!-- Coluna Aguardando -->
-            <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-[65vh] lg:h-[75vh]">
-                <div class="bg-yellow-500 p-4 text-white shadow-sm z-10 flex justify-between items-center">
-                    <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        Aguardando
-                    </h2>
-                    <span id="count-aguardando" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 px-3 py-1 rounded-full text-lg font-bold">0</span>
-                </div>
-                <div id="list-aguardando" class="p-4 overflow-y-auto flex-1 space-y-3 bg-gray-50">
-                    <!-- Cards inseridos via JS -->
-                </div>
-            </div>
-
-            <!-- Coluna Em Atendimento -->
-            <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-[65vh] lg:h-[75vh]">
-                <div class="bg-green-600 p-4 text-white shadow-sm z-10 flex justify-between items-center">
-                    <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                        Em Atendimento
-                    </h2>
-                    <span id="count-atendimento" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 px-3 py-1 rounded-full text-lg font-bold">0</span>
-                </div>
-                <div id="list-atendimento" class="p-4 overflow-y-auto flex-1 space-y-3 bg-gray-50">
-                    <!-- Cards inseridos via JS -->
-                </div>
-            </div>
-
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Configuração do Firebase
-        const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
-        
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        // ===================================================================
+        // INÍCIO DO JAVASCRIPT ADICIONADO
+        // ===================================================================
+        const subjectTree = [
+            { text: "Orientação Jurídica", description: "Prestação de informações e esclarecimentos gerais sobre direitos, deveres e as leis, auxiliando o cidadão a entender sua situação e as possíveis soluções legais." },
+            { text: "Atendimento Jurídico Integral e Gratuito", description: "O serviço principal da Defensoria, oferecido a pessoas que não possuem condições financeiras para contratar um advogado, abrangendo todas as etapas e necessidades legais." },
+            { text: "Ajuizamento e Acompanhamento de Ações Judiciais", description: "Início de processos legais perante o Poder Judiciário e o monitoramento de seu andamento até a decisão final." },
+            { text: "Consultas Processuais", description: "Fornecimento de informações sobre o status e o andamento de processos judiciais ou administrativos em que o assistido é parte." },
+            {
+                text: "Processos Cíveis (gerais)",
+                description: "Atuação em demandas judiciais que não se enquadram em áreas especializadas, como disputas de vizinhança, regularização de imóveis, questões condominiais, aluguel, despejo, indenizações diversas e problemas de posse.",
+                children: [
+                    { text: "Ação de Obrigação de Fazer", description: "Ação para exigir que alguém (ou uma empresa/órgão) cumpra uma determinada tarefa ou realize um serviço." },
+                    { text: "Ação Declaratória de Nulidade", description: "Ação para pedir que a justiça declare a invalidade de um ato jurídico (ex: contrato, multa, cobrança)." },
+                    { text: "Ação de Indenização (Danos Morais e Materiais)", description: "Ação para buscar compensação financeira por prejuízos sofridos (perdas materiais) e/ou por abalos psicológicos, honra ou dignidade (danos morais)." },
+                    { text: "Ação Revisional de Débito", description: "Ação para contestar e pedir a alteração de valores de dívidas ou cobranças consideradas abusivas ou indevidas." },
+                    { text: "Ação de Exigir Contas", description: "Ação para solicitar que uma pessoa (ex: antigo curador, administrador) apresente detalhes e comprovantes de como administrou valores ou bens de outra." }
+                ]
+            },
+            {
+                text: "Processos de Família",
+                description: "Atuação em questões jurídicas que envolvem relações familiares.",
+                children: [
+                    { text: "Alimentos", description: "Ação para solicitar ou ajustar a pensão alimentícia.", children: [
+                        { text: "Ação de Fixação de Alimentos", description: "Para determinar, pela primeira vez, o valor da pensão alimentícia." },
+                        { text: "Ação de Majoração de Alimentos", description: "Para pedir o aumento do valor da pensão alimentícia." },
+                        { text: "Ação de Oferta de Alimentos", description: "Para que o devedor ofereça formalmente um valor de pensão, buscando regularizar a situação." },
+                        { text: "Ação de Alimentos Gravídicos", description: "Para que o futuro pai preste auxílio financeiro à gestante para cobrir despesas da gravidez." },
+                        { text: "Ação de Alimentos Avoengos (contra avós)", description: "Para pedir pensão alimentícia aos avós, em caráter subsidiário e complementar, quando os pais não podem ou não conseguem arcar." }
+                    ]},
+                    { text: "Divórcio", description: "Ação para dissolver o vínculo matrimonial.", children: [
+                        { text: "Divórcio Consensual", description: "Quando ambos os cônjuges concordam com todos os termos da separação (partilha, guarda, etc.)." },
+                        { text: "Divórcio Litigioso", description: "Quando os cônjuges não chegam a um acordo sobre um ou mais termos da separação." }
+                    ]},
+                    { text: "União Estável", description: "Ação para reconhecer ou dissolver a união estável.", children: [
+                        { text: "Reconhecimento e Dissolução de União Estável", description: "Para formalizar judicialmente o início e o fim de uma união estável." },
+                        { text: "Reconhecimento / Dissolução de União Estável Post Mortem", description: "Para reconhecer e/ou dissolver uma união estável após o falecimento de um dos companheiros." },
+                        { text: "Conversão de União Estável Homoafetiva em Casamento", description: "Para formalizar o casamento a partir de uma união estável entre pessoas do mesmo sexo." }
+                    ]},
+                    { text: "Guarda", description: "Ação para definir quem será responsável pelos cuidados e decisões sobre uma criança ou adolescente.", children: [
+                        { text: "Guarda (pedida pelos pais)", description: "Quando os próprios genitores buscam a formalização da guarda." },
+                        { text: "Guarda (pedida por outra pessoa que não o pai ou a mãe)", description: "Quando um terceiro (ex: avó, tio) busca a guarda de uma criança/adolescente, geralmente em situações excepcionais de incapacidade ou risco com os pais." },
+                        { text: "Guarda Compartilhada", description: "Modalidade em que ambos os pais exercem a autoridade parental, mesmo separados, tomando decisões conjuntas sobre os filhos." }
+                    ]},
+                    { text: "Regulamentação de Convivência Familiar (Visitas)", description: "Ação para definir judicialmente os dias e horários em que o pai/mãe (ou avós/terceiros) terá contato com a criança/adolescente."},
+                    { text: "Investigação de Paternidade (DNA)", description: "Ação para buscar o reconhecimento judicial da paternidade biológica.", children: [
+                        { text: "Investigação de Paternidade Cumulada com Alimentos", description: "Ação que, além de buscar o reconhecimento, já pede a fixação de pensão alimentícia." },
+                        { text: "Investigação de Paternidade Pós Morte", description: "Ação de reconhecimento de paternidade após o falecimento do suposto pai." }
+                    ]},
+                    { text: "Curatela", description: "Medida judicial que nomeia um curador para gerir atos negociais e patrimoniais de um adulto que não pode exprimir sua vontade.", children: [
+                        { text: "Procedimento de Fixação dos Limites da Curatela (antiga interdição)", description: "Processo para instituir a curatela, definindo os atos para os quais a pessoa precisará de assistência." },
+                        { text: "Levantamento de Curatela", description: "Ação para encerrar a curatela quando a causa da incapacidade cessa ou a pessoa recupera a autonomia." }
+                    ]},
+                    { text: "Tutela", description: "Medida judicial que nomeia um tutor para cuidar de um menor que não tem pais ou cujos pais perderam o poder familiar." },
+                    { text: "Adoção", description: "Processo judicial para estabelecer um novo vínculo de filiação, em que uma criança ou adolescente se torna filho legal de pais adotivos." }
+                ]
+            },
+            {
+                text: "Processos Criminais",
+                description: "Atuação jurídica relacionada a crimes.",
+                children: [
+                    { text: "Defesa de Acusados em Processo Criminal", description: "Representação legal de pessoas que respondem a acusações criminais." },
+                    { text: "Acompanhamento do Cumprimento da Pena (Execução Penal)", description: "Atuação em favor de pessoas condenadas, para garantir seus direitos durante o cumprimento da pena (regime, progressão, benefícios)." },
+                    { text: "Atuação em Audiência de Custódia", description: "Assistência a pessoas presas em flagrante, avaliando a legalidade da prisão e buscando medidas alternativas." }
+                ]
+            },
+            {
+                text: "Processos de Fazenda Pública",
+                description: "Demandas contra o Estado (União, Estados, Municípios) e seus órgãos.",
+                children: [
+                    { text: "Fornecimento de Medicamentos", description: "Ação para compelir o Poder Público a fornecer medicamentos essenciais." },
+                    { text: "Indenizações contra o Poder Público", description: "Ações para buscar compensação por danos causados por atos ou omissões do Estado." },
+                    { text: "Previdência Social (estadual e municipal)", description: "Atuação em questões relacionadas a benefícios previdenciários de regimes próprios." },
+                    { text: "Questionamentos em Cobranças de Impostos, Taxas e Multas", description: "Ações para contestar cobranças indevidas de tributos ou multas por entes públicos." }
+                ]
+            },
+            {
+                text: "Processos de Infância e Juventude",
+                description: "Ações focadas nos direitos de crianças e adolescentes.",
+                children: [
+                    { text: "Vaga em Escolas e Creches", description: "Ação para garantir o acesso à educação, pleiteando matrícula em creches ou escolas públicas/conveniadas." },
+                    { text: "Profissionais de Apoio Escolar", description: "Ação para garantir a presença de mediadores ou outros profissionais de apoio para alunos com deficiência na escola." },
+                    { text: "Obrigação de Fazer (genérica)", description: "Ação para exigir que um órgão cumpra uma obrigação específica em favor da criança/adolescente." },
+                    { text: "Transporte (demanda de transporte gratuito)", description: "Ação para garantir o direito de transporte gratuito para crianças/adolescentes com deficiência ou necessidades específicas." }
+                ]
+            },
+            { text: "Processos Relacionados a Direitos Humanos", description: "Atuação em casos de violação de direitos fundamentais." },
+            { text: "Mediação e Conciliação", description: "Métodos de resolução de conflitos em que um terceiro imparcial auxilia as partes a chegarem a um acordo, evitando ou encerrando o processo judicial." },
+            {
+                text: "Facilitação de Acesso à Documentação Básica",
+                description: "Auxílio na obtenção de documentos essenciais para o exercício da cidadania.",
+                children: [
+                    { text: "Emissão de Carteira de Identidade (1ª e 2ª via)", description: "Apoio no processo para obter ou renovar o RG, incluindo gratuidade se necessário." },
+                    { text: "Emissão de Certidões (Nascimento, Casamento, Óbito - 1ª e 2ª via)", description: "Auxílio na obtenção de certidões, com foco na gratuidade para hipossuficientes." },
+                    { text: "Obtenção de 'Nada Consta'", description: "Apoio para obter certidões que atestam a inexistência de pendências legais." }
+                ]
+            },
+            {
+                text: "Atendimento em Demandas de Saúde (CRLS)",
+                description: "Atuação na Câmara de Resolução de Litígios de Saúde, buscando soluções administrativas para acesso a medicamentos e procedimentos.",
+                children: [
+                    { text: "Acesso a Medicamentos", description: "Conseguir o fornecimento de medicamentos pelo SUS ou plano de saúde." },
+                    { text: "Agendamento de Procedimentos Cirúrgicos ou Exames", description: "Agilizar a realização de procedimentos médicos." }
+                ]
+            },
+            {
+                text: "Orientação sobre Execução Penal",
+                description: "Esclarecimentos sobre os direitos de pessoas que cumprem pena.",
+                children: [
+                    { text: "Progressão de Regime", description: "Orientação sobre a mudança para regimes de pena menos rigorosos (Fechado, Semiaberto, Aberto)." },
+                    { text: "Visita Periódica ao Lar (VPL)", description: "Orientação sobre o direito a saídas temporárias para convivência familiar." },
+                    { text: "Trabalho/Estudo Extramuros", description: "Orientação sobre a possibilidade de trabalhar ou estudar fora do estabelecimento prisional." },
+                    { text: "Livramento Condicional", description: "Orientação sobre a liberdade antecipada sob condições." },
+                    { text: "Indulto", description: "Orientação sobre o perdão da pena concedido por decreto presidencial." }
+                ]
+            },
+            {
+                text: "Retificação de Registro Civil",
+                description: "Ações para corrigir informações em documentos civis.",
+                children: [
+                    { text: "Retificação de Dados Registrais (Nascimento, Casamento, Óbito)", description: "Correção de erros ou omissões em certidões." },
+                    { text: "Alteração de Gênero e Nome", description: "Processo para pessoas transgênero alterarem o nome e/ou gênero em seus documentos." }
+                ]
+            },
+            {
+                text: "Alvará Judicial",
+                description: "Medida judicial simplificada para fins específicos.",
+                children: [
+                    { text: "Alvará para Levantamento de Valores (FGTS, PIS/PASEP)", description: "Para autorizar o saque de valores específicos." },
+                    { text: "Alvará para Autorização de Viagem ao Exterior (para menor)", description: "Para suprir o consentimento de um dos pais em viagens internacionais de menores." }
+                ]
+            },
+            { text: "Apoio Psicossocial", description: "Prestação de suporte que considera os aspectos psicológicos e sociais do assistido, integrando-o ao atendimento jurídico." },
+            { text: "Defesa de Direitos Homoafetivos", description: "Atuação específica para a promoção e defesa dos direitos de pessoas LGBT." }
+        ];
 
-        // Pegar ID da URL (?id=xyz...)
-        const urlParams = new URLSearchParams(window.location.search);
-        const pautaId = urlParams.get('id');
-
-        const loading = document.getElementById('loading');
-        const errorScreen = document.getElementById('error-screen');
-        const appContent = document.getElementById('app-content');
-        const listAguardando = document.getElementById('list-aguardando');
-        const listAtendimento = document.getElementById('list-atendimento');
-        
-        let maskNames = false;
-        let pautaRooms = [];
-
-        // Função para ocultar sobrenomes (João da Silva -> João D...)
-        function formatName(name) {
-            if (!maskNames || !name) return name;
-            const parts = name.trim().split(' ');
-            if (parts.length === 1) return name;
-            return `${parts[0]} ${parts[parts.length - 1].charAt(0)}...`; 
-        }
-
-        // Função para criar o Card Visual
-        function createCard(item, isAtendimento = false) {
-            const div = document.createElement('div');
-            
-            // Estilos visuais
-            let borderColor = 'border-l-4 border-gray-300';
-            let bgColor = 'bg-white';
-            
-            if (isAtendimento) {
-                borderColor = 'border-l-4 border-green-500';
-                bgColor = 'bg-green-50';
-            } else if (item.priority === 'URGENTE') {
-                borderColor = 'border-l-4 border-red-500';
-                bgColor = 'bg-red-50';
-            }
-
-            let salaBadge = '';
-            if (item.room) {
-                salaBadge = `<span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded ml-auto uppercase tracking-wide border border-blue-200">📍 ${item.room}</span>`;
-            }
-
-            let collabInfo = '';
-            if (isAtendimento && item.assignedCollaborator) {
-                collabInfo = `
-                    <div class="mt-2 pt-2 border-t border-green-200 flex items-center text-sm text-green-800">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                        <span class="font-semibold">${item.assignedCollaborator.name}</span>
-                    </div>`;
-            }
-
-            div.className = `p-4 rounded-lg shadow-sm ${borderColor} ${bgColor} transition-all hover:shadow-md`;
-            div.innerHTML = `
-                <div class="flex justify-between items-start mb-1 gap-2">
-                    <h3 class="text-lg font-bold text-gray-800 break-words leading-tight">${formatName(item.name)}</h3>
-                    ${item.priority === 'URGENTE' && !isAtendimento ? '<span class="shrink-0 bg-red-100 text-red-700 text-[10px] font-extrabold px-2 py-1 rounded border border-red-200 animate-pulse">URGENTE</span>' : ''}
-                </div>
-                
-                <div class="flex items-center justify-between mt-1">
-                    <p class="text-sm text-gray-500 truncate mr-2" title="${item.subject || ''}">${item.subject || 'Sem assunto'}</p>
-                    ${salaBadge}
-                </div>
-                ${collabInfo}
-            `;
-            return div;
-        }
-
-        // Lógica Principal
-        if (!pautaId) {
-            loading.classList.add('hidden');
-            errorScreen.classList.remove('hidden');
-        } else {
-            // 1. Monitorar configurações da Pauta
-            onSnapshot(doc(db, "pautas", pautaId), (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    
-                    if (!data.isPublic) {
-                        appContent.classList.add('hidden');
-                        errorScreen.classList.remove('hidden');
-                        loading.classList.add('hidden');
-                        return;
-                    }
-
-                    errorScreen.classList.add('hidden');
-                    appContent.classList.remove('hidden');
-                    loading.classList.add('hidden');
-
-                    document.getElementById('pauta-title').textContent = data.name;
-                    maskNames = data.maskNames || false;
-                    pautaRooms = data.rooms || [];
-
-                } else {
-                    loading.classList.add('hidden');
-                    errorScreen.classList.remove('hidden');
+        function flattenTreeWithObjects(nodes, parentPrefix = '') {
+            let flatList = [];
+            nodes.forEach(node => {
+                const currentValue = parentPrefix ? `${parentPrefix} > ${node.text}` : node.text;
+                flatList.push({ value: currentValue, description: node.description });
+                if (node.children) {
+                    flatList = flatList.concat(flattenTreeWithObjects(node.children, currentValue));
                 }
-            }, (error) => {
-                console.error("Erro ao carregar pauta:", error);
-                loading.classList.add('hidden');
-                errorScreen.classList.remove('hidden');
+            });
+            return flatList;
+        }
+        // ===================================================================
+        // FIM DO JAVASCRIPT ADICIONADO
+        // ===================================================================
+
+        // --- ELEMENTOS DO DOM ---
+        const loadingContainer = document.getElementById('loading-container');
+        const errorContainer = document.getElementById('error-container');
+        const mainContainer = document.getElementById('main-container');
+        const successContainer = document.getElementById('success-container');
+        const errorMessage = document.getElementById('error-message');
+
+        // --- LÓGICA PRINCIPAL ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            // ===================================================================
+            // INÍCIO DA LÓGICA DE PREENCHIMENTO DO DATALIST
+            // ===================================================================
+            const datalist = document.getElementById('subjects-list-external');
+            const flatSubjects = flattenTreeWithObjects(subjectTree);
+            flatSubjects.forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject.value;
+                datalist.appendChild(option);
+            });
+            // ===================================================================
+            // FIM DA LÓGICA DE PREENCHIMENTO DO DATALIST
+            // ===================================================================
+
+            const params = new URLSearchParams(window.location.search);
+            const pautaId = params.get('pautaId');
+            const assistidoId = params.get('assistidoId');
+            const collaboratorName = params.get('collaboratorName');
+
+            if (!pautaId || !assistidoId) {
+                showScreen('error');
+                errorMessage.textContent = 'Link de atendimento inválido ou incompleto. Faltam parâmetros essenciais.';
+                return;
+            }
+
+            try {
+                // Cole aqui a configuração do seu Firebase
+                const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
+                const app = initializeApp(firebaseConfig);
+                const db = getFirestore(app);
+
+                const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
+                const docSnap = await getDoc(docRef);
+
+                if (!docSnap.exists()) {
+                    showScreen('error');
+                    errorMessage.textContent = 'Atendimento não encontrado. Verifique se o link está correto.';
+                    return;
+                }
+
+                const assistido = docSnap.data();
+                
+                if (assistido.finalizadoPeloColaborador) {
+                    showScreen('success');
+                    document.querySelector('#success-container h2').textContent = "Atendimento Já Finalizado";
+                    document.querySelector('#success-container p').textContent = "Este registro de atendimento já foi finalizado anteriormente. Obrigado!";
+                    return;
+                }
+
+                populateData(assistido, collaboratorName);
+                setupEventListeners(docRef, assistido);
+                showScreen('main');
+
+            } catch (error) {
+                console.error("Erro ao conectar ou buscar dados: ", error);
+                showScreen('error');
+                errorMessage.textContent = 'Ocorreu um problema ao conectar com o serviço. Tente novamente mais tarde.';
+            }
+        });
+
+        function showScreen(screenName) {
+            loadingContainer.classList.add('hidden');
+            errorContainer.classList.add('hidden');
+            mainContainer.classList.add('hidden');
+            successContainer.classList.add('hidden');
+            
+            document.getElementById(`${screenName}-container`).classList.remove('hidden');
+        }
+
+        function populateData(assistido, collaboratorName) {
+            document.getElementById('collaborator-name-header').textContent = collaboratorName ? collaboratorName.split(' ')[0] : 'Colaborador(a)';
+            document.getElementById('assistido-name-header').textContent = assistido.name;
+            document.getElementById('assistido-name-summary').textContent = assistido.name;
+            document.getElementById('assistido-subject').textContent = assistido.subject || 'Não informado';
+            
+            document.getElementById('attendant-name').value = collaboratorName || assistido.attendant || '';
+        }
+
+        function setupEventListeners(docRef, assistido) {
+            const addDemandBtn = document.getElementById('add-demand-btn');
+            const newDemandInput = document.getElementById('new-demand-input');
+            const demandsList = document.getElementById('demands-list');
+            const finishBtn = document.getElementById('finish-btn');
+
+            const existingDemands = assistido.demandas?.descricoes || [];
+            existingDemands.forEach(addDemandToList);
+
+            addDemandBtn.addEventListener('click', () => {
+                const demandText = newDemandInput.value.trim();
+                if (demandText) {
+                    addDemandToList(demandText);
+                    newDemandInput.value = '';
+                }
+            });
+            
+            // Lógica para formatar o texto do assunto ao selecionar da lista
+            newDemandInput.addEventListener('change', () => {
+                const originalValue = newDemandInput.value;
+                if (originalValue.includes(' > ')) {
+                    const parts = originalValue.split(' > ');
+                    newDemandInput.value = parts[parts.length - 1];
+                }
             });
 
-            // 2. Monitorar a Lista de Atendimentos
-            onSnapshot(collection(db, "pautas", pautaId, "attendances"), (snapshot) => {
-                const allItems = snapshot.docs.map(d => d.data());
+            function addDemandToList(demandText) {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-2 bg-white rounded-md text-sm shadow-sm';
+                li.textContent = demandText;
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'text-red-500 hover:text-red-700 text-xs font-semibold ml-2';
+                removeBtn.textContent = 'Remover';
+                removeBtn.onclick = () => li.remove();
                 
-                // Filtros
-                const aguardando = allItems.filter(i => i.status === 'aguardando');
-                const emAtendimento = allItems.filter(i => i.status === 'emAtendimento');
-                const atendidos = allItems.filter(i => i.status === 'atendido'); // NOVO: Filtro para atendidos
+                li.appendChild(removeBtn);
+                demandsList.appendChild(li);
+            }
+            
+             newDemandInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addDemandBtn.click();
+                }
+            });
 
-                // Ordenação Inteligente (Aguardando)
-                aguardando.sort((a, b) => {
-                    if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-                    if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-                    const timeA = a.arrivalTime ? new Date(a.arrivalTime) : new Date(a.createdAt);
-                    const timeB = b.arrivalTime ? new Date(b.arrivalTime) : new Date(b.createdAt);
-                    return timeA - timeB;
-                });
+            finishBtn.addEventListener('click', async () => {
+                finishBtn.disabled = true;
+                finishBtn.textContent = 'Salvando...';
 
-                // Ordenação (Em Atendimento)
-                emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
-
-                // Atualizar Contadores
-                document.getElementById('count-aguardando').textContent = aguardando.length;
-                document.getElementById('count-atendimento').textContent = emAtendimento.length;
+                const attendantName = document.getElementById('attendant-name').value.trim();
+                const additionalDemands = Array.from(demandsList.querySelectorAll('li')).map(li => li.firstChild.textContent);
                 
-                // NOVO: Atualizar contador de Atendidos
-                document.getElementById('total-atendidos-count').textContent = atendidos.length;
+                const existingDemands = assistido.demandas?.descricoes || [];
+                const allDemands = [...new Set([...existingDemands, ...additionalDemands])];
 
-                document.getElementById('last-update').textContent = `Atualizado às ${new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}`;
+                const demandasObject = {
+                    descricoes: allDemands,
+                    quantidade: allDemands.length
+                };
 
-                // Renderizar Listas
-                listAguardando.innerHTML = '';
-                listAtendimento.innerHTML = '';
-
-                // Agrupamento por Sala
-                if (pautaRooms.length > 0) {
-                    pautaRooms.forEach(room => {
-                        const inRoom = aguardando.filter(x => x.room === room);
-                        if(inRoom.length > 0) {
-                            const header = document.createElement('div');
-                            header.className = "sticky top-0 bg-gray-100/95 backdrop-blur text-xs font-bold text-gray-500 uppercase tracking-wider py-2 px-3 border-b border-gray-200 mt-2 mb-2 first:mt-0 shadow-sm z-10";
-                            header.innerHTML = `🏢 ${room} <span class="ml-2 text-[10px] bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full border border-gray-300">${inRoom.length}</span>`;
-                            listAguardando.appendChild(header);
-                            inRoom.forEach(item => listAguardando.appendChild(createCard(item)));
-                        }
+                try {
+                    await updateDoc(docRef, {
+                        status: 'atendido',
+                        attendant: attendantName,
+                        attendedTime: new Date(),
+                        finalizadoPeloColaborador: true,
+                        demandas: demandasObject
                     });
-
-                    const noRoom = aguardando.filter(x => !x.room || !pautaRooms.includes(x.room));
-                    if(noRoom.length > 0) {
-                        const header = document.createElement('div');
-                        header.className = "sticky top-0 bg-gray-100/95 backdrop-blur text-xs font-bold text-gray-500 uppercase tracking-wider py-2 px-3 border-b border-gray-200 mt-2 mb-2 shadow-sm z-10";
-                        header.textContent = "Geral";
-                        listAguardando.appendChild(header);
-                        noRoom.forEach(item => listAguardando.appendChild(createCard(item)));
-                    }
-                    
-                    if (aguardando.length === 0) {
-                        listAguardando.innerHTML = '<div class="text-center text-gray-400 mt-10 py-10">Ninguém aguardando no momento.</div>';
-                    }
-
-                } else {
-                    if (aguardando.length === 0) {
-                        listAguardando.innerHTML = '<div class="text-center text-gray-400 mt-10 py-10">Ninguém aguardando no momento.</div>';
-                    } else {
-                        aguardando.forEach(item => listAguardando.appendChild(createCard(item)));
-                    }
+                    showScreen('success');
+                } catch(error) {
+                    console.error("Erro ao atualizar o documento: ", error);
+                    alert("Não foi possível salvar a finalização. Tente novamente.");
+                    finishBtn.disabled = false;
+                    finishBtn.textContent = 'Finalizar e Salvar Registro';
                 }
-
-                if (emAtendimento.length === 0) {
-                    listAtendimento.innerHTML = '<div class="text-center text-gray-400 mt-10 py-10">Nenhum atendimento em andamento.</div>';
-                } else {
-                    emAtendimento.forEach(item => listAtendimento.appendChild(createCard(item, true)));
-                }
-
             });
         }
     </script>
