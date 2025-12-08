@@ -1,19 +1,17 @@
 /**
  * detalhes.js
- * Gerencia o modal de detalhes, checklist e dados da parte contrária.
- * Versão: Renda Organizada + PDF Completo + Dados do Réu
+ * Gerencia o modal de detalhes, checklist, dados do Réu e Planilha de Despesas.
+ * Versão: Comprovação de Renda + Planilha de Gastos Automática + PDF Completo
  */
 
 // --- 1. CONSTANTES DE DOCUMENTAÇÃO ---
 
-// Documentos Básicos (sempre strings simples)
 const BASE_DOCS = [
     'Carteira de Identidade (RG) ou Habilitação (CNH)', 
     'CPF', 
     'Comprovante de Residência (Atualizado - últimos 3 meses)'
 ];
 
-// Lista de Renda ESTRUTURADA (Objetos para títulos, Strings para documentos)
 const INCOME_DOCS_STRUCTURED = [
     { type: 'title', text: '1. TRABALHADOR FORMAL (CLT / SERVIDOR)' },
     'Contracheque (3 últimos meses)',
@@ -43,259 +41,31 @@ const INCOME_DOCS_STRUCTURED = [
     'Declaração de IRPF Completa + Recibo (se declarar)'
 ];
 
-// Combinação para uso nas seções
 const COMMON_DOCS_FULL = [...BASE_DOCS, ...INCOME_DOCS_STRUCTURED];
 
+// --- CONSTANTES DA PLANILHA DE DESPESAS ---
+const EXPENSE_CATEGORIES = [
+    { id: 'moradia', label: '1. MORADIA (Habitação)', desc: 'Aluguel, luz, água, gás (divida pelo nº de moradores).' },
+    { id: 'alimentacao', label: '2. ALIMENTAÇÃO', desc: 'Mercado, feira, açougue, lanches, leites especiais.' },
+    { id: 'educacao', label: '3. EDUCAÇÃO', desc: 'Mensalidade, transporte escolar, material, uniforme, cursos.' },
+    { id: 'saude', label: '4. SAÚDE', desc: 'Plano de saúde, farmácia, tratamentos (dentista, psicólogo).' },
+    { id: 'vestuario', label: '5. VESTUÁRIO E HIGIENE', desc: 'Roupas, calçados, fraldas, itens de higiene.' },
+    { id: 'lazer', label: '6. LAZER E TRANSPORTE', desc: 'Passeios, festas, transporte para atividades.' },
+    { id: 'outras', label: '7. OUTRAS DESPESAS', desc: 'Babá, pet, cursos livres, etc.' }
+];
 
-// --- 2. DADOS DOS TIPOS DE AÇÃO ---
+// Ações que ativam a planilha de despesas
+const ACTIONS_WITH_EXPENSES = [
+    'alimentos_fixacao_majoracao_oferta',
+    'alimentos_gravidicos',
+    'alimentos_avoengos',
+    'divorcio_litigioso',
+    'divorcio_consensual',
+    'investigacao_paternidade',
+    'guarda'
+];
 
-const documentsData = {
-    // --- CÍVEL ---
-    obrigacao_fazer: { 
-        title: 'Ação de Obrigação de Fazer', 
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, 
-            { title: 'Específicos do Caso', docs: ['Contrato ou acordo descumprido', 'Protocolos de atendimento', 'Troca de e-mails/mensagens', 'Fotos/Vídeos do problema'] }
-        ] 
-    },
-    declaratoria_nulidade: { 
-        title: 'Ação Declaratória de Nulidade', 
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, 
-            { title: 'Específicos do Caso', docs: ['Cópia do contrato/multa a ser anulado', 'Comprovantes de pagamento indevido', 'Laudos ou pareces (se houver)'] }
-        ] 
-    },
-    indenizacao_danos: { 
-        title: 'Ação de Indenização (Danos)', 
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, 
-            { title: 'Específicos do Caso', docs: ['Boletim de Ocorrência (se aplicável)', 'Fotos/Vídeos dos danos', 'Três orçamentos (para dano material)', 'Notas fiscais de gastos', 'Nome e endereço de testemunhas'] }
-        ] 
-    },
-    revisional_debito: {
-        title: 'Ação Revisional de Débito',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, 
-            { title: 'Específicos do Caso', docs: ['Contrato de empréstimo/financiamento', 'Planilha de evolução da dívida', 'Extratos comprovando os descontos'] }
-        ]
-    },
-    exigir_contas: {
-        title: 'Ação de Exigir Contas',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, 
-            { title: 'Específicos do Caso', docs: ['Documento que prova a gestão de bens pelo réu', 'Provas da recusa em prestar contas'] }
-        ] 
-    },
-
-    // --- FAMÍLIA ---
-    alimentos_fixacao_majoracao_oferta: {
-        title: 'Alimentos (Fixação / Majoração / Oferta)',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Do Alimentando (Filho)', docs: ['Certidão de Nascimento', 'Comprovantes de despesas (Escola, Curso, Natação)', 'Comprovantes de saúde (Plano, remédios, tratamentos)', 'Notas fiscais de vestuário/alimentação'] },
-            { title: 'Sobre o Réu', docs: ['Endereço completo (Indispensável)', 'Informações sobre trabalho/renda do réu (Nome da empresa, endereço)'] }
-        ]
-    },
-    alimentos_gravidicos: {
-        title: 'Ação de Alimentos Gravídicos',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Da Gestação', docs: ['Exame Beta HCG / Ultrassom', 'Cartão de Pré-Natal', 'Receitas médicas e notas de medicamentos', 'Orçamento de enxoval/parto'] },
-            { title: 'Do Suposto Pai', docs: ['Indícios de paternidade (Conversas WhatsApp, Fotos juntos, Testemunhas)', 'Endereço e Local de Trabalho do Réu'] }
-        ]
-    },
-    alimentos_avoengos: {
-        title: 'Alimentos Avoengos (Contra Avós)',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Certidão de Nascimento do Neto', 'Prova da impossibilidade dos pais pagarem (prisão, morte, desaparecimento)', 'Endereço dos Avós'] }
-        ]
-    },
-    divorcio_consensual: {
-        title: 'Divórcio Consensual',
-        sections: [
-            { title: 'Documentação (Ambos)', docs: ['RG e CPF de ambos', 'Comprovante de Residência de ambos', 'Certidão de Casamento (Atualizada - 90 dias)', ...INCOME_DOCS_STRUCTURED] },
-            { title: 'Filhos e Bens', docs: ['Certidão de Nascimento dos filhos', 'Documento do Imóvel (RGI ou Compra e Venda)', 'CRLV de Veículos'] }
-        ]
-    },
-    divorcio_litigioso: {
-        title: 'Divórcio Litigioso',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: [...COMMON_DOCS_FULL, 'Certidão de Casamento (Atualizada - 90 dias)'] },
-            { title: 'Filhos e Bens', docs: ['Certidão de Nascimento dos filhos', 'Comprovantes de despesas dos filhos', 'Documentos dos bens a partilhar (RGI, CRLV, Extratos)'] },
-            { title: 'Sobre o Cônjuge (Réu)', docs: ['Endereço atual', 'Local de trabalho'] }
-        ]
-    },
-    uniao_estavel_reconhecimento_dissolucao: {
-        title: 'União Estável (Reconhecimento/Dissolução)',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Provas da União', docs: ['Certidão de Nascimento dos filhos em comum', 'Contas em nome de ambos no mesmo endereço', 'Fotos do casal', 'Declarações de testemunhas', 'Seguro de vida/Plano de saúde como dependente'] },
-            { title: 'Bens', docs: ['Documentos dos bens adquiridos durante a união'] }
-        ]
-    },
-    uniao_estavel_post_mortem: {
-        title: 'União Estável Post Mortem',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Do Falecido', docs: ['Certidão de Óbito', 'Certidão de bens deixados'] },
-            { title: 'Provas da União', docs: ['(Mesmas provas da união estável comum)'] }
-        ]
-    },
-    conversao_uniao_homoafetiva: {
-        title: 'Conversão de União Estável em Casamento',
-        sections: [
-            { title: 'Documentação (Ambos)', docs: ['RG/CPF e Comprovante de Residência de ambos', 'Certidões de Nascimento atualizadas', ...INCOME_DOCS_STRUCTURED] }
-        ]
-    },
-    guarda: {
-        title: 'Ação de Guarda',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Da Criança', docs: ['Certidão de Nascimento', 'Comprovante de matrícula escolar', 'Carteira de vacinação'] },
-            { title: 'Do Caso', docs: ['Relatório do Conselho Tutelar (se houver)', 'Provas de maus tratos/negligência da outra parte (se houver)'] }
-        ]
-    },
-    regulamentacao_convivencia: {
-        title: 'Regulamentação de Visitas',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Da Criança', docs: ['Certidão de Nascimento', 'Endereço onde a criança reside'] }
-        ] 
-    },
-    investigacao_paternidade: {
-        title: 'Investigação de Paternidade',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Da Criança', docs: ['Certidão de Nascimento (sem o nome do pai)'] },
-            { title: 'Sobre o Suposto Pai', docs: ['Nome completo', 'Endereço residencial ou trabalho', 'Provas do relacionamento (se houver)'] }
-        ]
-    },
-    curatela: {
-        title: 'Curatela (Interdição)',
-        sections: [
-            { title: 'Documentação Pessoal e Renda (Curador)', docs: COMMON_DOCS_FULL },
-            { title: 'Do Curatelando', docs: ['RG e CPF', 'Certidão de Nascimento/Casamento', 'Comprovante de Renda (Benefício INSS)', 'Laudo Médico Atualizado (com CID e expressa menção à incapacidade)'] }
-        ]
-    },
-    levantamento_curatela: {
-        title: 'Levantamento de Curatela',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Cópia da sentença de interdição', 'Laudo médico atestando a recuperação da capacidade'] }
-        ]
-    },
-    tutela: {
-        title: 'Tutela (Menor)',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Do Menor', docs: ['Certidão de Nascimento', 'Certidão de Óbito dos pais (ou comprovante de destituição do poder familiar)'] }
-        ]
-    },
-    adocao: {
-        title: 'Adoção',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Certidão de Casamento/Nascimento dos adotantes', 'Certidão de Nascimento da criança', 'Atestado de Sanidade Física e Mental', 'Certidões Negativas Cíveis e Criminais'] }
-        ]
-    },
-
-    // --- CRIMINAL ---
-    defesa_criminal_custodia: {
-        title: 'Defesa Criminal / Audiência de Custódia',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Do Caso', docs: ['Auto de Prisão em Flagrante / BO', 'Comprovante de Residência Fixa', 'Carteira de Trabalho Assinada (para pedir liberdade)', 'Nome e endereço de testemunhas'] }
-        ]
-    },
-    execucao_penal: {
-        title: 'Execução Penal (VPL, Livramento, Progressão)',
-        sections: [
-            { title: 'Documentação Pessoal e Renda (Familiar)', docs: COMMON_DOCS_FULL },
-            { title: 'Do Preso', docs: ['Carteira de Visitante', 'Carta do preso', 'Número do Processo de Execução (PEP)', 'Certidão Carcerária (se tiver)'] }
-        ]
-    },
-
-    // --- FAZENDA PÚBLICA ---
-    fornecimento_medicamentos: {
-        title: 'Medicamentos / Saúde',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Médicos', docs: ['Laudo Médico (com CID e justificativa)', 'Receita Médica (Original e Atual)', 'Negativa da Secretaria de Saúde/Plano', 'Três orçamentos de farmácias diferentes'] }
-        ]
-    },
-    indenizacao_poder_publico: {
-        title: 'Indenização contra o Estado',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Provas do fato (BO, Fotos, Laudos)', 'Comprovantes de gastos/danos'] }
-        ]
-    },
-    previdencia_estadual_municipal: {
-        title: 'Previdência (RPPS)',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Processo administrativo do benefício', 'Portaria de aposentadoria/pensão'] }
-        ]
-    },
-    questionamento_impostos_taxas: {
-        title: 'Contestação de Impostos/Taxas',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Carnê do IPTU/Taxa', 'Notificação da Dívida Ativa', 'Comprovantes de pagamento (se houver)'] }
-        ]
-    },
-
-    // --- INFÂNCIA ---
-    vaga_escola_creche: {
-        title: 'Vaga em Creche/Escola',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Da Criança', docs: ['Certidão de Nascimento', 'Cartão de Vacinação', 'Comprovante de Inscrição/Negativa da escola', 'Número do protocolo 1746 (se Rio)'] }
-        ]
-    },
-    apoio_escolar: {
-        title: 'Profissional de Apoio Escolar (Mediador)',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Da Criança', docs: ['Certidão de Nascimento', 'Laudo Médico (CID + Necessidade de mediador)', 'Comprovante de Matrícula'] }
-        ]
-    },
-    transporte_gratuito: {
-        title: 'Transporte Gratuito (Passe Livre)',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Do Requerente', docs: ['Laudo Médico (CID + Necessidade de transporte)', 'Negativa do Riocard/Fetranspor'] }
-        ]
-    },
-
-    // --- REGISTROS ---
-    retificacao_registro_civil: {
-        title: 'Retificação de Registro Civil',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Certidão a ser retificada (Original)', 'Documentos que provam o erro (outras certidões, batistério, documentos escolares)'] }
-        ]
-    },
-    
-    // --- ALVARÁ ---
-    alvara_levantamento_valores: {
-        title: 'Alvará (Levantamento de Valores)',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Do Falecido', docs: ['Certidão de Óbito', 'Certidão de Dependentes Habilitados (INSS) ou Negativa', 'Extratos de PIS/FGTS/Conta Bancária'] }
-        ]
-    },
-    alvara_viagem_menor: {
-        title: 'Alvará de Viagem (Menor)',
-        sections: [
-            { title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Viagem', docs: ['Passagens/Reserva', 'Endereço de destino', 'Documentos de quem acompanhará', 'Endereço do genitor que nega/ausente'] }
-        ]
-    }
-};
-
-// Lista de ações que exigem dados profissionais do Réu
+// Ações que ativam dados profissionais do Réu
 const ACTIONS_WITH_WORK_INFO = [
     'alimentos_fixacao_majoracao_oferta',
     'alimentos_gravidicos',
@@ -304,6 +74,54 @@ const ACTIONS_WITH_WORK_INFO = [
     'uniao_estavel_reconhecimento_dissolucao',
     'investigacao_paternidade'
 ];
+
+// --- 2. DADOS DOS TIPOS DE AÇÃO (Estrutura) ---
+
+const documentsData = {
+    // CÍVEL
+    obrigacao_fazer: { title: 'Ação de Obrigação de Fazer', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Contrato/Acordo', 'Provas do descumprimento'] }] },
+    declaratoria_nulidade: { title: 'Ação Declaratória de Nulidade', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Documento a anular', 'Provas da ilegalidade'] }] },
+    indenizacao_danos: { title: 'Ação de Indenização', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['BO', 'Fotos/Vídeos', 'Orçamentos', 'Notas Fiscais', 'Testemunhas'] }] },
+    revisional_debito: { title: 'Ação Revisional de Débito', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Contrato', 'Planilha da dívida', 'Extratos'] }] },
+    exigir_contas: { title: 'Ação de Exigir Contas', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Prova da gestão de bens', 'Recusa em prestar contas'] }] },
+
+    // FAMÍLIA
+    alimentos_fixacao_majoracao_oferta: { title: 'Alimentos (Fixação / Majoração / Oferta)', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Do Alimentando', docs: ['Certidão de Nascimento', 'Comprovantes de despesas (Planilha abaixo)'] }, { title: 'Sobre o Réu', docs: ['Endereço completo', 'Dados de trabalho'] }] },
+    alimentos_gravidicos: { title: 'Ação de Alimentos Gravídicos', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Da Gestação', docs: ['Exame Beta HCG / Ultrassom', 'Pré-Natal', 'Gastos (Planilha abaixo)'] }, { title: 'Do Suposto Pai', docs: ['Indícios de paternidade', 'Endereço/Trabalho'] }] },
+    alimentos_avoengos: { title: 'Alimentos Avoengos', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Certidão de Nascimento', 'Prova da impossibilidade dos pais', 'Planilha de Gastos'] }] },
+    divorcio_consensual: { title: 'Divórcio Consensual', sections: [{ title: 'Documentação (Ambos)', docs: ['RG/CPF ambos', 'Comp. Residência ambos', 'Certidão Casamento', ...INCOME_DOCS_STRUCTURED] }, { title: 'Filhos/Bens', docs: ['Certidão Nascimento Filhos', 'Documentos Bens'] }] },
+    divorcio_litigioso: { title: 'Divórcio Litigioso', sections: [{ title: 'Documentação Pessoal e Renda', docs: [...COMMON_DOCS_FULL, 'Certidão de Casamento'] }, { title: 'Filhos/Bens', docs: ['Certidão Nascimento Filhos', 'Documentos Bens', 'Planilha de Gastos (se houver alimentos)'] }, { title: 'Sobre o Cônjuge', docs: ['Endereço', 'Trabalho'] }] },
+    uniao_estavel_reconhecimento_dissolucao: { title: 'União Estável (Reconhecimento/Dissolução)', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Provas', docs: ['Certidão filhos', 'Contas conjuntas', 'Fotos', 'Testemunhas'] }] },
+    uniao_estavel_post_mortem: { title: 'União Estável Post Mortem', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Do Falecido', docs: ['Certidão de Óbito', 'Bens deixados'] }] },
+    conversao_uniao_homoafetiva: { title: 'Conversão União Estável em Casamento', sections: [{ title: 'Documentação (Ambos)', docs: ['RG/CPF', 'Certidões Nascimento', ...INCOME_DOCS_STRUCTURED] }] },
+    guarda: { title: 'Ação de Guarda', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Da Criança', docs: ['Certidão Nascimento', 'Matrícula Escolar', 'Cartão Vacina'] }] },
+    regulamentacao_convivencia: { title: 'Regulamentação de Visitas', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Da Criança', docs: ['Certidão Nascimento', 'Endereço atual'] }] },
+    investigacao_paternidade: { title: 'Investigação de Paternidade', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Da Criança', docs: ['Certidão Nascimento (sem pai)'] }, { title: 'Suposto Pai', docs: ['Nome', 'Endereço', 'Indícios'] }] },
+    curatela: { title: 'Curatela (Interdição)', sections: [{ title: 'Documentação Pessoal e Renda (Curador)', docs: COMMON_DOCS_FULL }, { title: 'Do Curatelando', docs: ['RG/CPF', 'Certidão Nascimento/Casamento', 'Renda (INSS)', 'Laudo Médico (CID)'] }] },
+    levantamento_curatela: { title: 'Levantamento de Curatela', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Sentença anterior', 'Laudo médico de capacidade'] }] },
+    tutela: { title: 'Tutela (Menor)', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Do Menor', docs: ['Certidão Nascimento', 'Óbito dos pais'] }] },
+    adocao: { title: 'Adoção', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Certidão Casamento/Nasc. adotantes', 'Certidão Criança', 'Sanidade Física/Mental', 'Certidões Negativas'] }] },
+
+    // CRIMINAL
+    defesa_criminal_custodia: { title: 'Defesa Criminal / Custódia', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Do Caso', docs: ['APF / BO', 'Residência Fixa', 'Carteira de Trabalho', 'Testemunhas'] }] },
+    execucao_penal: { title: 'Execução Penal', sections: [{ title: 'Documentação Pessoal e Renda (Familiar)', docs: COMMON_DOCS_FULL }, { title: 'Do Preso', docs: ['Carteira Visitante', 'Carta', 'PEP', 'Certidão Carcerária'] }] },
+
+    // FAZENDA
+    fornecimento_medicamentos: { title: 'Medicamentos / Saúde', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Médicos', docs: ['Laudo (CID)', 'Receita', 'Negativa', '3 Orçamentos'] }] },
+    indenizacao_poder_publico: { title: 'Indenização contra Estado', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Provas (BO, Fotos, Laudos)', 'Comprovantes de gastos'] }] },
+    previdencia_estadual_municipal: { title: 'Previdência (RPPS)', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Processo administrativo', 'Portaria'] }] },
+    questionamento_impostos_taxas: { title: 'Contestação Impostos/Taxas', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Carnê/Notificação', 'Comprovantes'] }] },
+
+    // INFÂNCIA
+    vaga_escola_creche: { title: 'Vaga em Creche/Escola', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Da Criança', docs: ['Certidão Nascimento', 'Vacina', 'Protocolo Inscrição/Negativa'] }] },
+    apoio_escolar: { title: 'Apoio Escolar (Mediador)', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Da Criança', docs: ['Certidão Nascimento', 'Laudo (CID)', 'Matrícula'] }] },
+    transporte_gratuito: { title: 'Transporte Gratuito', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Do Requerente', docs: ['Laudo (CID + Necessidade)', 'Negativa Riocard'] }] },
+
+    // OUTROS
+    retificacao_registro_civil: { title: 'Retificação Registro Civil', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Certidão a retificar', 'Provas do erro'] }] },
+    alvara_levantamento_valores: { title: 'Alvará (Valores)', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Do Falecido', docs: ['Óbito', 'Dependentes INSS', 'Extratos'] }] },
+    alvara_viagem_menor: { title: 'Alvará Viagem (Menor)', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Viagem', docs: ['Passagens', 'Destino', 'Acompanhante', 'Endereço genitor ausente'] }] }
+};
 
 // --- 3. ESTADO GLOBAL ---
 
@@ -332,6 +150,17 @@ const cancelBtn = document.getElementById('cancel-checklist-btn');
 // --- 4. UTILITÁRIOS E VIACEP ---
 
 const normalizeText = (str) => str ? str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : '';
+
+// Formata moeda (BRL)
+const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+};
+
+// Converte string "R$ 1.000,00" para float
+const parseCurrency = (str) => {
+    if (!str) return 0;
+    return parseFloat(str.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+};
 
 async function getAddressByCep(cep) {
     const cleanCep = cep.replace(/\D/g, ''); 
@@ -367,8 +196,9 @@ function setupCepListener(cepInputId, fields) {
     });
 }
 
-// --- 5. RENDERIZAÇÃO DO FORMULÁRIO DO RÉU ---
+// --- 5. COMPONENTES DE UI ---
 
+// Geração do Formulário do Réu
 function renderReuForm(actionKey) {
     const showWorkInfo = ACTIONS_WITH_WORK_INFO.includes(actionKey);
 
@@ -378,73 +208,94 @@ function renderReuForm(actionKey) {
 
     container.innerHTML = `
         <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Dados da Parte Contrária (Réu)</h3>
-        
-        <!-- Dados Pessoais e Contato -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">CPF</label>
-                <input type="text" id="cpf-reu" placeholder="000.000.000-00" class="mt-1 block w-full p-2 border rounded-md">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Telefone/WhatsApp</label>
-                <input type="text" id="telefone-reu" placeholder="(00) 00000-0000" class="mt-1 block w-full p-2 border rounded-md">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">E-mail</label>
-                <input type="email" id="email-reu" placeholder="nome@exemplo.com" class="mt-1 block w-full p-2 border rounded-md">
-            </div>
+            <div><label class="block text-sm text-gray-700">CPF</label><input type="text" id="cpf-reu" class="mt-1 block w-full p-2 border rounded-md"></div>
+            <div><label class="block text-sm text-gray-700">Telefone/Zap</label><input type="text" id="telefone-reu" class="mt-1 block w-full p-2 border rounded-md"></div>
+            <div><label class="block text-sm text-gray-700">E-mail</label><input type="email" id="email-reu" class="mt-1 block w-full p-2 border rounded-md"></div>
         </div>
-
-        <!-- Endereço Residencial -->
-        <h4 class="text-sm font-semibold text-gray-600 mb-2">Endereço Residencial</h4>
+        <h4 class="text-sm font-semibold text-gray-600 mb-2">Endereço</h4>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-                <label class="block text-xs text-gray-500">CEP</label>
-                <input type="text" id="cep-reu" maxlength="9" class="w-full p-2 border rounded-md">
-            </div>
-            <div class="md:col-span-2">
-                <label class="block text-xs text-gray-500">Rua/Logradouro</label>
-                <input type="text" id="rua-reu" class="w-full p-2 border rounded-md bg-gray-100">
-            </div>
-            <div>
-                <label class="block text-xs text-gray-500">Número</label>
-                <input type="text" id="numero-reu" class="w-full p-2 border rounded-md">
-            </div>
-            <div>
-                <label class="block text-xs text-gray-500">Bairro</label>
-                <input type="text" id="bairro-reu" class="w-full p-2 border rounded-md bg-gray-100">
-            </div>
-            <div>
-                <label class="block text-xs text-gray-500">Cidade/UF</label>
-                <div class="flex gap-2">
-                    <input type="text" id="cidade-reu" class="w-full p-2 border rounded-md bg-gray-100">
-                    <input type="text" id="estado-reu" class="w-16 p-2 border rounded-md bg-gray-100">
-                </div>
-            </div>
+            <div><label class="block text-xs text-gray-500">CEP</label><input type="text" id="cep-reu" maxlength="9" class="w-full p-2 border rounded-md"></div>
+            <div class="md:col-span-2"><label class="block text-xs text-gray-500">Rua</label><input type="text" id="rua-reu" class="w-full p-2 border rounded-md bg-gray-100"></div>
+            <div><label class="block text-xs text-gray-500">Número</label><input type="text" id="numero-reu" class="w-full p-2 border rounded-md"></div>
+            <div><label class="block text-xs text-gray-500">Bairro</label><input type="text" id="bairro-reu" class="w-full p-2 border rounded-md bg-gray-100"></div>
+            <div><label class="block text-xs text-gray-500">Cidade/UF</label><div class="flex gap-2"><input type="text" id="cidade-reu" class="w-full p-2 border rounded-md bg-gray-100"><input type="text" id="estado-reu" class="w-16 p-2 border rounded-md bg-gray-100"></div></div>
         </div>
-
-        <!-- Dados Profissionais (Condicional) -->
         ${showWorkInfo ? `
         <div class="border-t pt-4 mt-4">
-            <h4 class="text-sm font-semibold text-blue-700 mb-2">Dados Profissionais (Necessário para o processo)</h4>
+            <h4 class="text-sm font-semibold text-blue-700 mb-2">Dados Profissionais</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Nome da Empresa / Empregador</label>
-                    <input type="text" id="empresa-reu" placeholder="Onde o réu trabalha?" class="mt-1 w-full p-2 border rounded-md">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Endereço do Trabalho</label>
-                    <input type="text" id="endereco-trabalho-reu" placeholder="Endereço completo da empresa" class="mt-1 w-full p-2 border rounded-md">
-                </div>
+                <div><label class="block text-sm text-gray-700">Empresa/Empregador</label><input type="text" id="empresa-reu" class="mt-1 w-full p-2 border rounded-md"></div>
+                <div><label class="block text-sm text-gray-700">Endereço Trabalho</label><input type="text" id="endereco-trabalho-reu" class="mt-1 w-full p-2 border rounded-md"></div>
             </div>
-        </div>
-        ` : ''}
+        </div>` : ''}
     `;
-
     return container;
 }
 
-// --- 6. RENDERIZAÇÃO DA CHECKLIST ---
+// Geração da Planilha de Despesas (NOVA)
+function renderExpenseTable() {
+    const container = document.createElement('div');
+    container.id = 'expense-table-container';
+    container.className = 'mt-6 p-4 bg-green-50 border border-green-200 rounded-lg';
+
+    let rowsHtml = '';
+    EXPENSE_CATEGORIES.forEach(cat => {
+        rowsHtml += `
+            <tr class="bg-white border-b hover:bg-gray-50">
+                <td class="p-3 text-sm font-semibold text-gray-700">${cat.label}</td>
+                <td class="p-3 text-xs text-gray-500">${cat.desc}</td>
+                <td class="p-3">
+                    <input type="text" id="expense-${cat.id}" class="expense-input w-full p-2 border rounded text-right" placeholder="R$ 0,00" oninput="formatExpenseInput(this)">
+                </td>
+            </tr>
+        `;
+    });
+
+    container.innerHTML = `
+        <h3 class="text-lg font-bold text-green-800 mb-2">Planilha de Despesas da Criança</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-green-100 text-green-800 text-xs uppercase">
+                        <th class="p-3 w-1/4">Categoria</th>
+                        <th class="p-3 w-1/2">Orientação</th>
+                        <th class="p-3 w-1/4 text-right">Valor Mensal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rowsHtml}
+                </tbody>
+                <tfoot>
+                    <tr class="bg-green-200 font-bold text-green-900">
+                        <td colspan="2" class="p-3 text-right">TOTAL GERAL:</td>
+                        <td class="p-3 text-right" id="expense-total">R$ 0,00</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    `;
+    return container;
+}
+
+// Lógica de cálculo e formatação da tabela de despesas
+window.formatExpenseInput = function(input) {
+    let value = input.value.replace(/\D/g, '');
+    value = (Number(value) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    input.value = value;
+    calculateExpenseTotal();
+}
+
+function calculateExpenseTotal() {
+    let total = 0;
+    const inputs = document.querySelectorAll('.expense-input');
+    inputs.forEach(input => {
+        total += parseCurrency(input.value);
+    });
+    document.getElementById('expense-total').textContent = formatCurrency(total);
+}
+
+// --- 6. RENDERIZAÇÃO GERAL ---
 
 function populateActionSelection() {
     const container = document.getElementById('document-action-selection');
@@ -455,7 +306,7 @@ function populateActionSelection() {
         searchInput = document.createElement('input');
         searchInput.id = 'action-search-input';
         searchInput.type = 'text';
-        searchInput.placeholder = 'Pesquisar por assunto...';
+        searchInput.placeholder = 'Pesquisar assunto...';
         searchInput.className = 'w-full p-2 border border-gray-300 rounded-md mb-4 focus:ring-green-500';
         searchInput.addEventListener('input', handleActionSearch);
         container.prepend(searchInput);
@@ -474,7 +325,6 @@ function populateActionSelection() {
         btn.innerHTML = `<span class="font-semibold text-gray-700">${documentsData[key].title}</span>`;
         grid.appendChild(btn);
     });
-
     container.appendChild(grid);
 }
 
@@ -490,7 +340,7 @@ function renderChecklist(actionKey) {
     checklistContainer.innerHTML = '';
     checklistSearch.value = '';
 
-    // 1. Lista de Documentos
+    // 1. Docs
     data.sections.forEach((section, sIdx) => {
         const div = document.createElement('div');
         div.innerHTML = `<h4 class="font-bold text-gray-700 mt-4 mb-2 border-b">${section.title}</h4>`;
@@ -499,27 +349,13 @@ function renderChecklist(actionKey) {
         
         section.docs.forEach((docItem, dIdx) => {
             const li = document.createElement('li');
-            
-            // VERIFICAÇÃO DE TIPO: Se for objeto com 'type: title', é título. Se for string, é doc.
             if (typeof docItem === 'object' && docItem.type === 'title') {
-                // Renderiza Título de Categoria (sem checkbox)
-                li.innerHTML = `
-                    <div class="font-bold text-blue-700 text-sm mt-3 mb-1 bg-blue-50 p-1 rounded">
-                        ${docItem.text}
-                    </div>
-                `;
+                li.innerHTML = `<div class="font-bold text-blue-700 text-sm mt-3 mb-1 bg-blue-50 p-1 rounded">${docItem.text}</div>`;
             } else {
-                // Renderiza Documento com Checkbox
-                const docText = typeof docItem === 'string' ? docItem : docItem.text; // Fallback
+                const docText = typeof docItem === 'string' ? docItem : docItem.text;
                 const id = `doc-${actionKey}-${sIdx}-${dIdx}`;
                 const isChecked = saved?.checkedIds?.includes(id) ? 'checked' : '';
-                
-                li.innerHTML = `
-                    <label class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
-                        <input type="checkbox" id="${id}" class="h-5 w-5 text-green-600 rounded border-gray-300 mr-2" ${isChecked}>
-                        <span class="text-sm text-gray-700">${docText}</span>
-                    </label>
-                `;
+                li.innerHTML = `<label class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded"><input type="checkbox" id="${id}" class="h-5 w-5 text-green-600 rounded border-gray-300 mr-2" ${isChecked}><span class="text-sm text-gray-700">${docText}</span></label>`;
             }
             ul.appendChild(li);
         });
@@ -527,12 +363,20 @@ function renderChecklist(actionKey) {
         checklistContainer.appendChild(div);
     });
 
-    // 2. Observações (NOME ALTERADO)
+    // 2. Tabela de Despesas (Condicional)
+    if (ACTIONS_WITH_EXPENSES.includes(actionKey)) {
+        const table = renderExpenseTable();
+        checklistContainer.appendChild(table);
+        // Preencher dados salvos da tabela
+        if (saved?.expenseData) {
+            fillExpenseData(saved.expenseData);
+        }
+    }
+
+    // 3. Observações
     const obsDiv = document.createElement('div');
     obsDiv.className = 'mt-6 bg-yellow-50 p-4 rounded-lg border border-yellow-100';
     obsDiv.innerHTML = `<h4 class="font-bold text-gray-800 mb-2">Status da Documentação</h4>`;
-    
-    // Lista de opções atualizada (NOME ALTERADO)
     const obsOptions = ['Documentação Pendente', 'Documentos Organizados', 'Assistido Ciente'];
     const savedObs = saved?.observations?.selected || [];
 
@@ -544,109 +388,85 @@ function renderChecklist(actionKey) {
         obsDiv.appendChild(label);
     });
 
-    // Outras observações
     const otherText = saved?.observations?.otherText || '';
     const showOther = !!otherText;
-    
     const otherDiv = document.createElement('div');
     otherDiv.className = 'mt-2';
-    otherDiv.innerHTML = `
-        <label class="flex items-center cursor-pointer">
-            <input type="checkbox" id="check-other" class="h-4 w-4 text-yellow-600 mr-2" ${showOther ? 'checked' : ''}>
-            Outras Observações
-        </label>
-        <textarea id="text-other" class="w-full mt-2 p-2 border rounded text-sm ${showOther ? '' : 'hidden'}" rows="2" placeholder="Descreva...">${otherText}</textarea>
-    `;
-    
+    otherDiv.innerHTML = `<label class="flex items-center cursor-pointer"><input type="checkbox" id="check-other" class="h-4 w-4 text-yellow-600 mr-2" ${showOther ? 'checked' : ''}> Outras Observações</label><textarea id="text-other" class="w-full mt-2 p-2 border rounded text-sm ${showOther ? '' : 'hidden'}" rows="2" placeholder="Descreva...">${otherText}</textarea>`;
     otherDiv.querySelector('#check-other').addEventListener('change', (e) => {
         document.getElementById('text-other').classList.toggle('hidden', !e.target.checked);
     });
-    
     obsDiv.appendChild(otherDiv);
     checklistContainer.appendChild(obsDiv);
 
-    // 3. Formulário do Réu (Dinâmico)
+    // 4. Formulário Réu
     const reuForm = renderReuForm(actionKey);
     checklistContainer.appendChild(reuForm);
-
-    // Ativar Listener do CEP no formulário recém-criado
     setupCepListener('cep-reu', { rua: 'rua-reu', bairro: 'bairro-reu', cidade: 'cidade-reu', uf: 'estado-reu' });
-
-    // 4. Preencher dados salvos do Réu
-    if (saved?.reuData) {
-        fillReuData(saved.reuData);
-    }
+    if (saved?.reuData) fillReuData(saved.reuData);
 }
 
 // --- 7. MANIPULAÇÃO DE DADOS (GET/SET) ---
 
 function fillReuData(data) {
     const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val || ''; };
-    setVal('cpf-reu', data.cpf);
-    setVal('telefone-reu', data.telefone);
-    setVal('email-reu', data.email);
-    setVal('cep-reu', data.cep);
-    setVal('rua-reu', data.rua);
-    setVal('numero-reu', data.numero);
-    setVal('bairro-reu', data.bairro);
-    setVal('cidade-reu', data.cidade);
-    setVal('estado-reu', data.uf);
-    setVal('empresa-reu', data.empresa);
-    setVal('endereco-trabalho-reu', data.enderecoTrabalho);
+    setVal('cpf-reu', data.cpf); setVal('telefone-reu', data.telefone); setVal('email-reu', data.email);
+    setVal('cep-reu', data.cep); setVal('rua-reu', data.rua); setVal('numero-reu', data.numero);
+    setVal('bairro-reu', data.bairro); setVal('cidade-reu', data.cidade); setVal('estado-reu', data.uf);
+    setVal('empresa-reu', data.empresa); setVal('endereco-trabalho-reu', data.enderecoTrabalho);
 }
 
 function getReuData() {
-    const getVal = (id) => {
-        const el = document.getElementById(id);
-        return el ? el.value : '';
-    };
-
+    const getVal = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
     const ids = ['cpf-reu', 'telefone-reu', 'email-reu', 'cep-reu', 'rua-reu', 'empresa-reu'];
-    const hasData = ids.some(id => getVal(id) !== '');
-
-    if (!hasData) return null;
-
+    if (!ids.some(id => getVal(id) !== '')) return null;
     return {
-        cpf: getVal('cpf-reu'),
-        telefone: getVal('telefone-reu'),
-        email: getVal('email-reu'),
-        cep: getVal('cep-reu'),
-        rua: getVal('rua-reu'),
-        numero: getVal('numero-reu'),
-        bairro: getVal('bairro-reu'),
-        cidade: getVal('cidade-reu'),
-        uf: getVal('estado-reu'),
-        empresa: getVal('empresa-reu'),
-        enderecoTrabalho: getVal('endereco-trabalho-reu')
+        cpf: getVal('cpf-reu'), telefone: getVal('telefone-reu'), email: getVal('email-reu'),
+        cep: getVal('cep-reu'), rua: getVal('rua-reu'), numero: getVal('numero-reu'),
+        bairro: getVal('bairro-reu'), cidade: getVal('cidade-reu'), uf: getVal('estado-reu'),
+        empresa: getVal('empresa-reu'), enderecoTrabalho: getVal('endereco-trabalho-reu')
     };
+}
+
+function fillExpenseData(data) {
+    EXPENSE_CATEGORIES.forEach(cat => {
+        const input = document.getElementById(`expense-${cat.id}`);
+        if(input) input.value = data[cat.id] || '';
+    });
+    calculateExpenseTotal();
+}
+
+function getExpenseData() {
+    if (!document.getElementById('expense-table-container')) return null;
+    const data = {};
+    EXPENSE_CATEGORIES.forEach(cat => {
+        const input = document.getElementById(`expense-${cat.id}`);
+        if(input) data[cat.id] = input.value;
+    });
+    return data;
 }
 
 async function handleSave() {
     if (!currentAssistedId || !currentPautaId) return;
 
-    // Salva checkboxes
     const checkedIds = Array.from(checklistContainer.querySelectorAll('input[type="checkbox"][id^="doc-"]:checked')).map(cb => cb.id);
-    
-    // Salva observações
     const obsSelected = Array.from(checklistContainer.querySelectorAll('.obs-opt:checked')).map(cb => cb.value);
     const otherText = document.getElementById('check-other')?.checked ? document.getElementById('text-other').value : '';
-
-    // Salva dados do Réu
-    const reuData = getReuData();
-
+    
     const payload = {
         documentChecklist: {
             action: currentChecklistAction,
             checkedIds: checkedIds,
             observations: { selected: obsSelected, otherText: otherText },
-            reuData: reuData
+            reuData: getReuData(),
+            expenseData: getExpenseData() // Salva a planilha
         }
     };
 
     try {
         const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), getUpdatePayload(payload));
-        if (showNotification) showNotification("Dados salvos com sucesso!", "success");
+        if (showNotification) showNotification("Dados salvos!", "success");
         closeModal();
     } catch (e) {
         console.error(e);
@@ -673,29 +493,24 @@ function handleBack() {
 
 function handleActionSearch(e) {
     const term = normalizeText(e.target.value);
-    const btns = actionSelectionView.querySelectorAll('.action-grid button');
-    btns.forEach(btn => {
+    actionSelectionView.querySelectorAll('.action-grid button').forEach(btn => {
         btn.style.display = normalizeText(btn.textContent).includes(term) ? 'block' : 'none';
     });
 }
 
 function handleSearch(e) {
     const term = normalizeText(e.target.value);
-    const lis = checklistContainer.querySelectorAll('ul li');
-    lis.forEach(li => {
+    checklistContainer.querySelectorAll('ul li').forEach(li => {
         li.style.display = normalizeText(li.textContent).includes(term) ? 'block' : 'none';
     });
 }
 
-function closeModal() {
-    modal.classList.add('hidden');
-}
+function closeModal() { modal.classList.add('hidden'); }
 
 // --- 9. GERAÇÃO DE PDF (COMPLETA) ---
 
 async function handleGeneratePdf() {
     if (printChecklistBtn) printChecklistBtn.textContent = "Gerando...";
-    
     const { jsPDF } = window.jspdf || await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
     
     const doc = new jsPDF();
@@ -703,138 +518,107 @@ async function handleGeneratePdf() {
     const pageHeight = doc.internal.pageSize.getHeight();
     let y = 20;
 
-    // --- Cabeçalho ---
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
+    // Cabeçalho
+    doc.setFontSize(16); doc.setFont("helvetica", "bold");
     doc.text("Checklist de Atendimento", pageWidth / 2, y, { align: "center" });
-    
     y += 15;
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12); doc.setFont("helvetica", "normal");
     doc.text(`Assistido(a): ${assistedNameEl.textContent}`, 15, y);
     y += 7;
     doc.text(`Ação: ${checklistTitle.textContent}`, 15, y);
     y += 15;
     
-    // --- 1. Itens da Checklist (Marcados) ---
-    doc.setFont("helvetica", "bold");
-    doc.text("Documentos Entregues:", 15, y);
-    y += 8;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    
-    // Pega todos os checkboxes de documentos marcados
+    // 1. Itens da Checklist
+    doc.setFont("helvetica", "bold"); doc.text("Documentos Entregues:", 15, y); y += 8;
+    doc.setFont("helvetica", "normal"); doc.setFontSize(10);
     const checked = checklistContainer.querySelectorAll('input[type="checkbox"][id^="doc-"]:checked');
-    
     if (checked.length > 0) {
         checked.forEach(cb => {
-            // Pega o texto do span vizinho ao checkbox
             const text = cb.nextElementSibling.textContent.trim();
-            
-            // Quebra de linha se texto for longo
             const lines = doc.splitTextToSize(`- ${text}`, pageWidth - 30);
-            
-            // Verifica quebra de página
             if (y + (lines.length * 5) > pageHeight - 20) { doc.addPage(); y = 20; }
-            
             doc.text(lines, 20, y);
             y += lines.length * 5;
         });
     } else {
-        doc.text("- Nenhum documento marcado.", 20, y);
-        y += 7;
+        doc.text("- Nenhum documento marcado.", 20, y); y += 7;
     }
 
-    // --- 2. Observações ---
+    // 2. Planilha de Despesas (Se houver)
+    const expenses = getExpenseData();
+    if (expenses && Object.values(expenses).some(v => v)) {
+        y += 10;
+        if (y > pageHeight - 150) { doc.addPage(); y = 20; }
+        doc.line(15, y, pageWidth - 15, y); y += 10;
+        
+        doc.setFont("helvetica", "bold"); doc.setFontSize(12);
+        doc.text("Planilha de Despesas (Criança)", 15, y); y += 8;
+        doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+
+        let total = 0;
+        EXPENSE_CATEGORIES.forEach(cat => {
+            const valStr = expenses[cat.id];
+            if (valStr) {
+                doc.text(`${cat.label}:`, 20, y);
+                doc.text(`${valStr}`, pageWidth - 30, y, { align: 'right' });
+                total += parseCurrency(valStr);
+                y += 6;
+            }
+        });
+        y += 2;
+        doc.setFont("helvetica", "bold");
+        doc.text("TOTAL MENSAL:", 20, y);
+        doc.text(formatCurrency(total), pageWidth - 30, y, { align: 'right' });
+        y += 8;
+    }
+
+    // 3. Observações
     y += 10;
     if (y > pageHeight - 40) { doc.addPage(); y = 20; }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(12);
+    doc.text("Status / Observações:", 15, y); y += 8;
+    doc.setFont("helvetica", "normal"); doc.setFontSize(10);
     
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text("Status / Observações:", 15, y);
-    y += 8;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    
-    const obs = checklistContainer.querySelectorAll('.obs-opt:checked');
-    if (obs.length > 0) {
-        obs.forEach(cb => {
-            doc.text(`[X] ${cb.value}`, 20, y);
-            y += 6;
-        });
-    }
-
+    checklistContainer.querySelectorAll('.obs-opt:checked').forEach(cb => {
+        doc.text(`[X] ${cb.value}`, 20, y); y += 6;
+    });
     const other = document.getElementById('text-other');
     if (other && !other.classList.contains('hidden') && other.value) {
         const lines = doc.splitTextToSize(`Obs: ${other.value}`, pageWidth - 30);
-        if (y + (lines.length * 5) > pageHeight - 20) { doc.addPage(); y = 20; }
-        doc.text(lines, 20, y);
-        y += lines.length * 5;
+        doc.text(lines, 20, y); y += lines.length * 5;
     }
 
-    // --- 3. Dados da Parte Contrária (Réu) - BLOCO COMPLETO ---
-    
-    // Pega os dados que estão na tela (getReuData) ou usa os salvos se disponíveis
-    // Nota: O getReuData pega o que está preenchido nos inputs agora.
+    // 4. Dados do Réu
     const reuData = getReuData(); 
-
-    if (reuData) { // Só imprime se houver dados
-        y += 15;
-        if (y > pageHeight - 100) { doc.addPage(); y = 20; } // Garante espaço para o bloco
-
-        // Linha divisória
-        doc.setLineWidth(0.5);
-        doc.line(15, y, pageWidth - 15, y);
-        y += 15;
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(13);
-        doc.text("Dados da Parte Contrária (Réu)", 15, y);
+    if (reuData) {
         y += 10;
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "normal");
+        if (y > pageHeight - 100) { doc.addPage(); y = 20; }
+        doc.line(15, y, pageWidth - 15, y); y += 10;
+        doc.setFont("helvetica", "bold"); doc.setFontSize(13);
+        doc.text("Dados da Parte Contrária (Réu)", 15, y); y += 10;
+        doc.setFontSize(11); doc.setFont("helvetica", "normal");
 
-        // Função auxiliar para imprimir campos
-        const printField = (label, value) => {
-            if (value && value.trim() !== "") {
-                doc.text(`${label}: ${value}`, 20, y);
-                y += 6;
-            }
-        };
-
+        const printField = (l, v) => { if (v && v.trim()) { doc.text(`${l}: ${v}`, 20, y); y += 6; } };
         printField("CPF", reuData.cpf);
-        printField("Telefone/WhatsApp", reuData.telefone);
+        printField("Telefone", reuData.telefone);
         printField("E-mail", reuData.email);
         
-        // Monta endereço
-        let end = reuData.rua;
-        if (reuData.numero) end += `, ${reuData.numero}`;
-        if (reuData.bairro) end += ` - ${reuData.bairro}`;
-        if (reuData.cidade) end += ` - ${reuData.cidade}`;
-        if (reuData.uf) end += `/${reuData.uf}`;
+        let end = [reuData.rua, reuData.numero, reuData.bairro, reuData.cidade, reuData.uf].filter(Boolean).join(', ');
         if (reuData.cep) end += ` (CEP: ${reuData.cep})`;
-        
-        if (end && end.length > 5) {
-            const endLines = doc.splitTextToSize(`Endereço: ${end}`, pageWidth - 40);
-            if (y + (endLines.length * 6) > pageHeight - 20) { doc.addPage(); y = 20; }
-            doc.text(endLines, 20, y);
-            y += endLines.length * 6;
+        if (end.length > 5) {
+            const lines = doc.splitTextToSize(`Endereço: ${end}`, pageWidth - 40);
+            doc.text(lines, 20, y); y += lines.length * 6;
         }
 
-        // Dados Profissionais
         if (reuData.empresa || reuData.enderecoTrabalho) {
             y += 4;
-            if (y > pageHeight - 40) { doc.addPage(); y = 20; }
-            doc.setFont("helvetica", "bold");
-            doc.text("Dados Profissionais:", 20, y);
-            y += 6;
+            doc.setFont("helvetica", "bold"); doc.text("Dados Profissionais:", 20, y); y += 6;
             doc.setFont("helvetica", "normal");
             printField("Empresa", reuData.empresa);
             printField("End. Trabalho", reuData.enderecoTrabalho);
         }
     }
     
-    // Salvar
     doc.save(`Checklist_${normalizeText(assistedNameEl.textContent).replace(/\s+/g, '_')}.pdf`);
     if (printChecklistBtn) printChecklistBtn.textContent = "Baixar PDF";
 }
@@ -842,10 +626,7 @@ async function handleGeneratePdf() {
 // --- 10. EXPORTS ---
 
 export function setupDetailsModal(config) {
-    db = config.db;
-    getUpdatePayload = config.getUpdatePayload;
-    showNotification = config.showNotification;
-
+    db = config.db; getUpdatePayload = config.getUpdatePayload; showNotification = config.showNotification;
     actionSelectionView.addEventListener('click', handleActionSelect);
     backToActionSelectionBtn.addEventListener('click', handleBack);
     saveChecklistBtn.addEventListener('click', handleSave);
@@ -857,22 +638,13 @@ export function setupDetailsModal(config) {
 
 export function openDetailsModal(config) {
     populateActionSelection();
-    currentAssistedId = config.assistedId;
-    currentPautaId = config.pautaId;
-    allAssisted = config.allAssisted;
-
+    currentAssistedId = config.assistedId; currentPautaId = config.pautaId; allAssisted = config.allAssisted;
     const assisted = allAssisted.find(a => a.id === currentAssistedId);
     if (!assisted) return;
-
     assistedNameEl.textContent = assisted.name;
-
     if (assisted.documentChecklist?.action) {
         renderChecklist(assisted.documentChecklist.action);
-        actionSelectionView.classList.add('hidden');
-        checklistView.classList.remove('hidden');
-        checklistView.classList.add('flex');
-    } else {
-        handleBack();
-    }
+        actionSelectionView.classList.add('hidden'); checklistView.classList.remove('hidden'); checklistView.classList.add('flex');
+    } else { handleBack(); }
     modal.classList.remove('hidden');
 }
