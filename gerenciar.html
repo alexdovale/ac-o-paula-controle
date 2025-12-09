@@ -3,342 +3,222 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciar Colaboradores</title>
+    <title>Gerenciar Colaboradores - SIGAP</title>
+    
+    <!-- Ícone -->
+    <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
+    
+    <!-- Bibliotecas PDF -->
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.autotable.umd.min.js"></script>
+    
+    <!-- Tailwind CSS (Visual Moderno) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fonte Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            margin: 0;
-            flex-direction: column;
-        }
-        .header {
-            width: 100%;
-            max-width: 1140px;
-            margin-bottom: 20px;
-        }
-        .content-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            gap: 40px;
-            flex-wrap: wrap;
-            width: 100%;
-        }
-        .container, .list-container {
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 90%;
-            max-width: 500px;
-        }
-        .list-container {
-            max-width: 600px;
-        }
-        h1, h2 {
-            text-align: center;
-            color: #333;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        .hidden {
-            display: none;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #555;
-        }
-        input[type="text"], input[type="tel"], textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        .options-group label {
-            display: inline-block;
-            margin-right: 20px;
-            font-weight: normal;
-        }
-        .back-button {
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #6c757d;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 5px;
-            font-size: 16px;
-            transition: background-color 0.3s ease;
-        }
-        .back-button:hover {
-            background-color: #5a6268;
-        }
-        button[type="submit"] {
-            width: 100%;
-            padding: 12px;
-            background-color: #28a745;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        button[type="submit"]:hover {
-            background-color: #218838;
-        }
-        .list-actions {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        #download-pdf, #clear-list {
-            width: auto;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            text-align: center;
-            transition: background-color 0.3s ease;
-        }
-        #download-pdf:hover {
-            background-color: #218838;
-        }
-        #clear-list {
-            background-color: #dc3545;
-            color: #fff;
-        }
-        #clear-list:hover {
-            background-color: #c82333;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-            vertical-align: middle;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        .whatsapp-link {
-            display: inline-block;
-            padding: 8px 12px;
-            background-color: #25D366;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 14px;
-            transition: background-color 0.3s;
-        }
-        .whatsapp-link:hover {
-            background-color: #128C7E;
-        }
-        .action-buttons button {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 5px;
-            margin: 0 2px;
-        }
-        .action-buttons svg {
-            width: 18px;
-            height: 18px;
-            vertical-align: middle;
-        }
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-        }
-        .modal-content p {
-            margin-bottom: 20px;
-            font-size: 16px;
-        }
-        .modal-content button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 0 10px;
-        }
-        #confirm-action {
-            background-color: #dc3545;
-            color: #fff;
-        }
-        #cancel-action {
-            background-color: #6c757d;
-            color: #fff;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .hidden { display: none; }
+        
+        /* Animação de carregamento */
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #16a34a; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body>
+<body class="bg-gray-50 text-gray-800">
 
-<div class="header">
-    <a href="index.html" class="back-button">← Voltar para o Início</a>
-</div>
-
-<div class="content-wrapper">
-    <div class="container">
-        <h1 id="form-title">Gerenciar Colaboradores</h1>
-        <form id="colaborador-form">
-            <div class="form-group">
-                <label for="nome">Nome do Colaborador:</label>
-                <input type="text" id="nome" name="nome" required>
-            </div>
-
-            <div class="form-group">
-                <label for="telefone">Telefone (com DDD):</label>
-                <input type="tel" id="telefone" name="telefone" placeholder="Ex: 21999998888" required>
-            </div>
-
-            <div class="form-group">
-                <label>Como vai se deslocar?</label>
-                <div class="options-group">
-                    <input type="radio" id="nao-confirmado" name="transporte" value="Não Confirmado" checked required>
-                    <label for="nao-confirmado">Não Confirmado</label>
-                    
-                    <input type="radio" id="meios-proprios" name="transporte" value="Meios Próprios">
-                    <label for="meios-proprios">Meios Próprios</label>
-                    
-                    <input type="radio" id="com-empresa" name="transporte" value="Com a Empresa">
-                    <label for="com-empresa">Com a Empresa</label>
-                </div>
-            </div>
-
-            <div class="form-group hidden" id="local-encontro-group">
-                <label>Ponto de Encontro:</label>
-                <div class="options-group">
-                    <input type="radio" id="sede" name="localEncontro" value="Sede">
-                    <label for="sede">Sede</label>
-                    
-                    <input type="radio" id="meio-caminho" name="localEncontro" value="Meio do Caminho">
-                    <label for="meio-caminho">No meio do caminho</label>
-                </div>
-            </div>
-
-            <div class="form-group hidden" id="observacao-group">
-                <label for="observacao">Observação:</label>
-                <textarea id="observacao" name="observacao" rows="3"></textarea>
-            </div>
-
-            <button type="submit" id="submit-button">Adicionar Colaborador</button>
-        </form>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white bg-opacity-90 flex flex-col items-center justify-center z-50">
+        <div class="loader mb-4"></div>
+        <p class="text-gray-600 font-semibold">Carregando dados...</p>
     </div>
 
-    <div class="list-container">
-        <h2>Lista de Presença</h2>
-        <table id="colaboradores-list">
-            <thead>
-                <tr>
-                    <th>Nome</th>
-                    <th>Deslocamento</th>
-                    <th>Presença</th>
-                    <th>Horário</th>
-                    <th>WhatsApp</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-            </tbody>
-        </table>
-        <div class="list-actions">
-            <button id="download-pdf">Baixar PDF da Lista</button>
-            <button id="clear-list">Limpar Lista</button>
+    <!-- Cabeçalho -->
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo" class="h-8 w-auto">
+                <h1 class="text-xl font-bold text-gray-800 hidden sm:block">Gestão de Equipe</h1>
+            </div>
+            <a href="index.html" class="flex items-center gap-2 text-gray-600 hover:text-green-600 font-medium transition">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                Voltar
+            </a>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- COLUNA DA ESQUERDA: FORMULÁRIO -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 sticky top-24">
+                    <h2 id="form-title" class="text-xl font-bold text-gray-800 mb-6 border-b pb-2">Adicionar Colaborador</h2>
+                    
+                    <form id="colaborador-form" class="space-y-4">
+                        
+                        <!-- Nome -->
+                        <div>
+                            <label for="nome" class="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                            <input type="text" id="nome" name="nome" required 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition outline-none"
+                                placeholder="Ex: Maria da Silva">
+                        </div>
+
+                        <!-- Telefone -->
+                        <div>
+                            <label for="telefone" class="block text-sm font-medium text-gray-700 mb-1">Telefone (WhatsApp)</label>
+                            <input type="tel" id="telefone" name="telefone" required 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition outline-none"
+                                placeholder="Ex: 21999998888">
+                        </div>
+
+                        <!-- Transporte -->
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <label class="block text-sm font-bold text-gray-700 mb-2">Deslocamento</label>
+                            <div class="space-y-2">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" id="nao-confirmado" name="transporte" value="Não Confirmado" checked class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300">
+                                    <span class="ml-2 text-sm text-gray-700">Não Confirmado</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" id="meios-proprios" name="transporte" value="Meios Próprios" class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300">
+                                    <span class="ml-2 text-sm text-gray-700">Meios Próprios</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" id="com-empresa" name="transporte" value="Com a Empresa" class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300">
+                                    <span class="ml-2 text-sm text-gray-700">Com a Empresa</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Local de Encontro (Condicional) -->
+                        <div id="local-encontro-group" class="hidden bg-blue-50 p-4 rounded-lg border border-blue-100 animation-fade">
+                            <label class="block text-sm font-bold text-blue-800 mb-2">Ponto de Encontro</label>
+                            <div class="flex gap-4">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" id="sede" name="localEncontro" value="Sede" class="h-4 w-4 text-blue-600 focus:ring-blue-500">
+                                    <span class="ml-2 text-sm text-gray-700">Sede</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" id="meio-caminho" name="localEncontro" value="Meio do Caminho" class="h-4 w-4 text-blue-600 focus:ring-blue-500">
+                                    <span class="ml-2 text-sm text-gray-700">No Caminho</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Observação (Condicional) -->
+                        <div id="observacao-group" class="hidden">
+                            <label for="observacao" class="block text-sm font-medium text-gray-700 mb-1">Observação</label>
+                            <textarea id="observacao" name="observacao" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"></textarea>
+                        </div>
+
+                        <!-- Botão Salvar -->
+                        <button type="submit" id="submit-button" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition transform active:scale-95 flex justify-center items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            Salvar Colaborador
+                        </button>
+                        
+                        <button type="button" id="cancel-edit-btn" class="hidden w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg transition text-sm">
+                            Cancelar Edição
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- COLUNA DA DIREITA: LISTA -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+                    <div class="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <h2 class="text-xl font-bold text-gray-800">Lista de Presença</h2>
+                        
+                        <div class="flex gap-2">
+                            <button id="download-pdf" class="bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold py-2 px-4 rounded-lg text-sm transition flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                PDF
+                            </button>
+                            <button id="clear-list" class="bg-red-50 text-red-700 hover:bg-red-100 font-semibold py-2 px-4 rounded-lg text-sm transition flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                Limpar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table id="colaboradores-list" class="w-full text-left text-sm text-gray-600">
+                            <thead class="bg-gray-50 text-gray-800 uppercase font-bold">
+                                <tr>
+                                    <th class="px-6 py-4">Nome</th>
+                                    <th class="px-6 py-4">Deslocamento</th>
+                                    <th class="px-6 py-4 text-center">Presença</th>
+                                    <th class="px-6 py-4">Horário</th>
+                                    <th class="px-6 py-4">Contato</th>
+                                    <th class="px-6 py-4 text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <!-- Linhas inseridas via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Mensagem de lista vazia -->
+                    <div id="empty-list-msg" class="hidden p-8 text-center text-gray-400">
+                        Nenhum colaborador adicionado ainda.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Modal de Confirmação -->
+    <div id="confirm-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition-all scale-100">
+            <h3 class="text-lg font-bold text-gray-800 mb-2">Confirmação</h3>
+            <p id="modal-text" class="text-gray-600 mb-6">Tem certeza?</p>
+            <div class="flex justify-end gap-3">
+                <button id="cancel-action" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition font-medium">Cancelar</button>
+                <button id="confirm-action" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium">Sim, confirmar</button>
+            </div>
         </div>
     </div>
-</div>
 
-<div id="confirm-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
-        <p id="modal-text"></p>
-        <button id="confirm-action">Sim</button>
-        <button id="cancel-action">Cancelar</button>
-    </div>
-</div>
-
+<!-- Scripts Firebase (Compat) -->
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-<script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE",
-      authDomain: "pauta-ce162.firebaseapp.com",
-      projectId: "pauta-ce162",
-      storageBucket: "pauta-ce162.firebasestorage.app",
-      messagingSenderId: "87113750208",
-      appId: "1:87113750208:web:4abba0024f4d4af699bf25",
-      measurementId: "G-8N6X36BC4M"
-    };
 
-    // Inicializa o Firebase
+<script>
+    // --- LÓGICA DO SISTEMA ---
+    const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.firebasestorage.app", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25", measurementId: "G-8N6X36BC4M" };
+
     const app = firebase.initializeApp(firebaseConfig);
     const db = app.firestore();
     const auth = app.auth();
 
     const urlParams = new URLSearchParams(window.location.search);
     const pautaId = urlParams.get('pautaId');
-    const userId = urlParams.get('userId'); // Pega o userId da URL
+    const userId = urlParams.get('userId');
 
-    if (!pautaId || !userId) {
-        document.body.innerHTML = `
-            <style>
-                body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f4; }
-                .error-container { text-align: center; padding: 40px; background-color: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-                .error-container h1 { color: #dc3545; }
-                .error-container p { color: #333; }
-                .error-container a { display: inline-block; margin-top: 20px; padding: 10px 20px; background-color: #6c757d; color: #fff; text-decoration: none; border-radius: 5px; }
-            </style>
-            <div class="error-container">
-                <h1>Erro: Acesso não autorizado</h1>
-                <p>Por favor, acesse esta página a partir de uma pauta específica no sistema principal.</p>
-                <a href="index.html">Voltar para o Início</a>
-            </div>
-        `;
-        throw new Error("ID da Pauta ou do Usuário não encontrado na URL.");
-    }
-    
+    // UI Elements
     const form = document.getElementById('colaborador-form');
     const formTitle = document.getElementById('form-title');
     const submitButton = document.getElementById('submit-button');
+    const cancelEditBtn = document.getElementById('cancel-edit-btn');
     const localEncontroGroup = document.getElementById('local-encontro-group');
     const observacaoGroup = document.getElementById('observacao-group');
     const transporteOptions = document.querySelectorAll('input[name="transporte"]');
     const colaboradoresListBody = document.querySelector('#colaboradores-list tbody');
+    const emptyListMsg = document.getElementById('empty-list-msg');
     const downloadPdfBtn = document.getElementById('download-pdf');
     const clearListBtn = document.getElementById('clear-list');
-    
-    // Modal
+    const loadingOverlay = document.getElementById('loading-overlay');
+
+    // Modal Elements
     const confirmModal = document.getElementById('confirm-modal');
     const modalText = document.getElementById('modal-text');
     const confirmActionBtn = document.getElementById('confirm-action');
@@ -346,272 +226,283 @@
 
     let editDocId = null;
     let actionToConfirm = null;
-    let currentUserName = "Usuário Desconhecido";
 
-    const renderColaboradores = (colaboradores) => {
-        colaboradoresListBody.innerHTML = '';
-        colaboradores.forEach((colaborador) => {
-            let deslocamentoTexto = colaborador.transporte;
-            if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro) {
-                deslocamentoTexto += ` (${colaborador.localEncontro})`;
-            }
+    if (!pautaId || !userId) {
+        loadingOverlay.classList.add('hidden');
+        document.body.innerHTML = `
+            <div class="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+                <div class="bg-white p-8 rounded-xl shadow-lg text-center max-w-md">
+                    <h1 class="text-2xl font-bold text-red-600 mb-2">Acesso Negado</h1>
+                    <p class="text-gray-600 mb-6">Faltam parâmetros de segurança na URL.</p>
+                    <a href="index.html" class="inline-block bg-gray-800 text-white px-6 py-2 rounded-lg hover:bg-gray-900 transition">Ir para Home</a>
+                </div>
+            </div>`;
+        throw new Error("Parâmetros inválidos.");
+    }
 
-            const newRow = document.createElement('tr');
-            newRow.innerHTML = `
-                <td>${colaborador.nome}</td>
-                <td>${deslocamentoTexto}</td>
-                <td><input type="checkbox" class="checkin-checkbox" data-id="${colaborador.id}" ${colaborador.presente ? 'checked' : ''}></td>
-                <td>${colaborador.horario}</td>
-                <td>
-                    <a href="https://wa.me/55${colaborador.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Bom dia! Poderia, por gentileza, informar se já está chegando? Estamos quase saindo.`)}" 
-                        class="whatsapp-link" target="_blank">
-                        Mensagem
-                    </a>
-                </td>
-                <td class="action-buttons">
-                    <button class="edit-btn" data-id="${colaborador.id}" title="Editar">
-                        <svg fill="#000000" viewBox="0 0 24 24"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z"></path></svg>
-                    </button>
-                    <button class="delete-btn" data-id="${colaborador.id}" title="Excluir">
-                        <svg fill="#dc3545" viewBox="0 0 24 24"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"></path></svg>
-                    </button>
-                </td>
-            `;
-            colaboradoresListBody.appendChild(newRow);
-        });
-        addEventListenersToListActions();
-    };
+    // Autenticação e Listener
+    auth.signInWithCustomToken(userId).then(async (userCredential) => {
+        console.log("Conectado.");
+        const attendancesRef = db.collection('pautas').doc(pautaId).collection('attendances');
 
-    // A lógica de autenticação com o userId do index.html
-    auth.signInWithCustomToken(userId)
-        .then(async (userCredential) => {
-            const user = userCredential.user;
-            console.log("Usuário autenticado com sucesso:", user.uid);
+        attendancesRef.onSnapshot(async (snapshot) => {
+            loadingOverlay.classList.add('hidden');
+            const colaboradores = [];
+            snapshot.forEach(doc => colaboradores.push({ id: doc.id, ...doc.data() }));
             
-            const attendancesCollectionRef = db.collection('pautas').doc(pautaId).collection('attendances');
+            // Ordenar por nome
+            colaboradores.sort((a, b) => a.nome.localeCompare(b.nome));
+            renderColaboradores(colaboradores);
+        });
 
-            // Configura o listener do Firestore para sincronização em tempo real
-            attendancesCollectionRef.onSnapshot(async (snapshot) => {
-                const colaboradores = [];
-                snapshot.forEach((doc) => {
-                    colaboradores.push({ id: doc.id, ...doc.data() });
-                });
-                renderColaboradores(colaboradores);
+        // Submit Form
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const btnOriginalText = submitButton.innerHTML;
+            submitButton.innerHTML = `<div class="loader w-5 h-5 border-2 border-white border-t-transparent mx-auto"></div>`;
+            submitButton.disabled = true;
 
-                const userDoc = await db.collection('users').doc(user.uid).get();
-                if (userDoc.exists) {
-                    currentUserName = userDoc.data().name || "Usuário Desconhecido";
-                }
-            });
+            const nome = document.getElementById('nome').value;
+            const telefone = document.getElementById('telefone').value;
+            const transporte = document.querySelector('input[name="transporte"]:checked').value;
+            const localEncontro = document.querySelector('input[name="localEncontro"]:checked')?.value || '';
+            const observacao = document.getElementById('observacao').value;
 
-            // Adiciona a lógica de manipulação do formulário aqui
-            form.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                
-                const nome = document.getElementById('nome').value;
-                const telefone = document.getElementById('telefone').value;
-                const transporte = document.querySelector('input[name="transporte"]:checked').value;
-                const localEncontro = document.querySelector('input[name="localEncontro"]:checked')?.value || '';
-                const observacao = document.getElementById('observacao').value;
+            const data = { nome, telefone, transporte, localEncontro, observacao, presente: false, horario: '--:--' };
+            // Se estiver editando, não sobrescreve presença/horário se não quiser (opcional)
+            if(editDocId) delete data.presente; 
+            if(editDocId) delete data.horario;
 
-                const novoColaborador = {
-                    nome: nome,
-                    telefone: telefone,
-                    transporte: transporte,
-                    localEncontro: localEncontro,
-                    observacao: observacao,
-                    presente: false,
-                    horario: '--:--'
-                };
-
+            try {
                 if (editDocId) {
-                    await attendancesCollectionRef.doc(editDocId).update(novoColaborador);
+                    await attendancesRef.doc(editDocId).update(data);
+                    showToast('Colaborador atualizado!');
                 } else {
-                    await attendancesCollectionRef.add(novoColaborador);
+                    await attendancesRef.add(data);
+                    showToast('Colaborador adicionado!');
                 }
-
                 resetForm();
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao salvar.");
+            } finally {
+                submitButton.innerHTML = btnOriginalText;
+                submitButton.disabled = false;
+            }
+        });
+
+        // Listeners da Lista (Check, Edit, Delete)
+        function addEventListenersToListActions() {
+            document.querySelectorAll('.checkin-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', async (e) => {
+                    const docId = e.target.dataset.id;
+                    const presente = e.target.checked;
+                    const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                    await attendancesRef.doc(docId).update({ presente, horario });
+                });
             });
 
-            // Adiciona a lógica dos botões de ação da lista aqui
-            function addEventListenersToListActions() {
-                document.querySelectorAll('.checkin-checkbox').forEach(checkbox => {
-                    checkbox.addEventListener('change', async (e) => {
-                        const docId = e.target.dataset.id;
-                        const presente = e.target.checked;
-                        const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-                        await attendancesCollectionRef.doc(docId).update({ presente, horario });
-                    });
-                });
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const docId = e.currentTarget.dataset.id;
+                    const doc = await attendancesRef.doc(docId).get();
+                    if (doc.exists) {
+                        const data = doc.data();
+                        editDocId = docId;
+                        document.getElementById('nome').value = data.nome;
+                        document.getElementById('telefone').value = data.telefone;
+                        
+                        // Set Radio Transporte
+                        const transRadio = document.querySelector(`input[name="transporte"][value="${data.transporte}"]`);
+                        if(transRadio) { transRadio.checked = true; transRadio.dispatchEvent(new Event('change')); }
 
-                document.querySelectorAll('.edit-btn').forEach(button => {
-                    button.addEventListener('click', async (e) => {
-                        const docId = e.currentTarget.dataset.id;
-                        const doc = await attendancesCollectionRef.doc(docId).get();
-                        if (doc.exists) {
-                            const colaborador = doc.data();
-                            editDocId = docId;
-                            document.getElementById('nome').value = colaborador.nome;
-                            document.getElementById('telefone').value = colaborador.telefone;
-                            
-                            const transporteRadio = document.querySelector(`input[name="transporte"][value="${colaborador.transporte}"]`);
-                            if (transporteRadio) {
-                                transporteRadio.checked = true;
-                                transporteRadio.dispatchEvent(new Event('change'));
-                            }
-
-                            const localEncontroRadio = document.querySelector(`input[name="localEncontro"][value="${colaborador.localEncontro}"]`);
-                            if (localEncontroRadio) {
-                                localEncontroRadio.checked = true;
-                                localEncontroRadio.dispatchEvent(new Event('change'));
-                            }
-
-                            document.getElementById('observacao').value = colaborador.observacao || '';
-                            formTitle.textContent = "Editar Colaborador";
-                            submitButton.textContent = "Salvar Alterações";
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        // Set Radio Local
+                        if(data.localEncontro) {
+                            const localRadio = document.querySelector(`input[name="localEncontro"][value="${data.localEncontro}"]`);
+                            if(localRadio) { localRadio.checked = true; localRadio.dispatchEvent(new Event('change')); }
                         }
-                    });
-                });
 
-                document.querySelectorAll('.delete-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const docId = e.currentTarget.dataset.id;
-                        showConfirmModal(() => {
-                            attendancesCollectionRef.doc(docId).delete();
-                        }, `Tem certeza que deseja excluir este colaborador?`);
-                    });
-                });
-            }
-
-            downloadPdfBtn.addEventListener('click', async () => {
-                const snapshot = await attendancesCollectionRef.get();
-                const colaboradores = [];
-                snapshot.forEach((doc) => {
-                    colaboradores.push({ id: doc.id, ...doc.data() });
-                });
-                
-                const doc = new window.jspdf.jsPDF();
-                const head = [['Nome', 'Deslocamento', 'Presença', 'Horário de Chegada']];
-                const tableBody = [];
-                const presentes = colaboradores.filter(c => c.presente);
-
-                if (presentes.length === 0) {
-                    const notification = document.createElement('div');
-                    notification.textContent = 'Nenhum colaborador com presença marcada para gerar o PDF.';
-                    notification.style.position = 'fixed';
-                    notification.style.bottom = '20px';
-                    notification.style.left = '50%';
-                    notification.style.transform = 'translateX(-50%)';
-                    notification.style.backgroundColor = '#333';
-                    notification.style.color = 'white';
-                    notification.style.padding = '15px';
-                    notification.style.borderRadius = '5px';
-                    notification.style.zIndex = '1001';
-                    notification.style.transition = 'opacity 0.5s';
-                    document.body.appendChild(notification);
-                    setTimeout(() => {
-                        notification.style.opacity = '0';
-                        setTimeout(() => document.body.removeChild(notification), 500);
-                    }, 3000);
-                    return;
-                }
-
-                presentes.forEach(colaborador => {
-                    const deslocamento = colaborador.transporte === 'Com a Empresa' 
-                        ? `${colaborador.transporte} (${colaborador.localEncontro})`
-                        : colaborador.transporte;
-                    tableBody.push([colaborador.nome, deslocamento, 'Presente', colaborador.horario]);
-                });
-                
-                doc.autoTable({
-                    head: head, body: tableBody, startY: 20,
-                    headStyles: { fillColor: [22, 160, 133] },
-                    didDrawPage: (data) => {
-                        doc.setFontSize(18);
-                        doc.setTextColor(40);
-                        doc.text('Lista de Presença de Colaboradores', data.settings.margin.left, 15);
+                        document.getElementById('observacao').value = data.observacao || '';
+                        
+                        formTitle.textContent = "Editar Colaborador";
+                        submitButton.innerHTML = "Salvar Alterações";
+                        submitButton.classList.replace('bg-green-600', 'bg-blue-600');
+                        submitButton.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
+                        cancelEditBtn.classList.remove('hidden');
+                        
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
                     }
                 });
-                
-                doc.save('lista_presenca_presentes.pdf');
             });
 
-            clearListBtn.addEventListener('click', () => {
-                showConfirmModal(async () => {
-                    const batch = db.batch();
-                    const snapshot = await attendancesCollectionRef.get();
-                    snapshot.docs.forEach(doc => {
-                        batch.delete(doc.ref);
-                    });
-                    await batch.commit();
-                    resetForm();
-                }, 'Tem certeza que deseja limpar toda a lista?<br>Esta ação não pode ser desfeita.');
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const docId = e.currentTarget.dataset.id;
+                    showConfirmModal(() => {
+                        attendancesRef.doc(docId).delete();
+                    }, "Tem certeza que deseja excluir este colaborador?");
+                });
             });
-        })
-        .catch(error => {
-            console.error("Erro de autenticação com token:", error);
-            document.body.innerHTML = `
-                <style>
-                    body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f4; }
-                    .error-container { text-align: center; padding: 40px; background-color: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-                    .error-container h1 { color: #dc3545; }
-                    .error-container p { color: #333; }
-                    .error-container a { display: inline-block; margin-top: 20px; padding: 10px 20px; background-color: #6c757d; color: #fff; text-decoration: none; border-radius: 5px; }
-                </style>
-                <div class="error-container">
-                    <h1>Erro de Autenticação</h1>
-                    <p>Não foi possível autenticar o usuário. Verifique as credenciais.</p>
-                    <a href="index.html">Voltar para o Início</a>
-                </div>
-            `;
+        }
+
+        // PDF Generation
+        downloadPdfBtn.addEventListener('click', async () => {
+            const snapshot = await attendancesRef.get();
+            const list = [];
+            snapshot.forEach(doc => list.push({ ...doc.data() }));
+            
+            const presentes = list.filter(c => c.presente);
+            if (presentes.length === 0) { alert('Ninguém marcou presença ainda.'); return; }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.setFontSize(18);
+            doc.setTextColor(40);
+            doc.text("Lista de Presença Confirmada", 14, 20);
+            
+            const tableBody = presentes.map(c => {
+                const desloc = c.transporte === 'Com a Empresa' ? `${c.transporte} (${c.localEncontro})` : c.transporte;
+                return [c.nome, desloc, c.horario];
+            });
+
+            doc.autoTable({
+                head: [['Nome', 'Deslocamento', 'Chegada']],
+                body: tableBody,
+                startY: 30,
+                headStyles: { fillColor: [22, 160, 133] },
+                theme: 'grid'
+            });
+            doc.save('presenca.pdf');
         });
-    
-    // Funções modais e de formulário
-    transporteOptions.forEach(option => {
-        option.addEventListener('change', (event) => {
-            localEncontroGroup.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
-            observacaoGroup.classList.add('hidden');
-            if (event.target.value !== 'Com a Empresa') {
-                document.querySelectorAll('input[name="localEncontro"]').forEach(localOption => localOption.checked = false);
+
+        // Limpar Lista
+        clearListBtn.addEventListener('click', () => {
+            showConfirmModal(async () => {
+                const snapshot = await attendancesRef.get();
+                const batch = db.batch();
+                snapshot.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+                resetForm();
+                showToast("Lista limpa com sucesso!");
+            }, "Isso apagará TODOS os colaboradores da lista. Confirma?");
+        });
+
+        // --- RENDER ---
+        function renderColaboradores(lista) {
+            colaboradoresListBody.innerHTML = '';
+            
+            if (lista.length === 0) {
+                emptyListMsg.classList.remove('hidden');
+                document.querySelector('table').classList.add('hidden');
+                return;
             }
+            
+            emptyListMsg.classList.add('hidden');
+            document.querySelector('table').classList.remove('hidden');
+
+            lista.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-gray-50 hover:bg-gray-50 transition";
+                
+                let desloc = c.transporte;
+                let badgeColor = 'bg-gray-100 text-gray-600';
+                if(c.transporte === 'Com a Empresa') {
+                    desloc += ` <span class="text-xs font-bold text-blue-600 block">(${c.localEncontro})</span>`;
+                    badgeColor = 'bg-blue-50 text-blue-700 border border-blue-100';
+                } else if (c.transporte === 'Meios Próprios') {
+                    badgeColor = 'bg-orange-50 text-orange-700 border border-orange-100';
+                }
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-medium text-gray-900">${c.nome}</td>
+                    <td class="px-6 py-4"><span class="px-2 py-1 rounded-md text-xs ${badgeColor}">${desloc}</span></td>
+                    <td class="px-6 py-4 text-center">
+                        <input type="checkbox" class="checkin-checkbox w-5 h-5 text-green-600 rounded focus:ring-green-500 border-gray-300 cursor-pointer" 
+                            data-id="${c.id}" ${c.presente ? 'checked' : ''}>
+                    </td>
+                    <td class="px-6 py-4 font-mono text-xs">${c.horario}</td>
+                    <td class="px-6 py-4">
+                        <a href="https://wa.me/55${c.telefone.replace(/\D/g, '')}?text=Olá" target="_blank" class="text-green-600 hover:text-green-800 font-bold flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592z"/></svg>
+                            Zap
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <button class="edit-btn p-1 text-gray-500 hover:text-blue-600 transition" data-id="${c.id}" title="Editar">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button class="delete-btn p-1 text-gray-500 hover:text-red-600 transition ml-2" data-id="${c.id}" title="Excluir">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        </button>
+                    </td>
+                `;
+                colaboradoresListBody.appendChild(tr);
+            });
+            addEventListenersToListActions();
+        }
+
+    }).catch(err => {
+        console.error(err);
+        loadingOverlay.innerHTML = '<p class="text-red-500">Erro de conexão.</p>';
+    });
+
+    // --- INTERAÇÕES DO FORM ---
+    transporteOptions.forEach(opt => {
+        opt.addEventListener('change', (e) => {
+            const isEmpresa = e.target.value === 'Com a Empresa';
+            localEncontroGroup.classList.toggle('hidden', !isEmpresa);
+            observacaoGroup.classList.add('hidden');
+            if(!isEmpresa) document.querySelectorAll('input[name="localEncontro"]').forEach(r => r.checked = false);
         });
     });
 
-    document.querySelectorAll('input[name="localEncontro"]').forEach(option => {
-        option.addEventListener('change', (event) => {
-            observacaoGroup.classList.toggle('hidden', event.target.value !== 'Meio do Caminho');
+    document.querySelectorAll('input[name="localEncontro"]').forEach(opt => {
+        opt.addEventListener('change', (e) => {
+            observacaoGroup.classList.toggle('hidden', e.target.value !== 'Meio do Caminho');
         });
     });
 
-    const resetForm = () => {
+    cancelEditBtn.addEventListener('click', resetForm);
+
+    function resetForm() {
         form.reset();
         editDocId = null;
-        formTitle.textContent = "Gerenciar Colaboradores";
-        submitButton.textContent = "Adicionar Colaborador";
+        formTitle.textContent = "Adicionar Colaborador";
+        submitButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar Colaborador`;
+        submitButton.classList.replace('bg-blue-600', 'bg-green-600');
+        submitButton.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
+        cancelEditBtn.classList.add('hidden');
         localEncontroGroup.classList.add('hidden');
         observacaoGroup.classList.add('hidden');
     }
 
-    const showConfirmModal = (callback, message) => {
-        modalText.innerHTML = message;
-        confirmModal.style.display = 'flex';
+    // --- MODAL LÓGICA ---
+    function showConfirmModal(callback, msg) {
+        modalText.innerHTML = msg;
+        confirmModal.classList.remove('hidden');
         actionToConfirm = callback;
     }
 
     confirmActionBtn.addEventListener('click', () => {
-        if (actionToConfirm) {
-            actionToConfirm();
-        }
-        confirmModal.style.display = 'none';
+        if (actionToConfirm) actionToConfirm();
+        confirmModal.classList.add('hidden');
         actionToConfirm = null;
     });
 
     cancelActionBtn.addEventListener('click', () => {
-        confirmModal.style.display = 'none';
+        confirmModal.classList.add('hidden');
         actionToConfirm = null;
     });
+    
+    // Toast Simples
+    function showToast(msg) {
+        const toast = document.createElement('div');
+        toast.className = "fixed bottom-5 right-5 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-bounce";
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
 </script>
-
 </body>
 </html>
