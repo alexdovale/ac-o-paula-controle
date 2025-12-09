@@ -5,37 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerenciar Colaboradores - SIGAP</title>
     
-    <!-- Ícone -->
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     
     <!-- Bibliotecas PDF -->
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.autotable.umd.min.js"></script>
     
-    <!-- Tailwind CSS (Visual Moderno) -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Fonte Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .hidden { display: none; }
-        
-        /* Animação de carregamento */
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #16a34a; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Ajuste para tabela com muitas colunas */
+        th, td { white-space: nowrap; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
 
-    <!-- Loading Overlay -->
     <div id="loading-overlay" class="fixed inset-0 bg-white bg-opacity-90 flex flex-col items-center justify-center z-50">
         <div class="loader mb-4"></div>
         <p class="text-gray-600 font-semibold">Carregando dados...</p>
     </div>
 
-    <!-- Cabeçalho -->
     <header class="bg-white shadow-sm sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -51,52 +47,47 @@
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
             
             <!-- COLUNA DA ESQUERDA: FORMULÁRIO -->
-            <div class="lg:col-span-1">
+            <div class="xl:col-span-1">
                 <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 sticky top-24">
                     <h2 id="form-title" class="text-xl font-bold text-gray-800 mb-6 border-b pb-2">Adicionar Colaborador</h2>
                     
                     <form id="colaborador-form" class="space-y-4">
-                        
-                        <!-- Nome -->
                         <div>
                             <label for="nome" class="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
                             <input type="text" id="nome" name="nome" required 
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition outline-none"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                                 placeholder="Ex: Maria da Silva">
                         </div>
 
-                        <!-- Telefone -->
                         <div>
                             <label for="telefone" class="block text-sm font-medium text-gray-700 mb-1">Telefone (WhatsApp)</label>
                             <input type="tel" id="telefone" name="telefone" required 
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition outline-none"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                                 placeholder="Ex: 21999998888">
                         </div>
 
-                        <!-- Transporte -->
                         <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                             <label class="block text-sm font-bold text-gray-700 mb-2">Deslocamento</label>
                             <div class="space-y-2">
                                 <label class="flex items-center cursor-pointer">
-                                    <input type="radio" id="nao-confirmado" name="transporte" value="Não Confirmado" checked class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300">
+                                    <input type="radio" id="nao-confirmado" name="transporte" value="Não Confirmado" checked class="h-4 w-4 text-green-600 focus:ring-green-500">
                                     <span class="ml-2 text-sm text-gray-700">Não Confirmado</span>
                                 </label>
                                 <label class="flex items-center cursor-pointer">
-                                    <input type="radio" id="meios-proprios" name="transporte" value="Meios Próprios" class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300">
+                                    <input type="radio" id="meios-proprios" name="transporte" value="Meios Próprios" class="h-4 w-4 text-green-600 focus:ring-green-500">
                                     <span class="ml-2 text-sm text-gray-700">Meios Próprios</span>
                                 </label>
                                 <label class="flex items-center cursor-pointer">
-                                    <input type="radio" id="com-empresa" name="transporte" value="Com a Empresa" class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300">
+                                    <input type="radio" id="com-empresa" name="transporte" value="Com a Empresa" class="h-4 w-4 text-green-600 focus:ring-green-500">
                                     <span class="ml-2 text-sm text-gray-700">Com a Empresa</span>
                                 </label>
                             </div>
                         </div>
 
-                        <!-- Local de Encontro (Condicional) -->
-                        <div id="local-encontro-group" class="hidden bg-blue-50 p-4 rounded-lg border border-blue-100 animation-fade">
+                        <div id="local-encontro-group" class="hidden bg-blue-50 p-4 rounded-lg border border-blue-100">
                             <label class="block text-sm font-bold text-blue-800 mb-2">Ponto de Encontro</label>
                             <div class="flex gap-4">
                                 <label class="flex items-center cursor-pointer">
@@ -110,15 +101,12 @@
                             </div>
                         </div>
 
-                        <!-- Observação (Condicional) -->
                         <div id="observacao-group" class="hidden">
                             <label for="observacao" class="block text-sm font-medium text-gray-700 mb-1">Observação</label>
                             <textarea id="observacao" name="observacao" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"></textarea>
                         </div>
 
-                        <!-- Botão Salvar -->
                         <button type="submit" id="submit-button" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition transform active:scale-95 flex justify-center items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                             Salvar Colaborador
                         </button>
                         
@@ -129,11 +117,16 @@
                 </div>
             </div>
 
-            <!-- COLUNA DA DIREITA: LISTA -->
-            <div class="lg:col-span-2">
+            <!-- COLUNA DA DIREITA: LISTA COMPLETA -->
+            <div class="xl:col-span-3">
                 <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+                    
+                    <!-- Topo da Lista -->
                     <div class="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <h2 class="text-xl font-bold text-gray-800">Lista de Presença</h2>
+                        <div class="flex flex-col">
+                            <h2 class="text-xl font-bold text-gray-800">Lista Completa</h2>
+                            <p id="stats-counter" class="text-sm text-gray-500">Total: 0</p>
+                        </div>
                         
                         <div class="flex gap-2">
                             <button id="download-pdf" class="bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold py-2 px-4 rounded-lg text-sm transition flex items-center gap-2">
@@ -147,26 +140,28 @@
                         </div>
                     </div>
 
+                    <!-- Tabela Responsiva com Scroll -->
                     <div class="overflow-x-auto">
                         <table id="colaboradores-list" class="w-full text-left text-sm text-gray-600">
-                            <thead class="bg-gray-50 text-gray-800 uppercase font-bold">
+                            <thead class="bg-gray-50 text-gray-800 uppercase font-bold text-xs">
                                 <tr>
-                                    <th class="px-6 py-4">Nome</th>
-                                    <th class="px-6 py-4">Deslocamento</th>
-                                    <th class="px-6 py-4 text-center">Presença</th>
-                                    <th class="px-6 py-4">Horário</th>
-                                    <th class="px-6 py-4">Contato</th>
-                                    <th class="px-6 py-4 text-right">Ações</th>
+                                    <th class="px-6 py-3">Nome</th>
+                                    <th class="px-6 py-3">Telefone</th>
+                                    <th class="px-6 py-3">Transporte</th>
+                                    <th class="px-6 py-3">Ponto Encontro</th>
+                                    <th class="px-6 py-3">Observação</th>
+                                    <th class="px-6 py-3 text-center">Presença</th>
+                                    <th class="px-6 py-3">Horário</th>
+                                    <th class="px-6 py-3 text-right">Ações</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-100">
-                                <!-- Linhas inseridas via JS -->
+                            <tbody class="divide-y divide-gray-100 bg-white">
+                                <!-- Linhas via JS -->
                             </tbody>
                         </table>
                     </div>
                     
-                    <!-- Mensagem de lista vazia -->
-                    <div id="empty-list-msg" class="hidden p-8 text-center text-gray-400">
+                    <div id="empty-list-msg" class="hidden p-12 text-center text-gray-400">
                         Nenhum colaborador adicionado ainda.
                     </div>
                 </div>
@@ -177,7 +172,7 @@
 
     <!-- Modal de Confirmação -->
     <div id="confirm-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden backdrop-blur-sm">
-        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition-all scale-100">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full">
             <h3 class="text-lg font-bold text-gray-800 mb-2">Confirmação</h3>
             <p id="modal-text" class="text-gray-600 mb-6">Tem certeza?</p>
             <div class="flex justify-end gap-3">
@@ -187,13 +182,11 @@
         </div>
     </div>
 
-<!-- Scripts Firebase (Compat) -->
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 
 <script>
-    // --- LÓGICA DO SISTEMA ---
     const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.firebasestorage.app", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25", measurementId: "G-8N6X36BC4M" };
 
     const app = firebase.initializeApp(firebaseConfig);
@@ -217,8 +210,9 @@
     const downloadPdfBtn = document.getElementById('download-pdf');
     const clearListBtn = document.getElementById('clear-list');
     const loadingOverlay = document.getElementById('loading-overlay');
+    const statsCounter = document.getElementById('stats-counter');
 
-    // Modal Elements
+    // Modal
     const confirmModal = document.getElementById('confirm-modal');
     const modalText = document.getElementById('modal-text');
     const confirmActionBtn = document.getElementById('confirm-action');
@@ -229,36 +223,24 @@
 
     if (!pautaId || !userId) {
         loadingOverlay.classList.add('hidden');
-        document.body.innerHTML = `
-            <div class="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-                <div class="bg-white p-8 rounded-xl shadow-lg text-center max-w-md">
-                    <h1 class="text-2xl font-bold text-red-600 mb-2">Acesso Negado</h1>
-                    <p class="text-gray-600 mb-6">Faltam parâmetros de segurança na URL.</p>
-                    <a href="index.html" class="inline-block bg-gray-800 text-white px-6 py-2 rounded-lg hover:bg-gray-900 transition">Ir para Home</a>
-                </div>
-            </div>`;
+        alert("Acesso inválido. Volte para o sistema principal.");
         throw new Error("Parâmetros inválidos.");
     }
 
-    // Autenticação e Listener
-    auth.signInWithCustomToken(userId).then(async (userCredential) => {
-        console.log("Conectado.");
+    auth.signInWithCustomToken(userId).then(async () => {
         const attendancesRef = db.collection('pautas').doc(pautaId).collection('attendances');
 
         attendancesRef.onSnapshot(async (snapshot) => {
             loadingOverlay.classList.add('hidden');
             const colaboradores = [];
             snapshot.forEach(doc => colaboradores.push({ id: doc.id, ...doc.data() }));
-            
-            // Ordenar por nome
             colaboradores.sort((a, b) => a.nome.localeCompare(b.nome));
             renderColaboradores(colaboradores);
         });
 
-        // Submit Form
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
-            const btnOriginalText = submitButton.innerHTML;
+            const btnOriginal = submitButton.innerHTML;
             submitButton.innerHTML = `<div class="loader w-5 h-5 border-2 border-white border-t-transparent mx-auto"></div>`;
             submitButton.disabled = true;
 
@@ -269,14 +251,12 @@
             const observacao = document.getElementById('observacao').value;
 
             const data = { nome, telefone, transporte, localEncontro, observacao, presente: false, horario: '--:--' };
-            // Se estiver editando, não sobrescreve presença/horário se não quiser (opcional)
-            if(editDocId) delete data.presente; 
-            if(editDocId) delete data.horario;
+            if(editDocId) { delete data.presente; delete data.horario; }
 
             try {
                 if (editDocId) {
                     await attendancesRef.doc(editDocId).update(data);
-                    showToast('Colaborador atualizado!');
+                    showToast('Atualizado com sucesso!');
                 } else {
                     await attendancesRef.add(data);
                     showToast('Colaborador adicionado!');
@@ -286,12 +266,11 @@
                 console.error(err);
                 alert("Erro ao salvar.");
             } finally {
-                submitButton.innerHTML = btnOriginalText;
+                submitButton.innerHTML = btnOriginal;
                 submitButton.disabled = false;
             }
         });
 
-        // Listeners da Lista (Check, Edit, Delete)
         function addEventListenersToListActions() {
             document.querySelectorAll('.checkin-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', async (e) => {
@@ -312,11 +291,9 @@
                         document.getElementById('nome').value = data.nome;
                         document.getElementById('telefone').value = data.telefone;
                         
-                        // Set Radio Transporte
                         const transRadio = document.querySelector(`input[name="transporte"][value="${data.transporte}"]`);
                         if(transRadio) { transRadio.checked = true; transRadio.dispatchEvent(new Event('change')); }
 
-                        // Set Radio Local
                         if(data.localEncontro) {
                             const localRadio = document.querySelector(`input[name="localEncontro"][value="${data.localEncontro}"]`);
                             if(localRadio) { localRadio.checked = true; localRadio.dispatchEvent(new Event('change')); }
@@ -329,7 +306,6 @@
                         submitButton.classList.replace('bg-green-600', 'bg-blue-600');
                         submitButton.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
                         cancelEditBtn.classList.remove('hidden');
-                        
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     }
                 });
@@ -338,45 +314,48 @@
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const docId = e.currentTarget.dataset.id;
-                    showConfirmModal(() => {
-                        attendancesRef.doc(docId).delete();
-                    }, "Tem certeza que deseja excluir este colaborador?");
+                    showConfirmModal(() => attendancesRef.doc(docId).delete(), "Excluir este colaborador?");
                 });
             });
         }
 
-        // PDF Generation
         downloadPdfBtn.addEventListener('click', async () => {
             const snapshot = await attendancesRef.get();
             const list = [];
-            snapshot.forEach(doc => list.push({ ...doc.data() }));
+            snapshot.forEach(doc => list.push(doc.data()));
             
-            const presentes = list.filter(c => c.presente);
-            if (presentes.length === 0) { alert('Ninguém marcou presença ainda.'); return; }
+            // Para PDF, vamos incluir todos, mas ordenar por presença
+            list.sort((a, b) => (a.presente === b.presente) ? 0 : a.presente ? -1 : 1);
 
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            const doc = new jsPDF({ orientation: 'landscape' }); // Paisagem para caber tudo
             
             doc.setFontSize(18);
-            doc.setTextColor(40);
-            doc.text("Lista de Presença Confirmada", 14, 20);
+            doc.text("Relatório Completo de Colaboradores", 14, 20);
             
-            const tableBody = presentes.map(c => {
-                const desloc = c.transporte === 'Com a Empresa' ? `${c.transporte} (${c.localEncontro})` : c.transporte;
-                return [c.nome, desloc, c.horario];
-            });
+            // Colunas expandidas no PDF
+            const tableBody = list.map(c => [
+                c.nome,
+                c.telefone,
+                c.transporte,
+                c.localEncontro || '-',
+                c.observacao || '-',
+                c.presente ? 'Sim' : 'Não',
+                c.horario
+            ]);
 
             doc.autoTable({
-                head: [['Nome', 'Deslocamento', 'Chegada']],
+                head: [['Nome', 'Telefone', 'Transporte', 'Ponto Enc.', 'Obs.', 'Presente', 'Chegada']],
                 body: tableBody,
                 startY: 30,
                 headStyles: { fillColor: [22, 160, 133] },
+                styles: { fontSize: 8 },
+                columnStyles: { 4: { cellWidth: 50 } }, // Ajuste para obs longa
                 theme: 'grid'
             });
-            doc.save('presenca.pdf');
+            doc.save('colaboradores_completo.pdf');
         });
 
-        // Limpar Lista
         clearListBtn.addEventListener('click', () => {
             showConfirmModal(async () => {
                 const snapshot = await attendancesRef.get();
@@ -384,13 +363,13 @@
                 snapshot.forEach(doc => batch.delete(doc.ref));
                 await batch.commit();
                 resetForm();
-                showToast("Lista limpa com sucesso!");
-            }, "Isso apagará TODOS os colaboradores da lista. Confirma?");
+                showToast("Lista limpa!");
+            }, "Apagar TODA a lista?");
         });
 
-        // --- RENDER ---
         function renderColaboradores(lista) {
             colaboradoresListBody.innerHTML = '';
+            statsCounter.textContent = `Total: ${lista.length} | Presentes: ${lista.filter(c => c.presente).length}`;
             
             if (lista.length === 0) {
                 emptyListMsg.classList.remove('hidden');
@@ -403,36 +382,32 @@
 
             lista.forEach(c => {
                 const tr = document.createElement('tr');
-                tr.className = "border-b border-gray-50 hover:bg-gray-50 transition";
+                tr.className = "border-b border-gray-50 hover:bg-gray-50 transition group";
                 
-                let desloc = c.transporte;
-                let badgeColor = 'bg-gray-100 text-gray-600';
-                if(c.transporte === 'Com a Empresa') {
-                    desloc += ` <span class="text-xs font-bold text-blue-600 block">(${c.localEncontro})</span>`;
-                    badgeColor = 'bg-blue-50 text-blue-700 border border-blue-100';
-                } else if (c.transporte === 'Meios Próprios') {
-                    badgeColor = 'bg-orange-50 text-orange-700 border border-orange-100';
-                }
+                let transBadge = c.transporte;
+                let transClass = 'bg-gray-100 text-gray-600';
+                if(c.transporte === 'Com a Empresa') transClass = 'bg-blue-50 text-blue-700';
+                else if(c.transporte === 'Meios Próprios') transClass = 'bg-orange-50 text-orange-700';
 
                 tr.innerHTML = `
-                    <td class="px-6 py-4 font-medium text-gray-900">${c.nome}</td>
-                    <td class="px-6 py-4"><span class="px-2 py-1 rounded-md text-xs ${badgeColor}">${desloc}</span></td>
+                    <td class="px-6 py-4 font-bold text-gray-800">${c.nome}</td>
+                    <td class="px-6 py-4 text-gray-600">${c.telefone}</td>
+                    <td class="px-6 py-4"><span class="px-2 py-1 rounded-md text-xs ${transClass}">${transBadge}</span></td>
+                    <td class="px-6 py-4 text-gray-500">${c.localEncontro || '-'}</td>
+                    <td class="px-6 py-4 text-xs text-gray-500 max-w-xs truncate" title="${c.observacao || ''}">${c.observacao || '-'}</td>
                     <td class="px-6 py-4 text-center">
-                        <input type="checkbox" class="checkin-checkbox w-5 h-5 text-green-600 rounded focus:ring-green-500 border-gray-300 cursor-pointer" 
+                        <input type="checkbox" class="checkin-checkbox w-5 h-5 text-green-600 rounded focus:ring-green-500 cursor-pointer" 
                             data-id="${c.id}" ${c.presente ? 'checked' : ''}>
                     </td>
-                    <td class="px-6 py-4 font-mono text-xs">${c.horario}</td>
-                    <td class="px-6 py-4">
-                        <a href="https://wa.me/55${c.telefone.replace(/\D/g, '')}?text=Olá" target="_blank" class="text-green-600 hover:text-green-800 font-bold flex items-center gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592z"/></svg>
-                            Zap
+                    <td class="px-6 py-4 font-mono text-xs text-blue-600 font-bold">${c.horario}</td>
+                    <td class="px-6 py-4 text-right flex justify-end gap-2">
+                        <a href="https://wa.me/55${c.telefone.replace(/\D/g, '')}" target="_blank" class="p-1 text-green-500 hover:text-green-700" title="WhatsApp">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326z"/></svg>
                         </a>
-                    </td>
-                    <td class="px-6 py-4 text-right">
-                        <button class="edit-btn p-1 text-gray-500 hover:text-blue-600 transition" data-id="${c.id}" title="Editar">
+                        <button class="edit-btn p-1 text-gray-400 hover:text-blue-600" data-id="${c.id}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         </button>
-                        <button class="delete-btn p-1 text-gray-500 hover:text-red-600 transition ml-2" data-id="${c.id}" title="Excluir">
+                        <button class="delete-btn p-1 text-gray-400 hover:text-red-600" data-id="${c.id}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                         </button>
                     </td>
@@ -442,26 +417,18 @@
             addEventListenersToListActions();
         }
 
-    }).catch(err => {
-        console.error(err);
-        loadingOverlay.innerHTML = '<p class="text-red-500">Erro de conexão.</p>';
-    });
+    }).catch(err => console.error(err));
 
-    // --- INTERAÇÕES DO FORM ---
-    transporteOptions.forEach(opt => {
-        opt.addEventListener('change', (e) => {
-            const isEmpresa = e.target.value === 'Com a Empresa';
-            localEncontroGroup.classList.toggle('hidden', !isEmpresa);
-            observacaoGroup.classList.add('hidden');
-            if(!isEmpresa) document.querySelectorAll('input[name="localEncontro"]').forEach(r => r.checked = false);
-        });
-    });
+    transporteOptions.forEach(opt => opt.addEventListener('change', (e) => {
+        const isEmpresa = e.target.value === 'Com a Empresa';
+        localEncontroGroup.classList.toggle('hidden', !isEmpresa);
+        observacaoGroup.classList.add('hidden');
+        if(!isEmpresa) document.querySelectorAll('input[name="localEncontro"]').forEach(r => r.checked = false);
+    }));
 
-    document.querySelectorAll('input[name="localEncontro"]').forEach(opt => {
-        opt.addEventListener('change', (e) => {
-            observacaoGroup.classList.toggle('hidden', e.target.value !== 'Meio do Caminho');
-        });
-    });
+    document.querySelectorAll('input[name="localEncontro"]').forEach(opt => opt.addEventListener('change', (e) => {
+        observacaoGroup.classList.toggle('hidden', e.target.value !== 'Meio do Caminho');
+    }));
 
     cancelEditBtn.addEventListener('click', resetForm);
 
@@ -469,33 +436,22 @@
         form.reset();
         editDocId = null;
         formTitle.textContent = "Adicionar Colaborador";
-        submitButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar Colaborador`;
+        submitButton.innerHTML = "Salvar Colaborador";
         submitButton.classList.replace('bg-blue-600', 'bg-green-600');
-        submitButton.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
         cancelEditBtn.classList.add('hidden');
         localEncontroGroup.classList.add('hidden');
         observacaoGroup.classList.add('hidden');
     }
 
-    // --- MODAL LÓGICA ---
     function showConfirmModal(callback, msg) {
         modalText.innerHTML = msg;
         confirmModal.classList.remove('hidden');
         actionToConfirm = callback;
     }
 
-    confirmActionBtn.addEventListener('click', () => {
-        if (actionToConfirm) actionToConfirm();
-        confirmModal.classList.add('hidden');
-        actionToConfirm = null;
-    });
-
-    cancelActionBtn.addEventListener('click', () => {
-        confirmModal.classList.add('hidden');
-        actionToConfirm = null;
-    });
+    confirmActionBtn.addEventListener('click', () => { if(actionToConfirm) actionToConfirm(); confirmModal.classList.add('hidden'); });
+    cancelActionBtn.addEventListener('click', () => { confirmModal.classList.add('hidden'); });
     
-    // Toast Simples
     function showToast(msg) {
         const toast = document.createElement('div');
         toast.className = "fixed bottom-5 right-5 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-bounce";
