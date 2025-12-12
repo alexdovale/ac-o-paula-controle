@@ -1,10 +1,3 @@
-O erro `[object Object]` acontece porque, quando você seleciona um colaborador da lista, o sistema está salvando um **objeto completo** (com nome, cargo e equipe) no banco de dados, mas na hora de mostrar na tela de "Atendidos", o código estava tentando exibir esse objeto como se fosse um **texto simples**.
-
-Fiz a correção na função de renderização. Agora o sistema verifica: se for um texto, exibe o texto; se for um objeto com dados do colaborador, ele extrai apenas o **nome**.
-
-Aqui está o código **completo e corrigido** do `index.html`.
-
-```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -4234,5 +4227,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
 
