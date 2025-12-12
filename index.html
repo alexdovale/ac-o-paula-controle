@@ -1,3 +1,10 @@
+O erro `[object Object]` acontece porque, quando você seleciona um colaborador da lista, o sistema está salvando um **objeto completo** (com nome, cargo e equipe) no banco de dados, mas na hora de mostrar na tela de "Atendidos", o código estava tentando exibir esse objeto como se fosse um **texto simples**.
+
+Fiz a correção na função de renderização. Agora o sistema verifica: se for um texto, exibe o texto; se for um objeto com dados do colaborador, ele extrai apenas o **nome**.
+
+Aqui está o código **completo e corrigido** do `index.html`.
+
+```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -326,6 +333,20 @@
                     <div id="em-atendimento-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
                 <!-- Fim da Nova Coluna: Em Atendimento -->
+
+                <!-- NOVA COLUNA: AGUARDANDO DISTRIBUIÇÃO -->
+                <div id="distribuicao-column" class="bg-white rounded-lg shadow-md flex flex-col hidden">
+                    <div class="p-4 border-b border-gray-200 bg-cyan-50 rounded-t-lg">
+                        <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
+                            <span>⚖️ Aguardando Distribuição</span>
+                            <span id="distribuicao-count" class="text-base font-normal bg-white text-gray-700 px-2 rounded-full border">0</span>
+                        </h3>
+                        <input type="search" id="distribuicao-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-cyan-500">
+                    </div>
+                    <div id="distribuicao-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                </div>
+                <!-- Fim da Nova Coluna -->
+
                 <div id="atendidos-column" class="bg-white rounded-lg shadow-md flex flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <div class="flex justify-between items-center mb-3">
@@ -544,6 +565,20 @@
                         <span class="block text-sm text-gray-500">Permite atribuir e delegar a finalização para outro colaborador.</span>
                     </span>
                 </label>
+                
+                <!-- SUB-OPÇÃO: Distribuição (Só aparece se Delegação estiver marcada) -->
+                <div id="distribution-option-container" class="p-4 border-x border-b rounded-b-lg bg-white ml-8 border-t-0">
+                    <label class="flex items-start space-x-3 cursor-pointer">
+                        <input type="checkbox" id="check-use-distribution" class="h-5 w-5 text-cyan-600 focus:ring-cyan-500 rounded mt-1">
+                        <div class="flex-1">
+                            <span class="font-semibold text-gray-700 block">Habilitar Fila de Distribuição?</span>
+                            <span class="text-xs text-gray-500">Adiciona a coluna "Aguardando Distribuição" para processos que precisam de assinatura/protocolo antes de finalizar.</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="mt-4">
                 <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
                     <input type="radio" name="useDelegationFlow" value="false" class="h-5 w-5 text-red-600 focus:ring-red-500">
                     <span class="ml-3">
@@ -552,6 +587,7 @@
                     </span>
                 </label>
             </div>
+
             <div class="flex justify-end space-x-4 mt-6">
                 <button id="cancel-delegation-flow-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Voltar</button>
                 <button id="confirm-create-pauta-final-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Criar Pauta</button>
@@ -559,6 +595,24 @@
         </div>
     </div>
     <!-- FIM NOVO MODAL -->
+
+    <!-- Modal de Conclusão de Distribuição -->
+    <div id="distribution-finish-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4 text-cyan-800">Concluir Distribuição</h2>
+            <p class="mb-4 text-gray-600">O processo foi distribuído. Por favor, insira o número (opcional).</p>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Número do Processo</label>
+                <input type="text" id="dist-process-number" placeholder="0000.00.00.0000" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500">
+            </div>
+
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-dist-finish-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-dist-finish-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700">Salvar e Finalizar</button>
+            </div>
+        </div>
+    </div>
 
     <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh;">
@@ -986,6 +1040,34 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 </div>
             </div>
         </div>
+    </div>
+    <div id="address-editor-container" class="mt-8 p-4 bg-gray-50 rounded-lg border hidden">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">Endereço da Parte Contrária (Réu)</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-1">
+            <label for="cep-reu" class="block text-sm font-medium text-gray-700">CEP</label>
+            <input type="text" id="cep-reu" placeholder="Digite o CEP" maxlength="9" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+        </div>
+        <div class="md:col-span-2">
+            <label for="rua-reu" class="block text-sm font-medium text-gray-700">Rua/Avenida</label>
+            <input type="text" id="rua-reu" placeholder="Rua será preenchida" class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-200" readonly>
+        </div>
+        <div class="md:col-span-1">
+            <label for="numero-reu" class="block text-sm font-medium text-gray-700">Número</label>
+            <input type="text" id="numero-reu" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+        </div>
+        <div class="md:col-span-1">
+            <label for="bairro-reu" class="block text-sm font-medium text-gray-700">Bairro</label>
+            <input type="text" id="bairro-reu" class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-200" readonly>
+        </div>
+        <div class="md:col-span-1">
+            <label for="cidade-reu" class="block text-sm font-medium text-gray-700">Cidade/UF</label>
+            <div class="flex gap-2">
+                <input type="text" id="cidade-reu" class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-200" readonly>
+                <input type="text" id="estado-reu" maxlength="2" class="mt-1 block w-1/3 p-2 border border-gray-300 rounded-md bg-gray-200" readonly>
+            </div>
+        </div>
+    </div>
 </div>
     <!-- ***** FIM DO HTML DO MODAL DE DETALHES ***** -->
     
@@ -1615,6 +1697,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 card.className = 'relative bg-green-50 p-4 rounded-lg shadow-sm border-green-200';
                 const totalAssuntos = 1 + (a.demandas?.quantidade ? Number(a.demandas.quantidade) : 0);
                 const demandasInfo = a.demandas?.descricoes?.length > 0 ? `<div class="mt-2 text-xs bg-gray-100 p-2 rounded"><strong class="text-gray-700">Demandas Adicionais (${a.demandas.quantidade || 0}):</strong><ul class="list-disc list-inside pl-2 text-gray-600">${a.demandas.descricoes.map(d => `<li>${d}</li>`).join('')}</ul></div>` : '';
+                
+                // CORREÇÃO: Verificação do Tipo de Objeto para o Atendente
+                let attendantNameDisplay = 'Não informado';
+                if (a.attendant) {
+                    if (typeof a.attendant === 'object' && a.attendant !== null) {
+                        attendantNameDisplay = a.attendant.nome || a.attendant.name || 'Sem nome';
+                    } else {
+                        attendantNameDisplay = a.attendant;
+                    }
+                }
+                
                 card.innerHTML = `
                     <div class="flex items-center justify-between">
                         <p class="font-bold text-lg inline-flex items-center">
@@ -1634,7 +1727,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         </div>
                         ${demandasInfo}
                         <div class="flex justify-between items-center mt-2">
-                            <p class="text-sm">Por: <strong>${a.attendant || 'Não informado'}</strong></p>
+                            <p class="text-sm">Por: <strong>${attendantNameDisplay}</strong></p>
                             <div class="flex items-center gap-1 flex-wrap">
                                 <button data-id="${a.id}" class="manage-demands-btn text-blue-600 hover:text-blue-800 font-semibold text-xs py-1 px-2 rounded hover:bg-blue-100">Demandas</button>
                                 <button data-id="${a.id}" class="edit-assisted-btn text-gray-600 hover:text-gray-800 font-semibold text-xs py-1 px-2 rounded hover:bg-gray-100">Dados</button>
@@ -4141,4 +4234,5 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 </body>
 </html>
+
 
