@@ -1,234 +1,249 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manual do Usuário - SIGEP</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        .container {
-            max-width: 800px;
-        }
-        h1, h2, h3 {
-            font-weight: 700;
-        }
-        h2 {
-            border-bottom: 2px solid #e5e7eb;
-            padding-bottom: 8px;
-            margin-top: 2rem;
-        }
-        h3 {
-            margin-top: 1.5rem;
-        }
-        p, li {
-            line-height: 1.6;
-            color: #374151;
-        }
-        strong {
-            color: #111827;
-        }
-        code {
-            background-color: #e5e7eb;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: monospace;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #334155; }
+        /* Estilos para a barra de rolagem fina */
+        aside::-webkit-scrollbar { width: 5px; }
+        aside::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        h1, h2, h3 { color: #1e293b; }
+        .wiki-link { @apply block px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-green-50 hover:text-green-700 transition; }
+        .wiki-link.active { @apply bg-green-100 text-green-800 font-bold; }
+        .section-title { @apply text-2xl font-bold border-b pb-2 mb-4 mt-8 text-green-800; }
+        .sub-title { @apply text-lg font-bold mt-6 mb-2 text-gray-800; }
+        p { @apply mb-4 leading-relaxed; }
+        ul { @apply list-disc ml-6 mb-4 space-y-1; }
+        ol { @apply list-decimal ml-6 mb-4 space-y-1; }
+        code { @apply bg-gray-100 text-red-600 px-1 rounded text-sm font-mono; }
+        .note-box { @apply bg-blue-50 border-l-4 border-blue-500 p-4 text-blue-700 mb-4 text-sm; }
+        .warning-box { @apply bg-yellow-50 border-l-4 border-yellow-500 p-4 text-yellow-800 mb-4 text-sm; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body class="flex flex-col h-screen overflow-hidden">
 
-    <div class="container mx-auto p-4 sm:p-6 md:p-8">
+    <!-- Cabeçalho -->
+    <header class="bg-white border-b h-16 flex items-center justify-between px-6 shadow-sm z-10 flex-shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="bg-green-600 text-white p-2 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+            </div>
+            <h1 class="text-xl font-bold tracking-tight">SIGEP <span class="text-gray-400 font-normal">| Manual do Usuário</span></h1>
+        </div>
+        <button onclick="window.close()" class="text-sm font-semibold text-gray-500 hover:text-red-600 flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            Fechar
+        </button>
+    </header>
 
-        <header class="text-center mb-10">
-            <img src="https://i.imgur.com/uG9uYAL.png" alt="Logo SIGEP" class="mx-auto mb-4 w-48">
-            <h1 class="text-4xl font-bold text-gray-900">Manual do Usuário</h1>
-            <p class="text-xl text-gray-600 mt-2">Sistema de Gerenciamento de Pauta (SIGEP)</p>
-        </header>
-
-        <nav class="bg-white p-6 rounded-lg shadow-md mb-12">
-            <h2 class="text-2xl font-bold mb-4">Sumário</h2>
-            <ul class="list-none space-y-2">
-                <li><a href="#introducao" class="text-blue-600 hover:underline">1. Introdução</a></li>
-                <li><a href="#primeiros-passos" class="text-blue-600 hover:underline">2. Primeiros Passos: Acesso ao Sistema</a></li>
-                <li><a href="#tela-principal" class="text-blue-600 hover:underline">3. Tela Principal: Minhas Pautas</a></li>
-                <li><a href="#interface-gerenciamento" class="text-blue-600 hover:underline">4. A Interface de Gerenciamento da Pauta</a></li>
-                <li><a href="#fluxo-atendimento" class="text-blue-600 hover:underline">5. Gerenciando o Fluxo de Atendimento</a></li>
-                <li><a href="#funcionalidades-avancadas" class="text-blue-600 hover:underline">6. Funcionalidades Avançadas (Menu "Ações")</a></li>
-                <li><a href="#politica-privacidade" class="text-blue-600 hover:underline">7. Política de Privacidade</a></li>
-                <li><a href="#suporte" class="text-blue-600 hover:underline">8. Suporte</a></li>
-            </ul>
-        </nav>
-
-        <main>
-            <section id="introducao">
-                <h2 class="text-3xl mb-4">1. Introdução</h2>
-                <p>Bem-vindo ao SIGEP, o Sistema de Gerenciamento de Pauta. Esta ferramenta foi desenvolvida para otimizar e organizar o fluxo de atendimentos, permitindo um controle em tempo real de quem está agendado, quem aguarda, quem está sendo atendido e quem já finalizou. Este manual irá guiá-lo por todas as funcionalidades do sistema.</p>
-            </section>
-
-            <section id="primeiros-passos">
-                <h2 class="text-3xl mb-4">2. Primeiros Passos: Acesso ao Sistema</h2>
-                <p>A tela inicial permite que você acesse sua conta ou crie uma nova.</p>
-                
-                <h3 class="text-2xl mb-2">2.1. Login</h3>
-                <ul class="list-disc list-inside space-y-1 ml-4">
-                    <li>Acesse a aba <strong>"Login"</strong>.</li>
-                    <li>Digite seu e-mail e senha cadastrados.</li>
-                    <li>Clique em <strong>"Entrar"</strong>.</li>
-                </ul>
-
-                <h3 class="text-2xl mb-2">2.2. Cadastro de Novo Usuário</h3>
-                <ul class="list-disc list-inside space-y-1 ml-4">
-                    <li>Acesse a aba <strong>"Cadastrar"</strong>.</li>
-                    <li>Preencha seu nome completo, e-mail e crie uma senha (mínimo de 6 caracteres).</li>
-                    <li>Clique em <strong>"Criar Conta"</strong>.</li>
-                    <li class="pl-4 border-l-4 border-blue-200">Após o cadastro, sua conta passará por um processo de aprovação pelo administrador do sistema. Você será notificado quando o acesso for liberado.</li>
-                </ul>
-
-                <h3 class="text-2xl mb-2">2.3. Recuperação de Senha</h3>
-                 <ul class="list-disc list-inside space-y-1 ml-4">
-                    <li>Na aba "Login", clique em <strong>"Esqueci minha senha"</strong>.</li>
-                    <li>Digite seu e-mail de cadastro. Um link para redefinição de senha será enviado para o seu e-mail.</li>
-                </ul>
-            </section>
-
-            <section id="tela-principal">
-                <h2 class="text-3xl mb-4">3. Tela Principal: Minhas Pautas</h2>
-                <p>Após o login, você verá a tela "Minhas Pautas", que lista todas as pautas que você criou ou das quais participa.</p>
-                
-                <h3 class="text-2xl mb-2">3.1. Criando uma Nova Pauta</h3>
-                <ul class="list-disc list-inside space-y-2 ml-4">
-                    <li>Clique no botão <strong>"Criar Nova Pauta"</strong>.</li>
-                    <li><strong>Tipo de Pauta:</strong> Escolha entre "Atendimento Agendado" ou "Atendimento Avulso".</li>
-                    <li><strong>Nome da Pauta:</strong> Dê um nome claro para a pauta (ex: "Ação Social Caxias - 10/10/2025").</li>
-                    <li><strong>Ordem de Atendimento:</strong>
-                        <ul class="list-circle list-inside ml-6">
-                           <li><strong>Padrão do Sistema (Recomendado):</strong> Organiza a fila por um sistema de prioridades baseado na pontualidade.</li>
-                           <li><strong>Ordem de Chegada:</strong> Organiza a fila estritamente pelo horário em que a chegada foi registrada.</li>
-                        </ul>
-                    </li>
-                     <li><strong>Fluxo de Atendimento:</strong>
-                        <ul class="list-circle list-inside ml-6">
-                           <li><strong>Sim, usar fluxo de delegação:</strong> Habilita a coluna "Em Atendimento".</li>
-                           <li><strong>Não, finalizar diretamente:</strong> O assistido vai da coluna "Aguardando" direto para "Atendidos".</li>
-                        </ul>
-                    </li>
-                    <li>Clique em <strong>"Criar Pauta"</strong>.</li>
-                </ul>
-
-                <h3 class="text-2xl mb-2">3.2. Acessando uma Pauta Existente</h3>
-                <p>Clique no card da pauta desejada para abri-la e iniciar o gerenciamento.</p>
-
-                <h3 class="text-2xl mb-2">3.3. Excluindo uma Pauta</h3>
-                <p>Clique no ícone de lixeira no canto superior direito do card da pauta. Uma confirmação será solicitada antes da exclusão permanente.</p>
-            </section>
-
-            <section id="interface-gerenciamento">
-                <h2 class="text-3xl mb-4">4. A Interface de Gerenciamento da Pauta</h2>
-                <p>Dentro de uma pauta, você encontrará a interface principal de gerenciamento, no estilo Kanban.</p>
-
-                <h3 class="text-2xl mb-2">4.1. Cabeçalho e Ações Principais</h3>
-                 <ul class="list-disc list-inside space-y-1 ml-4">
-                    <li><strong>Título da Pauta:</strong> Exibe o nome da pauta ativa.</li>
-                    <li><strong>Botão "Voltar":</strong> Retorna à tela "Minhas Pautas".</li>
-                    <li><strong>Botão "Ações":</strong> Abre um menu com funcionalidades avançadas (detalhado na seção 6).</li>
-                    <li><strong>Botão "Sair":</strong> Desconecta você do sistema.</li>
-                </ul>
-
-                <h3 class="text-2xl mb-2">4.2. Adicionando Assistidos</h3>
-                 <ul class="list-disc list-inside space-y-1 ml-4">
-                    <li><strong>Nome do Assistido:</strong> Campo obrigatório.</li>
-                    <li><strong>CPF:</strong> Opcional.</li>
-                    <li><strong>Matéria - Assunto:</strong> Digite ou selecione o assunto jurídico.</li>
-                    <li><strong>Horário Agendado:</strong> Se aplicável, defina o horário.</li>
-                    <li><strong>Assistido já chegou?:</strong> Marque "Sim" para enviá-lo diretamente para a coluna "Aguardando". Se marcar "Não", ele irá para a coluna "Pauta".</li>
-                    <li>Clique em <strong>"Adicionar"</strong>.</li>
-                </ul>
-                
-                <h3 class="text-2xl mb-2">4.3. Importando Pauta via Arquivo CSV</h3>
-                 <ul class="list-disc list-inside space-y-1 ml-4">
-                    <li>Clique em <strong>"Carregar Pauta (CSV)"</strong>.</li>
-                    <li>Selecione um arquivo <code>.csv</code> do seu computador.</li>
-                    <li>O arquivo deve ter 4 colunas, separadas por ponto e vírgula <code>;</code>, na seguinte ordem: <code>Nome Completo;HH:MM;Assunto;CPF(opcional)</code>.</li>
-                    <li>Clique no link <strong>"Como converter minha pauta?"</strong> para ver um exemplo detalhado.</li>
-                </ul>
-            </section>
-
-            <section id="fluxo-atendimento">
-                <h2 class="text-3xl mb-4">5. Gerenciando o Fluxo de Atendimento (Colunas Kanban)</h2>
-                <p>O fluxo é dividido em colunas. Cada assistido é representado por um card que pode ser movido entre as colunas.</p>
-                
-                <h3 class="text-2xl mb-2">5.1. Coluna 📋 Pauta</h3>
-                <p><strong>O que é:</strong> Lista os assistidos agendados que ainda não chegaram.</p>
-                <p><strong>Ações:</strong> Marcar Chegada, Faltou, Editar Dados, Excluir.</p>
-
-                <h3 class="text-2xl mb-2">5.2. Coluna ⏳ Aguardando Atendimento</h3>
-                <p><strong>O que é:</strong> A fila de espera, com assistidos que já chegaram.</p>
-                <p><strong>Ações:</strong> Atender, Prioridade, Editar, Voltar p/ Pauta.</p>
-
-                <h3 class="text-2xl mb-2">5.3. Coluna 👩‍💻 Em Atendimento</h3>
-                <p><strong>O que é:</strong> (Visível apenas se o fluxo de delegação estiver ativo) Mostra quem está sendo atendido e por qual colaborador.</p>
-                <p><strong>Ações:</strong> Delegar Finalização, Finalizar Diretamente, Voltar p/ Aguardando.</p>
-
-                <h3 class="text-2xl mb-2">5.4. Coluna ✅ Atendidos</h3>
-                <p><strong>O que é:</strong> Histórico de todos os atendimentos finalizados.</p>
-                <p><strong>Ações:</strong> Baixar PDF, Confirmação (✔), Demandas, Editar (Atendente/Dados), Voltar.</p>
-
-                <h3 class="text-2xl mb-2">5.5. Coluna 🚫 Faltosos</h3>
-                <p><strong>O que é:</strong> Lista de assistidos agendados que não compareceram.</p>
-                <p><strong>Ações:</strong> Revertido para Pauta, Confirmação (✔).</p>
-            </section>
-
-            <section id="funcionalidades-avancadas">
-                <h2 class="text-3xl mb-4">6. Funcionalidades Avançadas (Menu "Ações")</h2>
-                
-                <h3 class="text-2xl mb-2">6.1. Editar Nome da Pauta</h3>
-                <p>Permite renomear a pauta atual.</p>
-                
-                <h3 class="text-2xl mb-2">6.2. Compartilhar (Gerenciar Membros)</h3>
-                <p>Convide outros usuários para visualizar e editar a pauta em tempo real.</p>
-                
-                <h3 class="text-2xl mb-2">6.3. Fechar e Reabrir Pauta</h3>
-                <p>Bloqueia ou desbloqueia a pauta para edições, exigindo confirmação por senha.</p>
-                
-                <h3 class="text-2xl mb-2">6.4. Zerar Pauta</h3>
-                <p>Exclui todos os registros de assistidos da pauta atual. Ação irreversível.</p>
-
-                <h3 class="text-2xl mb-2">6.5. Colaboradores (Lista de Presença)</h3>
-                <p>Gerencie a equipe de campo: adicione membros, marque presença e gere um PDF com a lista.</p>
-
-                <h3 class="text-2xl mb-2">6.6. Anotações</h3>
-                <p>Um bloco de notas privado para lembretes, salvo localmente no seu navegador.</p>
-            </section>
-            
-            <section id="politica-privacidade">
-                <h2 class="text-3xl mb-4">7. Política de Privacidade</h2>
-                 <ul class="list-disc list-inside space-y-2 ml-4">
-                    <li><strong>Natureza dos Dados:</strong> O sistema é uma interface de controle de fluxo para gestão do atendimento.</li>
-                    <li><strong>Ciclo de Vida:</strong> Os dados dos assistidos permanecem no SIGAP por <strong>sete dias</strong> e depois são permanentemente excluídos. O armazenamento definitivo é responsabilidade do sistema Verde da DPERJ.</li>
-                    <li><strong>Dados Coletados dos Usuários:</strong> Apenas e-mail e senha para autenticação.</li>
-                    <li><strong>Origem dos Dados:</strong> Importados do sistema Verde ou cadastrados diretamente no SIGAP.</li>
-                    <li><strong>Direitos dos Titulares:</strong> Devem ser exercidos diretamente junto ao sistema Verde.</li>
-                </ul>
-            </section>
-
-            <section id="suporte">
-                <h2 class="text-3xl mb-4">8. Suporte</h2>
-                <p>Para dúvidas, sugestões ou problemas técnicos, entre em contato com o administrador do sistema.</p>
-            </section>
-        </main>
+    <div class="flex flex-1 overflow-hidden">
         
-        <footer class="text-center mt-12 pt-8 border-t">
-            <p class="text-gray-500">&copy; 2025 SIGEP. Todos os direitos reservados.</p>
-        </footer>
+        <!-- Sidebar de Navegação (Menu) -->
+        <aside class="w-64 bg-white border-r overflow-y-auto hidden md:block flex-shrink-0 p-4">
+            <nav class="space-y-1">
+                <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Introdução</p>
+                <a href="#inicio" class="wiki-link">Visão Geral</a>
+                <a href="#acesso" class="wiki-link">Acesso e Cadastro</a>
 
+                <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Gestão de Pautas</p>
+                <a href="#criar-pauta" class="wiki-link">Criar e Entrar</a>
+                <a href="#configuracoes" class="wiki-link">Configurações</a>
+
+                <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Fluxo de Atendimento</p>
+                <a href="#adicionar-assistido" class="wiki-link">Adicionar Assistido</a>
+                <a href="#kanban" class="wiki-link">Quadro Kanban</a>
+                <a href="#prioridades" class="wiki-link">Regras de Prioridade</a>
+
+                <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Documentação</p>
+                <a href="#checklist" class="wiki-link">Checklist de Documentos</a>
+                <a href="#dados-reu" class="wiki-link">Dados do Réu</a>
+                <a href="#despesas" class="wiki-link">Planilha de Despesas</a>
+                
+                <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Ferramentas Avançadas</p>
+                <a href="#estatisticas" class="wiki-link">Estatísticas (PDF)</a>
+                <a href="#tv-publica" class="wiki-link">Painel de TV</a>
+                <a href="#delegacao" class="wiki-link">Delegação Remota</a>
+                <a href="#anotacoes" class="wiki-link">Anotações e E-mail</a>
+            </nav>
+        </aside>
+
+        <!-- Área de Conteúdo -->
+        <main class="flex-1 overflow-y-auto p-8 scroll-smooth" id="content-area">
+            
+            <!-- SEÇÃO INICIAL -->
+            <section id="inicio" class="mb-12">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">Bem-vindo ao SIGEP</h2>
+                <p class="text-lg text-gray-600">O <strong>SIGEP (Sistema de Gerenciamento de Pauta)</strong> é a solução definitiva para organizar o fluxo de atendimento da Defensoria Pública. Projetado para substituir planilhas manuais e filas desordenadas, ele oferece um controlo visual e em tempo real de cada etapa do processo jurídico.</p>
+                
+                <div class="note-box">
+                    <strong>Dica de Navegação:</strong> Use o menu lateral para ir direto ao tópico desejado. Em dispositivos móveis, o conteúdo é apresentado em fluxo contínuo.
+                </div>
+            </section>
+
+            <!-- SEÇÃO ACESSO -->
+            <section id="acesso" class="mb-12">
+                <h2 class="section-title">Acesso e Cadastro</h2>
+                <p>O sistema possui controle de acesso rigoroso para garantir a segurança dos dados sensíveis.</p>
+                
+                <h3 class="sub-title">1. Primeiro Acesso</h3>
+                <ol>
+                    <li>Na tela de login, clique no link <strong>"Não tem conta? Cadastre-se"</strong>.</li>
+                    <li>Informe seu <strong>Nome Completo</strong>, <strong>E-mail Institucional</strong> e crie uma senha forte (mínimo 6 caracteres).</li>
+                    <li>Ao confirmar, sua conta entrará em estado de <code>Aprovação Pendente</code>.</li>
+                </ol>
+
+                <div class="warning-box">
+                    <strong>Importante:</strong> Você não conseguirá acessar as pautas até que um Administrador aprove o seu cadastro no painel de controle.
+                </div>
+
+                <h3 class="sub-title">2. Recuperação de Senha</h3>
+                <p>Esqueceu a senha? Na tela de login, clique em "Esqueceu a senha?". Digite seu e-mail e enviaremos um link seguro para redefinição.</p>
+            </section>
+
+            <!-- SEÇÃO PAUTAS -->
+            <section id="criar-pauta" class="mb-12">
+                <h2 class="section-title">Gestão de Pautas</h2>
+                <p>A "Pauta" funciona como uma sala virtual ou um evento diário (ex: "Plantão Cível 25/10").</p>
+
+                <h3 class="sub-title">Criando uma Pauta</h3>
+                <ul>
+                    <li>No painel inicial, clique em <strong>"+ Nova Pauta"</strong>.</li>
+                    <li><strong>Nome:</strong> Dê um nome descritivo (Ex: "Atendimento Família - Manhã").</li>
+                    <li><strong>Data:</strong> Selecione a data de referência.</li>
+                    <li><strong>Visibilidade:</strong> Se marcar como "Pública", o link de acompanhamento funcionará para qualquer pessoa. Se "Privada", apenas membros podem ver.</li>
+                </ul>
+                <p>Quem cria a pauta torna-se automaticamente o <strong>Dono (Owner)</strong> e possui permissões totais sobre ela.</p>
+            </section>
+
+            <!-- SEÇÃO FLUXO -->
+            <section id="adicionar-assistido" class="mb-12">
+                <h2 class="section-title">Fluxo de Atendimento</h2>
+                
+                <h3 class="sub-title" id="adicionar-assistido">1. Triagem (Adicionar Assistido)</h3>
+                <p>Use o botão verde <strong>"+ Adicionar"</strong> para registrar uma nova chegada. O sistema pedirá:</p>
+                <ul>
+                    <li><strong>Nome:</strong> Nome do assistido.</li>
+                    <li><strong>Assunto:</strong> Comece a digitar para ver as sugestões (ex: "Divórcio", "Alimentos"). O sistema possui uma base de dados com mais de 50 tipos de ações.</li>
+                    <li><strong>Prioridade:</strong> Fundamental para o ordenamento da fila.</li>
+                </ul>
+
+                <h3 class="sub-title" id="kanban">2. O Quadro Kanban</h3>
+                <p>A tela principal é dividida em colunas que representam o status do assistido. Você pode <strong>clicar e arrastar</strong> os cartões entre as colunas:</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div class="bg-yellow-50 p-4 rounded border border-yellow-200">
+                        <span class="font-bold text-yellow-800 text-lg">⏳ Aguardando</span>
+                        <p class="text-sm mt-2">Fila de espera. O sistema organiza automaticamente: primeiro as <strong>Prioridades</strong>, depois a ordem de chegada.</p>
+                    </div>
+                    <div class="bg-blue-50 p-4 rounded border border-blue-200">
+                        <span class="font-bold text-blue-800 text-lg">🏃 Em Atendimento</span>
+                        <p class="text-sm mt-2">Arraste para cá quando chamar o assistido. O sistema registrará a hora de início e o seu nome como atendente.</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded border border-green-200">
+                        <span class="font-bold text-green-800 text-lg">✅ Atendido</span>
+                        <p class="text-sm mt-2">Ao finalizar, mova para cá. O tempo total de atendimento é calculado e salvo nas estatísticas.</p>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <h3 class="sub-title" id="prioridades">Regra de Prioridades</h3>
+                    <p>A coluna "Aguardando" segue esta ordem rigorosa de classificação:</p>
+                    <ol class="list-decimal ml-6 font-semibold text-gray-700">
+                        <li class="text-red-600">URGENTE (Topo da fila)</li>
+                        <li class="text-green-600">Prioridade Máxima</li>
+                        <li class="text-orange-500">Prioridade Média</li>
+                        <li class="text-gray-500">Prioridade Mínima / Normal</li>
+                    </ol>
+                </div>
+            </section>
+
+            <!-- SEÇÃO DOCUMENTAÇÃO -->
+            <section id="checklist" class="mb-12">
+                <h2 class="section-title">Documentação e Checklist</h2>
+                <p>Esta é uma das ferramentas mais poderosas do SIGEP. Ao clicar no ícone 👁️ (Detalhes) num cartão, você acessa o painel do assistido.</p>
+
+                <h3 class="sub-title">1. Checklist Inteligente</h3>
+                <p>Baseado no "Assunto" escolhido na triagem, o sistema carrega a lista exata de documentos necessários (Ex: Se for "Divórcio", pede Certidão de Casamento; se for "Alimentos", pede Certidão de Nascimento).</p>
+                <ul>
+                    <li>Marque os documentos apresentados.</li>
+                    <li>Para cada documento, você pode especificar o formato: <strong>Físico</strong> (papel) ou <strong>Digital</strong> (PDF/Foto).</li>
+                </ul>
+
+                <h3 class="sub-title" id="dados-reu">2. Dados da Parte Contrária (Réu)</h3>
+                <p>Logo abaixo do checklist, há um formulário para cadastrar os dados do Réu (Nome, CPF, Endereço). Esses dados são salvos e saem no relatório final.</p>
+
+                <h3 class="sub-title" id="despesas">3. Planilha de Despesas</h3>
+                <p>Para ações de <strong>Alimentos</strong> ou <strong>Divórcio</strong>, o sistema exibe automaticamente uma tabela para cálculo de despesas (Alimentação, Moradia, Saúde, etc). O total é somado automaticamente.</p>
+
+                <div class="note-box">
+                    <strong>Geração de PDF:</strong> Ao final do atendimento, clique no botão <strong>"Baixar PDF"</strong> no rodapé do modal. O sistema gera um documento completo com o checklist, dados do réu e observações para imprimir ou salvar.
+                </div>
+            </section>
+
+            <!-- SEÇÃO FERRAMENTAS -->
+            <section id="estatisticas" class="mb-12">
+                <h2 class="section-title">Ferramentas Avançadas</h2>
+
+                <h3 class="sub-title">📊 Estatísticas e Relatórios</h3>
+                <p>Clique no botão <strong>Estatísticas</strong> no menu superior. O sistema gera gráficos em tempo real:</p>
+                <ul>
+                    <li>Total de atendimentos vs. Faltosos.</li>
+                    <li>Tempo médio de duração dos atendimentos.</li>
+                    <li>Contagem por tipo de ação (Ex: 10 Divórcios, 5 Guardas).</li>
+                    <li>Produtividade por colaborador.</li>
+                </ul>
+                <p>Você pode exportar um <strong>Relatório Gerencial em PDF</strong> contendo todos esses dados para prestação de contas.</p>
+
+                <h3 class="sub-title" id="tv-publica">📺 Painel de TV (Link Público)</h3>
+                <p>Ideal para recepções. Clique no ícone de <strong>Compartilhar (Link)</strong>. Isso gera uma URL segura que:</p>
+                <ul>
+                    <li>Não exige login.</li>
+                    <li>Mostra apenas o <strong>Primeiro Nome</strong> e a inicial do sobrenome do assistido (proteção de dados).</li>
+                    <li>Exibe claramente quem está "Aguardando" e quem está "Em Atendimento".</li>
+                </ul>
+
+                <h3 class="sub-title" id="delegacao">📧 Delegação Remota (E-mail)</h3>
+                <p>Se precisar que outro colega finalize um atendimento (ex: um psicólogo ou outro defensor em outra sala), use a opção "Enviar para Colega".</p>
+                <p>O sistema envia um e-mail com um <strong>Link Exclusivo</strong>. O colega pode clicar nesse link e finalizar o atendimento no celular dele, sem precisar logar no sistema completo.</p>
+                
+                <h3 class="sub-title" id="anotacoes">📝 Anotações Rápidas</h3>
+                <p>Precisa anotar algo sobre a pauta inteira? Use o botão <strong>"Notas"</strong>. As anotações são salvas localmente no seu navegador, e você pode enviá-las para o seu próprio e-mail como lembrete ao final do dia.</p>
+            </section>
+
+            <footer class="mt-20 pt-6 border-t text-center text-sm text-gray-400 pb-10">
+                <p>Manual do Usuário SIGEP - Versão 3.0 (Wiki Integrada)</p>
+                <p class="mt-2">&copy; <script>document.write(new Date().getFullYear())</script> Sistema de Gestão Jurídica</p>
+            </footer>
+
+        </main>
     </div>
 
+    <script>
+        // Script para navegação fluida e destaque do menu ativo
+        const sections = document.querySelectorAll('section');
+        const navLinks = document.querySelectorAll('.wiki-link');
+        const contentArea = document.getElementById('content-area');
+
+        // Scroll Spy
+        contentArea.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (contentArea.scrollTop >= (sectionTop - 150)) {
+                    current = section.getAttribute('id');
+                }
+            });
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').includes(current)) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
 </body>
 </html>
-
