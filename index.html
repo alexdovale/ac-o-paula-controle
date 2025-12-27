@@ -1097,6 +1097,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
     <script type="module">
         // Importando as funções do novo módulo de detalhes
+        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
         import { setupDetailsModal, openDetailsModal } from './detalhes.js';
         import { renderStatisticsModal } from './estatisticas.js'
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -2536,6 +2537,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             try {
                 const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
                 const app = initializeApp(firebaseConfig);
+                // Inicialização do App Check para segurança
+                const appCheck = initializeAppCheck(app, {
+                  provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
+                  isTokenAutoRefreshEnabled: true
+                });
                 db = getFirestore(app);
                 auth = getAuth(app);
                 handleAuthState();
@@ -4250,6 +4256,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
   }
 </script>
 </html>
+
 
 
 
