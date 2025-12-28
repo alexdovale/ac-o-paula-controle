@@ -126,6 +126,15 @@
                     <button id="close-admin-modal" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
                 </div>
                 
+                <div class="mt-8 border-t pt-4">
+                    <h3 class="font-semibold text-red-600 mb-2 uppercase text-sm">Manutenção do Sistema (LGPD)</h3>
+                    <p class="text-xs text-gray-500 mb-4">Apaga permanentemente atendimentos com mais de 7 dias de todas as pautas.</p>
+                    <button id="cleanup-old-data-btn" class="w-full bg-red-100 text-red-700 font-bold py-2 rounded-lg hover:bg-red-200 transition border border-red-300">
+                        Executar Limpeza de 7 Dias
+                    </button>
+                </div>
+
+                
                 <div class="overflow-y-auto">
                     <h3 class="font-semibold text-gray-700 mb-2">Usuários Pendentes</h3>
                     <div id="pending-users-list" class="space-y-3 mb-6">
@@ -2742,6 +2751,36 @@ window.approveUserWithRole = async (id) => {
             }
         };
 
+        // --- CONFIGURAÇÃO DE LOGOUT POR INATIVIDADE ---
+        const INACTIVITY_TIME = 30 * 60 * 1000; // 30 minutos em milissegundos
+        let inactivityTimer;
+        
+        const resetInactivityTimer = () => {
+            // Se o timer já estiver rodando, cancela e começa de novo
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+        
+            inactivityTimer = setTimeout(() => {
+                if (auth.currentUser) {
+                    console.log("Sessão expirada por inatividade.");
+                    signOut(auth).then(() => {
+                        showNotification("Sessão encerrada por inatividade para sua segurança.", "info");
+                    });
+                }
+            }, INACTIVITY_TIME);
+        };
+        
+        // Eventos que indicam que o usuário está ativo
+        const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+        
+        // Inicia o monitoramento
+        activityEvents.forEach(event => {
+            document.addEventListener(event, resetInactivityTimer, true);
+        });
+        
+        // Começa a contar assim que a página carrega
+        resetInactivityTimer();
+
+        
         const copyToClipboard = (text, message) => {
             const textArea = document.createElement('textarea');
             textArea.value = text;
@@ -4447,6 +4486,7 @@ window.approveUserWithRole = async (id) => {
   }
 </script>
 </html>
+
 
 
 
