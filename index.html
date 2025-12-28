@@ -441,57 +441,49 @@
         </div>
     </div>
 
-<!-- Rodapé do Sistema -->
-    <footer class="mt-16 pb-8 text-center border-t border-gray-200 pt-8">
-        <div class="flex justify-center space-x-6 mb-4 text-sm text-gray-500 font-medium">
-            <a href="#" id="manual-link-footer" class="flex items-center hover:text-green-600 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Manual do Utilizador
-            </a>
-            <a href="#" id="privacy-link-footer" class="hover:text-green-600 transition-colors">Privacidade</a>
-            <a href="#" id="terms-link-footer" class="hover:text-green-600 transition-colors">Termos</a>
-        </div>
-        <p class="text-xs text-gray-400">© SIGAP 2025 </p>
-    </footer>
+    <!-- Rodapé do Sistema -->
+<footer class="mt-16 pb-8 text-center border-t border-gray-200 pt-8">
+    <div class="flex justify-center space-x-6 mb-4 text-sm text-gray-500 font-medium">
+        <button id="manual-btn-footer" class="flex items-center hover:text-green-600 transition-colors focus:outline-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Manual do Utilizador
+        </button>
+        <button id="privacy-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none">Privacidade</button>
+        <button id="terms-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none">Termos</button>
+    </div>
+    <p class="text-xs text-gray-400">© SIGAP 2025 </p>
+</footer>
 
-    <script>
-        // Função para configurar modais de forma segura
-        function initModal(linkId, modalId, closeBtnIds) {
-            const link = document.getElementById(linkId);
-            const modal = document.getElementById(modalId);
+<script>
+    // Função para gerenciar modais
+    function bindModal(btnId, modalId, closeIds) {
+        const btn = document.getElementById(btnId);
+        const modal = document.getElementById(modalId);
+        
+        if (btn && modal) {
+            btn.onclick = () => modal.classList.remove('hidden');
             
-            if (link && modal) {
-                // Abrir
-                link.onclick = function(e) {
-                    e.preventDefault();
-                    modal.classList.remove('hidden');
-                };
-                
-                // Fechar por botões específicos
-                closeBtnIds.forEach(id => {
-                    const btn = document.getElementById(id);
-                    if (btn) btn.onclick = () => modal.classList.add('hidden');
-                });
+            closeIds.forEach(id => {
+                const closeBtn = document.getElementById(id);
+                if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
+            });
 
-                // Fechar ao clicar fora (na parte escura)
-                modal.onclick = function(e) {
-                    if (e.target === modal) modal.classList.add('hidden');
-                };
-            }
+            // Fecha ao clicar fora
+            modal.onclick = (e) => {
+                if (e.target === modal) modal.classList.add('hidden');
+            };
         }
+    }
 
-        // Inicializa cada um dos modais
-        // PRIVACIDADE
-        initModal('privacy-link-footer', 'privacy-policy-modal', ['close-policy-modal-btn-x', 'close-policy-modal-btn']);
-        
-        // MANUAL
-        initModal('manual-link-footer', 'manual-modal', ['close-manual-modal-x', 'close-manual-modal-btn']);
-        
-        // TERMOS
-        initModal('terms-link-footer', 'terms-modal', ['close-terms-modal-x', 'close-terms-modal-btn']);
-    </script>
+    // Inicializa os modais assim que a página carrega
+    window.addEventListener('load', () => {
+        bindModal('privacy-btn-footer', 'privacy-policy-modal', ['close-policy-modal-btn-x', 'close-policy-modal-btn']);
+        bindModal('manual-btn-footer', 'manual-modal', ['close-manual-modal-x', 'close-manual-modal-btn']);
+        bindModal('terms-btn-footer', 'terms-modal', ['close-terms-modal-x', 'close-terms-modal-btn']);
+    });
+</script>
 </body>
 </html>
 
@@ -4614,6 +4606,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
   }
 </script>
 </html>
+
 
 
 
