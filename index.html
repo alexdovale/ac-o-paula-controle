@@ -1219,19 +1219,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         };
         // 3. Funções Globais para os botões (Expostas para o HTML)
         // Aprovar escolhendo o cargo
-window.approveUserWithRole = async (id) => {
-    const roleSelect = document.getElementById(`role-select-${id}`);
-    const selectedRole = roleSelect.value;
-    
-    if(confirm(`Deseja aprovar este usuário como ${selectedRole}?`)) {
-        await updateDoc(doc(db, "users", id), { 
-            status: 'approved',
-            role: selectedRole 
-        });
-        showNotification(`Usuário aprovado como ${selectedRole}!`);
-        loadUsers();
-    }
-};
+        window.approveUserWithRole = async (id) => {
+            const roleSelect = document.getElementById(`role-select-${id}`);
+            const selectedRole = roleSelect.value;
+            
+            if(confirm(`Deseja aprovar este usuário como ${selectedRole}?`)) {
+                await updateDoc(doc(db, "users", id), { 
+                    status: 'approved',
+                    role: selectedRole 
+                });
+                showNotification(`Usuário aprovado como ${selectedRole}!`);
+                loadUsers();
+            }
+        };
 
     // Alterar cargo de quem já está aprovado
     window.changeUserRole = async (id, newRole) => {
@@ -1262,6 +1262,60 @@ window.approveUserWithRole = async (id) => {
             adminModal.classList.add('hidden');
         });
 
+        // --- COLOQUE O CÓDIGO ABAIXO DENTRO DO SEU SCRIPT TYPE="MODULE" ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // ... outros códigos de inicialização que você já tem ...
+        
+            // FUNÇÃO DE LIMPEZA DE DADOS ANTIGOS (LGPD - 7 DIAS)
+            const cleanupBtn = document.getElementById('cleanup-old-data-btn');
+            if (cleanupBtn) {
+                cleanupBtn.addEventListener('click', async () => {
+                    // Verifica se quem está clicando é realmente um Admin (segurança extra no JS)
+                    if (!confirm("Isso apagará permanentemente TODOS os atendimentos com mais de 7 dias. Deseja continuar?")) return;
+        
+                    cleanupBtn.disabled = true;
+                    cleanupBtn.textContent = "Limpando... aguarde";
+        
+                    try {
+                        const sevenDaysAgo = new Date();
+                        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                        const limitDate = sevenDaysAgo.toISOString();
+        
+                        // 1. Busca todas as pautas
+                        const pautasSnapshot = await getDocs(collection(db, "pautas"));
+                        let deletedCount = 0;
+        
+                        // 2. Percorre cada pauta para limpar os atendimentos dela
+                        for (const pautaDoc of pautasSnapshot.docs) {
+                            const pautaId = pautaDoc.id;
+                            const attendancesRef = collection(db, "pautas", pautaId, "attendances");
+                            
+                            // Busca atendimentos antigos desta pauta específica
+                            const q = query(attendancesRef, where("createdAt", "<", limitDate));
+                            const oldDocs = await getDocs(q);
+        
+                            if (!oldDocs.empty) {
+                                const batch = writeBatch(db);
+                                oldDocs.forEach((doc) => {
+                                    batch.delete(doc.ref);
+                                    deletedCount++;
+                                });
+                                await batch.commit();
+                            }
+                        }
+        
+                        showNotification(`Limpeza concluída! ${deletedCount} registros removidos.`, "success");
+                    } catch (error) {
+                        console.error("Erro na limpeza:", error);
+                        showNotification("Erro ao executar limpeza.", "error");
+                    } finally {
+                        cleanupBtn.disabled = false;
+                        cleanupBtn.textContent = "Executar Limpeza de 7 Dias";
+                    }
+                });
+            }
+        });
         
         // Importando as funções do novo módulo de detalhes
         import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
@@ -4486,6 +4540,7 @@ window.approveUserWithRole = async (id) => {
   }
 </script>
 </html>
+
 
 
 
