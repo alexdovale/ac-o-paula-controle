@@ -1561,6 +1561,66 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         let editCollaboratorId = null; // ID do colaborador sendo editado na lista de presença
         let unsubscribeFromCollaborators = () => {};
 
+        // --- LÓGICA DE MOVIMENTAÇÃO MANUAL (Setas e Topo) ---
+        // Definimos no objeto 'window' para que o HTML consiga enxergar a função
+        window.moveInQueue = async (id, direction) => {
+            if (isPautaClosed) {
+                showNotification("A pauta está fechada.", "error");
+                return;
+            }
+        
+            const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
+            
+            // 1. Pegamos a lista atual de quem está aguardando, já ordenada corretamente
+            let list = allAssisted
+                .filter(a => a.status === 'aguardando' && a.type === currentMode)
+                .sort((a, b) => {
+                    if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+                    if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+                    const orderA = a.manualIndex !== undefined ? a.manualIndex : (a.createdAt || 0);
+                    const orderB = b.manualIndex !== undefined ? b.manualIndex : (b.createdAt || 0);
+                    return orderA - orderB;
+                });
+        
+            const currentIndex = list.findIndex(item => item.id === id);
+            if (currentIndex === -1) return;
+        
+            // 2. Criamos uma cópia para manipular
+            let newList = [...list];
+        
+            if (direction === 'up' && currentIndex > 0) {
+                // Troca com o de cima
+                [newList[currentIndex - 1], newList[currentIndex]] = [newList[currentIndex], newList[currentIndex - 1]];
+            } else if (direction === 'down' && currentIndex < newList.length - 1) {
+                // Troca com o de baixo
+                [newList[currentIndex], newList[currentIndex + 1]] = [newList[currentIndex + 1], newList[currentIndex]];
+            } else if (direction === 'top') {
+                // Remove da posição atual e coloca no índice 0
+                const [movedItem] = newList.splice(currentIndex, 1);
+                newList.unshift(movedItem);
+            }
+        
+            // 3. Salvamos a nova ordem no Firebase usando Batch (Lote)
+            const batch = writeBatch(db); // writeBatch deve estar importado do firestore
+            newList.forEach((item, index) => {
+                const docRef = doc(db, "pautas", currentPautaId, "attendances", item.id);
+                batch.update(docRef, { 
+                    manualIndex: index,
+                    lastActionBy: currentUserName,
+                    lastActionTimestamp: new Date().toISOString()
+                });
+            });
+        
+            try {
+                await batch.commit();
+                // O onSnapshot cuidará de atualizar a tela automaticamente
+            } catch (error) {
+                console.error("Erro ao reordenar fila:", error);
+                showNotification("Erro ao atualizar ordem.", "error");
+            }
+        };
+
+        
         const loadingContainer = document.getElementById('loading-container');
         const loginContainer = document.getElementById('login-container');
         const pautaSelectionContainer = document.getElementById('pauta-selection-container');
@@ -1611,57 +1671,47 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 
         // --- COLOQUE ESTA FUNÇÃO NO ESCOPO GLOBAL DO SEU SCRIPT ---
-        let sortableAguardando = null;
+     let sortableAguardando = null;
         
-        const setupManualSort = () => {
-            const listaAguardandoEl = document.getElementById('aguardando-list');
-            
-            // Verificamos se o modo da pauta atual é 'manual'
-            const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
-        
-            if (pautaOrder === 'manual' && !isPautaClosed) {
-                // Se já existir uma instância (de uma renderização anterior), nós a destruímos para criar uma nova
-                if (sortableAguardando) {
-                    sortableAguardando.destroy();
-                }
-        
-                sortableAguardando = new Sortable(listaAguardandoEl, {
-                    animation: 150,
-                    ghostClass: 'bg-green-100', // Efeito visual ao arrastar
-                    // Esta função roda quando o usuário solta o card
-                    onEnd: async function () {
-                        const cards = listaAguardandoEl.querySelectorAll('[data-id]');
-                        const batch = writeBatch(db); // Usamos o writeBatch que você já importa
-        
-                        cards.forEach((card, index) => {
-                            const id = card.getAttribute('data-id');
-                            const docRef = doc(db, "pautas", currentPautaId, "attendances", id);
-                            
-                            // Atualizamos o índice manual de cada um com base na nova posição na tela
-                            batch.update(docRef, { 
-                                manualIndex: index,
-                                lastActionBy: currentUserName,
-                                lastActionTimestamp: new Date().toISOString()
-                            });
-                        });
-        
-                        try {
-                            await batch.commit();
-                            console.log("Nova ordem salva no banco de dados.");
-                        } catch (error) {
-                            console.error("Erro ao salvar ordem manual:", error);
-                        }
+     const setupManualSort = () => {
+        const el = document.getElementById('aguardando-list');
+        const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
+    
+        if (pautaOrder === 'manual' && !isPautaClosed) {
+            if (sortableAguardando) sortableAguardando.destroy();
+    
+            sortableAguardando = new Sortable(el, {
+                animation: 300, // Movimento mais lento e fluido
+                ghostClass: 'opacity-20', // Card fantasma quase transparente
+                chosenClass: 'ring-2', // Borda azul ao segurar
+                dragClass: 'scale-95', // Diminui o card enquanto arrasta
+                handle: '.relative', // Permite arrastar clicando em qualquer lugar do card...
+                filter: 'button, svg, p, span', // ...mas ignora se o clique for nos textos ou botões
+                preventOnFilter: false,
+                
+                onEnd: async function () {
+                    const items = el.querySelectorAll('[data-id]');
+                    const batch = writeBatch(db);
+                    
+                    items.forEach((item, index) => {
+                        const docId = item.getAttribute('data-id');
+                        const docRef = doc(db, "pautas", currentPautaId, "attendances", docId);
+                        batch.update(docRef, { manualIndex: index });
+                    });
+    
+                    try {
+                        await batch.commit();
+                        showNotification("Fila Reordenada!");
+                    } catch (e) {
+                        console.error(e);
                     }
-                });
-            } else {
-                // Se o modo não for manual ou a pauta fechar, desativamos o arraste
-                if (sortableAguardando) {
-                    sortableAguardando.destroy();
-                    sortableAguardando = null;
-                }
-            }
-        };
-
+                },
+            });
+        } else if (sortableAguardando) {
+            sortableAguardando.destroy();
+            sortableAguardando = null;
+        }
+    };
 
         
 
@@ -1775,49 +1825,65 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
         };
 
-        const createAguardandoCard = (a, index) => {
-            const card = document.createElement('div');
-            card.className = `relative bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)} mb-2`; 
-            const arrival = a.type === 'agendamento' && a.scheduledTime ? `Agendado: ${a.scheduledTime} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : `Chegada: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-            const returnToPautaBtn = a.type === 'agendamento' ? `<button data-id="${a.id}" class="return-to-pauta-btn w-full bg-gray-400 text-white font-semibold py-1 rounded-lg hover:bg-gray-500 text-xs mt-1">Voltar p/ Pauta</button>` : '';
+      const createAguardandoCard = (a, index) => {
+        const card = document.createElement('div');
+        // Adicionado 'group' para controlar o aparecimento dos botões e 'transition-all'
+        card.className = `relative bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)} mb-2 group transition-all duration-200`;
+        card.setAttribute('data-id', a.id);
+    
+        const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
+        const isManual = pautaOrder === 'manual' && !isPautaClosed;
+    
+        // Indicador de Posição (Rank) e Botões de Comando
+        const rankAndControls = isManual ? `
+            <!-- Indicador de Rank -->
+            <div class="absolute -top-2 -left-2 bg-blue-600 text-white text-[10px] font-bold w-6 h-6 flex items-center justify-center rounded-full shadow-md z-20 border-2 border-white">
+                ${index + 1}º
+            </div>
             
-            let atenderButton;
-            if (currentPautaData?.useDelegationFlow) {
-                atenderButton = `<button data-id="${a.id}" data-name="${a.name}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`;
-            } else {
-                atenderButton = `<button data-id="${a.id}" data-name="${a.name}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`;
-            }
-
-
-            card.innerHTML = `
-                <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
-                <div class="flex justify-between items-start">
-                            <div>
-                                <p class="font-bold text-lg">${index + 1}. ${a.name}</p>
-                                <p class="text-sm">Assunto: <strong>${a.subject}</strong></p>
-                                <p class="text-sm text-gray-500">${arrival}</p>
-                                ${a.room ? `<span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mt-1 font-bold">${a.room}</span>` : ''}
-                                ${a.priority === 'URGENTE' && a.priorityReason ? 
-                                    `<p class="text-sm text-red-600 font-semibold mt-1">Motivo da Prioridade: 
-                                            <span class="font-normal text-red-500">${a.priorityReason}</span>
-                                        </p>` 
-                                    : ''}
-                                <button data-id="${a.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-sm hover:underline font-semibold py-1">Ver Detalhes</button>
-                            </div>
-                        </div>
-                        <div class="mt-3 grid grid-cols-2 lg:grid-cols-3 gap-2">
-                            ${atenderButton}
-                            ${a.priority === 'URGENTE' 
-                                ? `<button data-id="${a.id}" class="unpriority-btn bg-yellow-500 text-white font-semibold py-2 rounded-lg hover:bg-yellow-600 text-sm">Desfazer Prioridade</button>` 
-                                : `<button data-id="${a.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 text-sm">Prioridade</button>`}
-                            <button data-id="${a.id}" class="edit-assisted-btn bg-gray-500 text-white font-semibold py-2 rounded-lg hover:bg-gray-600 text-sm">Editar</button>
-                        </div>
-                
-                ${returnToPautaBtn ? `<div class="mt-2">${returnToPautaBtn}</div>` : ''}
-                ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${a.lastActionBy}</strong></div>` : ''}
-                `;
-            return card;
-        };
+            <!-- Botões de Movimentação Lateral (Aparecem no Hover) -->
+            <div class="absolute -left-4 top-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-x-1 z-30">
+                <button onclick="moveInQueue('${a.id}', 'top')" title="Mover para o Topo" class="bg-white text-blue-600 shadow-lg border border-blue-100 rounded-full p-1.5 hover:bg-blue-600 hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M5 11l7-7 7 7M5 19l7-7 7 7" /></svg>
+                </button>
+                <button onclick="moveInQueue('${a.id}', 'up')" title="Subir uma posição" class="bg-white text-gray-700 shadow-lg border border-gray-100 rounded-full p-1.5 hover:bg-gray-100 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M5 15l7-7 7 7" /></svg>
+                </button>
+                <button onclick="moveInQueue('${a.id}', 'down')" title="Descer uma posição" class="bg-white text-gray-700 shadow-lg border border-gray-100 rounded-full p-1.5 hover:bg-gray-100 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M19 9l-7 7-7-7" /></svg>
+                </button>
+            </div>
+        ` : '';
+    
+        const arrival = a.type === 'agendamento' && a.scheduledTime 
+            ? `Agendado: ${a.scheduledTime} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` 
+            : `Chegada: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    
+        let atenderButton = currentPautaData?.useDelegationFlow
+            ? `<button data-id="${a.id}" data-name="${a.name}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`
+            : `<button data-id="${a.id}" data-name="${a.name}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`;
+    
+        card.innerHTML = `
+            ${rankAndControls}
+            <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
+            <div class="flex flex-col h-full ${isManual ? 'pl-3' : ''}">
+                <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${a.name}</p>
+                <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${a.subject}</strong></p>
+                <div class="flex flex-wrap gap-2 mb-3">
+                    <span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">${arrival}</span>
+                    ${a.room ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${a.room}</span>` : ''}
+                </div>
+                <div class="mt-auto grid grid-cols-2 gap-2">
+                    ${atenderButton}
+                    <button data-id="${a.id}" class="priority-btn ${a.priority === 'URGENTE' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-red-500 hover:bg-red-600'} text-white font-semibold py-2 rounded-lg text-xs transition-colors">
+                        ${a.priority === 'URGENTE' ? 'Urgente Ativado' : 'Prioridade'}
+                    </button>
+                </div>
+                <button data-id="${a.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
+            </div>
+        `;
+        return card;
+    };
 
         // --- FUNÇÃO PARA RENOMEAR SALA ---
         const renamePautaRoom = async (oldName, newName) => {
@@ -4716,6 +4782,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
   }
 </script>
 </html>
+
 
 
 
