@@ -1608,6 +1608,64 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             };
         };
 
+
+
+        // --- COLOQUE ESTA FUNÇÃO NO ESCOPO GLOBAL DO SEU SCRIPT ---
+        let sortableAguardando = null;
+        
+        const setupManualSort = () => {
+            const listaAguardandoEl = document.getElementById('aguardando-list');
+            
+            // Verificamos se o modo da pauta atual é 'manual'
+            const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
+        
+            if (pautaOrder === 'manual' && !isPautaClosed) {
+                // Se já existir uma instância (de uma renderização anterior), nós a destruímos para criar uma nova
+                if (sortableAguardando) {
+                    sortableAguardando.destroy();
+                }
+        
+                sortableAguardando = new Sortable(listaAguardandoEl, {
+                    animation: 150,
+                    ghostClass: 'bg-green-100', // Efeito visual ao arrastar
+                    // Esta função roda quando o usuário solta o card
+                    onEnd: async function () {
+                        const cards = listaAguardandoEl.querySelectorAll('[data-id]');
+                        const batch = writeBatch(db); // Usamos o writeBatch que você já importa
+        
+                        cards.forEach((card, index) => {
+                            const id = card.getAttribute('data-id');
+                            const docRef = doc(db, "pautas", currentPautaId, "attendances", id);
+                            
+                            // Atualizamos o índice manual de cada um com base na nova posição na tela
+                            batch.update(docRef, { 
+                                manualIndex: index,
+                                lastActionBy: currentUserName,
+                                lastActionTimestamp: new Date().toISOString()
+                            });
+                        });
+        
+                        try {
+                            await batch.commit();
+                            console.log("Nova ordem salva no banco de dados.");
+                        } catch (error) {
+                            console.error("Erro ao salvar ordem manual:", error);
+                        }
+                    }
+                });
+            } else {
+                // Se o modo não for manual ou a pauta fechar, desativamos o arraste
+                if (sortableAguardando) {
+                    sortableAguardando.destroy();
+                    sortableAguardando = null;
+                }
+            }
+        };
+
+
+        
+
+        
         const getPriorityLevel = (assisted) => {
             if (!assisted || assisted.status !== 'aguardando') return 'N/A';
             if (assisted.priority === 'URGENTE') return 'URGENTE';
@@ -4658,6 +4716,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
   }
 </script>
 </html>
+
 
 
 
