@@ -1086,6 +1086,51 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
 
+    <!-- Modal: Manual do Utilizador -->
+    <div id="manual-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 80vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Manual do Utilizador</h2>
+                <button id="close-manual-modal-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            </div>
+            <div class="text-gray-700 space-y-4 overflow-y-auto pr-2">
+                <p><strong>Bem-vindo ao SIGAP!</strong></p>
+                <p>Este sistema foi desenvolvido para facilitar a gestão de pautas de atendimento jurídico.</p>
+                <ul class="list-disc list-inside space-y-2">
+                    <li><strong>Criar Pauta:</strong> Use o botão verde na tela inicial para começar.</li>
+                    <li><strong>Importar Dados:</strong> Você pode carregar arquivos CSV para agilizar o preenchimento.</li>
+                    <li><strong>Gestão de Status:</strong> Mova os assistidos entre "Pauta", "Aguardando" e "Atendido".</li>
+                    <li><strong>Delegação:</strong> Use a coluna "Em Atendimento" para enviar links de finalização por e-mail.</li>
+                    <li><strong>Privacidade:</strong> O sistema limpa dados sensíveis periodicamente para sua segurança.</li>
+                </ul>
+            </div>
+            <div class="flex justify-end mt-6 flex-shrink-0">
+                <button id="close-manual-modal-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Fechar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal: Termos de Uso -->
+    <div id="terms-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 80vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Termos de Uso</h2>
+                <button id="close-terms-modal-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            </div>
+            <div class="text-gray-700 space-y-4 overflow-y-auto pr-2">
+                <p><strong>1. Uso do Sistema</strong></p>
+                <p>O SIGAP é uma ferramenta de apoio à gestão. O usuário é responsável pela veracidade dos dados inseridos.</p>
+                <p><strong>2. Segurança</strong></p>
+                <p>O acesso é pessoal e intransferível. Não compartilhe sua senha de acesso.</p>
+                <p><strong>3. Dados Sensíveis</strong></p>
+                <p>O usuário compromete-se a utilizar os dados dos assistidos apenas para fins profissionais, respeitando o sigilo funcional.</p>
+            </div>
+            <div class="flex justify-end mt-6 flex-shrink-0">
+                <button id="close-terms-modal-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ***** INÍCIO DO HTML DO MODAL DE DETALHES ***** -->
     <div id="documents-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl flex flex-col" style="max-height: 90vh;">
@@ -4565,6 +4610,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
   }
 </script>
 </html>
+
 
 
 
