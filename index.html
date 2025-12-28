@@ -1123,6 +1123,90 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     
 
     <script type="module">
+
+        // --- LÓGICA DO PAINEL DE ADMIN ---
+
+        const adminPanelBtn = document.getElementById('admin-panel-btn');
+        const adminModal = document.getElementById('admin-modal');
+        
+        // 1. Mostrar o botão apenas se for Admin
+        const checkAdminStatus = (userData) => {
+            if (userData.role === 'admin' || userData.role === 'superadmin') {
+                adminPanelBtn.classList.remove('hidden');
+            }
+        };
+        
+        // 2. Carregar e Renderizar Usuários
+        const loadUsers = async () => {
+            const usersRef = collection(db, "users");
+            const snapshot = await getDocs(usersRef);
+            
+            const pendingList = document.getElementById('pending-users-list');
+            const approvedList = document.getElementById('approved-users-list');
+            
+            pendingList.innerHTML = '';
+            approvedList.innerHTML = '';
+        
+            snapshot.forEach((docSnap) => {
+                const user = docSnap.data();
+                const userId = docSnap.id;
+        
+                const userRow = document.createElement('div');
+                userRow.className = "flex justify-between items-center p-3 bg-gray-50 rounded-lg border";
+                userRow.innerHTML = `
+                    <div>
+                        <p class="font-bold text-gray-800">${user.name}</p>
+                        <p class="text-xs text-gray-500">${user.email}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        ${user.status === 'pending' ? 
+                            `<button onclick="approveUser('${userId}')" class="bg-green-500 text-white text-xs px-3 py-1 rounded hover:bg-green-600">Aprovar</button>` : 
+                            `<span class="text-green-600 text-xs font-bold uppercase">Ativo</span>`
+                        }
+                        ${user.role !== 'superadmin' ? 
+                            `<button onclick="deleteUser('${userId}')" class="text-red-500 hover:text-red-700 p-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"/></svg>
+                            </button>` : ''
+                        }
+                    </div>
+                `;
+        
+                if (user.status === 'pending') {
+                    pendingList.appendChild(userRow);
+                } else {
+                    approvedList.appendChild(userRow);
+                }
+            });
+        };
+        
+        // 3. Funções Globais para os botões (Expostas para o HTML)
+        window.approveUser = async (id) => {
+            if(confirm("Deseja aprovar este usuário?")) {
+                await updateDoc(doc(db, "users", id), { status: 'approved' });
+                showNotification("Usuário aprovado!");
+                loadUsers();
+            }
+        };
+        
+        window.deleteUser = async (id) => {
+            if(confirm("Tem certeza que deseja excluir este usuário definitivamente?")) {
+                await deleteDoc(doc(db, "users", id));
+                showNotification("Usuário removido.", "error");
+                loadUsers();
+            }
+        };
+        
+        // Eventos de abrir/fechar modal
+        adminPanelBtn.addEventListener('click', () => {
+            adminModal.classList.remove('hidden');
+            loadUsers();
+        });
+        
+        document.getElementById('close-admin-modal').addEventListener('click', () => {
+            adminModal.classList.add('hidden');
+        });
+
+        
         // Importando as funções do novo módulo de detalhes
         import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
         import { setupDetailsModal, openDetailsModal } from './detalhes.js';
@@ -2455,37 +2539,70 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         };
 
         const handleAuthState = () => {
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    const userDoc = await getDoc(doc(db, "users", user.uid));
-                    if (userDoc.exists() && userDoc.data().status === 'approved') {
-                        currentUserName = userDoc.data().name || user.email;
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            try {
+                // 1. Busca os dados do usuário no Firestore
+                const userDocRef = doc(db, "users", user.uid);
+                const userDoc = await getDoc(userDocRef);
+
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    currentUserName = userData.name || user.email;
+
+                    // 2. Verifica se o usuário é Admin/Superadmin para mostrar o botão
+                    checkAdminStatus(userData);
+
+                    // 3. Verifica o Status de Aprovação
+                    if (userData.status === 'approved') {
+                        // USUÁRIO APROVADO: Prosseguir para o sistema
                         const lastPautaId = localStorage.getItem('lastPautaId');
                         const lastPautaType = localStorage.getItem('lastPautaType');
 
                         if (lastPautaId && lastPautaType) {
-                            // Verifica se o usuário logado ainda é membro daquela pauta
+                            // Verifica se ele ainda é membro dessa pauta antes de carregar
                             const pautaRef = doc(db, "pautas", lastPautaId);
                             const pautaSnap = await getDoc(pautaRef);
+                            
                             if (pautaSnap.exists() && pautaSnap.data().members.includes(user.uid)) {
                                 loadPauta(lastPautaId, pautaSnap.data().name, lastPautaType);
                             } else {
-                                // Se a pauta não existe mais ou o usuário não é membro, vai para a seleção
                                 showPautaSelectionScreen(user.uid);
                             }
                         } else {
                             showPautaSelectionScreen(user.uid);
                         }
-
                     } else {
-                        loadingText.innerHTML = 'Sua conta está pendente de aprovação. <br> Por favor, aguarde.';
+                        // USUÁRIO PENDENTE: Mostrar tela de aviso
+                        showScreen('loading');
+                        loadingText.innerHTML = `
+                            <div class="text-center">
+                                <p class="text-xl font-bold text-orange-600">Acesso Pendente</p>
+                                <p class="mt-2 text-gray-600">Olá, <b>${currentUserName}</b>!</p>
+                                <p class="text-sm text-gray-500">Sua conta foi criada, mas um administrador precisa aprová-la para você acessar o sistema.</p>
+                                <button onclick="signOut(auth)" class="mt-6 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Sair / Trocar de Conta</button>
+                            </div>
+                        `;
+                        // Esconde o spinner de carregamento para não confundir
                         document.querySelector('.loader').style.display = 'none';
                     }
                 } else {
-                    showScreen('login');
+                    // Caso o documento do usuário não exista (erro raro de criação)
+                    showNotification("Erro ao localizar seu perfil. Tente cadastrar novamente.", "error");
+                    signOut(auth);
                 }
-            });
-        };
+            } catch (error) {
+                console.error("Erro ao verificar estado do usuário:", error);
+                showNotification("Erro de conexão com o servidor.", "error");
+            }
+        } else {
+            // USUÁRIO DESLOGADO: Mostrar tela de login
+            showScreen('login');
+            // Resetar estados do Admin caso estivessem visíveis
+            adminPanelBtn.classList.add('hidden');
+        }
+    });
+};
 
         const showScreen = (screenName) => {
             loadingContainer.classList.toggle('hidden', screenName !== 'loading');
@@ -4283,6 +4400,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
   }
 </script>
 </html>
+
 
 
 
