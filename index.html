@@ -113,6 +113,33 @@
             </button>
         </div>
 
+        <!-- No pauta-selection-container, perto do botão de logout -->
+        <button id="admin-panel-btn" class="hidden bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">
+            Gerenciar Usuários
+        </button>
+        
+        <!-- Modal do Painel de Admin -->
+        <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 90vh;">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">Painel do Administrador</h2>
+                    <button id="close-admin-modal" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+                </div>
+                
+                <div class="overflow-y-auto">
+                    <h3 class="font-semibold text-gray-700 mb-2">Usuários Pendentes</h3>
+                    <div id="pending-users-list" class="space-y-3 mb-6">
+                        <!-- Usuários pendentes aparecerão aqui -->
+                    </div>
+        
+                    <h3 class="font-semibold text-gray-700 mb-2">Usuários Aprovados</h3>
+                    <div id="approved-users-list" class="space-y-3">
+                        <!-- Usuários aprovados aparecerão aqui -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <div id="invitations-container" class="hidden mb-8">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Convites Pendentes</h2>
             <div id="pending-invitations-list" class="space-y-4"></div>
@@ -4256,6 +4283,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
   }
 </script>
 </html>
+
 
 
 
