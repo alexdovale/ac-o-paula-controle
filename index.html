@@ -1847,26 +1847,22 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
             faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
 
+      // Ordenação da coluna Aguardando
             aguardando.sort((a, b) => {
                 const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
-
-                
+            
+                // Se for Manual, prioriza o índice que definimos arrastando
                 if (pautaOrder === 'manual') {
-                    // Se for manual, usa o índice gravado, mas mantém URGENTE no topo se quiser
+                    // Casos URGENTES continuam sempre no topo, mesmo no manual (opcional)
                     if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
                     if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-                    
-                    return (a.indexManual || 0) - (b.indexManual || 0);
-                }
+            
+                    // Se ambos forem urgentes ou ambos comuns, usa o índice manual
+                    const indexA = a.manualIndex !== undefined ? a.manualIndex : 999;
+                    const indexB = b.manualIndex !== undefined ? b.manualIndex : 999;
+                    return indexA - indexB;
+                }         
                 
-                if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-                if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-                if (a.priority === 'URGENTE' && b.priority === 'URGENTE') {
-                     const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
-                     const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                     return arrivalA - arrivalB;
-                }
-
                 if (pautaOrder === 'chegada') {
                     const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
                     const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
@@ -2102,6 +2098,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
 
             togglePautaLock(isPautaClosed);
+
+            // ADICIONE ESTA LINHA AQUI:
+            setupManualSort()
         };
 
         const showNotification = (message, type = 'success') => {
@@ -4659,6 +4658,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
   }
 </script>
 </html>
+
 
 
 
