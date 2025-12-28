@@ -15,6 +15,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SortableJS para Arrastar e Soltar -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <!-- Para o PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
@@ -570,11 +572,11 @@
                         <span class="block text-sm text-gray-500">Atende estritamente na ordem em que a chegada foi marcada.</span>
                     </span>
                 </label>
-                 <label class="flex items-center p-4 border rounded-lg cursor-not-allowed bg-gray-100 opacity-60">
-                    <input type="radio" name="ordemAtendimento" value="manual" class="h-5 w-5 text-green-600 focus:ring-green-500" disabled>
+                 <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="radio" name="ordemAtendimento" value="manual" class="h-5 w-5 text-green-600 focus:ring-green-500">
                     <span class="ml-3">
                         <span class="font-semibold text-gray-800">Ordem Manual</span>
-                        <span class="block text-sm text-gray-500">Permite arrastar e reordenar a fila (Em breve).</span>
+                        <span class="block text-sm text-gray-500">Permite arrastar e reordenar a fila livremente.</span>
                     </span>
                 </label>
             </div>
@@ -1848,6 +1850,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             aguardando.sort((a, b) => {
                 const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
 
+                
+                if (pautaOrder === 'manual') {
+                    // Se for manual, usa o índice gravado, mas mantém URGENTE no topo se quiser
+                    if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+                    if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+                    
+                    return (a.indexManual || 0) - (b.indexManual || 0);
+                }
+                
                 if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
                 if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
                 if (a.priority === 'URGENTE' && b.priority === 'URGENTE') {
@@ -2853,6 +2864,47 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             renderAssistedList();
         };
 
+
+        let sortableInstance = null;
+
+        const initSortable = () => {
+            const el = document.getElementById('aguardando-list');
+            const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
+        
+            // Só habilita o "arrastar" se a pauta estiver em modo manual e não estiver fechada
+            if (pautaOrder === 'manual' && !isPautaClosed) {
+                if (sortableInstance) sortableInstance.destroy(); // Limpa instância anterior
+        
+                sortableInstance = new Sortable(el, {
+                    animation: 150,
+                    ghostClass: 'bg-green-100', // Cor de fundo enquanto arrasta
+                    onEnd: async function () {
+                        const items = el.querySelectorAll('[data-id]');
+                        const batch = writeBatch(db);
+                        
+                        // Percorre a lista na nova ordem visual e atualiza o banco
+                        items.forEach((item, index) => {
+                            const docId = item.getAttribute('data-id');
+                            const docRef = doc(db, "pautas", currentPautaId, "attendances", docId);
+                            batch.update(docRef, { indexManual: index });
+                        });
+        
+                        try {
+                            await batch.commit();
+                            showNotification("Ordem atualizada!");
+                        } catch (e) {
+                            console.error("Erro ao salvar ordem:", e);
+                        }
+                    },
+                });
+            } else {
+                if (sortableInstance) {
+                    sortableInstance.destroy();
+                    sortableInstance = null;
+                }
+            }
+        };
+        
         const main = () => {
             try {
                 const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
@@ -4002,6 +4054,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         isConfirmed: false, // Novo campo
         confirmationDetails: null, // Novo campo
         room: assignedRoom, // Salva a sala se for avulso
+        indexManual: allAssisted.length, // Coloca no final da fila por padrão
         createdAt: new Date().toISOString()
     });
 
@@ -4606,6 +4659,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
   }
 </script>
 </html>
+
 
 
 
