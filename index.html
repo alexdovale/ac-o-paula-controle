@@ -1137,7 +1137,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         };
         
         // 2. Carregar e Renderizar Usuários
-        const loadUsers = async () => {
+       const loadUsers = async () => {
             const usersRef = collection(db, "users");
             const snapshot = await getDocs(usersRef);
             
@@ -1152,24 +1152,54 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const userId = docSnap.id;
         
                 const userRow = document.createElement('div');
-                userRow.className = "flex justify-between items-center p-3 bg-gray-50 rounded-lg border";
-                userRow.innerHTML = `
+                userRow.className = "flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-gray-50 rounded-lg border gap-3";
+                
+                // Parte Esquerda: Dados do Usuário
+                const userInfo = `
                     <div>
                         <p class="font-bold text-gray-800">${user.name}</p>
                         <p class="text-xs text-gray-500">${user.email}</p>
-                    </div>
-                    <div class="flex gap-2">
-                        ${user.status === 'pending' ? 
-                            `<button onclick="approveUser('${userId}')" class="bg-green-500 text-white text-xs px-3 py-1 rounded hover:bg-green-600">Aprovar</button>` : 
-                            `<span class="text-green-600 text-xs font-bold uppercase">Ativo</span>`
-                        }
-                        ${user.role !== 'superadmin' ? 
-                            `<button onclick="deleteUser('${userId}')" class="text-red-500 hover:text-red-700 p-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"/></svg>
-                            </button>` : ''
-                        }
+                        <p class="text-[10px] font-bold uppercase ${user.role === 'superadmin' ? 'text-purple-600' : 'text-blue-600'}">
+                            Cargo Atual: ${user.role || 'Nenhum'}
+                        </p>
                     </div>
                 `;
+        
+                // Parte Direita: Ações (Aprovar com escolha de perfil)
+                let userActions = '';
+                
+                if (user.status === 'pending') {
+                    userActions = `
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <select id="role-select-${userId}" class="text-xs border rounded p-1 bg-white">
+                                <option value="user">Usuário Comum</option>
+                                <option value="admin">Administrador</option>
+                                <option value="superadmin">Superadmin</option>
+                            </select>
+                            <button onclick="approveUserWithRole('${userId}')" class="bg-green-500 text-white text-xs px-3 py-1 rounded hover:bg-green-600">
+                                Aprovar
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    // Se já está aprovado, permite alterar o cargo ou excluir
+                    userActions = `
+                        <div class="flex items-center gap-2">
+                            <select onchange="changeUserRole('${userId}', this.value)" class="text-xs border rounded p-1 bg-white">
+                                <option value="user" ${user.role === 'user' ? 'selected' : ''}>Usuário</option>
+                                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                                <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>Superadmin</option>
+                            </select>
+                            ${user.role !== 'superadmin' ? `
+                                <button onclick="deleteUser('${userId}')" class="text-red-500 hover:text-red-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"/></svg>
+                                </button>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+        
+                userRow.innerHTML = userInfo + userActions;
         
                 if (user.status === 'pending') {
                     pendingList.appendChild(userRow);
@@ -1178,15 +1208,32 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             });
         };
-        
         // 3. Funções Globais para os botões (Expostas para o HTML)
-        window.approveUser = async (id) => {
-            if(confirm("Deseja aprovar este usuário?")) {
-                await updateDoc(doc(db, "users", id), { status: 'approved' });
-                showNotification("Usuário aprovado!");
-                loadUsers();
-            }
-        };
+        // Aprovar escolhendo o cargo
+window.approveUserWithRole = async (id) => {
+    const roleSelect = document.getElementById(`role-select-${id}`);
+    const selectedRole = roleSelect.value;
+    
+    if(confirm(`Deseja aprovar este usuário como ${selectedRole}?`)) {
+        await updateDoc(doc(db, "users", id), { 
+            status: 'approved',
+            role: selectedRole 
+        });
+        showNotification(`Usuário aprovado como ${selectedRole}!`);
+        loadUsers();
+    }
+};
+
+    // Alterar cargo de quem já está aprovado
+    window.changeUserRole = async (id, newRole) => {
+        if(confirm(`Deseja alterar o cargo deste usuário para ${newRole}?`)) {
+            await updateDoc(doc(db, "users", id), { 
+                role: newRole 
+            });
+            showNotification("Cargo atualizado com sucesso!");
+            loadUsers();
+        }
+    };
         
         window.deleteUser = async (id) => {
             if(confirm("Tem certeza que deseja excluir este usuário definitivamente?")) {
@@ -4400,6 +4447,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
   }
 </script>
 </html>
+
 
 
 
