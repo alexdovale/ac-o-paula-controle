@@ -11,6 +11,40 @@
     <link rel="apple-touch-icon" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <link rel="manifest" href="manifest.json">
 
+
+
+    <!-- ======================================================= -->
+    <!-- MONITORAMENTO DE ERROS (SENTRY) -->
+    <!-- Cole este bloco no início do <head> do index.html -->
+    <!-- ======================================================= -->
+    
+    <script
+      src="https://browser.sentry-cdn.com/7.114.0/bundle.min.js"
+      crossorigin="anonymous"
+    ></script>
+    
+    <script>
+      // Inicializa o Sentry assim que o script carregar
+      if (window.Sentry) {
+        Sentry.init({
+          // Tua chave DSN configurada:
+          dsn: "https://7d95a89ba62ab6b3f7a64540c8e693cb@o4510647821795328.ingest.us.sentry.io/4510647932223488", 
+    
+          // Define a taxa de amostragem de performance (1.0 = 100% das transações)
+          tracesSampleRate: 1.0,
+    
+          // Configuração do Session Replay (Gravação de tela)
+          // Captura 10% das sessões normais para análise
+          replaysSessionSampleRate: 0.1, 
+          // Captura 100% das sessões onde ocorrer um erro (muito útil!)
+          replaysOnErrorSampleRate: 1.0, 
+          
+          // Informações do ambiente
+          environment: "production",
+          release: "sigap@1.0.0"
+        });
+      }
+    </script>
     <!-- Para os gráficos -->    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Tailwind CSS -->
@@ -4806,6 +4840,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
