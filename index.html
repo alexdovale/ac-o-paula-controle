@@ -3096,49 +3096,52 @@ function renderColaboradores() {
             try {
                 const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
                 const app = initializeApp(firebaseConfig);
+                
                 // Inicialização do App Check para segurança
                 const appCheck = initializeAppCheck(app, {
                   provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
                   isTokenAutoRefreshEnabled: true
                 });
+
                 db = getFirestore(app);
+
+                // --- INÍCIO DO CÓDIGO OFFLINE ---
+                try {
+                    enableIndexedDbPersistence(db).catch((err) => {
+                        if (err.code == 'failed-precondition') {
+                            console.warn('Persistência falhou: Múltiplas abas abertas.');
+                        } else if (err.code == 'unimplemented') {
+                            console.warn('Persistência falhou: Navegador não suportado.');
+                        }
+                    });
+                    console.log("Persistência Offline Ativada!");
+                } catch (e) {
+                    console.log("Erro ao ativar persistência:", e);
+                }
+
+                // Monitores de Conexão (Para mostrar a barra vermelha)
+                window.addEventListener('offline', () => {
+                    const indicator = document.getElementById('offline-indicator');
+                    if(indicator) indicator.classList.remove('hidden');
+                });
+
+                window.addEventListener('online', () => {
+                    const indicator = document.getElementById('offline-indicator');
+                    if(indicator) indicator.classList.add('hidden');
+                    // Tenta exibir notificação se a função existir
+                    if (typeof showNotification === 'function') {
+                        showNotification("Conexão restabelecida! Sincronizando...", "success");
+                    }
+                });
+                // --- FIM DO CÓDIGO OFFLINE ---
+
                 auth = getAuth(app);
                 handleAuthState();
             } catch (error) {
                 console.error("Erro ao inicializar o Firebase: ", error);
-                loadingText.textContent = 'Erro na configuração do Firebase.';
+                if(loadingText) loadingText.textContent = 'Erro na configuração do Firebase.';
             }
         };
-
-        // -----------------------------------------------------------
-        // COLE O CÓDIGO DA PERSISTÊNCIA AQUI, LOGO ABAIXO DO 'db':
-        // -----------------------------------------------------------
-        try {
-            enableIndexedDbPersistence(db).catch((err) => {
-                if (err.code == 'failed-precondition') {
-                    console.warn('Persistência falhou: Múltiplas abas abertas.');
-                } else if (err.code == 'unimplemented') {
-                    console.warn('Persistência falhou: Navegador não suportado.');
-                }
-            });
-            console.log("Persistência Offline Ativada!");
-        } catch (e) {
-            console.log("Erro ao ativar persistência:", e);
-        }
-
-        // Monitores de Conexão (Para mostrar a barra vermelha)
-        window.addEventListener('offline', () => {
-            const indicator = document.getElementById('offline-indicator');
-            if(indicator) indicator.classList.remove('hidden');
-        });
-
-        window.addEventListener('online', () => {
-            const indicator = document.getElementById('offline-indicator');
-            if(indicator) indicator.classList.add('hidden');
-            if (typeof showNotification === 'function') {
-                showNotification("Conexão restabelecida! Sincronizando...", "success");
-            }
-        });
         
         // --- CONFIGURAÇÃO DE LOGOUT POR INATIVIDADE ---
         const INACTIVITY_TIME = 30 * 60 * 1000; // 30 minutos em milissegundos
@@ -4876,5 +4879,6 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
