@@ -3110,6 +3110,36 @@ function renderColaboradores() {
             }
         };
 
+        // -----------------------------------------------------------
+        // COLE O CÓDIGO DA PERSISTÊNCIA AQUI, LOGO ABAIXO DO 'db':
+        // -----------------------------------------------------------
+        try {
+            enableIndexedDbPersistence(db).catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    console.warn('Persistência falhou: Múltiplas abas abertas.');
+                } else if (err.code == 'unimplemented') {
+                    console.warn('Persistência falhou: Navegador não suportado.');
+                }
+            });
+            console.log("Persistência Offline Ativada!");
+        } catch (e) {
+            console.log("Erro ao ativar persistência:", e);
+        }
+
+        // Monitores de Conexão (Para mostrar a barra vermelha)
+        window.addEventListener('offline', () => {
+            const indicator = document.getElementById('offline-indicator');
+            if(indicator) indicator.classList.remove('hidden');
+        });
+
+        window.addEventListener('online', () => {
+            const indicator = document.getElementById('offline-indicator');
+            if(indicator) indicator.classList.add('hidden');
+            if (typeof showNotification === 'function') {
+                showNotification("Conexão restabelecida! Sincronizando...", "success");
+            }
+        });
+        
         // --- CONFIGURAÇÃO DE LOGOUT POR INATIVIDADE ---
         const INACTIVITY_TIME = 30 * 60 * 1000; // 30 minutos em milissegundos
         let inactivityTimer;
@@ -4846,4 +4876,5 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
