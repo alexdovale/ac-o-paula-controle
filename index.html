@@ -2824,6 +2824,7 @@ function renderColaboradores() {
             deleteButton.addEventListener('click', (event) => {
                 event.stopPropagation(); 
                 if (confirm(`Tem certeza que deseja apagar a pauta "${pauta.name}"?`)) {
+                    logAction('DELETE_PAUTA', `Apagou a pauta "${pauta.name}"`, docSnap.id); //LOG de Deletar
                     deletePauta(docSnap.id);
                 }
             });
@@ -3657,6 +3658,7 @@ function renderColaboradores() {
                         createdAt: new Date().toISOString(),
                         rooms: pautaRooms // Salva as salas
                     });
+                    logAction('CREATE_PAUTA', `Criou a pauta "${pautaName}" do tipo ${pautaType}`); //Logs de criação
                     showNotification("Pauta criada com sucesso!");
                     document.getElementById('create-pauta-name-input').value = '';
                     document.getElementById('delegation-flow-modal').classList.add('hidden'); // Fecha o modal final
@@ -4604,6 +4606,9 @@ function renderColaboradores() {
                         await updateDoc(pautaRef, { isClosed: !isReopen });
                         isPautaClosed = !isReopen;
                         togglePautaLock(isPautaClosed);
+
+                        const action = isReopen ? 'REOPEN_PAUTA' : 'CLOSE_PAUTA'; //LOG DE VERIFICAÇÃO PT1
+                        logAction(action, `${isReopen ? 'Reabriu' : 'Fechou'} a pauta ${currentPautaId}`, currentPautaId); //LOG DE VERIFICAÇÃO PT2
                         
                         showNotification(`Pauta ${isReopen ? 'reaberta' : 'fechada'} com sucesso.`);
                         document.getElementById('close-pauta-modal').classList.add('hidden');
@@ -4903,6 +4908,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
