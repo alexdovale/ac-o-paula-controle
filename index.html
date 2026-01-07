@@ -24,24 +24,24 @@
     ></script>
     
     <script>
-      // Inicializa o Sentry assim que o script carregar
       if (window.Sentry) {
         Sentry.init({
-          // Tua chave DSN configurada:
           dsn: "https://7d95a89ba62ab6b3f7a64540c8e693cb@o4510647821795328.ingest.us.sentry.io/4510647932223488", 
-    
-          // Define a taxa de amostragem de performance (1.0 = 100% das transações)
           tracesSampleRate: 1.0,
-    
-          // Configuração do Session Replay (Gravação de tela)
-          // Captura 10% das sessões normais para análise
           replaysSessionSampleRate: 0.1, 
-          // Captura 100% das sessões onde ocorrer um erro (muito útil!)
           replaysOnErrorSampleRate: 1.0, 
-          
-          // Informações do ambiente
           environment: "production",
-          release: "sigap@1.0.0"
+          release: "sigap@1.0.0",
+          
+          // --- ADICIONE ESTA PARTE PARA O FEEDBACK VISUAL ---
+          beforeSend(event, hint) {
+            // Verifica se é um erro (exception) e se não foi tratado
+            if (event.exception) {
+              Sentry.showReportDialog({ eventId: event.event_id });
+            }
+            return event;
+          }
+          // --------------------------------------------------
         });
       }
     </script>
@@ -5022,6 +5022,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
