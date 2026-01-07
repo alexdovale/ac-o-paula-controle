@@ -1346,8 +1346,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const selectedRole = roleSelect.value;
             
             if(confirm(`Deseja aprovar este usuário como ${selectedRole}?`)) {
+                logAction('ADMIN_APPROVE_USER', `Aprovou usuário ${id} como ${selectedRole}`, id); // LINHA ADICIONADA AQUI
+
                 await updateDoc(doc(db, "users", id), { 
-                    logAction('ADMIN_APPROVE_USER', `Aprovou usuário ${id} como ${selectedRole}`, id);
                     status: 'approved',
                     role: selectedRole,
                 });
@@ -4910,6 +4911,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
