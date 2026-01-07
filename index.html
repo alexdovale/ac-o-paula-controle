@@ -1614,6 +1614,31 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         let editCollaboratorId = null; // ID do colaborador sendo editado na lista de presença
         let unsubscribeFromCollaborators = () => {};
 
+
+        // --- SISTEMA DE AUDITORIA (LOGS) ---
+            const logAction = async (actionType, details, targetId = null) => {
+                try {
+                    if (!auth.currentUser) return; // Só loga se estiver autenticado
+    
+                    await addDoc(collection(db, "audit_logs"), {
+                        action: actionType,           // Ex: 'DELETE_ASSISTED', 'CLOSE_PAUTA'
+                        details: details,             // Ex: 'Apagou o assistido João da Silva'
+                        targetId: targetId,           // ID do objeto afetado (opcional)
+                        pautaId: currentPautaId || 'N/A',
+                        userEmail: auth.currentUser.email,
+                        userId: auth.currentUser.uid,
+                        userName: currentUserName || 'Desconhecido',
+                        timestamp: new Date().toISOString(),
+                        userAgent: navigator.userAgent // Info do navegador/dispositivo
+                    });
+                    console.log(`[AUDIT] ${actionType}: ${details}`);
+                } catch (error) {
+                    console.error("Falha ao gravar log de auditoria:", error);
+                    // Não mostramos erro ao usuário para não interromper o fluxo
+                }
+            };
+
+        
         // --- LÓGICA DE MOVIMENTAÇÃO MANUAL (Setas e Topo) ---
         // Definimos no objeto 'window' para que o HTML consiga enxergar a função
         window.moveInQueue = async (id, direction) => {
@@ -4878,6 +4903,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
