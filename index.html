@@ -1347,9 +1347,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             
             if(confirm(`Deseja aprovar este usuário como ${selectedRole}?`)) {
                 await updateDoc(doc(db, "users", id), { 
+                    logAction('ADMIN_APPROVE_USER', `Aprovou usuário ${id} como ${selectedRole}`, id);
                     status: 'approved',
                     role: selectedRole,
-                    logAction('ADMIN_APPROVE_USER', `Aprovou usuário ${id} como ${selectedRole}`, id);
                 });
                 showNotification(`Usuário aprovado como ${selectedRole}!`);
                 loadUsers();
@@ -4910,6 +4910,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
