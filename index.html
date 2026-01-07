@@ -1348,7 +1348,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             if(confirm(`Deseja aprovar este usuário como ${selectedRole}?`)) {
                 await updateDoc(doc(db, "users", id), { 
                     status: 'approved',
-                    role: selectedRole 
+                    role: selectedRole,
+                    logAction('ADMIN_APPROVE_USER', `Aprovou usuário ${id} como ${selectedRole}`, id);
                 });
                 showNotification(`Usuário aprovado como ${selectedRole}!`);
                 loadUsers();
@@ -1368,6 +1369,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         
         window.deleteUser = async (id) => {
             if(confirm("Tem certeza que deseja excluir este usuário definitivamente?")) {
+                logAction('ADMIN_DELETE_USER', `Excluiu o usuário ${id}`, id);
                 await deleteDoc(doc(db, "users", id));
                 showNotification("Usuário removido.", "error");
                 loadUsers();
@@ -4137,12 +4139,12 @@ function renderColaboradores() {
                         document.getElementById('attendant-modal').classList.remove('hidden');
                     }
 
-                    if (button.classList.contains('faltou-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'faltoso' })); showNotification("Marcado como faltoso."); }
+                    if (button.classList.contains('faltou-btn')) { const assisted = allAssisted.find(a => a.id === id); logAction('MARK_FALTOSO', `Marcou ${assisted.name} como faltoso`, id); await updateDoc(docRef, getUpdatePayload({ status: 'faltoso' })); showNotification("Marcado como faltoso."); }
                     if (button.classList.contains('return-to-pauta-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'pauta', arrivalTime: null, priority: null, assignedCollaborator: null, inAttendanceTime: null, room: null })); showNotification("Retornado para a pauta."); }
                     if (button.classList.contains('return-to-pauta-from-faltoso-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'pauta' })); showNotification("Revertido para a pauta."); }
                     if (button.classList.contains('return-to-aguardando-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', attendant: null, attendedTime: null, assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
                     if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
-                    if (button.classList.contains('delete-btn')) { if(confirm("Tem certeza que deseja apagar este registro permanentemente?")) { await deleteDoc(docRef); showNotification("Registro apagado."); }}
+                    if (button.classList.contains('delete-btn')) { if(confirm("Tem certeza que deseja apagar este registro permanentemente?")) { const assisted = allAssisted.find(a => a.id === id); const name = assisted ? assisted.name : 'Desconhecido'; logAction('DELETE_ASSISTED', `Apagou o assistido: ${name}`, id); await deleteDoc(docRef); showNotification("Registro apagado."); }}
                     if (button.classList.contains('priority-btn')) { assistedIdToHandle = id; document.getElementById('priority-reason-modal').classList.remove('hidden'); }
                     if (button.classList.contains('unpriority-btn')) { 
                         if(confirm("Tem certeza que deseja remover o status de Prioridade Urgente? A prioridade será recalculada.")) {
@@ -4908,6 +4910,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
