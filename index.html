@@ -1480,6 +1480,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
         // --- LÓGICA DE AUDITORIA (Visualização) ---
         
+        // --- LÓGICA DE AUDITORIA (Visualização) ---
+
         const viewLogsBtn = document.getElementById('view-audit-logs-btn');
         const logsContainer = document.getElementById('audit-logs-container');
         const logsTableBody = document.getElementById('audit-logs-table-body');
@@ -1500,6 +1502,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         
                 try {
                     // Buscar os últimos 50 logs, ordenados por data (decrescente)
+                    // Certifique-se de que 'db' está disponível globalmente ou importe-o se necessário
                     const logsRef = collection(db, "audit_logs");
                     const q = query(logsRef, orderBy("timestamp", "desc"), limit(50));
                     const snapshot = await getDocs(q);
@@ -1536,7 +1539,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         
                 } catch (error) {
                     console.error("Erro ao buscar logs:", error);
-                    showNotification("Erro ao carregar logs de auditoria.", "error");
+                    // Se showNotification não estiver disponível neste escopo, use alert ou console.log
+                    if (typeof showNotification === 'function') {
+                        showNotification("Erro ao carregar logs de auditoria.", "error");
+                    } else {
+                        alert("Erro ao carregar logs. Verifique o console.");
+                    }
                     viewLogsBtn.textContent = "Tentar Novamente";
                 } finally {
                     viewLogsBtn.disabled = false;
@@ -1551,8 +1559,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, where, orderBy, getDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove, setDoc, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
+       
         // --- INÍCIO DA LÓGICA DE ASSUNTOS ---
         const subjectTree = [
             { text: "Orientação Jurídica", description: "Prestação de informações e esclarecimentos gerais sobre direitos, deveres e as leis, auxiliando o cidadão a entender sua situação e as possíveis soluções legais." },
@@ -5015,6 +5022,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
