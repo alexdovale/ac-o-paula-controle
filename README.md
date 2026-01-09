@@ -1,55 +1,45 @@
-SIGEP - Sistema de Gerenciamento de Pauta
-SIGEP é uma aplicação web moderna, projetada para gerenciar em tempo real as pautas de atendimento da Defensoria Pública. O sistema oferece uma plataforma colaborativa para que múltiplos usuários possam organizar e acompanhar o fluxo de assistidos de forma justa, transparente e eficiente.
+🏛️ SIGEP - Sistema Integrado de Gestão e Pauta
 
-🎯 Sobre o Projeto
-Este sistema foi criado para resolver a necessidade de um controle de pautas dinâmico e colaborativo. Ele substitui processos manuais por uma interface digital que organiza a fila de espera com base em uma lógica de prioridades justa, considerando pontualidade e urgência, e permite que toda a equipe veja as atualizações instantaneamente.
+O SIGEP é uma plataforma web moderna desenvolvida para otimizar o fluxo de atendimento em repartições públicas e defensorias. O sistema substitui as listas de papel por um quadro digital interativo em tempo real.
 
-✨ Funcionalidades Principais
-Autenticação de Usuários: Sistema seguro de login e cadastro, com um painel de administração para aprovação de novas contas.
+🚀 Funcionalidades Principais
 
-Gerenciamento Multi-Pauta: Crie e gerencie múltiplas pautas de atendimento. O acesso é restrito aos membros convidados.
+Tempo Real: Atualizações instantâneas via Firebase Firestore.
 
-Colaboração em Tempo Real: Todas as alterações (chegadas, atendimentos finalizados, etc.) são sincronizadas instantaneamente para todos os membros da pauta através do Firestore.
+Modo Offline: Funciona sem internet e sincroniza quando a conexão volta.
 
-Fila de Atendimento Inteligente: A fila de espera é ordenada automaticamente com base em uma lógica de prioridades que considera:
+Multi-Dispositivo: Responsivo para Desktop, Tablets e Smartphones.
 
-Urgência: Casos marcados como urgentes vão para o topo da fila.
+Auditoria Completa: Logs detalhados de todas as ações críticas.
 
-Pontualidade: Recompensa assistidos que chegam no horário ou adiantados.
+Segurança: Proteção contra XSS, regras de acesso rígidas e monitorização Sentry.
 
-Tolerância a Atrasos: Gerencia atrasos de forma justa, sem prejudicar quem foi pontual.
+Gestão de Prioridades: Classificação visual (Urgente/Média/Normal).
 
-Importação de Pauta (CSV): Carregue rapidamente uma lista de assistidos agendados a partir de um arquivo CSV.
+🛠️ Tecnologias Usadas
 
-Atendimentos Agendados e Avulsos: Suporte para ambos os tipos de atendimento em abas separadas.
+Frontend: HTML5, Tailwind CSS, JavaScript (ES6 Modules).
 
-Geração de Relatórios (PDF): Exporte um relatório em PDF com o resumo de todos os assistidos atendidos na pauta.
+Backend (BaaS): Google Firebase (Auth, Firestore, App Check).
 
-Progressive Web App (PWA): O sistema pode ser "instalado" em computadores e dispositivos móveis para acesso rápido e funcionamento offline.
+Monitorização: Sentry.io (Error Tracking & Replay).
 
-SITE QUE USO: 
-https://dashboard.emailjs.com/admin
-https://firebase.google.com/
+Utilitários: Chart.js (Gráficos), jsPDF (Relatórios), SortableJS (Drag & Drop).
 
+📱 Instalação (Como App)
 
-📂 Estrutura do Projeto
-/
-|-- index.html            # Página de Login
-|-- pautas.html           # Página de seleção de pautas
-|-- app.html              # Página principal da aplicação
-|-- manifest.json         # Configuração do PWA
-|-- sw.js                 # Service Worker para PWA
-|-- css/
-|   |-- style.css         # Estilos customizados
-|-- js/
-    |-- firebase-config.js# Configuração do Firebase
-    |-- auth.js           # Lógica da página de login
-    |-- pautas.js         # Lógica da página de pautas
-    |-- app.js            # Lógica principal do gerenciador
-    |-- utils.js          # Funções utilitárias (notificações, PWA)
+Este sistema é uma PWA (Progressive Web App).
 
-📄 Licença
-Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
+Aceda ao link no seu telemóvel.
 
-👤 Autor
-Desenvolvido por Alex do Vale com a colaboração do Gemini.
+No Android (Chrome): Toque em "Opções" > "Adicionar ao Ecrã Inicial".
+
+No iOS (Safari): Toque em "Partilhar" > "Adicionar ao Ecrã Principal".
+
+🔒 Segurança e Privacidade
+
+O sistema está em conformidade com as boas práticas de LGPD, possuindo ferramentas de limpeza de dados automática.
+
+Todos os dados trafegam encriptados (HTTPS).
+
+Desenvolvido para gestão eficiente e transparente.
