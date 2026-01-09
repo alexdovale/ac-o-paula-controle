@@ -520,27 +520,53 @@
     </div>
 
     <!-- Rodapé do Sistema -->
-<footer class="mt-16 pb-8 text-center border-t border-gray-200 pt-8">
-    <div class="flex justify-center space-x-6 mb-4 text-sm text-gray-500 font-medium">
-        <button id="manual-btn-footer" class="flex items-center hover:text-green-600 transition-colors focus:outline-none">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Manual do Utilizador
-        </button>
-        <button id="privacy-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none">Privacidade</button>
-        <button id="terms-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none">Termos</button>
-    </div>
-    <p class="text-xs text-gray-400">© SIGAP 2025 </p>
-</footer>
-
+    <footer class="bg-white border-t border-gray-200 mt-8 pt-6 pb-6 text-center hidden md:block">
+        <!-- Links de Navegação -->
+        <div class="flex justify-center space-x-6 mb-4 text-xs text-gray-500 font-medium">
+            <button id="manual-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none">
+                Manual do Utilizador
+            </button>
+            <button id="privacy-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none">Privacidade</button>
+            <button id="terms-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none">Termos</button>
+        </div>
+    
+        <!-- Selos de Segurança -->
+        <div class="flex justify-center items-center gap-4 mb-2 opacity-60">
+            <!-- Selo SSL -->
+            <span class="flex items-center gap-1 text-[10px] text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full" title="Conexão Criptografada">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="green" viewBox="0 0 16 16"><path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/></svg>
+                Ambiente Seguro
+            </span>
+            
+            <!-- Selo Sentry -->
+            <span class="flex items-center gap-1 text-[10px] text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full" title="Monitoramento de Erros Ativo">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="blue" viewBox="0 0 16 16"><path d="M8 0c-.69 0-1.843.265-2.928.56-1.11.3-2.229.655-2.887.87a1.54 1.54 0 0 0-1.044 1.262c-.596 4.477.787 7.795 2.465 9.99a11.775 11.775 0 0 0 2.517 2.453c.386.262.794.5 1.218.697.12.056.242.107.366.153l.232.083.232-.083c.124-.046.246-.097.366-.153.424-.197.832-.435 1.218-.697a11.775 11.775 0 0 0 2.517-2.453c1.678-2.195 3.061-5.513 2.465-9.99a1.54 1.54 0 0 0-1.044-1.262 62.456 62.456 0 0 0-2.887-.87C9.843.265 8.69 0 8 0zm0 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg>
+                Sentry Monitored
+            </span>
+    
+            <!-- Selo LGPD (Adicionado) -->
+            <span class="flex items-center gap-1 text-[10px] text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full" title="Conformidade com Proteção de Dados">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="purple" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                    <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                </svg>
+                LGPD Ready
+            </span>
+        </div>
+    
+        <!-- Copyright -->
+        <p class="text-xs text-gray-400">
+            &copy; 2026 SIGEP - Sistema de Gestão. Versão 2.1 (Segura)
+        </p>
+    </footer>
+    
 <script>
     // Função para gerenciar modais
     function bindModal(btnId, modalId, closeIds) {
         const btn = document.getElementById(btnId);
         const modal = document.getElementById(modalId);
         
-        if (btn && modal) {
+        if (btn && modal) {[
             btn.onclick = () => modal.classList.remove('hidden');
             
             closeIds.forEach(id => {
@@ -5022,6 +5048,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
