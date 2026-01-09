@@ -156,9 +156,12 @@
         </div>
 
         <!-- No pauta-selection-container, perto do botão de logout -->
-        <button id="admin-panel-btn" class="hidden bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">
-            Painel do Administrador
-        </button>
+        <!-- Botão Painel do Administrador (Centralizado e com Margem) -->
+        <div class="flex justify-center w-full mb-6"> <!-- Flex para centralizar, mb-6 para margem embaixo -->
+            <button id="admin-panel-btn" class="hidden bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition shadow-md">
+                Painel do Administrador
+            </button>
+        </div>
         
         <!-- Modal do Painel de Admin -->
         <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -5048,6 +5051,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
