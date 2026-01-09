@@ -1,23 +1,21 @@
 {
-  "name": "Sistema de Gerenciamento de Pauta - SIGAP",
-  "short_name": "SIGAP",
-  "start_url": ".",
+  "name": "SIGEP - Gestão de Pauta",
+  "short_name": "SIGEP",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f0f2f5",
   "theme_color": "#16a34a",
-  "description": "Sistema para gerenciar pautas de atendimento da Defensoria.",
+  "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "https://alexdovale.github.io/ac-o-paula-controle/imagem.png",
+      "src": "https://alexdovale.github.io/ponto.codoc/imagem.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
-      "src": "https://alexdovale.github.io/ac-o-paula-controle/imagem.png",
+      "src": "https://alexdovale.github.io/ponto.codoc/imagem.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }
