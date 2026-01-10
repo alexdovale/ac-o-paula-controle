@@ -1186,66 +1186,110 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
 
-        // Listener para SALVAR a edição do assistido
-document.getElementById('edit-assisted-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    // 1. Capturar todos os valores do formulário
-    const id = document.getElementById('edit-assisted-id').value;
-    const name = document.getElementById('edit-assisted-name').value;
-    const cpf = document.getElementById('edit-assisted-cpf').value;
-    const subject = document.getElementById('edit-assisted-subject').value;
-    const scheduledTime = document.getElementById('edit-assisted-time').value;
-    
-    // NOVO: Capturar a Categoria e Calcular Prioridade
-    const categorySelect = document.getElementById('edit-assisted-category');
-    const category = categorySelect ? categorySelect.value : 'NORMAL';
+// Listener para SALVAR a edição do assistido
+const editForm = document.getElementById('edit-assisted-form');
 
-    let calculatedPriority = 'NORMAL'; // Padrão (Verde)
+if (editForm) {
+    // Removemos clones anteriores para evitar duplicação de eventos
+    const newEditForm = editForm.cloneNode(true);
+    editForm.parentNode.replaceChild(newEditForm, editForm);
 
-    // Regras de Negócio para Cores
-    if (['IDOSO_80', 'AUTISMO'].includes(category)) {
-        calculatedPriority = 'URGENTE'; // Vermelho
-    } else if (['IDOSO_60', 'GESTANTE', 'PCD', 'CRIANCA_COLO', 'OBESIDADE'].includes(category)) {
-        calculatedPriority = 'MEDIA'; // Laranja
-    }
+    newEditForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        console.log("Iniciando salvamento da edição...");
 
-    try {
-        // 2. Descobrir em qual coleção o assistido está
-        const assisted = allAssisted.find(a => a.id === id);
-        
-        let collectionName = 'aguardando'; // Padrão
-        
-        if (assisted) {
-             if (assisted.status === 'atendido' || (assisted.attendedTime && !assisted.isReverted)) {
-                 collectionName = 'atendidos';
-             } else if (assisted.inAttendanceTime && !assisted.attendedTime) {
-                 collectionName = 'emAtendimento';
-             } else if (assisted.status === 'faltoso') {
-                 collectionName = 'faltosos';
-             }
+        try {
+            // 1. Captura segura dos valores (evita erro se o campo não existir)
+            const idEl = document.getElementById('edit-assisted-id');
+            const nameEl = document.getElementById('edit-assisted-name');
+            const cpfEl = document.getElementById('edit-assisted-cpf');
+            const subjectEl = document.getElementById('edit-assisted-subject');
+            
+            // Tenta achar o campo de tempo com o ID novo OU antigo
+            const timeEl = document.getElementById('edit-assisted-time') || document.getElementById('edit-scheduled-time');
+            const categorySelect = document.getElementById('edit-assisted-category');
+
+            if (!idEl || !nameEl) {
+                throw new Error("Campos obrigatórios (ID ou Nome) não encontrados no HTML.");
+            }
+
+            const id = idEl.value;
+            const name = nameEl.value;
+            const cpf = cpfEl ? cpfEl.value : '';
+            const subject = subjectEl ? subjectEl.value : '';
+            const scheduledTime = timeEl ? timeEl.value : '';
+            const category = categorySelect ? categorySelect.value : 'NORMAL';
+
+            // 2. Calcular Prioridade
+            let calculatedPriority = 'NORMAL'; 
+            if (['IDOSO_80', 'AUTISMO'].includes(category)) {
+                calculatedPriority = 'URGENTE';
+            } else if (['IDOSO_60', 'GESTANTE', 'PCD', 'CRIANCA_COLO', 'OBESIDADE'].includes(category)) {
+                calculatedPriority = 'MEDIA';
+            }
+
+            // 3. Descobrir a coleção correta
+            // Verifica se 'allAssisted' existe e tem dados
+            if (typeof allAssisted === 'undefined' || !allAssisted) {
+                console.error("Erro: Lista 'allAssisted' não encontrada.");
+                throw new Error("Erro interno: Lista de dados indisponível.");
+            }
+
+            const assisted = allAssisted.find(a => a.id === id);
+            let collectionName = 'aguardando'; // Padrão
+
+            if (assisted) {
+                 if (assisted.status === 'atendido' || (assisted.attendedTime && !assisted.isReverted)) {
+                     collectionName = 'atendidos';
+                 } else if (assisted.inAttendanceTime && !assisted.attendedTime) {
+                     collectionName = 'emAtendimento';
+                 } else if (assisted.status === 'faltoso') {
+                     collectionName = 'faltosos';
+                 }
+            } else {
+                console.warn("Aviso: Assistido não encontrado na lista local. Tentando 'aguardando'.");
+            }
+
+            console.log(`Atualizando documento na coleção: ${collectionName}, ID: ${id}`);
+
+            if (!db || !currentPautaId) {
+                 throw new Error("Erro de conexão: Banco de dados ou Pauta não identificados.");
+            }
+
+            const docRef = doc(db, `pautas/${currentPautaId}/${collectionName}`, id);
+            
+            await updateDoc(docRef, {
+                name: name,
+                cpf: cpf,
+                subject: subject,
+                scheduledTime: scheduledTime,
+                category: category,
+                priority: calculatedPriority
+            });
+
+            console.log("Sucesso!");
+            
+            if (typeof showNotification === 'function') {
+                showNotification("Dados atualizados com sucesso!");
+            } else {
+                alert("Dados atualizados com sucesso!");
+            }
+            
+            const modal = document.getElementById('edit-assisted-modal');
+            if(modal) modal.classList.add('hidden');
+
+        } catch (error) {
+            console.error("Erro detalhado ao editar:", error);
+            if (typeof showNotification === 'function') {
+                showNotification(`Erro ao salvar: ${error.message}`, "error");
+            } else {
+                alert(`Erro ao salvar: ${error.message}`);
+            }
         }
-
-        const docRef = doc(db, `pautas/${currentPautaId}/${collectionName}`, id);
-        
-        // 3. Enviar atualização
-        await updateDoc(docRef, {
-            name: name,
-            cpf: cpf,
-            subject: subject,
-            scheduledTime: scheduledTime,
-            category: category,           // Salva a nova categoria
-            priority: calculatedPriority  // Salva a nova prioridade calculada
-        });
-
-        showNotification("Dados atualizados com sucesso!");
-        document.getElementById('edit-assisted-modal').classList.add('hidden');
-
-    } catch (error) {
-        console.error("Erro ao editar:", error);
-        showNotification("Erro ao salvar edição. Tente novamente.", "error");
-    }
-});
+    });
+} else {
+    console.error("Erro: Formulário 'edit-assisted-form' não encontrado no HTML.");
+}
    
      <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 80vh;">
@@ -5154,6 +5198,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
