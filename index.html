@@ -1185,7 +1185,67 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </form>
         </div>
     </div>
+
+        // Listener para SALVAR a edição do assistido
+document.getElementById('edit-assisted-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    // 1. Capturar todos os valores do formulário
+    const id = document.getElementById('edit-assisted-id').value;
+    const name = document.getElementById('edit-assisted-name').value;
+    const cpf = document.getElementById('edit-assisted-cpf').value;
+    const subject = document.getElementById('edit-assisted-subject').value;
+    const scheduledTime = document.getElementById('edit-assisted-time').value;
+    
+    // NOVO: Capturar a Categoria e Calcular Prioridade
+    const categorySelect = document.getElementById('edit-assisted-category');
+    const category = categorySelect ? categorySelect.value : 'NORMAL';
+
+    let calculatedPriority = 'NORMAL'; // Padrão (Verde)
+
+    // Regras de Negócio para Cores
+    if (['IDOSO_80', 'AUTISMO'].includes(category)) {
+        calculatedPriority = 'URGENTE'; // Vermelho
+    } else if (['IDOSO_60', 'GESTANTE', 'PCD', 'CRIANCA_COLO', 'OBESIDADE'].includes(category)) {
+        calculatedPriority = 'MEDIA'; // Laranja
+    }
+
+    try {
+        // 2. Descobrir em qual coleção o assistido está
+        const assisted = allAssisted.find(a => a.id === id);
         
+        let collectionName = 'aguardando'; // Padrão
+        
+        if (assisted) {
+             if (assisted.status === 'atendido' || (assisted.attendedTime && !assisted.isReverted)) {
+                 collectionName = 'atendidos';
+             } else if (assisted.inAttendanceTime && !assisted.attendedTime) {
+                 collectionName = 'emAtendimento';
+             } else if (assisted.status === 'faltoso') {
+                 collectionName = 'faltosos';
+             }
+        }
+
+        const docRef = doc(db, `pautas/${currentPautaId}/${collectionName}`, id);
+        
+        // 3. Enviar atualização
+        await updateDoc(docRef, {
+            name: name,
+            cpf: cpf,
+            subject: subject,
+            scheduledTime: scheduledTime,
+            category: category,           // Salva a nova categoria
+            priority: calculatedPriority  // Salva a nova prioridade calculada
+        });
+
+        showNotification("Dados atualizados com sucesso!");
+        document.getElementById('edit-assisted-modal').classList.add('hidden');
+
+    } catch (error) {
+        console.error("Erro ao editar:", error);
+        showNotification("Erro ao salvar edição. Tente novamente.", "error");
+    }
+});
    
      <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 80vh;">
@@ -5094,6 +5154,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
