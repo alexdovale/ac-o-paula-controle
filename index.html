@@ -4323,25 +4323,38 @@ function renderColaboradores() {
                             showNotification("Prioridade Urgente removida. Recalculando prioridade."); 
                         }
                     }
-                    if (button.classList.contains('edit-assisted-btn')) { 
-                        assistedIdToHandle = id; 
-                        const assisted = allAssisted.find(a => a.id === id); 
-                        if(assisted){ 
-                            document.getElementById('edit-assisted-name').value = assisted.name; 
-                            document.getElementById('edit-assisted-cpf').value = assisted.cpf || ''; 
-                            document.getElementById('edit-assisted-subject').value = assisted.subject; 
-                            document.getElementById('edit-scheduled-time').value = assisted.scheduledTime || '';
+                   // Lógica unificada para botões de edição que precisam do ID e dos dados do assistido
+                if (button.classList.contains('edit-assisted-btn') || button.classList.contains('edit-attendant-btn')) {
+                    const id = button.getAttribute('data-id');
+                    const assisted = allAssisted.find(a => a.id === id);
+                    
+                    if (assisted) {
+                        // Caso 1: Editar Dados do Assistido
+                        if (button.classList.contains('edit-assisted-btn')) {
+                            document.getElementById('edit-assisted-id').value = assisted.id;
+                            document.getElementById('edit-assisted-name').value = assisted.name || '';
+                            document.getElementById('edit-assisted-cpf').value = assisted.cpf || '';
+                            document.getElementById('edit-assisted-subject').value = assisted.subject || '';
+                            document.getElementById('edit-assisted-time').value = assisted.scheduledTime || '';
+                            
+                            // Carregar Categoria (Novo)
+                            const categorySelect = document.getElementById('edit-assisted-category');
+                            if (categorySelect) {
+                                categorySelect.value = assisted.category || 'NORMAL';
+                            }
+                            
                             document.getElementById('edit-assisted-modal').classList.remove('hidden');
-                        } 
-                    }
-                    if (button.classList.contains('edit-attendant-btn')) {
-                        assistedIdToHandle = id;
-                        const assisted = allAssisted.find(a => a.id === id);
-                        if (assisted) {
-                            document.getElementById('edit-attendant-name').value = assisted.attendant || '';
-                            document.getElementById('edit-attendant-modal').classList.remove('hidden');
+                        }
+                        
+                        // Caso 2: Editar Atendente (Se existir essa funcionalidade)
+                        if (button.classList.contains('edit-attendant-btn')) {
+                            document.getElementById('edit-attendant-name').value = (typeof assisted.attendant === 'object' ? assisted.attendant.name : assisted.attendant) || '';
+                            // Assumindo que existe um modal para isso, se não existir, ignore este bloco
+                            const attendantModal = document.getElementById('edit-attendant-modal');
+                            if(attendantModal) attendantModal.classList.remove('hidden');
                         }
                     }
+                }
                    // NOVO CÓDIGO
                     if (button.classList.contains('view-details-btn')) {
                         openDetailsModal({
@@ -5081,6 +5094,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
