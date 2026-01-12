@@ -2230,30 +2230,19 @@ const getPriorityLevel = (a) => {
                     const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
                     if (arrivalA !== arrivalB) return arrivalA - arrivalB;
                     return (a.createdAt || 0) - (b.createdAt || 0);
-                } else { // 'padrao'
-                    // Definição da ordem, com as novas prioridades no topo
-                    const order = { 
-                        'LEGAL_SUPREMA': 1, 
-                        'LEGAL_ALTA': 2, 
-                        'MAXIMA': 3, 
-                        'MEDIA': 4, 
-                        'MINIMA': 5 
-                    }; 
-                    
+                }else { // 'padrao'
+                    const order = { /* ... seu mapeamento de prioridades ... */ }; 
                     const priorityDiff = order[a.priority] - order[b.priority];
-                    if (priorityDiff !== 0) return priorityDiff; // Prioridade legal/tempo manda
-
-                    // Critério de desempate (para a mesma prioridade)
+                    
+                    if (priorityDiff !== 0) { // <--- Garanta que as chaves do IF estão fechadas corretamente
+                        return priorityDiff; 
+                    }
+                    
+                    // Se a prioridade for a mesma, desempata por tempo de chegada e depois por criação
                     const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
                     const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                    if (arrivalA !== arrivalB) return arrivalA - arrivalB;
-
-                    return (a.createdAt || 0) - (b.createdAt || 0);
-                }
-
-                    const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
-                    const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                   if (arrivalA !== arrivalB) {
+                    
+                    if (arrivalA !== arrivalB) {
                         return arrivalA - arrivalB; 
                     }
 
@@ -5078,5 +5067,6 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
