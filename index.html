@@ -2177,11 +2177,18 @@ const getPriorityLevel = (a) => {
             }
         };
 
+   // **COLE A PARTIR DAQUI E SUBSTITUA TUDO ATÉ O PRÓXIMO BLOCO DE CÓDIGO IMPORTANTE (Ex: Event Listeners de Clique)**
+
+// --- NOVA LÓGICA PARA RENDERIZAR LISTAS ---
+
         const renderAssistedList = () => {
+            // 1. ATUALIZAÇÃO DA PRIORIDADE BASEADA NO NOVO CAMPO (priority)
             allAssisted.forEach(a => {
-                if (a.status === 'aguardando' && a.priority !== 'URGENTE') {
+                // A prioridade é calculada apenas para quem está aguardando e não tem uma prioridade legal ou manual definida
+                if (a.status === 'aguardando' && a.priority === null) {
                     a.priority = getPriorityLevel(a);
                 }
+                // Se a prioridade veio do antigo sistema (URGENTE), ela é mantida.
             });
 
             const pautaList = document.getElementById('pauta-list');
@@ -2209,45 +2216,58 @@ const getPriorityLevel = (a) => {
             atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
             faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
 
-      // Ordenação da coluna Aguardando
+            // **CORREÇÃO CRÍTICA NA ORDENAÇÃO DE AGUARDANDO**
             aguardando.sort((a, b) => {
                 const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
             
-                // Se for Manual, prioriza o índice que definimos arrastando
-                if (pautaOrder === 'manual') {
-                    // Casos URGENTES continuam sempre no topo, mesmo no manual (opcional)
+                // 1. Ordenação Manual (Se ativada e não fechada)
+                if (pautaOrder === 'manual' && !isPautaClosed) {
+                    // Prioriza Urgentes (se ainda estiverem no sistema)
                     if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
                     if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-            
-                    // Se ambos forem urgentes ou ambos comuns, usa o índice manual
-                    const indexA = a.manualIndex !== undefined ? a.manualIndex : 999;
-                    const indexB = b.manualIndex !== undefined ? b.manualIndex : 999;
+
+                    // Usa o índice manual se existir, senão vai para o final
+                    const indexA = a.manualIndex !== undefined ? a.manualIndex : 9999;
+                    const indexB = b.manualIndex !== undefined ? b.manualIndex : 9999;
                     return indexA - indexB;
                 }         
                 
+                // 2. Ordenação por Ordem de Chegada (Se ativada)
                 if (pautaOrder === 'chegada') {
-                    const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
-                    const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                    if (arrivalA !== arrivalB) return arrivalA - arrivalB;
-                    return (a.createdAt || 0) - (b.createdAt || 0);
-                }else { // 'padrao'
-                    const order = { /* ... seu mapeamento de prioridades ... */ }; 
-                    const priorityDiff = order[a.priority] - order[b.priority];
-                    
-                    if (priorityDiff !== 0) { // <--- Garanta que as chaves do IF estão fechadas corretamente
-                        return priorityDiff; 
-                    }
-                    
-                    // Se a prioridade for a mesma, desempata por tempo de chegada e depois por criação
                     const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
                     const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
                     
                     if (arrivalA !== arrivalB) {
-                        return arrivalA - arrivalB; 
+                        return arrivalA - arrivalB; // Quem chegou mais cedo primeiro
                     }
+                    return (a.createdAt || 0) - (b.createdAt || 0); // Desempate por quem foi inserido primeiro
+                } 
+                
+                // 3. Ordenação Padrão (Default)
+                else { 
+                    const order = { 
+                        'LEGAL_SUPREMA': 1, 
+                        'LEGAL_ALTA': 2, 
+                        'MAXIMA': 3, 
+                        'MEDIA': 4, 
+                        'MINIMA': 5 
+                    }; 
+                    
+                    // Níveis legais (do novo SELECT) têm a maior precedência (1 e 2)
+                    const priorityDiff = order[a.priority] - order[b.priority];
+                    if (priorityDiff !== 0) return priorityDiff; 
 
+                    // Se a prioridade legal/automática for a mesma, desempata por tempo de chegada
+                    const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
+                    const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
+                    if (arrivalA !== arrivalB) return arrivalA - arrivalB;
+
+                    // Último desempate: data de criação no banco
                     return (a.createdAt || 0) - (b.createdAt || 0);
                 }
+            }); // <-- ESTE É O FECHAMENTO DO .sort() ANTERIOR
+
+            // **A LINHA ABAIXO ESTAVA CAUSANDO O ERRO DE SINTAXE ANTES DO FECHAMENTO CORRETO**
             // Ordenação para "Em Atendimento" - mais recente primeiro, ou por colaborador
             emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
 
@@ -2284,18 +2304,14 @@ const getPriorityLevel = (a) => {
                 return card;
             });
 
-            // --- LÓGICA NOVA PARA RENDERIZAR AGUARDANDO (MULTI-SALA) ---
+            // Renderização da coluna Aguardando (com suporte a Multi-Sala)
             aguardandoList.innerHTML = ''; // Limpa a lista
 
-            // Verifica se é multisala e se temos salas definidas
             if (currentPautaData?.type === 'multisala' && currentPautaData.rooms && currentPautaData.rooms.length > 0) {
                 
-                // Para cada sala, cria uma seção
                 currentPautaData.rooms.forEach(roomName => {
-                    // Filtra pessoas desta sala
                     const peopleInRoom = aguardando.filter(a => a.room === roomName);
                     
-                    // Cria cabeçalho da sala (COM BOTÃO DE EDITAR)
                     const roomHeader = document.createElement('div');
                     roomHeader.className = "bg-blue-100 text-blue-800 font-bold px-3 py-2 rounded-md mt-4 mb-2 text-sm uppercase flex justify-between items-center group";
                     
@@ -2316,14 +2332,10 @@ const getPriorityLevel = (a) => {
                         emptyMsg.textContent = "Vazio";
                         aguardandoList.appendChild(emptyMsg);
                     } else {
-                        peopleInRoom.forEach((item, index) => {
-                            const card = createAguardandoCard(item, index);
-                            aguardandoList.appendChild(card);
-                        });
+                        peopleInRoom.forEach((item, index) => aguardandoList.appendChild(createAguardandoCard(item, index)));
                     }
                 });
 
-                // Renderiza quem está "Aguardando" mas sem sala definida (fallback)
                 const noRoom = aguardando.filter(a => !a.room);
                 if (noRoom.length > 0) {
                     const header = document.createElement('div');
@@ -2334,7 +2346,7 @@ const getPriorityLevel = (a) => {
                 }
 
             } else {
-                // --- COMPORTAMENTO PADRÃO (CÓDIGO ORIGINAL) ---
+                // **COMPORTAMENTO PADRÃO (SE NÃO FOR MULTI-SALA)**
                 if(aguardando.length === 0) aguardandoList.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum resultado.</p>`;
                 else aguardando.forEach((item, index) => aguardandoList.appendChild(createAguardandoCard(item, index)));
             }
@@ -2344,7 +2356,6 @@ const getPriorityLevel = (a) => {
                 const card = document.createElement('div');
                 card.className = `relative bg-purple-50 p-4 rounded-lg shadow-sm border-purple-200`;
                 const inAttendanceTime = new Date(a.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                // Note o escapeHTML aqui também
                 const assignedCollabText = a.assignedCollaborator?.name ? `Colaborador: <strong>${escapeHTML(a.assignedCollaborator.name)}</strong>` : 'Colaborador: Não atribuído';
                 
                 card.innerHTML = `
@@ -2355,15 +2366,18 @@ const getPriorityLevel = (a) => {
                     <p class="text-sm">${assignedCollabText}</p>
                     <p class="text-sm text-gray-500">Início: ${inAttendanceTime}</p>
                     <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
-                        <button data-id="${a.id}" data-name="${escapeHTML(a.name)}" data-collaborator-name="${escapeHTML(a.assignedCollaborator?.name || 'Não informado')}" data-collaborator-id="${a.assignedCollaborator?.id || ''}" class="delegate-finalization-btn bg-indigo-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-indigo-600">Delegar Finalização</button>
-                        <button data-id="${a.id}" data-name="${escapeHTML(a.name)}" data-collaborator-name="${escapeHTML(a.assignedCollaborator?.name || 'Não informado')}" class="attend-directly-btn bg-green-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-600">Finalizar Diretamente</button>
+                        <button data-id="${a.id}" data-name="${escapeHTML(a.name)}" data-collaborator-name="${escapeHTML(a.assignedCollaborator?.name || 'Não informado')}" data-collaborator-id="${a.assignedCollaborator?.id || ''}" class="delegate-finalization-btn ${currentPautaData?.useDelegationFlow ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-blue-500 hover:bg-blue-600'} text-white font-semibold py-2 px-3 rounded-lg">
+                            ${currentPautaData?.useDelegationFlow ? 'Delegar Finalização' : 'Finalizar Diretamente'}
+                        </button>
+                        <button data-id="${a.id}" data-name="${escapeHTML(a.name)}" data-collaborator-name="${escapeHTML(a.assignedCollaborator?.name || 'Não informado')}" class="attend-directly-btn ${currentPautaData?.useDelegationFlow ? 'hidden' : 'bg-green-500 hover:bg-green-600'} text-white font-semibold py-2 px-3 rounded-lg">Finalizar Diretamente</button>
                         <button data-id="${a.id}" class="return-to-aguardando-from-emAtendimento-btn col-span-2 bg-gray-400 text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-500">Voltar p/ Aguardando</button>
                     </div>
                     ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${escapeHTML(a.lastActionBy)}</strong></div>` : ''}
                 `;
                 return card;
             });
-render(atendidosList, atendidos, a => {
+
+            render(atendidosList, atendidos, a => {
                 const card = document.createElement('div');
                 const confirmedBtnBgClass = a.isConfirmed ? 'bg-green-500' : 'bg-gray-400';
                 const confirmedBtnHoverClass = a.isConfirmed ? 'hover:bg-green-600' : 'hover:bg-gray-500';
@@ -2371,13 +2385,11 @@ render(atendidosList, atendidos, a => {
                     `<span class="text-xs opacity-75 block">Por: ${escapeHTML(a.confirmationDetails.confirmedBy)} em ${new Date(a.confirmationDetails.confirmedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}</span>` : '';
 
                 card.className = 'relative bg-green-50 p-4 rounded-lg shadow-sm border-green-200';
-                const totalAssuntos = 1 + (a.demandas?.quantidade ? Number(a.demandas.quantidade) : 0);
+                const totalAssuntos = 1 + (a.demandas?.quantidade || 0);
                 
-                // Sanitização das Demandas Adicionais
                 const demandasInfo = a.demandas?.descricoes?.length > 0 ? 
                     `<div class="mt-2 text-xs bg-gray-100 p-2 rounded"><strong class="text-gray-700">Demandas Adicionais (${a.demandas.quantidade || 0}):</strong><ul class="list-disc list-inside pl-2 text-gray-600">${a.demandas.descricoes.map(d => `<li>${escapeHTML(d)}</li>`).join('')}</ul></div>` : '';
                 
-                // Sanitização do nome do atendente
                 let attendantNameDisplay = 'Não informado';
                 if (a.attendant) {
                     if (typeof a.attendant === 'object' && a.attendant !== null) {
@@ -2430,13 +2442,17 @@ render(atendidosList, atendidos, a => {
                     </div>`;
                 return card;
             });
-
             render(faltososList, faltosos, a => {
                 const card = document.createElement('div');
-                // ... (lógica de confirmação mantém igual) ...
+                const confirmedBtnBgClass = a.isConfirmed ? 'bg-green-500' : 'bg-gray-400';
+                const confirmedBtnHoverClass = a.isConfirmed ? 'hover:bg-green-600' : 'hover:bg-gray-500';
+                const confirmationInfo = a.isConfirmed && a.confirmationDetails ? 
+                    `<span class="text-xs opacity-75 block">Por: ${escapeHTML(a.confirmationDetails.confirmedBy)} em ${new Date(a.confirmationDetails.confirmedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}</span>` : '';
+
+                card.className = 'relative bg-red-50 p-4 rounded-lg shadow-sm border-red-200';
 
                 card.innerHTML = `
-                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg ...></svg></button>
+                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
                     <div class="flex items-center justify-between">
                         <p class="font-bold text-lg inline-flex items-center">
                             ${escapeHTML(a.name)}
@@ -2461,9 +2477,10 @@ render(atendidosList, atendidos, a => {
 
             togglePautaLock(isPautaClosed);
 
-            // ADICIONE ESTA LINHA AQUI:
-            setupManualSort()
+            // **CHAMA A FUNÇÃO PARA HABILITAR O DRAG AND DROP MANUAL**
+            setupManualSort();
         };
+
 
         const showNotification = (message, type = 'success') => {
             const colors = { info: 'blue', error: 'red', success: 'green' };
@@ -5067,6 +5084,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
