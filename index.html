@@ -2253,11 +2253,12 @@ const getPriorityLevel = (a) => {
 
                     const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
                     const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                    if (arrivalA !== arrivalB) return arrivalA - arrivalB;
+                   if (arrivalA !== arrivalB) {
+                        return arrivalA - arrivalB; 
+                    }
 
                     return (a.createdAt || 0) - (b.createdAt || 0);
                 }
-            });
             // Ordenação para "Em Atendimento" - mais recente primeiro, ou por colaborador
             emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
 
@@ -5077,4 +5078,5 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
