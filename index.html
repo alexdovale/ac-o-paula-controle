@@ -362,7 +362,24 @@
                             <label for="assisted-name" class="mb-1 font-medium text-gray-600">Nome do Assistido</label>
                             <input type="text" id="assisted-name" placeholder="Ex: João da Silva" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition">
                         </div>
-                        <div class="flex flex-col"><label for="assisted-cpf" class="mb-1 font-medium text-gray-600">CPF (Opcional)</label><input type="text" id="assisted-cpf" placeholder="___.___.___-__" maxlength="14" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition"></div>
+                        <div class="flex flex-col"><label for="assisted-cpf" class="mb-1 font-medium text-gray-600">CPF (Opcional)</label><input type="text" id="assisted-cpf" placeholder="___.___.___-__" maxlength="14" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition"></div>                        
+                       <div class="flex flex-col">
+                            <label class="mb-1 font-medium text-gray-600">Categoria / Prioridade</label>
+                            <select id="assisted-priority-category" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 bg-white">
+                                <option value="NORMAL">🟢 Normal / Sem Prioridade</option>
+                                <optgroup label="Super Prioridade (Lei 13.466/17)">
+                                    <option value="IDOSO_80">🔴 Idoso (80 anos ou mais)</option>
+                                    <option value="AUTISMO">🔴 Autismo / TEA</option>
+                                </optgroup>
+                                <optgroup label="Prioridade Legal (Lei 10.048/00)">
+                                    <option value="IDOSO_60">🟠 Idoso (60 a 79 anos)</option>
+                                    <option value="GESTANTE">🟠 Gestante / Lactante</option>
+                                    <option value="PCD">🟠 Pessoa com Deficiência (PcD)</option>
+                                    <option value="CRIANCA_COLO">🟠 Pessoa c/ Criança de Colo</option>
+                                    <option value="OBESIDADE">🟠 Obesidade</option>
+                                </optgroup>
+                            </select>
+                        </div>
                         <div class="flex flex-col lg:col-span-4">
                             <div class="flex items-center gap-2 mb-1">
                                 <label for="assisted-subject" class="font-medium text-gray-600">Matéria - Assunto</label>
@@ -1139,6 +1156,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 <div><label for="edit-assisted-cpf" class="block text-sm font-medium text-gray-700">CPF</label><input type="text" id="edit-assisted-cpf" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
                 <div><label for="edit-assisted-subject" class="block text-sm font-medium text-gray-700">Assunto</label><input list="subjects-list" type="text" id="edit-assisted-subject" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
                 <div><label for="edit-scheduled-time" class="block text-sm font-medium text-gray-700">Horário Agendado</label><input type="time" id="edit-scheduled-time" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
+            </div>
+             <!-- Dentro do edit-assisted-modal, logo após o campo de Horário Agendado -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Categoria / Prioridade</label>
+                <select id="edit-assisted-priority-category" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg bg-white">
+                    <!-- Mesmas opções acima (Normal, Super Prioridade, Prioridade Legal) -->
+                </select>
             </div>
             <div class="flex justify-end space-x-4 mt-8">
                 <button id="cancel-edit-assisted-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
@@ -2054,7 +2078,24 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     
         const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
         const isManual = pautaOrder === 'manual' && !isPautaClosed;
-    
+
+        // Crie esse objeto fora da função para traduzir os nomes:
+        const categoryLabels = {
+            'IDOSO_80': '🔴 80+ ANOS',
+            'AUTISMO': '🔴 AUTISMO/TEA',
+            'IDOSO_60': '🟠 IDOSO (60+)',
+            'GESTANTE': '🟠 GESTANTE',
+            'PCD': '🟠 PCD',
+            'CRIANCA_COLO': '🟠 C/ COLO',
+            'OBESIDADE': '🟠 OBESIDADE'
+        };
+        
+        // Dentro do innerHTML do card, onde ficam as badges (perto de room):
+        ${a.priorityCategory && a.priorityCategory !== 'NORMAL' ? 
+            `<span class="bg-orange-50 text-orange-700 text-[10px] px-2 py-0.5 rounded font-bold border border-orange-200">
+                ${categoryLabels[a.priorityCategory]}
+            </span>` : ''}
+          
         // Indicador de Posição (Rank) e Botões de Comando
         const rankAndControls = isManual ? `
             <!-- Indicador de Rank -->
@@ -2195,6 +2236,29 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
       // Ordenação da coluna Aguardando
             aguardando.sort((a, b) => {
+
+
+             const priorityWeights = {
+        'URGENTE': 0,      // Botão manual de emergência
+        'IDOSO_80': 1,     // Super Prioridade
+        'AUTISMO': 1,      // Super Prioridade
+        'IDOSO_60': 2,     // Prioridade Legal
+        'GESTANTE': 2,
+        'PCD': 2,
+        'CRIANCA_COLO': 2,
+        'OBESIDADE': 2,
+        'NORMAL': 3        // Sem prioridade
+    };
+
+    const weightA = a.priority === 'URGENTE' ? 0 : (priorityWeights[a.priorityCategory] || 3);
+    const weightB = b.priority === 'URGENTE' ? 0 : (priorityWeights[b.priorityCategory] || 3);
+
+    if (weightA !== weightB) return weightA - weightB;
+
+    // Se empatar na categoria, usa o horário de chegada
+    return new Date(a.arrivalTime) - new Date(b.arrivalTime);
+});
+                
                 const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
             
                 // Se for Manual, prioriza o índice que definimos arrastando
@@ -4390,12 +4454,21 @@ function renderColaboradores() {
                 }
 
               if (button.id === 'add-assisted-btn') {
-    const name = document.getElementById('assisted-name').value.trim();
-    if (!name) {
-        showNotification("O nome é obrigatório.", "error");
-        return;
-    }
-    
+
+            const priorityCategory = document.getElementById('assisted-priority-category').value;
+
+            const newAssisted = getUpdatePayload({
+                // ... campos que já existem ...
+                priorityCategory: priorityCategory, // Adicione esta linha
+                // Remova ou deixe nulo o campo 'priority' antigo se quiser que a lista mande
+            });
+                  
+            const name = document.getElementById('assisted-name').value.trim();
+            if (!name) {
+                showNotification("O nome é obrigatório.", "error");
+                return;
+            }
+            
     const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
     let isScheduled, hasArrived, scheduledTimeValue;
 
@@ -4535,10 +4608,13 @@ function renderColaboradores() {
                 }
                 if (button.id === 'confirm-edit-assisted-btn') {
                     const name = document.getElementById('edit-assisted-name').value.trim();
+                    document.getElementById('edit-assisted-priority-category').value = assisted.priorityCategory || 'NORMAL';
+
                     if (!name) { showNotification("O nome não pode ficar em branco.", "error"); return; }
                     const updatedData = {
                         name,
                         cpf: document.getElementById('edit-assisted-cpf').value.trim(),
+                        priorityCategory: document.getElementById('edit-assisted-priority-category').value,
                         subject: document.getElementById('edit-assisted-subject').value.trim(),
                         scheduledTime: document.getElementById('edit-scheduled-time').value || null,
                     };
@@ -5051,3 +5127,4 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
