@@ -2129,14 +2129,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     <span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">${arrival}</span>
                     ${a.room ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(a.room)}</span>` : ''}
                 </div>
-                <div class="mt-auto grid grid-cols-2 gap-2">
-                    ${atenderButton}
-                    <button data-id="${a.id}" class="priority-btn ${a.priority === 'URGENTE' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-red-500 hover:bg-red-600'} text-white font-semibold py-2 rounded-lg text-xs transition-colors">
-                        ${a.priority === 'URGENTE' ? 'Urgente Ativado' : 'Prioridade'}
-                    </button>
-                </div>
-                <button data-id="${a.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
-            </div>
+               <div class="mt-auto grid grid-cols-2 gap-2">
+                        ${atenderButton}
+                        <!-- MANTIDO: O botão de prioridade manual (URGENTE) continua aqui, pois a função getPriorityLevel() prioriza ele! -->
+                        <button data-id="${a.id}" class="priority-btn ${a.priority === 'URGENTE' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-red-500 hover:bg-red-600'} text-white font-semibold py-2 rounded-lg text-xs transition-colors">
+                            ${a.priority === 'URGENTE' ? 'Urgente Ativado' : 'Prioridade'}
+                        </button>
+                    </div>
         `;
         return card;
     };
@@ -4323,7 +4322,6 @@ function renderColaboradores() {
                     if (button.classList.contains('return-to-aguardando-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', attendant: null, attendedTime: null, assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
                     if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
                     if (button.classList.contains('delete-btn')) { if(confirm("Tem certeza que deseja apagar este registro permanentemente?")) { const assisted = allAssisted.find(a => a.id === id); const name = assisted ? assisted.name : 'Desconhecido'; logAction('DELETE_ASSISTED', `Apagou o assistido: ${name}`, id); await deleteDoc(docRef); showNotification("Registro apagado."); }}
-                    if (button.classList.contains('priority-btn')) { assistedIdToHandle = id; document.getElementById('priority-reason-modal').classList.remove('hidden'); }
                     if (button.classList.contains('unpriority-btn')) { 
                         if(confirm("Tem certeza que deseja remover o status de Prioridade Urgente? A prioridade será recalculada.")) {
                             await updateDoc(docRef, getUpdatePayload({ priority: null, priorityReason: null })); 
@@ -5086,6 +5084,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
