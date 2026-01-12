@@ -58,17 +58,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
-        .priority-urgente { border-left: 5px solid #ef4444; } /* Pode manter essa cor para a antiga, ou remover */
         .priority-urgente { border-left: 5px solid #ef4444; }
         .priority-maxima { border-left: 5px solid #22c55e; }
         .priority-media { border-left: 5px solid #f97316; }
         .priority-minima { border-left: 5px solid #6b7280; }
-
-        /* NOVAS CLASSES PARA PRIORIDADES LEGAIS */
-        .priority-legal-suprema { border-left: 5px solid #9a3412; /* Vermelho mais escuro */ } 
-        .priority-legal-alta { border-left: 5px solid #ea580c; /* Laranja mais forte */ } 
-        /* MAXIMA, MEDIA, MINIMA já existem */
-        
         .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar, #members-list-container::-webkit-scrollbar, #statistics-content::-webkit-scrollbar { width: 8px; }
         .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track, #statistics-content::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
         .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb, #statistics-content::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
@@ -1153,8 +1146,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
         </div>
     </div>
-
-
+    <div id="priority-reason-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Atendimento Prioritário</h2>
+            <p class="mb-4 text-gray-600">Por favor, informe o motivo da prioridade.</p>
+            <textarea id="priority-reason-input" placeholder="Motivo..." class="w-full p-3 border border-gray-300 rounded-lg mb-6 h-24"></textarea>
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-priority-reason-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-priority-reason-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">Confirmar Prioridade</button>
+            </div>
+        </div>
+    </div>
      <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 80vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -1935,45 +1937,24 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         
 
         
+        const getPriorityLevel = (assisted) => {
+            if (!assisted || assisted.status !== 'aguardando') return 'N/A';
+            if (assisted.priority === 'URGENTE') return 'URGENTE';
 
-const getPriorityLevel = (a) => {
-            if (!a || a.status !== 'aguardando') return 'N/A';
-            
-            // Se for um assistido Avulso, aplica a regra de tempo base, mas com prioridade Média
-            if (a.type === 'avulso') {
-                if (a.arrivalTime) {
-                    const scheduled = { scheduledTime: '00:00' }; // Assume que avulso é sempre "no horário"
-                    const arrival = { arrivalTime: a.arrivalTime };
-                    const diffMinutes = (new Date(arrival.arrivalTime) - new Date(scheduled.scheduledTime)) / (1000 * 60); // Simplificação, o ideal seria calcular o tempo real de chegada se for avulso
+            if (assisted.type === 'avulso') return 'Média';
 
-                    // Para avulsos, geralmente a regra é: quem chegou primeiro é atendido.
-                    // Vamos forçar Média (ou você pode usar uma lógica de tempo para avulsos)
-                    return 'MEDIA'; 
-                }
-                return 'MEDIA'; // Se não tem chegada, mas é avulso, é Média por padrão.
-            }
+            if (!assisted.scheduledTime || !assisted.arrivalTime) return 'Média';
 
-            // 1. Prioridade Manual (URGENTE) - Se você decidir manter o botão (mas você pediu para remover, então pulamos)
-            // if (a.priority === 'URGENTE') return 'URGENTE'; 
-
-            // 2. Prioridades Legais (do novo SELECT)
-            if (a.priority === 'IDOSO_80' || a.priority === 'AUTISMO') return 'LEGAL_SUPREMA';
-            if (a.priority === 'IDOSO_60' || a.priority === 'GESTANTE' || a.priority === 'PCD' || a.priority === 'CRIANCA_COLO' || a.priority === 'OBESIDADE') return 'LEGAL_ALTA';
-
-            // 3. Prioridade por Tempo de Chegada (Para os com priority=null ou NENHUMA)
-            if (!a.scheduledTime || !a.arrivalTime) return 'MINIMA'; // Sem horário agendado/chegada, vai para o final
-
-            const scheduled = new Date(`1970-01-01T${a.scheduledTime}`);
-            const arrival = new Date(a.arrivalTime);
+            const scheduled = new Date(`1970-01-01T${assisted.scheduledTime}`);
+            const arrival = new Date(assisted.arrivalTime);
             const arrivalTime = new Date(`1970-01-01T${arrival.toTimeString().slice(0, 5)}`);
 
             const diffMinutes = (arrivalTime - scheduled) / (1000 * 60);
 
-            if (diffMinutes <= 0) return 'MAXIMA'; // Chegou na hora ou adiantado
-            if (diffMinutes <= 20) return 'MEDIA';   // Atraso pequeno (20 min)
-            return 'MINIMA'; // Atraso grande
+            if (diffMinutes <= 0) return 'Máxima';
+            if (diffMinutes <= 20) return 'Média';
+            return 'Mínima';
         };
-        
             /**
              * Garante a formatação segura de strings de data ISO ou Timestamp.
              * No fluxo de delegação, attendedTime pode ser uma string ISO ou um objeto Timestamp.
@@ -2065,63 +2046,66 @@ const getPriorityLevel = (a) => {
             }
         };
 
-     const createAguardandoCard = (a, index) => {
-            const card = document.createElement('div');
-            // Usa a nova função getPriorityLevel que agora considera as prioridades legais
-            card.className = `relative bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)} mb-2 group transition-all duration-200`;
-            card.setAttribute('data-id', a.id);
-        
-            const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
-            const isManual = pautaOrder === 'manual' && !isPautaClosed;
-        
-            // Bloco de Rank e Controles (mantido se a ordenação manual estiver ativa)
-            const rankAndControls = isManual ? `
-                <!-- Indicador de Rank -->
-                <div class="absolute -top-2 -left-2 bg-blue-600 text-white text-[10px] font-bold w-6 h-6 flex items-center justify-center rounded-full shadow-md z-20 border-2 border-white">
-                    ${index + 1}º
+      const createAguardandoCard = (a, index) => {
+        const card = document.createElement('div');
+        // Adicionado 'group' para controlar o aparecimento dos botões e 'transition-all'
+        card.className = `relative bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)} mb-2 group transition-all duration-200`;
+        card.setAttribute('data-id', a.id);
+    
+        const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
+        const isManual = pautaOrder === 'manual' && !isPautaClosed;
+    
+        // Indicador de Posição (Rank) e Botões de Comando
+        const rankAndControls = isManual ? `
+            <!-- Indicador de Rank -->
+            <div class="absolute -top-2 -left-2 bg-blue-600 text-white text-[10px] font-bold w-6 h-6 flex items-center justify-center rounded-full shadow-md z-20 border-2 border-white">
+                ${index + 1}º
+            </div>
+            
+            <!-- Botões de Movimentação Lateral (Aparecem no Hover) -->
+            <div class="absolute -left-4 top-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-x-1 z-30">
+                <button onclick="moveInQueue('${a.id}', 'top')" title="Mover para o Topo" class="bg-white text-blue-600 shadow-lg border border-blue-100 rounded-full p-1.5 hover:bg-blue-600 hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M5 11l7-7 7 7M5 19l7-7 7 7" /></svg>
+                </button>
+                <button onclick="moveInQueue('${a.id}', 'up')" title="Subir uma posição" class="bg-white text-gray-700 shadow-lg border border-gray-100 rounded-full p-1.5 hover:bg-gray-100 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M5 15l7-7 7 7" /></svg>
+                </button>
+                <button onclick="moveInQueue('${a.id}', 'down')" title="Descer uma posição" class="bg-white text-gray-700 shadow-lg border border-gray-100 rounded-full p-1.5 hover:bg-gray-100 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M19 9l-7 7-7-7" /></svg>
+                </button>
+            </div>
+        ` : '';
+    
+        const arrival = a.type === 'agendamento' && a.scheduledTime 
+            ? `Agendado: ${escapeHTML(a.scheduledTime)} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` 
+            : `Chegada: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    
+        // APLICAÇÃO DE SEGURANÇA: escapeHTML
+        let atenderButton = currentPautaData?.useDelegationFlow
+            ? `<button data-id="${a.id}" data-name="${escapeHTML(a.name)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`
+            : `<button data-id="${a.id}" data-name="${escapeHTML(a.name)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`;
+    
+        card.innerHTML = `
+            ${rankAndControls}
+            <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
+            <div class="flex flex-col h-full ${isManual ? 'pl-3' : ''}">
+                <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(a.name)}</p>
+                <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(a.subject)}</strong></p>
+                <div class="flex flex-wrap gap-2 mb-3">
+                    <span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">${arrival}</span>
+                    ${a.room ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(a.room)}</span>` : ''}
                 </div>
-                
-                <!-- Botões de Movimentação Lateral (Aparecem no Hover) -->
-                <div class="absolute -left-4 top-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-x-1 z-30">
-                    <button onclick="moveInQueue('${a.id}', 'top')" title="Mover para o Topo" class="bg-white text-blue-600 shadow-lg border border-blue-100 rounded-full p-1.5 hover:bg-blue-600 hover:text-white transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M5 11l7-7 7 7M5 19l7-7 7 7" /></svg>
-                    </button>
-                    <button onclick="moveInQueue('${a.id}', 'up')" title="Subir uma posição" class="bg-white text-gray-700 shadow-lg border border-gray-100 rounded-full p-1.5 hover:bg-gray-100 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M5 15l7-7 7 7" /></svg>
-                    </button>
-                    <button onclick="moveInQueue('${a.id}', 'down')" title="Descer uma posição" class="bg-white text-gray-700 shadow-lg border border-gray-100 rounded-full p-1.5 hover:bg-gray-100 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M19 9l-7 7-7-7" /></svg>
+                <div class="mt-auto grid grid-cols-2 gap-2">
+                    ${atenderButton}
+                    <button data-id="${a.id}" class="priority-btn ${a.priority === 'URGENTE' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-red-500 hover:bg-red-600'} text-white font-semibold py-2 rounded-lg text-xs transition-colors">
+                        ${a.priority === 'URGENTE' ? 'Urgente Ativado' : 'Prioridade'}
                     </button>
                 </div>
-            ` : '';
-        
-            const arrival = a.type === 'agendamento' && a.scheduledTime 
-                ? `Agendado: ${escapeHTML(a.scheduledTime)} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` 
-                : `Chegada: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-        
-            let atenderButton = currentPautaData?.useDelegationFlow
-                ? `<button data-id="${a.id}" data-name="${escapeHTML(a.name)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`
-                : `<button data-id="${a.id}" data-name="${escapeHTML(a.name)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`;
-        
-            card.innerHTML = `
-                ${rankAndControls}
-                <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
-                <div class="flex flex-col h-full ${isManual ? 'pl-3' : ''}">
-                    <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(a.name)}</p>
-                    <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(a.subject)}</strong></p>
-                    <div class="flex flex-wrap gap-2 mb-3">
-                        <span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">${arrival}</span>
-                        ${a.room ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(a.room)}</span>` : ''}
-                    </div>
-                    <div class="mt-auto grid grid-cols-2 gap-2">
-                        ${atenderButton}
-                        <!-- REMOVIDO O BOTÃO DE PRIORIDADE MANUAL AQUI -->
-                    </div>
-                    <button data-id="${a.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
-                </div>
-            `;
-            return card;
-        };
+                <button data-id="${a.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
+            </div>
+        `;
+        return card;
+    };
 
         // --- FUNÇÃO PARA RENOMEAR SALA ---
         const renamePautaRoom = async (oldName, newName) => {
@@ -2177,18 +2161,11 @@ const getPriorityLevel = (a) => {
             }
         };
 
-   // **COLE A PARTIR DAQUI E SUBSTITUA TUDO ATÉ O PRÓXIMO BLOCO DE CÓDIGO IMPORTANTE (Ex: Event Listeners de Clique)**
-
-// --- NOVA LÓGICA PARA RENDERIZAR LISTAS ---
-
         const renderAssistedList = () => {
-            // 1. ATUALIZAÇÃO DA PRIORIDADE BASEADA NO NOVO CAMPO (priority)
             allAssisted.forEach(a => {
-                // A prioridade é calculada apenas para quem está aguardando e não tem uma prioridade legal ou manual definida
-                if (a.status === 'aguardando' && a.priority === null) {
+                if (a.status === 'aguardando' && a.priority !== 'URGENTE') {
                     a.priority = getPriorityLevel(a);
                 }
-                // Se a prioridade veio do antigo sistema (URGENTE), ela é mantida.
             });
 
             const pautaList = document.getElementById('pauta-list');
@@ -2216,58 +2193,45 @@ const getPriorityLevel = (a) => {
             atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
             faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
 
-            // **CORREÇÃO CRÍTICA NA ORDENAÇÃO DE AGUARDANDO**
+      // Ordenação da coluna Aguardando
             aguardando.sort((a, b) => {
                 const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
             
-                // 1. Ordenação Manual (Se ativada e não fechada)
-                if (pautaOrder === 'manual' && !isPautaClosed) {
-                    // Prioriza Urgentes (se ainda estiverem no sistema)
+                // Se for Manual, prioriza o índice que definimos arrastando
+                if (pautaOrder === 'manual') {
+                    // Casos URGENTES continuam sempre no topo, mesmo no manual (opcional)
                     if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
                     if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-
-                    // Usa o índice manual se existir, senão vai para o final
-                    const indexA = a.manualIndex !== undefined ? a.manualIndex : 9999;
-                    const indexB = b.manualIndex !== undefined ? b.manualIndex : 9999;
+            
+                    // Se ambos forem urgentes ou ambos comuns, usa o índice manual
+                    const indexA = a.manualIndex !== undefined ? a.manualIndex : 999;
+                    const indexB = b.manualIndex !== undefined ? b.manualIndex : 999;
                     return indexA - indexB;
                 }         
                 
-                // 2. Ordenação por Ordem de Chegada (Se ativada)
                 if (pautaOrder === 'chegada') {
                     const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
                     const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                    
-                    if (arrivalA !== arrivalB) {
-                        return arrivalA - arrivalB; // Quem chegou mais cedo primeiro
-                    }
-                    return (a.createdAt || 0) - (b.createdAt || 0); // Desempate por quem foi inserido primeiro
-                } 
-                
-                // 3. Ordenação Padrão (Default)
-                else { 
-                    const order = { 
-                        'LEGAL_SUPREMA': 1, 
-                        'LEGAL_ALTA': 2, 
-                        'MAXIMA': 3, 
-                        'MEDIA': 4, 
-                        'MINIMA': 5 
-                    }; 
-                    
-                    // Níveis legais (do novo SELECT) têm a maior precedência (1 e 2)
+                    if (arrivalA !== arrivalB) return arrivalA - arrivalB;
+                    return (a.createdAt || 0) - (b.createdAt || 0);
+                } else { // 'padrao'
+                    const order = { 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
                     const priorityDiff = order[a.priority] - order[b.priority];
-                    if (priorityDiff !== 0) return priorityDiff; 
+                    if (priorityDiff !== 0) return priorityDiff;
 
-                    // Se a prioridade legal/automática for a mesma, desempata por tempo de chegada
+                    if (a.priority === 'Máxima' && a.type === 'agendamento') {
+                        const scheduledA = a.scheduledTime || '23:59';
+                        const scheduledB = b.scheduledTime || '23:59';
+                        if (scheduledA.localeCompare(scheduledB) !== 0) return scheduledA.localeCompare(scheduledB);
+                    }
+
                     const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
                     const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
                     if (arrivalA !== arrivalB) return arrivalA - arrivalB;
 
-                    // Último desempate: data de criação no banco
                     return (a.createdAt || 0) - (b.createdAt || 0);
                 }
-            }); // <-- ESTE É O FECHAMENTO DO .sort() ANTERIOR
-
-            // **A LINHA ABAIXO ESTAVA CAUSANDO O ERRO DE SINTAXE ANTES DO FECHAMENTO CORRETO**
+            });
             // Ordenação para "Em Atendimento" - mais recente primeiro, ou por colaborador
             emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
 
@@ -2304,14 +2268,18 @@ const getPriorityLevel = (a) => {
                 return card;
             });
 
-            // Renderização da coluna Aguardando (com suporte a Multi-Sala)
+            // --- LÓGICA NOVA PARA RENDERIZAR AGUARDANDO (MULTI-SALA) ---
             aguardandoList.innerHTML = ''; // Limpa a lista
 
+            // Verifica se é multisala e se temos salas definidas
             if (currentPautaData?.type === 'multisala' && currentPautaData.rooms && currentPautaData.rooms.length > 0) {
                 
+                // Para cada sala, cria uma seção
                 currentPautaData.rooms.forEach(roomName => {
+                    // Filtra pessoas desta sala
                     const peopleInRoom = aguardando.filter(a => a.room === roomName);
                     
+                    // Cria cabeçalho da sala (COM BOTÃO DE EDITAR)
                     const roomHeader = document.createElement('div');
                     roomHeader.className = "bg-blue-100 text-blue-800 font-bold px-3 py-2 rounded-md mt-4 mb-2 text-sm uppercase flex justify-between items-center group";
                     
@@ -2332,10 +2300,14 @@ const getPriorityLevel = (a) => {
                         emptyMsg.textContent = "Vazio";
                         aguardandoList.appendChild(emptyMsg);
                     } else {
-                        peopleInRoom.forEach((item, index) => aguardandoList.appendChild(createAguardandoCard(item, index)));
+                        peopleInRoom.forEach((item, index) => {
+                            const card = createAguardandoCard(item, index);
+                            aguardandoList.appendChild(card);
+                        });
                     }
                 });
 
+                // Renderiza quem está "Aguardando" mas sem sala definida (fallback)
                 const noRoom = aguardando.filter(a => !a.room);
                 if (noRoom.length > 0) {
                     const header = document.createElement('div');
@@ -2346,7 +2318,7 @@ const getPriorityLevel = (a) => {
                 }
 
             } else {
-                // **COMPORTAMENTO PADRÃO (SE NÃO FOR MULTI-SALA)**
+                // --- COMPORTAMENTO PADRÃO (CÓDIGO ORIGINAL) ---
                 if(aguardando.length === 0) aguardandoList.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum resultado.</p>`;
                 else aguardando.forEach((item, index) => aguardandoList.appendChild(createAguardandoCard(item, index)));
             }
@@ -2356,6 +2328,7 @@ const getPriorityLevel = (a) => {
                 const card = document.createElement('div');
                 card.className = `relative bg-purple-50 p-4 rounded-lg shadow-sm border-purple-200`;
                 const inAttendanceTime = new Date(a.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                // Note o escapeHTML aqui também
                 const assignedCollabText = a.assignedCollaborator?.name ? `Colaborador: <strong>${escapeHTML(a.assignedCollaborator.name)}</strong>` : 'Colaborador: Não atribuído';
                 
                 card.innerHTML = `
@@ -2366,18 +2339,15 @@ const getPriorityLevel = (a) => {
                     <p class="text-sm">${assignedCollabText}</p>
                     <p class="text-sm text-gray-500">Início: ${inAttendanceTime}</p>
                     <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
-                        <button data-id="${a.id}" data-name="${escapeHTML(a.name)}" data-collaborator-name="${escapeHTML(a.assignedCollaborator?.name || 'Não informado')}" data-collaborator-id="${a.assignedCollaborator?.id || ''}" class="delegate-finalization-btn ${currentPautaData?.useDelegationFlow ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-blue-500 hover:bg-blue-600'} text-white font-semibold py-2 px-3 rounded-lg">
-                            ${currentPautaData?.useDelegationFlow ? 'Delegar Finalização' : 'Finalizar Diretamente'}
-                        </button>
-                        <button data-id="${a.id}" data-name="${escapeHTML(a.name)}" data-collaborator-name="${escapeHTML(a.assignedCollaborator?.name || 'Não informado')}" class="attend-directly-btn ${currentPautaData?.useDelegationFlow ? 'hidden' : 'bg-green-500 hover:bg-green-600'} text-white font-semibold py-2 px-3 rounded-lg">Finalizar Diretamente</button>
+                        <button data-id="${a.id}" data-name="${escapeHTML(a.name)}" data-collaborator-name="${escapeHTML(a.assignedCollaborator?.name || 'Não informado')}" data-collaborator-id="${a.assignedCollaborator?.id || ''}" class="delegate-finalization-btn bg-indigo-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-indigo-600">Delegar Finalização</button>
+                        <button data-id="${a.id}" data-name="${escapeHTML(a.name)}" data-collaborator-name="${escapeHTML(a.assignedCollaborator?.name || 'Não informado')}" class="attend-directly-btn bg-green-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-600">Finalizar Diretamente</button>
                         <button data-id="${a.id}" class="return-to-aguardando-from-emAtendimento-btn col-span-2 bg-gray-400 text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-500">Voltar p/ Aguardando</button>
                     </div>
                     ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${escapeHTML(a.lastActionBy)}</strong></div>` : ''}
                 `;
                 return card;
             });
-
-            render(atendidosList, atendidos, a => {
+render(atendidosList, atendidos, a => {
                 const card = document.createElement('div');
                 const confirmedBtnBgClass = a.isConfirmed ? 'bg-green-500' : 'bg-gray-400';
                 const confirmedBtnHoverClass = a.isConfirmed ? 'hover:bg-green-600' : 'hover:bg-gray-500';
@@ -2385,11 +2355,13 @@ const getPriorityLevel = (a) => {
                     `<span class="text-xs opacity-75 block">Por: ${escapeHTML(a.confirmationDetails.confirmedBy)} em ${new Date(a.confirmationDetails.confirmedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}</span>` : '';
 
                 card.className = 'relative bg-green-50 p-4 rounded-lg shadow-sm border-green-200';
-                const totalAssuntos = 1 + (a.demandas?.quantidade || 0);
+                const totalAssuntos = 1 + (a.demandas?.quantidade ? Number(a.demandas.quantidade) : 0);
                 
+                // Sanitização das Demandas Adicionais
                 const demandasInfo = a.demandas?.descricoes?.length > 0 ? 
                     `<div class="mt-2 text-xs bg-gray-100 p-2 rounded"><strong class="text-gray-700">Demandas Adicionais (${a.demandas.quantidade || 0}):</strong><ul class="list-disc list-inside pl-2 text-gray-600">${a.demandas.descricoes.map(d => `<li>${escapeHTML(d)}</li>`).join('')}</ul></div>` : '';
                 
+                // Sanitização do nome do atendente
                 let attendantNameDisplay = 'Não informado';
                 if (a.attendant) {
                     if (typeof a.attendant === 'object' && a.attendant !== null) {
@@ -2442,17 +2414,13 @@ const getPriorityLevel = (a) => {
                     </div>`;
                 return card;
             });
+
             render(faltososList, faltosos, a => {
                 const card = document.createElement('div');
-                const confirmedBtnBgClass = a.isConfirmed ? 'bg-green-500' : 'bg-gray-400';
-                const confirmedBtnHoverClass = a.isConfirmed ? 'hover:bg-green-600' : 'hover:bg-gray-500';
-                const confirmationInfo = a.isConfirmed && a.confirmationDetails ? 
-                    `<span class="text-xs opacity-75 block">Por: ${escapeHTML(a.confirmationDetails.confirmedBy)} em ${new Date(a.confirmationDetails.confirmedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}</span>` : '';
-
-                card.className = 'relative bg-red-50 p-4 rounded-lg shadow-sm border-red-200';
+                // ... (lógica de confirmação mantém igual) ...
 
                 card.innerHTML = `
-                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
+                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg ...></svg></button>
                     <div class="flex items-center justify-between">
                         <p class="font-bold text-lg inline-flex items-center">
                             ${escapeHTML(a.name)}
@@ -2477,10 +2445,9 @@ const getPriorityLevel = (a) => {
 
             togglePautaLock(isPautaClosed);
 
-            // **CHAMA A FUNÇÃO PARA HABILITAR O DRAG AND DROP MANUAL**
-            setupManualSort();
+            // ADICIONE ESTA LINHA AQUI:
+            setupManualSort()
         };
-
 
         const showNotification = (message, type = 'success') => {
             const colors = { info: 'blue', error: 'red', success: 'green' };
@@ -5084,6 +5051,23 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
