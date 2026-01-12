@@ -58,10 +58,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
-        .priority-urgente { border-left: 5px solid #ef4444; }
+        .priority-urgente { border-left: 5px solid #ef4444; } /* Prioridade Manual/Botão */
         .priority-maxima { border-left: 5px solid #22c55e; }
         .priority-media { border-left: 5px solid #f97316; }
         .priority-minima { border-left: 5px solid #6b7280; }
+        
+        /* NOVAS CLASSES PARA PRIORIDADES LEGAIS */
+        .priority-legal-suprema { border-left: 5px solid #9a3412; } /* Vermelho Escuro */
+        .priority-legal-alta { border-left: 5px solid #ea580c; } /* Laranja Forte */
+
         .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar, #members-list-container::-webkit-scrollbar, #statistics-content::-webkit-scrollbar { width: 8px; }
         .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track, #statistics-content::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
         .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb, #statistics-content::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
@@ -154,8 +159,7 @@
                 Instalar App
             </button>
         </div>
-
-        <!-- No pauta-selection-container, perto do botão de logout -->
+        
         <!-- Botão Painel do Administrador (Centralizado e com Margem) -->
         <div class="flex justify-center w-full mb-6"> <!-- Flex para centralizar, mb-6 para margem embaixo -->
             <button id="admin-panel-btn" class="hidden bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition shadow-md">
@@ -275,14 +279,14 @@
                                 <span>Ver Estatísticas</span>
                             </button>
                             
-                            <button id="edit-pauta-name-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap">
+                            <button id="edit-pauta-name-btn" class="hidden flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-slate-500"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                 <span>Editar Nome</span>
                             </button>
 
                             <button id="manage-members-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-slate-500"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                                <span>Compartilhar</span>
+                                <span>Membros da Pauta</span>
                             </button>
 
                             <div class="w-full h-px bg-gray-300 my-1"></div>
@@ -363,13 +367,34 @@
                             <input type="text" id="assisted-name" placeholder="Ex: João da Silva" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition">
                         </div>
                         <div class="flex flex-col"><label for="assisted-cpf" class="mb-1 font-medium text-gray-600">CPF (Opcional)</label><input type="text" id="assisted-cpf" placeholder="___.___.___-__" maxlength="14" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition"></div>
+                        
+                        <!-- CAMPO DE PRIORIDADE LEGAL ADICIONADO AQUI -->
+                        <div class="flex flex-col">
+                            <label for="assisted-priority" class="mb-1 font-medium text-gray-600">Prioridade Legal</label>
+                            <select id="assisted-priority" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition bg-white">
+                                <option value="NENHUMA">🟢 Nenhuma / Padrão</option>
+                                <optgroup label="Lei 13.466/17 (Super Prioridade)">
+                                    <option value="IDOSO_80">🔴 80 Anos ou Mais</option>
+                                    <option value="AUTISMO">🔴 Autismo / TEA</option>
+                                </optgroup>
+                                <optgroup label="Lei 10.048/00 (Prioridade Legal)">
+                                    <option value="IDOSO_60">🟠 60 a 79 Anos</option>
+                                    <option value="GESTANTE">🟠 Gestante / Lactante</option>
+                                    <option value="PCD">🟠 Pessoa com Deficiência (PcD)</option>
+                                    <option value="CRIANCA_COLO">🟠 Criança de Colo</option>
+                                    <option value="OBESIDADE">🟠 Obesidade</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <!-- FIM CAMPO DE PRIORIDADE LEGAL -->
+
                         <div class="flex flex-col lg:col-span-4">
                             <div class="flex items-center gap-2 mb-1">
                                 <label for="assisted-subject" class="font-medium text-gray-600">Matéria - Assunto</label>
                                 <button type="button" id="subject-info-btn" class="font-bold text-lg text-blue-500 cursor-help rounded-full disabled:text-gray-300 disabled:cursor-not-allowed">!</button>
                             </div>
 
-                            <input list="subjects-list" id="assisted-subject" name="assisted-subject" placeholder="Digite ou selecione um assunto" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition w-full">
+                            <input list="subjects-list" id="assisted-subject" name="assisted-subject" placeholder="Digite ou selecione um assunto" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 w-full">
                             <datalist id="subjects-list"></datalist>
 
                             <div id="subject-description" class="hidden mt-2 p-4 bg-blue-50 border border-blue-200 text-gray-800 rounded-lg text-sm transition-all duration-300">
@@ -496,19 +521,21 @@
                           <div id="logic-explanation-padrao-content" class="hidden mt-4 text-left p-4 bg-gray-50 rounded-lg border space-y-3">
                               <p>A lógica foi pensada para balancear a <strong>pontualidade</strong> com a <strong>realidade</strong> do dia a dia, criando um sistema justo para todos.</p>
                               <ul class="list-disc list-inside space-y-2 text-gray-700">
-                                  <li><strong>Recompensa a Pontualidade:</strong> Valoriza quem chega no horário, atendendo-os primeiro. Para assistidos que chegam adiantados, a ordem de atendimento respeita o horário original do agendamento.</li>
+                                  <li><strong>Prioridade Manual (URGENTE):</strong> Acima de tudo, o atendimento marcado como "URGENTE" é atendido imediatamente.</li>
+                                  <li><strong>Prioridade Legal:</strong> Assistidos com prioridade legal (idosos, PcD, gestantes, etc.) são atendidos em seguida, seguindo a hierarquia definida em lei.</li>
+                                  <li><strong>Recompensa a Pontualidade:</strong> Valoriza quem chega no horário, atendendo-os primeiro.</li>
                                   <li><strong>Oferece Tolerância:</strong> Reconhece que imprevistos acontecem, com uma janela de 20 minutos para pequenos atrasos.</li>
-                                  <li><strong>Gerencia Atrasos Maiores:</strong> Coloca quem se atrasou muito no fim da fila para não prejudicar os outros.</li>
-                                  <li><strong>Permite Flexibilidade:</strong> O botão "Prioridade" garante que casos graves sejam atendidos imediatamente.</li>
-                                  <li><strong>Critério de Desempate:</strong> Para assistidos com a mesma prioridade, a ordem é definida pelo <strong>horário de chegada informado</strong> (quem chegou mais cedo é atendido primeiro). Se dois ou mais assistidos chegarem exatamente no mesmo horário, a preferência é de quem teve a chegada <strong>registrada primeiro</strong> no sistema.</li>
+                                  <li><strong>Gerencia Atrasos Maiores:</strong> Coloca quem se atrasou muito no fim da fila.</li>
                               </ul>
                               <p class="font-semibold text-gray-800 pt-2">O resultado é uma fila transparente, previsível e justa tanto para os assistidos quanto para a equipe.</p>
                           </div>
-                          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center mt-4">
-                              <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500"><p class="font-bold text-red-700">Prioridade Urgente</p><p class="text-sm text-gray-600 mt-1">Definida manualmente para casos que necessitam de atendimento imediato.</p></div>
-                              <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500"><p class="font-bold text-green-700">Prioridade Máxima</p><p class="text-sm text-gray-600 mt-1">Assistidos que chegaram no horário agendado ou adiantados.</p></div>
-                              <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500"><p class="font-bold text-orange-700">Prioridade Média</p><p class="text-sm text-gray-600 mt-1">Assistidos agendados com até 20 min de atraso ou atendimentos avulsos.</p></div>
-                              <div class="bg-gray-100 p-4 rounded-lg border-l-4 border-gray-500"><p class="font-bold text-gray-700">Prioridade Mínima</p><p class="text-sm text-gray-600 mt-1">Assistidos que chegaram com 30 minutos ou mais de atraso.</p></div>
+                          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 text-center mt-4">
+                              <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500"><p class="font-bold text-red-700">Prioridade URGEN. (Manual)</p><p class="text-sm text-gray-600 mt-1">Botão manual para casos extremos.</p></div>
+                              <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500"><p class="font-bold text-red-700">Legal Suprema</p><p class="text-sm text-gray-600 mt-1">Idoso 80+, TEA (Lei 13.466/17).</p></div>
+                              <div class="bg-orange-100 p-4 rounded-lg border-l-4 border-orange-500"><p class="font-bold text-orange-700">Legal Alta</p><p class="text-sm text-gray-600 mt-1">Idoso 60+, PcD, Gestante, Criança Colo, Obesidade (Lei 10.048/00).</p></div>
+                              <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500"><p class="font-bold text-green-700">Máxima (Tempo)</p><p class="text-sm text-gray-600 mt-1">Chegou no horário agendado.</p></div>
+                              <div class="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500"><p class="font-bold text-yellow-700">Média (Tempo)</p><p class="text-sm text-gray-600 mt-1">Atraso até 20 min ou Avulso.</p></div>
+                              <div class="bg-gray-100 p-4 rounded-lg border-l-4 border-gray-500"><p class="font-bold text-gray-700">Mínima (Tempo)</p><p class="text-sm text-gray-600 mt-1">Atraso acima de 20 min.</p></div>
                           </div>
                       </div>
                       <div id="logic-explanation-chegada" class="hidden text-center">
@@ -562,7 +589,6 @@
             &copy; 2026 SIGEP - Sistema de Gestão. Versão 2.1 (Segura)
         </p>
     </footer>
-    
 <script>
     // Função para gerenciar modais
     function bindModal(btnId, modalId, closeIds) {
@@ -667,7 +693,7 @@
                     <input type="radio" name="ordemAtendimento" value="padrao" class="h-5 w-5 text-green-600 focus:ring-green-500" checked>
                     <span class="ml-3">
                         <span class="font-semibold text-gray-800">Padrão do Sistema (Recomendado)</span>
-                        <span class="block text-sm text-gray-500">Prioriza por pontualidade e urgência. Justo e flexível.</span>
+                        <span class="block text-sm text-gray-500">Prioriza URGENTE > Legal > Tempo de Chegada.</span>
                     </span>
                 </label>
                 <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
@@ -797,7 +823,7 @@
     </div>
 
     <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh;">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg flex flex-col" style="max-height: 90vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
                 <h2 class="text-2xl font-bold text-gray-800">Gerenciar Membros da Pauta</h2>
                 <button id="close-members-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
@@ -820,8 +846,7 @@
         </div>
     </div>
     
-    <!-- MODAL DE GERENCIAR COLABORADORES (LISTA DE PRESENÇA) - INTEGRADO -->
-   <!-- MODAL DE GERENCIAR COLABORADORES (LISTA DE PRESENÇA) - ATUALIZADO -->
+    <!-- MODAL DE GERENCIAR COLABORADORES (LISTA DE PRESENÇA) -->
 <div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
     <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-6xl flex flex-col" style="max-height: 90vh;">
         <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -1388,7 +1413,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             </select>
                             ${user.role !== 'superadmin' ? `
                                 <button onclick="deleteUser('${userId}')" class="text-red-500 hover:text-red-700">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg>
                                 </button>
                             ` : ''}
                         </div>
@@ -1507,8 +1532,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
         });
 
-        // --- LÓGICA DE AUDITORIA (Visualização) ---
-        
         // --- LÓGICA DE AUDITORIA (Visualização) ---
 
         const viewLogsBtn = document.getElementById('view-audit-logs-btn');
@@ -1673,7 +1696,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     { text: "Transporte (demanda de transporte gratuito)", description: "Ação para garantir o direito de transporte gratuito para crianças/adolescentes com deficiência ou necessidades específicas." }
                 ]
             },
-            { text: "Processos Relacionados a Direitos Humanos", description: "Atuação em casos de violação de direitos fundamentais." },
+            { text: "Defesa de Direitos Humanos", description: "Atuação em casos de violação de direitos fundamentais." },
             { text: "Mediação e Conciliação", description: "Métodos de resolução de conflitos em que um terceiro imparcial auxilia as partes a chegarem a um acordo, evitando ou encerrando o processo judicial." },
             {
                 text: "Facilitação de Acesso à Documentação Básica",
@@ -1745,8 +1768,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         let assistedIdToHandle = null;
         let assistedNameToHandle = null; // Adicionado para passar o nome para o modal de seleção de colaborador
         
-        let customRoomsList = []; // Array para guardar os nomes das salas
-
         // Variáveis para o novo modal de delegação de e-mail
         let assistedIdForDelegation = null;
         let assistedNameForDelegation = null;
@@ -1842,220 +1863,42 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         };
 
         
-        const loadingContainer = document.getElementById('loading-container');
-        const loginContainer = document.getElementById('login-container');
-        const pautaSelectionContainer = document.getElementById('pauta-selection-container');
-        const appContainer = document.getElementById('app-container');
-        const loadingText = document.getElementById('loading-text');
-
-        const normalizeText = (str) => {
-            if (!str) return '';
-            return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-        };
-        
-        // FUNÇÃO DE PESQUISA MELHORADA
-       const searchFilter = (assisted, term) => {
-            if (!term) return true;
+        const getPriorityLevel = (a) => {
+            if (!a || a.status !== 'aguardando') return 'N/A';
             
-            // Formata a data de chegada para HH:MM para permitir a pesquisa
-            const arrivalTimeFormatted = assisted.arrivalTime ? new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
-        
-            const normalizedTerm = normalizeText(term);
-        
-            // Converte o campo attendant para string, caso seja um objeto com nome.
-            // O campo attendant pode ser uma string (padrão) ou, em fluxos complexos, um objeto.
-            const attendantName = (typeof assisted.attendant === 'object' && assisted.attendant !== null) 
-                                  ? assisted.attendant.name || assisted.attendant.nome || '' 
-                                  : assisted.attendant || '';
-        
-            return normalizeText(assisted.name).includes(normalizedTerm) ||
-                   (assisted.cpf && normalizeText(assisted.cpf).includes(normalizedTerm)) ||
-                   normalizeText(assisted.subject).includes(normalizedTerm) ||
-                   (assisted.scheduledTime && assisted.scheduledTime.includes(normalizedTerm)) ||
-                   (arrivalTimeFormatted && arrivalTimeFormatted.includes(normalizedTerm)) ||
-                   // NOVO: Usa a variável attendantName (que garante que o campo é string)
-                   (attendantName && normalizeText(attendantName).includes(normalizedTerm)) ||
-                   // Campo Colaborador Atribuído
-                   (assisted.assignedCollaborator?.name && normalizeText(assisted.assignedCollaborator.name).includes(normalizedTerm));
-        };
+            // 1. PRIORIDADE MANUAL: URGENTE (botão vermelho/amarelo) - Máxima prioridade
+            if (a.priority === 'URGENTE') return 'URGENTE'; 
 
-        const getPriorityClass = (priority) => ({'URGENTE':'priority-urgente','Máxima':'priority-maxima','Média':'priority-media','Mínima':'priority-minima'}[priority]||'');
+            // 2. PRIORIDADES LEGAIS (do novo SELECT)
+            if (a.priority === 'IDOSO_80' || a.priority === 'AUTISMO') return 'LEGAL_SUPREMA';
+            if (a.priority === 'IDOSO_60' || a.priority === 'GESTANTE' || a.priority === 'PCD' || a.priority === 'CRIANCA_COLO' || a.priority === 'OBESIDADE') return 'LEGAL_ALTA';
 
-        const getUpdatePayload = (data) => {
-            return {
-                ...data,
-                lastActionBy: currentUserName,
-                lastActionTimestamp: new Date().toISOString()
-            };
-        };
+            // 3. Prioridade por Tempo de Chegada (Para NENHUMA ou NULL)
+            if (a.type === 'avulso') return 'MEDIA'; // Avulsos vão para Média por padrão
 
+            if (!a.scheduledTime || !a.arrivalTime) return 'MINIMA'; 
 
-
-        // --- COLOQUE ESTA FUNÇÃO NO ESCOPO GLOBAL DO SEU SCRIPT ---
-     let sortableAguardando = null;
-        
-     const setupManualSort = () => {
-        const el = document.getElementById('aguardando-list');
-        const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
-    
-        if (pautaOrder === 'manual' && !isPautaClosed) {
-            if (sortableAguardando) sortableAguardando.destroy();
-    
-            sortableAguardando = new Sortable(el, {
-                animation: 300, // Movimento mais lento e fluido
-                ghostClass: 'opacity-20', // Card fantasma quase transparente
-                chosenClass: 'ring-2', // Borda azul ao segurar
-                dragClass: 'scale-95', // Diminui o card enquanto arrasta
-                handle: '.relative', // Permite arrastar clicando em qualquer lugar do card...
-                filter: 'button, svg, p, span', // ...mas ignora se o clique for nos textos ou botões
-                preventOnFilter: false,
-                
-                onEnd: async function () {
-                    const items = el.querySelectorAll('[data-id]');
-                    const batch = writeBatch(db);
-                    
-                    items.forEach((item, index) => {
-                        const docId = item.getAttribute('data-id');
-                        const docRef = doc(db, "pautas", currentPautaId, "attendances", docId);
-                        batch.update(docRef, { manualIndex: index });
-                    });
-    
-                    try {
-                        await batch.commit();
-                        showNotification("Fila Reordenada!");
-                    } catch (e) {
-                        console.error(e);
-                    }
-                },
-            });
-        } else if (sortableAguardando) {
-            sortableAguardando.destroy();
-            sortableAguardando = null;
-        }
-    };
-
-        
-
-        
-        const getPriorityLevel = (assisted) => {
-            if (!assisted || assisted.status !== 'aguardando') return 'N/A';
-            if (assisted.priority === 'URGENTE') return 'URGENTE';
-
-            if (assisted.type === 'avulso') return 'Média';
-
-            if (!assisted.scheduledTime || !assisted.arrivalTime) return 'Média';
-
-            const scheduled = new Date(`1970-01-01T${assisted.scheduledTime}`);
-            const arrival = new Date(assisted.arrivalTime);
+            const scheduled = new Date(`1970-01-01T${a.scheduledTime}`);
+            const arrival = new Date(a.arrivalTime);
             const arrivalTime = new Date(`1970-01-01T${arrival.toTimeString().slice(0, 5)}`);
 
             const diffMinutes = (arrivalTime - scheduled) / (1000 * 60);
 
-            if (diffMinutes <= 0) return 'Máxima';
-            if (diffMinutes <= 20) return 'Média';
-            return 'Mínima';
-        };
-            /**
-             * Garante a formatação segura de strings de data ISO ou Timestamp.
-             * No fluxo de delegação, attendedTime pode ser uma string ISO ou um objeto Timestamp.
-             * @param {string | object} timeStamp - A string de data (ISO) ou objeto Timestamp do Firebase.
-             * @returns {string} O horário formatado (HH:mm) ou 'N/A'.
-             */
-            function formatTime(timeStamp) {
-                if (!timeStamp) return 'N/A';
-            
-                let date;
-            
-                // 1. Verifica se é um objeto Timestamp do Firebase (muito comum em delegação)
-                if (typeof timeStamp === 'object' && timeStamp.seconds) {
-                    // Converte o Timestamp do Firebase para milissegundos
-                    date = new Date(timeStamp.seconds * 1000);
-                } 
-                // 2. Tenta usar a string diretamente (funciona se for ISO 8601)
-                else {
-                    date = new Date(timeStamp);
-                }
-                
-                // 3. Última verificação de validade
-                if (isNaN(date) || date.getTime() === 0) {
-                    // Se ainda for inválido (pode ser o caso do "Invalid Date")
-                    return 'N/A'; 
-                }
-            
-                // Retorna o horário formatado (ex: 10:30)
-                return date.toLocaleTimeString('pt-BR', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-            }
-        const togglePautaLock = (isClosed) => {
-            const isOwner = auth.currentUser?.uid === currentPautaOwnerId;
-            isPautaClosed = isClosed;
-
-            const buttonsToDisable = [
-                'form-agendamento', 'file-upload', 'add-assisted-btn',
-                'download-pdf-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento'
-            ];
-
-            buttonsToDisable.forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    if (isClosed) {
-                        element.classList.add('pointer-events-none', 'opacity-50');
-                        element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = true);
-                    } else {
-                        element.classList.remove('pointer-events-none', 'opacity-50');
-                        element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = false);
-                    }
-                }
-            });
-
-            // Trecho corrigido na função togglePautaLock:
-
-            // Dentro da função togglePautaLock, após o bloco buttonsToDisable:
-
-            const actionPanelButtons = document.querySelectorAll('#actions-panel button');
-            
-            actionPanelButtons.forEach(btn => {
-                if (btn.id === 'reopen-pauta-btn') {
-                    // Se a pauta está fechada, o REABRIR é o único que deve estar ativo
-                    btn.disabled = false;
-                } else {
-                    // Todos os outros botões do menu Ações (Zerar, Fechar, Editar) ficam desativados
-                    btn.disabled = isClosed; 
-                }
-            });
-            const actionButtons = document.querySelectorAll('.check-in-btn, .delegate-finalization-btn, .attend-directly-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn, .toggle-confirmed-atendido, .toggle-confirmed-faltoso'); // Adicionado
-            actionButtons.forEach(btn => {
-                btn.disabled = isClosed;
-            });
-
-            if (isClosed) {
-                document.getElementById('closed-pauta-alert').classList.remove('hidden');
-                document.getElementById('close-pauta-btn').classList.add('hidden');
-                document.getElementById('reopen-pauta-btn').classList.remove('hidden');
-            } else {
-                document.getElementById('closed-pauta-alert').classList.add('hidden');
-                document.getElementById('close-pauta-btn').classList.remove('hidden');
-                document.getElementById('reopen-pauta-btn').classList.add('hidden');
-            }
-
-            if (!isOwner) {
-                document.getElementById('close-pauta-btn').classList.add('hidden');
-                document.getElementById('reopen-pauta-btn').classList.add('hidden');
-            }
+            if (diffMinutes <= 0) return 'MAXIMA'; // Chegou na hora ou adiantado
+            if (diffMinutes <= 20) return 'MEDIA';   // Atraso pequeno (20 min)
+            return 'MINIMA'; // Atraso grande
         };
 
       const createAguardandoCard = (a, index) => {
         const card = document.createElement('div');
-        // Adicionado 'group' para controlar o aparecimento dos botões e 'transition-all'
+        // Aplica a cor baseada na prioridade calculada
         card.className = `relative bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)} mb-2 group transition-all duration-200`;
         card.setAttribute('data-id', a.id);
     
         const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
         const isManual = pautaOrder === 'manual' && !isPautaClosed;
     
-        // Indicador de Posição (Rank) e Botões de Comando
+        // Indicador de Posição (Rank) e Botões de Comando (Mantido para o modo manual)
         const rankAndControls = isManual ? `
             <!-- Indicador de Rank -->
             <div class="absolute -top-2 -left-2 bg-blue-600 text-white text-[10px] font-bold w-6 h-6 flex items-center justify-center rounded-full shadow-md z-20 border-2 border-white">
@@ -2080,7 +1923,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             ? `Agendado: ${escapeHTML(a.scheduledTime)} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` 
             : `Chegada: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
     
-        // APLICAÇÃO DE SEGURANÇA: escapeHTML
         let atenderButton = currentPautaData?.useDelegationFlow
             ? `<button data-id="${a.id}" data-name="${escapeHTML(a.name)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`
             : `<button data-id="${a.id}" data-name="${escapeHTML(a.name)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`;
@@ -2097,6 +1939,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 </div>
                 <div class="mt-auto grid grid-cols-2 gap-2">
                     ${atenderButton}
+                    <!-- BOTÃO DE PRIORIDADE MANUAL (URGENTE) MANTIDO -->
                     <button data-id="${a.id}" class="priority-btn ${a.priority === 'URGENTE' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-red-500 hover:bg-red-600'} text-white font-semibold py-2 rounded-lg text-xs transition-colors">
                         ${a.priority === 'URGENTE' ? 'Urgente Ativado' : 'Prioridade'}
                     </button>
@@ -2106,7 +1949,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         `;
         return card;
     };
-
         // --- FUNÇÃO PARA RENOMEAR SALA ---
         const renamePautaRoom = async (oldName, newName) => {
             if (!currentPautaId || !oldName || !newName || oldName === newName) return;
@@ -5051,24 +4893,3 @@ function renderColaboradores() {
   }
 </script>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
