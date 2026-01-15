@@ -4991,21 +4991,30 @@ function renderColaboradores() {
                 });
             });
 
-// Adiciona a lógica de autocompletar e formatação ao campo de assunto na modal de edição
-            const editSubjectInput = document.getElementById('edit-assisted-subject');
-            if (editSubjectInput) {
-                editSubjectInput.addEventListener('change', () => {
-                    const originalValue = editSubjectInput.value;
-                    let selectedText = originalValue;
-                    
-                    if (selectedText.includes(' > ')) {
-                        const parts = selectedText.split(' > ');
+            const editSubjectInput = document.getElementById("edit-subject-input");
+            const someElement = document.getElementById("some-element");
+        
+            if (someElement && editSubjectInput) {
+                someElement.addEventListener("click", () => {
+        
+                    let selectedText = window.getSelection().toString();
+        
+                    if (selectedText.includes(">")) {
+                        const parts = selectedText.split(">");
                         selectedText = parts[parts.length - 1];
                     }
-                    
+        
                     editSubjectInput.value = selectedText;
-                });
-            }
+        
+                }); // FECHA addEventListener
+            } // FECHA if
+        
+            /* ===============================
+               FIM DO SEU CÓDIGO
+               =============================== */
+        
+        }); // ✅ FECHA DOMContentLoaded
+        </script>
 
         }); // Este }); fecha o DOMContentLoaded que você abriu lá na linha 1910
     </script>
@@ -5127,6 +5136,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
