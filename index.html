@@ -5003,9 +5003,9 @@ function renderColaboradores() {
                 }
                 
                 editSubjectInput.value = selectedText;
-            });
-    }); // <--- ADICIONE ESTA LINHA PARA FECHAR O BLOCO PRINCIPAL
-
+      }); // Fecha o editSubjectInput
+            } // Fecha um possível IF ou ForEach pendente
+        }); // Fecha a função principal (DOMContentLoaded ou similar)
     </script>
 
 <!-- Modal de Anotações -->
@@ -5125,6 +5125,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
