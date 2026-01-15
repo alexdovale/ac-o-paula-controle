@@ -4991,23 +4991,20 @@ function renderColaboradores() {
                 });
             });
 
-// Adiciona a lógica de autocompletar e formatação ao campo de assunto na modal de edição
+            // Adiciona a lógica de autocompletar e formatação ao campo de assunto na modal de edição
             const editSubjectInput = document.getElementById('edit-assisted-subject');
-            if (editSubjectInput) {
-                editSubjectInput.addEventListener('change', () => {
-                    const originalValue = editSubjectInput.value;
-                    let selectedText = originalValue;
-                    
-                    if (selectedText.includes(' > ')) {
-                        const parts = selectedText.split(' > ');
-                        selectedText = parts[parts.length - 1];
-                    }
-                    
-                    editSubjectInput.value = selectedText;
-                });
-            }
+            editSubjectInput.addEventListener('change', () => {
+                const originalValue = editSubjectInput.value;
+                let selectedText = originalValue;
+                
+                if (selectedText.includes(' > ')) {
+                    const parts = selectedText.split(' > ');
+                    selectedText = parts[parts.length - 1];
+                }
+                
+                editSubjectInput.value = selectedText;
+            });
 
-        }); // Este }); fecha o DOMContentLoaded que você abriu lá na linha 1910
     </script>
 
 <!-- Modal de Anotações -->
@@ -5127,3 +5124,30 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
