@@ -5002,14 +5002,10 @@ function renderColaboradores() {
                     selectedText = parts[parts.length - 1];
                 }
                 
-                editSubjectInput.value = selectedText;
-            });
-
-        } catch (error) {
-                console.error(error);
-            }
-        });
-    });
+        editSubjectInput.value = selectedText;
+                });
+            }); // <--- ADICIONE ESTA LINHA AQUI PARA FECHAR O DOMContentLoaded
+        
     </script>
 
 <!-- Modal de Anotações -->
@@ -5129,6 +5125,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
