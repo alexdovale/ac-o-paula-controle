@@ -1,5 +1,7 @@
 // js/ui.js - CONTROLE DE INTERFACE
 
+// js/ui.js
+
 export const showScreen = (screenName) => {
     const screens = {
         loading: document.getElementById('loading-container'),
