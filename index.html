@@ -1740,23 +1740,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         const flatSubjects = flattenTreeWithObjects(subjectTree);
         // --- FIM DA LÓGICA DE ASSUNTOS ---
 
-        // Variáveis Globais
-        let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '', currentPautaOwnerId = null, isPautaClosed = false;
-        let currentPautaData = null; // Para armazenar todos os dados da pauta atual
-        let assistedIdToHandle = null;
-        let assistedNameToHandle = null; // Adicionado para passar o nome para o modal de seleção de colaborador
-        
-        let customRoomsList = []; // Array para guardar os nomes das salas
-
-        // Variáveis para o novo modal de delegação de e-mail
-        let assistedIdForDelegation = null;
-        let assistedNameForDelegation = null;
-        let collaboratorNameForDelegation = null; // Nome do colaborador já atribuído ao assistido, se houver.
-
-        // Variáveis para a lógica de Colaboradores (lista de presença)
-        let colaboradores = []; // Esta é a lista de colaboradores (da lista de presença)
-        let editCollaboratorId = null; // ID do colaborador sendo editado na lista de presença
-        let unsubscribeFromCollaborators = () => {};
 
 
         // --- SISTEMA DE AUDITORIA (LOGS) ---
@@ -4983,6 +4966,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
