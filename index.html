@@ -1589,12 +1589,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             });
         }
         
-        // Importando as funções do novo módulo de detalhes
-        import { setupDetailsModal, openDetailsModal } from './detalhes.js';
-        import { renderStatisticsModal } from './estatisticas.js'
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, where, orderBy, limit, getDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove, setDoc, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
        
         // --- INÍCIO DA LÓGICA DE ASSUNTOS ---
         const subjectTree = [
@@ -4989,6 +4983,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
