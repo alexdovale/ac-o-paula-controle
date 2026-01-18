@@ -3648,20 +3648,34 @@ function renderColaboradores() {
                 }
 
                 if (button.id === 'back-to-pautas-btn') { currentPautaId = null; showPautaSelectionScreen(auth.currentUser.uid); }
-            });
+                }
+            }); // FIM do document.body.addEventListener('click')
 
-            // 8. FINALIZAÇÃO DE EMAILJS E OUTROS
-            document.getElementById('send-delegate-email-btn').addEventListener('click', async () => {
-                const email = document.getElementById('collaborator-email-input').value.trim();
-                if (!email) { showNotification("Insira o e-mail.", "error"); return; }
-                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                const link = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(collaboratorNameForDelegation)}`;
-                try {
-                    await emailjs.send("service_r1nxe6a", "template_jslp9ny", { to_email: email, assisted_name: assistedNameForDelegation, collaborator_name: collaboratorNameForDelegation, finalization_link: link, name: currentUserName, email: auth.currentUser?.email || "noreply@example.com" });
-                    showNotification("Link enviado por e-mail!"); document.getElementById('delegate-email-modal').classList.add('hidden');
-                } catch (e) { showNotification("Erro ao enviar e-mail.", "error"); }
-            });
-        });
+            // 8. FINALIZAÇÃO DE EMAILJS (FORA DO CLICK DO BODY, DENTRO DO DOM)
+            const sendEmailBtn = document.getElementById('send-delegate-email-btn');
+            if (sendEmailBtn) {
+                sendEmailBtn.addEventListener('click', async () => {
+                    const email = document.getElementById('collaborator-email-input').value.trim();
+                    if (!email) { showNotification("Insira o e-mail.", "error"); return; }
+                    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                    const link = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(collaboratorNameForDelegation)}`;
+                    try {
+                        await emailjs.send("service_r1nxe6a", "template_jslp9ny", { 
+                            to_email: email, 
+                            assisted_name: assistedNameForDelegation, 
+                            collaborator_name: collaboratorNameForDelegation, 
+                            finalization_link: link, 
+                            name: currentUserName, 
+                            email: auth.currentUser?.email || "noreply@example.com" 
+                        });
+                        showNotification("Link enviado por e-mail!"); 
+                        document.getElementById('delegate-email-modal').classList.add('hidden');
+                    } catch (e) { 
+                        showNotification("Erro ao enviar e-mail.", "error"); 
+                    }
+                });
+            }
+        }); // FIM DO ÚNICO DOMContentLoaded
     </script>
 
 <!-- Modal de Anotações -->
@@ -3781,6 +3795,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
