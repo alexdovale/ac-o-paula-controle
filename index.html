@@ -25,12 +25,15 @@
         .priority-maxima { border-left: 5px solid #22c55e; }
         .priority-media { border-left: 5px solid #f97316; }
         .priority-minima { border-left: 5px solid #6b7280; }
-        .column-content::-webkit-scrollbar { width: 8px; }
-        .column-content::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar { width: 8px; }
+        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
+        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
         .tab-active { border-color: #16a34a; background-color: #f0fdf4; color: #16a34a; font-weight: 600; }
         .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
         .loader { border: 6px solid #f3f3f3; border-top: 6px solid #16a34a; border-radius: 50%; width: 50px; height: 50px; animation: spin 1.5s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .confirm-btn-style { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; border: 1px solid currentColor; transition: all 0.2s; flex-shrink: 0; margin-left: 8px; }
+        .confirm-btn-icon { width: 18px; height: 18px; color: white; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -41,35 +44,27 @@
 
     <div id="loading-container" class="loading-container"><div class="loader"></div><p id="loading-text" class="mt-4 text-gray-700 font-semibold text-center">Conectando com Segurança...</p></div>
 
-    <!-- TELA DE LOGIN / REGISTRO -->
+    <!-- TELA DE LOGIN -->
     <div id="login-container" class="hidden min-h-screen flex items-center justify-center">
         <div class="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
             <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGAP" class="mx-auto h-24 w-auto mb-6">
-            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Sistema SIGAP</h2>
-            
-            <div id="auth-error" class="bg-red-100 text-red-700 px-4 py-2 rounded-lg mb-4 text-sm hidden text-center"></div>
-
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Sistema de Gerenciamento de Pauta</h2>
+            <div id="auth-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden" role="alert"></div>
             <div class="flex border-b mb-6">
-                <button id="login-tab-btn" class="flex-1 py-2 font-semibold text-green-600 border-b-2 border-green-600">Entrar</button>
-                <button id="register-tab-btn" class="flex-1 py-2 font-semibold text-gray-400">Criar Conta</button>
+                <button id="login-tab-btn" class="flex-1 py-2 text-center font-semibold text-green-600 border-b-2 border-green-600">Login</button>
+                <button id="register-tab-btn" class="flex-1 py-2 text-center font-semibold text-gray-500">Cadastrar</button>
             </div>
-
-            <!-- Formulário Login -->
             <form id="login-form" class="space-y-4">
-                <div><label class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:ring-green-500"></div>
-                <div><label class="block text-sm font-medium text-gray-700">Senha</label><input type="password" id="login-password" required class="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:ring-green-500"></div>
-                <button type="submit" class="w-full bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700">Entrar no Sistema</button>
-                <div class="text-center mt-2">
-                    <button type="button" id="forgot-password-link" class="text-xs text-green-600 hover:underline">Esqueci minha senha</button>
-                </div>
+                <div><label class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Senha</label><input type="password" id="login-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500"></div>
+                <div class="text-right"><button type="button" id="forgot-password-link" class="text-sm text-green-600 hover:underline">Esqueci minha senha</button></div>
+                <button type="submit" class="w-full bg-green-600 py-2 px-4 rounded-md text-white font-medium hover:bg-green-700">Entrar</button>
             </form>
-
-            <!-- Formulário Registro -->
             <form id="register-form" class="hidden space-y-4">
-                <div><label class="block text-sm font-medium text-gray-700">Nome Completo</label><input type="text" id="reg-name" required class="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:ring-green-500"></div>
-                <div><label class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="reg-email" required class="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:ring-green-500"></div>
-                <div><label class="block text-sm font-medium text-gray-700">Senha (mínimo 6)</label><input type="password" id="reg-password" required class="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:ring-green-500"></div>
-                <button type="submit" class="w-full bg-green-700 text-white py-2 rounded-lg font-bold">Solicitar Acesso</button>
+                <div><label class="block text-sm font-medium text-gray-700">Nome Completo</label><input type="text" id="reg-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="reg-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Senha (min. 6)</label><input type="password" id="reg-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500"></div>
+                <button type="submit" class="w-full bg-green-600 py-2 px-4 rounded-md text-white font-medium hover:bg-green-700">Criar Conta</button>
             </form>
         </div>
     </div>
@@ -77,179 +72,260 @@
     <!-- SELEÇÃO DE PAUTA -->
     <div id="pauta-selection-container" class="hidden max-w-4xl mx-auto">
         <div class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-800">Minhas Pautas</h1>
-            <div class="flex gap-2">
-                <button id="admin-panel-btn" class="hidden bg-blue-600 text-white px-4 py-2 rounded-lg font-bold">Admin</button>
-                <button id="logout-btn-selection" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-bold">Sair</button>
-            </div>
+              <h2 class="text-3xl font-bold text-gray-800">Minhas Pautas</h2>
+              <div>
+                  <button id="admin-panel-btn" class="hidden bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Painel Admin</button>
+                  <button id="logout-btn-selection" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg ml-2">Sair</button>
+              </div>
         </div>
         <div id="pautas-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        <button id="create-pauta-btn" class="w-full mt-8 bg-green-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-green-700">Criar Nova Pauta</button>
+        <button id="create-pauta-btn-main" class="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Criar Nova Pauta</button>
     </div>
 
     <!-- APP PRINCIPAL -->
     <div id="app-container" class="hidden max-w-full mx-auto">
-        <header class="bg-white p-6 rounded-xl shadow-md mb-8">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-                <div>
-                    <h2 id="pauta-title" class="text-2xl font-bold text-gray-800"></h2>
-                    <button id="back-to-pautas-btn" class="text-sm text-green-600 hover:underline">← Voltar</button>
-                </div>
+        <header class="mb-6 bg-white p-4 rounded-lg shadow-sm">
+            <div class="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 id="pauta-title" class="text-2xl font-bold text-gray-800 truncate"></h2>
+                <button id="back-to-pautas" class="text-green-600 hover:underline font-semibold">← Voltar</button>
+            </div>
+            <div class="flex flex-wrap gap-2 justify-end">
                 <div class="relative">
-                    <button id="actions-toggle" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold">Ações ▼</button>
-                    <div id="actions-panel" class="hidden absolute right-0 mt-2 w-64 bg-white border shadow-2xl rounded-xl p-2 z-[100] flex flex-col gap-1">
-                        <button id="pdf-atendidos-btn" class="text-left px-4 py-2 hover:bg-gray-50 rounded">📄 Relatório de Atendidos</button>
-                        <button id="pdf-equipe-btn" class="text-left px-4 py-2 hover:bg-gray-50 rounded">👥 Lista de Presença Equipe</button>
-                        <button id="share-ext-btn" class="text-left px-4 py-2 hover:bg-gray-50 rounded">🔗 Link Externo</button>
-                        <button id="close-pauta-btn" class="text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded">🔒 Fechar Pauta</button>
+                    <button id="actions-toggle" class="bg-green-600 text-white px-5 py-2 rounded-lg font-bold">Ações ▼</button>
+                    <div id="actions-panel" class="hidden absolute right-0 mt-2 w-64 bg-white border shadow-xl rounded-lg p-2 z-50 flex flex-col gap-1 text-sm">
+                        <button id="btn-pdf-atendidos" class="text-left p-2 hover:bg-gray-100 rounded">📄 Relatório de Atendidos</button>
+                        <button id="btn-stats" class="text-left p-2 hover:bg-gray-100 rounded">📊 Estatísticas da Pauta</button>
+                        <button id="btn-equipe" class="text-left p-2 hover:bg-gray-100 rounded">👥 Lista de Presença Equipe</button>
+                        <button id="btn-share" class="text-left p-2 hover:bg-gray-100 rounded">🔗 Compartilhamento Externo</button>
+                        <hr>
+                        <button id="btn-close-pauta" class="text-left p-2 text-red-600 hover:bg-red-50 rounded font-bold">🔒 Fechar Pauta</button>
                     </div>
                 </div>
             </div>
         </header>
 
-        <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div class="p-4 bg-gray-50 border-b flex justify-between">
-                    <h3 class="font-bold">📋 Pauta</h3>
-                    <label class="cursor-pointer text-green-600 text-xs font-bold">IMPORTAR CSV <input type="file" id="file-upload" class="hidden" accept=".csv"></label>
+        <nav class="flex gap-4 mb-6 border-b">
+            <button id="tab-agendamento" class="tab-active py-2 px-4 border-b-2">📅 Agendados</button>
+            <button id="tab-avulso" class="py-2 px-4 border-b-2 text-gray-500">➕ Avulsos</button>
+        </nav>
+
+        <main id="main-content" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- COLUNA PAUTA -->
+            <div id="col-pauta" class="bg-white rounded-lg shadow-md flex flex-col h-full">
+                <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
+                    <h3 class="font-bold">📋 Pauta Original</h3>
+                    <label class="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded cursor-pointer font-bold">
+                        IMPORTAR CSV <input type="file" id="file-upload" class="hidden" accept=".csv">
+                    </label>
                 </div>
-                <div id="pauta-list" class="p-4 space-y-3 max-h-[60vh] overflow-y-auto"></div>
+                <div id="pauta-list" class="p-2 space-y-2 overflow-y-auto max-h-[60vh] column-content"></div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div class="p-4 bg-blue-50 border-b"><h3 class="font-bold">⏳ Aguardando</h3></div>
-                <div id="aguardando-list" class="p-4 space-y-3 max-h-[60vh] overflow-y-auto"></div>
+
+            <!-- COLUNA AGUARDANDO -->
+            <div id="col-aguardando" class="bg-white rounded-lg shadow-md flex flex-col h-full">
+                <div class="p-4 border-b bg-blue-50 flex justify-between items-center">
+                    <h3 class="font-bold">⏳ Aguardando</h3>
+                    <input type="search" id="aguardando-search" placeholder="Buscar..." class="text-xs border rounded p-1">
+                </div>
+                <div id="aguardando-list" class="p-2 space-y-2 overflow-y-auto max-h-[60vh] column-content"></div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div class="p-4 bg-green-50 border-b"><h3 class="font-bold">✅ Atendidos</h3></div>
-                <div id="atendidos-list" class="p-4 space-y-3 max-h-[60vh] overflow-y-auto"></div>
+
+            <!-- COLUNA ATENDIDOS -->
+            <div id="col-atendidos" class="bg-white rounded-lg shadow-md flex flex-col h-full">
+                <div class="p-4 border-b bg-green-50">
+                    <h3 class="font-bold">✅ Atendidos</h3>
+                </div>
+                <div id="atendidos-list" class="p-2 space-y-2 overflow-y-auto max-h-[60vh] column-content"></div>
             </div>
         </main>
+
+        <!-- FOOTER COM SELOS -->
+        <footer class="mt-12 bg-white border-t pt-8 pb-8 text-center rounded-lg shadow-sm">
+            <div class="flex justify-center space-x-6 mb-4 text-xs text-gray-500 font-medium">
+                <button onclick="document.getElementById('modal-manual').classList.remove('hidden')" class="hover:text-green-600">Manual</button>
+                <button onclick="document.getElementById('modal-privacidade').classList.remove('hidden')" class="hover:text-green-600">Privacidade (LGPD)</button>
+                <button onclick="document.getElementById('modal-termos').classList.remove('hidden')" class="hover:text-green-600">Termos</button>
+            </div>
+            <div class="flex justify-center items-center gap-4 mb-2 opacity-60">
+                <span class="text-[10px] border px-2 py-0.5 rounded-full flex items-center gap-1">🛡️ Ambiente Seguro SSL</span>
+                <span class="text-[10px] border px-2 py-0.5 rounded-full flex items-center gap-1">⚖️ LGPD Ready</span>
+                <span class="text-[10px] border px-2 py-0.5 rounded-full flex items-center gap-1">🛠️ Sentry Ativo</span>
+            </div>
+            <p class="text-[10px] text-gray-400">© 2026 SIGAP - Versão Modular 3.0</p>
+        </footer>
     </div>
 
-    <!-- RODAPÉ -->
-    <footer class="bg-white border-t mt-16 pt-10 pb-10 text-center">
-        <div class="flex justify-center space-x-8 mb-6 text-sm text-gray-500">
-            <button id="privacy-footer">Privacidade</button>
-            <button id="terms-footer">Termos</button>
-        </div>
-        <div class="flex justify-center gap-6 mb-4 opacity-50 text-[10px]">
-            <span class="border px-3 py-1 rounded-full">🛡️ SSL Seguro</span>
-            <span class="border px-3 py-1 rounded-full">⚖️ LGPD Ready</span>
-        </div>
-        <p class="text-xs text-gray-400">&copy; 2026 SIGAP - Sistema de Pautas.</p>
-    </footer>
-
-    <!-- MODAL ADMIN -->
-    <div id="admin-modal" class="hidden fixed inset-0 bg-black/50 z-[100] flex items-center justify-center">
-        <div class="bg-white p-8 rounded-xl w-full max-w-2xl">
-            <h2 class="text-2xl font-bold mb-4">Gerenciamento de Usuários</h2>
-            <div id="pending-users-list" class="space-y-2 mb-4"></div>
-            <div id="approved-users-list" class="space-y-2"></div>
-            <button id="close-admin-btn" class="mt-6 w-full bg-gray-200 py-2 rounded-lg">Fechar</button>
+    <!-- MODAL DE ADMINISTRAÇÃO -->
+    <div id="admin-modal" class="hidden fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl w-full max-w-2xl shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Painel Administrativo</h2>
+                <button onclick="document.getElementById('admin-modal').classList.add('hidden')" class="text-2xl">&times;</button>
+            </div>
+            <div class="space-y-4 overflow-y-auto max-h-[70vh]">
+                <h3 class="font-bold text-orange-600 border-b pb-1">Pendentes</h3>
+                <div id="pending-users-list" class="space-y-2"></div>
+                <h3 class="font-bold text-green-600 border-b pb-1 mt-4">Aprovados</h3>
+                <div id="approved-users-list" class="space-y-2"></div>
+            </div>
         </div>
     </div>
 
-    <!-- SCRIPT MAESTRO (INTEGRAÇÃO TOTAL) -->
+    <!-- MODAL DE PRIVACIDADE -->
+    <div id="modal-privacidade" class="hidden fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl max-w-lg">
+            <h2 class="font-bold text-lg mb-4 border-b pb-2 text-green-700">Política de Privacidade (LGPD)</h2>
+            <div class="text-sm text-gray-600 space-y-3 max-h-60 overflow-y-auto pr-2">
+                <p>O SIGAP coleta apenas dados necessários para a gestão da pauta diária. Nomes e CPFs são mantidos temporariamente e deletados após o período de 7 dias.</p>
+                <p>O sistema utiliza criptografia SSL para tráfego de dados e monitoramento do Sentry para prevenção de bugs.</p>
+            </div>
+            <button onclick="document.getElementById('modal-privacidade').classList.add('hidden')" class="w-full mt-6 bg-green-600 text-white py-2 rounded-lg font-bold">Entendi</button>
+        </div>
+    </div>
+
+    <!-- SCRIPT MAESTRO -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, writeBatch, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, collection, addDoc, writeBatch, updateDoc, deleteDoc, getDocs, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
-        // Importando seus 12 Arquivos Modulares
+        // Importando seus 12 módulos
         import { firebaseConfig, emailJsConfig } from './js/config.js';
         import { escapeHTML, showNotification, normalizeText } from './js/utils.js';
-        import { handleLogin, handleRegister, handleLogout, handlePasswordReset } from './js/auth.js';
+        import { subjectTree } from './js/assuntos.js';
+        import { handleLogin, handleRegister } from './js/auth.js';
         import { showScreen, togglePautaLockUI } from './js/ui.js';
-        import { loadUsersList, logAction } from './js/admin.js';
+        import { logAction, loadUsersList } from './js/admin.js';
         import { setupAttendancesListener } from './js/pauta.js';
         import { generateAtendidosPDF } from './js/pdfService.js';
         import { parsePautaCSV } from './js/csvHandler.js';
+        import { getChecklistHTML } from './js/checklist.js';
 
-        // Inicialização Firebase
+        // 1. INICIALIZAÇÃO
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-        
-        // --- COMENTE ESTE BLOCO SE O ERRO 401 PERSISTIR ---
-        // try {
-        //     initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'), isTokenAutoRefreshEnabled: true });
-        // } catch(e) { console.error("AppCheck Error"); }
+        emailjs.init(emailJsConfig.publicKey);
 
         let allAssisted = [], currentPautaId = null, currentUserName = '';
 
-        // 1. ALTERNAR LOGIN / REGISTRO
-        const loginTabBtn = document.getElementById('login-tab-btn');
-        const registerTabBtn = document.getElementById('register-tab-btn');
-        const loginForm = document.getElementById('login-form');
-        const registerForm = document.getElementById('register-form');
-
-        registerTabBtn.onclick = () => {
-            loginForm.classList.add('hidden'); registerForm.classList.remove('hidden');
-            registerTabBtn.classList.add('text-green-600', 'border-b-2', 'border-green-600');
-            loginTabBtn.classList.remove('text-green-600', 'border-b-2', 'border-green-600');
-        };
-
-        loginTabBtn.onclick = () => {
-            registerForm.classList.add('hidden'); loginForm.classList.remove('hidden');
-            loginTabBtn.classList.add('text-green-600', 'border-b-2', 'border-green-600');
-            registerTabBtn.classList.remove('text-green-600', 'border-b-2', 'border-green-600');
-        };
-
-        // 2. ESQUECI SENHA
-        document.getElementById('forgot-password-link').onclick = async () => {
-            const email = prompt("Digite seu email para recuperar a senha:");
-            if (email) {
-                try { await handlePasswordReset(auth, email); showNotification("Email enviado!"); }
-                catch(e) { showNotification("Erro ao enviar email", "error"); }
-            }
-        };
-
-        // 3. MONITOR DE ACESSO
+        // 2. CONTROLE DE ESTADO DO USUÁRIO
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                const snap = await getDoc(doc(db, "users", user.uid));
-                if (snap.exists() && snap.data().status === 'approved') {
-                    currentUserName = snap.data().name;
-                    document.getElementById('admin-panel-btn').classList.toggle('hidden', snap.data().role !== 'admin');
-                    showScreen('pautaSelection');
-                    // Aqui você chamaria carregarListaDePautas();
+                const userSnap = await getDoc(doc(db, "users", user.uid));
+                if (userSnap.exists() && userSnap.data().status === 'approved') {
+                    currentUserName = userSnap.data().name;
+                    document.getElementById('admin-panel-btn').classList.toggle('hidden', userSnap.data().role !== 'admin');
+                    
+                    const lastPautaId = localStorage.getItem('lastPautaId');
+                    if(lastPautaId) loadPauta(lastPautaId, "Carregando...");
+                    else showScreen('pautaSelection');
+                    
+                    carregarListaDePautas(user.uid);
                 } else {
-                    showNotification("Aguardando aprovação.", "info");
-                    handleLogout(auth);
+                    showNotification("Acesso pendente de aprovação.", "info");
+                    signOut(auth);
                 }
-            } else { showScreen('login'); }
+            } else {
+                showScreen('login');
+            }
         });
 
-        // 4. SUBMIT LOGIN
-        loginForm.onsubmit = async (e) => {
-            e.preventDefault();
-            const errDiv = document.getElementById('auth-error');
-            try { await handleLogin(auth, e.target[0].value, e.target[1].value); }
-            catch(err) { errDiv.textContent = "Email ou senha incorretos"; errDiv.classList.remove('hidden'); }
+        // 3. CARREGAR LISTA DE PAUTAS
+        async function carregarListaDePautas(userId) {
+            const q = query(collection(db, "pautas"), where("members", "array-contains", userId));
+            onSnapshot(q, (snapshot) => {
+                const list = document.getElementById('pautas-list');
+                list.innerHTML = '';
+                snapshot.forEach(d => {
+                    const data = d.data();
+                    const card = document.createElement('div');
+                    card.className = "p-6 bg-white rounded-xl shadow hover:shadow-lg transition cursor-pointer border-t-4 border-green-500";
+                    card.innerHTML = `<h3 class="font-bold text-lg">${data.name}</h3><p class="text-xs text-gray-500">Membros: ${data.memberEmails.length}</p>`;
+                    card.onclick = () => loadPauta(d.id, data.name);
+                    list.appendChild(card);
+                });
+            });
+        }
+
+        // 4. CARREGAR UMA PAUTA ESPECÍFICA
+        async function loadPauta(id, name) {
+            currentPautaId = id;
+            localStorage.setItem('lastPautaId', id);
+            document.getElementById('pauta-title').textContent = name;
+            
+            setupAttendancesListener(db, id, (dados) => {
+                allAssisted = dados;
+                renderAssistedList();
+            });
+            showScreen('app');
+        }
+
+        // 5. RENDERIZAÇÃO DOS CARDS (O CORAÇÃO DO INDEX)
+        function renderAssistedList() {
+            const listPauta = document.getElementById('pauta-list');
+            const listAguardando = document.getElementById('aguardando-list');
+            const listAtendidos = document.getElementById('atendidos-list');
+            
+            [listPauta, listAguardando, listAtendidos].forEach(l => l.innerHTML = '');
+
+            allAssisted.forEach(a => {
+                const card = document.createElement('div');
+                card.className = `p-3 bg-white border rounded-lg shadow-sm text-sm mb-2 relative ${a.priority === 'URGENTE' ? 'priority-urgente' : ''}`;
+                
+                let botoes = '';
+                if (a.status === 'pauta') {
+                    botoes = `<button data-id="${a.id}" class="btn-chegada bg-green-500 text-white px-2 py-1 rounded text-[10px] font-bold">CHEGOU</button>`;
+                } else if (a.status === 'aguardando') {
+                    botoes = `<button data-id="${a.id}" class="btn-atender bg-blue-500 text-white px-2 py-1 rounded text-[10px] font-bold">ATENDER</button>`;
+                }
+
+                card.innerHTML = `
+                    <div class="font-bold text-gray-800">${escapeHTML(a.name)}</div>
+                    <div class="text-[10px] text-gray-500 uppercase">${escapeHTML(a.subject)}</div>
+                    <div class="mt-2 flex justify-between items-center">
+                        ${botoes}
+                        <span class="text-[10px] text-gray-400">${a.scheduledTime || 'AVULSO'}</span>
+                    </div>
+                `;
+
+                if (a.status === 'pauta') listPauta.appendChild(card);
+                else if (a.status === 'aguardando') listAguardando.appendChild(card);
+                else if (a.status === 'atendido') listAtendidos.appendChild(card);
+            });
+        }
+
+        // 6. LISTENERS DE EVENTOS (BOTÕES E INTERAÇÕES)
+        
+        // Alternar Login/Cadastro
+        document.getElementById('register-tab-btn').onclick = () => {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('register-form').classList.remove('hidden');
+        };
+        document.getElementById('login-tab-btn').onclick = () => {
+            document.getElementById('register-form').classList.add('hidden');
+            document.getElementById('login-form').classList.remove('hidden');
         };
 
-        // 5. SUBMIT REGISTRO
-        registerForm.onsubmit = async (e) => {
+        // Login Submit
+        document.getElementById('login-form').onsubmit = async (e) => {
+            e.preventDefault();
+            try { await handleLogin(auth, e.target[0].value, e.target[1].value); } 
+            catch(err) { showNotification("Email ou senha inválidos", "error"); }
+        };
+
+        // Registro Submit
+        document.getElementById('register-form').onsubmit = async (e) => {
             e.preventDefault();
             try { 
                 await handleRegister(auth, db, e.target[0].value, e.target[1].value, e.target[2].value);
-                showNotification("Conta criada! Aguarde aprovação.");
-                loginTabBtn.click();
-            } catch(err) { showNotification("Erro ao criar conta", "error"); }
+                showNotification("Conta enviada para aprovação!");
+                document.getElementById('login-tab-btn').click();
+            } catch(err) { showNotification("Erro no registro", "error"); }
         };
 
-        // 6. BOTÕES APP
-        document.getElementById('actions-toggle').onclick = () => document.getElementById('actions-panel').classList.toggle('hidden');
-        document.getElementById('logout-btn-selection').onclick = () => handleLogout(auth);
-        
-        document.getElementById('back-to-pautas-btn').onclick = () => showScreen('pautaSelection');
-
-        document.getElementById('pdf-atendidos-btn').onclick = () => {
-            const atendidos = allAssisted.filter(a => a.status === 'atendido');
-            generateAtendidosPDF(document.getElementById('pauta-title').textContent, atendidos);
-        };
-
+        // Importação CSV
         document.getElementById('file-upload').onchange = async (e) => {
             const data = await parsePautaCSV(e.target.files[0]);
             const batch = writeBatch(db);
@@ -258,10 +334,41 @@
                 batch.set(ref, { ...item, status: 'pauta', createdAt: new Date().toISOString() });
             });
             await batch.commit();
-            showNotification("Pauta Importada!");
+            showNotification("CSV Importado!");
         };
 
-        // ... (Renderização de cards simplificada para este exemplo)
+        // PDF Relatório
+        document.getElementById('btn-pdf-atendidos').onclick = () => {
+            const atendidos = allAssisted.filter(a => a.status === 'atendido');
+            generateAtendidosPDF(document.getElementById('pauta-title').textContent, atendidos);
+        };
+
+        // Logout e Navegação
+        document.getElementById('logout-btn-selection').onclick = () => signOut(auth);
+        document.getElementById('back-to-pautas').onclick = () => showScreen('pautaSelection');
+        document.getElementById('actions-toggle').onclick = () => document.getElementById('actions-panel').classList.toggle('hidden');
+
+        // Cliques em botões dentro dos cards (Delegação de Evento)
+        document.body.addEventListener('click', async (e) => {
+            const id = e.target.dataset.id;
+            if(!id) return;
+
+            const ref = doc(db, "pautas", currentPautaId, "attendances", id);
+
+            if(e.target.classList.contains('btn-chegada')) {
+                await updateDoc(ref, { status: 'aguardando', arrivalTime: new Date().toISOString() });
+            }
+            if(e.target.classList.contains('btn-atender')) {
+                await updateDoc(ref, { status: 'atendido', attendedTime: new Date().toISOString(), attendant: currentUserName });
+            }
+        });
+
+        // Painel Admin
+        document.getElementById('admin-panel-btn').onclick = () => {
+            document.getElementById('admin-modal').classList.remove('hidden');
+            loadUsersList(db);
+        };
+
     </script>
 </body>
 </html>
