@@ -3390,6 +3390,7 @@ function renderColaboradores() {
             );
         };
         // --- BLOCO ÚNICO E COMPLETO DE INICIALIZAÇÃO ---
+// --- BLOCO ÚNICO E COMPLETO DE INICIALIZAÇÃO ---
         document.addEventListener('DOMContentLoaded', () => {
             main();
             setupModalClosers();
@@ -3477,9 +3478,9 @@ function renderColaboradores() {
             };
 
             subjectInput.addEventListener('input', (e) => {
-                const query = e.target.value.toLowerCase();
+                const queryVal = e.target.value.toLowerCase();
                 datalist.innerHTML = '';
-                flatSubjects.filter(item => item.value.toLowerCase().includes(query) || item.description.toLowerCase().includes(query))
+                flatSubjects.filter(item => item.value.toLowerCase().includes(queryVal) || item.description.toLowerCase().includes(queryVal))
                     .forEach(subject => {
                         const option = document.createElement('option');
                         option.value = subject.value;
@@ -3555,9 +3556,12 @@ function renderColaboradores() {
             });
 
             // 6. EVENTOS DE CRIAÇÃO E NAVEGAÇÃO
-            document.getElementById('format-help-link').addEventListener('click', (e) => {
-                e.preventDefault(); document.getElementById('format-help-modal').classList.remove('hidden');
-            });
+            const helpLink = document.getElementById('format-help-link');
+            if(helpLink) {
+                helpLink.addEventListener('click', (e) => {
+                    e.preventDefault(); document.getElementById('format-help-modal').classList.remove('hidden');
+                });
+            }
 
             document.getElementById('tab-agendamento').addEventListener('click', () => switchTab('agendamento'));
             document.getElementById('tab-avulso').addEventListener('click', () => switchTab('avulso'));
@@ -3565,7 +3569,8 @@ function renderColaboradores() {
             document.getElementById('logout-btn-app').addEventListener('click', () => signOut(auth));
 
             ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
-                document.getElementById(id).addEventListener('input', renderAssistedList);
+                const el = document.getElementById(id);
+                if(el) el.addEventListener('input', renderAssistedList);
             });
 
             // 7. O GRANDE LISTENER DE CLIQUE (BOTÕES DE AÇÃO)
@@ -3648,11 +3653,11 @@ function renderColaboradores() {
                 }
 
                 if (button.id === 'back-to-pautas-btn') { currentPautaId = null; showPautaSelectionScreen(auth.currentUser.uid); }
-            }); // FIM do document.body.addEventListener('click')
+            });
 
-            // 8. FINALIZAÇÃO DE EMAILJS (FORA DO CLICK DO BODY, DENTRO DO DOM)
+            // 8. FINALIZAÇÃO DE EMAILJS
             const sendEmailBtn = document.getElementById('send-delegate-email-btn');
-            if (sendEmailBtn) {
+            if(sendEmailBtn) {
                 sendEmailBtn.addEventListener('click', async () => {
                     const email = document.getElementById('collaborator-email-input').value.trim();
                     if (!email) { showNotification("Insira o e-mail.", "error"); return; }
@@ -3669,12 +3674,17 @@ function renderColaboradores() {
                         });
                         showNotification("Link enviado por e-mail!"); 
                         document.getElementById('delegate-email-modal').classList.add('hidden');
-                    } catch (e) { 
-                        showNotification("Erro ao enviar e-mail.", "error"); 
-                    }
+                    } catch (e) { showNotification("Erro ao enviar e-mail.", "error"); }
                 });
             }
-        }); // FIM DO ÚNICO DOMContentLoaded
+
+            const editSub = document.getElementById('edit-assisted-subject');
+            if (editSub) {
+                editSub.addEventListener('change', () => {
+                    if (editSub.value.includes(' > ')) editSub.value = editSub.value.split(' > ').pop();
+                });
+            }
+        }); 
     </script>
 
 <!-- Modal de Anotações -->
@@ -3794,6 +3804,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
