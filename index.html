@@ -1330,183 +1330,50 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     <div id="statistics-modal" class="hidden z-50">
         <!-- O conteúdo, incluindo cabeçalho e botões, será gerado dinamicamente pelo script 'estatisticas.js' -->
     </div>
-    
-
-    <script type="module">
-        // --- FUNÇÃO DE SEGURANÇA CONTRA XSS ---
-        const escapeHTML = (str) => {
-            if (!str) return '';
-            return String(str).replace(/[&<>'"]/g,
-                tag => ({
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    "'": '&#39;',
-                    '"': '&quot;'
-                }[tag]));
-        };
-        // --------------------------------------
-
-        // --- LÓGICA DO PAINEL DE ADMIN ---
-
-        const adminPanelBtn = document.getElementById('admin-panel-btn');
-        const adminModal = document.getElementById('admin-modal');
-        
-        // 1. Mostrar o botão apenas se for Admin
-        const checkAdminStatus = (userData) => {
-            if (userData.role === 'admin' || userData.role === 'superadmin') {
-                adminPanelBtn.classList.remove('hidden');
-            }
-        };
-        
-        // 2. Carregar e Renderizar Usuários
-       const loadUsers = async () => {
-            const usersRef = collection(db, "users");
-            const snapshot = await getDocs(usersRef);
-            
-            const pendingList = document.getElementById('pending-users-list');
-            const approvedList = document.getElementById('approved-users-list');
-            
-            pendingList.innerHTML = '';
-            approvedList.innerHTML = '';
-        
-            snapshot.forEach((docSnap) => {
-                const user = docSnap.data();
-                const userId = docSnap.id;
-        
-                const userRow = document.createElement('div');
-                userRow.className = "flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-gray-50 rounded-lg border gap-3";
-                
-                // Parte Esquerda: Dados do Usuário
-                // APLICAÇÃO DE SEGURANÇA: escapeHTML
-                const userInfo = `
-                    <div>
-                        <p class="font-bold text-gray-800">${escapeHTML(user.name)}</p>
-                        <p class="text-xs text-gray-500">${escapeHTML(user.email)}</p>
-                        <p class="text-[10px] font-bold uppercase ${user.role === 'superadmin' ? 'text-purple-600' : 'text-blue-600'}">
-                            Cargo Atual: ${escapeHTML(user.role) || 'Nenhum'}
-                        </p>
-                    </div>
-                `;
-        
-                // Parte Direita: Ações (Aprovar com escolha de perfil)
-                let userActions = '';
-                
-                if (user.status === 'pending') {
-                    userActions = `
-                        <div class="flex items-center gap-2 w-full sm:w-auto">
-                            <select id="role-select-${userId}" class="text-xs border rounded p-1 bg-white">
-                                <option value="user">Usuário Comum</option>
-                                <option value="admin">Administrador</option>
-                                <option value="superadmin">Superadmin</option>
-                            </select>
-                            <button onclick="approveUserWithRole('${userId}')" class="bg-green-500 text-white text-xs px-3 py-1 rounded hover:bg-green-600">
-                                Aprovar
-                            </button>
-                        </div>
-                    `;
-                } else {
-                    // Se já está aprovado, permite alterar o cargo ou excluir
-                    userActions = `
-                        <div class="flex items-center gap-2">
-                            <select onchange="changeUserRole('${userId}', this.value)" class="text-xs border rounded p-1 bg-white">
-                                <option value="user" ${user.role === 'user' ? 'selected' : ''}>Usuário</option>
-                                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                                <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>Superadmin</option>
-                            </select>
-                            ${user.role !== 'superadmin' ? `
-                                <button onclick="deleteUser('${userId}')" class="text-red-500 hover:text-red-700">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"/></svg>
-                                </button>
-                            ` : ''}
-                        </div>
-                    `;
-                }
-        
-                userRow.innerHTML = userInfo + userActions;
-        
-                if (user.status === 'pending') {
-                    pendingList.appendChild(userRow);
-                } else {
-                    approvedList.appendChild(userRow);
-                }
-            });
-        };
-        // 3. Funções Globais para os botões (Expostas para o HTML)
-        // Aprovar escolhendo o cargo
-        window.approveUserWithRole = async (id) => {
-            const roleSelect = document.getElementById(`role-select-${id}`);
-            const selectedRole = roleSelect.value;
-            
-            if(confirm(`Deseja aprovar este usuário como ${selectedRole}?`)) {
-                logAction('ADMIN_APPROVE_USER', `Aprovou usuário ${id} como ${selectedRole}`, id); // LINHA ADICIONADA AQUI
-
-                await updateDoc(doc(db, "users", id), { 
-                    status: 'approved',
-                    role: selectedRole,
-                });
-                showNotification(`Usuário aprovado como ${selectedRole}!`);
-                loadUsers();
-            }
-        };
-
-    // Alterar cargo de quem já está aprovado
-    window.changeUserRole = async (id, newRole) => {
-        if(confirm(`Deseja alterar o cargo deste usuário para ${newRole}?`)) {
-            await updateDoc(doc(db, "users", id), { 
-                role: newRole 
-            });
-            showNotification("Cargo atualizado com sucesso!");
-            loadUsers();
-        }
-    };
-        
-        window.deleteUser = async (id) => {
-            if(confirm("Tem certeza que deseja excluir este usuário definitivamente?")) {
-                logAction('ADMIN_DELETE_USER', `Excluiu o usuário ${id}`, id);
-                await deleteDoc(doc(db, "users", id));
-                showNotification("Usuário removido.", "error");
-                loadUsers();
-            }
-        };
-        
-        // Eventos de abrir/fechar modal
-        adminPanelBtn.addEventListener('click', () => {
-            adminModal.classList.remove('hidden');
-            loadUsers();
-        });
-        
-        document.getElementById('close-admin-modal').addEventListener('click', () => {
-            adminModal.classList.add('hidden');
-        });
-
-
-// 1. IMPORTAÇÕES (Sempre no topo)
+// ==========================================================
+// 1. IMPORTAÇÕES (Sempre no topo do script module)
+// ==========================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, where, orderBy, limit, getDoc, writeBatch, arrayUnion, arrayRemove, setDoc, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// Importando módulos locais (Certifique-se que os arquivos existem na mesma pasta)
 import { setupDetailsModal, openDetailsModal } from './detalhes.js';
 import { renderStatisticsModal } from './estatisticas.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, where, orderBy, limit, getDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove, setDoc, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// 2. VARIÁVEIS GLOIS E CONSTANTES (Acessíveis por todo o script)
-let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '', currentPautaOwnerId = null, isPautaClosed = false;
+// ==========================================================
+// 2. VARIÁVEIS GLOBAIS E ESTADOS
+// ==========================================================
+let db, auth;
+let allAssisted = [];
+let currentPautaId = null;
 let currentPautaData = null;
+let currentUserName = '';
+let currentPautaOwnerId = null;
+let isPautaClosed = false;
+let colaboradores = [];
+let customRoomsList = [];
 let assistedIdToHandle = null;
 let assistedNameToHandle = null;
-let customRoomsList = [];
 let assistedIdForDelegation = null;
 let assistedNameForDelegation = null;
 let collaboratorNameForDelegation = null;
-let colaboradores = [];
 let editCollaboratorId = null;
+let unsubscribeFromAttendances = () => {};
 let unsubscribeFromCollaborators = () => {};
-let currentChecklistAction = null;
+let sortableAguardando = null;
+let selectedLegalPriority = 'NENHUMA';
 
-// Árvore de Assuntos (Mantida como você definiu)
-const subjectTree = [ /* ... seu array subjectTree completo aqui ... */ ];
+// ==========================================================
+// 3. ÁRVORE DE ASSUNTOS E UTILITÁRIOS
+// ==========================================================
+const subjectTree = [
+    { text: "Orientação Jurídica", description: "Prestação de informações e esclarecimentos gerais sobre direitos..." },
+    { text: "Processos de Família", children: [ { text: "Alimentos", children: [] } ], description: "..." },
+    // ... (Mantenha sua árvore completa aqui)
+];
 
-// Função para achatar a árvore
 function flattenTreeWithObjects(nodes, parentPrefix = '') {
     let flatList = [];
     nodes.forEach(node => {
@@ -1518,9 +1385,9 @@ function flattenTreeWithObjects(nodes, parentPrefix = '') {
 }
 const flatSubjects = flattenTreeWithObjects(subjectTree);
 
-// 3. FUNÇÕES UTILITÁRIAS (Helpers)
+// Utilitários de Texto e Segurança
 const escapeHTML = (str) => {
-    if (!str) return "";
+    if (!str) return '';
     return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 };
 
@@ -1529,6 +1396,15 @@ const normalizeText = (str) => {
     return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 };
 
+const getUpdatePayload = (data) => ({
+    ...data,
+    lastActionBy: currentUserName,
+    lastActionTimestamp: new Date().toISOString()
+});
+
+// ==========================================================
+// 4. SISTEMA DE AUDITORIA E ADMIN
+// ==========================================================
 const logAction = async (actionType, details, targetId = null) => {
     try {
         if (!auth.currentUser) return;
@@ -1546,57 +1422,96 @@ const logAction = async (actionType, details, targetId = null) => {
     } catch (error) { console.error("Falha ao gravar log:", error); }
 };
 
-// ... (Mantenha as outras funções como formatTime, getPriorityLevel, searchFilter, renderAssistedList, etc.) ...
+// Funções expostas ao Objeto Window para o HTML (Botões Administrativos)
+window.approveUserWithRole = async (id) => {
+    const selectedRole = document.getElementById(`role-select-${id}`).value;
+    if(confirm(`Deseja aprovar este usuário como ${selectedRole}?`)) {
+        await updateDoc(doc(db, "users", id), { status: 'approved', role: selectedRole });
+        logAction('ADMIN_APPROVE_USER', `Aprovou usuário ${id} como ${selectedRole}`, id);
+        showNotification(`Usuário aprovado como ${selectedRole}!`);
+        loadUsers();
+    }
+};
 
-// 4. ÚNICO DOM CONTENT LOADED
+window.changeUserRole = async (id, newRole) => {
+    if(confirm(`Deseja alterar o cargo deste usuário para ${newRole}?`)) {
+        await updateDoc(doc(db, "users", id), { role: newRole });
+        showNotification("Cargo atualizado!");
+        loadUsers();
+    }
+};
+
+window.deleteUser = async (id) => {
+    if(confirm("Tem certeza que deseja excluir este usuário definitivamente?")) {
+        await deleteDoc(doc(db, "users", id));
+        logAction('ADMIN_DELETE_USER', `Excluiu o usuário ${id}`, id);
+        showNotification("Usuário removido.", "error");
+        loadUsers();
+    }
+};
+
+// ==========================================================
+// 5. INICIALIZAÇÃO ÚNICA (DOMContentLoaded)
+// ==========================================================
 document.addEventListener('DOMContentLoaded', () => {
     
-    // A. Inicialização do Firebase
-    main(); 
+    // --- A. Inicializar Firebase ---
+    const firebaseConfig = { 
+        apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", 
+        authDomain: "pauta-ce162.firebaseapp.com", 
+        projectId: "pauta-ce162", 
+        storageBucket: "pauta-ce162.appspot.com", 
+        messagingSenderId: "87113750208", 
+        appId: "1:87113750208:web:4abba0024f4d4af699bf25" 
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
 
-    // B. Configurações de Modais Externos
-    setupModalClosers();
-    setupDetailsModal({ db, getUpdatePayload: (data) => ({ ...data, lastActionBy: currentUserName, lastActionTimestamp: new Date().toISOString() }), showNotification: (msg, type) => {/* sua func showNotification */} });
+    // App Check
+    initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
+        isTokenAutoRefreshEnabled: true
+    });
 
-    // C. LÓGICA DE LIMPEZA DE DADOS (LGPD)
+    // Persistência Offline
+    enableIndexedDbPersistence(db).catch(err => console.warn("Modo offline não disponível", err.code));
+
+    // --- B. Configuração de Módulos Externos ---
+    setupDetailsModal({ db, getUpdatePayload, showNotification });
+    setupModalClosers(); // Função que fecha modais clicando fora
+
+    // --- C. Listeners da Interface Admin (Auditoria e LGPD) ---
     const cleanupBtn = document.getElementById('cleanup-old-data-btn');
     if (cleanupBtn) {
         cleanupBtn.addEventListener('click', async () => {
             if (!confirm("Isso apagará permanentemente TODOS os atendimentos com mais de 7 dias. Deseja continuar?")) return;
             cleanupBtn.disabled = true;
-            cleanupBtn.textContent = "Limpando...";
             try {
-                const sevenDaysAgo = new Date();
-                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-                const limitDate = sevenDaysAgo.toISOString();
+                const limitDate = new Date();
+                limitDate.setDate(limitDate.getDate() - 7);
                 const pautasSnapshot = await getDocs(collection(db, "pautas"));
-                let deletedCount = 0;
-                for (const pautaDoc of pautasSnapshot.docs) {
-                    const q = query(collection(db, "pautas", pautaDoc.id, "attendances"), where("createdAt", "<", limitDate));
-                    const oldDocs = await getDocs(q);
-                    if (!oldDocs.empty) {
-                        const batch = writeBatch(db);
-                        oldDocs.forEach(d => { batch.delete(d.ref); deletedCount++; });
-                        await batch.commit();
-                    }
+                let count = 0;
+                for (const pDoc of pautasSnapshot.docs) {
+                    const q = query(collection(db, "pautas", pDoc.id, "attendances"), where("createdAt", "<", limitDate.toISOString()));
+                    const snap = await getDocs(q);
+                    const batch = writeBatch(db);
+                    snap.forEach(d => { batch.delete(d.ref); count++; });
+                    await batch.commit();
                 }
-                alert(`Limpeza concluída! ${deletedCount} registros removidos.`);
-            } catch (error) { console.error(error); }
-            finally { cleanupBtn.disabled = false; cleanupBtn.textContent = "Executar Limpeza de 7 Dias"; }
+                showNotification(`Limpeza concluída: ${count} removidos.`);
+            } catch (e) { showNotification("Erro na limpeza.", "error"); }
+            finally { cleanupBtn.disabled = false; }
         });
     }
 
-    // D. LÓGICA DE AUDITORIA (Logs)
     const viewLogsBtn = document.getElementById('view-audit-logs-btn');
-    const logsContainer = document.getElementById('audit-logs-container');
     if (viewLogsBtn) {
         viewLogsBtn.addEventListener('click', async () => {
-            if (!logsContainer.classList.contains('hidden')) {
-                logsContainer.classList.add('hidden');
-                viewLogsBtn.textContent = "Carregar Logs";
-                return;
-            }
-            viewLogsBtn.textContent = "Carregando...";
+            const container = document.getElementById('audit-logs-container');
+            if (!container.classList.contains('hidden')) { container.classList.add('hidden'); return; }
+            
             try {
                 const q = query(collection(db, "audit_logs"), orderBy("timestamp", "desc"), limit(50));
                 const snapshot = await getDocs(q);
@@ -1605,66 +1520,124 @@ document.addEventListener('DOMContentLoaded', () => {
                 snapshot.forEach(docSnap => {
                     const log = docSnap.data();
                     const row = document.createElement('tr');
-                    row.innerHTML = `<td class="px-3 py-2">${new Date(log.timestamp).toLocaleString()}</td><td class="px-3 py-2">${escapeHTML(log.userName)}</td><td class="px-3 py-2">${log.action}</td>`;
+                    row.className = "border-b hover:bg-gray-50";
+                    row.innerHTML = `
+                        <td class="px-3 py-2 whitespace-nowrap text-xs">${new Date(log.timestamp).toLocaleString()}</td>
+                        <td class="px-3 py-2 font-medium">${escapeHTML(log.userName)}</td>
+                        <td class="px-3 py-2"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-200">${escapeHTML(log.action)}</span></td>
+                        <td class="px-3 py-2 text-gray-600 truncate max-w-xs" title="${escapeHTML(log.details)}">${escapeHTML(log.details)}</td>
+                    `;
                     tableBody.appendChild(row);
                 });
-                logsContainer.classList.remove('hidden');
-                viewLogsBtn.textContent = "Ocultar Logs";
-            } catch (e) { console.error(e); }
-            finally { viewLogsBtn.textContent = "Ocultar Logs"; }
+                container.classList.remove('hidden');
+            } catch (e) { showNotification("Erro ao carregar logs.", "error"); }
         });
     }
 
-    // E. Inicialização de Componentes de UI (Datalists, Tabs, etc.)
+    // --- D. Inicialização de Datalists e Filtros ---
     const datalist = document.getElementById('subjects-list');
-    if(datalist) {
-        flatSubjects.forEach(s => {
-            const opt = document.createElement('option');
-            opt.value = s.value;
-            datalist.appendChild(opt);
-        });
-    }
-
-    // F. Listeners de Navegação e Logout
-    document.getElementById('tab-agendamento')?.addEventListener('click', () => switchTab('agendamento'));
-    document.getElementById('tab-avulso')?.addEventListener('click', () => switchTab('avulso'));
-    document.getElementById('logout-btn-app')?.addEventListener('click', () => signOut(auth));
-
-    // G. Delegated Click Listener (O grande bloco de cliques que você tem)
-    document.body.addEventListener('click', async (e) => {
-        const button = e.target.closest('button');
-        if (!button) return;
-        
-        // Aqui entram todos os seus if (button.id === ...) ou if (button.classList.contains(...))
-        // Exemplo:
-        if (button.id === 'view-stats-btn') showStatisticsModal();
-        if (button.classList.contains('check-in-btn')) { /* ... */ }
-        // ... restante da sua lógica de cliques ...
+    flatSubjects.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.value;
+        datalist.appendChild(opt);
     });
 
-    // H. Listeners de Formulários (Login, Cadastro, Criação de Pauta)
-    document.getElementById('login-form')?.addEventListener('submit', handleLogin);
-    document.getElementById('register-form')?.addEventListener('submit', handleRegister);
-    
-    // I. Setup do Arrastar e Soltar (Sortable)
-    setupManualSort();
+    // --- E. Iniciar Monitor de Autenticação ---
+    handleAuthState();
 
 }); // Fim do DOMContentLoaded
 
-// 5. FUNÇÃO PRINCIPAL DE INICIALIZAÇÃO DO FIREBASE
-async function main() {
-    const firebaseConfig = { /* seu config */ };
-    const app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-    auth = getAuth(app);
-    
-    // Ativar persistência offline
-    enableIndexedDbPersistence(db).catch(err => console.error("Offline Error:", err));
-    
-    // Monitor de Auth
-    handleAuthState();
+// ==========================================================
+// 6. FUNÇÕES CORE (As lógicas de carregar usuários, pautas, etc.)
+// ==========================================================
+
+async function loadUsers() {
+    const pendingList = document.getElementById('pending-users-list');
+    const approvedList = document.getElementById('approved-users-list');
+    pendingList.innerHTML = 'Carregando...'; 
+    approvedList.innerHTML = 'Carregando...';
+
+    const snapshot = await getDocs(collection(db, "users"));
+    pendingList.innerHTML = ''; approvedList.innerHTML = '';
+
+    snapshot.forEach((docSnap) => {
+        const user = docSnap.data();
+        const userId = docSnap.id;
+        const row = document.createElement('div');
+        row.className = "flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-gray-50 rounded-lg border gap-3";
+        
+        const info = `<div><p class="font-bold">${escapeHTML(user.name)}</p><p class="text-xs text-gray-500">${escapeHTML(user.email)}</p></div>`;
+        let actions = '';
+
+        if (user.status === 'pending') {
+            actions = `<div class="flex gap-2"><select id="role-select-${userId}" class="text-xs border rounded p-1"><option value="user">Usuário</option><option value="admin">Admin</option></select><button onclick="approveUserWithRole('${userId}')" class="bg-green-500 text-white text-xs px-3 py-1 rounded">Aprovar</button></div>`;
+        } else {
+            actions = `<div class="flex gap-2 items-center"><select onchange="changeUserRole('${userId}', this.value)" class="text-xs border rounded p-1"><option value="user" ${user.role === 'user' ? 'selected' : ''}>Usuário</option><option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option></select><button onclick="deleteUser('${userId}')" class="text-red-500 hover:text-red-700">Deletar</button></div>`;
+        }
+        row.innerHTML = info + actions;
+        (user.status === 'pending' ? pendingList : approvedList).appendChild(row);
+    });
 }
 
+function handleAuthState() {
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                currentUserName = userData.name || user.email;
+                
+                // Ativar botão Admin se for o caso
+                if (userData.role === 'admin' || userData.role === 'superadmin') {
+                    document.getElementById('admin-panel-btn').classList.remove('hidden');
+                }
+
+                if (userData.status === 'approved') {
+                    const lastId = localStorage.getItem('lastPautaId');
+                    if (lastId) {
+                        const pSnap = await getDoc(doc(db, "pautas", lastId));
+                        if (pSnap.exists() && pSnap.data().members.includes(user.uid)) {
+                            // loadPauta(...) - Chame sua função de carregar a pauta detalhada
+                        } else { showPautaSelectionScreen(user.uid); }
+                    } else { showPautaSelectionScreen(user.uid); }
+                } else {
+                    showScreen('loading');
+                    document.getElementById('loading-text').innerHTML = "Acesso Pendente de Aprovação.";
+                }
+            }
+        } else {
+            showScreen('login');
+        }
+    });
+}
+
+// Funções de Interface Auxiliares
+function showNotification(msg, type = 'success') {
+    const div = document.createElement('div');
+    const color = type === 'error' ? 'bg-red-500' : 'bg-green-500';
+    div.className = `fixed top-5 right-5 ${color} text-white py-3 px-6 rounded-lg shadow-lg z-[100]`;
+    div.textContent = msg;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 3000);
+}
+
+function setupModalClosers() {
+    window.addEventListener('click', (e) => {
+        if (e.target.classList.contains('fixed') && e.target.classList.contains('inset-0')) {
+            e.target.classList.add('hidden');
+        }
+    });
+}
+
+function showScreen(screenName) {
+    document.getElementById('loading-container').classList.add('hidden');
+    document.getElementById('login-container').classList.add('hidden');
+    document.getElementById('pauta-selection-container').classList.add('hidden');
+    document.getElementById('app-container').classList.add('hidden');
+
+    const target = document.getElementById(screenName + '-container');
+    if (target) target.classList.remove('hidden');
+}
 <!-- Modal de Anotações -->
 <div id="notes-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
   <div class="bg-white rounded-xl p-6 w-96 shadow-lg">
@@ -1782,3 +1755,4 @@ async function main() {
   }
 </script>
 </html>
+
