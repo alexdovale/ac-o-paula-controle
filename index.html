@@ -1305,22 +1305,30 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     
 
     <script type="module">
-        // --- FUNÇÃO DE SEGURANÇA CONTRA XSS ---
-        const escapeHTML = (str) => {
-            if (!str) return '';
-            return String(str).replace(/[&<>'"]/g,
-                tag => ({
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    "'": '&#39;',
-                    '"': '&quot;'
-                }[tag]));
-        };
-        // --------------------------------------
 
+         // 1. IMPORTAÇÕES DO FIREBASE (Sempre no topo)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, where, orderBy, limit, getDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove, setDoc, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
+
+    // 2. IMPORTAÇÕES DOS SEUS NOVOS MÓDULOS (O que criamos agora)
+    import { firebaseConfig, emailJsConfig } from './js/config.js';
+    import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
+    
+    // 3. OUTROS MÓDULOS QUE VOCÊ JÁ TINHA
+    import { setupDetailsModal, openDetailsModal } from './detalhes.js';
+    import { renderStatisticsModal } from './estatisticas.js';
+
+    // 4. INICIALIZAÇÃO GLOBAL
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    emailjs.init(emailJsConfig.publicKey); // Ativa o EmailJS usando o seu config.js
+
+        
         // --- LÓGICA DO PAINEL DE ADMIN ---
-
+    
         const adminPanelBtn = document.getElementById('admin-panel-btn');
         const adminModal = document.getElementById('admin-modal');
         
@@ -1847,11 +1855,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         const pautaSelectionContainer = document.getElementById('pauta-selection-container');
         const appContainer = document.getElementById('app-container');
         const loadingText = document.getElementById('loading-text');
-
-        const normalizeText = (str) => {
-            if (!str) return '';
-            return str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-        };
         
         // FUNÇÃO DE PESQUISA MELHORADA
        const searchFilter = (assisted, term) => {
@@ -1961,33 +1964,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
              * @param {string | object} timeStamp - A string de data (ISO) ou objeto Timestamp do Firebase.
              * @returns {string} O horário formatado (HH:mm) ou 'N/A'.
              */
-            function formatTime(timeStamp) {
-                if (!timeStamp) return 'N/A';
-            
-                let date;
-            
-                // 1. Verifica se é um objeto Timestamp do Firebase (muito comum em delegação)
-                if (typeof timeStamp === 'object' && timeStamp.seconds) {
-                    // Converte o Timestamp do Firebase para milissegundos
-                    date = new Date(timeStamp.seconds * 1000);
-                } 
-                // 2. Tenta usar a string diretamente (funciona se for ISO 8601)
-                else {
-                    date = new Date(timeStamp);
-                }
-                
-                // 3. Última verificação de validade
-                if (isNaN(date) || date.getTime() === 0) {
-                    // Se ainda for inválido (pode ser o caso do "Invalid Date")
-                    return 'N/A'; 
-                }
-            
-                // Retorna o horário formatado (ex: 10:30)
-                return date.toLocaleTimeString('pt-BR', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-            }
+        
         const togglePautaLock = (isClosed) => {
             const isOwner = auth.currentUser?.uid === currentPautaOwnerId;
             isPautaClosed = isClosed;
@@ -2447,23 +2424,6 @@ render(atendidosList, atendidos, a => {
 
             // ADICIONE ESTA LINHA AQUI:
             setupManualSort()
-        };
-
-        const showNotification = (message, type = 'success') => {
-            const colors = { info: 'blue', error: 'red', success: 'green' };
-            const notification = document.createElement('div');
-            notification.className = `fixed top-5 right-5 bg-${colors[type]}-500 text-white py-3 px-6 rounded-lg shadow-lg z-[100] transition-transform transform translate-x-full`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-
-            requestAnimationFrame(() => {
-                notification.classList.remove('translate-x-full');
-            });
-
-            setTimeout(() => {
-                notification.classList.add('translate-x-full');
-                notification.addEventListener('transitionend', () => notification.remove());
-            }, 3000);
         };
 
         const setupRealtimeListener = (pautaId) => {
@@ -3262,7 +3222,6 @@ function renderColaboradores() {
         
         const main = () => {
             try {
-                const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
                 const app = initializeApp(firebaseConfig);
                 
                 // Inicialização do App Check para segurança
@@ -3340,23 +3299,7 @@ function renderColaboradores() {
         // Começa a contar assim que a página carrega
         resetInactivityTimer();
 
-        
-        const copyToClipboard = (text, message) => {
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'fixed';
-            textArea.style.opacity = '0';
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                showNotification(message, 'info');
-            } catch (err) {
-                showNotification('Erro ao copiar.', 'error');
-            }
-            document.body.removeChild(textArea);
-        };
+    
         
         // FUNÇÃO PARA MOSTRAR ESTATÍSTICAS (AGORA CHAMA O SCRIPT EXTERNO)
         const showStatisticsModal = () => {
@@ -4960,10 +4903,6 @@ function renderColaboradores() {
 
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
-  (function(){
-    // SUBSTITUA "aGL-Q2UJcD2tDpUKq" PELA SUA PUBLIC KEY REAL DO EmailJS
-    emailjs.init("aGL-Q2UJcD2tDpUKq"); // Sua Public Key do EmailJS
-  })();
 
   const notesBtn = document.getElementById("notes-btn");
   const notesModal = document.getElementById("notes-modal");
@@ -5051,6 +4990,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
