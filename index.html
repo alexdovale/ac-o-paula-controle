@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1306,29 +1307,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
     <script type="module">
 
-         // 1. IMPORTAÇÕES DO FIREBASE (Sempre no topo)
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, where, orderBy, limit, getDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove, setDoc, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-    import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
-
-    // 2. IMPORTAÇÕES DOS SEUS NOVOS MÓDULOS (O que criamos agora)
-    import { firebaseConfig, emailJsConfig } from './js/config.js';
-    import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
-    
-    // 3. OUTROS MÓDULOS QUE VOCÊ JÁ TINHA
-    import { setupDetailsModal, openDetailsModal } from './detalhes.js';
-    import { renderStatisticsModal } from './estatisticas.js';
-
-    // 4. INICIALIZAÇÃO GLOBAL
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-    emailjs.init(emailJsConfig.publicKey); // Ativa o EmailJS usando o seu config.js
-
-        
         // --- LÓGICA DO PAINEL DE ADMIN ---
-    
+
         const adminPanelBtn = document.getElementById('admin-panel-btn');
         const adminModal = document.getElementById('admin-modal');
         
@@ -1590,6 +1570,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         }
         
         // Importando as funções do novo módulo de detalhes
+        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
         import { setupDetailsModal, openDetailsModal } from './detalhes.js';
         import { renderStatisticsModal } from './estatisticas.js'
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -1854,7 +1835,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         const pautaSelectionContainer = document.getElementById('pauta-selection-container');
         const appContainer = document.getElementById('app-container');
         const loadingText = document.getElementById('loading-text');
-        
+
+
         // FUNÇÃO DE PESQUISA MELHORADA
        const searchFilter = (assisted, term) => {
             if (!term) return true;
@@ -1963,7 +1945,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
              * @param {string | object} timeStamp - A string de data (ISO) ou objeto Timestamp do Firebase.
              * @returns {string} O horário formatado (HH:mm) ou 'N/A'.
              */
-        
+  
         const togglePautaLock = (isClosed) => {
             const isOwner = auth.currentUser?.uid === currentPautaOwnerId;
             isPautaClosed = isClosed;
@@ -2424,7 +2406,6 @@ render(atendidosList, atendidos, a => {
             // ADICIONE ESTA LINHA AQUI:
             setupManualSort()
         };
-
         const setupRealtimeListener = (pautaId) => {
             if (unsubscribeFromAttendances) unsubscribeFromAttendances();
             const attendanceCollectionRef = collection(db, "pautas", pautaId, "attendances");
@@ -3298,7 +3279,6 @@ function renderColaboradores() {
         // Começa a contar assim que a página carrega
         resetInactivityTimer();
 
-    
         
         // FUNÇÃO PARA MOSTRAR ESTATÍSTICAS (AGORA CHAMA O SCRIPT EXTERNO)
         const showStatisticsModal = () => {
@@ -4902,7 +4882,7 @@ function renderColaboradores() {
 
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
-
+  
   const notesBtn = document.getElementById("notes-btn");
   const notesModal = document.getElementById("notes-modal");
   const closeNotesBtn = document.getElementById("close-notes-btn");
@@ -4989,25 +4969,3 @@ function renderColaboradores() {
   }
 </script>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
