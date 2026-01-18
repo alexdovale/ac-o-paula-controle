@@ -16,7 +16,7 @@
     <!-- ======================================================= -->
     <!-- MONITORAMENTO DE ERROS (SENTRY) -->
     <!-- Cole este bloco no início do <head> do index.html -->
-    <!-- ======================================================= -->-
+    <!-- ======================================================= -->
     
     <script
       src="https://browser.sentry-cdn.com/7.114.0/bundle.min.js"
@@ -1130,123 +1130,33 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 <button id="save-demands-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar Alterações</button>
             </div>
         </div>
-    <!-- Modal Editar Dados do Assistido (ATUALIZADO COM CATEGORIAS) -->
+    </div>
     <div id="edit-assisted-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
          <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
             <h2 class="text-2xl font-bold mb-6">Editar Dados do Assistido</h2>
-            
-            <form id="edit-assisted-form" class="space-y-4">
-                <input type="hidden" id="edit-assisted-id">
-                
-                <div>
-                    <label for="edit-assisted-name" class="block text-sm font-medium text-gray-700">Nome</label>
-                    <input type="text" id="edit-assisted-name" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg" required>
-                </div>
-                
-                <div>
-                    <label for="edit-assisted-cpf" class="block text-sm font-medium text-gray-700">CPF</label>
-                    <input type="text" id="edit-assisted-cpf" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg">
-                </div>
-                
-                <div>
-                    <label for="edit-assisted-subject" class="block text-sm font-medium text-gray-700">Assunto</label>
-                    <input list="subjects-list" type="text" id="edit-assisted-subject" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg" required>
-                </div>
-
-                <!-- CAMPO DE CATEGORIA LEGAL (NOVO) -->
-                <div>
-                    <label class="block text-sm fon[t-medium text-gray-700">Categoria / Prioridade</label>
-                    <select id="edit-assisted-category" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg bg-white">
-                        <option value="NORMAL">🟢 Normal / Sem Prioridade</option>
-                        <optgroup label="Super Prioridade (Lei 13.466/17)">
-                            <option value="IDOSO_80">🔴 Idoso (80 anos ou mais)</option>
-                            <option value="AUTISMO">🔴 Autismo / TEA</option>
-                        </optgroup>
-                        <optgroup label="Prioridade Legal (Lei 10.048/00)">
-                            <option value="IDOSO_60">🟠 Idoso (60 a 79 anos)</option>
-                            <option value="GESTANTE">🟠 Gestante / Lactante</option>
-                            <option value="PCD">🟠 Pessoa com Deficiência (PcD)</option>
-                            <option value="CRIANCA_COLO">🟠 Pessoa c/ Criança de Colo</option>
-                            <option value="OBESIDADE">🟠 Obesidade</option>
-                        </optgroup>
-                    </select>
-                </div>
-                <!-- FIM DO CAMPO NOVO -->
-
-                <div>
-                    <label for="edit-assisted-time" class="block text-sm font-medium text-gray-700">Horário Agendado</label>
-                    <input type="time" id="edit-assisted-time" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg">
-                </div>
-
-                <div class="flex justify-end space-x-4 mt-8 pt-4 border-t">
-                    <button type="button" id="cancel-edit-assisted" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
-                    <button type="submit" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar Alterações</button>
-                </div>
-            </form>
+            <div class="space-y-4">
+                <div><label for="edit-assisted-name" class="block text-sm font-medium text-gray-700">Nome</label><input type="text" id="edit-assisted-name" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
+                <div><label for="edit-assisted-cpf" class="block text-sm font-medium text-gray-700">CPF</label><input type="text" id="edit-assisted-cpf" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
+                <div><label for="edit-assisted-subject" class="block text-sm font-medium text-gray-700">Assunto</label><input list="subjects-list" type="text" id="edit-assisted-subject" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
+                <div><label for="edit-scheduled-time" class="block text-sm font-medium text-gray-700">Horário Agendado</label><input type="time" id="edit-scheduled-time" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
+            </div>
+            <div class="flex justify-end space-x-4 mt-8">
+                <button id="cancel-edit-assisted-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-edit-assisted-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar Alterações</button>
+            </div>
         </div>
     </div>
-
-        // Listener para SALVAR a edição do assistido
-document.getElementById('edit-assisted-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    // 1. Capturar todos os valores do formulário
-    const id = document.getElementById('edit-assisted-id').value;
-    const name = document.getElementById('edit-assisted-name').value;
-    const cpf = document.getElementById('edit-assisted-cpf').value;
-    const subject = document.getElementById('edit-assisted-subject').value;
-    const scheduledTime = document.getElementById('edit-assisted-time').value;
-    
-    // NOVO: Capturar a Categoria e Calcular Prioridade
-    const categorySelect = document.getElementById('edit-assisted-category');
-    const category = categorySelect ? categorySelect.value : 'NORMAL';
-
-    let calculatedPriority = 'NORMAL'; // Padrão (Verde)
-
-    // Regras de Negócio para Cores
-    if (['IDOSO_80', 'AUTISMO'].includes(category)) {
-        calculatedPriority = 'URGENTE'; // Vermelho
-    } else if (['IDOSO_60', 'GESTANTE', 'PCD', 'CRIANCA_COLO', 'OBESIDADE'].includes(category)) {
-        calculatedPriority = 'MEDIA'; // Laranja
-    }
-
-    try {
-        // 2. Descobrir em qual coleção o assistido está
-        const assisted = allAssisted.find(a => a.id === id);
-        
-        let collectionName = 'aguardando'; // Padrão
-        
-        if (assisted) {
-             if (assisted.status === 'atendido' || (assisted.attendedTime && !assisted.isReverted)) {
-                 collectionName = 'atendidos';
-             } else if (assisted.inAttendanceTime && !assisted.attendedTime) {
-                 collectionName = 'emAtendimento';
-             } else if (assisted.status === 'faltoso') {
-                 collectionName = 'faltosos';
-             }
-        }
-
-        const docRef = doc(db, `pautas/${currentPautaId}/${collectionName}`, id);
-        
-        // 3. Enviar atualização
-        await updateDoc(docRef, {
-            name: name,
-            cpf: cpf,
-            subject: subject,
-            scheduledTime: scheduledTime,
-            category: category,           // Salva a nova categoria
-            priority: calculatedPriority  // Salva a nova prioridade calculada
-        });
-
-        showNotification("Dados atualizados com sucesso!");
-        document.getElementById('edit-assisted-modal').classList.add('hidden');
-
-    } catch (error) {
-        console.error("Erro ao editar:", error);
-        showNotification("Erro ao salvar edição. Tente novamente.", "error");
-    }
-});
-   
+    <div id="priority-reason-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Atendimento Prioritário</h2>
+            <p class="mb-4 text-gray-600">Por favor, informe o motivo da prioridade.</p>
+            <textarea id="priority-reason-input" placeholder="Motivo..." class="w-full p-3 border border-gray-300 rounded-lg mb-6 h-24"></textarea>
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-priority-reason-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-priority-reason-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">Confirmar Prioridade</button>
+            </div>
+        </div>
+    </div>
      <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 80vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -4383,38 +4293,25 @@ function renderColaboradores() {
                             showNotification("Prioridade Urgente removida. Recalculando prioridade."); 
                         }
                     }
-                   // Lógica unificada para botões de edição que precisam do ID e dos dados do assistido
-                if (button.classList.contains('edit-assisted-btn') || button.classList.contains('edit-attendant-btn')) {
-                    const id = button.getAttribute('data-id');
-                    const assisted = allAssisted.find(a => a.id === id);
-                    
-                    if (assisted) {
-                        // Caso 1: Editar Dados do Assistido
-                        if (button.classList.contains('edit-assisted-btn')) {
-                            document.getElementById('edit-assisted-id').value = assisted.id;
-                            document.getElementById('edit-assisted-name').value = assisted.name || '';
-                            document.getElementById('edit-assisted-cpf').value = assisted.cpf || '';
-                            document.getElementById('edit-assisted-subject').value = assisted.subject || '';
-                            document.getElementById('edit-assisted-time').value = assisted.scheduledTime || '';
-                            
-                            // Carregar Categoria (Novo)
-                            const categorySelect = document.getElementById('edit-assisted-category');
-                            if (categorySelect) {
-                                categorySelect.value = assisted.category || 'NORMAL';
-                            }
-                            
+                    if (button.classList.contains('edit-assisted-btn')) { 
+                        assistedIdToHandle = id; 
+                        const assisted = allAssisted.find(a => a.id === id); 
+                        if(assisted){ 
+                            document.getElementById('edit-assisted-name').value = assisted.name; 
+                            document.getElementById('edit-assisted-cpf').value = assisted.cpf || ''; 
+                            document.getElementById('edit-assisted-subject').value = assisted.subject; 
+                            document.getElementById('edit-scheduled-time').value = assisted.scheduledTime || '';
                             document.getElementById('edit-assisted-modal').classList.remove('hidden');
-                        }
-                        
-                        // Caso 2: Editar Atendente (Se existir essa funcionalidade)
-                        if (button.classList.contains('edit-attendant-btn')) {
-                            document.getElementById('edit-attendant-name').value = (typeof assisted.attendant === 'object' ? assisted.attendant.name : assisted.attendant) || '';
-                            // Assumindo que existe um modal para isso, se não existir, ignore este bloco
-                            const attendantModal = document.getElementById('edit-attendant-modal');
-                            if(attendantModal) attendantModal.classList.remove('hidden');
+                        } 
+                    }
+                    if (button.classList.contains('edit-attendant-btn')) {
+                        assistedIdToHandle = id;
+                        const assisted = allAssisted.find(a => a.id === id);
+                        if (assisted) {
+                            document.getElementById('edit-attendant-name').value = assisted.attendant || '';
+                            document.getElementById('edit-attendant-modal').classList.remove('hidden');
                         }
                     }
-                }
                    // NOVO CÓDIGO
                     if (button.classList.contains('view-details-btn')) {
                         openDetailsModal({
@@ -5154,3 +5051,24 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
