@@ -1305,17 +1305,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     
 <script type="module">
 // =======================================================
-// 1. IMPORTAÇÕES (Firebase + Seus 12 Módulos)
+// 1. IMPORTAÇÕES COMPLETAS (Firebase + Seus 12 Módulos)
 // =======================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, collection, addDoc, query, where, onSnapshot, writeBatch, deleteDoc, updateDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
-// Importando sua estrutura modular da pasta /js
+// Seus módulos da pasta /js
 import { firebaseConfig, emailJsConfig } from './js/config.js';
 import { escapeHTML, showNotification, normalizeText } from './js/utils.js';
-import { handleLogin, handleLogout } from './js/auth.js';
+import { handleLogin, handleRegister, handleLogout } from './js/auth.js';
 import { showScreen, togglePautaLockUI } from './js/ui.js';
 import { loadUsersList } from './js/admin.js';
 import { setupAttendancesListener } from './js/pauta.js';
@@ -1323,25 +1323,32 @@ import { generateAtendidosPDF } from './js/pdfService.js';
 import { parsePautaCSV } from './js/csvHandler.js';
 import { getChecklistHTML } from './js/checklist.js';
 
-// Módulos extras na raiz
-import { setupDetailsModal, openDetailsModal } from './detalhes.js';
+// Módulos extras (detalhes.js deve estar na mesma pasta do HTML)
+import { setupDetailsModal } from './detalhes.js';
 
 // =======================================================
-// 2. INICIALIZAÇÃO E ESTADO GLOBAL
+// 2. INICIALIZAÇÃO DO SISTEMA
 // =======================================================
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+// Globais de controle
 let allAssisted = [], currentPautaId = null, currentPautaData = null;
-let currentUserName = '', currentPautaOwnerId = null;
+let currentUserName = '', isPautaClosed = false;
 
-// Inicializações de Segurança e Offline
-emailjs.init(emailJsConfig.publicKey);
+// Inicialização do App Check (Corrigido para evitar erro 403)
 try {
-    initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'), isTokenAutoRefreshEnabled: true });
-    enableIndexedDbPersistence(db).catch(err => console.warn("Offline desativado:", err.code));
-} catch (e) { console.error(e); }
+    if (location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+        initializeAppCheck(app, {
+            provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
+            isTokenAutoRefreshEnabled: true
+        });
+    }
+    enableIndexedDbPersistence(db).catch(() => console.warn("Offline básico ativado."));
+} catch (e) { console.error("Erro AppCheck:", e); }
+
+emailjs.init(emailJsConfig.publicKey);
 
 // =======================================================
 // 3. MONITOR DE ACESSO E LISTAGEM DE PAUTAS
@@ -1350,30 +1357,24 @@ try {
 const showPautaSelectionScreen = (userId) => {
     const pautasList = document.getElementById('pautas-list');
     if (!pautasList) return;
-
-    pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500">Buscando suas pautas...</p>';
+    pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500">Buscando pautas...</p>';
 
     const q = query(collection(db, "pautas"), where("members", "array-contains", userId));
-    
     onSnapshot(q, (snapshot) => {
         pautasList.innerHTML = '';
         if (snapshot.empty) {
-            pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500 p-8">Nenhuma pauta encontrada.</p>';
+            pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500 p-8">Nenhuma pauta encontrada. Crie uma nova!</p>';
             return;
         }
-
         snapshot.forEach((docSnap) => {
             const pauta = docSnap.data();
             const card = document.createElement('div');
-            card.className = "bg-white p-6 rounded-xl shadow-md border hover:border-green-500 cursor-pointer transition-all relative group";
+            card.className = "bg-white p-6 rounded-xl shadow-md border hover:border-green-500 cursor-pointer transition-all";
             card.innerHTML = `
-                <div class="mb-4">
-                    <h3 class="font-bold text-xl text-gray-800">${escapeHTML(pauta.name)}</h3>
-                    <p class="text-[10px] text-gray-400 font-bold uppercase">${pauta.type}</p>
-                </div>
-                <button class="delete-pauta-btn text-red-300 hover:text-red-500" data-id="${docSnap.id}">Excluir</button>
+                <h3 class="font-bold text-xl text-gray-800">${escapeHTML(pauta.name)}</h3>
+                <p class="text-xs text-gray-400 uppercase font-bold mt-2">${pauta.type}</p>
+                <button class="delete-pauta-btn text-red-300 hover:text-red-500 text-xs mt-4" data-id="${docSnap.id}">Excluir Pauta</button>
             `;
-            
             card.onclick = (e) => {
                 if (e.target.classList.contains('delete-pauta-btn')) {
                     if(confirm("Apagar pauta?")) deleteDoc(doc(db, "pautas", docSnap.id));
@@ -1389,29 +1390,28 @@ const showPautaSelectionScreen = (userId) => {
 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        const userSnap = await getDoc(doc(db, "users", user.uid));
-        if (userSnap.exists() && userSnap.data().status === 'approved') {
-            const userData = userSnap.data();
-            currentUserName = userData.name;
-            
-            // Ajuste conforme seu HTML: admin-panel-btn ou admin-btn-main
-            const adminBtn = document.getElementById('admin-panel-btn');
-            if(adminBtn) adminBtn.classList.toggle('hidden', userData.role !== 'admin' && userData.role !== 'superadmin');
-            
-            const lastId = localStorage.getItem('lastPautaId');
-            if (lastId) {
-                const pSnap = await getDoc(doc(db, "pautas", lastId));
-                if(pSnap.exists()) loadPauta(lastId, pSnap.data().name, pSnap.data().type);
-                else showPautaSelectionScreen(user.uid);
-            } else showPautaSelectionScreen(user.uid);
-        } else {
-            signOut(auth);
-        }
-    } else showScreen('login');
+        try {
+            const userSnap = await getDoc(doc(db, "users", user.uid));
+            if (userSnap.exists() && userSnap.data().status === 'approved') {
+                const userData = userSnap.data();
+                currentUserName = userData.name;
+                
+                const adminBtn = document.getElementById('admin-panel-btn');
+                if(adminBtn) adminBtn.classList.toggle('hidden', userData.role !== 'admin' && userData.role !== 'superadmin');
+
+                showPautaSelectionScreen(user.uid);
+            } else {
+                showNotification("Aguardando aprovação do admin.", "info");
+                signOut(auth);
+            }
+        } catch (e) { console.error(e); signOut(auth); }
+    } else {
+        showScreen('login');
+    }
 });
 
 // =======================================================
-// 4. LÓGICA DE CARREGAMENTO E RENDERIZAÇÃO
+// 4. CARREGAMENTO E RENDERIZAÇÃO
 // =======================================================
 
 const loadPauta = async (id, name, type) => {
@@ -1423,8 +1423,7 @@ const loadPauta = async (id, name, type) => {
     const pSnap = await getDoc(doc(db, "pautas", id));
     if (pSnap.exists()) {
         currentPautaData = pSnap.data();
-        currentPautaOwnerId = currentPautaData.owner;
-        togglePautaLockUI(currentPautaData.isClosed, currentPautaOwnerId, auth.currentUser?.uid);
+        togglePautaLockUI(currentPautaData.isClosed, currentPautaData.owner, auth.currentUser?.uid);
     }
 
     setupAttendancesListener(db, id, (dados) => {
@@ -1435,64 +1434,85 @@ const loadPauta = async (id, name, type) => {
 };
 
 const renderAssistedList = () => {
-    const lPauta = document.getElementById('pauta-list');
-    const lAguardando = document.getElementById('aguardando-list');
-    const lAtendidos = document.getElementById('atendidos-list');
-    if(!lPauta || !lAguardando || !lAtendidos) return;
+    const lists = {
+        pauta: document.getElementById('pauta-list'),
+        aguardando: document.getElementById('aguardando-list'),
+        atendido: document.getElementById('atendidos-list')
+    };
+    if(!lists.pauta) return;
 
-    [lPauta, lAguardando, lAtendidos].forEach(l => l.innerHTML = '');
+    Object.values(lists).forEach(l => l.innerHTML = '');
 
     allAssisted.forEach(a => {
         const card = document.createElement('div');
-        card.className = "p-4 bg-white border rounded-xl shadow-sm mb-3 relative";
+        card.className = "p-4 bg-white border rounded-xl shadow-sm mb-3";
         card.innerHTML = `
             <h4 class="font-bold text-gray-800">${escapeHTML(a.name)}</h4>
             <p class="text-xs text-gray-500">${escapeHTML(a.subject)}</p>
-            <div class="mt-4 flex gap-2">
-                ${a.status === 'pauta' ? `<button class="btn-checkin bg-green-600 text-white text-[10px] px-2 py-1 rounded" data-id="${a.id}">Chegou</button>` : ''}
-                ${a.status === 'aguardando' ? `<button class="btn-atender bg-blue-600 text-white text-[10px] px-2 py-1 rounded" data-id="${a.id}">Atender</button>` : ''}
-                <button class="btn-del text-red-300 text-xs ml-auto" data-id="${a.id}">Excluir</button>
+            <div class="mt-3 flex gap-2">
+                ${a.status === 'pauta' ? `<button class="btn-checkin bg-green-600 text-white text-[10px] px-2 py-1 rounded" data-id="${a.id}">CHEGOU</button>` : ''}
+                ${a.status === 'aguardando' ? `<button class="btn-atender bg-blue-600 text-white text-[10px] px-2 py-1 rounded" data-id="${a.id}">ATENDER</button>` : ''}
+                <button class="btn-del text-red-300 text-[10px] ml-auto" data-id="${a.id}">APAGAR</button>
             </div>
         `;
-        if(a.status === 'pauta') lPauta.appendChild(card);
-        else if(a.status === 'aguardando') lAguardando.appendChild(card);
-        else if(a.status === 'atendido') lAtendidos.appendChild(card);
+        if(lists[a.status]) lists[a.status].appendChild(card);
     });
 };
 
 // =======================================================
-// 5. EVENT LISTENERS (CORRIGIDOS PARA SEUS IDs)
+// 5. EVENT LISTENERS (FIXED & COMPLETE)
 // =======================================================
 
-// Login
+// FORMULÁRIO DE LOGIN
 const loginForm = document.getElementById('login-form');
 if (loginForm) {
-    loginForm.onsubmit = async (e) => {
+    loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const pass = document.getElementById('login-password').value;
-        try { await handleLogin(auth, email, pass); } catch(err) { showNotification("Erro no login", "error"); }
-    };
+        const email = document.getElementById('login-email').value.trim();
+        const pass = document.getElementById('login-password').value.trim();
+        try { 
+            await handleLogin(auth, email, pass); 
+        } catch(err) { 
+            console.error(err);
+            showNotification("Erro ao logar. Verifique email/senha.", "error"); 
+        }
+    });
 }
 
-// Botões de Voltar e Sair (Verificando se existem antes de atribuir)
+// CRIAÇÃO DE PAUTA
+const btnCreate = document.getElementById('create-pauta-btn');
+if (btnCreate) btnCreate.onclick = () => document.getElementById('pauta-type-modal').classList.remove('hidden');
+
+document.querySelectorAll('.pauta-type-btn').forEach(btn => {
+    btn.onclick = (e) => {
+        const type = e.currentTarget.dataset.type;
+        document.getElementById('pauta-type-modal').classList.add('hidden');
+        const createModal = document.getElementById('create-pauta-modal');
+        createModal.dataset.pautaType = type;
+        createModal.classList.remove('hidden');
+    };
+});
+
+// Ações do Menu Principal
 const btnBack = document.getElementById('back-to-pautas-btn');
 if (btnBack) btnBack.onclick = () => showPautaSelectionScreen(auth.currentUser.uid);
 
-const btnLogoutSelection = document.getElementById('logout-btn-main'); // No pauta selection
+const btnLogoutSelection = document.getElementById('logout-btn-main');
 if (btnLogoutSelection) btnLogoutSelection.onclick = () => handleLogout(auth);
 
-const btnLogoutApp = document.getElementById('logout-btn-app'); // No app principal
+const btnLogoutApp = document.getElementById('logout-btn-app');
 if (btnLogoutApp) btnLogoutApp.onclick = () => handleLogout(auth);
 
 const btnActions = document.getElementById('actions-toggle');
 if (btnActions) btnActions.onclick = () => document.getElementById('actions-panel').classList.toggle('hidden');
 
-// Botão PDF
 const btnPdf = document.getElementById('download-pdf-btn');
 if (btnPdf) btnPdf.onclick = () => generateAtendidosPDF(currentPautaData.name, allAssisted.filter(a => a.status === 'atendido'));
 
-// Ações dinâmicas nos cards
+const btnAdmin = document.getElementById('admin-panel-btn');
+if (btnAdmin) btnAdmin.onclick = () => { document.getElementById('admin-modal').classList.remove('hidden'); loadUsersList(db); };
+
+// Cliques nos botões dos cards (Delegação)
 document.addEventListener('click', async (e) => {
     const id = e.target.dataset.id;
     if (!id || !currentPautaId) return;
@@ -1503,9 +1523,8 @@ document.addEventListener('click', async (e) => {
     if (e.target.classList.contains('btn-del')) if(confirm("Apagar?")) await deleteDoc(docRef);
 });
 
-// Inicialização
+// Inicialização de Detalhes
 setupDetailsModal({ db, getChecklistHTML, showNotification });
-
 </script>
      
 <!-- Modal de Anotações -->
@@ -1625,6 +1644,7 @@ setupDetailsModal({ db, getChecklistHTML, showNotification });
   }
 </script>
 </html>
+
 
 
 
