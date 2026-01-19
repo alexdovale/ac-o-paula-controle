@@ -1316,21 +1316,19 @@ import { firebaseConfig, emailJsConfig } from './js/config.js';
 import { escapeHTML, showNotification, normalizeText, formatTime } from './js/utils.js';
 import { subjectTree, flatSubjects } from './js/assuntos.js';
 import { handleLogin, handleRegister, handleLogout } from './js/auth.js';
-import { showScreen, togglePautaLockUI, switchTabUI } from './js/ui.js';
+import { showScreen, togglePautaLockUI } from './js/ui.js';
 import { logAction, loadUsersList } from './js/admin.js';
 import { setupAttendancesListener } from './js/pauta.js';
-import { setupCollaboratorsListener } from './js/colaboradores.js';
-import { generateAtendidosPDF } from './js/pdfService.js';
+import { setupCollaboratorsListener, saveCollaboratorData } from './js/colaboradores.js';
+import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
 import { parsePautaCSV } from './js/csvHandler.js';
 import { sendDelegationEmail } from './js/emailService.js';
 import { getChecklistHTML } from './js/checklist.js';
-
-// Módulos na raiz
 import { setupDetailsModal, openDetailsModal } from './detalhes.js';
 import { renderStatisticsModal } from './estatisticas.js';
 
 // =======================================================
-// 2. INICIALIZAÇÃO E ESTADO GLOBAL (MANTENDO ORIGINAL)
+// 2. INICIALIZAÇÃO E VARIÁVEIS DE ESTADO
 // =======================================================
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -1338,18 +1336,13 @@ const auth = getAuth(app);
 
 let allAssisted = [], colaboradores = [], currentPautaId = null, currentPautaData = null;
 let currentUserName = '', currentPautaOwnerId = null, isPautaClosed = false;
-let assistedIdToHandle = null, assistedNameToHandle = null, customRoomsList = [];
+let assistedIdToHandle = null, customRoomsList = [];
 
 emailjs.init(emailJsConfig.publicKey);
-try {
-    if (location.hostname !== "localhost") {
-        initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'), isTokenAutoRefreshEnabled: true });
-    }
-    enableIndexedDbPersistence(db);
-} catch (e) { console.error("Offline ready"); }
+try { enableIndexedDbPersistence(db); } catch (e) { console.warn("Offline pronto"); }
 
 // =======================================================
-// 3. FLUXO DE ACESSO E LISTAGEM DE PAUTAS
+// 3. MONITOR DE ACESSO E TELA INICIAL
 // =======================================================
 
 const showPautaSelectionScreen = (userId) => {
@@ -1362,15 +1355,12 @@ const showPautaSelectionScreen = (userId) => {
             const card = document.createElement('div');
             card.className = "bg-white p-6 rounded-xl shadow-md border hover:border-green-500 cursor-pointer transition-all relative";
             card.innerHTML = `
-                <h3 class="font-bold text-xl">${escapeHTML(pauta.name)}</h3>
+                <h3 class="font-bold text-xl text-gray-800">${escapeHTML(pauta.name)}</h3>
                 <p class="text-[10px] font-bold text-gray-400 uppercase mt-1">${pauta.type}</p>
-                <div class="mt-4 flex justify-between items-center text-xs text-gray-500">
-                    <span>Membros: ${pauta.memberEmails?.length || 1}</span>
-                    <button class="delete-pauta-btn text-gray-300 hover:text-red-500" data-id="${docSnap.id}">🗑️</button>
-                </div>`;
+                <button class="delete-pauta-btn absolute top-3 right-3 text-gray-300 hover:text-red-500" data-id="${docSnap.id}">🗑️</button>`;
             card.onclick = (e) => {
                 if (e.target.closest('.delete-pauta-btn')) {
-                    if(confirm("Apagar esta pauta definitivamente?")) deleteDoc(doc(db, "pautas", docSnap.id));
+                    if(confirm("Apagar esta pauta?")) deleteDoc(doc(db, "pautas", docSnap.id));
                     return;
                 }
                 loadPauta(docSnap.id, pauta.name, pauta.type);
@@ -1385,43 +1375,32 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         const userSnap = await getDoc(doc(db, "users", user.uid));
         if (userSnap.exists() && userSnap.data().status === 'approved') {
-            const data = userSnap.data();
-            currentUserName = data.name;
-            document.getElementById('admin-panel-btn').classList.toggle('hidden', data.role !== 'admin' && data.role !== 'superadmin');
-            const lastId = localStorage.getItem('lastPautaId');
-            if (lastId) {
-                const pSnap = await getDoc(doc(db, "pautas", lastId));
-                if(pSnap.exists()) loadPauta(lastId, pSnap.data().name, pSnap.data().type);
-                else showPautaSelectionScreen(user.uid);
-            } else showPautaSelectionScreen(user.uid);
+            currentUserName = userSnap.data().name;
+            document.getElementById('admin-panel-btn').classList.toggle('hidden', userSnap.data().role !== 'admin');
+            showPautaSelectionScreen(user.uid);
         } else { handleLogout(auth); }
     } else showScreen('login');
 });
 
 // =======================================================
-// 4. LÓGICA DE CARREGAMENTO (CONECTOR DE FLUXOS)
+// 4. RENDERIZAÇÃO DE CARDS (INTEGRAL - IGUAL AO ORIGINAL)
 // =======================================================
 
 const loadPauta = async (id, name, type) => {
     currentPautaId = id;
     localStorage.setItem('lastPautaId', id);
     document.getElementById('pauta-title').textContent = name;
-
+    
     const pSnap = await getDoc(doc(db, "pautas", id));
     if (pSnap.exists()) {
         currentPautaData = pSnap.data();
         currentPautaOwnerId = currentPautaData.owner;
         isPautaClosed = currentPautaData.isClosed || false;
         togglePautaLockUI(isPautaClosed, currentPautaOwnerId, auth.currentUser?.uid);
-        
-        // Ativa Colunas Especiais (Fluxo de Delegação)
         document.getElementById('em-atendimento-column').classList.toggle('hidden', !currentPautaData.useDelegationFlow);
     }
 
-    setupAttendancesListener(db, id, (dados) => { 
-        allAssisted = dados; 
-        renderAssistedList(); 
-    });
+    setupAttendancesListener(db, id, (dados) => { allAssisted = dados; renderAssistedList(); });
     setupCollaboratorsListener(db, id, (equipe) => { colaboradores = equipe; });
     showScreen('app');
 };
@@ -1436,35 +1415,35 @@ const renderAssistedList = () => {
     };
     Object.values(lists).forEach(l => { if(l) l.innerHTML = ''; });
 
-    const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-
     allAssisted.forEach(a => {
-        if (a.status === 'aguardando' && a.type !== currentMode) return;
-
         const card = document.createElement('div');
         card.className = `p-4 bg-white border rounded-xl shadow-sm mb-3 relative ${a.priority === 'URGENTE' ? 'priority-urgente' : ''}`;
         
         let actions = '';
         if (a.status === 'pauta') {
-            actions = `<button class="btn-checkin bg-green-600 text-white text-[10px] px-2 py-1 rounded" data-id="${a.id}">CHEGOU</button>
-                       <button class="btn-faltou bg-yellow-500 text-white text-[10px] px-2 py-1 rounded" data-id="${a.id}">FALTOU</button>`;
+            actions = `
+                <button class="btn-checkin bg-green-600 text-white text-[10px] px-3 py-1.5 rounded-lg font-bold" data-id="${a.id}">MARCAR CHEGADA</button>
+                <button class="btn-faltou bg-yellow-500 text-white text-[10px] px-3 py-1.5 rounded-lg font-bold" data-id="${a.id}">FALTOU</button>
+            `;
         } else if (a.status === 'aguardando') {
-            actions = `<button class="btn-atender bg-blue-600 text-white text-[10px] px-2 py-1 rounded" data-id="${a.id}">ATENDER</button>`;
-        } else if (a.status === 'emAtendimento') {
-            actions = `<button class="btn-finish bg-purple-600 text-white text-[10px] px-2 py-1 rounded" data-id="${a.id}">FINALIZAR</button>`;
+            actions = `
+                <button class="btn-atender bg-blue-600 text-white text-[10px] px-3 py-1.5 rounded-lg font-bold" data-id="${a.id}">ATENDER</button>
+                <button class="btn-priority bg-red-100 text-red-600 text-[10px] px-3 py-1.5 rounded-lg font-bold" data-id="${a.id}">PRIORIDADE</button>
+            `;
+        } else if (a.status === 'atendido') {
+            actions = `
+                <button class="btn-demands bg-gray-100 text-[10px] px-2 py-1 rounded" data-id="${a.id}">Demandas</button>
+                <button class="btn-return bg-orange-50 text-orange-600 text-[10px] px-2 py-1 rounded" data-id="${a.id}">Reverter</button>
+            `;
         }
 
         card.innerHTML = `
-            <div class="flex justify-between items-start">
-                <div>
-                    <h4 class="font-bold text-gray-800 leading-tight">${escapeHTML(a.name)}</h4>
-                    <p class="text-[10px] text-gray-400 mt-1">${escapeHTML(a.subject)}</p>
-                </div>
-                <button class="btn-details text-blue-400" data-id="${a.id}">ℹ️</button>
-            </div>
-            <div class="mt-4 flex gap-2 items-center">
+            <div class="font-bold text-gray-800">${escapeHTML(a.name)}</div>
+            <div class="text-[10px] text-gray-500 mb-2">${escapeHTML(a.subject)}</div>
+            <div class="flex gap-2 items-center">
                 ${actions}
-                <button class="btn-del text-red-200 hover:text-red-500 ml-auto" data-id="${a.id}">🗑️</button>
+                <button class="btn-details text-blue-500 text-[10px] underline ml-auto" data-id="${a.id}">Ver Detalhes</button>
+                <button class="btn-del text-red-300 ml-1" data-id="${a.id}">🗑️</button>
             </div>
         `;
         if(lists[a.status]) lists[a.status].appendChild(card);
@@ -1472,18 +1451,26 @@ const renderAssistedList = () => {
 };
 
 // =======================================================
-// 5. EVENT LISTENERS (RESTAURANDO O FLUXO ORIGINAL)
+// 5. EVENT LISTENERS (FLUXO DE CRIAÇÃO E MENU AÇÕES)
 // =======================================================
 
-// FLUXO DE CRIAÇÃO PASSO-A-PASSO
+// MENU AÇÕES (DROPDOWN)
+document.getElementById('actions-toggle').onclick = (e) => {
+    e.stopPropagation();
+    document.getElementById('actions-panel').classList.toggle('hidden');
+};
+window.onclick = () => document.getElementById('actions-panel').classList.add('hidden');
+
+// FLUXO DE CRIAÇÃO (AVANÇAR ENTRE MODAIS)
 document.getElementById('create-pauta-btn').onclick = () => document.getElementById('pauta-type-modal').classList.remove('hidden');
 
 document.querySelectorAll('.pauta-type-btn').forEach(btn => {
     btn.onclick = (e) => {
+        const type = e.currentTarget.dataset.type;
         document.getElementById('pauta-type-modal').classList.add('hidden');
-        const modal = document.getElementById('create-pauta-modal');
-        modal.dataset.type = e.currentTarget.dataset.type;
-        modal.classList.remove('hidden');
+        const nextModal = document.getElementById('create-pauta-modal');
+        nextModal.dataset.type = type;
+        nextModal.classList.remove('hidden');
     };
 });
 
@@ -1506,50 +1493,36 @@ document.getElementById('confirm-create-pauta-final-btn').onclick = async () => 
 
     await addDoc(collection(db, "pautas"), {
         name, type, ordemAtendimento: order, useDelegationFlow: delegation,
-        owner: auth.currentUser.uid, members: [auth.currentUser.uid],
-        memberEmails: [auth.currentUser.email], createdAt: new Date().toISOString(), isClosed: false
+        owner: auth.currentUser.uid, members: [auth.currentUser.uid], memberEmails: [auth.currentUser.email],
+        createdAt: new Date().toISOString(), isClosed: false
     });
     document.getElementById('delegation-flow-modal').classList.add('hidden');
-    showNotification("Pauta criada!");
+    showNotification("Pauta Criada com Sucesso!");
 };
 
-// Cliques em Botões Dinâmicos (Cards)
+// Cliques em botões de Cards
 document.addEventListener('click', async (e) => {
-    const id = e.target.dataset.id;
-    if (!id || !currentPautaId) return;
+    const btn = e.target.closest('button');
+    if (!btn || !btn.dataset.id || !currentPautaId) return;
+    const id = btn.dataset.id;
     const docRef = doc(db, "pautas", currentPautaId, "attendances", id);
 
-    if (e.target.classList.contains('btn-checkin')) await updateDoc(docRef, { status: 'aguardando', arrivalTime: new Date().toISOString() });
-    if (e.target.classList.contains('btn-faltou')) await updateDoc(docRef, { status: 'faltoso' });
-    if (e.target.classList.contains('btn-atender')) {
-        if(currentPautaData.useDelegationFlow) await updateDoc(docRef, { status: 'emAtendimento', inAttendanceTime: new Date().toISOString() });
-        else await updateDoc(docRef, { status: 'atendido', attendedTime: new Date().toISOString(), attendant: currentUserName });
-    }
-    if (e.target.classList.contains('btn-finish')) await updateDoc(docRef, { status: 'atendido', attendedTime: new Date().toISOString(), attendant: currentUserName });
-    if (e.target.classList.contains('btn-del')) if(confirm("Apagar permanentemente?")) await deleteDoc(docRef);
-    if (e.target.classList.contains('btn-details')) openDetailsModal({ assistedId: id, pautaId: currentPautaId, allAssisted });
+    if (btn.classList.contains('btn-checkin')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); }
+    if (btn.classList.contains('btn-faltou')) await updateDoc(docRef, { status: 'faltoso' });
+    if (btn.classList.contains('btn-atender')) await updateDoc(docRef, { status: 'atendido', attendedTime: new Date().toISOString(), attendant: currentUserName });
+    if (btn.classList.contains('btn-priority')) { assistedIdToHandle = id; document.getElementById('priority-reason-modal').classList.remove('hidden'); }
+    if (btn.classList.contains('btn-del')) if(confirm("Excluir permanentemente?")) await deleteDoc(docRef);
+    if (btn.classList.contains('btn-details')) openDetailsModal({ assistedId: id, pautaId: currentPautaId, allAssisted });
 });
 
-// Ações Gerais
+// Ações de Interface
 document.getElementById('login-form').onsubmit = (e) => {
     e.preventDefault();
     handleLogin(auth, document.getElementById('login-email').value, document.getElementById('login-password').value);
 };
-
 document.getElementById('back-to-pautas-btn').onclick = () => showPautaSelectionScreen(auth.currentUser.uid);
-document.getElementById('actions-toggle').onclick = () => document.getElementById('actions-panel').classList.toggle('hidden');
 document.getElementById('pdf-atendidos-btn').onclick = () => generateAtendidosPDF(currentPautaData.name, allAssisted.filter(a => a.status === 'atendido'));
-document.getElementById('admin-panel-btn').onclick = () => { document.getElementById('admin-modal').classList.remove('hidden'); loadUsersList(db); };
-document.getElementById('logout-btn-selection').onclick = () => handleLogout(auth);
-
-// Importação CSV
-document.getElementById('file-upload').onchange = async (e) => {
-    const data = await parsePautaCSV(e.target.files[0]);
-    const batch = writeBatch(db);
-    data.forEach(item => batch.set(doc(collection(db, "pautas", currentPautaId, "attendances")), { ...item, status: 'pauta', createdAt: new Date().toISOString() }));
-    await batch.commit();
-    showNotification("Importação Concluída!");
-};
+document.getElementById('stats-btn').onclick = () => renderStatisticsModal(allAssisted, currentPautaData.useDelegationFlow, currentPautaData.name);
 
 setupDetailsModal({ db, getChecklistHTML, showNotification });
 </script>
@@ -1671,6 +1644,7 @@ setupDetailsModal({ db, getChecklistHTML, showNotification });
   }
 </script>
 </html>
+
 
 
 
