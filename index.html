@@ -6,17 +6,54 @@
     <title>Sistema de Gerenciamento de Pauta - SIGAP</title>
 
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
+
     <meta name="theme-color" content="#16a34a"/>
     <link rel="apple-touch-icon" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
+    <link rel="manifest" href="manifest.json">
 
-    <!-- Bibliotecas Externas -->
-    <script src="https://browser.sentry-cdn.com/7.114.0/bundle.min.js" crossorigin="anonymous"></script>
+
+
+    <!-- ======================================================= -->
+    <!-- MONITORAMENTO DE ERROS (SENTRY) -->
+    <!-- Cole este bloco no início do <head> do index.html -->
+    <!-- ======================================================= -->
+    
+    <script
+      src="https://browser.sentry-cdn.com/7.114.0/bundle.min.js"
+      crossorigin="anonymous"
+    ></script>
+    
+    <script>
+      if (window.Sentry) {
+        Sentry.init({
+          dsn: "https://7d95a89ba62ab6b3f7a64540c8e693cb@o4510647821795328.ingest.us.sentry.io/4510647932223488", 
+          tracesSampleRate: 1.0,
+          replaysSessionSampleRate: 0.1, 
+          replaysOnErrorSampleRate: 1.0, 
+          environment: "production",
+          release: "sigap@1.0.0",
+          
+          // --- ADICIONE ESTA PARTE PARA O FEEDBACK VISUAL ---
+          beforeSend(event, hint) {
+            // Verifica se é um erro (exception) e se não foi tratado
+            if (event.exception) {
+              Sentry.showReportDialog({ eventId: event.event_id });
+            }
+            return event;
+          }
+          // --------------------------------------------------
+        });
+      }
+    </script>
+    <!-- Para os gráficos -->    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SortableJS para Arrastar e Soltar -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <!-- Para o PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -25,287 +62,1537 @@
         .priority-maxima { border-left: 5px solid #22c55e; }
         .priority-media { border-left: 5px solid #f97316; }
         .priority-minima { border-left: 5px solid #6b7280; }
-        .column-content::-webkit-scrollbar { width: 8px; }
-        .column-content::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar, #members-list-container::-webkit-scrollbar, #statistics-content::-webkit-scrollbar { width: 8px; }
+        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track, #statistics-content::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
+        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb, #statistics-content::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
         .tab-active { border-color: #16a34a; background-color: #f0fdf4; color: #16a34a; font-weight: 600; }
         .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
         .loader { border: 6px solid #f3f3f3; border-top: 6px solid #16a34a; border-radius: 50%; width: 50px; height: 50px; animation: spin 1.5s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Estilos para o botão de confirmado */
+        .confirm-btn-style {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px; 
+            height: 28px; 
+            border-radius: 50%;
+            border: 1px solid currentColor;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            flex-shrink: 0; 
+            margin-left: 8px; 
+        }
+        .confirm-btn-icon {
+            width: 18px; 
+            height: 18px; 
+            color: white; 
+        }
+        .grid.gap-2 > div {
+            padding: 0.5rem; 
+        }
+        .space-y-2 > * + * {
+            margin-top: 0.25rem; 
+        }
+
     </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <div id="offline-indicator" class="fixed top-0 left-0 w-full bg-red-600 text-white text-center py-1 text-sm font-bold hidden z-[100]">
+    <!-- ADICIONE ESTE BLOCO AQUI: -->
+    <div id="offline-indicator" class="fixed top-0 left-0 w-full bg-red-600 text-white text-center py-1 text-sm font-bold hidden z-[100] transition-all duration-300">
         ⚠️ Sem conexão. Trabalhando em Modo Offline.
     </div>
+    <!-- FIM DO BLOCO ADICIONADO -->
 
     <div id="loading-container" class="loading-container"><div class="loader"></div><p id="loading-text" class="mt-4 text-gray-700 font-semibold text-center">Conectando com Segurança...</p></div>
 
-    <!-- TELA DE LOGIN / CADASTRO -->
     <div id="login-container" class="hidden min-h-screen flex items-center justify-center">
         <div class="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
             <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGAP" class="mx-auto h-24 w-auto mb-6">
-            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Sistema SIGAP</h2>
-            
-            <div id="auth-error" class="bg-red-100 text-red-700 px-4 py-2 rounded-lg mb-4 text-sm hidden text-center"></div>
-
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Sistema de Gerenciamento de Pauta</h2>
+            <div id="auth-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden" role="alert"></div>
             <div class="flex border-b mb-6">
-                <button id="login-tab-btn" class="flex-1 py-2 font-semibold text-green-600 border-b-2 border-green-600">Login</button>
-                <button id="register-tab-btn" class="flex-1 py-2 font-semibold text-gray-400">Cadastrar</button>
+                <button id="login-tab-btn" class="flex-1 py-2 text-center font-semibold text-green-600 border-b-2 border-green-600">Login</button>
+                <button id="register-tab-btn" class="flex-1 py-2 text-center font-semibold text-gray-500">Cadastrar</button>
             </div>
-
             <form id="login-form" class="space-y-4">
-                <input type="email" id="login-email" placeholder="Seu email" required class="w-full px-4 py-2 border rounded-lg focus:ring-green-500">
-                <input type="password" id="login-password" placeholder="Sua senha" required class="w-full px-4 py-2 border rounded-lg focus:ring-green-500">
-                <button type="submit" class="w-full bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700 transition">Entrar</button>
-                <div class="text-center mt-2">
-                    <button type="button" id="forgot-password-link" class="text-xs text-green-600 hover:underline">Esqueci minha senha</button>
+                <div><label for="login-email" class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"></div>
+                <div><label for="login-password" class="block text-sm font-medium text-gray-700">Senha</label><input type="password" id="login-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"></div>
+                <div class="text-right">
+                    <a href="#" id="forgot-password-link" class="text-sm text-green-600 hover:underline">Esqueci minha senha</a>
                 </div>
+                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">Entrar</button>
             </form>
-
             <form id="register-form" class="hidden space-y-4">
-                <input type="text" id="reg-name" placeholder="Nome Completo" required class="w-full px-4 py-2 border rounded-lg">
-                <input type="email" id="reg-email" placeholder="Email Profissional" required class="w-full px-4 py-2 border rounded-lg">
-                <input type="password" id="reg-password" placeholder="Senha (mínimo 6)" required class="w-full px-4 py-2 border rounded-lg">
-                <button type="submit" class="w-full bg-green-700 text-white py-2 rounded-lg font-bold">Criar Conta</button>
+                <div><label for="register-name" class="block text-sm font-medium text-gray-700">Nome Completo</label><input type="text" id="register-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"></div>
+                <div><label for="register-email" class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="register-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"></div>
+                <div><label for="register-password" class="block text-sm font-medium text-gray-700">Senha (mínimo 6 caracteres)</label><input type="password" id="register-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"></div>
+                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">Criar Conta</button>
             </form>
+            <a href="#" id="privacy-policy-link" class="block mt-4 text-center text-sm text-gray-500 hover:underline">
+                    Política de Privacidade
+            </a>
         </div>
     </div>
 
-    <!-- SELEÇÃO DE PAUTA -->
     <div id="pauta-selection-container" class="hidden max-w-4xl mx-auto">
-        <div class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-800">Minhas Pautas</h1>
-            <div class="flex gap-2">
-                <button id="admin-panel-btn" class="hidden bg-blue-600 text-white px-4 py-2 rounded-lg font-bold">Painel Admin</button>
-                <button id="logout-btn-selection" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-bold">Sair</button>
-            </div>
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Sistema de Gerenciamento de Pauta - SIGAP</h1>
         </div>
-        <div id="pautas-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        <button id="create-pauta-btn" class="w-full mt-8 bg-green-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-green-700">Criar Nova Pauta</button>
-    </div>
+        <div class="flex justify-between items-center mb-6">
+              <h2 class="text-3xl font-bold text-gray-800">Minhas Pautas</h2>
+              <div>
+                  <button id="admin-btn-main" class="hidden bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600">Painel do Admin</button>
+                  <button id="logout-btn-main" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Sair</button>
+              </div>
+        </div>
+        <div id="install-container" class="hidden my-4 p-3 bg-green-100 border border-green-200 rounded-lg text-center">
+            <p class="text-sm text-green-800">Leve o gerenciador de pautas com você!</p>
+            <button id="install-button" class="mt-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 text-sm rounded-lg shadow-md hover:shadow-lg transition-all">
+                Instalar App
+            </button>
+        </div>
 
-    <!-- APP PRINCIPAL -->
-    <div id="app-container" class="hidden max-w-full mx-auto">
-        <header class="bg-white p-6 rounded-xl shadow-md mb-8">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-                <div>
-                    <h2 id="pauta-title" class="text-2xl font-bold text-gray-800"></h2>
-                    <button id="back-to-pautas-btn" class="text-sm text-green-600 hover:underline">← Voltar para Minhas Pautas</button>
+        <!-- No pauta-selection-container, perto do botão de logout -->
+        <!-- Botão Painel do Administrador (Centralizado e com Margem) -->
+        <div class="flex justify-center w-full mb-6"> <!-- Flex para centralizar, mb-6 para margem embaixo -->
+            <button id="admin-panel-btn" class="hidden bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition shadow-md">
+                Painel do Administrador
+            </button>
+        </div>
+        
+        <!-- Modal do Painel de Admin -->
+        <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 90vh;">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">Painel do Administrador</h2>
+                    <button id="close-admin-modal" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
                 </div>
-                <div class="relative">
-                    <button id="actions-toggle" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold">Ações ▼</button>
-                    <div id="actions-panel" class="hidden absolute right-0 mt-2 w-64 bg-white border shadow-2xl rounded-xl p-2 z-[100] flex flex-col gap-1">
-                        <button id="pdf-btn" class="text-left px-4 py-2 hover:bg-gray-50 rounded">📄 Relatório de Atendidos</button>
-                        <button id="pdf-equipe-btn" class="text-left px-4 py-2 hover:bg-gray-50 rounded">👥 Lista de Presença Equipe</button>
-                        <button id="stats-btn" class="text-left px-4 py-2 hover:bg-gray-50 rounded">📊 Estatísticas</button>
-                        <hr>
-                        <button id="close-pauta-btn" class="text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded">🔒 Fechar Pauta</button>
+                
+                <div class="mt-8 border-t pt-4">
+                    <h3 class="font-semibold text-red-600 mb-2 uppercase text-sm">Manutenção do Sistema (LGPD)</h3>
+                    <p class="text-xs text-gray-500 mb-4">Apaga permanentemente atendimentos com mais de 7 dias de todas as pautas.</p>
+                    <button id="cleanup-old-data-btn" class="w-full bg-red-100 text-red-700 font-bold py-2 rounded-lg hover:bg-red-200 transition border border-red-300">
+                        Executar Limpeza de 7 Dias
+                    </button>
+                </div>
+
+
+            <div class="mb-8">
+                <h3 class="text-lg font-semibold text-gray-700 mb-2 border-l-4 border-purple-500 pl-2">Auditoria e Segurança</h3>
+                
+                <div class="bg-gray-50 p-4 rounded border border-gray-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h4 class="font-bold text-gray-700">Logs de Atividade</h4>
+                            <p class="text-xs text-gray-600">Visualize o histórico de ações críticas realizadas no sistema.</p>
+                        </div>
+                        <button id="view-audit-logs-btn" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 text-sm font-bold">
+                            Carregar Logs
+                        </button>
+                    </div>
+            
+                    <!-- Área onde os logs serão listados -->
+                    <div id="audit-logs-container" class="hidden mt-4">
+                        <div class="overflow-x-auto max-h-60 overflow-y-auto border rounded bg-white">
+                            <table class="w-full text-xs text-left text-gray-500">
+                                <thead class="text-gray-700 uppercase bg-gray-100 sticky top-0">
+                                    <tr>
+                                        <th class="px-3 py-2">Data/Hora</th>
+                                        <th class="px-3 py-2">Usuário</th>
+                                        <th class="px-3 py-2">Ação</th>
+                                        <th class="px-3 py-2">Detalhes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="audit-logs-table-body">
+                                    <!-- Logs inseridos via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <p id="no-logs-msg" class="text-center text-gray-400 text-xs py-2 hidden">Nenhum registro encontrado.</p>
                     </div>
                 </div>
             </div>
-        </header>
-
-        <nav class="flex gap-4 mb-6 border-b">
-            <button id="tab-agendamento" class="tab-active py-2 px-4 border-b-2">📅 Agendados</button>
-            <button id="tab-avulso" class="py-2 px-4 border-b-2 text-gray-500">➕ Avulsos</button>
-        </nav>
-
-        <!-- Form de Adicionar -->
-        <div class="bg-white p-6 rounded-xl shadow-sm mb-8">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <input type="text" id="add-name" placeholder="Nome do Assistido" class="md:col-span-2 border p-2 rounded">
-                <input type="text" id="add-subject" placeholder="Assunto" class="border p-2 rounded">
-                <button id="add-btn" class="bg-green-600 text-white font-bold rounded">Adicionar</button>
+                            
+                <div class="overflow-y-auto">
+                    <h3 class="font-semibold text-gray-700 mb-2">Usuários Pendentes</h3>
+                    <div id="pending-users-list" class="space-y-3 mb-6">
+                        <!-- Usuários pendentes aparecerão aqui -->
+                    </div>
+        
+                    <h3 class="font-semibold text-gray-700 mb-2">Usuários Aprovados</h3>
+                    <div id="approved-users-list" class="space-y-3">
+                        <!-- Usuários aprovados aparecerão aqui -->
+                    </div>
+                </div>
             </div>
         </div>
-
-        <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div class="p-4 bg-gray-50 border-b flex justify-between">
-                    <h3 class="font-bold">📋 Pauta</h3>
-                    <label class="cursor-pointer text-green-600 text-[10px] font-bold">IMPORTAR CSV <input type="file" id="file-upload" class="hidden" accept=".csv"></label>
-                </div>
-                <div id="pauta-list" class="p-4 space-y-3 max-h-[500px] overflow-y-auto"></div>
-            </div>
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden border-t-4 border-blue-500">
-                <div class="p-4 bg-blue-50 border-b"><h3 class="font-bold">⏳ Aguardando</h3></div>
-                <div id="aguardando-list" class="p-4 space-y-3 max-h-[500px] overflow-y-auto"></div>
-            </div>
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden border-t-4 border-green-500">
-                <div class="p-4 bg-green-50 border-b"><h3 class="font-bold">✅ Atendidos</h3></div>
-                <div id="atendidos-list" class="p-4 space-y-3 max-h-[500px] overflow-y-auto"></div>
-            </div>
-        </main>
+        
+        <div id="invitations-container" class="hidden mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Convites Pendentes</h2>
+            <div id="pending-invitations-list" class="space-y-4"></div>
+        </div>
+        <div id="pautas-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        <div class="mt-6"><button id="create-pauta-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Criar Nova Pauta</button></div>
     </div>
 
-    <!-- RODAPÉ -->
-    <footer class="bg-white border-t mt-16 pt-10 pb-10 text-center">
-        <div class="flex justify-center items-center gap-6 mb-4 opacity-50 text-[10px]">
-            <span class="border px-3 py-1 rounded-full">🛡️ SSL Seguro</span>
-            <span class="border px-3 py-1 rounded-full">⚖️ LGPD Ready</span>
-        </div>
-        <p class="text-xs text-gray-400">&copy; 2026 SIGAP - Gerenciamento de Pauta.</p>
-    </footer>
+    <div id="app-container" class="max-w-full mx-auto hidden">
+        <header class="mb-6 space-y-4">
+            <div class="flex justify-center items-center w-full relative">
+                 <h1 class="text-xl font-semibold text-gray-600 text-center">Sistema de Gerenciamento de Pauta - SIGAP</h1>
+                 <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                            <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                        </svg>
+                 </button>
+            </div>
 
-    <!-- SCRIPT MAESTRO -->
-    <script type="module">
+            <div class="bg-white p-4 rounded-lg shadow-sm space-y-4">
+                <div class="text-center border-b pb-4">
+                    <h2 id="pauta-title" class="text-2xl md:text-3xl font-bold text-gray-800 truncate px-4"></h2>
+                </div>
+
+                <div class="flex flex-col sm:flex-row justify-between items-center w-full gap-4 pt-4">
+                    <div class="flex-shrink-0">
+                        <button id="back-to-pautas-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
+                    </div>
+
+                    <div class="relative flex items-center">
+                        <!-- MENU DE AÇÕES ATUALIZADO -->
+                        <div id="actions-panel" class="absolute top-full right-0 mt-2 w-64 p-2 bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-200 ease-out transform origin-top-right opacity-0 scale-95 pointer-events-none z-20 space-y-1">
+
+                            <button id="share-pauta-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-pink-700 bg-pink-100 rounded-lg hover:bg-pink-200 transition-colors whitespace-nowrap">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                                <span>Compartilhamento Externo</span>
+                            </button>
+
+                            
+                            <button id="view-stats-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-cyan-700 bg-cyan-100 rounded-lg hover:bg-cyan-200 transition-colors whitespace-nowrap">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-cyan-500"><path d="M3 3v18h18"/><path d="M18.7 8a6 6 0 0 0-8.4 0L3 15.6V21h5.4l7.3-7.3Z"/></svg>
+                                <span>Ver Estatísticas</span>
+                            </button>
+                            
+                            <button id="edit-pauta-name-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-slate-500"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                                <span>Editar Nome</span>
+                            </button>
+
+                            <button id="manage-members-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-slate-500"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                <span>Compartilhar</span>
+                            </button>
+
+                            <div class="w-full h-px bg-gray-300 my-1"></div>
+
+                            <button id="close-pauta-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-orange-700 bg-orange-100 rounded-lg hover:bg-orange-200 transition-colors whitespace-nowrap">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-orange-500"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                <span>Fechar Pauta</span>
+                            </button>
+
+                            <button id="reopen-pauta-btn" class="hidden flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-teal-700 bg-teal-100 rounded-lg hover:bg-teal-200 transition-colors whitespace-nowrap">
+                               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-teal-500"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+                               <span>Reabrir Pauta</span>
+                            </button>
+
+                            <button id="reset-all-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition-colors whitespace-nowrap">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-red-500"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                                <span>Zerar Pauta</span>
+                            </button>
+                            
+                            <button id="manage-collaborators-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-violet-700 bg-violet-100 rounded-lg hover:bg-violet-200 transition-colors whitespace-nowrap">
+                                <svg xmlns='http://www.w3.org/2000/svg' class='w-5 h-5 text-violet-500' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
+                                    <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><polyline points='16 11 18 13 22 9'/>
+                                </svg>
+                                <span>Colaboradores</span>
+                            </button>
+                            
+                            <button id="notes-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-indigo-700 bg-indigo-100 rounded-lg hover:bg-indigo-200 transition-colors whitespace-nowrap">
+                                <svg xmlns='http://www.w3.org/2000/svg' class='w-5 h-5 text-indigo-500' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
+                                    <path d='M9 12h6M9 16h6M12 20h.01M19 3h-4a2 2 0 0 0-2-2H11a2 2 0 0 0-2 2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z'/>
+                                </svg>
+                                <span>Anotações</span>
+                            </button>
+                        </div>
+
+                        <button id="actions-toggle" class="z-10 flex items-center justify-center gap-2 px-5 py-2.5 text-white bg-green-600 hover:bg-green-700 font-semibold rounded-lg transition-colors duration-200">
+                            <span>Ações</span>
+                            <svg id="actions-arrow" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 transition-transform duration-200"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+
+                    </div>
+                </div>
+            </div>
+
+            <div id="closed-pauta-alert" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4" role="alert">
+                <p class="font-bold">Pauta Fechada</p>
+                <p>Esta pauta está fechada para novas edições. Apenas o criador pode reabri-la.</p>
+            </div>
+        </header>
+
+        <div id="app-content" class="w-full">
+              <div class="mb-6">
+                  <div class="border-b border-gray-200">
+                      <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                          <button id="tab-agendamento" class="tab-active whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg">Atendimento Agendado</button>
+                          <button id="tab-avulso" class="text-gray-500 hover:text-gray-700 hover:bg-gray-100 whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg">Atendimento Avulso</button>
+                      </nav>
+                  </div>
+              </div>
+            <form id="form-agendamento" class="bg-white p-6 rounded-lg shadow-md mb-8">
+                <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+                    <h2 id="form-title" class="text-xl font-semibold text-gray-700">Adicionar Novo Agendamento</h2>
+                    <div id="agendamento-actions" class="flex items-center gap-4">
+                        <a href="#" id="format-help-link" class="text-sm text-green-600 hover:text-green-800 hover:underline transition-colors duration-300 flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle-fill" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.95-11.05a.9.9 0 0 1 .023 1.272l-.2.204a.9.9 0 0 1-1.273-.226L6.451 4.95a.9.9 0 0 1 1.273-.023l.204.2zM8 8.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+                            <span>Como converter minha pauta?</span>
+                        </a>
+                        <label for="file-upload" class="cursor-pointer bg-teal-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-teal-600 transition text-sm inline-flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                            Carregar Pauta (CSV)
+                        </label>
+                        <input type="file" id="file-upload" class="hidden" accept=".csv">
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                        <div class="flex flex-col lg:col-span-2">
+                            <label for="assisted-name" class="mb-1 font-medium text-gray-600">Nome do Assistido</label>
+                            <input type="text" id="assisted-name" placeholder="Ex: João da Silva" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition">
+                        </div>
+                        <div class="flex flex-col"><label for="assisted-cpf" class="mb-1 font-medium text-gray-600">CPF (Opcional)</label><input type="text" id="assisted-cpf" placeholder="___.___.___-__" maxlength="14" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition"></div>
+                        <div class="flex flex-col lg:col-span-4">
+                            <div class="flex items-center gap-2 mb-1">
+                                <label for="assisted-subject" class="font-medium text-gray-600">Matéria - Assunto</label>
+                                <button type="button" id="subject-info-btn" class="font-bold text-lg text-blue-500 cursor-help rounded-full disabled:text-gray-300 disabled:cursor-not-allowed">!</button>
+                            </div>
+
+                            <input list="subjects-list" id="assisted-subject" name="assisted-subject" placeholder="Digite ou selecione um assunto" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition w-full">
+                            <datalist id="subjects-list"></datalist>
+
+                            <div id="subject-description" class="hidden mt-2 p-4 bg-blue-50 border border-blue-200 text-gray-800 rounded-lg text-sm transition-all duration-300">
+                                </div>
+                        </div>
+                    </div>
+
+                    <div id="form-options-container" class="border-t mt-4 pt-4 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                        <div id="is-scheduled-container">
+                            <label class="font-medium text-gray-700">Possui horário agendado?</label>
+                            <div class="flex items-center gap-x-4 mt-1">
+                                <label><input type="radio" name="is-scheduled" value="yes" class="mr-1"> Sim</label>
+                                <label><input type="radio" name="is-scheduled" value="no" class="mr-1" checked> Não</label>
+                            </div>
+                            <div id="scheduled-time-wrapper" class="hidden mt-2">
+                                <label for="scheduled-time" class="block mb-1 font-medium text-gray-600">Horário Agendado</label>
+                                <input type="time" id="scheduled-time" class="p-3 w-full md:w-1/2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="font-medium text-gray-700">Assistido já chegou?</label>
+                            <div class="flex items-center gap-x-4 mt-1">
+                                <label><input type="radio" name="has-arrived" value="yes" class="mr-1"> Sim</label>
+                                <label><input type="radio" name="has-arrived" value="no" class="mr-1" checked> Não</label>
+                            </div>
+                            <div id="arrival-time-wrapper" class="hidden mt-2">
+                                <label for="arrival-time" class="block mb-1 font-medium text-gray-600">Horário de Chegada</label>
+                                <input type="time" id="arrival-time" class="p-3 w-full md:w-1/2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition">
+                            </div>
+                            <!-- SELEÇÃO DE SALA PARA AVULSO -->
+                            <div id="manual-room-wrapper" class="hidden mt-2">
+                                <label for="manual-room-select" class="block mb-1 font-medium text-gray-600">Sala de Destino</label>
+                                <select id="manual-room-select" class="p-3 w-full md:w-1/2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition">
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                     <button type="button" id="add-assisted-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition shadow-md w-full lg:w-auto">Adicionar</button>
+                </div>
+            </form>
+            <main id="main-content" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full">
+                <div id="pauta-column" class="bg-white rounded-lg shadow-md flex-col">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                        <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
+                            <span>📋 Pauta</span>
+                            <span id="pauta-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                        </h3>
+                        <input type="search" id="pauta-search" placeholder="Pesquisar por nome, CPF, horário..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div id="pauta-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                </div>
+               <div class="bg-white rounded-lg shadow-md flex flex-col">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                        <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
+                           <span>⏳ Aguardando Atendimento</span>
+                           <span id="aguardando-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                        </h3>
+                        <input type="search" id="aguardando-search" placeholder="Pesquisar por nome, CPF, horário..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div id="aguardando-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                </div>
+                <!-- Nova Coluna: Em Atendimento -->
+                <div id="em-atendimento-column" class="bg-white rounded-lg shadow-md flex flex-col hidden"> <!-- Inicialmente escondida, visibilidade controlada pelo JS -->
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                        <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
+                            <span>👩‍💻 Em Atendimento</span>
+                            <span id="em-atendimento-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                        </h3>
+                        <input type="search" id="em-atendimento-search" placeholder="Pesquisar por nome, colaborador..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div id="em-atendimento-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                </div>
+                <!-- Fim da Nova Coluna: Em Atendimento -->
+
+                <!-- NOVA COLUNA: AGUARDANDO DISTRIBUIÇÃO -->
+                <div id="distribuicao-column" class="bg-white rounded-lg shadow-md flex flex-col hidden">
+                    <div class="p-4 border-b border-gray-200 bg-cyan-50 rounded-t-lg">
+                        <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center">
+                            <span>⚖️ Aguardando Distribuição</span>
+                            <span id="distribuicao-count" class="text-base font-normal bg-white text-gray-700 px-2 rounded-full border">0</span>
+                        </h3>
+                        <input type="search" id="distribuicao-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-cyan-500">
+                    </div>
+                    <div id="distribuicao-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                </div>
+                <!-- Fim da Nova Coluna -->
+
+                <div id="atendidos-column" class="bg-white rounded-lg shadow-md flex flex-col">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                        <div class="flex justify-between items-center mb-3">
+                             <h3 class="text-xl font-semibold text-gray-800 flex justify-between items-center w-full">
+                                 <span>✅ Atendidos</span>
+                                 <span id="atendidos-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                             </h3>
+                            <button id="download-pdf-btn" class="ml-4 flex-shrink-0 bg-blue-600 text-white font-bold py-1 px-3 rounded-lg hover:bg-blue-700 text-sm">PDF</button>
+                        </div>
+                        <input type="search" id="atendidos-search" placeholder="Pesquisar por nome, CPF, horário..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div id="atendidos-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                </div>
+                 <div id="faltosos-column" class="bg-white rounded-lg shadow-md flex flex-col hidden">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                                🚫 Faltosos
+                                <span id="faltosos-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                            </h3>
+                        </div>
+                        <input type="search" id="faltosos-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div id="faltosos-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                </div>
+            </main>
+            <div class="mt-8 flex justify-center">
+                <button id="toggle-faltosos-btn" class="w-full sm:w-auto bg-purple-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-purple-700">Ver Faltosos</button>
+            </div>
+              <footer class="mt-12 bg-white p-6 rounded-lg shadow-md">
+                  <h3 id="order-explanation-title" class="text-xl font-semibold text-gray-800 mb-2 text-center">Entenda a Ordem de Atendimento</h3>
+                  <div id="order-explanation-content">
+                      <div id="logic-explanation-padrao">
+                          <div class="text-center mb-4">
+                              <button id="toggle-logic-btn-padrao" class="text-green-600 hover:text-green-800 text-sm hover:underline transition-colors duration-300">Por que esta ordem é justa? (Clique para expandir)</button>
+                          </div>
+                          <div id="logic-explanation-padrao-content" class="hidden mt-4 text-left p-4 bg-gray-50 rounded-lg border space-y-3">
+                              <p>A lógica foi pensada para balancear a <strong>pontualidade</strong> com a <strong>realidade</strong> do dia a dia, criando um sistema justo para todos.</p>
+                              <ul class="list-disc list-inside space-y-2 text-gray-700">
+                                  <li><strong>Recompensa a Pontualidade:</strong> Valoriza quem chega no horário, atendendo-os primeiro. Para assistidos que chegam adiantados, a ordem de atendimento respeita o horário original do agendamento.</li>
+                                  <li><strong>Oferece Tolerância:</strong> Reconhece que imprevistos acontecem, com uma janela de 20 minutos para pequenos atrasos.</li>
+                                  <li><strong>Gerencia Atrasos Maiores:</strong> Coloca quem se atrasou muito no fim da fila para não prejudicar os outros.</li>
+                                  <li><strong>Permite Flexibilidade:</strong> O botão "Prioridade" garante que casos graves sejam atendidos imediatamente.</li>
+                                  <li><strong>Critério de Desempate:</strong> Para assistidos com a mesma prioridade, a ordem é definida pelo <strong>horário de chegada informado</strong> (quem chegou mais cedo é atendido primeiro). Se dois ou mais assistidos chegarem exatamente no mesmo horário, a preferência é de quem teve a chegada <strong>registrada primeiro</strong> no sistema.</li>
+                              </ul>
+                              <p class="font-semibold text-gray-800 pt-2">O resultado é uma fila transparente, previsível e justa tanto para os assistidos quanto para a equipe.</p>
+                          </div>
+                          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center mt-4">
+                              <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500"><p class="font-bold text-red-700">Prioridade Urgente</p><p class="text-sm text-gray-600 mt-1">Definida manualmente para casos que necessitam de atendimento imediato.</p></div>
+                              <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500"><p class="font-bold text-green-700">Prioridade Máxima</p><p class="text-sm text-gray-600 mt-1">Assistidos que chegaram no horário agendado ou adiantados.</p></div>
+                              <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500"><p class="font-bold text-orange-700">Prioridade Média</p><p class="text-sm text-gray-600 mt-1">Assistidos agendados com até 20 min de atraso ou atendimentos avulsos.</p></div>
+                              <div class="bg-gray-100 p-4 rounded-lg border-l-4 border-gray-500"><p class="font-bold text-gray-700">Prioridade Mínima</p><p class="text-sm text-gray-600 mt-1">Assistidos que chegaram com 30 minutos ou mais de atraso.</p></div>
+                          </div>
+                      </div>
+                      <div id="logic-explanation-chegada" class="hidden text-center">
+                          <p class="text-gray-700 p-4 bg-gray-50 rounded-lg border">
+                              Neste modo, a fila de "Aguardando Atendimento" é organizada <strong>estritamente pela ordem de chegada</strong>. O primeiro assistido a ter sua chegada registrada no sistema será o primeiro a ser atendido, independentemente de ter horário agendado ou ser um atendimento avulso. A única exceção é o uso do botão <strong>"Prioridade"</strong>, que move o assistido para o topo da fila.
+                          </p>
+                      </div>
+                  </div>
+                  <p class="text-center text-sm text-gray-500 mt-8">Desenvolvido por Alex do Vale</p>
+              </footer>
+        </div>
+    </div>
+
+    <!-- Rodapé do Sistema -->
+        <footer class="bg-white border-t border-gray-200 mt-8 pt-6 pb-6 text-center">
+    <!-- Links de Navegação -->
+        <div class="flex justify-center space-x-6 mb-4 text-xs text-gray-500 font-medium">
+            <button id="manual-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none">
+                Manual do Utilizador
+            </button>
+            <button id="privacy-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none">Privacidade</button>
+            <button id="terms-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none">Termos</button>
+        </div>
+    
+        <!-- Selos de Segurança -->
+        <div class="flex justify-center items-center gap-4 mb-2 opacity-60">
+            <!-- Selo SSL -->
+            <span class="flex items-center gap-1 text-[10px] text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full" title="Conexão Criptografada">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="green" viewBox="0 0 16 16"><path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/></svg>
+                Ambiente Seguro
+            </span>
+            
+            <!-- Selo Sentry -->
+            <span class="flex items-center gap-1 text-[10px] text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full" title="Monitoramento de Erros Ativo">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="blue" viewBox="0 0 16 16"><path d="M8 0c-.69 0-1.843.265-2.928.56-1.11.3-2.229.655-2.887.87a1.54 1.54 0 0 0-1.044 1.262c-.596 4.477.787 7.795 2.465 9.99a11.775 11.775 0 0 0 2.517 2.453c.386.262.794.5 1.218.697.12.056.242.107.366.153l.232.083.232-.083c.124-.046.246-.097.366-.153.424-.197.832-.435 1.218-.697a11.775 11.775 0 0 0 2.517-2.453c1.678-2.195 3.061-5.513 2.465-9.99a1.54 1.54 0 0 0-1.044-1.262 62.456 62.456 0 0 0-2.887-.87C9.843.265 8.69 0 8 0zm0 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg>
+                Sentry Monitored
+            </span>
+    
+            <!-- Selo LGPD (Adicionado) -->
+            <span class="flex items-center gap-1 text-[10px] text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full" title="Conformidade com Proteção de Dados">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="purple" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                    <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                </svg>
+                LGPD Ready
+            </span>
+        </div>
+    
+        <!-- Copyright -->
+        <p class="text-xs text-gray-400">
+            &copy; 2026 SIGEP - Sistema de Gestão. Versão 2.1 (Segura)
+        </p>
+    </footer>
+    
+<script>
+    // Função para gerenciar modais
+    function bindModal(btnId, modalId, closeIds) {
+        const btn = document.getElementById(btnId);
+        const modal = document.getElementById(modalId);
+        
+        if (btn && modal) {
+            btn.onclick = () => modal.classList.remove('hidden');
+            
+            closeIds.forEach(id => {
+                const closeBtn = document.getElementById(id);
+                if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
+            });
+
+            // Fecha ao clicar fora
+            modal.onclick = (e) => {
+                if (e.target === modal) modal.classList.add('hidden');
+            };
+        }
+    }
+
+    // Inicializa os modais assim que a página carrega
+    window.addEventListener('load', () => {
+        bindModal('privacy-btn-footer', 'privacy-policy-modal', ['close-policy-modal-btn-x', 'close-policy-modal-btn']);
+        bindModal('manual-btn-footer', 'manual-modal', ['close-manual-modal-x', 'close-manual-modal-btn']);
+        bindModal('terms-btn-footer', 'terms-modal', ['close-terms-modal-x', 'close-terms-modal-btn']);
+    });
+</script>
+</body>
+</html>
+
+    <div id="pauta-type-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4 text-center">Tipo de Pauta</h2>
+            <p class="text-gray-600 text-center mb-6">Selecione o tipo de atendimento para sua nova pauta:</p>
+            <div class="space-y-4">
+                <button data-type="agendado" class="pauta-type-btn w-full flex items-center justify-center gap-2 p-4 bg-green-100 text-green-700 font-semibold rounded-lg hover:bg-green-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h8m-11 0h11a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
+                    </svg>
+                    Pauta de Atendimento Agendado
+                </button>
+                <button data-type="avulso" class="pauta-type-btn w-full flex items-center justify-center gap-2 p-4 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Pauta de Atendimento Avulso
+                </button>
+                <!-- NOVA OPÇÃO: MULTI-SALAS -->
+                <button data-type="multisala" class="pauta-type-btn w-full flex items-center justify-center gap-2 p-4 bg-blue-100 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    Pauta Multi-Salas (Sala 1, Sala 2...)
+                </button>
+            </div>
+            <div class="flex justify-end mt-6">
+                <button id="cancel-pauta-type-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="create-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Criar Nova Pauta</h2>
+            <label for="create-pauta-name-input" class="block text-sm font-medium text-gray-700 mb-2">Nome da Pauta</label>
+            <input type="text" id="create-pauta-name-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
+            
+            <!-- CONFIGURAÇÃO DE SALAS PERSONALIZADAS -->
+            <div id="room-config-container" class="hidden mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Defina as Salas ou Locais</label>
+                
+                <div class="flex gap-2 mb-3">
+                    <input type="text" id="custom-room-input" placeholder="Ex: Vara de Família, 2º Andar..." class="flex-1 p-3 border border-gray-300 rounded-lg" />
+                    <button id="add-custom-room-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">
+                        Adicionar
+                    </button>
+                </div>
+
+                <!-- Lista onde aparecerão as salas adicionadas -->
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-3" style="min-height: 100px;">
+                    <p id="no-rooms-msg" class="text-gray-400 text-sm text-center mt-4">Nenhum local adicionado ainda.</p>
+                    <ul id="custom-rooms-list" class="space-y-2">
+                        <!-- Itens serão inseridos aqui via JavaScript -->
+                    </ul>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-create-pauta-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="next-to-ordem-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Avançar</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="ordem-atendimento-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Ordem de Atendimento</h2>
+            <p class="text-gray-600 mb-6">Como a fila de "Aguardando Atendimento" será organizada?</p>
+            <div id="ordem-atendimento-options" class="space-y-3">
+                <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="radio" name="ordemAtendimento" value="padrao" class="h-5 w-5 text-green-600 focus:ring-green-500" checked>
+                    <span class="ml-3">
+                        <span class="font-semibold text-gray-800">Padrão do Sistema (Recomendado)</span>
+                        <span class="block text-sm text-gray-500">Prioriza por pontualidade e urgência. Justo e flexível.</span>
+                    </span>
+                </label>
+                <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="radio" name="ordemAtendimento" value="chegada" class="h-5 w-5 text-green-600 focus:ring-green-500">
+                    <span class="ml-3">
+                        <span class="font-semibold text-gray-800">Ordem de Chegada</span>
+                        <span class="block text-sm text-gray-500">Atende estritamente na ordem em que a chegada foi marcada.</span>
+                    </span>
+                </label>
+                 <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="radio" name="ordemAtendimento" value="manual" class="h-5 w-5 text-green-600 focus:ring-green-500">
+                    <span class="ml-3">
+                        <span class="font-semibold text-gray-800">Ordem Manual</span>
+                        <span class="block text-sm text-gray-500">Permite arrastar e reordenar a fila livremente.</span>
+                    </span>
+                </label>
+            </div>
+            <div class="flex justify-end space-x-4 mt-6">
+                <button id="cancel-ordem-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Voltar</button>
+                <button id="next-to-delegation-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Avançar</button>
+            </div>
+        </div>
+    </div>
+
+<!-- Modal de Compartilhamento Externo -->
+<div id="share-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+        <h2 class="text-2xl font-bold mb-4 text-gray-800">Compartilhamento Externo</h2>
+        <p class="text-gray-600 mb-6 text-sm">Gere um link público para que assistidos e colaboradores vejam a fila em tempo real (apenas leitura).</p>
+        
+        <div class="flex items-center justify-between mb-6 bg-gray-50 p-4 rounded-lg border">
+            <span class="font-medium text-gray-700">Status do Link:</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="share-toggle" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                <span id="share-status-text" class="ml-3 text-sm font-medium text-gray-900">Privado</span>
+            </label>
+        </div>
+
+        <div id="share-link-container" class="hidden space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase">Link Público</label>
+                <div class="flex mt-1">
+                    <input type="text" id="share-link-input" readonly class="w-full p-2 border border-gray-300 rounded-l-lg bg-gray-100 text-sm text-gray-600">
+                    <button id="copy-share-link-btn" class="bg-blue-600 text-white px-4 rounded-r-lg hover:bg-blue-700 font-bold text-sm">Copiar</button>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <input type="checkbox" id="mask-names-check" class="h-4 w-4 text-pink-600 border-gray-300 rounded">
+                <label for="mask-names-check" class="text-sm text-gray-700">Ocultar Sobrenomes (Privacidade/LGPD)</label>
+            </div>
+            
+            <a id="open-external-btn" href="#" target="_blank" class="block w-full text-center py-2 border border-pink-600 text-pink-600 rounded-lg hover:bg-pink-50 font-bold mt-2">
+                Abrir Visualização
+            </a>
+        </div>
+
+        <div class="flex justify-end mt-6">
+            <button id="close-share-modal-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
+        </div>
+    </div>
+</div>
+
+
+    
+    <!-- NOVO MODAL: Fluxo de Delegação -->
+    <div id="delegation-flow-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Fluxo de Atendimento</h2>
+            <p class="text-gray-600 mb-6">Deseja utilizar a coluna "Em Atendimento" para delegar a finalização a um colaborador?</p>
+            <div class="space-y-3">
+                <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="radio" name="useDelegationFlow" value="true" class="h-5 w-5 text-green-600 focus:ring-green-500" checked>
+                    <span class="ml-3">
+                        <span class="font-semibold text-gray-800">Sim, usar fluxo de delegação</span>
+                        <span class="block text-sm text-gray-500">Permite atribuir e delegar a finalização para outro colaborador.</span>
+                    </span>
+                </label>
+                
+                <!-- SUB-OPÇÃO: Distribuição (Só aparece se Delegação estiver marcada) -->
+                <div id="distribution-option-container" class="p-4 border-x border-b rounded-b-lg bg-white ml-8 border-t-0">
+                    <label class="flex items-start space-x-3 cursor-pointer">
+                        <input type="checkbox" id="check-use-distribution" class="h-5 w-5 text-cyan-600 focus:ring-cyan-500 rounded mt-1">
+                        <div class="flex-1">
+                            <span class="font-semibold text-gray-700 block">Habilitar Fila de Distribuição?</span>
+                            <span class="text-xs text-gray-500">Adiciona a coluna "Aguardando Distribuição" para processos que precisam de assinatura/protocolo antes de finalizar.</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="radio" name="useDelegationFlow" value="false" class="h-5 w-5 text-red-600 focus:ring-red-500">
+                    <span class="ml-3">
+                        <span class="font-semibold text-gray-800">Não, finalizar diretamente</span>
+                        <span class="block text-sm text-gray-500">Pular a coluna "Em Atendimento", indo direto para "Atendidos".</span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="flex justify-end space-x-4 mt-6">
+                <button id="cancel-delegation-flow-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Voltar</button>
+                <button id="confirm-create-pauta-final-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Criar Pauta</button>
+            </div>
+        </div>
+    </div>
+    <!-- FIM NOVO MODAL -->
+
+    <!-- Modal de Conclusão de Distribuição -->
+    <div id="distribution-finish-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4 text-cyan-800">Concluir Distribuição</h2>
+            <p class="mb-4 text-gray-600">O processo foi distribuído. Por favor, insira o número (opcional).</p>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Número do Processo</label>
+                <input type="text" id="dist-process-number" placeholder="0000.00.00.0000" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500">
+            </div>
+
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-dist-finish-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-dist-finish-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700">Salvar e Finalizar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Gerenciar Membros da Pauta</h2>
+                <button id="close-members-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+            </div>
+            <div class="overflow-y-auto">
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-700">Convidar Novo Membro (Usuário do Sistema)</h3>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="email" id="invite-email-input" placeholder="email@exemplo.com" class="flex-grow p-2 border border-gray-300 rounded-lg">
+                        <button id="invite-member-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 flex-shrink-0">Convidar</button>
+                    </div>
+                    <div id="invite-status" class="text-sm h-4"></div>
+                </div>
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Membros Atuais da Pauta</h3>
+                    <div id="members-list-container" class="space-y-2 max-h-64 overflow-y-auto">
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MODAL DE GERENCIAR COLABORADORES (LISTA DE PRESENÇA) - INTEGRADO -->
+   <!-- MODAL DE GERENCIAR COLABORADORES (LISTA DE PRESENÇA) - ATUALIZADO -->
+<div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-6xl flex flex-col" style="max-height: 90vh;">
+        <div class="flex justify-between items-center mb-4 flex-shrink-0">
+            <h2 class="text-2xl font-bold text-gray-800">Lista de Presença de Colaboradores</h2>
+            <button id="close-collaborators-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+        </div>
+
+        <div class="flex-grow overflow-y-auto pr-2">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Adicionar/Editar Colaborador (Equipe de Campo)</h3>
+                    <form id="collaborator-form-modal">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="collaborator-name-modal" class="block text-sm font-medium text-gray-700">Nome do Colaborador:</label>
+                                <input type="text" id="collaborator-name-modal" name="nome-colaborador" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                            </div>
+
+                            <!-- CAMPO CARGO ADICIONADO -->
+                            <div>
+                                <label for="collaborator-role-modal" class="block text-sm font-medium text-gray-700">Cargo:</label>
+                                <select id="collaborator-role-modal" name="cargo-colaborador" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                                    <option value="" disabled selected>Selecione o cargo</option>
+                                    <option value="Defensor(a)">Defensor(a)</option>
+                                    <option value="Servidor(a)">Servidor(a)</option>
+                                    <option value="CRC">CRC</option>
+                                </select>
+                            </div>
+
+                            <!-- CAMPO EQUIPE ATUALIZADO PARA SELECT -->
+                            <div>
+                                <label for="collaborator-team-modal" class="block text-sm font-medium text-gray-700">Equipe:</label>
+                                <select id="collaborator-team-modal" name="equipe-colaborador" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                                    <option value="" disabled selected>Selecione a equipe</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                    <option value="6">6</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="collaborator-email-modal" class="block text-sm font-medium text-gray-700">Email do Colaborador (opcional):</label>
+                                <input type="email" id="collaborator-email-modal" name="email-colaborador" placeholder="email@exemplo.com" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                            </div>
+
+                            <div>
+                                <label for="collaborator-phone-modal" class="block text-sm font-medium text-gray-700">Telefone (com DDD):</label>
+                                <input type="tel" id="collaborator-phone-modal" name="telefone-colaborador" placeholder="Ex: 21999998888" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Como vai se deslocar?</label>
+                                <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
+                                    <label><input type="radio" id="transporte-nao-confirmado-modal" name="transporte-colaborador" value="Não Confirmado" checked required> Não Confirmado</label>
+                                    <label><input type="radio" id="transporte-meios-proprios-modal" name="transporte-colaborador" value="Meios Próprios"> Meios Próprios</label>
+                                    <label><input type="radio" id="transporte-com-empresa-modal" name="transporte-colaborador" value="Com a Empresa"> Com a Empresa</label>
+                                </div>
+                            </div>
+                            <div id="local-encontro-group-modal" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700">Ponto de Encontro:</label>
+                                <div class="mt-1 flex items-center space-x-4">
+                                    <label><input type="radio" id="local-sede-modal" name="localEncontro-colaborador" value="Sede"> Sede</label>
+                                    <label><input type="radio" id="local-meio-caminho-modal" name="localEncontro-colaborador" value="Meio do Caminho"> No meio do caminho</label>
+                                </div>
+                            </div>
+                            <div id="observacao-group-modal" class="hidden">
+                                <label for="collaborator-obs-modal" class="block text-sm font-medium text-gray-700">Observação:</label>
+                                <textarea id="collaborator-obs-modal" name="observacao-colaborador" rows="3" class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></textarea>
+                            </div>
+                            <button type="submit" id="add-collaborator-btn-modal" class="w-full bg-green-600 text-white font-bold py-2 rounded-md hover:bg-green-700 transition">Adicionar Colaborador</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Estatísticas e Lista</h3>
+                    <div id="presence-stats" class="mb-4 text-sm text-gray-700 space-y-1">
+                        <p>Total de Participantes: <strong id="total-participants-count">0</strong></p>
+                        <p>Meios Próprios: <strong id="self-transport-count">0</strong></p>
+                        <p>Com a Empresa: <strong id="company-transport-count">0</strong></p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table id="collaborators-list-table-modal" class="w-full text-sm text-left text-gray-500">
+                          <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="py-3 px-6">Nome</th>
+                                        <th scope="col" class="py-3 px-6">Cargo</th>
+                                        <th scope="col" class="py-3 px-6">Equipe</th>
+                                        <th scope="col" class="py-3 px-6">Presença</th>       <th scope="col" class="py-3 px-6">Horário</th>
+                                        <th scope="col" class="py-3 px-6">Email</th>          <th scope="col" class="py-3 px-6">Deslocamento</th>
+                                        <th scope="col" class="py-3 px-6">WhatsApp</th>
+                                        <th scope="col" class="py-3 px-6">Ações</th>
+                                    </tr>
+                                </thead>
+                            <tbody>
+                                <!-- As linhas da tabela serão preenchidas via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="flex justify-between items-center mt-4">
+                        <button id="download-collaborators-pdf-modal" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">PDF</button>
+                        <button id="clear-collaborators-list-modal" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Limpar Lista</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- FIM MODAL DE GERENCIAR COLABORADORES -->
+    
+    <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4"></div>
+    <div id="arrival-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Confirmar Horário de Chegada</h2>
+            <p class="mb-4 text-gray-600">Por favor, informe o horário de chegada do assistido.</p>
+            
+            <!-- SELEÇÃO DE SALA PARA CHECKIN -->
+            <div id="arrival-room-container" class="hidden mb-4">
+                <label for="arrival-room-select" class="block text-sm font-medium text-gray-700 mb-1">Selecionar Sala de Espera</label>
+                <select id="arrival-room-select" class="w-full p-3 border border-gray-300 rounded-lg bg-white">
+                    <!-- Opções preenchidas via JS -->
+                </select>
+            </div>
+
+            <input type="time" id="arrival-time-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-arrival-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-arrival-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Finalização de Atendimento (Antigo) - Mantido para 'Finalizar Diretamente' ou 'Editar Atendente' -->
+    <div id="attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Finalizar Atendimento</h2>
+            <p class="mb-4 text-gray-600">Insira o nome do profissional que realizou o atendimento (opcional).</p>
+            <input list="collaborators-list" type="text" id="attendant-name" placeholder="Nome do Defensor/Servidor" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
+            <datalist id="collaborators-list"></datalist>
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-attendant-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOVO MODAL: Selecionar Colaborador -->
+    <div id="select-collaborator-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Atender Assistido</h2>
+            <p class="mb-4 text-gray-600">Selecione o colaborador que irá atender <strong id="assisted-to-attend-name"></strong> (opcional):</p>
+            <div id="collaborator-selection-list" class="space-y-3 mb-6 max-h-60 overflow-y-auto">
+                <p class="text-gray-500 text-center">Carregando colaboradores...</p>
+            </div>
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-select-collaborator-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-select-collaborator-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Confirmar Seleção</button>
+            </div>
+        </div>
+    </div>
+    <!-- FIM NOVO MODAL -->
+
+    <!-- NOVO MODAL: Delegar Finalização por Email -->
+    <div id="delegate-email-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Delegar Finalização de Atendimento</h2>
+            <p class="mb-4 text-gray-600">Enviar link de finalização para <strong id="delegate-assisted-name"></strong>.</p>
+            <div class="mb-4">
+                <label for="collaborator-email-input" class="block text-sm font-medium text-gray-700">Email do Colaborador:</label>
+                <input type="email" id="collaborator-email-input" placeholder="email@exemplo.com" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <p class="text-sm text-gray-500 mb-6">O colaborador receberá um link por e-mail para finalizar o atendimento.</p>
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-delegate-email-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="send-delegate-email-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Enviar Link por E-mail</button>
+            </div>
+        </div>
+    </div>
+    <!-- FIM NOVO MODAL -->
+
+    <div id="reset-confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg space-y-4">
+            <h2 class="text-2xl font-bold text-gray-800">Zerar Pauta</h2>
+            <p class="text-gray-600">Tem certeza de que deseja apagar permanentemente todos os dados desta pauta?</p>
+            <div id="reset-auth-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden" role="alert"></div>
+            <div>
+                <label for="reset-pauta-password" class="block text-sm font-medium text-gray-700">Confirme sua senha:</label>
+                <input type="password" id="reset-pauta-password" class="w-full p-3 border border-gray-300 rounded-lg mt-1" required>
+            </div>
+            <div class="flex justify-end space-x-4 pt-4">
+                <button id="cancel-reset-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-reset-btn" class="bg-red-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-800">Zerar Pauta</button>
+            </div>
+        </div>
+    </div>
+    <div id="edit-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Editar Nome da Pauta</h2>
+            <label for="edit-pauta-name-input" class="block text-sm font-medium text-gray-700 mb-2">Novo nome</label>
+            <input type="text" id="edit-pauta-name-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-edit-pauta-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-edit-pauta-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="close-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4" id="close-modal-title">Fechar Pauta</h2>
+            <p class="mb-4 text-gray-600" id="close-modal-message">Para fechar esta pauta, confirme sua senha. Nenhum membro poderá fazer alterações até que você a reabra.</p>
+            <input type="password" id="close-pauta-password" placeholder="Sua senha de login" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
+            <div id="close-auth-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden" role="alert"></div>
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-close-pauta-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-close-pauta-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="format-help-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl relative flex flex-col" style="max-height: 90vh;">
+            <div class="flex-shrink-0">
+                <button id="close-format-help-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+                <h2 class="text-2xl font-bold mb-4">Como Preparar sua Pauta para Importação</h2>
+            </div>
+            <div class="flex-grow overflow-y-auto scrollable-content pr-4">
+                <p class="mb-4 text-gray-600">Para importar seus agendamentos de uma vez, crie um arquivo <strong>.csv</strong> (Valores Separados por Vírgula). Você pode criar este arquivo usando o Bloco de Notas, Excel, Google Sheets ou similar.</p>
+
+                <div class="flex justify-between items-center mb-2">
+                     <p class="font-semibold">O arquivo deve seguir o formato abaixo, com 4 colunas, nesta ordem:</p>
+                     <button id="copy-csv-format-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Formato</button>
+                </div>
+                <div class="bg-gray-100 p-4 rounded-lg text-sm mb-4">
+                    <code id="csv-format-code">Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code>
+                </div>
+
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-lg font-semibold">Exemplo:</h3>
+                    <button id="copy-csv-example-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Exemplo</button>
+                </div>
+                <pre class="bg-gray-100 p-4 rounded-lg text-sm" style="white-space: pre-wrap; word-break: break-all;"><code id="csv-example-code">Maria Joaquina de Amaral Pereira;09:00;Divórcio Consensual;111.222.333-44
+João da Silva;09:30;Ação de Alimentos;
+Fulano de Tal;10:00;Curatela;444.555.666-77</code></pre>
+                <ul class="list-disc list-inside mt-4 space-y-2 text-gray-700">
+                    <li>A primeira linha (cabeçalho) é <strong>opcional</strong>. O sistema a ignorará se presente.</li>
+                    <li>O campo <strong>CPF</strong> é opcional. Se não houver CPF, deixe o espaço em branco (ou não coloque nada após o último ponto e vírgula).</li>
+                    <li>O <strong>horário</strong> deve estar no formato <strong>HH:MM</strong> (Ex: 09:00, 14:30).</li>
+                    <li>Salve o arquivo com a extensão <strong>.csv</strong>.</li>
+                </ul>
+
+                <div class="mt-6 pt-4 border-t">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-lg font-semibold">Prompt para IA (Ex: ChatGPT, Gemini):</h3>
+                        <button id="copy-ai-prompt-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Prompt</button>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-2">Se sua pauta está em um PDF, copie o texto abaixo e cole junto com o conteúdo do seu PDF em uma IA para formatá-lo corretamente.</p>
+                    <pre class="bg-gray-100 p-4 rounded-lg text-sm" style="white-space: pre-wrap; word-break: break-all;"><code id="ai-prompt-code">Olá! Por favor, converta o conteúdo do arquivo PDF que estou enviando para o formato CSV, usando ponto e vírgula (;) como separador. O resultado deve seguir este padrão:
+
+Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)
+
+Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .csv.</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Editar Atendente</h2>
+            <p class="mb-4 text-gray-600">Insira o nome do profissional que realizou o atendimento (opcional).</p>
+            <input list="collaborators-list" type="text" id="edit-attendant-name" placeholder="Nome do Defensor/Servidor" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
+            <datalist id="collaborators-list"></datalist>
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-edit-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-edit-attendant-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar</button>
+            </div>
+        </div>
+    </div>
+    <div id="demands-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg flex flex-col" style="max-height: 90vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Gerenciar Demandas Adicionais</h2>
+                <button id="close-demands-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+            </div>
+            <div class="flex-grow overflow-y-auto pr-2">
+                <p class="mb-4">Assistido: <strong id="demands-assisted-name-modal" class="text-green-600"></strong></p>
+                <div class="space-y-2">
+                    <label for="demands-modal-new-demand-input" class="block text-sm font-medium text-gray-700">Adicionar nova demanda:</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="demands-modal-new-demand-input" placeholder="Ex: Ação de Partilha de Bens" class="flex-grow p-2 border border-gray-300 rounded-lg">
+                        <button id="demands-modal-add-demand-btn" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 flex-shrink-0">Adicionar</button>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Demandas Adicionais Registradas:</h3>
+                    <div id="demands-modal-list-container" class="space-y-2 max-h-60 overflow-y-auto bg-gray-50 p-3 rounded-lg border">
+                        <p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-4 mt-6 flex-shrink-0 border-t pt-4">
+                <button id="cancel-demands-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
+                <button id="save-demands-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+    <div id="edit-assisted-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
+            <h2 class="text-2xl font-bold mb-6">Editar Dados do Assistido</h2>
+            <div class="space-y-4">
+                <div><label for="edit-assisted-name" class="block text-sm font-medium text-gray-700">Nome</label><input type="text" id="edit-assisted-name" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
+                <div><label for="edit-assisted-cpf" class="block text-sm font-medium text-gray-700">CPF</label><input type="text" id="edit-assisted-cpf" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
+                <div><label for="edit-assisted-subject" class="block text-sm font-medium text-gray-700">Assunto</label><input list="subjects-list" type="text" id="edit-assisted-subject" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
+                <div><label for="edit-scheduled-time" class="block text-sm font-medium text-gray-700">Horário Agendado</label><input type="time" id="edit-scheduled-time" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
+            </div>
+            <div class="flex justify-end space-x-4 mt-8">
+                <button id="cancel-edit-assisted-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-edit-assisted-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+    <div id="priority-reason-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Atendimento Prioritário</h2>
+            <p class="mb-4 text-gray-600">Por favor, informe o motivo da prioridade.</p>
+            <textarea id="priority-reason-input" placeholder="Motivo..." class="w-full p-3 border border-gray-300 rounded-lg mb-6 h-24"></textarea>
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-priority-reason-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-priority-reason-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">Confirmar Prioridade</button>
+            </div>
+        </div>
+    </div>
+     <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 80vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Política de Privacidade</h2>
+                <button id="close-policy-modal-btn-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            </div>
+            <div id="policy-content" class="text-gray-700 space-y-4 overflow-y-auto pr-2">
+                <p><strong>1. Natureza do Sistema e Ciclo de Vida dos Dados</strong></p>
+                <p>O Sistema de Gerenciamento de Pauta (SIGAP) é uma interface de controle para a gestão de atendimentos. Ele coleta e armazena os dados pessoais de assistidos, como nome, CPF (opcional), assunto e demanda, por um período de sete dias após a finalização da ação. Após esse prazo, os dados são permanentemente excluídos do SIGAP.</p>
+                <p>Para o armazenamento permanente, todos os dados são enviados e salvos no sistema Verde, que é de responsabilidade da Defensoria Pública do Estado do Rio de Janeiro (DPERJ) e está em total conformidade com a LGPD.</p>
+
+                <p><strong>2. Dados Coletados pelo SIGAP</strong></p>
+                <p>Para permitir o uso da interface, o SIGAP coleta apenas os dados de autenticação dos usuários (profissionais): e-mail e senha.</p>
+
+                <p><strong>3. Tratamento e Proteção de Dados (dentro do SIGAP)</strong></p>
+                <p>Os dados de autenticação são utilizados para garantir o acesso restrito e seguro ao sistema. Os dados de assistidos são armazenados por apenas sete dias, tempo necessário para a conclusão da ação, e são protegidos por medidas de segurança para evitar acesso não autorizado.</p>
+
+                <p><strong>4. Direitos dos Titulares dos Dados</strong></p>
+                <p>Os direitos dos assistidos, como acesso, correção e exclusão de dados, são garantidos e exercidos diretamente por meio do sistema Verde, que é o responsável pelo armazenamento final. Os usuários do SIGAP podem gerenciar a pauta e solicitar alterações no sistema Verde conforme as normas da DPERJ.</p>
+
+                <p><strong>5. Origem e Transferência de Dados dos Assistidos</strong></p>
+                <p>Os dados dos assistidos gerenciados no SIGAP podem ter duas origens:</p>
+                <p><strong>Importação do Sistema Verde:</strong> A maior parte dos dados (nome, horário, assunto) é transferida manualmente do sistema oficial Verde (DPERJ) através de um processo de exportação e importação. Neste fluxo, o CPF do assistido não é transferido.</p>
+                <p><strong>Cadastro Direto no SIGAP:</strong> Novos atendimentos, como os avulsos, podem ser registrados diretamente na plataforma. Nesses casos, o campo CPF é opcional e pode ser preenchido pelo profissional responsável pelo cadastro (criador ou membro da pauta).</p>
+                <p>O processo de transferência manual consiste na exportação da pauta do sistema Verde, quando houver pauta previamente cadastrada, sua conversão para um formato compatível e a importação do arquivo final no SIGAP. Cabe ao usuário responsável pela transferência garantir a segurança dos dados durante este processo, incluindo a exclusão segura dos arquivos intermediários (como PDFs e CSVs) de seus dispositivos locais após a importação bem-sucedida. O SIGAP não se responsabiliza pelo manuseio dos dados fora de sua plataforma, mas orienta todos os usuários a seguirem as melhores práticas de segurança para proteger a privacidade dos assistidos.</p>
+            </div>
+            <div class="flex justify-end mt-6 flex-shrink-0">
+                <button id="close-policy-modal-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Manual do Utilizador -->
+    <div id="manual-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 80vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Manual do Utilizador</h2>
+                <button id="close-manual-modal-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            </div>
+            <div class="text-gray-700 space-y-4 overflow-y-auto pr-2">
+                <p><strong>Bem-vindo ao SIGAP!</strong></p>
+                <p>Este sistema foi desenvolvido para facilitar a gestão de pautas de atendimento jurídico.</p>
+                <ul class="list-disc list-inside space-y-2">
+                    <li><strong>Criar Pauta:</strong> Use o botão verde na tela inicial para começar.</li>
+                    <li><strong>Importar Dados:</strong> Você pode carregar arquivos CSV para agilizar o preenchimento.</li>
+                    <li><strong>Gestão de Status:</strong> Mova os assistidos entre "Pauta", "Aguardando" e "Atendido".</li>
+                    <li><strong>Delegação:</strong> Use a coluna "Em Atendimento" para enviar links de finalização por e-mail.</li>
+                    <li><strong>Privacidade:</strong> O sistema limpa dados sensíveis periodicamente para sua segurança.</li>
+                </ul>
+            </div>
+            <div class="flex justify-end mt-6 flex-shrink-0">
+                <button id="close-manual-modal-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Fechar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal: Termos de Uso -->
+    <div id="terms-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 80vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Termos de Uso</h2>
+                <button id="close-terms-modal-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            </div>
+            <div class="text-gray-700 space-y-4 overflow-y-auto pr-2">
+                <p><strong>1. Uso do Sistema</strong></p>
+                <p>O SIGAP é uma ferramenta de apoio à gestão. O usuário é responsável pela veracidade dos dados inseridos.</p>
+                <p><strong>2. Segurança</strong></p>
+                <p>O acesso é pessoal e intransferível. Não compartilhe sua senha de acesso.</p>
+                <p><strong>3. Dados Sensíveis</strong></p>
+                <p>O usuário compromete-se a utilizar os dados dos assistidos apenas para fins profissionais, respeitando o sigilo funcional.</p>
+            </div>
+            <div class="flex justify-end mt-6 flex-shrink-0">
+                <button id="close-terms-modal-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ***** INÍCIO DO HTML DO MODAL DE DETALHES ***** -->
+    <div id="documents-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl flex flex-col" style="max-height: 90vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">
+                    Detalhes para <span id="documents-assisted-name" class="text-green-600"></span>
+                </h2>
+                <button id="close-documents-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            </div>
+
+            <div id="document-action-selection" class="flex-grow overflow-y-auto scrollable-content pr-2">
+                <!-- O conteúdo será inserido aqui pelo detalhes.js -->
+            </div>
+
+            <div id="document-checklist-view" class="hidden flex-grow flex flex-col">
+                <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                    <div class="flex items-center gap-4">
+                        <button id="back-to-action-selection-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
+                        <h3 id="checklist-title" class="text-xl font-bold text-gray-800"></h3>
+                    </div>
+                    <div class="flex space-x-4">
+                        <button id="cancel-checklist-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
+                        <button id="print-checklist-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">PDF</button>
+                        <button id="save-checklist-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar</button>
+                    </div>
+                </div>
+                 <div class="mb-4 flex-shrink-0">
+                    <input type="search" id="checklist-search" placeholder="Pesquisar documento..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                </div>
+                <div id="checklist-container" class="space-y-4 overflow-y-auto pr-2 flex-grow border rounded-lg p-4 bg-gray-50" style="max-height: 55vh;">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="address-editor-container" class="mt-8 p-4 bg-gray-50 rounded-lg border hidden">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">Endereço da Parte Contrária (Réu)</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-1">
+            <label for="cep-reu" class="block text-sm font-medium text-gray-700">CEP</label>
+            <input type="text" id="cep-reu" placeholder="Digite o CEP" maxlength="9" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+        </div>
+        <div class="md:col-span-2">
+            <label for="rua-reu" class="block text-sm font-medium text-gray-700">Rua/Avenida</label>
+            <input type="text" id="rua-reu" placeholder="Rua será preenchida" class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-200" readonly>
+        </div>
+        <div class="md:col-span-1">
+            <label for="numero-reu" class="block text-sm font-medium text-gray-700">Número</label>
+            <input type="text" id="numero-reu" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+        </div>
+        <div class="md:col-span-1">
+            <label for="bairro-reu" class="block text-sm font-medium text-gray-700">Bairro</label>
+            <input type="text" id="bairro-reu" class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-200" readonly>
+        </div>
+        <div class="md:col-span-1">
+            <label for="cidade-reu" class="block text-sm font-medium text-gray-700">Cidade/UF</label>
+            <div class="flex gap-2">
+                <input type="text" id="cidade-reu" class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-200" readonly>
+                <input type="text" id="estado-reu" maxlength="2" class="mt-1 block w-1/3 p-2 border border-gray-300 rounded-md bg-gray-200" readonly>
+            </div>
+        </div>
+    </div>
+</div>
+    <!-- ***** FIM DO HTML DO MODAL DE DETALHES ***** -->
+    
+ <!-- Modal de Estatísticas (Container) -->
+    <div id="statistics-modal" class="hidden z-50">
+        <!-- O conteúdo, incluindo cabeçalho e botões, será gerado dinamicamente pelo script 'estatisticas.js' -->
+    </div>
+    
+
+<script type="module">
+        // =======================================================
+        // 1. IMPORTAÇÕES DOS SEUS 12 ARQUIVOS JS
+        // =======================================================
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, addDoc, writeBatch, query, where, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, collection, addDoc, updateDoc, deleteDoc, writeBatch, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
-        // Importando seus 12 módulos
         import { firebaseConfig, emailJsConfig } from './js/config.js';
-        import { escapeHTML, showNotification, normalizeText } from './js/utils.js';
-        import { subjectTree } from './js/assuntos.js';
-        import { handleLogin, handleRegister, handlePasswordReset } from './js/auth.js';
-        import { showScreen, togglePautaLockUI } from './js/ui.js';
-        import { loadUsersList } from './js/admin.js';
+        import { escapeHTML, showNotification, normalizeText, formatTime } from './js/utils.js';
+        import { subjectTree, flatSubjects } from './js/assuntos.js';
+        import { handleLogin, handleRegister, handleLogout } from './js/auth.js';
+        import { showScreen, togglePautaLockUI, switchTabUI } from './js/ui.js';
+        import { logAction, loadUsersList } from './js/admin.js';
         import { setupAttendancesListener } from './js/pauta.js';
+        import { setupCollaboratorsListener } from './js/colaboradores.js';
         import { generateAtendidosPDF } from './js/pdfService.js';
         import { parsePautaCSV } from './js/csvHandler.js';
+        import { sendDelegationEmail } from './js/emailService.js';
+        import { getChecklistHTML } from './js/checklist.js';
+        import { setupDetailsModal } from './detalhes.js';
 
-        // 1. INICIALIZAÇÃO
+        // =======================================================
+        // 2. INICIALIZAÇÃO E ESTADO GLOBAL
+        // =======================================================
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-        emailjs.init(emailJsConfig.publicKey);
-
-        // --- DESATIVADO PARA EVITAR ERRO 401 DURANTE TESTES ---
-        // try { initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'), isTokenAutoRefreshEnabled: true }); } catch(e) {}
 
         let allAssisted = [], currentPautaId = null, currentUserName = '';
+        let isPautaClosed = false, currentPautaOwnerId = null;
 
-        // 2. CONTROLE DE LOGIN / CADASTRO
-        const loginTabBtn = document.getElementById('login-tab-btn');
-        const registerTabBtn = document.getElementById('register-tab-btn');
-        const loginForm = document.getElementById('login-form');
-        const registerForm = document.getElementById('register-form');
+        emailjs.init(emailJsConfig.publicKey);
+        try {
+            initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'), isTokenAutoRefreshEnabled: true });
+            enableIndexedDbPersistence(db);
+        } catch (e) { console.error("Offline ready"); }
 
-        registerTabBtn.onclick = () => {
-            loginForm.classList.add('hidden'); registerForm.classList.remove('hidden');
-            registerTabBtn.classList.add('text-green-600', 'border-b-2', 'border-green-600');
-            loginTabBtn.classList.remove('text-green-600', 'border-b-2', 'border-green-600');
-        };
-
-        loginTabBtn.onclick = () => {
-            registerForm.classList.add('hidden'); loginForm.classList.remove('hidden');
-            loginTabBtn.classList.add('text-green-600', 'border-b-2', 'border-green-600');
-            registerTabBtn.classList.remove('text-green-600', 'border-b-2', 'border-green-600');
-        };
-
-        document.getElementById('forgot-password-link').onclick = async () => {
-            const email = prompt("Digite seu email para recuperar senha:");
-            if (email) await handlePasswordReset(auth, email);
-        };
-
-        // 3. AUTH STATE
+        // =======================================================
+        // 3. MONITOR DE ACESSO (AUTH)
+        // =======================================================
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                const snap = await getDoc(doc(db, "users", user.uid));
-                if (snap.exists() && snap.data().status === 'approved') {
-                    currentUserName = snap.data().name;
-                    document.getElementById('admin-panel-btn').classList.toggle('hidden', snap.data().role !== 'admin');
+                const userSnap = await getDoc(doc(db, "users", user.uid));
+                if (userSnap.exists() && userSnap.data().status === 'approved') {
+                    currentUserName = userSnap.data().name;
+                    document.getElementById('admin-panel-btn').classList.toggle('hidden', userSnap.data().role !== 'admin');
                     
                     const lastId = localStorage.getItem('lastPautaId');
-                    if(lastId) loadPauta(lastId, "Carregando...");
+                    if (lastId) loadPauta(lastId, "Reconectando...");
                     else showScreen('pautaSelection');
-                    
-                    carregarMinhasPautas(user.uid);
                 } else {
-                    signOut(auth);
+                    handleLogout(auth);
                 }
             } else {
                 showScreen('login');
             }
         });
 
-        // 4. LÓGICA DE PAUTAS
-        function carregarMinhasPautas(userId) {
-            const q = query(collection(db, "pautas"), where("members", "array-contains", userId));
-            onSnapshot(q, (snapshot) => {
-                const list = document.getElementById('pautas-list');
-                list.innerHTML = '';
-                snapshot.forEach(d => {
-                    const card = document.createElement('div');
-                    card.className = "p-6 bg-white rounded-xl shadow-md border-t-4 border-green-600 cursor-pointer hover:scale-105 transition";
-                    card.innerHTML = `<h3 class="font-bold">${d.data().name}</h3><p class="text-xs text-gray-400 mt-2">ID: ${d.id}</p>`;
-                    card.onclick = () => loadPauta(d.id, d.data().name);
-                    list.appendChild(card);
-                });
-            });
-        }
-
-        async function loadPauta(id, name) {
+        // =======================================================
+        // 4. LOGICA DE CARREGAMENTO (CONECTOR)
+        // =======================================================
+        const loadPauta = async (id, name) => {
             currentPautaId = id;
             localStorage.setItem('lastPautaId', id);
             document.getElementById('pauta-title').textContent = name;
+
+            const pSnap = await getDoc(doc(db, "pautas", id));
+            if (pSnap.exists()) {
+                currentPautaOwnerId = pSnap.data().owner;
+                isPautaClosed = pSnap.data().isClosed || false;
+                togglePautaLockUI(isPautaClosed, currentPautaOwnerId, auth.currentUser?.uid);
+            }
+
             setupAttendancesListener(db, id, (dados) => {
                 allAssisted = dados;
                 renderAssistedList();
             });
-            showScreen('app');
-        }
 
-        // 5. RENDERIZAÇÃO DE CARDS
-        function renderAssistedList() {
-            const lPauta = document.getElementById('pauta-list');
-            const lAguardando = document.getElementById('aguardando-list');
-            const lAtendido = document.getElementById('atendidos-list');
-            [lPauta, lAguardando, lAtendido].forEach(l => l.innerHTML = '');
+            showScreen('app');
+        };
+
+        const renderAssistedList = () => {
+            const pautaL = document.getElementById('pauta-list');
+            const aguardandoL = document.getElementById('aguardando-list');
+            const atendidosL = document.getElementById('atendidos-list');
+            [pautaL, aguardandoL, atendidosL].forEach(l => l.innerHTML = '');
 
             allAssisted.forEach(a => {
                 const card = document.createElement('div');
-                card.className = "p-3 bg-white border rounded-lg shadow-sm text-sm mb-2 relative";
-                
-                let btn = '';
-                if(a.status === 'pauta') btn = `<button data-id="${a.id}" class="btn-chegou bg-green-500 text-white px-2 py-1 rounded text-[10px] font-bold">CHEGOU</button>`;
-                else if(a.status === 'aguardando') btn = `<button data-id="${a.id}" class="btn-atender bg-blue-500 text-white px-2 py-1 rounded text-[10px] font-bold">ATENDER</button>`;
-
+                card.className = `p-4 bg-white border rounded-xl shadow-sm mb-3 ${a.priority === 'URGENTE' ? 'priority-urgente' : ''}`;
                 card.innerHTML = `
                     <div class="flex justify-between">
-                        <div><strong>${escapeHTML(a.name)}</strong><br><span class="text-[10px] text-gray-500">${escapeHTML(a.subject)}</span></div>
-                        <button data-id="${a.id}" class="btn-deletar text-red-300 hover:text-red-600">×</button>
+                        <h4 class="font-bold">${escapeHTML(a.name)}</h4>
+                        <span class="text-[10px] text-gray-400">${a.scheduledTime || 'Avulso'}</span>
                     </div>
-                    <div class="mt-2 flex justify-between items-center">${btn} <span class="text-[10px] text-gray-400">${a.scheduledTime || 'AVULSO'}</span></div>
+                    <p class="text-xs text-gray-500 mb-3">${escapeHTML(a.subject)}</p>
+                    <div class="flex gap-2">
+                        ${a.status === 'pauta' ? `<button class="btn-checkin bg-green-600 text-white text-[10px] px-2 py-1 rounded" data-id="${a.id}">CHEGOU</button>` : ''}
+                        ${a.status === 'aguardando' ? `<button class="btn-atender bg-blue-600 text-white text-[10px] px-2 py-1 rounded" data-id="${a.id}">ATENDER</button>` : ''}
+                        <button class="btn-del text-red-400 text-xs ml-auto" data-id="${a.id}">🗑️</button>
+                    </div>
                 `;
-
-                if (a.status === 'pauta') lPauta.appendChild(card);
-                else if (a.status === 'aguardando') lAguardando.appendChild(card);
-                else if (a.status === 'atendido') lAtendido.appendChild(card);
+                if(a.status === 'pauta') pautaL.appendChild(card);
+                else if(a.status === 'aguardando') aguardandoL.appendChild(card);
+                else if(a.status === 'atendido') atendidosL.appendChild(card);
             });
-        }
+        };
 
-        // 6. LISTENERS DE CLIQUE
-        document.getElementById('login-form').onsubmit = (e) => { e.preventDefault(); handleLogin(auth, e.target[0].value, e.target[1].value); };
-        document.getElementById('register-form').onsubmit = (e) => { e.preventDefault(); handleRegister(auth, db, e.target[0].value, e.target[1].value, e.target[2].value); };
-        document.getElementById('actions-toggle').onclick = () => document.getElementById('actions-panel').classList.toggle('hidden');
-        document.getElementById('back-to-pautas-btn').onclick = () => showScreen('pautaSelection');
-        document.getElementById('logout-btn-selection').onclick = () => signOut(auth);
+        // =======================================================
+        // 5. EVENT LISTENERS (LIGANDO OS BOTÕES AOS JS)
+        // =======================================================
+        document.getElementById('login-form').onsubmit = (e) => {
+            e.preventDefault();
+            handleLogin(auth, e.target[0].value, e.target[1].value);
+        };
 
-        document.getElementById('pdf-btn').onclick = () => {
+        document.getElementById('file-upload').onchange = async (e) => {
+            const assistidos = await parsePautaCSV(e.target.files[0]);
+            const batch = writeBatch(db);
+            assistidos.forEach(a => {
+                const ref = doc(collection(db, "pautas", currentPautaId, "attendances"));
+                batch.set(ref, { ...a, status: 'pauta', createdAt: new Date().toISOString() });
+            });
+            await batch.commit();
+            showNotification("Importado!");
+        };
+
+        document.getElementById('download-pdf-btn').onclick = () => {
             const atendidos = allAssisted.filter(a => a.status === 'atendido');
             generateAtendidosPDF(document.getElementById('pauta-title').textContent, atendidos);
         };
 
-        document.getElementById('add-btn').onclick = async () => {
-            const name = document.getElementById('add-name').value;
-            const sub = document.getElementById('add-subject').value;
-            if(!name) return;
-            await addDoc(collection(db, "pautas", currentPautaId, "attendances"), { name, subject: sub, status: 'aguardando', arrivalTime: new Date().toISOString() });
-            document.getElementById('add-name').value = ''; document.getElementById('add-subject').value = '';
-        };
-
-        document.body.addEventListener('click', async (e) => {
+        document.addEventListener('click', async (e) => {
             const id = e.target.dataset.id;
-            if(!id) return;
-            const ref = doc(db, "pautas", currentPautaId, "attendances", id);
-            if(e.target.classList.contains('btn-chegou')) await updateDoc(ref, { status: 'aguardando', arrivalTime: new Date().toISOString() });
-            if(e.target.classList.contains('btn-atender')) await updateDoc(ref, { status: 'atendido', attendedTime: new Date().toISOString(), attendant: currentUserName });
-            if(e.target.classList.contains('btn-deletar')) { if(confirm("Apagar?")) await deleteDoc(ref); }
+            if (!id) return;
+            const docRef = doc(db, "pautas", currentPautaId, "attendances", id);
+
+            if (e.target.classList.contains('btn-checkin')) {
+                await updateDoc(docRef, { status: 'aguardando', arrivalTime: new Date().toISOString() });
+            }
+            if (e.target.classList.contains('btn-del')) {
+                if(confirm("Excluir?")) await deleteDoc(docRef);
+            }
         });
 
+        document.getElementById('logout-btn-app').onclick = () => handleLogout(auth);
+        document.getElementById('actions-toggle').onclick = () => document.getElementById('actions-panel').classList.toggle('hidden');
+        
+        setupDetailsModal({ db, getChecklistHTML, showNotification });
+
     </script>
-</body>
+     
+<!-- Modal de Anotações -->
+<div id="notes-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
+  <div class="bg-white rounded-xl p-6 w-96 shadow-lg">
+    <h2 class="text-lg font-semibold text-gray-700 mb-3">Minhas Anotações</h2>
+    <textarea id="notes-text" class="w-full h-40 border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500"></textarea>
+    <div class="mt-4 flex justify-end gap-2">
+      <button id="save-notes-btn" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Salvar</button>
+      <button id="close-notes-btn" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmação (necessário para as novas funcionalidades) -->
+<div id="confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+        <h2 class="text-2xl font-bold mb-4">Confirmação</h2>
+        <p id="modal-text" class="mb-6 text-gray-600">Tem certeza que deseja realizar esta ação?</p>
+        <div class="flex justify-end space-x-4">
+            <button id="cancel-action" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+            <button id="confirm-action" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+  (function(){
+    // SUBSTITUA "aGL-Q2UJcD2tDpUKq" PELA SUA PUBLIC KEY REAL DO EmailJS
+    emailjs.init("aGL-Q2UJcD2tDpUKq"); // Sua Public Key do EmailJS
+  })();
+
+  const notesBtn = document.getElementById("notes-btn");
+  const notesModal = document.getElementById("notes-modal");
+  const closeNotesBtn = document.getElementById("close-notes-btn");
+  const saveNotesBtn = document.getElementById("save-notes-btn");
+  const notesText = document.getElementById("notes-text");
+
+  const confirmModal = document.getElementById('confirm-modal');
+  const modalText = document.getElementById('modal-text');
+  const confirmActionBtn = document.getElementById('confirm-action');
+  const cancelActionBtn = document.getElementById('cancel-action');
+  let actionToConfirm = null;
+
+  function showConfirmModal(callback, message) {
+    modalText.innerHTML = message;
+    confirmModal.classList.remove('hidden'); // Use classList.remove para Tailwind CSS
+    actionToConfirm = callback;
+  }
+
+  if (confirmActionBtn) {
+    confirmActionBtn.addEventListener('click', () => {
+        if (actionToConfirm) {
+            actionToConfirm();
+        }
+        confirmModal.classList.add('hidden');
+        actionToConfirm = null;
+    });
+  }
+
+  if (cancelActionBtn) {
+    cancelActionBtn.addEventListener('click', () => {
+        confirmModal.classList.add('hidden');
+        actionToConfirm = null;
+    });
+  }
+
+
+  notesBtn.addEventListener("click", () => {
+    const saved = localStorage.getItem("pauta_notes") || "";
+    notesText.value = saved;
+    notesModal.classList.remove("hidden");
+  });
+
+  closeNotesBtn.addEventListener("click", () => {
+    notesModal.classList.add("hidden");
+  });
+
+  saveNotesBtn.addEventListener("click", () => {
+    localStorage.setItem("pauta_notes", notesText.value);
+    alert("Anotação salva!");
+    notesModal.classList.add("hidden");
+  });
+
+  async function sendNotesByEmail() {
+    const notes = localStorage.getItem("pauta_notes") || "";
+    if (!notes) return;
+
+    try {
+      await emailjs.send(
+        "service_r1nxe6a", // Seu Service ID para anotações
+        "template_ynrwaxt", // Seu Template ID para Anotações (ATUALIZADO)
+        {
+            message: notes,
+            email_to: "SEU_EMAIL_DESTINO_ANOTACOES@dominio.com", // Substitua pelo seu email para receber as anotações
+            name: currentUserName, // Adicionado
+            email: auth.currentUser?.email || "noreply@example.com" // Adicionado
+        }
+      );
+      console.log("Anotações enviadas por e-mail!");
+    } catch (err) {
+      console.error("Erro ao enviar email de anotações:", err);
+    }
+  }
+
+  const closePautaBtn = document.getElementById("close-pauta-btn");
+  if (closePautaBtn) {
+    closePautaBtn.addEventListener("click", async () => {
+      setTimeout(async () => {
+        const isPasswordModalHidden = document.getElementById('close-pauta-modal').classList.contains('hidden');
+        if (isPasswordModalHidden) { 
+          await sendNotesByEmail();
+        }
+      }, 500);
+    });
+  }
+</script>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
