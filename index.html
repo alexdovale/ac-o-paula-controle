@@ -1305,30 +1305,31 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     
 <script type="module">
 // =======================================================
-// 1. IMPORTAÇÕES COMPLETAS
+// 1. IMPORTAÇÕES TOTAIS (Firebase + Seus 12 Arquivos)
 // =======================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, addDoc, query, where, onSnapshot, writeBatch, deleteDoc, updateDoc, enableIndexedDbPersistence, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, addDoc, query, where, onSnapshot, writeBatch, deleteDoc, updateDoc, enableIndexedDbPersistence, arrayUnion, arrayRemove, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
 import { firebaseConfig, emailJsConfig } from './js/config.js';
-import { escapeHTML, showNotification, formatTime, normalizeText } from './js/utils.js';
-import { handleLogin, handleLogout } from './js/auth.js';
-import { showScreen, togglePautaLockUI } from './js/ui.js';
-import { loadUsersList } from './js/admin.js';
+import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
+import { subjectTree, flatSubjects } from './js/assuntos.js';
+import { handleLogin, handleRegister, handleLogout } from './js/auth.js';
+import { showScreen, togglePautaLockUI, switchTabUI } from './js/ui.js';
+import { loadUsersList, logAction } from './js/admin.js';
 import { setupAttendancesListener } from './js/pauta.js';
-import { setupCollaboratorsListener } from './js/colaboradores.js';
-import { generateAtendidosPDF } from './js/pdfService.js';
+import { setupCollaboratorsListener, saveCollaboratorData } from './js/colaboradores.js';
+import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
 import { parsePautaCSV } from './js/csvHandler.js';
+import { sendDelegationEmail, sendNotesEmail } from './js/emailService.js';
 import { getChecklistHTML } from './js/checklist.js';
 
-// Módulos na raiz
 import { setupDetailsModal, openDetailsModal } from './detalhes.js';
 import { renderStatisticsModal } from './estatisticas.js';
 
 // =======================================================
-// 2. INICIALIZAÇÃO E ESTADO GLOBAL
+// 2. INICIALIZAÇÃO E VARIÁVEIS DE ESTADO GLOBAL
 // =======================================================
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -1336,18 +1337,25 @@ const auth = getAuth(app);
 
 let allAssisted = [], colaboradores = [], currentPautaId = null, currentPautaData = null;
 let currentUserName = '', currentPautaOwnerId = null, isPautaClosed = false;
-let assistedIdToHandle = null;
+let assistedIdToHandle = null, assistedNameToHandle = null, customRoomsList = [];
+let unsubscribeAttendances = () => {}, unsubscribeCollabs = () => {};
 
 emailjs.init(emailJsConfig.publicKey);
-try { enableIndexedDbPersistence(db); } catch (e) { console.warn("Offline pronto"); }
+try {
+    enableIndexedDbPersistence(db);
+    if (location.hostname !== "localhost") {
+        initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'), isTokenAutoRefreshEnabled: true });
+    }
+} catch (e) { console.warn("Modo Offline/Segurança Ativo"); }
 
 // =======================================================
-// 3. FLUXO DE TELAS E LISTAGEM DE PAUTAS
+// 3. MONITOR DE ACESSO E LISTAGEM DE PAUTAS (LGPD)
 // =======================================================
 
 const showPautaSelectionScreen = (userId) => {
     const pautasList = document.getElementById('pautas-list');
-    const q = query(collection(db, "pautas"), where("members", "array-contains", userId));
+    const q = query(collection(db, "pautas"), where("members", "array-contains", userId), orderBy("createdAt", "desc"));
+    
     onSnapshot(q, (snapshot) => {
         pautasList.innerHTML = '';
         snapshot.forEach((docSnap) => {
@@ -1356,16 +1364,21 @@ const showPautaSelectionScreen = (userId) => {
             const expires = new Date(created); expires.setDate(created.getDate() + 7);
 
             const card = document.createElement('div');
-            card.className = "bg-white p-6 rounded-xl shadow-md border hover:shadow-lg cursor-pointer transition-all relative";
+            card.className = "bg-white p-6 rounded-xl shadow-md border hover:border-green-500 cursor-pointer transition-all relative group";
             card.innerHTML = `
-                <h3 class="font-bold text-xl mb-2">${escapeHTML(pauta.name)}</h3>
-                <p class="text-xs text-gray-500">Criada em: ${created.toLocaleDateString('pt-BR')}</p>
-                <p class="text-xs text-red-500 font-semibold">Eliminação em: ${expires.toLocaleDateString('pt-BR')}</p>
-                <button class="delete-pauta-btn absolute top-3 right-3 text-gray-300 hover:text-red-500" data-id="${docSnap.id}">🗑️</button>
+                <h3 class="font-bold text-xl text-gray-800">${escapeHTML(pauta.name)}</h3>
+                <p class="text-[10px] font-bold text-gray-400 uppercase mt-1 tracking-widest">${pauta.type}</p>
+                <div class="mt-4 pt-4 border-t border-gray-100 space-y-1">
+                    <p class="text-[10px] text-gray-400">Criada em: <strong>${created.toLocaleDateString('pt-BR')}</strong></p>
+                    <p class="text-[10px] text-red-400">Eliminação (LGPD): <strong>${expires.toLocaleDateString('pt-BR')}</strong></p>
+                </div>
+                <button class="delete-pauta-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" data-id="${docSnap.id}">🗑️</button>
             `;
+            
             card.onclick = (e) => {
                 if (e.target.closest('.delete-pauta-btn')) {
-                    if(confirm("Deseja apagar esta pauta definitivamente?")) deleteDoc(doc(db, "pautas", docSnap.id));
+                    const id = e.target.closest('.delete-pauta-btn').dataset.id;
+                    if(confirm("Apagar esta pauta definitivamente?")) deleteDoc(doc(db, "pautas", id));
                     return;
                 }
                 loadPauta(docSnap.id, pauta.name, pauta.type);
@@ -1381,14 +1394,21 @@ onAuthStateChanged(auth, async (user) => {
         const userSnap = await getDoc(doc(db, "users", user.uid));
         if (userSnap.exists() && userSnap.data().status === 'approved') {
             currentUserName = userSnap.data().name;
-            document.getElementById('admin-panel-btn').classList.toggle('hidden', userSnap.data().role !== 'admin' && userSnap.data().role !== 'superadmin');
-            showPautaSelectionScreen(user.uid);
+            const data = userSnap.data();
+            document.getElementById('admin-panel-btn').classList.toggle('hidden', data.role !== 'admin' && data.role !== 'superadmin');
+            
+            const lastId = localStorage.getItem('lastPautaId');
+            if (lastId) {
+                const pSnap = await getDoc(doc(db, "pautas", lastId));
+                if (pSnap.exists()) loadPauta(lastId, pSnap.data().name, pSnap.data().type);
+                else showPautaSelectionScreen(user.uid);
+            } else showPautaSelectionScreen(user.uid);
         } else { signOut(auth); }
     } else showScreen('login');
 });
 
 // =======================================================
-// 4. RENDERIZAÇÃO DOS CARDS (VISUAL ORIGINAL RESTAURADO)
+// 4. LÓGICA DE RENDERIZAÇÃO DE CARDS (VISUAL ORIGINAL)
 // =======================================================
 
 const loadPauta = async (id, name, type) => {
@@ -1402,11 +1422,13 @@ const loadPauta = async (id, name, type) => {
         currentPautaOwnerId = currentPautaData.owner;
         isPautaClosed = currentPautaData.isClosed || false;
         togglePautaLockUI(isPautaClosed, currentPautaOwnerId, auth.currentUser?.uid);
+        
+        // Colunas dinâmicas (Em Atendimento)
         document.getElementById('em-atendimento-column').classList.toggle('hidden', !currentPautaData.useDelegationFlow);
     }
 
-    setupAttendancesListener(db, id, (dados) => { allAssisted = dados; renderAssistedList(); });
-    setupCollaboratorsListener(db, id, (equipe) => { colaboradores = equipe; });
+    unsubscribeAttendances = setupAttendancesListener(db, id, (dados) => { allAssisted = dados; renderAssistedList(); });
+    unsubscribeCollabs = setupCollaboratorsListener(db, id, (equipe) => { colaboradores = equipe; });
     showScreen('app');
 };
 
@@ -1424,64 +1446,70 @@ const renderAssistedList = () => {
     const mode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
 
     allAssisted.forEach(a => {
+        // Filtro de aba
+        if (a.status === 'aguardando' && a.type !== mode) return;
+
         const card = document.createElement('div');
         card.className = `p-4 bg-white border rounded-xl shadow-sm mb-3 relative ${getPriorityClass(a.priority)}`;
         
+        // Cabeçalho do Card
         let html = `
-            <button class="btn-del absolute top-2 right-2 text-gray-300 hover:text-red-500" data-id="${a.id}">🗑️</button>
-            <div class="font-bold text-lg text-gray-800">${escapeHTML(a.name)}</div>
-            ${a.cpf ? `<div class="text-xs text-gray-400">CPF: ${a.cpf}</div>` : ''}
-            <div class="text-sm text-gray-600 mt-1">Assunto: <strong>${escapeHTML(a.subject)}</strong></div>`;
+            <div class="flex justify-between items-start mb-2">
+                <div class="font-bold text-gray-800 leading-tight">${escapeHTML(a.name)}</div>
+                <span class="text-[9px] font-bold text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded border uppercase">${a.scheduledTime || 'Avulso'}</span>
+            </div>
+            ${a.cpf ? `<div class="text-[10px] text-gray-400 mb-1">CPF: ${a.cpf}</div>` : ''}
+            <div class="text-xs text-gray-600">Assunto: <strong>${escapeHTML(a.subject)}</strong></div>
+        `;
 
+        // Botões por Coluna
         if (a.status === 'pauta') {
-            html += `
-                <div class="text-xs text-blue-600 font-bold mt-1">Agendado: ${a.scheduledTime}</div>
-                <div class="grid grid-cols-2 gap-2 mt-3">
-                    <button class="btn-checkin bg-green-600 text-white text-[10px] py-2 rounded-lg font-bold" data-id="${a.id}">MARCAR CHEGADA</button>
-                    <button class="btn-faltou bg-yellow-500 text-white text-[10px] py-2 rounded-lg font-bold" data-id="${a.id}">FALTOU</button>
-                    <button class="btn-edit-assisted col-span-2 bg-gray-50 text-gray-500 text-[10px] py-1.5 rounded-lg" data-id="${a.id}">EDITAR DADOS</button>
-                </div>`;
-        } else if (a.status === 'aguardando' && a.type === mode) {
-            html += `
-                <div class="flex flex-wrap gap-2 mt-4">
-                    <button class="btn-atender bg-blue-600 text-white text-[10px] px-4 py-2 rounded-lg font-bold" data-id="${a.id}">ATENDER</button>
-                    <button class="btn-priority bg-red-500 text-white text-[10px] px-4 py-2 rounded-lg font-bold" data-id="${a.id}">PRIORIDADE</button>
-                    <button class="btn-details text-indigo-500 text-[10px] font-bold underline ml-auto" data-id="${a.id}">Ver Detalhes</button>
-                </div>`;
+            html += `<div class="grid grid-cols-2 gap-2 mt-4">
+                <button class="btn-checkin bg-green-600 text-white text-[10px] py-1.5 rounded-lg font-bold" data-id="${a.id}">MARCAR CHEGADA</button>
+                <button class="btn-faltou bg-yellow-500 text-white text-[10px] py-1.5 rounded-lg font-bold" data-id="${a.id}">FALTOU</button>
+                <button class="btn-edit-assisted col-span-2 bg-gray-50 text-gray-500 text-[10px] py-1 rounded" data-id="${a.id}">EDITAR DADOS</button>
+            </div>`;
+        } else if (a.status === 'aguardando') {
+            html += `<div class="flex flex-wrap gap-2 mt-4">
+                <button class="btn-atender bg-blue-600 text-white text-[10px] px-4 py-1.5 rounded-lg font-bold" data-id="${a.id}">ATENDER</button>
+                <button class="btn-priority bg-red-100 text-red-600 text-[10px] px-3 py-1.5 rounded-lg font-bold" data-id="${a.id}">PRIORIDADE</button>
+                <button class="btn-details text-indigo-500 text-[10px] font-bold underline ml-auto" data-id="${a.id}">Ver Detalhes</button>
+            </div>`;
         } else if (a.status === 'atendido') {
             html += `
-                <div class="mt-2 pt-2 border-t flex justify-between items-center">
-                    <span class="text-[10px] text-gray-400">Atendente: ${a.attendant || 'N/A'}</span>
-                    <button class="btn-confirm ${a.isConfirmed ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-400'} rounded-full w-6 h-6 flex items-center justify-center" data-id="${a.id}">✓</button>
+                <div class="mt-3 pt-3 border-t flex justify-between items-center">
+                    <div class="text-[10px] text-gray-400">Por: <strong>${a.attendant || 'N/A'}</strong></div>
+                    <button class="btn-confirm ${a.isConfirmed ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-400'} rounded-full w-5 h-5 text-[10px] flex items-center justify-center" data-id="${a.id}">✓</button>
                 </div>
                 <div class="grid grid-cols-2 gap-2 mt-2">
-                    <button class="btn-demands bg-blue-50 text-blue-600 text-[10px] py-1 rounded" data-id="${a.id}">Demandas</button>
-                    <button class="btn-return bg-orange-50 text-orange-600 text-[10px] py-1 rounded" data-id="${a.id}">Reverter</button>
-                </div>`;
+                    <button class="btn-demands bg-blue-50 text-blue-600 text-[9px] font-bold py-1 rounded" data-id="${a.id}">DEMANDAS</button>
+                    <button class="btn-return bg-orange-50 text-orange-600 text-[9px] font-bold py-1 rounded" data-id="${a.id}">REVERTER</button>
+                </div>
+            `;
         }
 
+        // Rodapé do Card
         if(a.lastActionBy) {
-            html += `<div class="text-[9px] text-gray-300 text-right mt-2 italic">Última ação: ${a.lastActionBy}</div>`;
+            html += `<div class="text-[8px] text-gray-300 text-right mt-2 italic uppercase">Ação: ${a.lastActionBy}</div>`;
         }
 
-        card.innerHTML = html;
+        card.innerHTML = html + `<button class="btn-del absolute -top-1 -right-1 bg-white text-gray-300 hover:text-red-500 rounded-full w-5 h-5 shadow-sm border text-xs" data-id="${a.id}">×</button>`;
         if(lists[a.status]) lists[a.status].appendChild(card);
     });
 };
 
 // =======================================================
-// 5. EVENT LISTENERS E FLUXOS DE MODAIS
+// 5. EVENT LISTENERS E FLUXO DE MODAIS
 // =======================================================
 
-// FLUXO DE CRIAÇÃO (IDÊNTICO AO ORIGINAL)
+// FLUXO DE CRIAÇÃO (4 ETAPAS)
 document.getElementById('create-pauta-btn').onclick = () => document.getElementById('pauta-type-modal').classList.remove('hidden');
 
 document.querySelectorAll('.pauta-type-btn').forEach(btn => {
     btn.onclick = (e) => {
-        const type = e.currentTarget.dataset.type;
         document.getElementById('pauta-type-modal').classList.add('hidden');
         const modal = document.getElementById('create-pauta-modal');
-        modal.dataset.type = type;
+        modal.dataset.type = e.currentTarget.dataset.type;
         modal.classList.remove('hidden');
     };
 });
@@ -1509,10 +1537,17 @@ document.getElementById('confirm-create-pauta-final-btn').onclick = async () => 
         createdAt: new Date().toISOString(), isClosed: false, rooms: []
     });
     document.getElementById('delegation-flow-modal').classList.add('hidden');
-    showNotification("Pauta Criada com Sucesso!");
+    showNotification("Pauta Criada!");
 };
 
-// Cliques em Botões Dinâmicos (Cards)
+// ACOES DO MENU "AÇÕES"
+document.getElementById('actions-toggle').onclick = (e) => {
+    e.stopPropagation();
+    document.getElementById('actions-panel').classList.toggle('hidden');
+};
+window.onclick = () => document.getElementById('actions-panel').classList.add('hidden');
+
+// Cliques nos botões de Cards (Delegação Global)
 document.addEventListener('click', async (e) => {
     const btn = e.target.closest('button');
     if (!btn || !btn.dataset.id || !currentPautaId) return;
@@ -1527,17 +1562,19 @@ document.addEventListener('click', async (e) => {
         else { assistedIdToHandle = id; document.getElementById('attendant-modal').classList.remove('hidden'); }
     }
     if (btn.classList.contains('btn-details')) openDetailsModal({ assistedId: id, pautaId: currentPautaId, allAssisted });
-    if (btn.classList.contains('btn-del')) if(confirm("Apagar permanentemente?")) await deleteDoc(docRef);
+    if (btn.classList.contains('btn-del')) if(confirm("Deseja excluir?")) await deleteDoc(docRef);
     if (btn.classList.contains('btn-return')) await updateDoc(docRef, { status: 'aguardando', lastActionBy: currentUserName });
 });
 
-// Ações Gerais
+// AÇÕES GERAIS
 document.getElementById('login-form').onsubmit = (e) => { e.preventDefault(); handleLogin(auth, document.getElementById('login-email').value, document.getElementById('login-password').value); };
 document.getElementById('back-to-pautas-btn').onclick = () => showPautaSelectionScreen(auth.currentUser.uid);
-document.getElementById('actions-toggle').onclick = (e) => { e.stopPropagation(); document.getElementById('actions-panel').classList.toggle('hidden'); };
+document.getElementById('logout-btn-selection').onclick = () => handleLogout(auth);
 document.getElementById('pdf-atendidos-btn').onclick = () => generateAtendidosPDF(currentPautaData.name, allAssisted.filter(a => a.status === 'atendido'));
+document.getElementById('stats-btn').onclick = () => renderStatisticsModal(allAssisted, currentPautaData.useDelegationFlow, currentPautaData.name);
 
 setupDetailsModal({ db, getChecklistHTML, showNotification });
+</script>
 </script>
      
 <!-- Modal de Anotações -->
@@ -1657,6 +1694,7 @@ setupDetailsModal({ db, getChecklistHTML, showNotification });
   }
 </script>
 </html>
+
 
 
 
