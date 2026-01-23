@@ -1311,6 +1311,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
         import { subjectTree, flatSubjects } from './js/assuntos.js';
         import { handleLogin, handleRegister, handleLogout, handlePasswordReset } from './js/auth.js';
+        import { showScreen, togglePautaLockUI, switchTabUI } from './js/ui.js';
 
         
         // Inicialização do EmailJS usando o novo arquivo de config
@@ -1803,63 +1804,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
              * @param {string | object} timeStamp - A string de data (ISO) ou objeto Timestamp do Firebase.
              * @returns {string} O horário formatado (HH:mm) ou 'N/A'.
              */
-        const togglePautaLock = (isClosed) => {
-            const isOwner = auth.currentUser?.uid === currentPautaOwnerId;
-            isPautaClosed = isClosed;
-
-            const buttonsToDisable = [
-                'form-agendamento', 'file-upload', 'add-assisted-btn',
-                'download-pdf-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento'
-            ];
-
-            buttonsToDisable.forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    if (isClosed) {
-                        element.classList.add('pointer-events-none', 'opacity-50');
-                        element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = true);
-                    } else {
-                        element.classList.remove('pointer-events-none', 'opacity-50');
-                        element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = false);
-                    }
-                }
-            });
-
-            // Trecho corrigido na função togglePautaLock:
-
-            // Dentro da função togglePautaLock, após o bloco buttonsToDisable:
-
-            const actionPanelButtons = document.querySelectorAll('#actions-panel button');
-            
-            actionPanelButtons.forEach(btn => {
-                if (btn.id === 'reopen-pauta-btn') {
-                    // Se a pauta está fechada, o REABRIR é o único que deve estar ativo
-                    btn.disabled = false;
-                } else {
-                    // Todos os outros botões do menu Ações (Zerar, Fechar, Editar) ficam desativados
-                    btn.disabled = isClosed; 
-                }
-            });
-            const actionButtons = document.querySelectorAll('.check-in-btn, .delegate-finalization-btn, .attend-directly-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn, .toggle-confirmed-atendido, .toggle-confirmed-faltoso'); // Adicionado
-            actionButtons.forEach(btn => {
-                btn.disabled = isClosed;
-            });
-
-            if (isClosed) {
-                document.getElementById('closed-pauta-alert').classList.remove('hidden');
-                document.getElementById('close-pauta-btn').classList.add('hidden');
-                document.getElementById('reopen-pauta-btn').classList.remove('hidden');
-            } else {
-                document.getElementById('closed-pauta-alert').classList.add('hidden');
-                document.getElementById('close-pauta-btn').classList.remove('hidden');
-                document.getElementById('reopen-pauta-btn').classList.add('hidden');
-            }
-
-            if (!isOwner) {
-                document.getElementById('close-pauta-btn').classList.add('hidden');
-                document.getElementById('reopen-pauta-btn').classList.add('hidden');
-            }
-        };
 
       const createAguardandoCard = (a, index) => {
         const card = document.createElement('div');
@@ -2945,80 +2889,6 @@ function renderColaboradores() {
     });
 };
 
-        const showScreen = (screenName) => {
-            loadingContainer.classList.toggle('hidden', screenName !== 'loading');
-            loginContainer.classList.toggle('hidden', screenName !== 'login');
-            pautaSelectionContainer.classList.toggle('hidden', screenName !== 'pautaSelection');
-            appContainer.classList.toggle('hidden', screenName !== 'app');
-        };
-
-        const switchTab = (tabName) => {
-            const tabAgendamento = document.getElementById('tab-agendamento');
-            const tabAvulso = document.getElementById('tab-avulso');
-            const isScheduledContainer = document.getElementById('is-scheduled-container');
-            const formTitle = document.getElementById('form-title');
-            const pautaColumn = document.getElementById('pauta-column');
-            const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-            const formContainer = document.getElementById('form-agendamento');
-
-            formContainer.classList.remove('hidden');
-
-            if (tabName === 'agendamento') {
-                tabAgendamento.classList.add('tab-active');
-                tabAvulso.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700');
-                isScheduledContainer.classList.remove('hidden');
-                pautaColumn.classList.remove('hidden');
-                if (currentPautaData?.useDelegationFlow) {
-                    emAtendimentoColumn.classList.remove('hidden');
-                } else {
-                    emAtendimentoColumn.classList.add('hidden');
-                }
-                formTitle.textContent = "Adicionar Novo Agendamento";
-                document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
-                document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
-                document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-                document.getElementById('arrival-time-wrapper').classList.add('hidden');
-                document.getElementById('manual-room-wrapper').classList.add('hidden'); // Ocultar seleção de sala manual
-            } else { // avulso
-                tabAvulso.classList.add('tab-active');
-                tabAgendamento.classList.remove('tab-active');
-                tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700');
-                isScheduledContainer.classList.add('hidden');
-                pautaColumn.classList.add('hidden');
-                 if (currentPautaData?.useDelegationFlow) {
-                    emAtendimentoColumn.classList.remove('hidden');
-                } else {
-                    emAtendimentoColumn.classList.add('hidden');
-                }
-                formTitle.textContent = "Adicionar Atendimento Avulso";
-
-                document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
-                document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
-                document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-                document.getElementById('arrival-time-wrapper').classList.remove('hidden');
-                document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
-
-                // Lógica para mostrar/esconder o seletor de sala manual
-                const manualRoomWrapper = document.getElementById('manual-room-wrapper');
-                const manualRoomSelect = document.getElementById('manual-room-select');
-                
-                if (currentPautaData?.type === 'multisala' && currentPautaData.rooms) {
-                    manualRoomWrapper.classList.remove('hidden');
-                    manualRoomSelect.innerHTML = '';
-                    currentPautaData.rooms.forEach(room => {
-                        const opt = document.createElement('option');
-                        opt.value = room;
-                        opt.textContent = room;
-                        manualRoomSelect.appendChild(opt);
-                    });
-                } else {
-                    manualRoomWrapper.classList.add('hidden');
-                }
-            }
-            renderAssistedList();
-        };
-
-
         let sortableInstance = null;
 
         const initSortable = () => {
@@ -3151,124 +3021,6 @@ function renderColaboradores() {
             main();
             setupModalClosers();
             setupDetailsModal({ db, getUpdatePayload, showNotification }); // <--- ADICIONE AQUI
-
-            const actionsToggle = document.getElementById('actions-toggle');
-            const actionsPanel = document.getElementById('actions-panel');
-            const actionsArrow = document.getElementById('actions-arrow');
-            // Referências
-            const shareModal = document.getElementById('share-modal');
-            const shareToggle = document.getElementById('share-toggle');
-            const shareStatusText = document.getElementById('share-status-text');
-            const shareLinkContainer = document.getElementById('share-link-container');
-            const shareLinkInput = document.getElementById('share-link-input');
-            const maskNamesCheck = document.getElementById('mask-names-check');
-            
-            // 1. Abrir Modal
-            document.getElementById('share-pauta-btn').addEventListener('click', () => {
-                if (!currentPautaData) return;
-                
-                shareModal.classList.remove('hidden');
-                
-                // Carregar estado atual
-                const isPublic = currentPautaData.isPublic || false;
-                const maskNames = currentPautaData.maskNames || false;
-                
-                shareToggle.checked = isPublic;
-                maskNamesCheck.checked = maskNames;
-                updateShareUI(isPublic);
-            });
-            
-            // 2. Função Visual
-            function updateShareUI(isPublic) {
-                shareStatusText.textContent = isPublic ? "Público" : "Privado";
-                if (isPublic) {
-                    shareLinkContainer.classList.remove('hidden');
-                    // Gera o link para o arquivo acompanhamento.html
-                    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                    const link = `${baseUrl}/acompanhamento.html?id=${currentPautaId}`;
-                    shareLinkInput.value = link;
-                    document.getElementById('open-external-btn').href = link;
-                } else {
-                    shareLinkContainer.classList.add('hidden');
-                }
-            }
-            
-            // 3. Alternar Público/Privado
-            shareToggle.addEventListener('change', async (e) => {
-                const isPublic = e.target.checked;
-                updateShareUI(isPublic);
-                
-                try {
-                    const pautaRef = doc(db, "pautas", currentPautaId);
-                    await updateDoc(pautaRef, { isPublic: isPublic });
-                    
-                    // Atualiza a variável local
-                    currentPautaData.isPublic = isPublic;
-                    
-                    showNotification(isPublic ? "Link público ativado." : "Link público desativado.");
-                } catch (error) {
-                    console.error(error);
-                    showNotification("Erro ao atualizar status.", "error");
-                    // Reverte visualmente se der erro
-                    e.target.checked = !isPublic;
-                    updateShareUI(!isPublic);
-                }
-            });
-            
-            // 4. Alternar Mascara de Nomes (LGPD)
-            maskNamesCheck.addEventListener('change', async (e) => {
-                const mask = e.target.checked;
-                try {
-                    const pautaRef = doc(db, "pautas", currentPautaId);
-                    await updateDoc(pautaRef, { maskNames: mask });
-                    currentPautaData.maskNames = mask;
-                    showNotification("Configuração de privacidade atualizada.");
-                } catch (error) {
-                    showNotification("Erro ao salvar configuração.", "error");
-                }
-            });
-            
-            // 5. Copiar Link
-            document.getElementById('copy-share-link-btn').addEventListener('click', () => {
-                shareLinkInput.select();
-                document.execCommand('copy');
-                showNotification("Link copiado!", "info");
-            });
-            
-            document.getElementById('close-share-modal-btn').addEventListener('click', () => {
-                shareModal.classList.add('hidden');
-            });
-            
-            function showPanel() {
-                if(actionsPanel && actionsArrow) {
-                    actionsPanel.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
-                    actionsArrow.classList.add('rotate-180');
-                }
-            }
-
-            function hidePanel() {
-                if(actionsPanel && actionsArrow) {
-                    actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                    actionsArrow.classList.remove('rotate-180');
-                }
-            }
-
-            if(actionsToggle) {
-                actionsToggle.addEventListener('click', (event) => {
-                    event.stopPropagation();
-                    if (actionsPanel && actionsPanel.classList.contains('opacity-0')) {
-                        showPanel();
-                    } else {
-                        hidePanel();
-                    }
-                });
-            }
-
-            window.addEventListener('click', (event) => {
-                if (actionsPanel && !actionsPanel.contains(event.target) && actionsToggle && !actionsToggle.contains(event.target)) {
-                    hidePanel();
-                }
-            });
             
             const datalist = document.getElementById('subjects-list');
             flatSubjects.forEach(subject => {
@@ -3532,9 +3284,6 @@ function renderColaboradores() {
                     copyToClipboard(text, 'Prompt para IA copiado!');
                 }
             });
-
-            document.getElementById('tab-agendamento').addEventListener('click', () => switchTab('agendamento'));
-            document.getElementById('tab-avulso').addEventListener('click', () => switchTab('avulso'));
 
             ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
                 document.getElementById(id).addEventListener('input', renderAssistedList);
@@ -4728,6 +4477,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
