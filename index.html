@@ -1310,7 +1310,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { firebaseConfig, emailJsConfig } from './js/config.js';
         import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
         import { subjectTree, flatSubjects } from './js/assuntos.js';
-        import { handleLogin, handleRegister, handleLogout, handlePasswordReset } from './js/auth.js';
 
         
         // Inicialização do EmailJS usando o novo arquivo de config
@@ -3343,6 +3342,96 @@ function renderColaboradores() {
                 }
             });
 
+            // --- LÓGICA DE LOGIN/CADASTRO ---
+            // --- LÓGICA DE LOGIN/CADASTRO ---
+            const loginTabBtn = document.getElementById('login-tab-btn');
+            const registerTabBtn = document.getElementById('register-tab-btn');
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+
+            loginTabBtn.addEventListener('click', () => {
+                loginTabBtn.classList.add('border-green-600', 'text-green-600');
+                loginTabBtn.classList.remove('text-gray-500');
+                registerTabBtn.classList.remove('border-green-600', 'text-green-600');
+                registerTabBtn.classList.add('text-gray-500');
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+            });
+
+            registerTabBtn.addEventListener('click', () => {
+                registerTabBtn.classList.add('border-green-600', 'text-green-600');
+                registerTabBtn.classList.remove('text-gray-500');
+                loginTabBtn.classList.remove('border-green-600', 'text-green-600');
+                loginTabBtn.classList.add('text-gray-500');
+                registerForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+            });
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                const errorDiv = document.getElementById('auth-error');
+                try {
+                    await signInWithEmailAndPassword(auth, email, password);
+                    errorDiv.classList.add('hidden');
+                } catch (error) {
+                    console.error("Login failed:", error);
+                    errorDiv.textContent = 'Email ou senha inválidos.';
+                    errorDiv.classList.remove('hidden');
+                }
+            });
+
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('register-name').value;
+                const email = document.getElementById('register-email').value;
+                const password = document.getElementById('register-password').value;
+                const errorDiv = document.getElementById('auth-error');
+
+                if (password.length < 6) {
+                    errorDiv.textContent = 'A senha deve ter pelo menos 6 caracteres.';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+
+                try {
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
+
+                    await setDoc(doc(db, "users", user.uid), {
+                        name: name,
+                        email: email,
+                        uid: user.uid,
+                        status: 'pending',
+                        role: 'admin',
+                        createdAt: new Date().toISOString()
+                    });
+
+                    errorDiv.classList.add('hidden');
+                    showNotification('Conta criada com sucesso! Agora você pode fazer o login.', 'success');
+                    loginTabBtn.click();
+
+                } catch (error) {
+                    console.error("Registration failed:", error);
+                    errorDiv.textContent = error.code === 'auth/email-already-in-use' ? 'Este email já está em uso.' : 'Ocorreu um erro ao criar a conta.';
+                    errorDiv.classList.remove('hidden');
+                }
+            });
+
+            document.getElementById('forgot-password-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                const email = prompt("Por favor, digite seu email para redefinir a senha:");
+                if (email) {
+                    sendPasswordResetEmail(auth, email)
+                        .then(() => showNotification("Email de redefinição de senha enviado!", "success"))
+                        .catch((error) => {
+                            console.error("Password reset error:", error);
+                            showNotification("Erro ao enviar email. Verifique se o email está correto.", "error");
+                        });
+                }
+            });
+
             // --- LÓGICA DE SALAS PERSONALIZADAS ---
             const customRoomInput = document.getElementById('custom-room-input');
             const customRoomsListEl = document.getElementById('custom-rooms-list');
@@ -3535,6 +3624,15 @@ function renderColaboradores() {
 
             document.getElementById('tab-agendamento').addEventListener('click', () => switchTab('agendamento'));
             document.getElementById('tab-avulso').addEventListener('click', () => switchTab('avulso'));
+
+            const handleLogout = () => {
+                signOut(auth).catch(error => {
+                    console.error("Logout error", error);
+                    showNotification("Erro ao tentar sair.", "error");
+                });
+            };
+            document.getElementById('logout-btn-main').addEventListener('click', handleLogout);
+            document.getElementById('logout-btn-app').addEventListener('click', handleLogout);
 
             ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
                 document.getElementById(id).addEventListener('input', renderAssistedList);
@@ -4728,3 +4826,4 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
