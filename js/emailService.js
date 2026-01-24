@@ -1,7 +1,24 @@
 // js/emailService.js
 import { emailJsConfig } from './config.js';
 
-export const sendDelegationEmail = async (toEmail, assistedName, collaboratorName, link, senderName) => {
+/**
+ * Envia o link de finalização para um colaborador via e-mail
+ */
+export const sendDelegationEmail = async (params) => {
+    const { 
+        toEmail, 
+        assistedName, 
+        collaboratorName, 
+        pautaId, 
+        assistedId, 
+        senderName, 
+        senderEmail 
+    } = params;
+
+    // Gera o link dinâmico
+    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+    const externalLink = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${assistedId}&collaboratorName=${encodeURIComponent(collaboratorName)}`;
+
     return emailjs.send(
         emailJsConfig.serviceId,
         emailJsConfig.templates.delegacao,
@@ -9,21 +26,27 @@ export const sendDelegationEmail = async (toEmail, assistedName, collaboratorNam
             to_email: toEmail,
             assisted_name: assistedName,
             collaborator_name: collaboratorName,
-            finalization_link: link,
-            sender_name: senderName
+            finalization_link: externalLink,
+            name: senderName,
+            email: senderEmail
         }
     );
 };
 
-export const sendNotesEmail = async (notes, senderName, userEmail) => {
+/**
+ * Envia as anotações da pauta por e-mail
+ */
+export const sendNotesByEmail = async (notes, senderName, senderEmail) => {
     if (!notes) return;
+
     return emailjs.send(
         emailJsConfig.serviceId,
         emailJsConfig.templates.anotacoes,
         {
-            notes_content: notes,
-            sender_name: senderName,
-            reply_to: userEmail
+            message: notes,
+            email_to: senderEmail, // Geralmente envia para o próprio usuário
+            name: senderName,
+            email: senderEmail
         }
     );
 };
