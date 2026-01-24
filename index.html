@@ -2994,12 +2994,11 @@ function renderColaboradores() {
             }
         };
         
-          const main = () => {
+        const main = () => {
             try {
-                // O firebaseConfig já está sendo importado do js/config.js, então não precisa dele aqui
+                // Inicializa o Firebase com a config que vem do js/config.js
                 const app = initializeApp(firebaseConfig);
                 
-                // Inicialização do App Check para segurança
                 const appCheck = initializeAppCheck(app, {
                   provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
                   isTokenAutoRefreshEnabled: true
@@ -3010,21 +3009,15 @@ function renderColaboradores() {
                 // Persistência Offline
                 try {
                     enableIndexedDbPersistence(db).catch((err) => {
-                        if (err.code == 'failed-precondition') {
-                            console.warn('Persistência falhou: Múltiplas abas abertas.');
-                        } else if (err.code == 'unimplemented') {
-                            console.warn('Persistência falhou: Navegador não suportado.');
-                        }
+                        console.warn('Persistência offline falhou');
                     });
                     console.log("Persistência Offline Ativada!");
-                } catch (e) {
-                    console.log("Erro ao ativar persistência:", e);
-                }
+                } catch (e) { console.log(e); }
 
                 auth = getAuth(app);
                 
-                // --- ATENÇÃO: A LINHA handleAuthState(); FOI REMOVIDA DAQUI ---
-                
+                // REMOVA A LINHA "handleAuthState();" DAQUI!
+
             } catch (error) {
                 console.error("Erro ao inicializar o Firebase: ", error);
                 if(loadingText) loadingText.textContent = 'Erro na configuração do Firebase.';
@@ -4731,5 +4724,6 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
