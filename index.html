@@ -2589,88 +2589,99 @@ function renderColaboradores() {
         });
         // --- FIM DA LÓGICA DE COLABORADORES ---
 
-        const loadPauta = async (pautaId, pautaName, pautaType) => {
-            currentPautaId = pautaId;
-            document.getElementById('pauta-title').textContent = pautaName;
+const loadPauta = async (pautaId, pautaName, pautaType) => {
+    currentPautaId = pautaId;
+    document.getElementById('pauta-title').textContent = pautaName;
 
-            // Salva a pauta atual no localStorage
-            localStorage.setItem('lastPautaId', pautaId);
-            localStorage.setItem('lastPautaType', pautaType);
+    // Salva a pauta atual no localStorage
+    localStorage.setItem('lastPautaId', pautaId);
+    localStorage.setItem('lastPautaType', pautaType);
 
-            const tabAgendamento = document.getElementById('tab-agendamento');
-            const tabAvulso = document.getElementById('tab-avulso');
-            const pautaColumn = document.getElementById('pauta-column');
-            const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-            const mainContent = document.getElementById('main-content');
+    // Referências aos elementos (Lógica original)
+    const tabAgendamento = document.getElementById('tab-agendamento');
+    const tabAvulso = document.getElementById('tab-avulso');
+    const pautaColumn = document.getElementById('pauta-column');
+    const emAtendimentoColumn = document.getElementById('em-atendimento-column');
+    const mainContent = document.getElementById('main-content');
 
-            const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
-            if (pautaDoc.exists()) {
-                const pautaData = pautaDoc.data();
+    const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
+    if (pautaDoc.exists()) {
+        const pautaData = pautaDoc.data();
 
-                const creationDate = pautaData.createdAt ? new Date(pautaData.createdAt) : new Date();
-                const expirationDate = new Date(creationDate);
-                expirationDate.setDate(creationDate.getDate() + 7);
-                if (new Date() > expirationDate) {
-                    showNotification("Pauta inacessível pois cumpriu seu prazo.", "error");
-                    return;
-                }
+        // Lógica LGPD: Verificação de expiração (Original)
+        const creationDate = pautaData.createdAt ? new Date(pautaData.createdAt) : new Date();
+        const expirationDate = new Date(creationDate);
+        expirationDate.setDate(creationDate.getDate() + 7);
+        if (new Date() > expirationDate) {
+            showNotification("Pauta inacessível pois cumpriu seu prazo.", "error");
+            return;
+        }
 
-                currentPautaData = pautaData;
-                currentPautaOwnerId = pautaData.owner;
-                isPautaClosed = pautaData.isClosed || false;
-                
-                const ordem = currentPautaData.ordemAtendimento || 'padrao';
-                document.getElementById('logic-explanation-padrao').classList.toggle('hidden', ordem !== 'padrao');
-                document.getElementById('logic-explanation-chegada').classList.toggle('hidden', ordem !== 'chegada');
-                document.getElementById('order-explanation-title').textContent = ordem === 'padrao' ? 'Entenda a Ordem de Atendimento Padrão' : 'Entenda a Ordem de Chegada';
-                document.getElementById('toggle-logic-btn-padrao').addEventListener('click', (e) => {
-                    const explanationDiv = document.getElementById('logic-explanation-padrao-content');
-                    const isHidden = explanationDiv.classList.toggle('hidden');
-                    e.target.textContent = isHidden ? 'Por que esta ordem é justa? (Clique para expandir)' : 'Ocultar explicação';
-                });
+        currentPautaData = pautaData;
+        currentPautaOwnerId = pautaData.owner;
+        isPautaClosed = pautaData.isClosed || false;
+        
+        // Lógica de Explicação (Original)
+        const ordem = currentPautaData.ordemAtendimento || 'padrao';
+        const logicPadrao = document.getElementById('logic-explanation-padrao');
+        const logicChegada = document.getElementById('logic-explanation-chegada');
+        if(logicPadrao) logicPadrao.classList.toggle('hidden', ordem !== 'padrao');
+        if(logicChegada) logicChegada.classList.toggle('hidden', ordem !== 'chegada');
+        
+        const orderTitle = document.getElementById('order-explanation-title');
+        if(orderTitle) orderTitle.textContent = ordem === 'padrao' ? 'Entenda a Ordem de Atendimento Padrão' : 'Entenda a Ordem de Chegada';
+        
+        // CORREÇÃO: Usando a função do arquivo js/ui.js
+        togglePautaLockUI(isPautaClosed, currentPautaOwnerId, auth.currentUser?.uid);
 
-                togglePautaLock(isPautaClosed);
+        const btnEditName = document.getElementById('edit-pauta-name-btn');
+        if(btnEditName) {
+            if (pautaData.owner === auth.currentUser.uid) btnEditName.classList.remove('hidden');
+            else btnEditName.classList.add('hidden');
+        }
 
-                if (pautaData.owner === auth.currentUser.uid) {
-                    document.getElementById('edit-pauta-name-btn').classList.remove('hidden');
-                } else {
-                    document.getElementById('edit-pauta-name-btn').classList.add('hidden');
-                }
+        // LÓGICA DE LAYOUT DINÂMICO (Original)
+        if (pautaData.useDelegationFlow) {
+            if(emAtendimentoColumn) emAtendimentoColumn.classList.remove('hidden');
+            if(mainContent) { mainContent.classList.remove('lg:grid-cols-3'); mainContent.classList.add('lg:grid-cols-4'); }
+        } else {
+            if(emAtendimentoColumn) emAtendimentoColumn.classList.add('hidden');
+            if(mainContent) { mainContent.classList.remove('lg:grid-cols-4'); mainContent.classList.add('lg:grid-cols-3'); }
+        }
+    }
 
-                // LÓGICA DE LAYOUT DINÂMICO DOS CARDS
-                if (pautaData.useDelegationFlow) {
-                    emAtendimentoColumn.classList.remove('hidden');
-                    mainContent.classList.remove('lg:grid-cols-3');
-                    mainContent.classList.add('lg:grid-cols-4');
-                } else {
-                    emAtendimentoColumn.classList.add('hidden');
-                    mainContent.classList.remove('lg:grid-cols-4');
-                    mainContent.classList.add('lg:grid-cols-3');
-                }
-
-            }
-             if (pautaType === 'agendado') {
-                 tabAgendamento.classList.remove('hidden');
-                 tabAvulso.classList.add('hidden');
-                 pautaColumn.classList.remove('hidden');
-                 switchTab('agendamento');
-            } else if (pautaType === 'avulso') {
-                 tabAvulso.classList.remove('hidden');
-                 tabAgendamento.classList.add('hidden');
-                 pautaColumn.classList.add('hidden');
-                 switchTab('avulso');
-            } else {
-                tabAgendamento.classList.remove('hidden');
-                tabAvulso.classList.remove('hidden');
-                pautaColumn.classList.remove('hidden');
-                switchTab('agendamento');
-            }
-
-            setupRealtimeListener(pautaId);
-            setupCollaboratorsListener(pautaId); // Inicia o listener para colaboradores
-            showScreen('app');
-        };
-
+        // LÓGICA DE VISIBILIDADE POR TIPO (Original)
+        if (pautaType === 'agendado') {
+            if(tabAgendamento) tabAgendamento.classList.remove('hidden');
+            if(tabAvulso) tabAvulso.classList.add('hidden');
+            if(pautaColumn) pautaColumn.classList.remove('hidden');
+            switchTabUI('agendamento'); // Chama a lógica do js/ui.js
+        } else if (pautaType === 'avulso') {
+            if(tabAvulso) tabAvulso.classList.remove('hidden');
+            if(tabAgendamento) tabAgendamento.classList.add('hidden');
+            if(pautaColumn) pautaColumn.classList.add('hidden');
+            switchTabUI('avulso'); // Chama a lógica do js/ui.js
+        } else {
+            if(tabAgendamento) tabAgendamento.classList.remove('hidden');
+            if(tabAvulso) tabAvulso.classList.remove('hidden');
+            if(pautaColumn) pautaColumn.classList.remove('hidden');
+            switchTabUI('agendamento');
+        }
+    
+        // CORREÇÃO: Usando os Listeners dos arquivos externos pauta.js e colaboradores.js
+        setupAttendancesListener(db, pautaId, (dados) => {
+            allAssisted = dados;
+            renderAssistedList(); // Chama sua função que desenha os cards
+        });
+    
+        setupCollaboratorsListener(db, pautaId, (equipe) => {
+            colaboradores = equipe;
+            renderColaboradores(); // Certifique-se que essa função existe no seu script
+        });
+    
+        showScreen('app'); // Chama a troca de tela do js/ui.js
+    };
+        
         const deletePauta = async (pautaId) => {
             try {
                 await deleteDoc(doc(db, "pautas", pautaId));
@@ -4723,3 +4734,4 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
