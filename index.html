@@ -2994,8 +2994,9 @@ function renderColaboradores() {
             }
         };
         
-        const main = () => {
+          const main = () => {
             try {
+                // O firebaseConfig já está sendo importado do js/config.js, então não precisa dele aqui
                 const app = initializeApp(firebaseConfig);
                 
                 // Inicialização do App Check para segurança
@@ -3006,7 +3007,7 @@ function renderColaboradores() {
 
                 db = getFirestore(app);
 
-                // --- INÍCIO DO CÓDIGO OFFLINE ---
+                // Persistência Offline
                 try {
                     enableIndexedDbPersistence(db).catch((err) => {
                         if (err.code == 'failed-precondition') {
@@ -3020,24 +3021,10 @@ function renderColaboradores() {
                     console.log("Erro ao ativar persistência:", e);
                 }
 
-                // Monitores de Conexão (Para mostrar a barra vermelha)
-                window.addEventListener('offline', () => {
-                    const indicator = document.getElementById('offline-indicator');
-                    if(indicator) indicator.classList.remove('hidden');
-                });
-
-                window.addEventListener('online', () => {
-                    const indicator = document.getElementById('offline-indicator');
-                    if(indicator) indicator.classList.add('hidden');
-                    // Tenta exibir notificação se a função existir
-                    if (typeof showNotification === 'function') {
-                        showNotification("Conexão restabelecida! Sincronizando...", "success");
-                    }
-                });
-                // --- FIM DO CÓDIGO OFFLINE ---
-
                 auth = getAuth(app);
-                handleAuthState();
+                
+                // --- ATENÇÃO: A LINHA handleAuthState(); FOI REMOVIDA DAQUI ---
+                
             } catch (error) {
                 console.error("Erro ao inicializar o Firebase: ", error);
                 if(loadingText) loadingText.textContent = 'Erro na configuração do Firebase.';
@@ -4744,4 +4731,5 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
