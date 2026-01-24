@@ -1310,6 +1310,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { firebaseConfig, emailJsConfig } from './js/config.js';
         import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
         import { subjectTree, flatSubjects } from './js/assuntos.js';
+        import { getChecklistHTML } from './js/checklist.js';
+        import { setupDetailsModal, openDetailsModal } from './detalhes.js';
+
 
         
         // Inicialização do EmailJS usando o novo arquivo de config
@@ -1578,7 +1581,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         
         // Importando as funções do novo módulo de detalhes
         import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
-        import { setupDetailsModal, openDetailsModal } from './detalhes.js';
+        //import { setupDetailsModal, openDetailsModal } from './detalhes.js';
         import { renderStatisticsModal } from './estatisticas.js'
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -3149,7 +3152,7 @@ function renderColaboradores() {
         document.addEventListener('DOMContentLoaded', () => {
             main();
             setupModalClosers();
-            setupDetailsModal({ db, getUpdatePayload, showNotification }); // <--- ADICIONE AQUI
+            setupDetailsModal({ db,getChecklistHTML, getUpdatePayload, showNotification }); // <--- ADICIONE AQUI
 
             const actionsToggle = document.getElementById('actions-toggle');
             const actionsPanel = document.getElementById('actions-panel');
@@ -4602,88 +4605,11 @@ function renderColaboradores() {
                 }
             });
 
-            const actionSelectionView = document.getElementById('document-action-selection');
-            const checklistView = document.getElementById('document-checklist-view');
-            const checklistContainer = document.getElementById('checklist-container');
-            const checklistTitle = document.getElementById('checklist-title');
-
-            actionSelectionView.addEventListener('click', (e) => {
-                const actionButton = e.target.closest('button[data-action]');
-                if (!actionButton) return;
-
-                const actionKey = actionButton.dataset.action;
-                currentChecklistAction = actionKey;
-                const data = documentsData[actionKey];
-                const assisted = allAssisted.find(a => a.id === assistedIdToHandle);
-                const savedChecklist = assisted?.documentChecklist;
-
-                checklistTitle.textContent = data.title;
-                checklistContainer.innerHTML = '';
-
-                data.sections.forEach((section, sectionIndex) => {
-                    const sectionDiv = document.createElement('div');
-                    const sectionTitleEl = document.createElement('h4');
-                    sectionTitleEl.className = 'font-bold text-md text-gray-700 mb-2 mt-3 border-b pb-1';
-                    sectionTitleEl.textContent = section.title;
-                    sectionDiv.appendChild(sectionTitleEl);
-
-                    const list = document.createElement('ul');
-                    list.className = 'space-y-2';
-                    section.docs.forEach((docText, docIndex) => {
-                        const listItem = document.createElement('li');
-                        const label = document.createElement('label');
-                        label.className = 'flex items-center text-gray-800 cursor-pointer';
-                        const checkbox = document.createElement('input');
-                        checkbox.type = 'checkbox';
-                        const checkboxId = `doc-${actionKey}-${sectionIndex}-${docIndex}`;
-                        checkbox.id = checkboxId;
-                        checkbox.className = 'h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500 mr-3';
-                        
-                        if(savedChecklist && savedChecklist.action === actionKey && savedChecklist.checkedIds?.includes(checkboxId)){
-                            checkbox.checked = true;
-                        }
-
-                        label.appendChild(checkbox);
-                        label.appendChild(document.createTextNode(docText));
-                        listItem.appendChild(label);
-                        list.appendChild(listItem);
-                    });
-                    sectionDiv.appendChild(list);
-                    checklistContainer.appendChild(sectionDiv);
-                });
-
                 actionSelectionView.classList.add('hidden');
                 checklistView.classList.remove('hidden');
                 checklistView.classList.add('flex');
             });
 
-            document.getElementById('back-to-action-selection-btn').addEventListener('click', () => {
-                checklistView.classList.add('hidden');
-                checklistView.classList.remove('flex');
-                actionSelectionView.classList.remove('hidden');
-            });
-
-            document.getElementById('save-checklist-btn').addEventListener('click', async () => {
-                if (!assistedIdToHandle || !currentChecklistAction) return;
-
-                const checkedCheckboxes = checklistContainer.querySelectorAll('input[type="checkbox"]:checked');
-                const checkedIds = Array.from(checkedCheckboxes).map(cb => cb.id);
-
-                const checklistData = {
-                    action: currentChecklistAction,
-                    checkedIds: checkedIds
-                };
-
-                try {
-                    const docRef = doc(db, "pautas", currentPautaId, "attendances", assistedIdToHandle);
-                    await updateDoc(docRef, getUpdatePayload({ documentChecklist: checklistData }));
-                    showNotification("Checklist salvo com sucesso!", "success");
-                    document.getElementById('documents-modal').classList.add('hidden');
-                } catch (error) {
-                    console.error("Erro ao salvar o checklist: ", error);
-                    showNotification("Erro ao salvar o checklist.", "error");
-                }
-            });
 
             document.getElementById('checklist-search').addEventListener('input', (e) => {
                 const searchTerm = normalizeText(e.target.value);
@@ -4826,3 +4752,4 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
