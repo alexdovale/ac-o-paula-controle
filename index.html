@@ -1310,7 +1310,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { firebaseConfig, emailJsConfig } from './js/config.js';
         import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
         import { subjectTree, flatSubjects } from './js/assuntos.js';
-
+        import { setupAttendancesListener, updateAttendanceStatus, deleteAttendance, moveInQueueLogic, saveImportedPauta } from './js/pauta.js';
         
         // Inicialização do EmailJS usando o novo arquivo de config
         emailjs.init(emailJsConfig.publicKey);
@@ -1630,63 +1630,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         
         // --- LÓGICA DE MOVIMENTAÇÃO MANUAL (Setas e Topo) ---
         // Definimos no objeto 'window' para que o HTML consiga enxergar a função
-        window.moveInQueue = async (id, direction) => {
-            if (isPautaClosed) {
-                showNotification("A pauta está fechada.", "error");
-                return;
-            }
-        
-            const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-            
-            // 1. Pegamos a lista atual de quem está aguardando, já ordenada corretamente
-            let list = allAssisted
-                .filter(a => a.status === 'aguardando' && a.type === currentMode)
-                .sort((a, b) => {
-                    if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-                    if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-                    const orderA = a.manualIndex !== undefined ? a.manualIndex : (a.createdAt || 0);
-                    const orderB = b.manualIndex !== undefined ? b.manualIndex : (b.createdAt || 0);
-                    return orderA - orderB;
-                });
-        
-            const currentIndex = list.findIndex(item => item.id === id);
-            if (currentIndex === -1) return;
-        
-            // 2. Criamos uma cópia para manipular
-            let newList = [...list];
-        
-            if (direction === 'up' && currentIndex > 0) {
-                // Troca com o de cima
-                [newList[currentIndex - 1], newList[currentIndex]] = [newList[currentIndex], newList[currentIndex - 1]];
-            } else if (direction === 'down' && currentIndex < newList.length - 1) {
-                // Troca com o de baixo
-                [newList[currentIndex], newList[currentIndex + 1]] = [newList[currentIndex + 1], newList[currentIndex]];
-            } else if (direction === 'top') {
-                // Remove da posição atual e coloca no índice 0
-                const [movedItem] = newList.splice(currentIndex, 1);
-                newList.unshift(movedItem);
-            }
-        
-            // 3. Salvamos a nova ordem no Firebase usando Batch (Lote)
-            const batch = writeBatch(db); // writeBatch deve estar importado do firestore
-            newList.forEach((item, index) => {
-                const docRef = doc(db, "pautas", currentPautaId, "attendances", item.id);
-                batch.update(docRef, { 
-                    manualIndex: index,
-                    lastActionBy: currentUserName,
-                    lastActionTimestamp: new Date().toISOString()
-                });
-            });
-        
-            try {
-                await batch.commit();
-                // O onSnapshot cuidará de atualizar a tela automaticamente
-            } catch (error) {
-                console.error("Erro ao reordenar fila:", error);
-                showNotification("Erro ao atualizar ordem.", "error");
-            }
-        };
-
+    
         
         const loadingContainer = document.getElementById('loading-container');
         const loginContainer = document.getElementById('login-container');
@@ -2262,17 +2206,7 @@ render(atendidosList, atendidos, a => {
             // ADICIONE ESTA LINHA AQUI:
             setupManualSort()
         };
-
-
-        const setupRealtimeListener = (pautaId) => {
-            if (unsubscribeFromAttendances) unsubscribeFromAttendances();
-            const attendanceCollectionRef = collection(db, "pautas", pautaId, "attendances");
-            unsubscribeFromAttendances = onSnapshot(attendanceCollectionRef, (snapshot) => {
-                allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderAssistedList();
-            }, (error) => console.error("Erro no listener do Firestore: ", error));
-        };
-
+ 
         // --- INÍCIO DA LÓGICA DE GERENCIAR MEMBROS DA PAUTA (COMPARTILHAR) ---
         const membersModal = document.getElementById('members-modal');
         const inviteEmailInput = document.getElementById('invite-email-input');
@@ -3638,6 +3572,9 @@ function renderColaboradores() {
                 document.getElementById(id).addEventListener('input', renderAssistedList);
             });
 
+
+
+            // Novo Listener de Importação CSV (Modular)
             document.getElementById('file-upload').addEventListener('change', async (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -3645,73 +3582,33 @@ function renderColaboradores() {
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     const text = e.target.result;
-                    let lines = text.split(/\r\n|\n|\r/).filter(line => line.trim() !== '');
-                    if (lines.length === 0) {
-                        showNotification("Arquivo vazio ou em formato inválido.", "error");
-                        return;
-                    }
+                    const lines = text.split(/\r\n|\n|\r/).filter(line => line.trim() !== '');
+                    
+                    // Lógica de processamento de linhas (simplificada aqui)
+                    const dataToSave = lines.map(line => {
+                        const parts = line.split(';').map(item => item.trim().replace(/^"|"$/g, ''));
+                        return {
+                            name: parts[0],
+                            scheduledTime: parts[1],
+                            subject: parts[2],
+                            cpf: parts[3] || null
+                        };
+                    }).filter(item => item.name && /^\d{1,2}:\d{2}$/.test(item.scheduledTime));
 
-                   const firstLineParts = lines[0].split(';').map(item => item.trim().replace(/^"|"$/g, ''));
-                        if (firstLineParts.length >= 3) {
-                            const potentialTime = firstLineParts[1].trim();
-                            // Verifica se o segundo campo (índice 1) da primeira linha NÃO é um horário válido (HH:MM)
-                            if (!/^\d{1,2}:\d{2}$/.test(potentialTime)) {
-                                lines.shift(); // Se não for horário, remove a primeira linha (considerando-a o cabeçalho)
-                            }
-                        }
-
-                    if (lines.length === 0) {
-                        showNotification("O arquivo CSV contém apenas um cabeçalho ou está vazio.", "error");
-                        return;
-                    }
-
+                    // CHAMA A FUNÇÃO DO ARQUIVO pauta.js
                     try {
-                        const batch = writeBatch(db);
-                        const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
-                        let processedCount = 0;
-
-                        lines.forEach(line => {
-                            const parts = line.split(';').map(item => item.trim().replace(/^"|"$/g, ''));
-                             if (parts.length >= 3) {
-                                 const name = parts[0];
-                                 const scheduledTime = parts[1];
-                                 const subject = parts[2];
-                                 const cpf = parts.length > 3 ? parts[3].replace(/^"|"$/g, '') : '';
-
-                                 if (name && subject && scheduledTime && /^\d{1,2}:\d{2}$/.test(scheduledTime)) {
-                                     const newDocRef = doc(collectionRef);
-                                     batch.set(newDocRef, getUpdatePayload({
-                                         name,
-                                         cpf: cpf || null,
-                                         subject,
-                                         scheduledTime,
-                                         status: 'pauta',
-                                         type: 'agendamento',
-                                         createdAt: new Date().toISOString(),
-                                         isConfirmed: false, // Novo campo
-                                         confirmationDetails: null // Novo campo
-                                     }));
-                                     processedCount++;
-                                 }
-                             }
-                        });
-
-                        if (processedCount > 0) {
-                            await batch.commit();
-                            const skippedCount = lines.length - processedCount;
-                            showNotification(`${processedCount} registros adicionados.` + (skippedCount > 0 ? ` ${skippedCount} linhas foram ignoradas.` : ''));
-                        } else {
-                            showNotification("Nenhum registro válido encontrado no arquivo. Verifique o formato (Nome;HH:MM;Assunto;CPF).", "error");
-                        }
+                        await saveImportedPauta(db, currentPautaId, dataToSave, currentUserName);
+                        showNotification(`${dataToSave.length} registros importados!`);
                     } catch (err) {
-                        console.error("Erro ao carregar pauta:", err);
-                        showNotification("Erro ao processar o arquivo.", "error");
+                        showNotification("Erro ao salvar dados importados.", "error");
                     }
                 };
                 reader.readAsText(file);
                 event.target.value = '';
             });
 
+
+            
             document.getElementById('download-pdf-btn').addEventListener('click', () => {
                 // Configuração para Paisagem ('l' de landscape) e formato A4
                 const { jsPDF } = window.jspdf;
@@ -4826,3 +4723,4 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
