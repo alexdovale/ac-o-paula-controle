@@ -2611,6 +2611,17 @@ function renderColaboradores() {
         }
         
         // PDF Download for modal's lis
+        // Relatório de Assistidos
+        document.getElementById('download-pdf-btn').addEventListener('click', () => {
+            const atendidos = allAssisted.filter(a => a.status === 'atendido');
+            generateAtendidosPDF(document.getElementById('pauta-title').textContent, atendidos);
+        });
+        
+        // PDF da Equipe
+        downloadCollaboratorsPdfBtnModal.addEventListener('click', () => {
+            generateCollaboratorsPDF(document.getElementById('pauta-title').textContent, colaboradores);
+        });
+
         
         // Clear list for modal's list
         clearCollaboratorsListBtnModal.addEventListener('click', () => {
@@ -4523,6 +4534,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
