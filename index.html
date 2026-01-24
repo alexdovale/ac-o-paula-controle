@@ -1312,6 +1312,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { subjectTree, flatSubjects } from './js/assuntos.js';
         import { getChecklistHTML } from './js/checklist.js';
         import { setupDetailsModal, openDetailsModal } from './detalhes.js';
+        import { parsePautaCSV } from './js/csvHandler.js';
+
 
 
         
@@ -3642,79 +3644,24 @@ function renderColaboradores() {
             });
 
             document.getElementById('file-upload').addEventListener('change', async (event) => {
-                const file = event.target.files[0];
+            const file = event.target.files[0];
                 if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = async (e) => {
-                    const text = e.target.result;
-                    let lines = text.split(/\r\n|\n|\r/).filter(line => line.trim() !== '');
-                    if (lines.length === 0) {
-                        showNotification("Arquivo vazio ou em formato inválido.", "error");
-                        return;
-                    }
-
-                   const firstLineParts = lines[0].split(';').map(item => item.trim().replace(/^"|"$/g, ''));
-                        if (firstLineParts.length >= 3) {
-                            const potentialTime = firstLineParts[1].trim();
-                            // Verifica se o segundo campo (índice 1) da primeira linha NÃO é um horário válido (HH:MM)
-                            if (!/^\d{1,2}:\d{2}$/.test(potentialTime)) {
-                                lines.shift(); // Se não for horário, remove a primeira linha (considerando-a o cabeçalho)
-                            }
-                        }
-
-                    if (lines.length === 0) {
-                        showNotification("O arquivo CSV contém apenas um cabeçalho ou está vazio.", "error");
-                        return;
-                    }
-
-                    try {
-                        const batch = writeBatch(db);
-                        const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
-                        let processedCount = 0;
-
-                        lines.forEach(line => {
-                            const parts = line.split(';').map(item => item.trim().replace(/^"|"$/g, ''));
-                             if (parts.length >= 3) {
-                                 const name = parts[0];
-                                 const scheduledTime = parts[1];
-                                 const subject = parts[2];
-                                 const cpf = parts.length > 3 ? parts[3].replace(/^"|"$/g, '') : '';
-
-                                 if (name && subject && scheduledTime && /^\d{1,2}:\d{2}$/.test(scheduledTime)) {
-                                     const newDocRef = doc(collectionRef);
-                                     batch.set(newDocRef, getUpdatePayload({
-                                         name,
-                                         cpf: cpf || null,
-                                         subject,
-                                         scheduledTime,
-                                         status: 'pauta',
-                                         type: 'agendamento',
-                                         createdAt: new Date().toISOString(),
-                                         isConfirmed: false, // Novo campo
-                                         confirmationDetails: null // Novo campo
-                                     }));
-                                     processedCount++;
-                                 }
-                             }
-                        });
-
-                        if (processedCount > 0) {
-                            await batch.commit();
-                            const skippedCount = lines.length - processedCount;
-                            showNotification(`${processedCount} registros adicionados.` + (skippedCount > 0 ? ` ${skippedCount} linhas foram ignoradas.` : ''));
-                        } else {
-                            showNotification("Nenhum registro válido encontrado no arquivo. Verifique o formato (Nome;HH:MM;Assunto;CPF).", "error");
-                        }
-                    } catch (err) {
-                        console.error("Erro ao carregar pauta:", err);
-                        showNotification("Erro ao processar o arquivo.", "error");
-                    }
-                };
-                reader.readAsText(file);
-                event.target.value = '';
-            });
-
+            
+                try {
+                    // 1. Processa o arquivo usando o módulo externo
+                    const assistidosValidados = await parsePautaCSV(file);
+                    
+                    // 2. Salva no banco de dados (usando a função do pauta.js que criamos antes)
+                    await saveImportedPauta(db, currentPautaId, assistidosValidados, currentUserName);
+                    
+                    showNotification(`${assistidosValidados.length} registros importados com sucesso!`);
+                } catch (error) {
+                    showNotification(error, "error");
+                } finally {
+                    event.target.value = ''; // Limpa o campo
+                }
+        });
+            
             document.getElementById('download-pdf-btn').addEventListener('click', () => {
                 // Configuração para Paisagem ('l' de landscape) e formato A4
                 const { jsPDF } = window.jspdf;
