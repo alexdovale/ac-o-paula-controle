@@ -1310,6 +1310,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { firebaseConfig, emailJsConfig } from './js/config.js';
         import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
         import { subjectTree, flatSubjects } from './js/assuntos.js';
+        import { handleLogin, handleRegister, handleLogout, handlePasswordReset } from './js/auth.js';
 
         
         // Inicialização do EmailJS usando o novo arquivo de config
@@ -2878,72 +2879,7 @@ function renderColaboradores() {
             });
         };
 
-        const handleAuthState = () => {
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            try {
-                // 1. Busca os dados do usuário no Firestore
-                const userDocRef = doc(db, "users", user.uid);
-                const userDoc = await getDoc(userDocRef);
-
-                if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    currentUserName = userData.name || user.email;
-
-                    // 2. Verifica se o usuário é Admin/Superadmin para mostrar o botão
-                    checkAdminStatus(userData);
-
-                    // 3. Verifica o Status de Aprovação
-                    if (userData.status === 'approved') {
-                        // USUÁRIO APROVADO: Prosseguir para o sistema
-                        const lastPautaId = localStorage.getItem('lastPautaId');
-                        const lastPautaType = localStorage.getItem('lastPautaType');
-
-                        if (lastPautaId && lastPautaType) {
-                            // Verifica se ele ainda é membro dessa pauta antes de carregar
-                            const pautaRef = doc(db, "pautas", lastPautaId);
-                            const pautaSnap = await getDoc(pautaRef);
-                            
-                            if (pautaSnap.exists() && pautaSnap.data().members.includes(user.uid)) {
-                                loadPauta(lastPautaId, pautaSnap.data().name, lastPautaType);
-                            } else {
-                                showPautaSelectionScreen(user.uid);
-                            }
-                        } else {
-                            showPautaSelectionScreen(user.uid);
-                        }
-                    } else {
-                        // USUÁRIO PENDENTE: Mostrar tela de aviso
-                        showScreen('loading');
-                        loadingText.innerHTML = `
-                            <div class="text-center">
-                                <p class="text-xl font-bold text-orange-600">Acesso Pendente</p>
-                                <p class="mt-2 text-gray-600">Olá, <b>${currentUserName}</b>!</p>
-                                <p class="text-sm text-gray-500">Sua conta foi criada, mas um administrador precisa aprová-la para você acessar o sistema.</p>
-                                <button onclick="signOut(auth)" class="mt-6 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Sair / Trocar de Conta</button>
-                            </div>
-                        `;
-                        // Esconde o spinner de carregamento para não confundir
-                        document.querySelector('.loader').style.display = 'none';
-                    }
-                } else {
-                    // Caso o documento do usuário não exista (erro raro de criação)
-                    showNotification("Erro ao localizar seu perfil. Tente cadastrar novamente.", "error");
-                    signOut(auth);
-                }
-            } catch (error) {
-                console.error("Erro ao verificar estado do usuário:", error);
-                showNotification("Erro de conexão com o servidor.", "error");
-            }
-        } else {
-            // USUÁRIO DESLOGADO: Mostrar tela de login
-            showScreen('login');
-            // Resetar estados do Admin caso estivessem visíveis
-            adminPanelBtn.classList.add('hidden');
-        }
-    });
-};
-
+        
         const showScreen = (screenName) => {
             loadingContainer.classList.toggle('hidden', screenName !== 'loading');
             loginContainer.classList.toggle('hidden', screenName !== 'login');
@@ -3367,70 +3303,8 @@ function renderColaboradores() {
                 loginForm.classList.add('hidden');
             });
 
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const email = document.getElementById('login-email').value;
-                const password = document.getElementById('login-password').value;
-                const errorDiv = document.getElementById('auth-error');
-                try {
-                    await signInWithEmailAndPassword(auth, email, password);
-                    errorDiv.classList.add('hidden');
-                } catch (error) {
-                    console.error("Login failed:", error);
-                    errorDiv.textContent = 'Email ou senha inválidos.';
-                    errorDiv.classList.remove('hidden');
-                }
-            });
 
-            registerForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const name = document.getElementById('register-name').value;
-                const email = document.getElementById('register-email').value;
-                const password = document.getElementById('register-password').value;
-                const errorDiv = document.getElementById('auth-error');
 
-                if (password.length < 6) {
-                    errorDiv.textContent = 'A senha deve ter pelo menos 6 caracteres.';
-                    errorDiv.classList.remove('hidden');
-                    return;
-                }
-
-                try {
-                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                    const user = userCredential.user;
-
-                    await setDoc(doc(db, "users", user.uid), {
-                        name: name,
-                        email: email,
-                        uid: user.uid,
-                        status: 'pending',
-                        role: 'admin',
-                        createdAt: new Date().toISOString()
-                    });
-
-                    errorDiv.classList.add('hidden');
-                    showNotification('Conta criada com sucesso! Agora você pode fazer o login.', 'success');
-                    loginTabBtn.click();
-
-                } catch (error) {
-                    console.error("Registration failed:", error);
-                    errorDiv.textContent = error.code === 'auth/email-already-in-use' ? 'Este email já está em uso.' : 'Ocorreu um erro ao criar a conta.';
-                    errorDiv.classList.remove('hidden');
-                }
-            });
-
-            document.getElementById('forgot-password-link').addEventListener('click', (e) => {
-                e.preventDefault();
-                const email = prompt("Por favor, digite seu email para redefinir a senha:");
-                if (email) {
-                    sendPasswordResetEmail(auth, email)
-                        .then(() => showNotification("Email de redefinição de senha enviado!", "success"))
-                        .catch((error) => {
-                            console.error("Password reset error:", error);
-                            showNotification("Erro ao enviar email. Verifique se o email está correto.", "error");
-                        });
-                }
-            });
 
             // --- LÓGICA DE SALAS PERSONALIZADAS ---
             const customRoomInput = document.getElementById('custom-room-input');
@@ -3625,12 +3499,7 @@ function renderColaboradores() {
             document.getElementById('tab-agendamento').addEventListener('click', () => switchTab('agendamento'));
             document.getElementById('tab-avulso').addEventListener('click', () => switchTab('avulso'));
 
-            const handleLogout = () => {
-                signOut(auth).catch(error => {
-                    console.error("Logout error", error);
-                    showNotification("Erro ao tentar sair.", "error");
-                });
-            };
+  
             document.getElementById('logout-btn-main').addEventListener('click', handleLogout);
             document.getElementById('logout-btn-app').addEventListener('click', handleLogout);
 
@@ -4711,6 +4580,55 @@ function renderColaboradores() {
                 
                 editSubjectInput.value = selectedText;
             });
+
+            // --- LIGAÇÕES DE AUTENTICAÇÃO (Módulo js/auth.js) ---
+        
+        // 1. Monitor de quem está logado ou pendente
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    const userSnap = await getDoc(doc(db, "users", user.uid));
+                    if (userSnap.exists() && userSnap.data().status === 'approved') {
+                        currentUserName = userSnap.data().name;
+                        const lastId = localStorage.getItem('lastPautaId');
+                        if (lastId) loadPauta(lastId, "Carregando...");
+                        else showScreen('pautaSelection');
+                    } else {
+                        showNotification("Aguardando aprovação do administrador.", "info");
+                        signOut(auth);
+                    }
+                } catch (e) { console.error(e); }
+            } else {
+                showScreen('login');
+            }
+        });
+        
+        // 2. Ação de Login
+        if (loginForm) {
+            loginForm.onsubmit = async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('login-email').value;
+                const pass = document.getElementById('login-password').value;
+                handleLogin(auth, email, pass).catch(() => {});
+            };
+        }
+        
+        // 3. Ação de Cadastro
+        if (registerForm) {
+            registerForm.onsubmit = async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('register-name').value;
+                const email = document.getElementById('register-email').value;
+                const pass = document.getElementById('register-password').value;
+                handleRegister(auth, db, name, email, pass);
+            };
+        }
+        
+        // 4. Botões de Sair (Logout)
+        const btnOutMain = document.getElementById('logout-btn-main');
+        const btnOutApp = document.getElementById('logout-btn-app');
+        if (btnOutMain) btnOutMain.onclick = () => handleLogout(auth);
+        if (btnOutApp) btnOutApp.onclick = () => handleLogout(auth);
     </script>
 
 <!-- Modal de Anotações -->
@@ -4826,3 +4744,4 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
