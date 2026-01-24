@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Gerenciamento de Pauta - SIGAP</title>
+    <title>Sistema de Gerenciamento de Pauta - SIGEP</title>
 
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
 
@@ -31,7 +31,7 @@
           replaysSessionSampleRate: 0.1, 
           replaysOnErrorSampleRate: 1.0, 
           environment: "production",
-          release: "sigap@1.0.0",
+          release: "sigep@1.0.0",
           
           // --- ADICIONE ESTA PARTE PARA O FEEDBACK VISUAL ---
           beforeSend(event, hint) {
@@ -1310,7 +1310,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { firebaseConfig, emailJsConfig } from './js/config.js';
         import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
         import { subjectTree, flatSubjects } from './js/assuntos.js';
-        import { showScreen, togglePautaLockUI, switchTabUI } from './js/ui.js';
 
         
         // Inicialização do EmailJS usando o novo arquivo de config
@@ -1803,6 +1802,63 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
              * @param {string | object} timeStamp - A string de data (ISO) ou objeto Timestamp do Firebase.
              * @returns {string} O horário formatado (HH:mm) ou 'N/A'.
              */
+        const togglePautaLock = (isClosed) => {
+            const isOwner = auth.currentUser?.uid === currentPautaOwnerId;
+            isPautaClosed = isClosed;
+
+            const buttonsToDisable = [
+                'form-agendamento', 'file-upload', 'add-assisted-btn',
+                'download-pdf-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento'
+            ];
+
+            buttonsToDisable.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    if (isClosed) {
+                        element.classList.add('pointer-events-none', 'opacity-50');
+                        element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = true);
+                    } else {
+                        element.classList.remove('pointer-events-none', 'opacity-50');
+                        element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = false);
+                    }
+                }
+            });
+
+            // Trecho corrigido na função togglePautaLock:
+
+            // Dentro da função togglePautaLock, após o bloco buttonsToDisable:
+
+            const actionPanelButtons = document.querySelectorAll('#actions-panel button');
+            
+            actionPanelButtons.forEach(btn => {
+                if (btn.id === 'reopen-pauta-btn') {
+                    // Se a pauta está fechada, o REABRIR é o único que deve estar ativo
+                    btn.disabled = false;
+                } else {
+                    // Todos os outros botões do menu Ações (Zerar, Fechar, Editar) ficam desativados
+                    btn.disabled = isClosed; 
+                }
+            });
+            const actionButtons = document.querySelectorAll('.check-in-btn, .delegate-finalization-btn, .attend-directly-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn, .toggle-confirmed-atendido, .toggle-confirmed-faltoso'); // Adicionado
+            actionButtons.forEach(btn => {
+                btn.disabled = isClosed;
+            });
+
+            if (isClosed) {
+                document.getElementById('closed-pauta-alert').classList.remove('hidden');
+                document.getElementById('close-pauta-btn').classList.add('hidden');
+                document.getElementById('reopen-pauta-btn').classList.remove('hidden');
+            } else {
+                document.getElementById('closed-pauta-alert').classList.add('hidden');
+                document.getElementById('close-pauta-btn').classList.remove('hidden');
+                document.getElementById('reopen-pauta-btn').classList.add('hidden');
+            }
+
+            if (!isOwner) {
+                document.getElementById('close-pauta-btn').classList.add('hidden');
+                document.getElementById('reopen-pauta-btn').classList.add('hidden');
+            }
+        };
 
       const createAguardandoCard = (a, index) => {
         const card = document.createElement('div');
@@ -2201,8 +2257,7 @@ render(atendidosList, atendidos, a => {
                 return card;
             });
 
-            togglePautaLockUI(isPautaClosed, currentPautaOwnerId, auth.currentUser?.uid);
-
+            togglePautaLock(isPautaClosed);
 
             // ADICIONE ESTA LINHA AQUI:
             setupManualSort()
@@ -2640,8 +2695,7 @@ function renderColaboradores() {
                     e.target.textContent = isHidden ? 'Por que esta ordem é justa? (Clique para expandir)' : 'Ocultar explicação';
                 });
 
-                togglePautaLockUI(isPautaClosed, currentPautaOwnerId, auth.currentUser?.uid);
-
+                togglePautaLock(isPautaClosed);
 
                 if (pautaData.owner === auth.currentUser.uid) {
                     document.getElementById('edit-pauta-name-btn').classList.remove('hidden');
@@ -2814,6 +2868,16 @@ function renderColaboradores() {
             showScreen('pautaSelection');
         };
 
+        const setupModalClosers = () => {
+            document.querySelectorAll('.fixed.inset-0').forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            });
+        };
+
         const handleAuthState = () => {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -2879,6 +2943,79 @@ function renderColaboradores() {
         }
     });
 };
+
+        const showScreen = (screenName) => {
+            loadingContainer.classList.toggle('hidden', screenName !== 'loading');
+            loginContainer.classList.toggle('hidden', screenName !== 'login');
+            pautaSelectionContainer.classList.toggle('hidden', screenName !== 'pautaSelection');
+            appContainer.classList.toggle('hidden', screenName !== 'app');
+        };
+
+        const switchTab = (tabName) => {
+            const tabAgendamento = document.getElementById('tab-agendamento');
+            const tabAvulso = document.getElementById('tab-avulso');
+            const isScheduledContainer = document.getElementById('is-scheduled-container');
+            const formTitle = document.getElementById('form-title');
+            const pautaColumn = document.getElementById('pauta-column');
+            const emAtendimentoColumn = document.getElementById('em-atendimento-column');
+            const formContainer = document.getElementById('form-agendamento');
+
+            formContainer.classList.remove('hidden');
+
+            if (tabName === 'agendamento') {
+                tabAgendamento.classList.add('tab-active');
+                tabAvulso.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700');
+                isScheduledContainer.classList.remove('hidden');
+                pautaColumn.classList.remove('hidden');
+                if (currentPautaData?.useDelegationFlow) {
+                    emAtendimentoColumn.classList.remove('hidden');
+                } else {
+                    emAtendimentoColumn.classList.add('hidden');
+                }
+                formTitle.textContent = "Adicionar Novo Agendamento";
+                document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
+                document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
+                document.getElementById('scheduled-time-wrapper').classList.add('hidden');
+                document.getElementById('arrival-time-wrapper').classList.add('hidden');
+                document.getElementById('manual-room-wrapper').classList.add('hidden'); // Ocultar seleção de sala manual
+            } else { // avulso
+                tabAvulso.classList.add('tab-active');
+                tabAgendamento.classList.remove('tab-active');
+                tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700');
+                isScheduledContainer.classList.add('hidden');
+                pautaColumn.classList.add('hidden');
+                 if (currentPautaData?.useDelegationFlow) {
+                    emAtendimentoColumn.classList.remove('hidden');
+                } else {
+                    emAtendimentoColumn.classList.add('hidden');
+                }
+                formTitle.textContent = "Adicionar Atendimento Avulso";
+
+                document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
+                document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
+                document.getElementById('scheduled-time-wrapper').classList.add('hidden');
+                document.getElementById('arrival-time-wrapper').classList.remove('hidden');
+                document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
+
+                // Lógica para mostrar/esconder o seletor de sala manual
+                const manualRoomWrapper = document.getElementById('manual-room-wrapper');
+                const manualRoomSelect = document.getElementById('manual-room-select');
+                
+                if (currentPautaData?.type === 'multisala' && currentPautaData.rooms) {
+                    manualRoomWrapper.classList.remove('hidden');
+                    manualRoomSelect.innerHTML = '';
+                    currentPautaData.rooms.forEach(room => {
+                        const opt = document.createElement('option');
+                        opt.value = room;
+                        opt.textContent = room;
+                        manualRoomSelect.appendChild(opt);
+                    });
+                } else {
+                    manualRoomWrapper.classList.add('hidden');
+                }
+            }
+            renderAssistedList();
+        };
 
 
         let sortableInstance = null;
@@ -3011,6 +3148,7 @@ function renderColaboradores() {
         };
         document.addEventListener('DOMContentLoaded', () => {
             main();
+            setupModalClosers();
             setupDetailsModal({ db, getUpdatePayload, showNotification }); // <--- ADICIONE AQUI
 
             const actionsToggle = document.getElementById('actions-toggle');
@@ -3484,17 +3622,8 @@ function renderColaboradores() {
                 }
             });
 
-            // Listener para aba Agendamento
-            document.getElementById('tab-agendamento').addEventListener('click', () => {
-                switchTabUI('agendamento', currentPautaData);
-                renderAssistedList(); 
-            });
-            
-            // Listener para aba Avulso
-            document.getElementById('tab-avulso').addEventListener('click', () => {
-                switchTabUI('avulso', currentPautaData);
-                renderAssistedList();
-            });
+            document.getElementById('tab-agendamento').addEventListener('click', () => switchTab('agendamento'));
+            document.getElementById('tab-avulso').addEventListener('click', () => switchTab('avulso'));
 
             const handleLogout = () => {
                 signOut(auth).catch(error => {
@@ -4697,4 +4826,3 @@ function renderColaboradores() {
   }
 </script>
 </html>
-
