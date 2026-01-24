@@ -1305,12 +1305,71 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     
 
     <script type="module">
+// 1. IMPORTAÇÕES (Firebase + Seus Arquivos)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
-        // --------------------------------------
-        import { firebaseConfig, emailJsConfig } from './js/config.js';
-        import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
-        import { subjectTree, flatSubjects } from './js/assuntos.js';
-        import { handleLogin, handleRegister, handleLogout, handlePasswordReset } from './js/auth.js';
+    import { firebaseConfig } from './js/config.js';
+    import { showNotification, escapeHTML } from './js/utils.js';
+    import { handleLogin, handleRegister, handleLogout } from './js/auth.js';
+    import { showScreen, togglePautaLockUI, switchTabUI } from './js/ui.js';
+
+    // 2. VARIÁVEIS GLOBAIS (Mantenha estas no Index por enquanto)
+    let db, auth;
+    let currentUserName = '';
+    let allAssisted = [];
+    let currentPautaId = null;
+    let currentPautaData = null;
+    let currentPautaOwnerId = null;
+    let isPautaClosed = false;
+
+    // 3. INICIALIZAÇÃO (A função main que você já tem)
+    const main = () => {
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            // Persistência Offline
+            enableIndexedDbPersistence(db).catch(err => console.error("Erro offline:", err.code));
+            console.log("Persistência Offline Ativada!");
+
+            // CHAMA O MONITOR DE AUTH ASSIM QUE O FIREBASE INICIAR
+            iniciarMonitorAuth();
+
+        } catch (error) {
+            console.error("Erro ao inicializar:", error);
+        }
+    };
+
+    // 4. MONITOR DE AUTH (O Coração do Sistema)
+    const iniciarMonitorAuth = () => {
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists() && userDoc.data().status === 'approved') {
+                    currentUserName = userDoc.data().name;
+                    
+                    // Se o usuário estiver aprovado, mostra as pautas
+                    const lastId = localStorage.getItem('lastPautaId');
+                    if (lastId) loadPauta(lastId, "Carregando...");
+                    else showScreen('pautaSelection');
+                    
+                } else {
+                    showNotification("Aguardando aprovação do admin.", "info");
+                    signOut(auth);
+                }
+            } else {
+                // Se não houver usuário, vai para a tela de login
+                showScreen('login');
+            }
+        });
+    };
+
+    // Inicializa tudo quando o documento carregar
+    document.addEventListener('DOMContentLoaded', main);
 
         
         // Inicialização do EmailJS usando o novo arquivo de config
@@ -4724,6 +4783,7 @@ function renderColaboradores() {
   }
 </script>
 </html>
+
 
 
 
