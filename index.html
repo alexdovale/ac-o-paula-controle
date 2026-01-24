@@ -1305,71 +1305,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     
 
     <script type="module">
-// 1. IMPORTAÇÕES (Firebase + Seus Arquivos)
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-    import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
-    import { firebaseConfig } from './js/config.js';
-    import { showNotification, escapeHTML } from './js/utils.js';
-    import { handleLogin, handleRegister, handleLogout } from './js/auth.js';
-    import { showScreen, togglePautaLockUI, switchTabUI } from './js/ui.js';
-
-    // 2. VARIÁVEIS GLOBAIS (Mantenha estas no Index por enquanto)
-    let db, auth;
-    let currentUserName = '';
-    let allAssisted = [];
-    let currentPautaId = null;
-    let currentPautaData = null;
-    let currentPautaOwnerId = null;
-    let isPautaClosed = false;
-
-    // 3. INICIALIZAÇÃO (A função main que você já tem)
-    const main = () => {
-        try {
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-
-            // Persistência Offline
-            enableIndexedDbPersistence(db).catch(err => console.error("Erro offline:", err.code));
-            console.log("Persistência Offline Ativada!");
-
-            // CHAMA O MONITOR DE AUTH ASSIM QUE O FIREBASE INICIAR
-            iniciarMonitorAuth();
-
-        } catch (error) {
-            console.error("Erro ao inicializar:", error);
-        }
-    };
-
-    // 4. MONITOR DE AUTH (O Coração do Sistema)
-    const iniciarMonitorAuth = () => {
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-                if (userDoc.exists() && userDoc.data().status === 'approved') {
-                    currentUserName = userDoc.data().name;
-                    
-                    // Se o usuário estiver aprovado, mostra as pautas
-                    const lastId = localStorage.getItem('lastPautaId');
-                    if (lastId) loadPauta(lastId, "Carregando...");
-                    else showScreen('pautaSelection');
-                    
-                } else {
-                    showNotification("Aguardando aprovação do admin.", "info");
-                    signOut(auth);
-                }
-            } else {
-                // Se não houver usuário, vai para a tela de login
-                showScreen('login');
-            }
-        });
-    };
-
-    // Inicializa tudo quando o documento carregar
-    document.addEventListener('DOMContentLoaded', main);
+        // --------------------------------------
+        import { firebaseConfig, emailJsConfig } from './js/config.js';
+        import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
+        import { subjectTree, flatSubjects } from './js/assuntos.js';
+        import { showScreen, togglePautaLockUI, switchTabUI } from './js/ui.js';
 
         
         // Inicialização do EmailJS usando o novo arquivo de config
@@ -1862,63 +1803,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
              * @param {string | object} timeStamp - A string de data (ISO) ou objeto Timestamp do Firebase.
              * @returns {string} O horário formatado (HH:mm) ou 'N/A'.
              */
-        const togglePautaLock = (isClosed) => {
-            const isOwner = auth.currentUser?.uid === currentPautaOwnerId;
-            isPautaClosed = isClosed;
-
-            const buttonsToDisable = [
-                'form-agendamento', 'file-upload', 'add-assisted-btn',
-                'download-pdf-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento'
-            ];
-
-            buttonsToDisable.forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    if (isClosed) {
-                        element.classList.add('pointer-events-none', 'opacity-50');
-                        element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = true);
-                    } else {
-                        element.classList.remove('pointer-events-none', 'opacity-50');
-                        element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = false);
-                    }
-                }
-            });
-
-            // Trecho corrigido na função togglePautaLock:
-
-            // Dentro da função togglePautaLock, após o bloco buttonsToDisable:
-
-            const actionPanelButtons = document.querySelectorAll('#actions-panel button');
-            
-            actionPanelButtons.forEach(btn => {
-                if (btn.id === 'reopen-pauta-btn') {
-                    // Se a pauta está fechada, o REABRIR é o único que deve estar ativo
-                    btn.disabled = false;
-                } else {
-                    // Todos os outros botões do menu Ações (Zerar, Fechar, Editar) ficam desativados
-                    btn.disabled = isClosed; 
-                }
-            });
-            const actionButtons = document.querySelectorAll('.check-in-btn, .delegate-finalization-btn, .attend-directly-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn, .toggle-confirmed-atendido, .toggle-confirmed-faltoso'); // Adicionado
-            actionButtons.forEach(btn => {
-                btn.disabled = isClosed;
-            });
-
-            if (isClosed) {
-                document.getElementById('closed-pauta-alert').classList.remove('hidden');
-                document.getElementById('close-pauta-btn').classList.add('hidden');
-                document.getElementById('reopen-pauta-btn').classList.remove('hidden');
-            } else {
-                document.getElementById('closed-pauta-alert').classList.add('hidden');
-                document.getElementById('close-pauta-btn').classList.remove('hidden');
-                document.getElementById('reopen-pauta-btn').classList.add('hidden');
-            }
-
-            if (!isOwner) {
-                document.getElementById('close-pauta-btn').classList.add('hidden');
-                document.getElementById('reopen-pauta-btn').classList.add('hidden');
-            }
-        };
 
       const createAguardandoCard = (a, index) => {
         const card = document.createElement('div');
@@ -2317,7 +2201,8 @@ render(atendidosList, atendidos, a => {
                 return card;
             });
 
-            togglePautaLock(isPautaClosed);
+            togglePautaLockUI(isPautaClosed, currentPautaOwnerId, auth.currentUser?.uid);
+
 
             // ADICIONE ESTA LINHA AQUI:
             setupManualSort()
@@ -2755,7 +2640,8 @@ function renderColaboradores() {
                     e.target.textContent = isHidden ? 'Por que esta ordem é justa? (Clique para expandir)' : 'Ocultar explicação';
                 });
 
-                togglePautaLock(isPautaClosed);
+                togglePautaLockUI(isPautaClosed, currentPautaOwnerId, auth.currentUser?.uid);
+
 
                 if (pautaData.owner === auth.currentUser.uid) {
                     document.getElementById('edit-pauta-name-btn').classList.remove('hidden');
@@ -2928,89 +2814,71 @@ function renderColaboradores() {
             showScreen('pautaSelection');
         };
 
-        const setupModalClosers = () => {
-            document.querySelectorAll('.fixed.inset-0').forEach(modal => {
-                modal.addEventListener('click', (e) => {
-                    if (e.target === modal) {
-                        modal.classList.add('hidden');
+        const handleAuthState = () => {
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            try {
+                // 1. Busca os dados do usuário no Firestore
+                const userDocRef = doc(db, "users", user.uid);
+                const userDoc = await getDoc(userDocRef);
+
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    currentUserName = userData.name || user.email;
+
+                    // 2. Verifica se o usuário é Admin/Superadmin para mostrar o botão
+                    checkAdminStatus(userData);
+
+                    // 3. Verifica o Status de Aprovação
+                    if (userData.status === 'approved') {
+                        // USUÁRIO APROVADO: Prosseguir para o sistema
+                        const lastPautaId = localStorage.getItem('lastPautaId');
+                        const lastPautaType = localStorage.getItem('lastPautaType');
+
+                        if (lastPautaId && lastPautaType) {
+                            // Verifica se ele ainda é membro dessa pauta antes de carregar
+                            const pautaRef = doc(db, "pautas", lastPautaId);
+                            const pautaSnap = await getDoc(pautaRef);
+                            
+                            if (pautaSnap.exists() && pautaSnap.data().members.includes(user.uid)) {
+                                loadPauta(lastPautaId, pautaSnap.data().name, lastPautaType);
+                            } else {
+                                showPautaSelectionScreen(user.uid);
+                            }
+                        } else {
+                            showPautaSelectionScreen(user.uid);
+                        }
+                    } else {
+                        // USUÁRIO PENDENTE: Mostrar tela de aviso
+                        showScreen('loading');
+                        loadingText.innerHTML = `
+                            <div class="text-center">
+                                <p class="text-xl font-bold text-orange-600">Acesso Pendente</p>
+                                <p class="mt-2 text-gray-600">Olá, <b>${currentUserName}</b>!</p>
+                                <p class="text-sm text-gray-500">Sua conta foi criada, mas um administrador precisa aprová-la para você acessar o sistema.</p>
+                                <button onclick="signOut(auth)" class="mt-6 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Sair / Trocar de Conta</button>
+                            </div>
+                        `;
+                        // Esconde o spinner de carregamento para não confundir
+                        document.querySelector('.loader').style.display = 'none';
                     }
-                });
-            });
-        };
-
-        
-        const showScreen = (screenName) => {
-            loadingContainer.classList.toggle('hidden', screenName !== 'loading');
-            loginContainer.classList.toggle('hidden', screenName !== 'login');
-            pautaSelectionContainer.classList.toggle('hidden', screenName !== 'pautaSelection');
-            appContainer.classList.toggle('hidden', screenName !== 'app');
-        };
-
-        const switchTab = (tabName) => {
-            const tabAgendamento = document.getElementById('tab-agendamento');
-            const tabAvulso = document.getElementById('tab-avulso');
-            const isScheduledContainer = document.getElementById('is-scheduled-container');
-            const formTitle = document.getElementById('form-title');
-            const pautaColumn = document.getElementById('pauta-column');
-            const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-            const formContainer = document.getElementById('form-agendamento');
-
-            formContainer.classList.remove('hidden');
-
-            if (tabName === 'agendamento') {
-                tabAgendamento.classList.add('tab-active');
-                tabAvulso.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700');
-                isScheduledContainer.classList.remove('hidden');
-                pautaColumn.classList.remove('hidden');
-                if (currentPautaData?.useDelegationFlow) {
-                    emAtendimentoColumn.classList.remove('hidden');
                 } else {
-                    emAtendimentoColumn.classList.add('hidden');
+                    // Caso o documento do usuário não exista (erro raro de criação)
+                    showNotification("Erro ao localizar seu perfil. Tente cadastrar novamente.", "error");
+                    signOut(auth);
                 }
-                formTitle.textContent = "Adicionar Novo Agendamento";
-                document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
-                document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
-                document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-                document.getElementById('arrival-time-wrapper').classList.add('hidden');
-                document.getElementById('manual-room-wrapper').classList.add('hidden'); // Ocultar seleção de sala manual
-            } else { // avulso
-                tabAvulso.classList.add('tab-active');
-                tabAgendamento.classList.remove('tab-active');
-                tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700');
-                isScheduledContainer.classList.add('hidden');
-                pautaColumn.classList.add('hidden');
-                 if (currentPautaData?.useDelegationFlow) {
-                    emAtendimentoColumn.classList.remove('hidden');
-                } else {
-                    emAtendimentoColumn.classList.add('hidden');
-                }
-                formTitle.textContent = "Adicionar Atendimento Avulso";
-
-                document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
-                document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
-                document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-                document.getElementById('arrival-time-wrapper').classList.remove('hidden');
-                document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
-
-                // Lógica para mostrar/esconder o seletor de sala manual
-                const manualRoomWrapper = document.getElementById('manual-room-wrapper');
-                const manualRoomSelect = document.getElementById('manual-room-select');
-                
-                if (currentPautaData?.type === 'multisala' && currentPautaData.rooms) {
-                    manualRoomWrapper.classList.remove('hidden');
-                    manualRoomSelect.innerHTML = '';
-                    currentPautaData.rooms.forEach(room => {
-                        const opt = document.createElement('option');
-                        opt.value = room;
-                        opt.textContent = room;
-                        manualRoomSelect.appendChild(opt);
-                    });
-                } else {
-                    manualRoomWrapper.classList.add('hidden');
-                }
+            } catch (error) {
+                console.error("Erro ao verificar estado do usuário:", error);
+                showNotification("Erro de conexão com o servidor.", "error");
             }
-            renderAssistedList();
-        };
+        } else {
+            // USUÁRIO DESLOGADO: Mostrar tela de login
+            showScreen('login');
+            // Resetar estados do Admin caso estivessem visíveis
+            adminPanelBtn.classList.add('hidden');
+        }
+    });
+};
 
 
         let sortableInstance = null;
@@ -3055,9 +2923,9 @@ function renderColaboradores() {
         
         const main = () => {
             try {
-                // Inicializa o Firebase com a config que vem do js/config.js
                 const app = initializeApp(firebaseConfig);
                 
+                // Inicialização do App Check para segurança
                 const appCheck = initializeAppCheck(app, {
                   provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
                   isTokenAutoRefreshEnabled: true
@@ -3065,18 +2933,38 @@ function renderColaboradores() {
 
                 db = getFirestore(app);
 
-                // Persistência Offline
+                // --- INÍCIO DO CÓDIGO OFFLINE ---
                 try {
                     enableIndexedDbPersistence(db).catch((err) => {
-                        console.warn('Persistência offline falhou');
+                        if (err.code == 'failed-precondition') {
+                            console.warn('Persistência falhou: Múltiplas abas abertas.');
+                        } else if (err.code == 'unimplemented') {
+                            console.warn('Persistência falhou: Navegador não suportado.');
+                        }
                     });
                     console.log("Persistência Offline Ativada!");
-                } catch (e) { console.log(e); }
+                } catch (e) {
+                    console.log("Erro ao ativar persistência:", e);
+                }
+
+                // Monitores de Conexão (Para mostrar a barra vermelha)
+                window.addEventListener('offline', () => {
+                    const indicator = document.getElementById('offline-indicator');
+                    if(indicator) indicator.classList.remove('hidden');
+                });
+
+                window.addEventListener('online', () => {
+                    const indicator = document.getElementById('offline-indicator');
+                    if(indicator) indicator.classList.add('hidden');
+                    // Tenta exibir notificação se a função existir
+                    if (typeof showNotification === 'function') {
+                        showNotification("Conexão restabelecida! Sincronizando...", "success");
+                    }
+                });
+                // --- FIM DO CÓDIGO OFFLINE ---
 
                 auth = getAuth(app);
-                
-                // REMOVA A LINHA "handleAuthState();" DAQUI!
-
+                handleAuthState();
             } catch (error) {
                 console.error("Erro ao inicializar o Firebase: ", error);
                 if(loadingText) loadingText.textContent = 'Erro na configuração do Firebase.';
@@ -3342,8 +3230,70 @@ function renderColaboradores() {
                 loginForm.classList.add('hidden');
             });
 
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                const errorDiv = document.getElementById('auth-error');
+                try {
+                    await signInWithEmailAndPassword(auth, email, password);
+                    errorDiv.classList.add('hidden');
+                } catch (error) {
+                    console.error("Login failed:", error);
+                    errorDiv.textContent = 'Email ou senha inválidos.';
+                    errorDiv.classList.remove('hidden');
+                }
+            });
 
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('register-name').value;
+                const email = document.getElementById('register-email').value;
+                const password = document.getElementById('register-password').value;
+                const errorDiv = document.getElementById('auth-error');
 
+                if (password.length < 6) {
+                    errorDiv.textContent = 'A senha deve ter pelo menos 6 caracteres.';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+
+                try {
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
+
+                    await setDoc(doc(db, "users", user.uid), {
+                        name: name,
+                        email: email,
+                        uid: user.uid,
+                        status: 'pending',
+                        role: 'admin',
+                        createdAt: new Date().toISOString()
+                    });
+
+                    errorDiv.classList.add('hidden');
+                    showNotification('Conta criada com sucesso! Agora você pode fazer o login.', 'success');
+                    loginTabBtn.click();
+
+                } catch (error) {
+                    console.error("Registration failed:", error);
+                    errorDiv.textContent = error.code === 'auth/email-already-in-use' ? 'Este email já está em uso.' : 'Ocorreu um erro ao criar a conta.';
+                    errorDiv.classList.remove('hidden');
+                }
+            });
+
+            document.getElementById('forgot-password-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                const email = prompt("Por favor, digite seu email para redefinir a senha:");
+                if (email) {
+                    sendPasswordResetEmail(auth, email)
+                        .then(() => showNotification("Email de redefinição de senha enviado!", "success"))
+                        .catch((error) => {
+                            console.error("Password reset error:", error);
+                            showNotification("Erro ao enviar email. Verifique se o email está correto.", "error");
+                        });
+                }
+            });
 
             // --- LÓGICA DE SALAS PERSONALIZADAS ---
             const customRoomInput = document.getElementById('custom-room-input');
@@ -3535,10 +3485,24 @@ function renderColaboradores() {
                 }
             });
 
-            document.getElementById('tab-agendamento').addEventListener('click', () => switchTab('agendamento'));
-            document.getElementById('tab-avulso').addEventListener('click', () => switchTab('avulso'));
+            // Listener para aba Agendamento
+            document.getElementById('tab-agendamento').addEventListener('click', () => {
+                switchTabUI('agendamento', currentPautaData);
+                renderAssistedList(); 
+            });
+            
+            // Listener para aba Avulso
+            document.getElementById('tab-avulso').addEventListener('click', () => {
+                switchTabUI('avulso', currentPautaData);
+                renderAssistedList();
+            });
 
-  
+            const handleLogout = () => {
+                signOut(auth).catch(error => {
+                    console.error("Logout error", error);
+                    showNotification("Erro ao tentar sair.", "error");
+                });
+            };
             document.getElementById('logout-btn-main').addEventListener('click', handleLogout);
             document.getElementById('logout-btn-app').addEventListener('click', handleLogout);
 
@@ -4619,55 +4583,6 @@ function renderColaboradores() {
                 
                 editSubjectInput.value = selectedText;
             });
-
-            // --- LIGAÇÕES DE AUTENTICAÇÃO (Módulo js/auth.js) ---
-        
-        // 1. Monitor de quem está logado ou pendente
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                try {
-                    const userSnap = await getDoc(doc(db, "users", user.uid));
-                    if (userSnap.exists() && userSnap.data().status === 'approved') {
-                        currentUserName = userSnap.data().name;
-                        const lastId = localStorage.getItem('lastPautaId');
-                        if (lastId) loadPauta(lastId, "Carregando...");
-                        else showScreen('pautaSelection');
-                    } else {
-                        showNotification("Aguardando aprovação do administrador.", "info");
-                        signOut(auth);
-                    }
-                } catch (e) { console.error(e); }
-            } else {
-                showScreen('login');
-            }
-        });
-        
-        // 2. Ação de Login
-        if (loginForm) {
-            loginForm.onsubmit = async (e) => {
-                e.preventDefault();
-                const email = document.getElementById('login-email').value;
-                const pass = document.getElementById('login-password').value;
-                handleLogin(auth, email, pass).catch(() => {});
-            };
-        }
-        
-        // 3. Ação de Cadastro
-        if (registerForm) {
-            registerForm.onsubmit = async (e) => {
-                e.preventDefault();
-                const name = document.getElementById('register-name').value;
-                const email = document.getElementById('register-email').value;
-                const pass = document.getElementById('register-password').value;
-                handleRegister(auth, db, name, email, pass);
-            };
-        }
-        
-        // 4. Botões de Sair (Logout)
-        const btnOutMain = document.getElementById('logout-btn-main');
-        const btnOutApp = document.getElementById('logout-btn-app');
-        if (btnOutMain) btnOutMain.onclick = () => handleLogout(auth);
-        if (btnOutApp) btnOutApp.onclick = () => handleLogout(auth);
     </script>
 
 <!-- Modal de Anotações -->
@@ -4783,7 +4698,3 @@ function renderColaboradores() {
   }
 </script>
 </html>
-
-
-
-
