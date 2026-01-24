@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Gerenciamento de Pauta - SIGEP</title>
+    <title>Sistema de Gerenciamento de Pauta - SIGAP</title>
 
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
 
@@ -31,7 +31,7 @@
           replaysSessionSampleRate: 0.1, 
           replaysOnErrorSampleRate: 1.0, 
           environment: "production",
-          release: "sigep@1.0.0",
+          release: "sigap@1.0.0",
           
           // --- ADICIONE ESTA PARTE PARA O FEEDBACK VISUAL ---
           beforeSend(event, hint) {
@@ -1310,7 +1310,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { firebaseConfig, emailJsConfig } from './js/config.js';
         import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
         import { subjectTree, flatSubjects } from './js/assuntos.js';
-        import { setupAttendancesListener, updateAttendanceStatus, deleteAttendance, moveInQueueLogic, saveImportedPauta } from './js/pauta.js';
+
         
         // Inicialização do EmailJS usando o novo arquivo de config
         emailjs.init(emailJsConfig.publicKey);
@@ -1630,7 +1630,63 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         
         // --- LÓGICA DE MOVIMENTAÇÃO MANUAL (Setas e Topo) ---
         // Definimos no objeto 'window' para que o HTML consiga enxergar a função
-    
+        window.moveInQueue = async (id, direction) => {
+            if (isPautaClosed) {
+                showNotification("A pauta está fechada.", "error");
+                return;
+            }
+        
+            const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
+            
+            // 1. Pegamos a lista atual de quem está aguardando, já ordenada corretamente
+            let list = allAssisted
+                .filter(a => a.status === 'aguardando' && a.type === currentMode)
+                .sort((a, b) => {
+                    if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+                    if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+                    const orderA = a.manualIndex !== undefined ? a.manualIndex : (a.createdAt || 0);
+                    const orderB = b.manualIndex !== undefined ? b.manualIndex : (b.createdAt || 0);
+                    return orderA - orderB;
+                });
+        
+            const currentIndex = list.findIndex(item => item.id === id);
+            if (currentIndex === -1) return;
+        
+            // 2. Criamos uma cópia para manipular
+            let newList = [...list];
+        
+            if (direction === 'up' && currentIndex > 0) {
+                // Troca com o de cima
+                [newList[currentIndex - 1], newList[currentIndex]] = [newList[currentIndex], newList[currentIndex - 1]];
+            } else if (direction === 'down' && currentIndex < newList.length - 1) {
+                // Troca com o de baixo
+                [newList[currentIndex], newList[currentIndex + 1]] = [newList[currentIndex + 1], newList[currentIndex]];
+            } else if (direction === 'top') {
+                // Remove da posição atual e coloca no índice 0
+                const [movedItem] = newList.splice(currentIndex, 1);
+                newList.unshift(movedItem);
+            }
+        
+            // 3. Salvamos a nova ordem no Firebase usando Batch (Lote)
+            const batch = writeBatch(db); // writeBatch deve estar importado do firestore
+            newList.forEach((item, index) => {
+                const docRef = doc(db, "pautas", currentPautaId, "attendances", item.id);
+                batch.update(docRef, { 
+                    manualIndex: index,
+                    lastActionBy: currentUserName,
+                    lastActionTimestamp: new Date().toISOString()
+                });
+            });
+        
+            try {
+                await batch.commit();
+                // O onSnapshot cuidará de atualizar a tela automaticamente
+            } catch (error) {
+                console.error("Erro ao reordenar fila:", error);
+                showNotification("Erro ao atualizar ordem.", "error");
+            }
+        };
+
         
         const loadingContainer = document.getElementById('loading-container');
         const loginContainer = document.getElementById('login-container');
@@ -2206,7 +2262,17 @@ render(atendidosList, atendidos, a => {
             // ADICIONE ESTA LINHA AQUI:
             setupManualSort()
         };
- 
+
+
+        const setupRealtimeListener = (pautaId) => {
+            if (unsubscribeFromAttendances) unsubscribeFromAttendances();
+            const attendanceCollectionRef = collection(db, "pautas", pautaId, "attendances");
+            unsubscribeFromAttendances = onSnapshot(attendanceCollectionRef, (snapshot) => {
+                allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderAssistedList();
+            }, (error) => console.error("Erro no listener do Firestore: ", error));
+        };
+
         // --- INÍCIO DA LÓGICA DE GERENCIAR MEMBROS DA PAUTA (COMPARTILHAR) ---
         const membersModal = document.getElementById('members-modal');
         const inviteEmailInput = document.getElementById('invite-email-input');
@@ -2589,99 +2655,88 @@ function renderColaboradores() {
         });
         // --- FIM DA LÓGICA DE COLABORADORES ---
 
-const loadPauta = async (pautaId, pautaName, pautaType) => {
-    currentPautaId = pautaId;
-    document.getElementById('pauta-title').textContent = pautaName;
+        const loadPauta = async (pautaId, pautaName, pautaType) => {
+            currentPautaId = pautaId;
+            document.getElementById('pauta-title').textContent = pautaName;
 
-    // Salva a pauta atual no localStorage
-    localStorage.setItem('lastPautaId', pautaId);
-    localStorage.setItem('lastPautaType', pautaType);
+            // Salva a pauta atual no localStorage
+            localStorage.setItem('lastPautaId', pautaId);
+            localStorage.setItem('lastPautaType', pautaType);
 
-    // Referências aos elementos (Lógica original)
-    const tabAgendamento = document.getElementById('tab-agendamento');
-    const tabAvulso = document.getElementById('tab-avulso');
-    const pautaColumn = document.getElementById('pauta-column');
-    const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-    const mainContent = document.getElementById('main-content');
+            const tabAgendamento = document.getElementById('tab-agendamento');
+            const tabAvulso = document.getElementById('tab-avulso');
+            const pautaColumn = document.getElementById('pauta-column');
+            const emAtendimentoColumn = document.getElementById('em-atendimento-column');
+            const mainContent = document.getElementById('main-content');
 
-    const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
-    if (pautaDoc.exists()) {
-        const pautaData = pautaDoc.data();
+            const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
+            if (pautaDoc.exists()) {
+                const pautaData = pautaDoc.data();
 
-        // Lógica LGPD: Verificação de expiração (Original)
-        const creationDate = pautaData.createdAt ? new Date(pautaData.createdAt) : new Date();
-        const expirationDate = new Date(creationDate);
-        expirationDate.setDate(creationDate.getDate() + 7);
-        if (new Date() > expirationDate) {
-            showNotification("Pauta inacessível pois cumpriu seu prazo.", "error");
-            return;
-        }
+                const creationDate = pautaData.createdAt ? new Date(pautaData.createdAt) : new Date();
+                const expirationDate = new Date(creationDate);
+                expirationDate.setDate(creationDate.getDate() + 7);
+                if (new Date() > expirationDate) {
+                    showNotification("Pauta inacessível pois cumpriu seu prazo.", "error");
+                    return;
+                }
 
-        currentPautaData = pautaData;
-        currentPautaOwnerId = pautaData.owner;
-        isPautaClosed = pautaData.isClosed || false;
-        
-        // Lógica de Explicação (Original)
-        const ordem = currentPautaData.ordemAtendimento || 'padrao';
-        const logicPadrao = document.getElementById('logic-explanation-padrao');
-        const logicChegada = document.getElementById('logic-explanation-chegada');
-        if(logicPadrao) logicPadrao.classList.toggle('hidden', ordem !== 'padrao');
-        if(logicChegada) logicChegada.classList.toggle('hidden', ordem !== 'chegada');
-        
-        const orderTitle = document.getElementById('order-explanation-title');
-        if(orderTitle) orderTitle.textContent = ordem === 'padrao' ? 'Entenda a Ordem de Atendimento Padrão' : 'Entenda a Ordem de Chegada';
-        
-        // CORREÇÃO: Usando a função do arquivo js/ui.js
-        togglePautaLockUI(isPautaClosed, currentPautaOwnerId, auth.currentUser?.uid);
+                currentPautaData = pautaData;
+                currentPautaOwnerId = pautaData.owner;
+                isPautaClosed = pautaData.isClosed || false;
+                
+                const ordem = currentPautaData.ordemAtendimento || 'padrao';
+                document.getElementById('logic-explanation-padrao').classList.toggle('hidden', ordem !== 'padrao');
+                document.getElementById('logic-explanation-chegada').classList.toggle('hidden', ordem !== 'chegada');
+                document.getElementById('order-explanation-title').textContent = ordem === 'padrao' ? 'Entenda a Ordem de Atendimento Padrão' : 'Entenda a Ordem de Chegada';
+                document.getElementById('toggle-logic-btn-padrao').addEventListener('click', (e) => {
+                    const explanationDiv = document.getElementById('logic-explanation-padrao-content');
+                    const isHidden = explanationDiv.classList.toggle('hidden');
+                    e.target.textContent = isHidden ? 'Por que esta ordem é justa? (Clique para expandir)' : 'Ocultar explicação';
+                });
 
-        const btnEditName = document.getElementById('edit-pauta-name-btn');
-        if(btnEditName) {
-            if (pautaData.owner === auth.currentUser.uid) btnEditName.classList.remove('hidden');
-            else btnEditName.classList.add('hidden');
-        }
+                togglePautaLock(isPautaClosed);
 
-        // LÓGICA DE LAYOUT DINÂMICO (Original)
-        if (pautaData.useDelegationFlow) {
-            if(emAtendimentoColumn) emAtendimentoColumn.classList.remove('hidden');
-            if(mainContent) { mainContent.classList.remove('lg:grid-cols-3'); mainContent.classList.add('lg:grid-cols-4'); }
-        } else {
-            if(emAtendimentoColumn) emAtendimentoColumn.classList.add('hidden');
-            if(mainContent) { mainContent.classList.remove('lg:grid-cols-4'); mainContent.classList.add('lg:grid-cols-3'); }
-        }
-    }
+                if (pautaData.owner === auth.currentUser.uid) {
+                    document.getElementById('edit-pauta-name-btn').classList.remove('hidden');
+                } else {
+                    document.getElementById('edit-pauta-name-btn').classList.add('hidden');
+                }
 
-        // LÓGICA DE VISIBILIDADE POR TIPO (Original)
-        if (pautaType === 'agendado') {
-            if(tabAgendamento) tabAgendamento.classList.remove('hidden');
-            if(tabAvulso) tabAvulso.classList.add('hidden');
-            if(pautaColumn) pautaColumn.classList.remove('hidden');
-            switchTabUI('agendamento'); // Chama a lógica do js/ui.js
-        } else if (pautaType === 'avulso') {
-            if(tabAvulso) tabAvulso.classList.remove('hidden');
-            if(tabAgendamento) tabAgendamento.classList.add('hidden');
-            if(pautaColumn) pautaColumn.classList.add('hidden');
-            switchTabUI('avulso'); // Chama a lógica do js/ui.js
-        } else {
-            if(tabAgendamento) tabAgendamento.classList.remove('hidden');
-            if(tabAvulso) tabAvulso.classList.remove('hidden');
-            if(pautaColumn) pautaColumn.classList.remove('hidden');
-            switchTabUI('agendamento');
-        }
-    
-        // CORREÇÃO: Usando os Listeners dos arquivos externos pauta.js e colaboradores.js
-        setupAttendancesListener(db, pautaId, (dados) => {
-            allAssisted = dados;
-            renderAssistedList(); // Chama sua função que desenha os cards
-        });
-    
-        setupCollaboratorsListener(db, pautaId, (equipe) => {
-            colaboradores = equipe;
-            renderColaboradores(); // Certifique-se que essa função existe no seu script
-        });
-    
-        showScreen('app'); // Chama a troca de tela do js/ui.js
-    };
-        
+                // LÓGICA DE LAYOUT DINÂMICO DOS CARDS
+                if (pautaData.useDelegationFlow) {
+                    emAtendimentoColumn.classList.remove('hidden');
+                    mainContent.classList.remove('lg:grid-cols-3');
+                    mainContent.classList.add('lg:grid-cols-4');
+                } else {
+                    emAtendimentoColumn.classList.add('hidden');
+                    mainContent.classList.remove('lg:grid-cols-4');
+                    mainContent.classList.add('lg:grid-cols-3');
+                }
+
+            }
+             if (pautaType === 'agendado') {
+                 tabAgendamento.classList.remove('hidden');
+                 tabAvulso.classList.add('hidden');
+                 pautaColumn.classList.remove('hidden');
+                 switchTab('agendamento');
+            } else if (pautaType === 'avulso') {
+                 tabAvulso.classList.remove('hidden');
+                 tabAgendamento.classList.add('hidden');
+                 pautaColumn.classList.add('hidden');
+                 switchTab('avulso');
+            } else {
+                tabAgendamento.classList.remove('hidden');
+                tabAvulso.classList.remove('hidden');
+                pautaColumn.classList.remove('hidden');
+                switchTab('agendamento');
+            }
+
+            setupRealtimeListener(pautaId);
+            setupCollaboratorsListener(pautaId); // Inicia o listener para colaboradores
+            showScreen('app');
+        };
+
         const deletePauta = async (pautaId) => {
             try {
                 await deleteDoc(doc(db, "pautas", pautaId));
@@ -3583,9 +3638,6 @@ const loadPauta = async (pautaId, pautaName, pautaType) => {
                 document.getElementById(id).addEventListener('input', renderAssistedList);
             });
 
-
-
-            // Novo Listener de Importação CSV (Modular)
             document.getElementById('file-upload').addEventListener('change', async (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -3593,33 +3645,73 @@ const loadPauta = async (pautaId, pautaName, pautaType) => {
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     const text = e.target.result;
-                    const lines = text.split(/\r\n|\n|\r/).filter(line => line.trim() !== '');
-                    
-                    // Lógica de processamento de linhas (simplificada aqui)
-                    const dataToSave = lines.map(line => {
-                        const parts = line.split(';').map(item => item.trim().replace(/^"|"$/g, ''));
-                        return {
-                            name: parts[0],
-                            scheduledTime: parts[1],
-                            subject: parts[2],
-                            cpf: parts[3] || null
-                        };
-                    }).filter(item => item.name && /^\d{1,2}:\d{2}$/.test(item.scheduledTime));
+                    let lines = text.split(/\r\n|\n|\r/).filter(line => line.trim() !== '');
+                    if (lines.length === 0) {
+                        showNotification("Arquivo vazio ou em formato inválido.", "error");
+                        return;
+                    }
 
-                    // CHAMA A FUNÇÃO DO ARQUIVO pauta.js
+                   const firstLineParts = lines[0].split(';').map(item => item.trim().replace(/^"|"$/g, ''));
+                        if (firstLineParts.length >= 3) {
+                            const potentialTime = firstLineParts[1].trim();
+                            // Verifica se o segundo campo (índice 1) da primeira linha NÃO é um horário válido (HH:MM)
+                            if (!/^\d{1,2}:\d{2}$/.test(potentialTime)) {
+                                lines.shift(); // Se não for horário, remove a primeira linha (considerando-a o cabeçalho)
+                            }
+                        }
+
+                    if (lines.length === 0) {
+                        showNotification("O arquivo CSV contém apenas um cabeçalho ou está vazio.", "error");
+                        return;
+                    }
+
                     try {
-                        await saveImportedPauta(db, currentPautaId, dataToSave, currentUserName);
-                        showNotification(`${dataToSave.length} registros importados!`);
+                        const batch = writeBatch(db);
+                        const collectionRef = collection(db, "pautas", currentPautaId, "attendances");
+                        let processedCount = 0;
+
+                        lines.forEach(line => {
+                            const parts = line.split(';').map(item => item.trim().replace(/^"|"$/g, ''));
+                             if (parts.length >= 3) {
+                                 const name = parts[0];
+                                 const scheduledTime = parts[1];
+                                 const subject = parts[2];
+                                 const cpf = parts.length > 3 ? parts[3].replace(/^"|"$/g, '') : '';
+
+                                 if (name && subject && scheduledTime && /^\d{1,2}:\d{2}$/.test(scheduledTime)) {
+                                     const newDocRef = doc(collectionRef);
+                                     batch.set(newDocRef, getUpdatePayload({
+                                         name,
+                                         cpf: cpf || null,
+                                         subject,
+                                         scheduledTime,
+                                         status: 'pauta',
+                                         type: 'agendamento',
+                                         createdAt: new Date().toISOString(),
+                                         isConfirmed: false, // Novo campo
+                                         confirmationDetails: null // Novo campo
+                                     }));
+                                     processedCount++;
+                                 }
+                             }
+                        });
+
+                        if (processedCount > 0) {
+                            await batch.commit();
+                            const skippedCount = lines.length - processedCount;
+                            showNotification(`${processedCount} registros adicionados.` + (skippedCount > 0 ? ` ${skippedCount} linhas foram ignoradas.` : ''));
+                        } else {
+                            showNotification("Nenhum registro válido encontrado no arquivo. Verifique o formato (Nome;HH:MM;Assunto;CPF).", "error");
+                        }
                     } catch (err) {
-                        showNotification("Erro ao salvar dados importados.", "error");
+                        console.error("Erro ao carregar pauta:", err);
+                        showNotification("Erro ao processar o arquivo.", "error");
                     }
                 };
                 reader.readAsText(file);
                 event.target.value = '';
             });
 
-
-            
             document.getElementById('download-pdf-btn').addEventListener('click', () => {
                 // Configuração para Paisagem ('l' de landscape) e formato A4
                 const { jsPDF } = window.jspdf;
@@ -4734,4 +4826,3 @@ const loadPauta = async (pautaId, pautaName, pautaType) => {
   }
 </script>
 </html>
-
