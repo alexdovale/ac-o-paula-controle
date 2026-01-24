@@ -1312,6 +1312,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { setupDetailsModal, openDetailsModal } from './detalhes.js';
         import { parsePautaCSV } from './js/csvHandler.js';
         import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
+        import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
 
 
 
@@ -4330,67 +4331,6 @@ function renderColaboradores() {
                 }
             });
 
-            // Lógica para enviar o link de delegação por e-mail
-            document.getElementById('send-delegate-email-btn').addEventListener('click', async () => {
-                const collaboratorEmail = document.getElementById('collaborator-email-input').value.trim();
-                if (!collaboratorEmail) {
-                    showNotification("Por favor, insira o e-mail do colaborador.", "error");
-                    return;
-                }
-
-                if (!assistedIdForDelegation || !currentPautaId || !collaboratorNameForDelegation) {
-                    showNotification("Erro interno: dados do atendimento ausentes para delegação.", "error");
-                    return;
-                }
-
-                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                const externalLink = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(collaboratorNameForDelegation)}`;
-
-                // --- INÍCIO DOS CONSOLE.LOGS DE DEBUG ---
-                console.log("--- DEBUG EMAILJS DELEGAÇÃO ---");
-                console.log("Service ID:", "service_r1nxe6a");
-                console.log("Template ID:", "template_jslp9ny");
-                console.log("Public Key (usada no init):", "aGL-Q2UJcD2tDpUKq");
-                console.log("to_email (para quem será enviado):", collaboratorEmail);
-                console.log("assisted_name (nome do assistido):", assistedNameForDelegation);
-                console.log("collaborator_name (nome do colaborador):", collaboratorNameForDelegation);
-                console.log("finalization_link (link gerado):", externalLink);
-                console.log("name (remetente):", currentUserName);
-                console.log("email (email de resposta):", auth.currentUser?.email || "noreply@example.com");
-                console.log("-------------------------------");
-                // --- FIM DOS CONSOLE.LOGS DE DEBUG ---
-
-
-                try {
-                    await emailjs.send(
-                        "service_r1nxe6a", // Seu Service ID
-                        "template_jslp9ny", // Seu Template ID para Delegação
-                        {
-                            to_email: collaboratorEmail,
-                            assisted_name: assistedNameForDelegation,
-                            collaborator_name: collaboratorNameForDelegation,
-                            finalization_link: externalLink,
-                            name: currentUserName, // Adicionado
-                            email: auth.currentUser?.email || "noreply@example.com" // Adicionado
-                        }
-                    );
-                    showNotification("Link de finalização enviado com sucesso por e-mail!", "success");
-                    document.getElementById('delegate-email-modal').classList.add('hidden');
-
-                    const assignedCollabId = allAssisted.find(a => a.id === assistedIdForDelegation)?.assignedCollaborator?.id;
-                    if (assignedCollabId && collaboratorEmail) {
-                         const collaboratorRef = doc(collection(db, "pautas", currentPautaId, "collaborators"), assignedCollabId);
-                         await updateDoc(collaboratorRef, { email: collaboratorEmail });
-                         console.log(`Email '${collaboratorEmail}' salvo para o colaborador ${assignedCollabId}.`);
-                    }
-
-                } catch (error) {
-                    console.error("Erro ao enviar e-mail de delegação:", error);
-                    showNotification("Erro ao enviar o link de finalização por e-mail. Verifique a configuração do EmailJS e os parâmetros do template.", "error");
-                }
-            });
-
-
             document.getElementById('checklist-search').addEventListener('input', (e) => {
                 const searchTerm = normalizeText(e.target.value);
                 const allDocs = checklistContainer.querySelectorAll('li');
@@ -4498,37 +4438,53 @@ function renderColaboradores() {
     notesModal.classList.add("hidden");
   });
 
-  async function sendNotesByEmail() {
-    const notes = localStorage.getItem("pauta_notes") || "";
-    if (!notes) return;
+// Envio de E-mail de Delegação (Modular)
+document.getElementById('send-delegate-email-btn').addEventListener('click', async () => {
+    const collaboratorEmail = document.getElementById('collaborator-email-input').value.trim();
+    if (!collaboratorEmail) return showNotification("Insira o e-mail.", "error");
 
     try {
-      await emailjs.send(
-        "service_r1nxe6a", // Seu Service ID para anotações
-        "template_ynrwaxt", // Seu Template ID para Anotações (ATUALIZADO)
-        {
-            message: notes,
-            email_to: "SEU_EMAIL_DESTINO_ANOTACOES@dominio.com", // Substitua pelo seu email para receber as anotações
-            name: currentUserName, // Adicionado
-            email: auth.currentUser?.email || "noreply@example.com" // Adicionado
-        }
-      );
-      console.log("Anotações enviadas por e-mail!");
-    } catch (err) {
-      console.error("Erro ao enviar email de anotações:", err);
+        await sendDelegationEmail({
+            toEmail: collaboratorEmail,
+            assistedName: assistedNameForDelegation,
+            collaboratorName: collaboratorNameForDelegation,
+            pautaId: currentPautaId,
+            assistedId: assistedIdForDelegation,
+            senderName: currentUserName,
+            senderEmail: auth.currentUser?.email
+        });
+        showNotification("Link enviado por e-mail!");
+        document.getElementById('delegate-email-modal').classList.add('hidden');
+    } catch (error) {
+        showNotification("Erro ao enviar e-mail.", "error");
     }
-  }
+});
 
-  const closePautaBtn = document.getElementById("close-pauta-btn");
-  if (closePautaBtn) {
+  // C. Envio automático de anotações ao fechar a pauta (Modular)
+const closePautaBtn = document.getElementById("close-pauta-btn");
+if (closePautaBtn) {
     closePautaBtn.addEventListener("click", async () => {
-      setTimeout(async () => {
-        const isPasswordModalHidden = document.getElementById('close-pauta-modal').classList.contains('hidden');
-        if (isPasswordModalHidden) { 
-          await sendNotesByEmail();
-        }
-      }, 500);
+        // Aguarda um tempo para verificar se o modal de senha fechou (sucesso no fechamento)
+        setTimeout(async () => {
+            const isPasswordModalHidden = document.getElementById('close-pauta-modal').classList.contains('hidden');
+            
+            if (isPasswordModalHidden) { 
+                // Busca as anotações do localStorage (chave original: pauta_notes)
+                const notes = localStorage.getItem("pauta_notes") || "";
+                
+                if (notes.trim() !== "") {
+                    try {
+                        // Chama a função do arquivo js/emailService.js
+                        await sendNotesByEmail(notes, currentUserName, auth.currentUser?.email);
+                        showNotification("Anotações enviadas para seu e-mail por segurança!", "info");
+                    } catch (err) {
+                        console.error("Falha ao enviar backup das notas:", err);
+                    }
+                }
+            }
+        }, 1000); // 1 segundo de delay para garantir que o banco atualizou antes
     });
-  }
+}
 </script>
 </html>
+
