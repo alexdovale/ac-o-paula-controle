@@ -2221,6 +2221,31 @@ render(atendidosList, atendidos, a => {
                 editCollaboratorId = null;
             };
         }
+
+        // Função para limpar o formulário de colaboradores (Necessária para o modal abrir limpo)
+        const resetCollaboratorFormModal = () => {
+            const form = document.getElementById('collaborator-form-modal');
+            if (form) {
+                form.reset();
+                // Volta o rádio para o padrão
+                const radioDefault = document.getElementById('transporte-nao-confirmado-modal');
+                if (radioDefault) radioDefault.checked = true;
+                
+                // Esconde campos condicionais
+                const localEncontro = document.getElementById('local-encontro-group-modal');
+                const obs = document.getElementById('observacao-group-modal');
+                if (localEncontro) localEncontro.classList.add('hidden');
+                if (obs) obs.classList.add('hidden');
+                
+                // Reseta o ID de edição
+                editCollaboratorId = null; 
+                
+                // Reseta o texto do botão
+                const btn = document.getElementById('add-collaborator-btn-modal');
+                if (btn) btn.textContent = "Adicionar Colaborador";
+            }
+        };
+
         
         // 4. Delegação de cliques (Presença e Excluir)
         document.addEventListener('click', async (e) => {
@@ -3560,10 +3585,20 @@ render(atendidosList, atendidos, a => {
                 }
 
                 // Lógica para abrir o modal de "Lista de Presença de Colaboradores"
-                if (button.id === 'manage-collaborators-btn') {
-                    setupCollaboratorsListener(currentPautaId); // Inicia o listener específico para este modal
-                    resetCollaboratorFormModal(); // Limpa o formulário do modal de colaboradores
-                    collaboratorsModal.classList.remove('hidden'); // Abre o modal
+               // Lógica para abrir o modal de "Lista de Presença de Colaboradores"
+                if (btn.id === 'manage-collaborators-btn') {
+                    // 1. Inicia o motor de escuta passando o DB e o que fazer com os dados
+                    setupCollaboratorsListener(db, currentPautaId, (dados) => {
+                        colaboradores = dados;
+                        renderColaboradores(); // Função que desenha a tabela no HTML
+                    });
+                
+                    // 2. Limpa o formulário para não vir com dados de uma edição anterior
+                    resetCollaboratorFormModal(); 
+                
+                    // 3. Abre o modal removendo o 'hidden'
+                    const modalColab = document.getElementById('collaborators-modal');
+                    if (modalColab) modalColab.classList.remove('hidden');
                 }
 
               if (button.id === 'add-assisted-btn') {
@@ -4096,6 +4131,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
