@@ -2249,9 +2249,9 @@ render(atendidosList, atendidos, a => {
         
         // 4. Delegação de cliques (Presença e Excluir)
         document.addEventListener('click', async (e) => {
-            const id = e.target.dataset.id;
+            const btn = e.target.closest('button');
             if (!id) return;
-        
+            const id = btn.dataset.id; 
             if (e.target.classList.contains('checkin-checkbox')) {
                 await toggleCollaboratorPresence(db, currentPautaId, id, e.target.checked);
             }
@@ -4131,14 +4131,3 @@ if (closePautaBtn) {
 }
 </script>
 </html>
-
-
-
-
-
-
-
-
-
-
-
