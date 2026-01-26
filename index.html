@@ -1313,6 +1313,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { parsePautaCSV } from './js/csvHandler.js';
         import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
         import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
+        import { logAction, loadUsersList, cleanupOldData } from './js/admin.js';
+
 
 
 
@@ -1322,7 +1324,38 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         emailjs.init(emailJsConfig.publicKey);
         // --- LÓGICA DO PAINEL DE ADMIN ---
 
+        // Painel do Administrador (Modularizado)
         const adminPanelBtn = document.getElementById('admin-panel-btn');
+        if (adminPanelBtn) {
+            adminPanelBtn.onclick = () => {
+                document.getElementById('admin-modal').classList.remove('hidden');
+                loadUsersList(db); // Função do admin.js
+            };
+        }
+        
+        // Limpeza LGPD
+        const btnCleanup = document.getElementById('cleanup-old-data-btn');
+        if (btnCleanup) {
+            btnCleanup.onclick = () => cleanupOldData(db); // Função do admin.js
+        }
+        
+        // Expondo funções globais necessárias para os botões do Admin
+        window.approveUserWithRole = async (id) => {
+            const roleSelect = document.getElementById(`role-select-${id}`);
+            const selectedRole = roleSelect.value;
+            await updateDoc(doc(db, "users", id), { status: 'approved', role: selectedRole });
+            showNotification("Usuário aprovado!");
+            loadUsersList(db);
+        };
+        
+        window.deleteUser = async (id) => {
+            if(confirm("Deseja excluir permanentemente?")) {
+                await deleteDoc(doc(db, "users", id));
+                showNotification("Usuário removido.", "error");
+                loadUsersList(db);
+            }
+        };
+        
         const adminModal = document.getElementById('admin-modal');
         
         // 1. Mostrar o botão apenas se for Admin
@@ -1332,255 +1365,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
         };
         
-        // 2. Carregar e Renderizar Usuários
-       const loadUsers = async () => {
-            const usersRef = collection(db, "users");
-            const snapshot = await getDocs(usersRef);
-            
-            const pendingList = document.getElementById('pending-users-list');
-            const approvedList = document.getElementById('approved-users-list');
-            
-            pendingList.innerHTML = '';
-            approvedList.innerHTML = '';
-        
-            snapshot.forEach((docSnap) => {
-                const user = docSnap.data();
-                const userId = docSnap.id;
-        
-                const userRow = document.createElement('div');
-                userRow.className = "flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-gray-50 rounded-lg border gap-3";
-                
-                // Parte Esquerda: Dados do Usuário
-                // APLICAÇÃO DE SEGURANÇA: escapeHTML
-                const userInfo = `
-                    <div>
-                        <p class="font-bold text-gray-800">${escapeHTML(user.name)}</p>
-                        <p class="text-xs text-gray-500">${escapeHTML(user.email)}</p>
-                        <p class="text-[10px] font-bold uppercase ${user.role === 'superadmin' ? 'text-purple-600' : 'text-blue-600'}">
-                            Cargo Atual: ${escapeHTML(user.role) || 'Nenhum'}
-                        </p>
-                    </div>
-                `;
-        
-                // Parte Direita: Ações (Aprovar com escolha de perfil)
-                let userActions = '';
-                
-                if (user.status === 'pending') {
-                    userActions = `
-                        <div class="flex items-center gap-2 w-full sm:w-auto">
-                            <select id="role-select-${userId}" class="text-xs border rounded p-1 bg-white">
-                                <option value="user">Usuário Comum</option>
-                                <option value="admin">Administrador</option>
-                                <option value="superadmin">Superadmin</option>
-                            </select>
-                            <button onclick="approveUserWithRole('${userId}')" class="bg-green-500 text-white text-xs px-3 py-1 rounded hover:bg-green-600">
-                                Aprovar
-                            </button>
-                        </div>
-                    `;
-                } else {
-                    // Se já está aprovado, permite alterar o cargo ou excluir
-                    userActions = `
-                        <div class="flex items-center gap-2">
-                            <select onchange="changeUserRole('${userId}', this.value)" class="text-xs border rounded p-1 bg-white">
-                                <option value="user" ${user.role === 'user' ? 'selected' : ''}>Usuário</option>
-                                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                                <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>Superadmin</option>
-                            </select>
-                            ${user.role !== 'superadmin' ? `
-                                <button onclick="deleteUser('${userId}')" class="text-red-500 hover:text-red-700">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"/></svg>
-                                </button>
-                            ` : ''}
-                        </div>
-                    `;
-                }
-        
-                userRow.innerHTML = userInfo + userActions;
-        
-                if (user.status === 'pending') {
-                    pendingList.appendChild(userRow);
-                } else {
-                    approvedList.appendChild(userRow);
-                }
-            });
-        };
-        // 3. Funções Globais para os botões (Expostas para o HTML)
-        // Aprovar escolhendo o cargo
-        window.approveUserWithRole = async (id) => {
-            const roleSelect = document.getElementById(`role-select-${id}`);
-            const selectedRole = roleSelect.value;
-            
-            if(confirm(`Deseja aprovar este usuário como ${selectedRole}?`)) {
-                logAction('ADMIN_APPROVE_USER', `Aprovou usuário ${id} como ${selectedRole}`, id); // LINHA ADICIONADA AQUI
-
-                await updateDoc(doc(db, "users", id), { 
-                    status: 'approved',
-                    role: selectedRole,
-                });
-                showNotification(`Usuário aprovado como ${selectedRole}!`);
-                loadUsers();
-            }
-        };
-
-    // Alterar cargo de quem já está aprovado
-    window.changeUserRole = async (id, newRole) => {
-        if(confirm(`Deseja alterar o cargo deste usuário para ${newRole}?`)) {
-            await updateDoc(doc(db, "users", id), { 
-                role: newRole 
-            });
-            showNotification("Cargo atualizado com sucesso!");
-            loadUsers();
-        }
-    };
-        
-        window.deleteUser = async (id) => {
-            if(confirm("Tem certeza que deseja excluir este usuário definitivamente?")) {
-                logAction('ADMIN_DELETE_USER', `Excluiu o usuário ${id}`, id);
-                await deleteDoc(doc(db, "users", id));
-                showNotification("Usuário removido.", "error");
-                loadUsers();
-            }
-        };
-        
-        // Eventos de abrir/fechar modal
-        adminPanelBtn.addEventListener('click', () => {
-            adminModal.classList.remove('hidden');
-            loadUsers();
-        });
-        
-        document.getElementById('close-admin-modal').addEventListener('click', () => {
-            adminModal.classList.add('hidden');
-        });
-
-        // --- COLOQUE O CÓDIGO ABAIXO DENTRO DO SEU SCRIPT TYPE="MODULE" ---
-
         document.addEventListener('DOMContentLoaded', () => {
             // ... outros códigos de inicialização que você já tem ...
         
-            // FUNÇÃO DE LIMPEZA DE DADOS ANTIGOS (LGPD - 7 DIAS)
-            const cleanupBtn = document.getElementById('cleanup-old-data-btn');
-            if (cleanupBtn) {
-                cleanupBtn.addEventListener('click', async () => {
-                    // Verifica se quem está clicando é realmente um Admin (segurança extra no JS)
-                    if (!confirm("Isso apagará permanentemente TODOS os atendimentos com mais de 7 dias. Deseja continuar?")) return;
-        
-                    cleanupBtn.disabled = true;
-                    cleanupBtn.textContent = "Limpando... aguarde";
-        
-                    try {
-                        const sevenDaysAgo = new Date();
-                        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-                        const limitDate = sevenDaysAgo.toISOString();
-        
-                        // 1. Busca todas as pautas
-                        const pautasSnapshot = await getDocs(collection(db, "pautas"));
-                        let deletedCount = 0;
-        
-                        // 2. Percorre cada pauta para limpar os atendimentos dela
-                        for (const pautaDoc of pautasSnapshot.docs) {
-                            const pautaId = pautaDoc.id;
-                            const attendancesRef = collection(db, "pautas", pautaId, "attendances");
-                            
-                            // Busca atendimentos antigos desta pauta específica
-                            const q = query(attendancesRef, where("createdAt", "<", limitDate));
-                            const oldDocs = await getDocs(q);
-        
-                            if (!oldDocs.empty) {
-                                const batch = writeBatch(db);
-                                oldDocs.forEach((doc) => {
-                                    batch.delete(doc.ref);
-                                    deletedCount++;
-                                });
-                                await batch.commit();
-                            }
-                        }
-        
-                        showNotification(`Limpeza concluída! ${deletedCount} registros removidos.`, "success");
-                    } catch (error) {
-                        console.error("Erro na limpeza:", error);
-                        showNotification("Erro ao executar limpeza.", "error");
-                    } finally {
-                        cleanupBtn.disabled = false;
-                        cleanupBtn.textContent = "Executar Limpeza de 7 Dias";
-                    }
-                });
-            }
         });
-
-        // --- LÓGICA DE AUDITORIA (Visualização) ---
-        
-        // --- LÓGICA DE AUDITORIA (Visualização) ---
-
-        const viewLogsBtn = document.getElementById('view-audit-logs-btn');
         const logsContainer = document.getElementById('audit-logs-container');
         const logsTableBody = document.getElementById('audit-logs-table-body');
         const noLogsMsg = document.getElementById('no-logs-msg');
         
-        if (viewLogsBtn) {
-            viewLogsBtn.addEventListener('click', async () => {
-                // Alternar visibilidade
-                if (!logsContainer.classList.contains('hidden')) {
-                    logsContainer.classList.add('hidden');
-                    viewLogsBtn.textContent = "Carregar Logs";
-                    return;
-                }
-        
-                viewLogsBtn.textContent = "Carregando...";
-                viewLogsBtn.disabled = true;
-                logsTableBody.innerHTML = ''; // Limpar tabela
-        
-                try {
-                    // Buscar os últimos 50 logs, ordenados por data (decrescente)
-                    // Certifique-se de que 'db' está disponível globalmente ou importe-o se necessário
-                    const logsRef = collection(db, "audit_logs");
-                    const q = query(logsRef, orderBy("timestamp", "desc"), limit(50));
-                    const snapshot = await getDocs(q);
-        
-                    if (snapshot.empty) {
-                        noLogsMsg.classList.remove('hidden');
-                    } else {
-                        noLogsMsg.classList.add('hidden');
-                        
-                        snapshot.forEach(docSnap => {
-                            const log = docSnap.data();
-                            const date = new Date(log.timestamp).toLocaleString('pt-BR');
-                            
-                            const row = document.createElement('tr');
-                            row.className = "border-b hover:bg-gray-50";
-                            row.innerHTML = `
-                                <td class="px-3 py-2 whitespace-nowrap">${date}</td>
-                                <td class="px-3 py-2 font-medium text-gray-800">${escapeHTML(log.userName)}</td>
-                                <td class="px-3 py-2">
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-200 text-gray-700">
-                                        ${escapeHTML(log.action)}
-                                    </span>
-                                </td>
-                                <td class="px-3 py-2 text-gray-600 truncate max-w-xs" title="${escapeHTML(log.details)}">
-                                    ${escapeHTML(log.details)}
-                                </td>
-                            `;
-                            logsTableBody.appendChild(row);
-                        });
-                    }
-                    
-                    logsContainer.classList.remove('hidden');
-                    viewLogsBtn.textContent = "Ocultar Logs";
-        
-                } catch (error) {
-                    console.error("Erro ao buscar logs:", error);
-                    // Se showNotification não estiver disponível neste escopo, use alert ou console.log
-                    if (typeof showNotification === 'function') {
-                        showNotification("Erro ao carregar logs de auditoria.", "error");
-                    } else {
-                        alert("Erro ao carregar logs. Verifique o console.");
-                    }
-                    viewLogsBtn.textContent = "Tentar Novamente";
-                } finally {
-                    viewLogsBtn.disabled = false;
-                }
-            });
-        }
         
         // Importando as funções do novo módulo de detalhes
         import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
@@ -4487,4 +4279,5 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
