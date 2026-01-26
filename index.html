@@ -4,27 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Gerenciamento de Pauta - SIGAP</title>
-
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <meta name="theme-color" content="#16a34a"/>
     <link rel="apple-touch-icon" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <link rel="manifest" href="manifest.json">
 
-    <!-- Monitoramento e Bibliotecas -->
+    <!-- Bibliotecas Externas -->
     <script src="https://browser.sentry-cdn.com/7.114.0/bundle.min.js" crossorigin="anonymous"></script>
-    <script>
-      if (window.Sentry) {
-        Sentry.init({
-          dsn: "https://7d95a89ba62ab6b3f7a64540c8e693cb@o4510647821795328.ingest.us.sentry.io/4510647932223488", 
-          environment: "production",
-          release: "sigap@1.0.0",
-          beforeSend(event, hint) {
-            if (event.exception) Sentry.showReportDialog({ eventId: event.event_id });
-            return event;
-          }
-        });
-      }
-    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -35,10 +21,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
-        .priority-urgente { border-left: 5px solid #ef4444; }
-        .priority-maxima { border-left: 5px solid #22c55e; }
-        .priority-media { border-left: 5px solid #f97316; }
-        .priority-minima { border-left: 5px solid #6b7280; }
+        .priority-urgente { border-left: 5px solid #ef4444 !important; background-color: #fef2f2; }
+        .priority-maxima { border-left: 5px solid #22c55e !important; }
+        .priority-media { border-left: 5px solid #f97316 !important; }
+        .priority-minima { border-left: 5px solid #6b7280 !important; }
         .column-content::-webkit-scrollbar { width: 8px; }
         .column-content::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
         .tab-active { border-color: #16a34a; background-color: #f0fdf4; color: #16a34a; font-weight: 600; }
@@ -49,208 +35,177 @@
     </style>
 </head>
 <body class="p-4 md:p-8">
-
     <div id="offline-indicator" class="fixed top-0 left-0 w-full bg-red-600 text-white text-center py-1 text-sm font-bold hidden z-[100]">
         ⚠️ Sem conexão. Trabalhando em Modo Offline.
     </div>
 
-    <div id="loading-container" class="loading-container"><div class="loader"></div><p id="loading-text" class="mt-4 text-gray-700 font-semibold">Conectando...</p></div>
+    <div id="loading-container" class="loading-container"><div class="loader"></div><p id="loading-text" class="mt-4 text-gray-700 font-semibold text-center">Conectando com Segurança...</p></div>
 
-    <!-- LOGIN -->
     <div id="login-container" class="hidden min-h-screen flex items-center justify-center">
         <div class="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
-            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" class="mx-auto h-24 mb-6">
-            <h2 class="text-2xl font-bold text-center mb-6">Sistema SIGAP</h2>
+            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGAP" class="mx-auto h-24 mb-6">
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Sistema SIGAP</h2>
+            <div id="auth-error" class="bg-red-100 text-red-700 px-4 py-3 rounded-lg mb-4 hidden"></div>
             <div class="flex border-b mb-6">
                 <button id="login-tab-btn" class="flex-1 py-2 font-semibold text-green-600 border-b-2 border-green-600">Login</button>
                 <button id="register-tab-btn" class="flex-1 py-2 font-semibold text-gray-500">Cadastrar</button>
             </div>
             <form id="login-form" class="space-y-4">
-                <input type="email" id="login-email" placeholder="Email" required class="w-full p-2 border rounded">
-                <input type="password" id="login-password" placeholder="Senha" required class="w-full p-2 border rounded">
-                <button type="submit" class="w-full bg-green-600 text-white py-2 rounded font-bold">Entrar</button>
+                <input type="email" id="login-email" placeholder="Email" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500">
+                <input type="password" id="login-password" placeholder="Senha" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500">
+                <div class="text-right"><button id="forgot-password-link" class="text-xs text-green-600 hover:underline">Esqueci minha senha</button></div>
+                <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700">ENTRAR</button>
             </form>
             <form id="register-form" class="hidden space-y-4">
-                <input type="text" id="register-name" placeholder="Nome Completo" required class="w-full p-2 border rounded">
-                <input type="email" id="register-email" placeholder="Email" required class="w-full p-2 border rounded">
-                <input type="password" id="register-password" placeholder="Senha (min 6)" required class="w-full p-2 border rounded">
-                <button type="submit" class="w-full bg-green-700 text-white py-2 rounded font-bold">Criar Conta</button>
+                <input type="text" id="register-name" placeholder="Nome Completo" required class="w-full p-3 border rounded-lg">
+                <input type="email" id="register-email" placeholder="Email" required class="w-full p-3 border rounded-lg">
+                <input type="password" id="register-password" placeholder="Senha (min 6 caracteres)" required class="w-full p-3 border rounded-lg">
+                <button type="submit" class="w-full bg-green-700 text-white py-3 rounded-lg font-bold">CRIAR CONTA</button>
             </form>
         </div>
     </div>
-
-    <!-- SELEÇÃO DE PAUTAS -->
     <div id="pauta-selection-container" class="hidden max-w-4xl mx-auto">
         <div class="flex justify-between items-center mb-8">
             <h1 class="text-3xl font-bold text-gray-800">Minhas Pautas</h1>
             <div class="flex gap-2">
-                <button id="admin-panel-btn" class="hidden bg-blue-600 text-white px-4 py-2 rounded-lg font-bold">Admin</button>
-                <button id="logout-btn-selection" class="bg-gray-600 text-white px-4 py-2 rounded-lg font-bold">Sair</button>
+                <button id="admin-panel-btn" class="hidden bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow-md">Painel Admin</button>
+                <button id="logout-btn-main" class="bg-gray-600 text-white px-4 py-2 rounded-lg font-bold">Sair</button>
             </div>
         </div>
         <div id="pautas-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        <button id="create-pauta-btn" class="w-full mt-8 bg-green-600 text-white py-4 rounded-xl font-bold">Criar Nova Pauta</button>
+        <button id="create-pauta-btn" class="w-full mt-8 bg-green-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-green-700 transition-all">CRIAR NOVA PAUTA</button>
     </div>
 
-    <!-- APP PRINCIPAL -->
     <div id="app-container" class="hidden max-w-full mx-auto">
         <header class="bg-white p-6 rounded-xl shadow-md mb-8">
-            <div class="flex justify-between items-center">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
                 <div>
                     <h2 id="pauta-title" class="text-2xl font-bold text-gray-800"></h2>
-                    <button id="back-to-pautas-btn" class="text-sm text-green-600 hover:underline">← Voltar</button>
+                    <button id="back-to-pautas-btn" class="text-sm text-green-600 hover:underline">← Voltar para Minhas Pautas</button>
                 </div>
                 <div class="relative">
-                    <button id="actions-toggle" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold">Ações ▼</button>
+                    <button id="actions-toggle" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold">Menu Ações ▼</button>
                     <div id="actions-panel" class="hidden absolute right-0 mt-2 w-64 bg-white border shadow-2xl rounded-xl p-2 z-[100] flex flex-col gap-1">
-                        <button id="share-pauta-btn" class="text-left px-3 py-2 text-sm hover:bg-gray-100 rounded">🔗 Compartilhamento Externo</button>
-                        <button id="view-stats-btn" class="text-left px-3 py-2 text-sm hover:bg-gray-100 rounded">📊 Estatísticas</button>
-                        <button id="edit-pauta-name-btn" class="text-left px-3 py-2 text-sm hover:bg-gray-100 rounded">✏️ Editar Nome</button>
-                        <button id="manage-members-btn" class="text-left px-3 py-2 text-sm hover:bg-gray-100 rounded">📧 Compartilhar</button>
+                        <button id="share-pauta-btn" class="text-left px-4 py-2 text-sm text-pink-700 bg-pink-50 rounded-lg hover:bg-pink-100">🔗 Compartilhamento Externo</button>
+                        <button id="view-stats-btn" class="text-left px-4 py-2 text-sm text-cyan-700 bg-cyan-50 rounded-lg hover:bg-cyan-100">📊 Ver Estatísticas</button>
+                        <button id="edit-pauta-name-btn" class="text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">✏️ Editar Nome</button>
+                        <button id="manage-members-btn" class="text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">📧 Compartilhar com Colega</button>
                         <hr>
-                        <button id="manage-collaborators-btn" class="text-left px-3 py-2 text-sm hover:bg-gray-100 rounded">👥 Equipe de Campo</button>
-                        <button id="notes-btn" class="text-left px-3 py-2 text-sm hover:bg-gray-100 rounded">📝 Anotações</button>
+                        <button id="manage-collaborators-btn" class="text-left px-4 py-2 text-sm text-violet-700 bg-violet-50 rounded-lg hover:bg-violet-100">👥 Equipe de Campo</button>
+                        <button id="notes-btn" class="text-left px-4 py-2 text-sm text-indigo-700 bg-indigo-50 rounded-lg hover:bg-indigo-100">📝 Anotações</button>
                         <hr>
-                        <button id="close-pauta-btn" class="text-left px-3 py-2 text-sm text-orange-600 hover:bg-orange-50 rounded">🔒 Fechar Pauta</button>
-                        <button id="reset-all-btn" class="text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded">🗑️ Zerar Pauta</button>
+                        <button id="close-pauta-btn" class="text-left px-4 py-2 text-sm text-orange-700 bg-orange-50 rounded-lg hover:bg-orange-100">🔒 Fechar Pauta</button>
+                        <button id="reset-all-btn" class="text-left px-4 py-2 text-sm text-red-700 bg-red-50 rounded-lg hover:bg-red-100">🗑️ Zerar Pauta</button>
                     </div>
                 </div>
             </div>
-            <div id="closed-pauta-alert" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4 rounded">Pauta Fechada.</div>
+            <div id="closed-pauta-alert" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4 font-bold rounded">Pauta Fechada para Edições.</div>
         </header>
 
         <nav class="flex gap-4 mb-6 border-b">
-            <button id="tab-agendamento" class="tab-active py-2 px-4 border-b-2">📅 Agendados</button>
-            <button id="tab-avulso" class="py-2 px-4 border-b-2 text-gray-500">➕ Avulsos</button>
+            <button id="tab-agendamento" class="tab-active py-2 px-6 border-b-2">📅 Agendados</button>
+            <button id="tab-avulso" class="py-2 px-6 border-b-2 text-gray-500">➕ Avulsos</button>
         </nav>
 
-        <main id="main-content" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div id="pauta-column" class="bg-white rounded-xl shadow-sm border overflow-hidden">
-                <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
-                    <h3 class="font-bold">📋 Pauta Original</h3>
-                    <label class="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded cursor-pointer font-bold">IMPORTAR CSV <input type="file" id="file-upload" class="hidden" accept=".csv"></label>
+        <main id="main-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div id="pauta-column" class="bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col">
+                <div class="p-4 bg-gray-50 border-b flex justify-between items-center font-bold">
+                    <span>📋 Pauta Original</span>
+                    <label class="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded cursor-pointer font-bold uppercase hover:bg-green-200">
+                        IMPORTAR CSV <input type="file" id="file-upload" class="hidden" accept=".csv">
+                    </label>
                 </div>
                 <div id="pauta-list" class="p-4 space-y-3 column-content overflow-y-auto max-h-[60vh]"></div>
             </div>
-            <div id="aguardando-column" class="bg-white rounded-xl shadow-sm border border-t-4 border-blue-500 overflow-hidden">
-                <div class="p-4 bg-blue-50 border-b flex justify-between items-center font-bold">
-                    <span>⏳ Aguardando</span>
-                    <input type="search" id="aguardando-search" placeholder="🔍" class="w-20 text-xs border rounded px-1">
+            <div id="aguardando-column" class="bg-white rounded-xl shadow-sm border border-t-4 border-blue-500 overflow-hidden flex flex-col">
+                <div class="p-4 bg-blue-50 flex justify-between items-center font-bold">
+                    <span class="text-blue-800">⏳ Aguardando Atendimento</span>
+                    <input type="search" id="aguardando-search" placeholder="🔍 Buscar..." class="w-24 text-xs border rounded px-1.5 py-0.5">
                 </div>
                 <div id="aguardando-list" class="p-4 space-y-3 column-content overflow-y-auto max-h-[60vh]"></div>
             </div>
-            <div id="em-atendimento-column" class="hidden bg-white rounded-xl shadow-sm border border-t-4 border-purple-500 overflow-hidden">
-                <div class="p-4 bg-purple-50 border-b font-bold text-purple-800">👩‍💻 Em Atendimento</div>
+            <div id="em-atendimento-column" class="hidden bg-white rounded-xl shadow-sm border border-t-4 border-purple-500 overflow-hidden flex flex-col">
+                <div class="p-4 bg-purple-50 font-bold text-purple-800">👩‍💻 Em Atendimento</div>
                 <div id="em-atendimento-list" class="p-4 space-y-3 column-content overflow-y-auto max-h-[60vh]"></div>
             </div>
-            <div id="atendidos-column" class="bg-white rounded-xl shadow-sm border border-t-4 border-green-500 overflow-hidden">
-                <div class="p-4 bg-green-50 border-b flex justify-between items-center font-bold">
-                    <span>✅ Atendidos</span>
-                    <button id="download-pdf-btn" class="text-[10px] bg-blue-600 text-white px-2 py-1 rounded">PDF</button>
+            <div id="atendidos-column" class="bg-white rounded-xl shadow-sm border border-t-4 border-green-500 overflow-hidden flex flex-col">
+                <div class="p-4 bg-green-50 flex justify-between items-center font-bold">
+                    <span class="text-green-800">✅ Atendidos</span>
+                    <button id="download-pdf-btn" class="text-[10px] bg-blue-600 text-white px-2 py-1 rounded font-bold hover:bg-blue-700 uppercase">PDF</button>
                 </div>
                 <div id="atendidos-list" class="p-4 space-y-3 column-content overflow-y-auto max-h-[60vh]"></div>
             </div>
         </main>
     </div>
-    <!-- MODAIS DO FLUXO DE CRIAÇÃO -->
-    <div id="pauta-type-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[200]">
+    <footer class="bg-white border-t mt-16 pt-10 pb-10 text-center">
+        <div class="flex justify-center space-x-12 mb-8 text-sm text-gray-500 font-bold uppercase tracking-widest">
+            <button onclick="document.getElementById('manual-modal').classList.remove('hidden')" class="hover:text-green-600 transition-colors">Manual</button>
+            <button onclick="document.getElementById('privacy-policy-modal').classList.remove('hidden')" class="hover:text-green-600 transition-colors">Privacidade (LGPD)</button>
+            <button onclick="document.getElementById('terms-modal').classList.remove('hidden')" class="hover:text-green-600 transition-colors">Termos de Uso</button>
+        </div>
+        <div class="flex justify-center items-center gap-8 mb-4 opacity-60">
+            <span class="flex items-center gap-1.5 text-xs border px-4 py-1.5 rounded-full font-semibold"><svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6z"></path></svg> AMBIENTE CRIPTOGRAFADO (SSL)</span>
+            <span class="flex items-center gap-1.5 text-xs border px-4 py-1.5 rounded-full font-semibold"><svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h.01a1 1 0 100-2H10zm3 0a1 1 0 000 2h.01a1 1 0 100-2H13zM7 13a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h.01a1 1 0 100-2H10zm3 0a1 1 0 000 2h.01a1 1 0 100-2H13z" clip-rule="evenodd"></path></svg> MONITORAMENTO SENTRY ATIVO</span>
+            <span class="flex items-center gap-1.5 text-xs border px-4 py-1.5 rounded-full font-semibold"><svg class="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> EM CONFORMIDADE COM LGPD</span>
+        </div>
+        <p class="text-[10px] text-gray-400">&copy; 2026 SIGAP - Sistema Inteligente de Gestão de Pauta. Desenvolvido por Alex do Vale.</p>
+    </footer>
+    <!-- MODAIS DE CRIAÇÃO -->
+    <div id="pauta-type-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[200]">
         <div class="bg-white p-8 rounded-xl max-w-md w-full shadow-2xl">
-            <h2 class="text-xl font-bold mb-6 text-center">Tipo de Pauta</h2>
+            <h2 class="text-xl font-bold mb-6 text-center">Escolha o Tipo de Pauta</h2>
             <div class="space-y-4">
-                <button data-type="agendado" class="pauta-type-btn w-full p-4 border rounded-xl hover:bg-green-50 font-bold text-left">📅 Agendamento Padrão</button>
-                <button data-type="avulso" class="pauta-type-btn w-full p-4 border rounded-xl hover:bg-green-50 font-bold text-left">➕ Pauta para Avulsos</button>
-                <button data-type="multisala" class="pauta-type-btn w-full p-4 border rounded-xl hover:bg-green-50 font-bold text-left">🏢 Pauta Multi-Salas</button>
+                <button data-type="agendado" class="pauta-type-btn w-full p-4 border rounded-xl hover:bg-green-50 font-bold transition-all text-left">📅 Agendamento Padrão</button>
+                <button data-type="avulso" class="pauta-type-btn w-full p-4 border rounded-xl hover:bg-green-50 font-bold transition-all text-left">➕ Pauta para Avulsos</button>
+                <button data-type="multisala" class="pauta-type-btn w-full p-4 border rounded-xl hover:bg-green-50 font-bold transition-all text-left">🏢 Pauta Multi-Salas</button>
             </div>
         </div>
     </div>
-    <div id="create-pauta-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[210]">
+    <div id="create-pauta-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[210]">
         <div class="bg-white p-8 rounded-xl max-w-md w-full">
-            <h2 class="text-xl font-bold mb-4">Nome da Pauta</h2>
-            <input type="text" id="create-pauta-name-input" class="w-full border p-3 rounded-lg mb-6">
+            <h2 class="text-xl font-bold mb-4">Dê um nome à pauta</h2>
+            <input type="text" id="create-pauta-name-input" class="w-full border p-4 rounded-lg mb-6 focus:ring-2 focus:ring-green-500" placeholder="Ex: Vara de Família - Março/2026">
             <button id="next-to-ordem-btn" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold">Avançar →</button>
         </div>
     </div>
-    <div id="ordem-atendimento-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[220]">
+    <div id="ordem-atendimento-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[220]">
         <div class="bg-white p-8 rounded-xl max-w-md w-full">
-            <h2 class="text-xl font-bold mb-4">Ordem da Fila</h2>
+            <h2 class="text-xl font-bold mb-4">Regra da Fila</h2>
             <div class="space-y-3">
-                <label class="flex items-center gap-3 p-3 border rounded cursor-pointer"><input type="radio" name="ordemAtendimento" value="padrao" checked> <b>Lógica Justa</b></label>
-                <label class="flex items-center gap-3 p-3 border rounded cursor-pointer"><input type="radio" name="ordemAtendimento" value="chegada"> <b>Ordem de Chegada</b></label>
+                <label class="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="ordemAtendimento" value="padrao" checked> <b>Lógica Justa (SIGAP)</b></label>
+                <label class="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="ordemAtendimento" value="chegada"> <b>Ordem de Chegada Bruta</b></label>
             </div>
             <button id="next-to-delegation-btn" class="w-full mt-6 bg-green-600 text-white py-3 rounded-lg font-bold">Avançar →</button>
         </div>
     </div>
-    <div id="delegation-flow-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[230]">
+    <div id="delegation-flow-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[230]">
         <div class="bg-white p-8 rounded-xl max-w-md w-full">
-            <h2 class="text-xl font-bold mb-4">Fluxo de Equipe?</h2>
+            <h2 class="text-xl font-bold mb-4">Fluxo de Equipe</h2>
             <div class="space-y-3">
-                <label class="flex items-center gap-3 p-3 border rounded cursor-pointer"><input type="radio" name="useDelegationFlow" value="true" checked> <b>Sim</b> (Usar Delegação)</label>
-                <label class="flex items-center gap-3 p-3 border rounded cursor-pointer"><input type="radio" name="useDelegationFlow" value="false"> <b>Não</b> (Finalizar Direto)</label>
+                <label class="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="useDelegationFlow" value="true" checked> <b>Sim</b> (Mover para equipe)</label>
+                <label class="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="useDelegationFlow" value="false"> <b>Não</b> (Finalizar diretamente)</label>
             </div>
-            <button id="confirm-create-pauta-final-btn" class="w-full mt-6 bg-green-700 text-white py-3 rounded-lg font-bold">Criar Pauta</button>
+            <button id="confirm-create-pauta-final-btn" class="w-full mt-6 bg-green-700 text-white py-3 rounded-lg font-bold">Concluir e Criar Pauta</button>
         </div>
     </div>
 
     <!-- MODAIS DE OPERAÇÃO -->
-    <div id="arrival-modal" class="hidden fixed inset-0 bg-black/60 z-[200] flex items-center justify-center">
-        <div class="bg-white p-6 rounded-xl max-w-xs w-full">
-            <h2 class="font-bold mb-4 text-center">Horário de Chegada</h2>
-            <input type="time" id="arrival-time-input" class="w-full border p-3 rounded-lg mb-4 text-center font-bold text-xl">
+    <div id="arrival-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[200]">
+        <div class="bg-white p-6 rounded-xl max-w-xs w-full text-center">
+            <h2 class="font-bold mb-4">Horário de Chegada</h2>
+            <input type="time" id="arrival-time-input" class="w-full border p-3 rounded-lg mb-4 text-center text-xl font-bold">
             <button id="confirm-arrival-btn" class="w-full bg-green-600 text-white py-2 rounded font-bold">Confirmar</button>
         </div>
     </div>
-    <div id="priority-reason-modal" class="hidden fixed inset-0 bg-black/60 z-[200] flex items-center justify-center">
-        <div class="bg-white p-6 rounded-xl max-w-md w-full">
-            <h2 class="font-bold mb-2">Motivo da Prioridade</h2>
+    <div id="priority-reason-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[200]">
+        <div class="bg-white p-8 rounded-xl max-w-md w-full">
+            <h2 class="text-xl font-bold mb-2">Motivo da Prioridade</h2>
             <textarea id="priority-reason-input" class="w-full border p-3 rounded-lg mb-4 h-24"></textarea>
-            <button id="confirm-priority-reason-btn" class="w-full bg-red-600 text-white py-2 rounded font-bold">Ativar Urgência</button>
+            <button id="confirm-priority-reason-btn" class="w-full bg-red-600 text-white py-2 rounded-lg font-bold">Ativar Prioridade</button>
         </div>
     </div>
-    <div id="admin-modal" class="hidden fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
-            <h2 class="text-2xl font-bold mb-4">Painel Administrativo</h2>
-            <div class="overflow-y-auto flex-1 space-y-4"><div id="pending-users-list"></div><div id="approved-users-list"></div></div>
-            <button id="cleanup-old-data-btn" class="mt-4 bg-red-100 text-red-700 py-2 rounded text-xs font-bold uppercase">Limpeza LGPD (7 dias)</button>
-            <button id="close-admin-modal" class="mt-2 w-full bg-gray-200 py-2 rounded">Fechar</button>
-        </div>
-    </div>
-
-    <!-- MODAIS DE EQUIPE E ANOTAÇÕES -->
-    <div id="collaborators-modal" class="hidden fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <h2 class="text-xl font-bold mb-4">Lista de Presença Equipe</h2>
-            <form id="collaborator-form-modal" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <input type="text" id="collaborator-name-modal" placeholder="Nome" required class="border p-2 rounded">
-                <input type="text" id="collaborator-role-modal" placeholder="Cargo" class="border p-2 rounded">
-                <input type="text" id="collaborator-team-modal" placeholder="Equipe" class="border p-2 rounded">
-                <input type="tel" id="collaborator-phone-modal" placeholder="Telefone" class="border p-2 rounded">
-                <div class="md:col-span-2">
-                    <label class="block text-xs font-bold mb-1">Transporte:</label>
-                    <label><input type="radio" name="transporte-colaborador" value="Meios Próprios"> Meios Próprios</label>
-                    <label class="ml-4"><input type="radio" name="transporte-colaborador" value="Com a Empresa"> Empresa</label>
-                </div>
-                <button type="submit" id="add-collaborator-btn-modal" class="md:col-span-2 bg-green-600 text-white py-2 rounded font-bold">Salvar</button>
-            </form>
-            <table id="collaborators-list-table-modal" class="w-full text-left text-xs">
-                <thead class="bg-gray-100"><tr><th class="p-2">Nome</th><th>Cargo</th><th>Presença</th><th>Ações</th></tr></thead>
-                <tbody></tbody>
-            </table>
-            <div class="mt-4 flex justify-between text-xs font-bold">
-                <p>Participantes: <span id="total-participants-count">0</span></p>
-                <button id="download-collaborators-pdf-modal" class="text-blue-600">Baixar PDF</button>
-            </div>
-        </div>
-    </div>
-    <div id="notes-modal" class="hidden fixed inset-0 bg-black/60 z-[200] flex items-center justify-center">
-        <div class="bg-white p-6 rounded-xl max-w-md w-full">
-            <h2 class="font-bold mb-4">Minhas Anotações</h2>
-            <textarea id="notes-text" class="w-full h-40 border p-3 rounded-lg mb-4"></textarea>
-            <button id="save-notes-btn" class="w-full bg-indigo-600 text-white py-2 rounded font-bold">Salvar Anotações</button>
-        </div>
-    </div>
-    <!-- SCRIPTS MODULARES -->
     <script type="module">
-        // 1. IMPORTAÇÕES TOTAIS
+        // 1. IMPORTAÇÕES TOTAIS (Firebase + Seus 12 Módulos da pasta /js)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, collection, addDoc, query, where, onSnapshot, writeBatch, deleteDoc, updateDoc, enableIndexedDbPersistence, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -258,11 +213,12 @@
 
         import { firebaseConfig, emailJsConfig } from './js/config.js';
         import { escapeHTML, showNotification, normalizeText } from './js/utils.js';
+        import { subjectTree } from './js/assuntos.js';
         import { handleLogin, handleRegister, handleLogout } from './js/auth.js';
         import { showScreen, togglePautaLockUI, switchTabUI } from './js/ui.js';
-        import { loadUsersList, cleanupOldData } from './js/admin.js';
+        import { loadUsersList, logAction } from './js/admin.js';
         import { setupAttendancesListener, getPriorityLevel, saveImportedPauta } from './js/pauta.js';
-        import { setupCollaboratorsListener, saveCollaboratorData, toggleCollaboratorPresence, deleteCollaborator } from './js/colaboradores.js';
+        import { setupCollaboratorsListener } from './js/colaboradores.js';
         import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
         import { parsePautaCSV } from './js/csvHandler.js';
         import { getChecklistHTML } from './js/checklist.js';
@@ -274,18 +230,19 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
         let allAssisted = [], colaboradores = [], currentPautaId = null, currentPautaData = null;
-        let currentUserName = '', assistedIdToHandle = null, editCollaboratorId = null;
+        let currentUserName = '', currentPautaOwnerId = null, isPautaClosed = false;
+        let assistedIdToHandle = null;
 
         emailjs.init(emailJsConfig.publicKey);
-        try { enableIndexedDbPersistence(db); if (location.hostname !== "localhost") initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'), isTokenAutoRefreshEnabled: true }); } catch (e) {}
+        try { enableIndexedDbPersistence(db); if (location.hostname !== "localhost") { initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'), isTokenAutoRefreshEnabled: true }); } } catch (e) {}
 
-        // 3. MONITOR DE ACESSO E PAUTAS
+        // 3. MONITOR DE ACESSO E PAUTAS (REATIVADO)
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                const snap = await getDoc(doc(db, "users", user.uid));
-                if (snap.exists() && snap.data().status === 'approved') {
-                    currentUserName = snap.data().name;
-                    document.getElementById('admin-panel-btn').classList.toggle('hidden', snap.data().role !== 'admin');
+                const userSnap = await getDoc(doc(db, "users", user.uid));
+                if (userSnap.exists() && userSnap.data().status === 'approved') {
+                    currentUserName = userSnap.data().name;
+                    document.getElementById('admin-panel-btn').classList.toggle('hidden', userSnap.data().role !== 'admin');
                     showPautaSelectionScreen(user.uid);
                 } else { handleLogout(auth); }
             } else { showScreen('login'); }
@@ -302,8 +259,8 @@
                     const expires = new Date(created); expires.setDate(created.getDate() + 7);
                     const card = document.createElement('div');
                     card.className = "bg-white p-6 rounded-xl shadow-md border hover:border-green-500 cursor-pointer transition-all relative group";
-                    card.innerHTML = `<h3 class="font-bold text-xl">${escapeHTML(pauta.name)}</h3><p class="text-[10px] text-gray-400 uppercase mt-1 font-bold">${pauta.type}</p>
-                    <div class="mt-4 pt-4 border-t space-y-1"><p class="text-[10px] text-gray-400">Criada: ${created.toLocaleDateString()}</p><p class="text-[10px] text-red-400 font-bold uppercase">Exclui em: ${expires.toLocaleDateString()}</p></div>
+                    card.innerHTML = `<h3 class="font-bold text-xl">${escapeHTML(pauta.name)}</h3><p class="text-[10px] font-bold text-gray-400 uppercase mt-1 tracking-widest">${pauta.type}</p>
+                    <div class="mt-4 pt-4 border-t space-y-1"><p class="text-[10px] text-gray-400">Criada: ${created.toLocaleDateString('pt-BR')}</p><p class="text-[10px] text-red-400 font-bold uppercase">Expira: ${expires.toLocaleDateString('pt-BR')}</p></div>
                     <button class="delete-pauta-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100" data-id="${docSnap.id}">🗑️</button>`;
                     card.onclick = (e) => { if (e.target.closest('.delete-pauta-btn')) { if(confirm("Apagar?")) deleteDoc(doc(db, "pautas", docSnap.id)); return; } loadPauta(docSnap.id, pauta.name, pauta.type); };
                     pautasList.appendChild(card);
@@ -322,7 +279,6 @@
                 document.getElementById('em-atendimento-column').classList.toggle('hidden', !currentPautaData.useDelegationFlow);
             }
             setupAttendancesListener(db, id, (dados) => { allAssisted = dados; renderAssistedList(); });
-            setupCollaboratorsListener(db, id, (dados) => { colaboradores = dados; renderColaboradores(); });
             showScreen('app');
         };
 
@@ -334,39 +290,29 @@
             allAssisted.forEach(a => {
                 if (a.status === 'aguardando' && a.type !== mode) return;
                 const prio = getPriorityLevel(a);
+                const prioClass = {'URGENTE':'priority-urgente','Máxima':'priority-maxima','Média':'priority-media','Mínima':'priority-minima'}[prio] || '';
+                
                 const card = document.createElement('div');
-                card.className = `p-4 bg-white border rounded-xl shadow-sm mb-3 relative ${prio === 'URGENTE' ? 'priority-urgente' : ''}`;
+                card.className = `p-4 bg-white border rounded-xl shadow-sm mb-3 relative ${prioClass}`;
                 
                 let acts = '';
-                if (a.status === 'pauta') acts = `<button class="btn-checkin bg-green-600 text-white text-[10px] px-3 py-1.5 rounded-lg font-bold" data-id="${a.id}">CHEGOU</button><button class="btn-faltou bg-yellow-500 text-white text-[10px] px-3 py-1.5 rounded-lg font-bold" data-id="${a.id}">FALTOU</button>`;
-                else if (a.status === 'aguardando') acts = `<button class="btn-atender bg-blue-600 text-white text-[10px] px-4 py-1.5 rounded-lg font-bold" data-id="${a.id}">ATENDER</button><button class="btn-priority bg-red-100 text-red-600 text-[10px] px-2 py-1.5 rounded font-bold" data-id="${a.id}">PRIORIDADE</button>`;
-                else if (a.status === 'atendido') acts = `<button class="btn-return bg-orange-50 text-orange-600 text-[10px] px-3 py-1 rounded-lg" data-id="${a.id}">REVERTER</button>`;
+                if (a.status === 'pauta') acts = `<button class="btn-checkin bg-green-600 text-white text-[10px] px-3 py-1.5 rounded-lg font-bold" data-id="${a.id}">CHEGOU</button> <button class="btn-faltou bg-yellow-500 text-white text-[10px] px-3 py-1.5 rounded-lg font-bold" data-id="${a.id}">FALTOU</button>`;
+                else if (a.status === 'aguardando') acts = `<button class="btn-atender bg-blue-600 text-white text-[10px] px-4 py-1.5 rounded-lg font-bold" data-id="${a.id}">ATENDER</button> <button class="btn-priority bg-red-100 text-red-600 text-[10px] px-2 py-1.5 rounded-lg font-bold" data-id="${a.id}">PRIORIDADE</button>`;
+                else if (a.status === 'atendido') acts = `<button class="btn-demands bg-gray-100 text-[10px] px-2 py-1 rounded" data-id="${a.id}">Demandas</button> <button class="btn-return bg-orange-50 text-orange-600 text-[10px] px-2 py-1 rounded" data-id="${a.id}">Reverter</button>`;
 
-                card.innerHTML = `<div class="font-bold text-gray-800">${escapeHTML(a.name)}</div>
+                card.innerHTML = `<div class="font-bold text-gray-800 leading-tight">${escapeHTML(a.name)}</div>
                 ${a.cpf ? `<div class="text-[10px] text-gray-400">CPF: ${a.cpf}</div>` : ''}
-                <div class="text-xs text-gray-500 mb-3">${escapeHTML(a.subject)}</div><div class="flex gap-2 items-center">${acts} <button class="btn-details text-blue-500 text-xs ml-auto" data-id="${a.id}">ℹ️</button></div>
-                <button class="btn-del absolute -top-1 -right-1 bg-white text-gray-200 hover:text-red-500 rounded-full w-5 h-5 shadow-sm border text-xs" data-id="${a.id}">×</button>`;
+                <div class="text-[11px] text-gray-500 mb-2">${escapeHTML(a.subject)}</div>
+                <div class="flex gap-2 items-center">${acts} <button class="btn-details text-blue-500 text-[10px] font-bold underline ml-auto" data-id="${a.id}">ℹ️</button></div>
+                <button class="btn-del absolute -top-1 -right-1 bg-white text-gray-300 hover:text-red-500 rounded-full w-5 h-5 shadow-sm border text-xs" data-id="${a.id}">×</button>`;
                 if(lists[a.status]) lists[a.status].appendChild(card);
             });
         };
 
-        const renderColaboradores = () => {
-            const tableBody = document.querySelector('#collaborators-list-table-modal tbody');
-            if (!tableBody) return;
-            tableBody.innerHTML = colaboradores.length === 0 ? '<tr><td colspan="4" class="text-center py-4">Nenhum.</td></tr>' : '';
-            colaboradores.forEach(c => {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td class="p-2">${escapeHTML(c.nome)}</td><td>${escapeHTML(c.cargo)}</td><td><input type="checkbox" class="checkin-checkbox" data-id="${c.id}" ${c.presente ? 'checked' : ''}></td><td><button class="del-collab-btn text-red-500" data-id="${c.id}">🗑️</button></td>`;
-                tableBody.appendChild(row);
-            });
-            document.getElementById('total-participants-count').textContent = colaboradores.length;
-        };
-
-        // 4. LISTENERS (MENU AÇÕES E FLUXO)
+        // 4. LISTENERS DE MENU E CRIACAO
         document.getElementById('actions-toggle').onclick = (e) => { e.stopPropagation(); document.getElementById('actions-panel').classList.toggle('hidden'); };
         document.getElementById('create-pauta-btn').onclick = () => document.getElementById('pauta-type-modal').classList.remove('hidden');
         document.getElementById('back-to-pautas-btn').onclick = () => showPautaSelectionScreen(auth.currentUser.uid);
-        document.getElementById('logout-btn-selection').onclick = () => handleLogout(auth);
         document.getElementById('pdf-atendidos-btn').onclick = () => generateAtendidosPDF(currentPautaData.name, allAssisted.filter(a => a.status === 'atendido'));
 
         document.querySelectorAll('.pauta-type-btn').forEach(btn => btn.onclick = (e) => { document.getElementById('pauta-type-modal').classList.add('hidden'); const m = document.getElementById('create-pauta-modal'); m.dataset.type = e.currentTarget.dataset.type; m.classList.remove('hidden'); });
@@ -382,209 +328,23 @@
             showNotification("Pauta Criada!");
         };
 
-        // CLIQUES DINÂMICOS
+        // CLIQUES NOS CARDS
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('button');
-            const clicked = e.target;
-            if (!btn && !clicked.dataset.id) return;
-            const id = clicked.dataset.id || btn.dataset.id;
-            const dr = doc(db, "pautas", currentPautaId, "attendances", id);
-
-            if (btn?.classList.contains('btn-checkin')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); }
-            if (btn?.classList.contains('btn-atender')) await updateDoc(dr, { status: 'atendido', attendedTime: new Date().toISOString(), attendant: currentUserName });
-            if (btn?.classList.contains('btn-del')) if(confirm("Apagar?")) await deleteDoc(dr);
-            if (btn?.classList.contains('btn-details')) openDetailsModal({ assistedId: id, pautaId: currentPautaId, allAssisted });
-            if (clicked.classList.contains('checkin-checkbox')) await toggleCollaboratorPresence(db, currentPautaId, id, clicked.checked);
+            if (!btn || !btn.dataset.id || !currentPautaId) return;
+            const id = btn.dataset.id; const dr = doc(db, "pautas", currentPautaId, "attendances", id);
+            if (btn.classList.contains('btn-checkin')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); }
+            if (btn.classList.contains('btn-atender')) await updateDoc(dr, { status: 'atendido', attendedTime: new Date().toISOString(), attendant: currentUserName });
+            if (btn.classList.contains('btn-details')) openDetailsModal({ assistedId: id, pautaId: currentPautaId, allAssisted });
+            if (btn.classList.contains('btn-del')) if(confirm("Apagar?")) await deleteDoc(dr);
         });
 
         document.getElementById('login-form').onsubmit = (e) => { e.preventDefault(); handleLogin(auth, e.target[0].value, e.target[1].value); };
         document.getElementById('file-upload').onchange = async (e) => { const data = await parsePautaCSV(e.target.files[0]); await saveImportedPauta(db, currentPautaId, data, currentUserName); showNotification("Importado!"); };
+
+        window.onclick = (e) => { if(e.target.classList.contains('fixed')) e.target.classList.add('hidden'); document.getElementById('actions-panel').classList.add('hidden'); };
         
         setupDetailsModal({ db, getChecklistHTML, showNotification });
-    </script>
-    <!-- SCRIPTS MODULARES -->
-    <script type="module">
-        // 1. IMPORTAÇÕES TOTAIS
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, addDoc, query, where, onSnapshot, writeBatch, deleteDoc, updateDoc, enableIndexedDbPersistence, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
-
-        import { firebaseConfig, emailJsConfig } from './js/config.js';
-        import { escapeHTML, showNotification, normalizeText } from './js/utils.js';
-        import { handleLogin, handleRegister, handleLogout } from './js/auth.js';
-        import { showScreen, togglePautaLockUI, switchTabUI } from './js/ui.js';
-        import { loadUsersList, cleanupOldData } from './js/admin.js';
-        import { setupAttendancesListener, getPriorityLevel, saveImportedPauta } from './js/pauta.js';
-        import { setupCollaboratorsListener, saveCollaboratorData, toggleCollaboratorPresence, deleteCollaborator } from './js/colaboradores.js';
-        import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
-        import { parsePautaCSV } from './js/csvHandler.js';
-        import { getChecklistHTML } from './js/checklist.js';
-        import { setupDetailsModal, openDetailsModal } from './detalhes.js';
-        import { renderStatisticsModal } from './estatisticas.js';
-
-        // 2. INICIALIZAÇÃO
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        let allAssisted = [], colaboradores = [], currentPautaId = null, currentPautaData = null;
-        let currentUserName = '', assistedIdToHandle = null, editCollaboratorId = null;
-
-        emailjs.init(emailJsConfig.publicKey);
-        try { enableIndexedDbPersistence(db); if (location.hostname !== "localhost") initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'), isTokenAutoRefreshEnabled: true }); } catch (e) {}
-
-        // 3. MONITOR DE ACESSO E PAUTAS
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const snap = await getDoc(doc(db, "users", user.uid));
-                if (snap.exists() && snap.data().status === 'approved') {
-                    currentUserName = snap.data().name;
-                    document.getElementById('admin-panel-btn').classList.toggle('hidden', snap.data().role !== 'admin');
-                    showPautaSelectionScreen(user.uid);
-                } else { handleLogout(auth); }
-            } else { showScreen('login'); }
-        });
-
-        const showPautaSelectionScreen = (userId) => {
-            const pautasList = document.getElementById('pautas-list');
-            const q = query(collection(db, "pautas"), where("members", "array-contains", userId), orderBy("createdAt", "desc"));
-            onSnapshot(q, (snapshot) => {
-                pautasList.innerHTML = '';
-                snapshot.forEach((docSnap) => {
-                    const pauta = docSnap.data();
-                    const created = pauta.createdAt ? new Date(pauta.createdAt) : new Date();
-                    const expires = new Date(created); expires.setDate(created.getDate() + 7);
-                    const card = document.createElement('div');
-                    card.className = "bg-white p-6 rounded-xl shadow-md border hover:border-green-500 cursor-pointer transition-all relative group";
-                    card.innerHTML = `<h3 class="font-bold text-xl">${escapeHTML(pauta.name)}</h3><p class="text-[10px] text-gray-400 uppercase mt-1 font-bold">${pauta.type}</p>
-                    <div class="mt-4 pt-4 border-t space-y-1"><p class="text-[10px] text-gray-400">Criada: ${created.toLocaleDateString()}</p><p class="text-[10px] text-red-400 font-bold uppercase">Exclui em: ${expires.toLocaleDateString()}</p></div>
-                    <button class="delete-pauta-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100" data-id="${docSnap.id}">🗑️</button>`;
-                    card.onclick = (e) => { if (e.target.closest('.delete-pauta-btn')) { if(confirm("Apagar?")) deleteDoc(doc(db, "pautas", docSnap.id)); return; } loadPauta(docSnap.id, pauta.name, pauta.type); };
-                    pautasList.appendChild(card);
-                });
-            });
-            showScreen('pautaSelection');
-        };
-
-        const loadPauta = async (id, name, type) => {
-            currentPautaId = id; localStorage.setItem('lastPautaId', id);
-            document.getElementById('pauta-title').textContent = name;
-            const pSnap = await getDoc(doc(db, "pautas", id));
-            if (pSnap.exists()) {
-                currentPautaData = pSnap.data();
-                togglePautaLockUI(currentPautaData.isClosed, currentPautaData.owner, auth.currentUser?.uid);
-                document.getElementById('em-atendimento-column').classList.toggle('hidden', !currentPautaData.useDelegationFlow);
-            }
-            setupAttendancesListener(db, id, (dados) => { allAssisted = dados; renderAssistedList(); });
-            setupCollaboratorsListener(db, id, (dados) => { colaboradores = dados; renderColaboradores(); });
-            showScreen('app');
-        };
-
-        const renderAssistedList = () => {
-            const lists = { pauta: document.getElementById('pauta-list'), aguardando: document.getElementById('aguardando-list'), emAtendimento: document.getElementById('em-atendimento-list'), atendidos: document.getElementById('atendidos-list') };
-            Object.values(lists).forEach(l => { if(l) l.innerHTML = ''; });
-            const mode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-
-            allAssisted.forEach(a => {
-                if (a.status === 'aguardando' && a.type !== mode) return;
-                const prio = getPriorityLevel(a);
-                const card = document.createElement('div');
-                card.className = `p-4 bg-white border rounded-xl shadow-sm mb-3 relative ${prio === 'URGENTE' ? 'priority-urgente' : ''}`;
-                
-                let acts = '';
-                if (a.status === 'pauta') acts = `<button class="btn-checkin bg-green-600 text-white text-[10px] px-3 py-1.5 rounded-lg font-bold" data-id="${a.id}">CHEGOU</button><button class="btn-faltou bg-yellow-500 text-white text-[10px] px-3 py-1.5 rounded-lg font-bold" data-id="${a.id}">FALTOU</button>`;
-                else if (a.status === 'aguardando') acts = `<button class="btn-atender bg-blue-600 text-white text-[10px] px-4 py-1.5 rounded-lg font-bold" data-id="${a.id}">ATENDER</button><button class="btn-priority bg-red-100 text-red-600 text-[10px] px-2 py-1.5 rounded font-bold" data-id="${a.id}">PRIORIDADE</button>`;
-                else if (a.status === 'atendido') acts = `<button class="btn-return bg-orange-50 text-orange-600 text-[10px] px-3 py-1 rounded-lg" data-id="${a.id}">REVERTER</button>`;
-
-                card.innerHTML = `<div class="font-bold text-gray-800">${escapeHTML(a.name)}</div>
-                ${a.cpf ? `<div class="text-[10px] text-gray-400">CPF: ${a.cpf}</div>` : ''}
-                <div class="text-xs text-gray-500 mb-3">${escapeHTML(a.subject)}</div><div class="flex gap-2 items-center">${acts} <button class="btn-details text-blue-500 text-xs ml-auto" data-id="${a.id}">ℹ️</button></div>
-                <button class="btn-del absolute -top-1 -right-1 bg-white text-gray-200 hover:text-red-500 rounded-full w-5 h-5 shadow-sm border text-xs" data-id="${a.id}">×</button>`;
-                if(lists[a.status]) lists[a.status].appendChild(card);
-            });
-        };
-
-        const renderColaboradores = () => {
-            const tableBody = document.querySelector('#collaborators-list-table-modal tbody');
-            if (!tableBody) return;
-            tableBody.innerHTML = colaboradores.length === 0 ? '<tr><td colspan="4" class="text-center py-4">Nenhum.</td></tr>' : '';
-            colaboradores.forEach(c => {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td class="p-2">${escapeHTML(c.nome)}</td><td>${escapeHTML(c.cargo)}</td><td><input type="checkbox" class="checkin-checkbox" data-id="${c.id}" ${c.presente ? 'checked' : ''}></td><td><button class="del-collab-btn text-red-500" data-id="${c.id}">🗑️</button></td>`;
-                tableBody.appendChild(row);
-            });
-            document.getElementById('total-participants-count').textContent = colaboradores.length;
-        };
-
-        // 4. LISTENERS (MENU AÇÕES E FLUXO)
-        document.getElementById('actions-toggle').onclick = (e) => { e.stopPropagation(); document.getElementById('actions-panel').classList.toggle('hidden'); };
-        document.getElementById('create-pauta-btn').onclick = () => document.getElementById('pauta-type-modal').classList.remove('hidden');
-        document.getElementById('back-to-pautas-btn').onclick = () => showPautaSelectionScreen(auth.currentUser.uid);
-        document.getElementById('logout-btn-selection').onclick = () => handleLogout(auth);
-        document.getElementById('pdf-atendidos-btn').onclick = () => generateAtendidosPDF(currentPautaData.name, allAssisted.filter(a => a.status === 'atendido'));
-
-        document.querySelectorAll('.pauta-type-btn').forEach(btn => btn.onclick = (e) => { document.getElementById('pauta-type-modal').classList.add('hidden'); const m = document.getElementById('create-pauta-modal'); m.dataset.type = e.currentTarget.dataset.type; m.classList.remove('hidden'); });
-        document.getElementById('next-to-ordem-btn').onclick = () => { document.getElementById('create-pauta-modal').classList.add('hidden'); document.getElementById('ordem-atendimento-modal').classList.remove('hidden'); };
-        document.getElementById('next-to-delegation-btn').onclick = () => { document.getElementById('ordem-atendimento-modal').classList.add('hidden'); document.getElementById('delegation-flow-modal').classList.remove('hidden'); };
-        document.getElementById('confirm-create-pauta-final-btn').onclick = async () => {
-            const name = document.getElementById('create-pauta-name-input').value;
-            const type = document.getElementById('create-pauta-modal').dataset.type;
-            const order = document.querySelector('input[name="ordemAtendimento"]:checked').value;
-            const delegation = document.querySelector('input[name="useDelegationFlow"]:checked').value === 'true';
-            await addDoc(collection(db, "pautas"), { name, type, ordemAtendimento: order, useDelegationFlow: delegation, owner: auth.currentUser.uid, members: [auth.currentUser.uid], memberEmails: [auth.currentUser.email], createdAt: new Date().toISOString(), isClosed: false });
-            document.getElementById('delegation-flow-modal').classList.add('hidden');
-            showNotification("Pauta Criada!");
-        };
-
-        // CLIQUES DINÂMICOS
-        document.addEventListener('click', async (e) => {
-            const btn = e.target.closest('button');
-            const clicked = e.target;
-            if (!btn && !clicked.dataset.id) return;
-            const id = clicked.dataset.id || btn.dataset.id;
-            const dr = doc(db, "pautas", currentPautaId, "attendances", id);
-
-            if (btn?.classList.contains('btn-checkin')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); }
-            if (btn?.classList.contains('btn-atender')) await updateDoc(dr, { status: 'atendido', attendedTime: new Date().toISOString(), attendant: currentUserName });
-            if (btn?.classList.contains('btn-del')) if(confirm("Apagar?")) await deleteDoc(dr);
-            if (btn?.classList.contains('btn-details')) openDetailsModal({ assistedId: id, pautaId: currentPautaId, allAssisted });
-            if (clicked.classList.contains('checkin-checkbox')) await toggleCollaboratorPresence(db, currentPautaId, id, clicked.checked);
-        });
-
-        document.getElementById('login-form').onsubmit = (e) => { e.preventDefault(); handleLogin(auth, e.target[0].value, e.target[1].value); };
-        document.getElementById('file-upload').onchange = async (e) => { const data = await parsePautaCSV(e.target.files[0]); await saveImportedPauta(db, currentPautaId, data, currentUserName); showNotification("Importado!"); };
-        
-        setupDetailsModal({ db, getChecklistHTML, showNotification });
-    </script>
-    <!-- MODAIS DE AJUDA E POLÍTICAS -->
-    <div id="modal-manual" class="hidden fixed inset-0 bg-black/60 z-[300] flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-xl max-w-2xl w-full">
-            <h2 class="text-xl font-bold mb-4">Manual do Usuário</h2>
-            <div class="text-sm text-gray-600 space-y-2">
-                <p>1. Crie uma pauta para o mutirão ou dia de atendimento.</p>
-                <p>2. Importe o CSV gerado pelo sistema oficial.</p>
-                <p>3. Marque a chegada dos assistidos conforme eles forem se apresentando.</p>
-            </div>
-            <button onclick="document.getElementById('modal-manual').classList.add('hidden')" class="mt-6 w-full bg-gray-100 py-2 rounded">Fechar</button>
-        </div>
-    </div>
-
-    <!-- Script de Anotações (LocalStorage) -->
-    <script>
-        const btnNotes = document.getElementById('notes-btn');
-        if (btnNotes) {
-            btnNotes.onclick = () => {
-                const modal = document.getElementById('notes-modal');
-                const saved = localStorage.getItem(`notes_sigap`) || "";
-                document.getElementById('notes-text').value = saved;
-                modal.classList.remove('hidden');
-            };
-        }
-        document.getElementById('save-notes-btn').onclick = () => {
-            const txt = document.getElementById('notes-text').value;
-            localStorage.setItem(`notes_sigap`, txt);
-            alert("Salvo localmente!");
-        };
     </script>
 </body>
 </html>
