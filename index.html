@@ -1319,17 +1319,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
 
         // Ponte para o sistema de Auditoria (Módulo js/admin.js)
-        const logAction = (type, details, targetId = null) => {
+       // const logAction = (type, details, targetId = null) => {
             // Chama a função exportada do admin.js passando as variáveis globais do index
-            import('./js/admin.js').then(m => {
-                m.logAction(db, auth, currentUserName, currentPautaId, type, details, targetId);
-            });
-        };
+       //     import('./js/admin.js').then(m => {
+       //         m.logAction(db, auth, currentUserName, currentPautaId, type, details, targetId);
+      //      });
+      //    };
 
 
         
         // Inicialização do EmailJS usando o novo arquivo de config
-        // emailjs.init(emailJsConfig.publicKey);
+        emailjs.init(emailJsConfig.publicKey);
         // --- LÓGICA DO PAINEL DE ADMIN ---
 
         // Painel do Administrador (Modularizado)
@@ -4102,6 +4102,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
