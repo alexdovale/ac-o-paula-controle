@@ -2247,19 +2247,38 @@ render(atendidosList, atendidos, a => {
         };
 
         
-        // 4. Delegação de cliques (Presença e Excluir)
+       // 4. Delegação de cliques (Presença e Excluir)
         document.addEventListener('click', async (e) => {
-            const btn = e.target.closest('button');
-            if (!id) return;
-            const id = btn.dataset.id; 
+            // Primeiro: verifica se clicou no checkbox de presença (que não é um botão)
             if (e.target.classList.contains('checkin-checkbox')) {
-                await toggleCollaboratorPresence(db, currentPautaId, id, e.target.checked);
+                const idCheckbox = e.target.dataset.id;
+                if (idCheckbox) {
+                    await toggleCollaboratorPresence(db, currentPautaId, idCheckbox, e.target.checked);
+                }
+                return; // Interrompe aqui pois já processou o checkbox
             }
-            if (e.target.classList.contains('del-collab-btn')) {
+        
+            // Segundo: tenta encontrar se o clique foi em um botão
+            const btn = e.target.closest('button');
+            if (!btn) return; // Se não clicou em botão nem checkbox, ignora.
+        
+            // Terceiro: Pega o ID do botão (se houver)
+            const id = btn.dataset.id;
+        
+            // Ação de Excluir Colaborador
+            if (btn.classList.contains('del-collab-btn')) {
+                if (!id) return;
                 if (confirm("Remover colaborador?")) await deleteCollaborator(db, currentPautaId, id);
             }
-            if (e.target.id === 'clear-collaborators-list-modal') {
-                if (confirm("Limpar toda a lista?")) await clearCollaborators(db, currentPautaId);
+            
+            // Ação de Abrir Modal de Equipe
+            if (btn.id === 'manage-collaborators-btn') {
+                setupCollaboratorsListener(db, currentPautaId, (dados) => {
+                    colaboradores = dados;
+                    renderColaboradores();
+                });
+                if (typeof resetCollaboratorFormModal === 'function') resetCollaboratorFormModal();
+                document.getElementById('collaborators-modal').classList.remove('hidden');
             }
         });
         
@@ -4131,3 +4150,4 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
