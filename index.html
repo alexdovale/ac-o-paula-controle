@@ -1316,7 +1316,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { logAction, loadUsersList, cleanupOldData } from './js/admin.js';
 
 
-
+        // Ponte para o sistema de Auditoria (Módulo js/admin.js)
+        const logAction = (type, details, targetId = null) => {
+            // Chama a função exportada do admin.js passando as variáveis globais do index
+            import('./js/admin.js').then(m => {
+                m.logAction(db, auth, currentUserName, currentPautaId, type, details, targetId);
+            });
+        };
 
 
         
@@ -4255,6 +4261,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
