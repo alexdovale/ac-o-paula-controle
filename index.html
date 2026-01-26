@@ -1313,7 +1313,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { parsePautaCSV } from './js/csvHandler.js';
         import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
         import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
-        import { logAction, loadUsersList, cleanupOldData } from './js/admin.js';
+        import { loadUsersList, cleanupOldData, viewAuditLogs } from './js/admin.js';
         import { setupAttendancesListener } from './js/pauta.js';
         import { setupCollaboratorsListener,  saveCollaboratorData, toggleCollaboratorPresence, deleteCollaborator, clearCollaborators } from './js/colaboradores.js';
 
@@ -1348,30 +1348,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         }
         
         // Expondo funções globais necessárias para os botões do Admin
-        window.approveUserWithRole = async (id) => {
-            const roleSelect = document.getElementById(`role-select-${id}`);
-            const selectedRole = roleSelect.value;
-            await updateDoc(doc(db, "users", id), { status: 'approved', role: selectedRole });
-            showNotification("Usuário aprovado!");
-            loadUsersList(db);
-        };
-        
-        window.deleteUser = async (id) => {
-            if(confirm("Deseja excluir permanentemente?")) {
-                await deleteDoc(doc(db, "users", id));
-                showNotification("Usuário removido.", "error");
-                loadUsersList(db);
-            }
-        };
         
         const adminModal = document.getElementById('admin-modal');
-        
-        // 1. Mostrar o botão apenas se for Admin
-        const checkAdminStatus = (userData) => {
-            if (userData.role === 'admin' || userData.role === 'superadmin') {
-                adminPanelBtn.classList.remove('hidden');
-            }
-        };
         
         document.addEventListener('DOMContentLoaded', () => {
             // ... outros códigos de inicialização que você já tem ...
@@ -2282,6 +2260,46 @@ render(atendidosList, atendidos, a => {
         });
         
 
+m        // --- LIGAÇÃO DO PAINEL ADMIN (Módulo js/admin.js) ---
+        
+        // Abrir Modal Admin
+        const btnAdmin = document.getElementById('admin-panel-btn');
+        if (btnAdmin) {
+            btnAdmin.onclick = () => {
+                document.getElementById('admin-modal').classList.remove('hidden');
+                loadUsersList(db); // Carrega usuários via admin.js
+            };
+        }
+        
+        // Executar Limpeza LGPD (7 dias)
+        const btnCleanup = document.getElementById('cleanup-old-data-btn');
+        if (btnCleanup) {
+            btnCleanup.onclick = () => {
+                import('./js/admin.js').then(m => m.cleanupOldData(db));
+            };
+        }
+        
+        // Visualizar Logs de Auditoria
+        const btnLogs = document.getElementById('view-audit-logs-btn');
+        if (btnLogs) {
+            btnLogs.onclick = () => {
+                viewAuditLogs(db); // Chama a tabela de logs do admin.js
+            };
+        }
+        
+        // Expor funções globais para os botões "Aprovar" e "Excluir" que são criados via texto
+        window.approveUserWithRole = async (id) => {
+            const role = document.getElementById(`role-select-${id}`).value;
+            import('./js/admin.js').then(m => m.approveUser(db, id, role));
+        };
+        
+        window.deleteUser = async (id) => {
+            if(confirm("Excluir definitivamente?")) {
+                import('./js/admin.js').then(m => m.deleteUser(db, id));
+            }
+        };
+
+        
         const loadPauta = async (pautaId, pautaName, pautaType) => {
             currentPautaId = pautaId;
             document.getElementById('pauta-title').textContent = pautaName;
@@ -4149,5 +4167,6 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
