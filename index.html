@@ -1315,8 +1315,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
         import { logAction, loadUsersList, cleanupOldData } from './js/admin.js';
         import { setupAttendancesListener } from './js/pauta.js';
-        import { setupCollaboratorsListener, saveCollaboratorData, deleteCollaborator, clearCollaborators } from './js/colaboradores.js';
-
+        import { setupCollaboratorsListener,  saveCollaboratorData, toggleCollaboratorPresence, deleteCollaborator, clearCollaborators } from './js/colaboradores.js';
 
 
         // Ponte para o sistema de Auditoria (Módulo js/admin.js)
@@ -4150,4 +4149,5 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
