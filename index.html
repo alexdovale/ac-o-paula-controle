@@ -1314,6 +1314,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
         import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
         import { logAction as logActionDB, loadUsersList, cleanupOldData } from './js/admin.js';
+        import { setupAttendancesListener, updateAttendanceStatus, saveImportedPauta } from './js/pauta.js';
 
         
         // Inicialização do EmailJS usando o novo arquivo de config
@@ -4264,6 +4265,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
