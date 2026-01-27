@@ -1313,50 +1313,49 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { parsePautaCSV } from './js/csvHandler.js';
         import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
         import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
-        import { logAction, loadUsersList, cleanupOldData } from './js/admin.js';
-        import { logAction as logActionModule, loadUsersList, cleanupOldData } from './js/admin.js';
-
-        // Ponte para o sistema de Auditoria (Módulo js/admin.js)
-        const logAction = (type, details, targetId = null) => {
-            // Chama a função exportada do admin.js passando as variáveis globais do index
-            import('./js/admin.js').then(m => {
-                m.logAction(db, auth, currentUserName, currentPautaId, type, details, targetId);
-            });
-        };
-
+        import { logAction as logActionDB, loadUsersList, cleanupOldData } from './js/admin.js';
 
         
         // Inicialização do EmailJS usando o novo arquivo de config
         emailjs.init(emailJsConfig.publicKey);
         // --- LÓGICA DO PAINEL DE ADMIN ---
-
-        // Ponte para o sistema de Auditoria (Módulo js/admin.js)
-        const logAction = (type, details, targetId = null) => {
-            // Chama a função que apelidamos de logActionModule lá no topo
-            logActionModule(db, auth, currentUserName, currentPautaId, type, details, targetId);
-        };
         
-        // Limpeza LGPD
-        const btnCleanup = document.getElementById('cleanup-old-data-btn');
-        if (btnCleanup) {
-            btnCleanup.onclick = () => cleanupOldData(db); // Função do admin.js
+        // --- LIGAÇÕES DO PAINEL ADMIN ---
+        
+        // Abrir o Painel (ID: admin-panel-btn)
+        const btnAdmin = document.getElementById('admin-panel-btn');
+        if (btnAdmin) {
+            btnAdmin.onclick = () => {
+                document.getElementById('admin-modal').classList.remove('hidden');
+                loadUsersList(db); // Chama a função que você importou
+            };
         }
         
-        // Expondo funções globais necessárias para os botões do Admin
+        // Botão de Limpeza LGPD (ID: cleanup-old-data-btn)
+        const btnCleanup = document.getElementById('cleanup-old-data-btn');
+        if (btnCleanup) {
+            btnCleanup.onclick = () => {
+                cleanupOldData(db); // Chama a função que você importou
+            };
+        }
+        
+        // Funções para os botões "Aprovar" e "Excluir" que ficam dentro da lista
         window.approveUserWithRole = async (id) => {
-            const roleSelect = document.getElementById(`role-select-${id}`);
-            const selectedRole = roleSelect.value;
-            await updateDoc(doc(db, "users", id), { status: 'approved', role: selectedRole });
-            showNotification("Usuário aprovado!");
-            loadUsersList(db);
+            const role = document.getElementById(`role-select-${id}`).value;
+            // Importa o módulo na hora e executa a aprovação
+            import('./js/admin.js').then(m => m.approveUser(db, id, role));
         };
         
         window.deleteUser = async (id) => {
-            if(confirm("Deseja excluir permanentemente?")) {
-                await deleteDoc(doc(db, "users", id));
-                showNotification("Usuário removido.", "error");
-                loadUsersList(db);
+            if(confirm("Deseja excluir permanentemente este usuário?")) {
+                import('./js/admin.js').then(m => m.deleteUser(db, id));
             }
+        };
+
+        // Ponte simplificada para a Auditoria (Módulo js/admin.js)
+        const logAction = (type, details, targetId = null) => {
+            // Chama a função do arquivo usando o "apelido" logActionDB
+            logActionDB(db, auth, currentUserName, currentPautaId, type, details, targetId);
         };
         
         const adminModal = document.getElementById('admin-modal');
@@ -4258,4 +4257,5 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
