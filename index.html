@@ -1314,7 +1314,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
         import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
         import { logAction, loadUsersList, cleanupOldData } from './js/admin.js';
-
+        import { logAction as logActionModule, loadUsersList, cleanupOldData } from './js/admin.js';
 
         // Ponte para o sistema de Auditoria (Módulo js/admin.js)
         const logAction = (type, details, targetId = null) => {
@@ -1330,14 +1330,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         emailjs.init(emailJsConfig.publicKey);
         // --- LÓGICA DO PAINEL DE ADMIN ---
 
-        // Painel do Administrador (Modularizado)
-        const adminPanelBtn = document.getElementById('admin-panel-btn');
-        if (adminPanelBtn) {
-            adminPanelBtn.onclick = () => {
-                document.getElementById('admin-modal').classList.remove('hidden');
-                loadUsersList(db); // Função do admin.js
-            };
-        }
+        // Ponte para o sistema de Auditoria (Módulo js/admin.js)
+        const logAction = (type, details, targetId = null) => {
+            // Chama a função que apelidamos de logActionModule lá no topo
+            logActionModule(db, auth, currentUserName, currentPautaId, type, details, targetId);
+        };
         
         // Limpeza LGPD
         const btnCleanup = document.getElementById('cleanup-old-data-btn');
@@ -4261,3 +4258,4 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
