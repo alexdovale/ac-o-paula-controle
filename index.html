@@ -9,8 +9,23 @@
     <link rel="apple-touch-icon" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <link rel="manifest" href="manifest.json">
 
-    <!-- Bibliotecas Externas -->
+    <!-- Sentry Monitoramento -->
     <script src="https://browser.sentry-cdn.com/7.114.0/bundle.min.js" crossorigin="anonymous"></script>
+    <script>
+      if (window.Sentry) {
+        Sentry.init({
+          dsn: "https://7d95a89ba62ab6b3f7a64540c8e693cb@o4510647821795328.ingest.us.sentry.io/4510647932223488", 
+          environment: "production",
+          release: "sigap@1.0.0",
+          beforeSend(event, hint) {
+            if (event.exception) Sentry.showReportDialog({ eventId: event.event_id });
+            return event;
+          }
+        });
+      }
+    </script>
+
+    <!-- Bibliotecas Externas -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -39,13 +54,12 @@
         ⚠️ Sem conexão. Trabalhando em Modo Offline.
     </div>
 
-    <div id="loading-container" class="loading-container"><div class="loader"></div><p id="loading-text" class="mt-4 text-gray-700 font-semibold text-center">Conectando com Segurança...</p></div>
+    <div id="loading-container" class="loading-container"><div class="loader"></div><p id="loading-text" class="mt-4 text-gray-700 font-semibold">Conectando...</p></div>
 
     <div id="login-container" class="hidden min-h-screen flex items-center justify-center">
         <div class="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
-            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGAP" class="mx-auto h-24 mb-6">
-            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Sistema SIGAP</h2>
-            <div id="auth-error" class="bg-red-100 text-red-700 px-4 py-3 rounded-lg mb-4 hidden"></div>
+            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" class="mx-auto h-24 mb-6">
+            <h2 class="text-2xl font-bold text-center mb-6">SIGAP - Gerenciamento</h2>
             <div class="flex border-b mb-6">
                 <button id="login-tab-btn" class="flex-1 py-2 font-semibold text-green-600 border-b-2 border-green-600">Login</button>
                 <button id="register-tab-btn" class="flex-1 py-2 font-semibold text-gray-500">Cadastrar</button>
@@ -53,13 +67,12 @@
             <form id="login-form" class="space-y-4">
                 <input type="email" id="login-email" placeholder="Email" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500">
                 <input type="password" id="login-password" placeholder="Senha" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500">
-                <div class="text-right"><button id="forgot-password-link" class="text-xs text-green-600 hover:underline">Esqueci minha senha</button></div>
                 <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700">ENTRAR</button>
             </form>
             <form id="register-form" class="hidden space-y-4">
                 <input type="text" id="register-name" placeholder="Nome Completo" required class="w-full p-3 border rounded-lg">
                 <input type="email" id="register-email" placeholder="Email" required class="w-full p-3 border rounded-lg">
-                <input type="password" id="register-password" placeholder="Senha (min 6 caracteres)" required class="w-full p-3 border rounded-lg">
+                <input type="password" id="register-password" placeholder="Senha (min 6)" required class="w-full p-3 border rounded-lg">
                 <button type="submit" class="w-full bg-green-700 text-white py-3 rounded-lg font-bold">CRIAR CONTA</button>
             </form>
         </div>
@@ -73,7 +86,7 @@
             </div>
         </div>
         <div id="pautas-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        <button id="create-pauta-btn" class="w-full mt-8 bg-green-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-green-700 transition-all">CRIAR NOVA PAUTA</button>
+        <button id="create-pauta-btn" class="w-full mt-8 bg-green-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-green-700">CRIAR NOVA PAUTA</button>
     </div>
 
     <div id="app-container" class="hidden max-w-full mx-auto">
@@ -81,15 +94,15 @@
             <div class="flex flex-col md:flex-row justify-between items-center gap-4">
                 <div>
                     <h2 id="pauta-title" class="text-2xl font-bold text-gray-800"></h2>
-                    <button id="back-to-pautas-btn" class="text-sm text-green-600 hover:underline">← Voltar para Minhas Pautas</button>
+                    <button id="back-to-pautas-btn" class="text-sm text-green-600 hover:underline">← Voltar</button>
                 </div>
                 <div class="relative">
-                    <button id="actions-toggle" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold">Menu Ações ▼</button>
+                    <button id="actions-toggle" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold transition-colors">Menu Ações ▼</button>
                     <div id="actions-panel" class="hidden absolute right-0 mt-2 w-64 bg-white border shadow-2xl rounded-xl p-2 z-[100] flex flex-col gap-1">
                         <button id="share-pauta-btn" class="text-left px-4 py-2 text-sm text-pink-700 bg-pink-50 rounded-lg hover:bg-pink-100">🔗 Compartilhamento Externo</button>
                         <button id="view-stats-btn" class="text-left px-4 py-2 text-sm text-cyan-700 bg-cyan-50 rounded-lg hover:bg-cyan-100">📊 Ver Estatísticas</button>
                         <button id="edit-pauta-name-btn" class="text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">✏️ Editar Nome</button>
-                        <button id="manage-members-btn" class="text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">📧 Compartilhar com Colega</button>
+                        <button id="manage-members-btn" class="text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">📧 Compartilhar</button>
                         <hr>
                         <button id="manage-collaborators-btn" class="text-left px-4 py-2 text-sm text-violet-700 bg-violet-50 rounded-lg hover:bg-violet-100">👥 Equipe de Campo</button>
                         <button id="notes-btn" class="text-left px-4 py-2 text-sm text-indigo-700 bg-indigo-50 rounded-lg hover:bg-indigo-100">📝 Anotações</button>
@@ -102,12 +115,12 @@
             <div id="closed-pauta-alert" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4 font-bold rounded">Pauta Fechada para Edições.</div>
         </header>
 
-        <nav class="flex gap-4 mb-6 border-b">
+        <nav class="flex gap-4 mb-6 border-b border-gray-200">
             <button id="tab-agendamento" class="tab-active py-2 px-6 border-b-2">📅 Agendados</button>
             <button id="tab-avulso" class="py-2 px-6 border-b-2 text-gray-500">➕ Avulsos</button>
         </nav>
 
-        <main id="main-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <main id="main-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
             <div id="pauta-column" class="bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col">
                 <div class="p-4 bg-gray-50 border-b flex justify-between items-center font-bold">
                     <span>📋 Pauta Original</span>
@@ -131,79 +144,96 @@
             <div id="atendidos-column" class="bg-white rounded-xl shadow-sm border border-t-4 border-green-500 overflow-hidden flex flex-col">
                 <div class="p-4 bg-green-50 flex justify-between items-center font-bold">
                     <span class="text-green-800">✅ Atendidos</span>
-                    <button id="download-pdf-btn" class="text-[10px] bg-blue-600 text-white px-2 py-1 rounded font-bold hover:bg-blue-700 uppercase">PDF</button>
+                    <button id="download-pdf-btn" class="text-[10px] bg-blue-600 text-white px-2 py-1 rounded font-bold uppercase hover:bg-blue-700">PDF</button>
                 </div>
                 <div id="atendidos-list" class="p-4 space-y-3 column-content overflow-y-auto max-h-[60vh]"></div>
             </div>
         </main>
     </div>
+    <footer class="mt-12 bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center">
+        <button id="toggle-logic-btn-padrao" class="text-green-600 text-sm font-bold hover:underline">Por que esta ordem é justa? (Clique para expandir)</button>
+        <div id="logic-explanation-padrao-content" class="hidden mt-4 text-left p-4 bg-gray-50 border rounded-lg text-sm space-y-3">
+            <p>A lógica prioriza quem chega no horário agendado e oferece tolerância de 20 minutos. Quem atrasa mais de 30 minutos ou é avulso, é movido para o final da fila para não prejudicar os pontuais.</p>
+        </div>
+    </footer>
+
     <footer class="bg-white border-t mt-16 pt-10 pb-10 text-center">
         <div class="flex justify-center space-x-12 mb-8 text-sm text-gray-500 font-bold uppercase tracking-widest">
-            <button onclick="document.getElementById('manual-modal').classList.remove('hidden')" class="hover:text-green-600 transition-colors">Manual</button>
-            <button onclick="document.getElementById('privacy-policy-modal').classList.remove('hidden')" class="hover:text-green-600 transition-colors">Privacidade (LGPD)</button>
-            <button onclick="document.getElementById('terms-modal').classList.remove('hidden')" class="hover:text-green-600 transition-colors">Termos de Uso</button>
+            <button onclick="document.getElementById('manual-modal').classList.remove('hidden')" class="hover:text-green-600">Manual</button>
+            <button onclick="document.getElementById('privacy-policy-modal').classList.remove('hidden')" class="hover:text-green-600">Privacidade (LGPD)</button>
+            <button onclick="document.getElementById('terms-modal').classList.remove('hidden')" class="hover:text-green-600">Termos</button>
         </div>
         <div class="flex justify-center items-center gap-8 mb-4 opacity-60">
             <span class="flex items-center gap-1.5 text-xs border px-4 py-1.5 rounded-full font-semibold"><svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6z"></path></svg> AMBIENTE CRIPTOGRAFADO (SSL)</span>
             <span class="flex items-center gap-1.5 text-xs border px-4 py-1.5 rounded-full font-semibold"><svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h.01a1 1 0 100-2H10zm3 0a1 1 0 000 2h.01a1 1 0 100-2H13zM7 13a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h.01a1 1 0 100-2H10zm3 0a1 1 0 000 2h.01a1 1 0 100-2H13z" clip-rule="evenodd"></path></svg> MONITORAMENTO SENTRY ATIVO</span>
-            <span class="flex items-center gap-1.5 text-xs border px-4 py-1.5 rounded-full font-semibold"><svg class="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> EM CONFORMIDADE COM LGPD</span>
+            <span class="flex items-center gap-1.5 text-xs border px-4 py-1.5 rounded-full font-semibold"><svg class="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> LGPD COMPLIANT</span>
         </div>
-        <p class="text-[10px] text-gray-400">&copy; 2026 SIGAP - Sistema Inteligente de Gestão de Pauta. Desenvolvido por Alex do Vale.</p>
+        <p class="text-xs text-gray-400">&copy; 2026 SIGAP - Sistema de Gestão de Pauta.</p>
     </footer>
     <!-- MODAIS DE CRIAÇÃO -->
     <div id="pauta-type-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[200]">
         <div class="bg-white p-8 rounded-xl max-w-md w-full shadow-2xl">
-            <h2 class="text-xl font-bold mb-6 text-center">Escolha o Tipo de Pauta</h2>
+            <h2 class="text-xl font-bold mb-6 text-center">Tipo de Pauta</h2>
             <div class="space-y-4">
                 <button data-type="agendado" class="pauta-type-btn w-full p-4 border rounded-xl hover:bg-green-50 font-bold transition-all text-left">📅 Agendamento Padrão</button>
                 <button data-type="avulso" class="pauta-type-btn w-full p-4 border rounded-xl hover:bg-green-50 font-bold transition-all text-left">➕ Pauta para Avulsos</button>
                 <button data-type="multisala" class="pauta-type-btn w-full p-4 border rounded-xl hover:bg-green-50 font-bold transition-all text-left">🏢 Pauta Multi-Salas</button>
             </div>
+            <button onclick="this.closest('.fixed').classList.add('hidden')" class="mt-4 w-full text-gray-400 text-xs font-bold uppercase">Cancelar</button>
         </div>
     </div>
+
     <div id="create-pauta-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[210]">
-        <div class="bg-white p-8 rounded-xl max-w-md w-full">
-            <h2 class="text-xl font-bold mb-4">Dê um nome à pauta</h2>
+        <div class="bg-white p-8 rounded-xl max-w-md w-full shadow-2xl">
+            <h2 class="text-xl font-bold mb-4">Nome da Pauta</h2>
             <input type="text" id="create-pauta-name-input" class="w-full border p-4 rounded-lg mb-6 focus:ring-2 focus:ring-green-500" placeholder="Ex: Vara de Família - Março/2026">
-            <button id="next-to-ordem-btn" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold">Avançar →</button>
+            <button id="next-to-ordem-btn" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold shadow-lg">Avançar →</button>
         </div>
     </div>
+
     <div id="ordem-atendimento-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[220]">
         <div class="bg-white p-8 rounded-xl max-w-md w-full">
             <h2 class="text-xl font-bold mb-4">Regra da Fila</h2>
             <div class="space-y-3">
-                <label class="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="ordemAtendimento" value="padrao" checked> <b>Lógica Justa (SIGAP)</b></label>
+                <label class="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="ordemAtendimento" value="padrao" checked> <b>Lógica SIGAP</b></label>
                 <label class="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="ordemAtendimento" value="chegada"> <b>Ordem de Chegada Bruta</b></label>
             </div>
             <button id="next-to-delegation-btn" class="w-full mt-6 bg-green-600 text-white py-3 rounded-lg font-bold">Avançar →</button>
         </div>
     </div>
+
     <div id="delegation-flow-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[230]">
         <div class="bg-white p-8 rounded-xl max-w-md w-full">
             <h2 class="text-xl font-bold mb-4">Fluxo de Equipe</h2>
             <div class="space-y-3">
-                <label class="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="useDelegationFlow" value="true" checked> <b>Sim</b> (Mover para equipe)</label>
-                <label class="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="useDelegationFlow" value="false"> <b>Não</b> (Finalizar diretamente)</label>
+                <label class="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="useDelegationFlow" value="true" checked> <b>Sim</b> (Usar Delegação)</label>
+                <label class="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="useDelegationFlow" value="false"> <b>Não</b> (Finalizar Direto)</label>
             </div>
-            <button id="confirm-create-pauta-final-btn" class="w-full mt-6 bg-green-700 text-white py-3 rounded-lg font-bold">Concluir e Criar Pauta</button>
+            <button id="confirm-create-pauta-final-btn" class="w-full mt-6 bg-green-700 text-white py-3 rounded-lg font-bold shadow-xl">Concluir e Criar Pauta</button>
         </div>
     </div>
 
-    <!-- MODAIS DE OPERAÇÃO -->
-    <div id="arrival-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[200]">
-        <div class="bg-white p-6 rounded-xl max-w-xs w-full text-center">
-            <h2 class="font-bold mb-4">Horário de Chegada</h2>
-            <input type="time" id="arrival-time-input" class="w-full border p-3 rounded-lg mb-4 text-center text-xl font-bold">
+    <div id="arrival-modal" class="hidden fixed inset-0 bg-black/60 z-[200] flex items-center justify-center">
+        <div class="bg-white p-6 rounded-xl max-w-xs w-full shadow-2xl">
+            <h2 class="font-bold mb-4 text-center">Horário de Chegada</h2>
+            <input type="time" id="arrival-time-input" class="w-full border p-3 rounded-lg mb-4 text-center font-bold text-xl">
             <button id="confirm-arrival-btn" class="w-full bg-green-600 text-white py-2 rounded font-bold">Confirmar</button>
         </div>
     </div>
-    <div id="priority-reason-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[200]">
-        <div class="bg-white p-8 rounded-xl max-w-md w-full">
-            <h2 class="text-xl font-bold mb-2">Motivo da Prioridade</h2>
-            <textarea id="priority-reason-input" class="w-full border p-3 rounded-lg mb-4 h-24"></textarea>
-            <button id="confirm-priority-reason-btn" class="w-full bg-red-600 text-white py-2 rounded-lg font-bold">Ativar Prioridade</button>
+
+    <!-- MODAL ADMIN -->
+    <div id="admin-modal" class="hidden fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl">
+            <h2 class="text-2xl font-bold mb-6 border-b pb-2">Painel de Administração</h2>
+            <div class="overflow-y-auto flex-1 pr-2">
+                <div id="pending-users-list" class="space-y-2 mb-6"></div>
+                <div id="approved-users-list" class="space-y-2"></div>
+            </div>
+            <button id="cleanup-old-data-btn" class="mt-4 bg-red-50 text-red-700 py-3 rounded-lg font-bold text-xs uppercase border border-red-200">Executar Limpeza LGPD (7 dias)</button>
+            <button id="close-admin-modal" class="w-full mt-2 bg-gray-100 py-3 rounded-lg font-bold uppercase text-xs">Fechar Painel</button>
         </div>
     </div>
+    <!-- SCRIPTS MODULARES -->
     <script type="module">
         // 1. IMPORTAÇÕES TOTAIS (Firebase + Seus 12 Módulos da pasta /js)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -213,13 +243,12 @@
 
         import { firebaseConfig, emailJsConfig } from './js/config.js';
         import { escapeHTML, showNotification, normalizeText } from './js/utils.js';
-        import { subjectTree } from './js/assuntos.js';
         import { handleLogin, handleRegister, handleLogout } from './js/auth.js';
         import { showScreen, togglePautaLockUI, switchTabUI } from './js/ui.js';
-        import { loadUsersList, logAction } from './js/admin.js';
+        import { loadUsersList, cleanupOldData } from './js/admin.js';
         import { setupAttendancesListener, getPriorityLevel, saveImportedPauta } from './js/pauta.js';
-        import { setupCollaboratorsListener } from './js/colaboradores.js';
-        import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
+        import { setupCollaboratorsListener, toggleCollaboratorPresence } from './js/colaboradores.js';
+        import { generateAtendidosPDF } from './js/pdfService.js';
         import { parsePautaCSV } from './js/csvHandler.js';
         import { getChecklistHTML } from './js/checklist.js';
         import { setupDetailsModal, openDetailsModal } from './detalhes.js';
@@ -229,20 +258,24 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-        let allAssisted = [], colaboradores = [], currentPautaId = null, currentPautaData = null;
-        let currentUserName = '', currentPautaOwnerId = null, isPautaClosed = false;
-        let assistedIdToHandle = null;
+        let allAssisted = [], currentPautaId = null, currentPautaData = null;
+        let currentUserName = '', assistedIdToHandle = null;
 
         emailjs.init(emailJsConfig.publicKey);
-        try { enableIndexedDbPersistence(db); if (location.hostname !== "localhost") { initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'), isTokenAutoRefreshEnabled: true }); } } catch (e) {}
+        try { 
+            enableIndexedDbPersistence(db);
+            if (location.hostname !== "localhost") {
+                initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'), isTokenAutoRefreshEnabled: true });
+            }
+        } catch (e) {}
 
-        // 3. MONITOR DE ACESSO E PAUTAS (REATIVADO)
+        // 3. MONITOR DE ACESSO
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                const userSnap = await getDoc(doc(db, "users", user.uid));
-                if (userSnap.exists() && userSnap.data().status === 'approved') {
-                    currentUserName = userSnap.data().name;
-                    document.getElementById('admin-panel-btn').classList.toggle('hidden', userSnap.data().role !== 'admin');
+                const snap = await getDoc(doc(db, "users", user.uid));
+                if (snap.exists() && snap.data().status === 'approved') {
+                    currentUserName = snap.data().name;
+                    document.getElementById('admin-panel-btn').classList.toggle('hidden', snap.data().role !== 'admin' && snap.data().role !== 'superadmin');
                     showPautaSelectionScreen(user.uid);
                 } else { handleLogout(auth); }
             } else { showScreen('login'); }
@@ -255,13 +288,9 @@
                 pautasList.innerHTML = '';
                 snapshot.forEach((docSnap) => {
                     const pauta = docSnap.data();
-                    const created = pauta.createdAt ? new Date(pauta.createdAt) : new Date();
-                    const expires = new Date(created); expires.setDate(created.getDate() + 7);
                     const card = document.createElement('div');
                     card.className = "bg-white p-6 rounded-xl shadow-md border hover:border-green-500 cursor-pointer transition-all relative group";
-                    card.innerHTML = `<h3 class="font-bold text-xl">${escapeHTML(pauta.name)}</h3><p class="text-[10px] font-bold text-gray-400 uppercase mt-1 tracking-widest">${pauta.type}</p>
-                    <div class="mt-4 pt-4 border-t space-y-1"><p class="text-[10px] text-gray-400">Criada: ${created.toLocaleDateString('pt-BR')}</p><p class="text-[10px] text-red-400 font-bold uppercase">Expira: ${expires.toLocaleDateString('pt-BR')}</p></div>
-                    <button class="delete-pauta-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100" data-id="${docSnap.id}">🗑️</button>`;
+                    card.innerHTML = `<h3 class="font-bold text-xl">${escapeHTML(pauta.name)}</h3><p class="text-[10px] text-gray-400 uppercase mt-1 font-bold">${pauta.type}</p><button class="delete-pauta-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100" data-id="${docSnap.id}">🗑️</button>`;
                     card.onclick = (e) => { if (e.target.closest('.delete-pauta-btn')) { if(confirm("Apagar?")) deleteDoc(doc(db, "pautas", docSnap.id)); return; } loadPauta(docSnap.id, pauta.name, pauta.type); };
                     pautasList.appendChild(card);
                 });
@@ -291,57 +320,50 @@
                 if (a.status === 'aguardando' && a.type !== mode) return;
                 const prio = getPriorityLevel(a);
                 const prioClass = {'URGENTE':'priority-urgente','Máxima':'priority-maxima','Média':'priority-media','Mínima':'priority-minima'}[prio] || '';
-                
                 const card = document.createElement('div');
                 card.className = `p-4 bg-white border rounded-xl shadow-sm mb-3 relative ${prioClass}`;
                 
                 let acts = '';
-                if (a.status === 'pauta') acts = `<button class="btn-checkin bg-green-600 text-white text-[10px] px-3 py-1.5 rounded-lg font-bold" data-id="${a.id}">CHEGOU</button> <button class="btn-faltou bg-yellow-500 text-white text-[10px] px-3 py-1.5 rounded-lg font-bold" data-id="${a.id}">FALTOU</button>`;
-                else if (a.status === 'aguardando') acts = `<button class="btn-atender bg-blue-600 text-white text-[10px] px-4 py-1.5 rounded-lg font-bold" data-id="${a.id}">ATENDER</button> <button class="btn-priority bg-red-100 text-red-600 text-[10px] px-2 py-1.5 rounded-lg font-bold" data-id="${a.id}">PRIORIDADE</button>`;
-                else if (a.status === 'atendido') acts = `<button class="btn-demands bg-gray-100 text-[10px] px-2 py-1 rounded" data-id="${a.id}">Demandas</button> <button class="btn-return bg-orange-50 text-orange-600 text-[10px] px-2 py-1 rounded" data-id="${a.id}">Reverter</button>`;
+                if (a.status === 'pauta') acts = `<button class="btn-in bg-green-600 text-white text-[10px] px-3 py-1.5 rounded-lg font-bold" data-id="${a.id}">CHEGOU</button>`;
+                else if (a.status === 'aguardando') acts = `<button class="btn-at bg-blue-600 text-white text-[10px] px-4 py-1.5 rounded-lg font-bold" data-id="${a.id}">ATENDER</button>`;
+                else if (a.status === 'atendido') acts = `<button class="btn-rt bg-orange-50 text-orange-600 text-[10px] px-3 py-1 rounded-lg" data-id="${a.id}">REVERTER</button>`;
 
                 card.innerHTML = `<div class="font-bold text-gray-800 leading-tight">${escapeHTML(a.name)}</div>
                 ${a.cpf ? `<div class="text-[10px] text-gray-400">CPF: ${a.cpf}</div>` : ''}
                 <div class="text-[11px] text-gray-500 mb-2">${escapeHTML(a.subject)}</div>
-                <div class="flex gap-2 items-center">${acts} <button class="btn-details text-blue-500 text-[10px] font-bold underline ml-auto" data-id="${a.id}">ℹ️</button></div>
+                <div class="flex gap-2 items-center">${acts} <button class="btn-dt text-blue-500 text-[10px] font-bold underline ml-auto" data-id="${a.id}">ℹ️</button></div>
                 <button class="btn-del absolute -top-1 -right-1 bg-white text-gray-300 hover:text-red-500 rounded-full w-5 h-5 shadow-sm border text-xs" data-id="${a.id}">×</button>`;
                 if(lists[a.status]) lists[a.status].appendChild(card);
             });
         };
 
-        // 4. LISTENERS DE MENU E CRIACAO
+        // LISTENERS
         document.getElementById('actions-toggle').onclick = (e) => { e.stopPropagation(); document.getElementById('actions-panel').classList.toggle('hidden'); };
         document.getElementById('create-pauta-btn').onclick = () => document.getElementById('pauta-type-modal').classList.remove('hidden');
         document.getElementById('back-to-pautas-btn').onclick = () => showPautaSelectionScreen(auth.currentUser.uid);
         document.getElementById('pdf-atendidos-btn').onclick = () => generateAtendidosPDF(currentPautaData.name, allAssisted.filter(a => a.status === 'atendido'));
+        document.getElementById('admin-panel-btn').onclick = () => { document.getElementById('admin-modal').classList.remove('hidden'); loadUsersList(db); };
+        document.getElementById('logout-btn-selection').onclick = () => handleLogout(auth);
 
-        document.querySelectorAll('.pauta-type-btn').forEach(btn => btn.onclick = (e) => { document.getElementById('pauta-type-modal').classList.add('hidden'); const m = document.getElementById('create-pauta-modal'); m.dataset.type = e.currentTarget.dataset.type; m.classList.remove('hidden'); });
-        document.getElementById('next-to-ordem-btn').onclick = () => { document.getElementById('create-pauta-modal').classList.add('hidden'); document.getElementById('ordem-atendimento-modal').classList.remove('hidden'); };
-        document.getElementById('next-to-delegation-btn').onclick = () => { document.getElementById('ordem-atendimento-modal').classList.add('hidden'); document.getElementById('delegation-flow-modal').classList.remove('hidden'); };
-        document.getElementById('confirm-create-pauta-final-btn').onclick = async () => {
-            const name = document.getElementById('create-pauta-name-input').value;
-            const type = document.getElementById('create-pauta-modal').dataset.type;
-            const order = document.querySelector('input[name="ordemAtendimento"]:checked').value;
-            const delegation = document.querySelector('input[name="useDelegationFlow"]:checked').value === 'true';
-            await addDoc(collection(db, "pautas"), { name, type, ordemAtendimento: order, useDelegationFlow: delegation, owner: auth.currentUser.uid, members: [auth.currentUser.uid], memberEmails: [auth.currentUser.email], createdAt: new Date().toISOString(), isClosed: false });
-            document.getElementById('delegation-flow-modal').classList.add('hidden');
-            showNotification("Pauta Criada!");
-        };
-
-        // CLIQUES NOS CARDS
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('button');
-            if (!btn || !btn.dataset.id || !currentPautaId) return;
-            const id = btn.dataset.id; const dr = doc(db, "pautas", currentPautaId, "attendances", id);
-            if (btn.classList.contains('btn-checkin')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); }
-            if (btn.classList.contains('btn-atender')) await updateDoc(dr, { status: 'atendido', attendedTime: new Date().toISOString(), attendant: currentUserName });
-            if (btn.classList.contains('btn-details')) openDetailsModal({ assistedId: id, pautaId: currentPautaId, allAssisted });
-            if (btn.classList.contains('btn-del')) if(confirm("Apagar?")) await deleteDoc(dr);
+            const clicked = e.target;
+            if (!btn && !clicked.dataset.id) return;
+            const id = clicked.dataset.id || btn.dataset.id;
+            const dr = doc(db, "pautas", currentPautaId, "attendances", id);
+
+            if (btn?.classList.contains('btn-in')) { assistedIdToHandle = id; document.getElementById('arrival-modal').classList.remove('hidden'); }
+            if (btn?.classList.contains('btn-at')) await updateDoc(dr, { status: 'atendido', attendedTime: new Date().toISOString(), attendant: currentUserName });
+            if (btn?.classList.contains('btn-dt')) openDetailsModal({ assistedId: id, pautaId: currentPautaId, allAssisted });
+            if (btn?.classList.contains('btn-del')) if(confirm("Apagar?")) await deleteDoc(dr);
+            if (clicked.classList.contains('checkin-checkbox')) await toggleCollaboratorPresence(db, currentPautaId, id, clicked.checked);
         });
 
         document.getElementById('login-form').onsubmit = (e) => { e.preventDefault(); handleLogin(auth, e.target[0].value, e.target[1].value); };
         document.getElementById('file-upload').onchange = async (e) => { const data = await parsePautaCSV(e.target.files[0]); await saveImportedPauta(db, currentPautaId, data, currentUserName); showNotification("Importado!"); };
+        document.getElementById('cleanup-old-data-btn').onclick = () => cleanupOldData(db);
 
+        // FECHAR MODAIS
         window.onclick = (e) => { if(e.target.classList.contains('fixed')) e.target.classList.add('hidden'); document.getElementById('actions-panel').classList.add('hidden'); };
         
         setupDetailsModal({ db, getChecklistHTML, showNotification });
