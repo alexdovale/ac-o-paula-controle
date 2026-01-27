@@ -1361,11 +1361,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         const adminModal = document.getElementById('admin-modal');
         
         // 1. Mostrar o botão apenas se for Admin
+        // Versão corrigida da função
         const checkAdminStatus = (userData) => {
-            if (userData.role === 'admin' || userData.role === 'superadmin') {
-                adminPanelBtn.classList.remove('hidden');
+            // Pegamos o botão diretamente pelo ID para não depender de variáveis globais
+            const btn = document.getElementById('admin-panel-btn');
+            if (btn && (userData.role === 'admin' || userData.role === 'superadmin')) {
+                btn.classList.remove('hidden');
             }
-        };
+};
         
         document.addEventListener('DOMContentLoaded', () => {
             // ... outros códigos de inicialização que você já tem ...
@@ -2695,7 +2698,11 @@ function renderColaboradores() {
             // USUÁRIO DESLOGADO: Mostrar tela de login
             showScreen('login');
             // Resetar estados do Admin caso estivessem visíveis
-            adminPanelBtn.classList.add('hidden');
+            // No lugar de adminPanelBtn.classList.toggle(...)
+            const btnAdmin = document.getElementById('admin-panel-btn');
+            if (btnAdmin) {
+                btnAdmin.classList.toggle('hidden', userData.role !== 'admin' && userData.role !== 'superadmin');
+            };
         }
     });
 };
@@ -4257,5 +4264,6 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
