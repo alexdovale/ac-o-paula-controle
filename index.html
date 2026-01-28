@@ -1349,7 +1349,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { parsePautaCSV } from './js/csvHandler.js';
         import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
         import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
-        import { loadUsersList, logAction, cleanupOldData, updateAdminStats, generateAuditReportPDF } from './js/admin.js';
+        import { loadUsersList, cleanupOldData, updateAdminStats, generateAuditReportPDF, logAction as logActionDB } from './js/admin.js';
         import { 
             setupAttendancesListener, 
             updateAttendanceStatus, 
@@ -1406,7 +1406,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
         // Ponte simplificada para a Auditoria (Módulo js/admin.js)
         const logAction = (type, details, targetId = null) => {
-            // Chama a função do arquivo usando o "apelido" logActionDB
+            // Agora o JavaScript reconhece o nome logActionDB porque você definiu no import acima
             logActionDB(db, auth, currentUserName, currentPautaId, type, details, targetId);
         };
         
@@ -4341,6 +4341,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
