@@ -160,6 +160,26 @@
                 Painel do Administrador
             </button>
         </div>
+
+        <!-- Seção de Estatísticas e Relatório de Auditoria -->
+        <div class="mt-8 border-t pt-6 mb-6">
+            <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                📊 Resumo do Sistema
+            </h3>
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-gray-50 p-4 rounded-xl border text-center">
+                    <p class="text-[10px] uppercase font-bold text-gray-400">Total de Pautas</p>
+                    <p id="stats-total-pautas" class="text-2xl font-bold text-blue-600">0</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-xl border text-center">
+                    <p class="text-[10px] uppercase font-bold text-gray-400">Usuários Ativos</p>
+                    <p id="stats-total-users" class="text-2xl font-bold text-green-600">0</p>
+                </div>
+            </div>
+            <button id="download-audit-pdf-btn" class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 transition shadow-md flex items-center justify-center gap-2">
+                📥 Baixar Relatório de Atividades (PDF)
+            </button>
+        </div>
         
         <!-- Modal do Painel de Admin -->
         <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1350,7 +1370,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             btnAdmin.onclick = () => {
                 document.getElementById('admin-modal').classList.remove('hidden');
                 loadUsersList(db); // Chama a função que você importou
-                updateAdminStats(db);
+                updateAdminStats(db);  // ATUALIZA OS NÚMEROS (Pautas e Usuários)
+            };
+        }
+        
+        // Ação do novo botão de PDF de Auditoria
+        const btnAuditPdf = document.getElementById('download-audit-pdf-btn');
+        if (btnAuditPdf) {
+            btnAuditPdf.onclick = () => {
+                // Chama a função que você acabou de salvar no js/admin.js
+                generateAuditReportPDF(db);
             };
         }
         
@@ -4312,6 +4341,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
