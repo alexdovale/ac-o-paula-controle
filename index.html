@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -160,26 +161,6 @@
                 Painel do Administrador
             </button>
         </div>
-
-        <!-- Seção de Estatísticas e Relatório de Auditoria -->
-        <div class="mt-8 border-t pt-6 mb-6">
-            <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                📊 Resumo do Sistema
-            </h3>
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <div class="bg-gray-50 p-4 rounded-xl border text-center">
-                    <p class="text-[10px] uppercase font-bold text-gray-400">Total de Pautas</p>
-                    <p id="stats-total-pautas" class="text-2xl font-bold text-blue-600">0</p>
-                </div>
-                <div class="bg-gray-50 p-4 rounded-xl border text-center">
-                    <p class="text-[10px] uppercase font-bold text-gray-400">Usuários Ativos</p>
-                    <p id="stats-total-users" class="text-2xl font-bold text-green-600">0</p>
-                </div>
-            </div>
-            <button id="download-audit-pdf-btn" class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 transition shadow-md flex items-center justify-center gap-2">
-                📥 Baixar Relatório de Atividades (PDF)
-            </button>
-        </div>
         
         <!-- Modal do Painel de Admin -->
         <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -251,22 +232,6 @@
         <div id="invitations-container" class="hidden mb-8">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Convites Pendentes</h2>
             <div id="pending-invitations-list" class="space-y-4"></div>
-        </div>
-        <!-- Barra de Filtro e Ordenação para Minhas Pautas -->
-        <div class="flex flex-col md:flex-row gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-            <div class="flex-1 relative">
-                <input type="text" id="pauta-filter-input" placeholder="Filtrar pautas por nome..." 
-                       class="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
-                <span class="absolute left-3 top-2.5 opacity-30">🔍</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <label class="text-xs font-bold text-gray-400 uppercase">Ordenar:</label>
-                <select id="pauta-sort-select" class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none">
-                    <option value="newest">Mais Recentes</option>
-                    <option value="oldest">Mais Antigas</option>
-                    <option value="alpha">A-Z (Nome)</option>
-                </select>
-            </div>
         </div>
         <div id="pautas-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         <div class="mt-6"><button id="create-pauta-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Criar Nova Pauta</button></div>
@@ -1349,7 +1314,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { parsePautaCSV } from './js/csvHandler.js';
         import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
         import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
-        import { loadUsersList, cleanupOldData, updateAdminStats, generateAuditReportPDF, logAction as logActionDB } from './js/admin.js';
+        import { logAction as logActionDB, loadUsersList, cleanupOldData } from './js/admin.js';
         import { 
             setupAttendancesListener, 
             updateAttendanceStatus, 
@@ -1370,16 +1335,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             btnAdmin.onclick = () => {
                 document.getElementById('admin-modal').classList.remove('hidden');
                 loadUsersList(db); // Chama a função que você importou
-                updateAdminStats(db);  // ATUALIZA OS NÚMEROS (Pautas e Usuários)
-            };
-        }
-        
-        // Ação do novo botão de PDF de Auditoria
-        const btnAuditPdf = document.getElementById('download-audit-pdf-btn');
-        if (btnAuditPdf) {
-            btnAuditPdf.onclick = () => {
-                // Chama a função que você acabou de salvar no js/admin.js
-                generateAuditReportPDF(db);
             };
         }
         
@@ -1406,7 +1361,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
         // Ponte simplificada para a Auditoria (Módulo js/admin.js)
         const logAction = (type, details, targetId = null) => {
-            // Agora o JavaScript reconhece o nome logActionDB porque você definiu no import acima
+            // Chama a função do arquivo usando o "apelido" logActionDB
             logActionDB(db, auth, currentUserName, currentPautaId, type, details, targetId);
         };
         
@@ -2635,72 +2590,47 @@ function renderColaboradores() {
         };
 
 
-        let allUserPautas = []; // Variável global para armazenar as pautas baixadas
-        
         const showPautaSelectionScreen = (userId) => {
+            // Limpa o localStorage para a última pauta quando volta para a seleção
+            localStorage.removeItem('lastPautaId');
+            localStorage.removeItem('lastPautaType');
+
             const pautasList = document.getElementById('pautas-list');
-            const filterInput = document.getElementById('pauta-filter-input');
-            const sortSelect = document.getElementById('pauta-sort-select');
-        
-            // 1. Escuta o Banco de Dados
+            pautasList.innerHTML = '<p class="col-span-full text-center">Carregando pautas...</p>';
+
             const q = query(collection(db, "pautas"), where("members", "array-contains", userId));
+
             onSnapshot(q, (snapshot) => {
-                allUserPautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                applyPautaFiltersAndSort();
-            });
-        
-            // 2. Aplica Filtro e Ordenação
-            const applyPautaFiltersAndSort = () => {
-                const filterTerm = normalizeText(filterInput.value);
-                const sortMode = sortSelect.value;
-        
-                let filtered = allUserPautas.filter(p => normalizeText(p.name).includes(filterTerm));
-        
-                // Ordenação
-                if (sortMode === 'newest') filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-                if (sortMode === 'oldest') filtered.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-                if (sortMode === 'alpha') filtered.sort((a, b) => a.name.localeCompare(b.name));
-        
-                renderPautaCards(filtered);
-            };
-        
-            // 3. Renderiza os Cards na tela
-            const renderPautaCards = (pautas) => {
-                pautasList.innerHTML = '';
-                if (pautas.length === 0) {
-                    pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500 p-8">Nenhuma pauta encontrada.</p>';
+                pautasList.innerHTML = ''; 
+                const fragment = document.createDocumentFragment();
+                const now = new Date();
+                
+                if (snapshot.empty) {
+                    pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500">Nenhuma pauta encontrada. Crie uma para começar.</p>';
                     return;
                 }
-        
-                pautas.forEach((pauta) => {
-                    const created = pauta.createdAt ? new Date(pauta.createdAt) : new Date();
-                    const expires = new Date(created); expires.setDate(created.getDate() + 7);
-                    const card = document.createElement('div');
-                    card.className = "bg-white p-6 rounded-xl shadow-md border hover:border-green-500 cursor-pointer transition-all relative group";
-                    card.innerHTML = `
-                        <h3 class="font-bold text-xl text-gray-800">${escapeHTML(pauta.name)}</h3>
-                        <p class="text-[10px] font-bold text-gray-400 uppercase mt-1 tracking-widest">${pauta.type}</p>
-                        <div class="mt-4 pt-4 border-t border-gray-100 space-y-1">
-                            <p class="text-[10px] text-gray-400">Criada: <strong>${created.toLocaleDateString()}</strong></p>
-                            <p class="text-[10px] text-red-400 font-bold uppercase">Expira: <strong>${expires.toLocaleDateString()}</strong></p>
-                        </div>
-                        <button class="delete-pauta-btn absolute top-3 right-3 text-gray-300 hover:text-red-500" data-id="${pauta.id}">🗑️</button>`;
-                    
-                    card.onclick = (e) => {
-                        if (e.target.closest('.delete-pauta-btn')) {
-                            if(confirm("Apagar pauta?")) deleteDoc(doc(db, "pautas", pauta.id));
-                            return;
+
+                snapshot.docs.forEach((docSnap) => {
+                    const pauta = docSnap.data();
+                    let isExpired = false;
+                    if (pauta.createdAt) {
+                        const creationDate = new Date(pauta.createdAt);
+                        const expirationDate = new Date(creationDate);
+                        expirationDate.setDate(creationDate.getDate() + 7);
+                        if (now > expirationDate) {
+                            isExpired = true;
                         }
-                        loadPauta(pauta.id, pauta.name, pauta.type);
-                    };
-                    pautasList.appendChild(card);
+                    }
+                    const card = createPautaCard(docSnap, isExpired);
+                    fragment.appendChild(card);
                 });
-            };
-        
-            // Listeners dos campos de filtro
-            filterInput.oninput = applyPautaFiltersAndSort;
-            sortSelect.onchange = applyPautaFiltersAndSort;
-        
+                pautasList.appendChild(fragment);
+
+            }, (error) => {
+                console.error("Erro ao buscar pautas:", error);
+                pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Ocorreu um erro ao carregar as pautas.</p>';
+            });
+
             showScreen('pautaSelection');
         };
 
@@ -4341,12 +4271,3 @@ if (closePautaBtn) {
 }
 </script>
 </html>
-
-
-
-
-
-
-
-
-
