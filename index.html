@@ -216,26 +216,13 @@
                 <div class="overflow-y-auto">
                     <h3 class="font-semibold text-gray-700 mb-2">Usuários Pendentes</h3>
                     <div id="pending-users-list" class="space-y-3 mb-6">
-                        </div>
+                        <!-- Usuários pendentes aparecerão aqui -->
+                    </div>
         
                     <h3 class="font-semibold text-gray-700 mb-2">Usuários Aprovados</h3>
                     <div id="approved-users-list" class="space-y-3">
-                        </div>
-
-                    <div class="mt-8 border-t pt-4">
-                        <h3 class="font-bold text-gray-700 mb-2 uppercase text-xs tracking-widest">📈 Histórico Permanente de Atendimentos</h3>
-                        <div id="permanent-stats-container" class="bg-white border rounded-lg p-2 max-h-48 overflow-y-auto shadow-inner text-gray-600">
-                            <p class="text-center text-xs p-4 italic">Carregando histórico...</p>
-                        </div>
+                        <!-- Usuários aprovados aparecerão aqui -->
                     </div>
-                </div>
-
-                <div class="mt-8 border-t pt-4 flex-shrink-0">
-                    <h3 class="font-semibold text-red-600 mb-2 uppercase text-sm">Manutenção do Sistema (LGPD)</h3>
-                    <p class="text-xs text-gray-500 mb-4">Apaga permanentemente atendimentos com mais de 7 dias de todas as pautas.</p>
-                    <button id="cleanup-old-data-btn" class="w-full bg-red-100 text-red-700 font-bold py-2 rounded-lg hover:bg-red-200 transition border border-red-300">
-                        Executar Limpeza de 7 Dias
-                    </button>
                 </div>
             </div>
         </div>
@@ -1329,7 +1316,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { parsePautaCSV } from './js/csvHandler.js';
         import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
         import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
-        import { logAction as logActionDB, loadUsersList, cleanupOldData, updateAdminStats } from './js/admin.js';
+        import { logAction as logActionDB, loadUsersList, cleanupOldData } from './js/admin.js';
         import { 
             setupAttendancesListener, 
             updateAttendanceStatus, 
@@ -1350,16 +1337,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             btnAdmin.onclick = () => {
                 document.getElementById('admin-modal').classList.remove('hidden');
                 loadUsersList(db); // Chama a função que você importou
-            };
-        }
-
-        // Ação do Botão de PDF do Administrador
-        const btnAdminPdf = document.getElementById('download-audit-pdf-btn');
-        if (btnAdminPdf) {
-            btnAdminPdf.onclick = () => {
-                // Você define aqui quais colunas quer no PDF do Admin
-                const colunasDesejadas = ['nome', 'criador', 'data', 'atendidos'];
-                generateCustomAdminPDF(db, colunasDesejadas);
             };
         }
         
@@ -2613,8 +2590,7 @@ function renderColaboradores() {
             });
             return card;
         };
-        
-        //lógica do filtro e o nome do proprietário
+//lógica do filtro e o nome do proprietário
         let allUserPautas = []; // Cache para o filtro funcionar rápido
         
         const showPautaSelectionScreen = (userId) => {
@@ -2674,26 +2650,7 @@ function renderColaboradores() {
             filterInput.oninput = renderFilteredPautas;
             showScreen('pautaSelection');
         };
-        
 
-        // LIGAÇÃO DO FILTRO DE PESQUISA (Localiza pautas pelo nome)
-        const inputBuscaPauta = document.getElementById('pauta-filter-input');
-        if (inputBuscaPauta) {
-            inputBuscaPauta.addEventListener('input', (e) => {
-                const termo = normalizeText(e.target.value); // Função do js/utils.js
-                const cardsPauta = document.querySelectorAll('#pautas-list > div');
-                
-                cardsPauta.forEach(card => {
-                    const nomePauta = normalizeText(card.querySelector('h3').textContent);
-                    // Mostra ou esconde o card baseado na busca
-                    if (nomePauta.includes(termo)) {
-                        card.style.display = 'flex'; // Volta ao layout flex original do card
-                    } else {
-                        card.style.display = 'none';
-                    }
-                });
-            });
-        }
         const setupModalClosers = () => {
             document.querySelectorAll('.fixed.inset-0').forEach(modal => {
                 modal.addEventListener('click', (e) => {
@@ -2704,150 +2661,76 @@ function renderColaboradores() {
             });
         };
 
-          // =======================================================
-        // 3. MONITOR DE ACESSO E LOGICA DE TELAS
-        // =======================================================
-        
-        // Variável para o filtro funcionar rápido
-        //let allUserPautas = []; 
-        
         const handleAuthState = () => {
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    try {
-                        const userSnap = await getDoc(doc(db, "users", user.uid));
-                        if (userSnap.exists() && userSnap.data().status === 'approved') {
-                            const userData = userSnap.data();
-                            currentUserName = userData.name;
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            try {
+                // 1. Busca os dados do usuário no Firestore
+                const userDocRef = doc(db, "users", user.uid);
+                const userDoc = await getDoc(userDocRef);
+
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    currentUserName = userData.name || user.email;
+
+                    // 2. Verifica se o usuário é Admin/Superadmin para mostrar o botão
+                    checkAdminStatus(userData);
+
+                    // 3. Verifica o Status de Aprovação
+                    if (userData.status === 'approved') {
+                        // USUÁRIO APROVADO: Prosseguir para o sistema
+                        const lastPautaId = localStorage.getItem('lastPautaId');
+                        const lastPautaType = localStorage.getItem('lastPautaType');
+
+                        if (lastPautaId && lastPautaType) {
+                            // Verifica se ele ainda é membro dessa pauta antes de carregar
+                            const pautaRef = doc(db, "pautas", lastPautaId);
+                            const pautaSnap = await getDoc(pautaRef);
                             
-                            // Mostrar botão Admin apenas se for administrador
-                            const adminBtn = document.getElementById('admin-panel-btn');
-                            if (adminBtn) {
-                                adminBtn.classList.toggle('hidden', userData.role !== 'admin' && userData.role !== 'superadmin');
-                            }
-        
-                            // Tenta carregar a última pauta salva ou vai para a seleção
-                            const lastId = localStorage.getItem('lastPautaId');
-                            const lastType = localStorage.getItem('lastPautaType');
-                            
-                            if (lastId && lastType) {
-                                loadPauta(lastId, "Reconectando...", lastType);
+                            if (pautaSnap.exists() && pautaSnap.data().members.includes(user.uid)) {
+                                loadPauta(lastPautaId, pautaSnap.data().name, lastPautaType);
                             } else {
                                 showPautaSelectionScreen(user.uid);
                             }
                         } else {
-                            showNotification("Sua conta aguarda aprovação.", "info");
-                            signOut(auth);
+                            showPautaSelectionScreen(user.uid);
                         }
-                    } catch (e) {
-                        console.error("Erro ao verificar usuário:", e);
-                        showScreen('login');
+                    } else {
+                        // USUÁRIO PENDENTE: Mostrar tela de aviso
+                        showScreen('loading');
+                        loadingText.innerHTML = `
+                            <div class="text-center">
+                                <p class="text-xl font-bold text-orange-600">Acesso Pendente</p>
+                                <p class="mt-2 text-gray-600">Olá, <b>${currentUserName}</b>!</p>
+                                <p class="text-sm text-gray-500">Sua conta foi criada, mas um administrador precisa aprová-la para você acessar o sistema.</p>
+                                <button onclick="signOut(auth)" class="mt-6 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Sair / Trocar de Conta</button>
+                            </div>
+                        `;
+                        // Esconde o spinner de carregamento para não confundir
+                        document.querySelector('.loader').style.display = 'none';
                     }
                 } else {
-                    showScreen('login');
+                    // Caso o documento do usuário não exista (erro raro de criação)
+                    showNotification("Erro ao localizar seu perfil. Tente cadastrar novamente.", "error");
+                    signOut(auth);
                 }
-            });
-        };
-        
-        // =======================================================
-        // 4. TELA DE SELEÇÃO (FILTRO + NOME DO CRIADOR)
-        // =======================================================
-        
-        const showPautaSelectionScreen = (userId) => {
-            const pautasList = document.getElementById('pautas-list');
-            const filterInput = document.getElementById('pauta-filter-input');
-            if (!pautasList) return;
-        
-            pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500 p-8">Buscando suas pautas...</p>';
-        
-            // Listener em tempo real para as pautas do usuário
-            const q = query(collection(db, "pautas"), where("members", "array-contains", userId), orderBy("createdAt", "desc"));
-            
-            onSnapshot(q, (snapshot) => {
-                allUserPautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderFilteredPautas(userId);
-            });
-        
-            // Função interna para desenhar os cards baseada no filtro
-            const renderFilteredPautas = (uid) => {
-                const termo = filterInput ? normalizeText(filterInput.value) : "";
-                const filtradas = allUserPautas.filter(p => normalizeText(p.name).includes(termo));
-        
-                pautasList.innerHTML = '';
-                const now = new Date();
-        
-                if (filtradas.length === 0) {
-                    pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500 p-8">Nenhuma pauta encontrada.</p>';
-                    return;
-                }
-        
-                filtradas.forEach((pauta) => {
-                    const created = pauta.createdAt ? new Date(pauta.createdAt) : new Date();
-                    const expires = new Date(created); expires.setDate(created.getDate() + 7);
-                    const isExpired = now > expires;
-                    const isOwner = pauta.owner === uid;
-        
-                    // Só mostra o criador se a pauta NÃO for sua
-                    const creatorTag = !isOwner ? 
-                        `<p class="text-[10px] text-blue-600 font-bold uppercase mt-2">👤 Criador: ${escapeHTML(pauta.ownerName || 'Colega')}</p>` : '';
-        
-                    const card = document.createElement('div');
-                    card.className = `relative bg-white p-6 rounded-xl shadow-md border flex flex-col justify-between h-full transition-all ${isExpired ? 'opacity-60 bg-gray-100 cursor-not-allowed' : 'hover:border-green-500 cursor-pointer hover:shadow-lg'}`;
-                    
-                    card.innerHTML = `
-                        <div>
-                            <h3 class="font-bold text-xl text-gray-800">${escapeHTML(pauta.name)}</h3>
-                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">${pauta.type}</p>
-                            ${creatorTag}
-                        </div>
-                        <div class="mt-4 pt-4 border-t border-gray-100 space-y-1">
-                            <p class="text-[10px] text-gray-400">Criada: <strong>${created.toLocaleDateString('pt-BR')}</strong></p>
-                            <p class="text-[10px] ${isExpired ? 'text-gray-500 font-bold' : 'text-red-500 font-bold uppercase'}">
-                                ${isExpired ? 'Expirou em:' : 'Elimina em:'} <strong>${expires.toLocaleDateString('pt-BR')}</strong>
-                            </p>
-                        </div>
-                        <button class="delete-pauta-btn absolute top-3 right-3 text-gray-300 hover:text-red-500" data-id="${pauta.id}">🗑️</button>
-                    `;
-                    
-                    card.onclick = (e) => {
-                        if (e.target.closest('.delete-pauta-btn')) {
-                            const id = e.target.closest('.delete-pauta-btn').dataset.id;
-                            if(confirm("Deseja apagar esta pauta permanentemente?")) deleteDoc(doc(db, "pautas", id));
-                            return;
-                        }
-                        if (!isExpired) loadPauta(pauta.id, pauta.name, pauta.type);
-                        else showNotification("Pauta expirada.", "error");
-                    };
-                    pautasList.appendChild(card);
-                });
-            };
-        
-            // Ativa o campo de busca
-            if (filterInput) {
-                filterInput.oninput = () => renderFilteredPautas(userId);
+            } catch (error) {
+                console.error("Erro ao verificar estado do usuário:", error);
+                showNotification("Erro de conexão com o servidor.", "error");
             }
-        
-            showScreen('pautaSelection');
-        };
-        
-        // =======================================================
-        // 5. CLIQUES GLOBAIS
-        // =======================================================
-        
-        // Configuração do botão Admin
-        const btnAdmin = document.getElementById('admin-panel-btn');
-        if (btnAdmin) {
-            btnAdmin.onclick = () => {
-                document.getElementById('admin-modal').classList.remove('hidden');
-                loadUsersList(db);
-                updateAdminStats(db);
+        } else {
+            // USUÁRIO DESLOGADO: Mostrar tela de login
+            showScreen('login');
+            // Resetar estados do Admin caso estivessem visíveis
+            // No lugar de adminPanelBtn.classList.toggle(...)
+            const btnAdmin = document.getElementById('admin-panel-btn');
+            if (btnAdmin) {
+                btnAdmin.classList.toggle('hidden', userData.role !== 'admin' && userData.role !== 'superadmin');
             };
         }
-        
-        // Inicia o monitor de autenticação
-        handleAuthState();
+    });
+};
 
-        
         const showScreen = (screenName) => {
             loadingContainer.classList.toggle('hidden', screenName !== 'loading');
             loginContainer.classList.toggle('hidden', screenName !== 'login');
@@ -4405,9 +4288,3 @@ if (closePautaBtn) {
 }
 </script>
 </html>
-
-
-
-
-
-
