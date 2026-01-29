@@ -1329,7 +1329,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { parsePautaCSV } from './js/csvHandler.js';
         import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
         import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
-        import { logAction as logActionDB, loadUsersList, cleanupOldData } from './js/admin.js';
+        import { logAction as logActionDB, loadUsersList, cleanupOldData, updateAdminStats } from './js/admin.js';
         import { 
             setupAttendancesListener, 
             updateAttendanceStatus, 
@@ -2613,67 +2613,95 @@ function renderColaboradores() {
             });
             return card;
         };
-//lógica do filtro e o nome do proprietário
-        let allUserPautas = []; // Cache para o filtro funcionar rápido
-        
+        // FUNÇÃO PARA MOSTRAR AS PAUTAS NA TELA INICIAL (VISUAL INTEGRAL + NOME DO CRIADOR)
         const showPautaSelectionScreen = (userId) => {
             const pautasList = document.getElementById('pautas-list');
-            const filterInput = document.getElementById('pauta-filter-input');
+            if (!pautasList) return;
         
-            const q = query(collection(db, "pautas"), where("members", "array-contains", userId));
+            pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500">Buscando pautas...</p>';
+        
+            // Listener em tempo real para as pautas
+            const q = query(collection(db, "pautas"), where("members", "array-contains", userId), orderBy("createdAt", "desc"));
             
             onSnapshot(q, (snapshot) => {
-                allUserPautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderFilteredPautas();
-            });
-        
-            const renderFilteredPautas = () => {
-                const termo = normalizeText(filterInput.value);
-                const filtradas = allUserPautas.filter(p => normalizeText(p.name).includes(termo));
-                
                 pautasList.innerHTML = '';
-                const now = new Date();
+                if (snapshot.empty) {
+                    pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500 p-8">Nenhuma pauta encontrada.</p>';
+                    return;
+                }
         
-                filtradas.forEach((pauta) => {
+                snapshot.forEach((docSnap) => {
+                    const pauta = docSnap.data();
+                    
+                    // Lógica de Datas (Original)
                     const created = pauta.createdAt ? new Date(pauta.createdAt) : new Date();
-                    const expires = new Date(created); expires.setDate(created.getDate() + 7);
+                    const expires = new Date(created); 
+                    expires.setDate(created.getDate() + 7);
+                    const now = new Date();
                     const isExpired = now > expires;
         
-                    const card = document.createElement('div');
-                    card.className = `relative bg-white p-6 rounded-lg shadow-md flex flex-col justify-between h-full border ${isExpired ? 'opacity-60 bg-gray-100' : 'hover:shadow-xl transition-shadow cursor-pointer'}`;
-                    
-                    // Lógica do nome do criador (apenas se não for o usuário logado)
-                    const criadorInfo = pauta.owner !== userId ? 
-                        `<p class="text-[10px] text-blue-600 font-bold uppercase mt-2">👤 Criado por: ${pauta.ownerName || 'Colega'}</p>` : '';
+                    // Lógica do Criador (Só mostra se for de um colega)
+                    const creatorTag = (pauta.owner !== userId) ? 
+                        `<p class="text-[10px] text-blue-600 font-bold uppercase mt-2">👤 Criador: ${escapeHTML(pauta.ownerName || 'Colega')}</p>` : '';
         
+                    const card = document.createElement('div');
+                    // Mantém o visual original (opacidade se expirar, hover se ativo)
+                    card.className = `relative bg-white p-6 rounded-xl shadow-md border flex flex-col justify-between h-full transition-all ${isExpired ? 'opacity-60 bg-gray-100 cursor-not-allowed' : 'hover:border-green-500 cursor-pointer hover:shadow-lg'}`;
+                    
                     card.innerHTML = `
                         <div>
-                            <h3 class="font-bold text-xl mb-2 text-gray-800">${escapeHTML(pauta.name)}</h3>
-                            <p class="text-xs text-gray-500 font-medium">Membros: ${pauta.memberEmails?.length || 1}</p>
-                            ${criadorInfo}
+                            <h3 class="font-bold text-xl text-gray-800">${escapeHTML(pauta.name)}</h3>
+                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">${pauta.type}</p>
+                            ${creatorTag}
                         </div>
-                        <div class="mt-4 pt-4 border-t border-gray-200">
-                            <p class="text-xs text-gray-500">Criada em: <strong>${created.toLocaleDateString('pt-BR')}</strong></p>
-                            <p class="text-xs ${isExpired ? 'text-gray-500 font-bold' : 'text-red-600 font-bold'}">
+                        <div class="mt-4 pt-4 border-t border-gray-100 space-y-1">
+                            <p class="text-[10px] text-gray-400">Criada em: <strong>${created.toLocaleDateString('pt-BR')}</strong></p>
+                            <p class="text-[10px] ${isExpired ? 'text-gray-500 font-bold' : 'text-red-500 font-bold uppercase'}">
                                 ${isExpired ? 'Prazo de acesso expirou em:' : 'Será eliminada em:'} <strong>${expires.toLocaleDateString('pt-BR')}</strong>
                             </p>
                         </div>
-                        <button class="delete-pauta-btn absolute top-3 right-3 text-gray-300 hover:text-red-500" data-id="${pauta.id}">🗑️</button>
+                        <button class="delete-pauta-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 transition-colors" data-id="${docSnap.id}">🗑️</button>
                     `;
-        
+                    
                     card.onclick = (e) => {
-                        if (e.target.closest('button')) return;
-                        if (isExpired) showNotification("Pauta expirada (LGPD).", "error");
-                        else loadPauta(pauta.id, pauta.name, pauta.type);
+                        // Se clicar na lixeira, não abre a pauta
+                        if (e.target.closest('.delete-pauta-btn')) {
+                            const id = e.target.closest('.delete-pauta-btn').dataset.id;
+                            if(confirm("Deseja apagar esta pauta e todos os seus dados definitivamente?")) deleteDoc(doc(db, "pautas", id));
+                            return;
+                        }
+                        // Só abre se não estiver expirada
+                        if (isExpired) {
+                            showNotification("Esta pauta expirou e não pode mais ser acessada.", "error");
+                        } else {
+                            loadPauta(docSnap.id, pauta.name, pauta.type);
+                        }
                     };
                     pautasList.appendChild(card);
                 });
-            };
+            });
         
-            filterInput.oninput = renderFilteredPautas;
             showScreen('pautaSelection');
         };
 
+        // LIGAÇÃO DO FILTRO DE PESQUISA (Localiza pautas pelo nome)
+        const inputBuscaPauta = document.getElementById('pauta-filter-input');
+        if (inputBuscaPauta) {
+            inputBuscaPauta.addEventListener('input', (e) => {
+                const termo = normalizeText(e.target.value); // Função do js/utils.js
+                const cardsPauta = document.querySelectorAll('#pautas-list > div');
+                
+                cardsPauta.forEach(card => {
+                    const nomePauta = normalizeText(card.querySelector('h3').textContent);
+                    // Mostra ou esconde o card baseado na busca
+                    if (nomePauta.includes(termo)) {
+                        card.style.display = 'flex'; // Volta ao layout flex original do card
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        }
         const setupModalClosers = () => {
             document.querySelectorAll('.fixed.inset-0').forEach(modal => {
                 modal.addEventListener('click', (e) => {
@@ -2745,12 +2773,15 @@ function renderColaboradores() {
             // USUÁRIO DESLOGADO: Mostrar tela de login
             showScreen('login');
             // Resetar estados do Admin caso estivessem visíveis
-            // No lugar de adminPanelBtn.classList.toggle(...)
+            // Botão que abre o Painel do Administrador
             const btnAdmin = document.getElementById('admin-panel-btn');
             if (btnAdmin) {
-                btnAdmin.classList.toggle('hidden', userData.role !== 'admin' && userData.role !== 'superadmin');
-            };
-        }
+                btnAdmin.onclick = () => {
+                    document.getElementById('admin-modal').classList.remove('hidden');
+                    loadUsersList(db);      // Do arquivo js/admin.js
+                    updateAdminStats(db);   // Do arquivo js/admin.js (Carrega as estatísticas permanentes)
+                };
+            }
     });
 };
 
@@ -4311,4 +4342,5 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
