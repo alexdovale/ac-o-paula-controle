@@ -1,21 +1,12 @@
 // js/admin.js
 import { 
-    collection, 
-    addDoc, 
-    getDocs, 
-    updateDoc, 
-    deleteDoc, 
-    doc, 
-    query, 
-    orderBy, 
-    limit, 
-    where, 
-    writeBatch 
+    collection, addDoc, getDocs, updateDoc, deleteDoc, doc, 
+    query, orderBy, limit, where, writeBatch, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
 /**
- * Grava uma ação no log de auditoria do sistema
+ * Grava uma ação no log de auditoria
  */
 export const logAction = async (db, auth, userName, currentPautaId, actionType, details, targetId = null) => {
     try {
@@ -28,149 +19,148 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
             userEmail: auth.currentUser.email,
             userId: auth.currentUser.uid,
             userName: userName || 'Desconhecido',
-            timestamp: new Date().toISOString(),
-            userAgent: navigator.userAgent
+            timestamp: new Date().toISOString()
         });
-    } catch (error) {
-        console.error("Falha ao gravar log:", error);
-    }
+    } catch (error) { console.error("Erro log:", error); }
 };
 
 /**
- * Carrega a lista de usuários para o Painel Admin
+ * Carrega Usuários Pendentes e Aprovados
  */
 export const loadUsersList = async (db) => {
     const snapshot = await getDocs(collection(db, "users"));
     const pendingList = document.getElementById('pending-users-list');
     const approvedList = document.getElementById('approved-users-list');
-    
     if(!pendingList || !approvedList) return;
 
-    pendingList.innerHTML = '';
-    approvedList.innerHTML = '';
+    pendingList.innerHTML = ''; approvedList.innerHTML = '';
 
     snapshot.forEach((docSnap) => {
         const user = docSnap.data();
         const userId = docSnap.id;
         const row = document.createElement('div');
-        row.className = "flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-gray-50 rounded-lg border gap-3 mb-2";
-        
+        row.className = "flex justify-between items-center p-3 bg-gray-50 rounded border mb-2";
         row.innerHTML = `
-            <div>
-                <p class="font-bold text-gray-800">${escapeHTML(user.name)}</p>
-                <p class="text-xs text-gray-500">${escapeHTML(user.email)}</p>
-                <p class="text-[10px] font-bold uppercase text-blue-600">Cargo: ${user.role || 'user'}</p>
+            <div class="text-xs">
+                <p class="font-bold">${escapeHTML(user.name)}</p>
+                <p class="text-gray-500">${escapeHTML(user.email)}</p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex gap-2">
                 ${user.status === 'pending' ? 
-                    `<select id="role-select-${userId}" class="text-xs border rounded p-1">
-                        <option value="user">Usuário</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                     <button onclick="window.approveUserWithRole('${userId}')" class="bg-green-500 text-white text-xs px-3 py-1 rounded hover:bg-green-600">Aprovar</button>` :
-                    `<button onclick="window.deleteUser('${userId}')" class="text-red-500 hover:text-red-700 text-xs font-bold uppercase p-1">Excluir</button>`
-                }
-            </div>
-        `;
+                `<button onclick="window.approveUserWithRole('${userId}')" class="bg-green-500 text-white px-2 py-1 rounded text-[10px]">APROVAR</button>` : 
+                `<button onclick="window.deleteUser('${userId}')" class="text-red-500 text-[10px]">EXCLUIR</button>`}
+            </div>`;
         user.status === 'pending' ? pendingList.appendChild(row) : approvedList.appendChild(row);
     });
 };
 
 /**
- * Atualiza os contadores estatísticos do Painel Admin
+ * ATUALIZA ESTATÍSTICAS (Soma Pautas Ativas + Histórico Permanente)
  */
 export const updateAdminStats = async (db) => {
-    try {
-        const pautasSnap = await getDocs(collection(db, "pautas"));
-        const usersSnap = await getDocs(collection(db, "users"));
-        
-        const totalPautasEl = document.getElementById('stats-total-pautas');
-        const totalUsersEl = document.getElementById('stats-total-users');
-
-        if(totalPautasEl) totalPautasEl.textContent = pautasSnap.size;
-        if(totalUsersEl) totalUsersEl.textContent = usersSnap.size;
-    } catch (error) {
-        console.error("Erro ao carregar estatísticas admin:", error);
+    const pautasAtivas = await getDocs(collection(db, "pautas"));
+    const historico = await getDocs(collection(db, "estatisticas_permanentes"));
+    
+    const totalPautas = pautasAtivas.size + historico.size;
+    
+    if(document.getElementById('stats-total-pautas')) 
+        document.getElementById('stats-total-pautas').textContent = totalPautas;
+    
+    // Lista o histórico simples no painel
+    const container = document.getElementById('permanent-stats-container');
+    if(container) {
+        container.innerHTML = '<h4 class="font-bold text-xs uppercase mb-2">Histórico de Pautas Eliminadas</h4>';
+        historico.forEach(docSnap => {
+            const data = docSnap.data();
+            container.innerHTML += `
+                <div class="text-[10px] p-2 border-b flex justify-between">
+                    <span>${data.nomePauta}</span>
+                    <span class="font-bold text-green-600">${data.totalAtendidos} atendidos</span>
+                </div>`;
+        });
     }
 };
 
 /**
- * GERA O RELATÓRIO DE AUDITORIA EM PDF
+ * GERA PDF CUSTOMIZADO DO PAINEL ADMIN
+ * @param {Array} columns - Ex: ['nome', 'data', 'criador', 'atendidos']
  */
-export const generateAuditReportPDF = async (db) => {
+export const generateCustomAdminPDF = async (db, columns) => {
     const { jsPDF } = window.jspdf;
-    if (!jsPDF) return showNotification("Erro: Biblioteca PDF não carregada.", "error");
+    const docPDF = new jsPDF({ orientation: 'l' });
+    
+    const snapshot = await getDocs(collection(db, "pautas"));
+    const historico = await getDocs(collection(db, "estatisticas_permanentes"));
+    
+    docPDF.setFontSize(16);
+    docPDF.text("Relatório Gerencial Customizado - SIGAP", 14, 20);
 
-    showNotification("Gerando relatório de atividades...", "info");
+    const head = [];
+    const body = [];
 
-    try {
-        const logsRef = collection(db, "audit_logs");
-        const q = query(logsRef, orderBy("timestamp", "desc"), limit(100)); // Pega os últimos 100 logs
-        const snapshot = await getDocs(q);
+    // Define Cabeçalhos baseados na escolha
+    const headerRow = [];
+    if(columns.includes('nome')) headerRow.push('Pauta');
+    if(columns.includes('criador')) headerRow.push('Responsável');
+    if(columns.includes('data')) headerRow.push('Data');
+    if(columns.includes('atendidos')) headerRow.push('Atendidos');
+    head.push(headerRow);
 
-        const docPDF = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
+    // Junta Pautas Ativas e Histórico
+    const todas = [
+        ...snapshot.docs.map(d => ({...d.data(), status: 'Ativa'})),
+        ...historico.docs.map(d => ({...d.data(), status: 'Eliminada (Histórico)'}))
+    ];
 
-        docPDF.setFontSize(18);
-        docPDF.text("Relatório de Auditoria e Atividades - SIGAP", 14, 25);
-        
-        docPDF.setFontSize(10);
-        docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 40);
+    todas.forEach(p => {
+        const row = [];
+        if(columns.includes('nome')) row.push(p.name || p.nomePauta);
+        if(columns.includes('criador')) row.push(p.ownerName || p.criador || 'N/A');
+        if(columns.includes('data')) row.push(new Date(p.createdAt || p.dataCriacao).toLocaleDateString());
+        if(columns.includes('atendidos')) row.push(p.totalAtendidos || 'Ativa');
+        body.push(row);
+    });
 
-        const tableColumn = ["Data/Hora", "Usuário", "E-mail", "Ação", "Detalhes"];
-        const tableRows = snapshot.docs.map(d => {
-            const log = d.data();
-            return [
-                new Date(log.timestamp).toLocaleString('pt-BR'),
-                log.userName || 'N/A',
-                log.userEmail || 'N/A',
-                log.action,
-                log.details
-            ];
-        });
-
-        docPDF.autoTable(tableColumn, tableRows, { 
-            startY: 50,
-            styles: { fontSize: 7 },
-            headStyles: { fillColor: [126, 34, 206] }, // Roxo Auditoria
-            columnStyles: {
-                4: { cellWidth: 300 } // Dá mais espaço para os detalhes
-            }
-        });
-
-        docPDF.save(`auditoria_sigap_${new Date().toISOString().slice(0,10)}.pdf`);
-    } catch (error) {
-        console.error(error);
-        showNotification("Erro ao gerar PDF de auditoria.", "error");
-    }
+    docPDF.autoTable({ head, body, startY: 30, theme: 'striped', headStyles: { fillColor: [22, 101, 52] } });
+    docPDF.save("relatorio_gerencial_sigap.pdf");
 };
 
 /**
- * Executa a limpeza LGPD (Apaga atendimentos com mais de 7 dias)
+ * LIMPEZA LGPD COM SALVAMENTO DE ESTATÍSTICA PERMANENTE
  */
 export const cleanupOldData = async (db) => {
-    if (!confirm("Isso apagará permanentemente atendimentos com mais de 7 dias de TODAS as pautas. Deseja continuar?")) return;
+    if (!confirm("Deseja executar a limpeza? Dados de atendimentos serão apagados, mas a estatística será salva.")) return;
 
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const limitDate = sevenDaysAgo.toISOString();
+    const limitDate = new Date();
+    limitDate.setDate(limitDate.getDate() - 7);
+    const pautas = await getDocs(collection(db, "pautas"));
+    let count = 0;
 
-    try {
-        const pautasSnapshot = await getDocs(collection(db, "pautas"));
-        let deletedCount = 0;
+    for (const pautaDoc of pautas.docs) {
+        const pautaData = pautaDoc.data();
+        const attRef = collection(db, "pautas", pautaDoc.id, "attendances");
+        const q = query(attRef, where("createdAt", "<", limitDate.toISOString()));
+        const snapshot = await getDocs(q);
 
-        for (const pautaDoc of pautasSnapshot.docs) {
-            const q = query(collection(db, "pautas", pautaDoc.id, "attendances"), where("createdAt", "<", limitDate));
-            const oldDocs = await getDocs(q);
+        if (!snapshot.empty) {
+            // ANTES DE APAGAR: Salva o resumo na coleção permanente
+            const atendidos = snapshot.docs.filter(d => d.data().status === 'atendido').length;
             
-            if (!oldDocs.empty) {
-                const batch = writeBatch(db);
-                oldDocs.forEach(d => { batch.delete(d.ref); deletedCount++; });
-                await batch.commit();
-            }
+            await addDoc(collection(db, "estatisticas_permanentes"), {
+                nomePauta: pautaData.name,
+                criador: pautaData.ownerName || pautaData.ownerEmail,
+                dataCriacao: pautaData.createdAt,
+                totalAtendidos: atendidos,
+                pautaId: pautaDoc.id,
+                limpezaExecutadaEm: new Date().toISOString()
+            });
+
+            // AGORA APAGA OS ATENDIMENTOS
+            const batch = writeBatch(db);
+            snapshot.docs.forEach(d => batch.delete(d.ref));
+            await batch.commit();
+            count += snapshot.size;
         }
-        showNotification(`Limpeza concluída! ${deletedCount} registros antigos removidos.`);
-    } catch (error) {
-        console.error(error);
-        showNotification("Erro na limpeza automática.", "error");
     }
+    showNotification(`${count} registros limpos. Estatísticas salvas no histórico.`);
 };
