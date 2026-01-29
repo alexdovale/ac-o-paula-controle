@@ -216,13 +216,26 @@
                 <div class="overflow-y-auto">
                     <h3 class="font-semibold text-gray-700 mb-2">Usuários Pendentes</h3>
                     <div id="pending-users-list" class="space-y-3 mb-6">
-                        <!-- Usuários pendentes aparecerão aqui -->
-                    </div>
+                        </div>
         
                     <h3 class="font-semibold text-gray-700 mb-2">Usuários Aprovados</h3>
                     <div id="approved-users-list" class="space-y-3">
-                        <!-- Usuários aprovados aparecerão aqui -->
+                        </div>
+
+                    <div class="mt-8 border-t pt-4">
+                        <h3 class="font-bold text-gray-700 mb-2 uppercase text-xs tracking-widest">📈 Histórico Permanente de Atendimentos</h3>
+                        <div id="permanent-stats-container" class="bg-white border rounded-lg p-2 max-h-48 overflow-y-auto shadow-inner text-gray-600">
+                            <p class="text-center text-xs p-4 italic">Carregando histórico...</p>
+                        </div>
                     </div>
+                </div>
+
+                <div class="mt-8 border-t pt-4 flex-shrink-0">
+                    <h3 class="font-semibold text-red-600 mb-2 uppercase text-sm">Manutenção do Sistema (LGPD)</h3>
+                    <p class="text-xs text-gray-500 mb-4">Apaga permanentemente atendimentos com mais de 7 dias de todas as pautas.</p>
+                    <button id="cleanup-old-data-btn" class="w-full bg-red-100 text-red-700 font-bold py-2 rounded-lg hover:bg-red-200 transition border border-red-300">
+                        Executar Limpeza de 7 Dias
+                    </button>
                 </div>
             </div>
         </div>
@@ -1337,6 +1350,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             btnAdmin.onclick = () => {
                 document.getElementById('admin-modal').classList.remove('hidden');
                 loadUsersList(db); // Chama a função que você importou
+            };
+        }
+
+        // Ação do Botão de PDF do Administrador
+        const btnAdminPdf = document.getElementById('download-audit-pdf-btn');
+        if (btnAdminPdf) {
+            btnAdminPdf.onclick = () => {
+                // Você define aqui quais colunas quer no PDF do Admin
+                const colunasDesejadas = ['nome', 'criador', 'data', 'atendidos'];
+                generateCustomAdminPDF(db, colunasDesejadas);
             };
         }
         
@@ -4288,3 +4311,4 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
