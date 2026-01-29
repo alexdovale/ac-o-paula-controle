@@ -2613,7 +2613,9 @@ function renderColaboradores() {
             });
             return card;
         };
+        
         // FUNÇÃO PARA MOSTRAR AS PAUTAS NA TELA INICIAL (VISUAL INTEGRAL + NOME DO CRIADOR)
+        let allUserPautas = []; // Cache para o filtro funcionar rápido
         const showPautaSelectionScreen = (userId) => {
             const pautasList = document.getElementById('pautas-list');
             if (!pautasList) return;
@@ -4342,5 +4344,6 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
