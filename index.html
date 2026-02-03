@@ -1760,76 +1760,90 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         };
 
         const renderAssistedList = () => {
-            allAssisted.forEach(a => {
-                if (a.status === 'aguardando' && a.priority !== 'URGENTE') {
-                    a.priority = getPriorityLevel(a);
-                }
-            });
-
-            const pautaList = document.getElementById('pauta-list');
-            const aguardandoList = document.getElementById('aguardando-list');
-            const emAtendimentoList = document.getElementById('em-atendimento-list');
-            const atendidosList = document.getElementById('atendidos-list');
-            const faltososList = document.getElementById('faltosos-list');
-            [pautaList, aguardandoList, emAtendimentoList, atendidosList, faltososList].forEach(el => el.innerHTML = '');
-
-            const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-
-            const pautaSearchTerm = normalizeText(document.getElementById('pauta-search').value);
-            const aguardandoSearchTerm = normalizeText(document.getElementById('aguardando-search').value);
-            const emAtendimentoSearchTerm = normalizeText(document.getElementById('em-atendimento-search').value);
-            const atendidosSearchTerm = normalizeText(document.getElementById('atendidos-search').value);
-            const faltososSearchTerm = normalizeText(document.getElementById('faltosos-search').value);
-
-            const pauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && searchFilter(a, pautaSearchTerm));
-            const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm));
-            const emAtendimento = allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode && searchFilter(a, emAtendimentoSearchTerm));
-            const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && searchFilter(a, atendidosSearchTerm));
-            const faltosos = allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento' && searchFilter(a, faltososSearchTerm));
-
-            pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
-            atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
-            faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
-
-      // Ordenação da coluna Aguardando
-            aguardando.sort((a, b) => {
-                const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
-            
-                // Se for Manual, prioriza o índice que definimos arrastando
-                if (pautaOrder === 'manual') {
-                    // Casos URGENTES continuam sempre no topo, mesmo no manual (opcional)
-                    if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-                    if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-            
-                    // Se ambos forem urgentes ou ambos comuns, usa o índice manual
-                    const indexA = a.manualIndex !== undefined ? a.manualIndex : 999;
-                    const indexB = b.manualIndex !== undefined ? b.manualIndex : 999;
-                    return indexA - indexB;
-                }         
-                
-                if (pautaOrder === 'chegada') {
-                    const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
-                    const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                    if (arrivalA !== arrivalB) return arrivalA - arrivalB;
-                    return (a.createdAt || 0) - (b.createdAt || 0);
-                } else { // 'padrao'
-                    const order = { 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
-                    const priorityDiff = order[a.priority] - order[b.priority];
-                    if (priorityDiff !== 0) return priorityDiff;
-
-                    if (a.priority === 'Máxima' && a.type === 'agendamento') {
-                        const scheduledA = a.scheduledTime || '23:59';
-                        const scheduledB = b.scheduledTime || '23:59';
-                        if (scheduledA.localeCompare(scheduledB) !== 0) return scheduledA.localeCompare(scheduledB);
+                allAssisted.forEach(a => {
+                    if (a.status === 'aguardando' && a.priority !== 'URGENTE') {
+                        a.priority = getPriorityLevel(a);
                     }
-
-                    const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
-                    const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
-                    if (arrivalA !== arrivalB) return arrivalA - arrivalB;
-
-                    return (a.createdAt || 0) - (b.createdAt || 0);
-                }
-            });
+                });
+            
+                const pautaList = document.getElementById('pauta-list');
+                const aguardandoList = document.getElementById('aguardando-list');
+                const atendidosList = document.getElementById('atendidos-list');
+                const faltososList = document.getElementById('faltosos-list');
+                [pautaList, aguardandoList, atendidosList, faltososList].forEach(el => el.innerHTML = '');
+            
+                const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
+                const aguardandoSearchTerm = normalizeText(document.getElementById('aguardando-search').value);
+            
+                // Filtros
+                const pauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento');
+                const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm));
+                const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode);
+            
+                // --- FUNÇÃO AUXILIAR PARA GERAR A ETIQUETA ---
+                const getStatusBadgeHTML = (a) => {
+                    if (!a.documentState) return '';
+                    const states = {
+                        'selected': { color: 'bg-blue-100 text-blue-700 border-blue-200', text: '🔍 SELECIONADO', icon: '' },
+                        'filling': { color: 'bg-yellow-100 text-yellow-800 border-yellow-200 animate-pulse', text: '✍️ PREENCHENDO', icon: '' },
+                        'saved': { color: 'bg-green-100 text-green-700 border-green-200', text: '✅ SALVO', icon: '' },
+                        'pdf': { color: 'bg-purple-100 text-purple-700 border-purple-200', text: '📄 PDF GERADO', icon: '' }
+                    };
+                    const s = states[a.documentState];
+                    if (!s) return '';
+                    return `<div class="mt-1"><span class="text-[9px] font-bold px-2 py-0.5 rounded-full border ${s.color}">${s.text}: ${a.selectedAction || ''}</span></div>`;
+                };
+            
+                const render = (el, data, generator) => {
+                    if(data.length === 0) el.innerHTML = `<p class="text-gray-500 text-center p-4 text-xs">Vazio</p>`;
+                    else data.forEach((item, index) => el.appendChild(generator(item, index)));
+                };
+            
+                // --- RENDERIZANDO COLUNA PAUTA ---
+                render(pautaList, pauta, a => {
+                    const card = document.createElement('div');
+                    card.className = 'relative bg-gray-50 p-4 rounded-lg shadow-sm border mb-2';
+                    card.innerHTML = `
+                        <p class="font-bold text-gray-800">${escapeHTML(a.name)}</p>
+                        ${getStatusBadgeHTML(a)} <!-- Etiqueta aqui -->
+                        <p class="text-xs text-gray-500 mt-1">Assunto: ${escapeHTML(a.subject)}</p>
+                        <div class="mt-3 flex gap-2">
+                            <button data-id="${a.id}" class="check-in-btn bg-green-500 text-white text-[10px] px-2 py-1 rounded font-bold">CHEGOU</button>
+                        </div>
+                    `;
+                    return card;
+                });
+            
+                // --- RENDERIZANDO COLUNA AGUARDANDO (ONDE ESTÁ O BOTÃO DETALHES) ---
+                render(aguardandoList, aguardando, (a, index) => {
+                    const card = createAguardandoCard(a, index); // Chama a função que cria o card com setas
+                    
+                    // Inserindo a etiqueta dinamicamente dentro do card do Aguardando
+                    const badgeDiv = document.createElement('div');
+                    badgeDiv.innerHTML = getStatusBadgeHTML(a);
+                    
+                    // Tenta colocar a etiqueta logo após o nome do assistido
+                    const nameEl = card.querySelector('p.font-bold');
+                    if (nameEl) nameEl.after(badgeDiv);
+                    
+                    return card;
+                });
+            
+                // --- RENDERIZANDO COLUNA ATENDIDOS ---
+                render(atendidosList, atendidos, a => {
+                    const card = document.createElement('div');
+                    card.className = 'relative bg-green-50 p-4 rounded-lg shadow-sm border border-green-200 mb-2';
+                    card.innerHTML = `
+                        <p class="font-bold text-green-800">${escapeHTML(a.name)}</p>
+                        ${getStatusBadgeHTML(a)} <!-- Etiqueta aqui -->
+                        <p class="text-xs text-gray-600 mt-1">Assunto: ${escapeHTML(a.subject)}</p>
+                        <div class="mt-2 text-[10px] text-gray-400">Atendido por: ${a.attendant || 'N/A'}</div>
+                    `;
+                    return card;
+                });
+            
+                setupManualSort();
+            };
 
             // --- LÓGICA DE ETIQUETAS DE STATUS DO CHECKLIST (ESTADOS DE PREENCHIMENTO) ---
             let statusBadge = '';
@@ -1961,7 +1975,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 `;
                 return card;
             });
-render(atendidosList, atendidos, a => {
+            render(atendidosList, atendidos, a => {
                 const card = document.createElement('div');
                 const confirmedBtnBgClass = a.isConfirmed ? 'bg-green-500' : 'bg-gray-400';
                 const confirmedBtnHoverClass = a.isConfirmed ? 'hover:bg-green-600' : 'hover:bg-gray-500';
@@ -4285,4 +4299,5 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
