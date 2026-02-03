@@ -2071,38 +2071,114 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 return card;
             });
 
+        const renderAssistedList = () => {
+            // 1. Cálculos de prioridade
+            allAssisted.forEach(a => {
+                if (a.status === 'aguardando' && a.priority !== 'URGENTE') {
+                    a.priority = getPriorityLevel(a);
+                }
+            });
+        
+            // 2. Referências das colunas
+            const pautaList = document.getElementById('pauta-list');
+            const aguardandoList = document.getElementById('aguardando-list');
+            const emAtendimentoList = document.getElementById('em-atendimento-list');
+            const atendidosList = document.getElementById('atendidos-list');
+            const faltososList = document.getElementById('faltosos-list');
+            
+            // Limpa todas as colunas antes de desenhar
+            [pautaList, aguardandoList, emAtendimentoList, atendidosList, faltososList].forEach(el => { if(el) el.innerHTML = ''; });
+        
+            const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
+            const aguardandoSearchTerm = normalizeText(document.getElementById('aguardando-search').value);
+        
+            // 3. Filtros (conforme seu original)
+            const pauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento');
+            const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm));
+            const emAtendimento = allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode);
+            const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode);
+            const faltosos = allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento');
+        
+            // --- FUNÇÃO AUXILIAR PARA AS ETIQUETAS (BADGES) ---
+            const getStatusBadgeHTML = (a) => {
+                if (!a.documentState) return '';
+                const states = {
+                    'selected': { color: 'bg-blue-100 text-blue-700 border-blue-200', text: '🔍 SELECIONADO' },
+                    'filling': { color: 'bg-yellow-100 text-yellow-800 border-yellow-200 animate-pulse', text: '✍️ PREENCHENDO' },
+                    'saved': { color: 'bg-green-100 text-green-700 border-green-200', text: '✅ SALVO' },
+                    'pdf': { color: 'bg-purple-100 text-purple-700 border-purple-200', text: '📄 PDF GERADO' }
+                };
+                const s = states[a.documentState];
+                if (!s) return '';
+                return `<div class="mt-1 mb-1"><span class="text-[9px] font-bold px-2 py-0.5 rounded-full border ${s.color}">${s.text}: ${a.selectedAction || ''}</span></div>`;
+            };
+        
+            const render = (el, data, generator) => {
+                if(!el) return;
+                if(data.length === 0) el.innerHTML = `<p class="text-gray-500 text-center p-4 text-xs italic">Vazio</p>`;
+                else data.forEach((item, index) => el.appendChild(generator(item, index)));
+            };
+        
+            // --- RENDERIZANDO CADA COLUNA ---
+        
+            render(pautaList, pauta, a => {
+                const card = document.createElement('div');
+                card.className = 'relative bg-gray-50 p-4 rounded-lg shadow-sm border mb-2';
+                card.innerHTML = `
+                    <p class="font-bold text-gray-800">${escapeHTML(a.name)}</p>
+                    ${getStatusBadgeHTML(a)}
+                    <div class="mt-3 flex gap-2">
+                        <button data-id="${a.id}" class="check-in-btn bg-green-600 text-white text-[10px] px-2 py-1 rounded font-bold uppercase">Chegou</button>
+                        <button data-id="${a.id}" class="faltou-btn bg-yellow-500 text-white text-[10px] px-2 py-1 rounded font-bold uppercase">Faltou</button>
+                    </div>`;
+                return card;
+            });
+        
+            render(aguardandoList, aguardando, (a, index) => {
+                const card = createAguardandoCard(a, index);
+                const badgeHtml = getStatusBadgeHTML(a);
+                if (badgeHtml) {
+                    const badgeDiv = document.createElement('div'); badgeDiv.innerHTML = badgeHtml;
+                    const nameEl = card.querySelector('p.font-bold') || card.querySelector('div.font-bold');
+                    if (nameEl) nameEl.after(badgeDiv);
+                }
+                return card;
+            });
+        
+            render(atendidosList, atendidos, a => {
+                const card = document.createElement('div');
+                card.className = 'relative bg-green-50 p-4 rounded-lg shadow-sm border border-green-200 mb-2';
+                card.innerHTML = `<p class="font-bold text-green-800">${escapeHTML(a.name)}</p>${getStatusBadgeHTML(a)}<p class="text-xs text-gray-400">Atendente: ${a.attendant || 'N/A'}</p>`;
+                return card;
+            });
+        
+            // --- LÓGICA DE FALTOSOS (INTEGRADA AQUI) ---
             render(faltososList, faltosos, a => {
                 const card = document.createElement('div');
-                // ... (lógica de confirmação mantém igual) ...
-
+                card.className = 'relative bg-white p-4 rounded-lg shadow-sm border mb-2';
+                
+                const confirmedBtnBgClass = a.isConfirmed ? 'bg-green-500' : 'bg-gray-400';
+                const confirmedBtnHoverClass = a.isConfirmed ? 'hover:bg-green-600' : 'hover:bg-gray-500';
+                const confirmationInfo = a.isConfirmed && a.confirmationDetails ? 
+                    `<span class="text-[9px] opacity-75 block mt-1">Confirmado por: ${escapeHTML(a.confirmationDetails.confirmedBy)}</span>` : '';
+        
                 card.innerHTML = `
-                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg ...></svg></button>
+                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full">🗑️</button>
                     <div class="flex items-center justify-between">
-                        <p class="font-bold text-lg inline-flex items-center">
-                            ${escapeHTML(a.name)}
-                        </p>
+                        <p class="font-bold text-gray-800">${escapeHTML(a.name)}</p>
                         <button data-id="${a.id}" class="toggle-confirmed-faltoso confirm-btn-style ${confirmedBtnBgClass} ${confirmedBtnHoverClass} text-white">
                             <svg class="confirm-btn-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/></svg>
                         </button>
                     </div>
-                    <div class="mt-2 space-y-2">
-                        ${a.cpf ? `<p class="text-sm">CPF: <strong>${escapeHTML(a.cpf)}</strong></p>` : ''}
-                        <p class="text-sm">Assunto: <strong>${escapeHTML(a.subject)}</strong></p>
-                        <p class="text-sm">Agendado: <strong>${a.scheduledTime}</strong></p>
-                        <div class="mt-3">
-                            <button data-id="${a.id}" class="return-to-pauta-from-faltoso-btn w-full bg-gray-500 text-white font-semibold py-1 rounded-lg hover:bg-gray-600 text-xs">Revertido para Pauta</button>
-                        </div>
-                        ${confirmationInfo}
-                    </div>
-                    ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${escapeHTML(a.lastActionBy)}</strong></div>` : ''}
-                `;
+                    ${confirmationInfo}
+                    <div class="mt-3">
+                        <button data-id="${a.id}" class="return-to-pauta-from-faltoso-btn w-full bg-gray-500 text-white font-semibold py-1 rounded-lg text-[10px] uppercase">Reverter para Pauta</button>
+                    </div>`;
                 return card;
             });
-
+        
             togglePautaLock(isPautaClosed);
-
-            // ADICIONE ESTA LINHA AQUI:
-            setupManualSort()
+            setupManualSort();
         };
 
 
@@ -4327,6 +4403,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
