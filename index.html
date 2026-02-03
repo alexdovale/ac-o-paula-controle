@@ -4,11 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Gerenciamento de Pauta - SIGAP</title>
+
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <meta name="theme-color" content="#16a34a"/>
     <link rel="apple-touch-icon" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <link rel="manifest" href="manifest.json">
 
+    <!-- ======================================================= -->
+    <!-- MONITORAMENTO DE ERROS (SENTRY) -->
+    <!-- ======================================================= -->
     <script src="https://browser.sentry-cdn.com/7.114.0/bundle.min.js" crossorigin="anonymous"></script>
     <script>
       if (window.Sentry) {
@@ -24,7 +28,8 @@
         });
       }
     </script>
-    
+
+    <!-- BIBLIOTECAS EXTERNAS (Graficos, Tailwind, Drag and Drop, PDF) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -33,6 +38,8 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- ESTILOS CUSTOMIZADOS -->
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
         .priority-urgente { border-left: 5px solid #ef4444; }
@@ -46,57 +53,65 @@
         .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
         .loader { border: 6px solid #f3f3f3; border-top: 6px solid #16a34a; border-radius: 50%; width: 50px; height: 50px; animation: spin 1.5s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .confirm-btn-style { display: inline-flex; items-center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; border: 1px solid currentColor; transition: all 0.2s; flex-shrink: 0; margin-left: 8px; }
+        .confirm-btn-style { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; border: 1px solid currentColor; transition: 0.2s; flex-shrink: 0; margin-left: 8px; }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
+    <!-- AVISO DE CONEXÃO (OFFLINE) -->
     <div id="offline-indicator" class="fixed top-0 left-0 w-full bg-red-600 text-white text-center py-1 text-sm font-bold hidden z-[100]">
         ⚠️ Sem conexão. Trabalhando em Modo Offline.
     </div>
 
+    <!-- LOADER DE CARREGAMENTO -->
     <div id="loading-container" class="loading-container"><div class="loader"></div><p id="loading-text" class="mt-4 text-gray-700 font-semibold text-center">Conectando com Segurança...</p></div>
 
-    <!-- TELA DE LOGIN -->
+    <!-- TELA DE LOGIN E CADASTRO -->
     <div id="login-container" class="hidden min-h-screen flex items-center justify-center">
         <div class="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
             <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGAP" class="mx-auto h-24 w-auto mb-6">
             <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Sistema de Gerenciamento de Pauta</h2>
             <div id="auth-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden"></div>
+            
             <div class="flex border-b mb-6">
                 <button id="login-tab-btn" class="flex-1 py-2 text-center font-semibold text-green-600 border-b-2 border-green-600">Login</button>
                 <button id="register-tab-btn" class="flex-1 py-2 text-center font-semibold text-gray-500">Cadastrar</button>
             </div>
+
+            <!-- FORMULÁRIO LOGIN -->
             <form id="login-form" class="space-y-4">
-                <div><label class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></div>
-                <div><label class="block text-sm font-medium text-gray-700">Senha</label><input type="password" id="login-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Senha</label><input type="password" id="login-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></div>
                 <div class="text-right"><a href="#" id="forgot-password-link" class="text-sm text-green-600 hover:underline">Esqueci minha senha</a></div>
-                <button type="submit" class="w-full py-2 px-4 rounded-md text-white bg-green-600 hover:bg-green-700">Entrar</button>
+                <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md text-white bg-green-600 hover:bg-green-700">Entrar</button>
             </form>
+
+            <!-- FORMULÁRIO CADASTRO -->
             <form id="register-form" class="hidden space-y-4">
                 <div><label class="block text-sm font-medium text-gray-700">Nome Completo</label><input type="text" id="register-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></div>
                 <div><label class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="register-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></div>
-                <div><label class="block text-sm font-medium text-gray-700">Senha (min 6)</label><input type="password" id="register-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Senha (mínimo 6 caracteres)</label><input type="password" id="register-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></div>
                 <button type="submit" class="w-full py-2 px-4 rounded-md text-white bg-green-600 hover:bg-green-700">Criar Conta</button>
             </form>
             <a href="#" id="privacy-policy-link" class="block mt-4 text-center text-sm text-gray-500 hover:underline">Política de Privacidade</a>
         </div>
     </div>
 
-    <!-- SELEÇÃO DE PAUTA -->
+    <!-- TELA DE SELEÇÃO DE PAUTAS -->
     <div id="pauta-selection-container" class="hidden max-w-4xl mx-auto">
         <div class="flex justify-between items-center mb-6">
               <h2 class="text-3xl font-bold text-gray-800">Minhas Pautas</h2>
               <div class="space-x-2">
-                  <button id="admin-panel-btn" class="hidden bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Painel do Admin</button>
+                  <button id="admin-panel-btn" class="hidden bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Painel do Administrador</button>
                   <button id="logout-btn-main" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Sair</button>
               </div>
         </div>
+        
         <div id="pautas-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         <div class="mt-6"><button id="create-pauta-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Criar Nova Pauta</button></div>
     </div>
 
-    <!-- MODAL ADMIN -->
+    <!-- MODAL DO PAINEL DE ADMIN -->
     <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 90vh;">
             <div class="flex justify-between items-center mb-4">
@@ -104,85 +119,117 @@
                 <button id="close-admin-modal" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
             </div>
             <div class="overflow-y-auto">
-                <div class="mb-4">
-                    <h3 class="font-semibold text-red-600 mb-2 uppercase text-sm">Manutenção (LGPD)</h3>
-                    <button id="cleanup-old-data-btn" class="w-full bg-red-100 text-red-700 font-bold py-2 rounded-lg border border-red-300">Executar Limpeza de 7 Dias</button>
+                <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <h3 class="font-semibold text-red-600 mb-2 uppercase text-sm">Manutenção do Sistema (LGPD)</h3>
+                    <p class="text-xs text-gray-500 mb-4">Apaga atendimentos com mais de 7 dias.</p>
+                    <button id="cleanup-old-data-btn" class="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700">Executar Limpeza</button>
                 </div>
-                <div class="mb-4">
+                <div>
                     <h3 class="font-semibold text-gray-700 mb-2">Usuários Pendentes</h3>
-                    <div id="pending-users-list" class="space-y-2"></div>
+                    <div id="pending-users-list" class="space-y-3 mb-6"></div>
+                    <h3 class="font-semibold text-gray-700 mb-2">Usuários Aprovados</h3>
+                    <div id="approved-users-list" class="space-y-3"></div>
                 </div>
-                <div id="audit-logs-container" class="mt-4">
-                    <button id="view-audit-logs-btn" class="bg-purple-600 text-white px-4 py-2 rounded text-sm mb-2">Ver Logs</button>
-                    <div class="max-h-40 overflow-y-auto border rounded bg-gray-50 p-2"><table class="w-full text-xs"><tbody id="audit-logs-table-body"></tbody></table></div>
+                <div class="mt-6 border-t pt-4">
+                    <button id="view-audit-logs-btn" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 text-sm">Ver Logs de Atividade</button>
+                    <div id="audit-logs-container" class="hidden mt-4 max-h-40 overflow-y-auto border rounded bg-gray-50 p-2 text-xs">
+                        <table class="w-full"><tbody id="audit-logs-table-body"></tbody></table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- APLICATIVO PRINCIPAL -->
+    <!-- ESTRUTURA DO APLICATIVO (DENTRO DA PAUTA) -->
     <div id="app-container" class="max-w-full mx-auto hidden">
         <header class="mb-6 bg-white p-4 rounded-lg shadow-sm">
-            <div class="flex justify-between items-center">
-                 <h1 id="pauta-title" class="text-2xl font-bold text-gray-800"></h1>
-                 <button id="logout-btn-app" class="bg-gray-600 text-white p-2 rounded-lg hover:bg-gray-700">Sair</button>
-            </div>
-            <div class="flex flex-wrap gap-2 mt-4">
-                <button id="back-to-pautas-btn" class="bg-gray-200 text-gray-800 py-2 px-4 rounded-lg">Voltar</button>
-                <button id="actions-toggle" class="bg-green-600 text-white py-2 px-6 rounded-lg font-bold">Ações ▼</button>
-                <div id="actions-panel" class="hidden absolute mt-12 bg-white border shadow-xl rounded-lg z-20 p-2 space-y-1">
-                    <button id="share-pauta-btn" class="w-full text-left p-2 hover:bg-gray-100 rounded">Compartilhar Externo</button>
-                    <button id="view-stats-btn" class="w-full text-left p-2 hover:bg-gray-100 rounded">Estatísticas</button>
-                    <button id="edit-pauta-name-btn" class="w-full text-left p-2 hover:bg-gray-100 rounded">Editar Nome</button>
-                    <button id="manage-members-btn" class="w-full text-left p-2 hover:bg-gray-100 rounded">Membros</button>
-                    <button id="manage-collaborators-btn" class="w-full text-left p-2 hover:bg-gray-100 rounded">Colaboradores</button>
-                    <button id="notes-btn" class="w-full text-left p-2 hover:bg-gray-100 rounded">Anotações</button>
-                    <hr>
-                    <button id="close-pauta-btn" class="w-full text-left p-2 text-orange-600 hover:bg-orange-50">Fechar Pauta</button>
-                    <button id="reset-all-btn" class="w-full text-left p-2 text-red-600 hover:bg-red-50">Zerar Pauta</button>
-                </div>
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                 <h1 id="pauta-title" class="text-2xl font-bold text-gray-800 truncate max-w-lg"></h1>
+                 <div class="flex gap-2">
+                    <button id="back-to-pautas-btn" class="bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300">Voltar</button>
+                    <div class="relative">
+                        <button id="actions-toggle" class="bg-green-600 text-white py-2 px-6 rounded-lg font-bold flex items-center gap-2">Ações <span id="actions-arrow">▼</span></button>
+                        <!-- MENU SUSPENSO DE AÇÕES -->
+                        <div id="actions-panel" class="hidden absolute right-0 mt-2 w-64 bg-white border shadow-xl rounded-lg z-20 p-2 space-y-1">
+                            <button id="share-pauta-btn" class="w-full text-left p-2 hover:bg-gray-100 rounded text-sm">Compartilhamento Externo</button>
+                            <button id="view-stats-btn" class="w-full text-left p-2 hover:bg-gray-100 rounded text-sm">Ver Estatísticas</button>
+                            <button id="edit-pauta-name-btn" class="w-full text-left p-2 hover:bg-gray-100 rounded text-sm">Editar Nome</button>
+                            <button id="manage-members-btn" class="w-full text-left p-2 hover:bg-gray-100 rounded text-sm">Membros/Compartilhar</button>
+                            <button id="manage-collaborators-btn" class="w-full text-left p-2 hover:bg-gray-100 rounded text-sm">Equipe/Colaboradores</button>
+                            <button id="notes-btn" class="w-full text-left p-2 hover:bg-gray-100 rounded text-sm">Minhas Anotações</button>
+                            <hr>
+                            <button id="close-pauta-btn" class="w-full text-left p-2 text-orange-600 hover:bg-orange-50 rounded text-sm">Fechar Pauta</button>
+                            <button id="reset-all-btn" class="w-full text-left p-2 text-red-600 hover:bg-red-50 rounded text-sm">Zerar Pauta</button>
+                        </div>
+                    </div>
+                 </div>
             </div>
         </header>
 
-        <div id="app-content">
-            <div class="border-b mb-6">
-                <nav class="flex space-x-6">
-                    <button id="tab-agendamento" class="tab-active py-3 px-4 border-b-2 font-medium">Agendado</button>
-                    <button id="tab-avulso" class="text-gray-500 py-3 px-4 border-b-2 font-medium">Avulso</button>
-                </nav>
-            </div>
-
-            <form id="form-agendamento" class="bg-white p-6 rounded-lg shadow-md mb-8">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <input type="text" id="assisted-name" placeholder="Nome do Assistido" class="p-3 border rounded-lg">
-                    <input type="text" id="assisted-cpf" placeholder="CPF (Opcional)" class="p-3 border rounded-lg">
-                    <input list="subjects-list" id="assisted-subject" placeholder="Assunto" class="p-3 border rounded-lg lg:col-span-2">
-                    <datalist id="subjects-list"></datalist>
-                </div>
-                <div class="flex items-center gap-4 mt-4">
-                    <div id="scheduled-time-wrapper" class="hidden"><input type="time" id="scheduled-time" class="p-3 border rounded-lg"></div>
-                    <button type="button" id="add-assisted-btn" class="bg-green-600 text-white font-bold py-3 px-8 rounded-lg">Adicionar</button>
-                </div>
-            </form>
-
-            <main id="main-content" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-white rounded-lg shadow h-fit"><h3 class="p-4 border-b font-bold bg-gray-50">📋 Pauta <span id="pauta-count" class="text-xs bg-gray-200 px-2 rounded-full"></span></h3><div id="pauta-list" class="p-2 column-content overflow-y-auto max-h-[60vh]"></div><input type="search" id="pauta-search" placeholder="Pesquisar..." class="w-full p-2 text-sm border-t"></div>
-                <div class="bg-white rounded-lg shadow h-fit"><h3 class="p-4 border-b font-bold bg-gray-50">⏳ Aguardando <span id="aguardando-count" class="text-xs bg-gray-200 px-2 rounded-full"></span></h3><div id="aguardando-list" class="p-2 column-content overflow-y-auto max-h-[60vh]"></div><input type="search" id="aguardando-search" placeholder="Pesquisar..." class="w-full p-2 text-sm border-t"></div>
-                <div id="em-atendimento-column" class="bg-white rounded-lg shadow h-fit hidden"><h3 class="p-4 border-b font-bold bg-purple-50">👩‍💻 Em Atendimento <span id="em-atendimento-count" class="text-xs bg-gray-200 px-2 rounded-full"></span></h3><div id="em-atendimento-list" class="p-2 column-content overflow-y-auto max-h-[60vh]"></div></div>
-                <div class="bg-white rounded-lg shadow h-fit"><h3 class="p-4 border-b font-bold bg-green-50">✅ Atendidos <span id="atendidos-count" class="text-xs bg-gray-200 px-2 rounded-full"></span></h3><div id="atendidos-list" class="p-2 column-content overflow-y-auto max-h-[60vh]"></div><input type="search" id="atendidos-search" placeholder="Pesquisar..." class="w-full p-2 text-sm border-t"></div>
-            </main>
+        <!-- ABAS DE NAVEGAÇÃO -->
+        <div class="border-b border-gray-200 mb-6">
+            <nav class="flex space-x-6">
+                <button id="tab-agendamento" class="tab-active py-3 px-4 border-b-2 font-medium text-sm">Atendimento Agendado</button>
+                <button id="tab-avulso" class="text-gray-500 hover:text-gray-700 py-3 px-4 border-b-2 font-medium text-sm">Atendimento Avulso</button>
+            </nav>
         </div>
+
+        <!-- FORMULÁRIO DE CADASTRO DE ASSISTIDO -->
+        <form id="form-agendamento" class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <input type="text" id="assisted-name" placeholder="Nome do Assistido" class="p-3 border rounded-lg focus:ring-2 focus:ring-green-500">
+                <input type="text" id="assisted-cpf" placeholder="CPF (Opcional)" class="p-3 border rounded-lg focus:ring-2 focus:ring-green-500">
+                <input list="subjects-list" id="assisted-subject" placeholder="Assunto/Matéria" class="p-3 border rounded-lg lg:col-span-2 focus:ring-2 focus:ring-green-500">
+                <datalist id="subjects-list"></datalist>
+            </div>
+            <div class="flex items-center gap-4 mt-4">
+                <div id="scheduled-time-wrapper" class="hidden"><label class="text-sm font-medium">Horário:</label><input type="time" id="scheduled-time" class="p-2 border rounded-lg"></div>
+                <button type="button" id="add-assisted-btn" class="bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700">Adicionar à Fila</button>
+                <input type="file" id="file-upload" class="hidden" accept=".csv"><label for="file-upload" class="cursor-pointer text-sm text-teal-600 hover:underline">Importar Pauta (CSV)</label>
+            </div>
+        </form>
+
+        <!-- QUADRO KANBAN (COLUNAS) -->
+        <main id="main-content" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- COLUNA PAUTA -->
+            <div id="pauta-column" class="bg-white rounded-lg shadow flex flex-col h-fit max-h-[70vh]">
+                <h3 class="p-4 border-b font-bold bg-gray-50 flex justify-between">📋 Pauta <span id="pauta-count" class="text-xs bg-gray-200 px-2 py-1 rounded-full">0</span></h3>
+                <div id="pauta-list" class="p-2 column-content overflow-y-auto"></div>
+                <input type="search" id="pauta-search" placeholder="Pesquisar..." class="p-2 text-xs border-t focus:outline-none">
+            </div>
+            <!-- COLUNA AGUARDANDO -->
+            <div class="bg-white rounded-lg shadow flex flex-col h-fit max-h-[70vh]">
+                <h3 class="p-4 border-b font-bold bg-gray-50 flex justify-between">⏳ Aguardando <span id="aguardando-count" class="text-xs bg-gray-200 px-2 py-1 rounded-full">0</span></h3>
+                <div id="aguardando-list" class="p-2 column-content overflow-y-auto"></div>
+                <input type="search" id="aguardando-search" placeholder="Pesquisar..." class="p-2 text-xs border-t focus:outline-none">
+            </div>
+            <!-- COLUNA EM ATENDIMENTO -->
+            <div id="em-atendimento-column" class="bg-white rounded-lg shadow flex flex-col h-fit max-h-[70vh] hidden">
+                <h3 class="p-4 border-b font-bold bg-purple-50 text-purple-800 flex justify-between">👩‍💻 Em Atendimento <span id="em-atendimento-count" class="text-xs bg-purple-200 px-2 py-1 rounded-full">0</span></h3>
+                <div id="em-atendimento-list" class="p-2 column-content overflow-y-auto"></div>
+            </div>
+            <!-- COLUNA ATENDIDOS -->
+            <div class="bg-white rounded-lg shadow flex flex-col h-fit max-h-[70vh]">
+                <h3 class="p-4 border-b font-bold bg-green-50 text-green-800 flex justify-between">✅ Atendidos <span id="atendidos-count" class="text-xs bg-green-200 px-2 py-1 rounded-full">0</span></h3>
+                <div id="atendidos-list" class="p-2 column-content overflow-y-auto"></div>
+                <input type="search" id="atendidos-search" placeholder="Pesquisar..." class="p-2 text-xs border-t focus:outline-none">
+            </div>
+        </main>
     </div>
 
-    <!-- MODAL DE ATENDENTE (UNIFICADO) -->
+    <!-- ======================================================= -->
+    <!-- SEÇÃO DE MODAIS (JANELAS EMERGENTES) -->
+    <!-- ======================================================= -->
+
+    <!-- MODAL DE ATENDENTE (UNIFICADO PARA FINALIZAR E EDITAR) -->
     <div id="attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 id="attendant-modal-title" class="text-2xl font-bold mb-4">Finalizar Atendimento</h2>
-            <p class="mb-4 text-gray-600">Insira o nome do profissional (opcional).</p>
-            <input list="collaborators-list" type="text" id="attendant-name" class="w-full p-3 border rounded-lg mb-6">
+            <p class="mb-4 text-gray-600">Selecione o profissional que realizou o atendimento.</p>
+            <input list="collaborators-list" type="text" id="attendant-name" placeholder="Nome do Defensor/Servidor" class="w-full p-3 border rounded-lg mb-6">
             <div class="flex justify-end space-x-4">
-                <button id="cancel-attendant-btn" class="bg-gray-300 py-2 px-6 rounded-lg">Cancelar</button>
-                <button id="confirm-attendant-btn" class="bg-green-600 text-white py-2 px-6 rounded-lg">Confirmar</button>
+                <button id="cancel-attendant-btn" class="bg-gray-300 py-2 px-6 rounded-lg font-bold">Cancelar</button>
+                <button id="confirm-attendant-btn" class="bg-green-600 text-white py-2 px-6 rounded-lg font-bold">Confirmar</button>
             </div>
         </div>
     </div>
@@ -191,7 +238,7 @@
     <div id="notes-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
       <div class="bg-white rounded-xl p-6 w-96 shadow-lg">
         <h2 class="text-lg font-semibold mb-3">Minhas Anotações</h2>
-        <textarea id="notes-text" class="w-full h-40 border rounded-lg p-3"></textarea>
+        <textarea id="notes-text" class="w-full h-40 border rounded-lg p-3 focus:ring-2 focus:ring-indigo-500"></textarea>
         <div class="mt-4 flex justify-end gap-2">
           <button id="save-notes-btn" class="bg-indigo-600 text-white px-4 py-2 rounded-lg">Salvar</button>
           <button id="close-notes-btn" class="bg-gray-300 px-4 py-2 rounded-lg">Fechar</button>
@@ -199,17 +246,18 @@
       </div>
     </div>
 
-    <!-- MODAL CONFIRMAÇÃO GENÉRICO -->
+    <!-- MODAL DE CONFIRMAÇÃO GENÉRICA -->
     <div id="confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md text-center">
             <h2 class="text-2xl font-bold mb-4">Confirmação</h2>
-            <p id="modal-text" class="mb-6 text-gray-600"></p>
-            <div class="flex justify-end space-x-4">
-                <button id="cancel-action" class="bg-gray-300 py-2 px-6 rounded-lg">Cancelar</button>
-                <button id="confirm-action" class="bg-red-600 text-white py-2 px-6 rounded-lg">Confirmar</button>
+            <p id="modal-text" class="mb-6 text-gray-600">Tem certeza que deseja realizar esta ação?</p>
+            <div class="flex justify-center space-x-4">
+                <button id="cancel-action" class="bg-gray-300 py-2 px-6 rounded-lg font-bold">Não</button>
+                <button id="confirm-action" class="bg-red-600 text-white py-2 px-6 rounded-lg font-bold">Sim, Confirmar</button>
             </div>
         </div>
     </div>
+</html>
     <script type="module">
 
         // imports
@@ -3050,8 +3098,12 @@ function renderColaboradores() {
             });
     </script>
 
-<!-- Modal de Anotações -->
-<div id="notes-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
+<!-- ======================================================= -->
+<!-- BLOCO FINAL: MODAIS AUXILIARES -->
+<!-- ======================================================= -->
+
+<!-- Modal de Anotações (Rascunho local) -->
+<div id="notes-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
   <div class="bg-white rounded-xl p-6 w-96 shadow-lg">
     <h2 class="text-lg font-semibold text-gray-700 mb-3">Minhas Anotações</h2>
     <textarea id="notes-text" class="w-full h-40 border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500"></textarea>
@@ -3062,7 +3114,7 @@ function renderColaboradores() {
   </div>
 </div>
 
-<!-- Modal de Confirmação (necessário para as novas funcionalidades) -->
+<!-- Modal de Confirmação (Usado para deletar e zerar pauta) -->
 <div id="confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
         <h2 class="text-2xl font-bold mb-4">Confirmação</h2>
@@ -3074,108 +3126,54 @@ function renderColaboradores() {
     </div>
 </div>
 
+<!-- Importação do serviço de e-mail -->
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script>
 
+<!-- Script para funções que NÃO dependem do Firebase diretamente -->
+<script>
+  // Lógica das Anotações
   const notesBtn = document.getElementById("notes-btn");
   const notesModal = document.getElementById("notes-modal");
   const closeNotesBtn = document.getElementById("close-notes-btn");
   const saveNotesBtn = document.getElementById("save-notes-btn");
   const notesText = document.getElementById("notes-text");
 
-  const confirmModal = document.getElementById('confirm-modal');
-  const modalText = document.getElementById('modal-text');
-  const confirmActionBtn = document.getElementById('confirm-action');
-  const cancelActionBtn = document.getElementById('cancel-action');
-  let actionToConfirm = null;
-
-  function showConfirmModal(callback, message) {
-    modalText.innerHTML = message;
-    confirmModal.classList.remove('hidden'); // Use classList.remove para Tailwind CSS
-    actionToConfirm = callback;
+  if (notesBtn) {
+      notesBtn.addEventListener("click", () => {
+        const saved = localStorage.getItem("pauta_notes") || "";
+        notesText.value = saved;
+        notesModal.classList.remove("hidden");
+      });
   }
 
-  if (confirmActionBtn) {
-    confirmActionBtn.addEventListener('click', () => {
-        if (actionToConfirm) {
-            actionToConfirm();
-        }
-        confirmModal.classList.add('hidden');
-        actionToConfirm = null;
-    });
-  }
+  closeNotesBtn?.addEventListener("click", () => notesModal.classList.add("hidden"));
 
-  if (cancelActionBtn) {
-    cancelActionBtn.addEventListener('click', () => {
-        confirmModal.classList.add('hidden');
-        actionToConfirm = null;
-    });
-  }
-
-
-  notesBtn.addEventListener("click", () => {
-    const saved = localStorage.getItem("pauta_notes") || "";
-    notesText.value = saved;
-    notesModal.classList.remove("hidden");
-  });
-
-  closeNotesBtn.addEventListener("click", () => {
-    notesModal.classList.add("hidden");
-  });
-
-  saveNotesBtn.addEventListener("click", () => {
+  saveNotesBtn?.addEventListener("click", () => {
     localStorage.setItem("pauta_notes", notesText.value);
     alert("Anotação salva!");
     notesModal.classList.add("hidden");
   });
 
-// Envio de E-mail de Delegação (Modular)
-document.getElementById('send-delegate-email-btn').addEventListener('click', async () => {
-    const collaboratorEmail = document.getElementById('collaborator-email-input').value.trim();
-    if (!collaboratorEmail) return showNotification("Insira o e-mail.", "error");
+  // Lógica da Janela de Confirmação (Global)
+  const confirmModal = document.getElementById('confirm-modal');
+  let actionToConfirm = null;
 
-    try {
-        await sendDelegationEmail({
-            toEmail: collaboratorEmail,
-            assistedName: assistedNameForDelegation,
-            collaboratorName: collaboratorNameForDelegation,
-            pautaId: currentPautaId,
-            assistedId: assistedIdForDelegation,
-            senderName: currentUserName,
-            senderEmail: auth.currentUser?.email
-        });
-        showNotification("Link enviado por e-mail!");
-        document.getElementById('delegate-email-modal').classList.add('hidden');
-    } catch (error) {
-        showNotification("Erro ao enviar e-mail.", "error");
-    }
-});
+  window.showConfirmModal = function(callback, message) {
+    document.getElementById('modal-text').innerHTML = message;
+    confirmModal.classList.remove('hidden');
+    actionToConfirm = callback;
+  }
 
-  // C. Envio automático de anotações ao fechar a pauta (Modular)
-const closePautaBtn = document.getElementById("close-pauta-btn");
-if (closePautaBtn) {
-    closePautaBtn.addEventListener("click", async () => {
-        // Aguarda um tempo para verificar se o modal de senha fechou (sucesso no fechamento)
-        setTimeout(async () => {
-            const isPasswordModalHidden = document.getElementById('close-pauta-modal').classList.contains('hidden');
-            
-            if (isPasswordModalHidden) { 
-                // Busca as anotações do localStorage (chave original: pauta_notes)
-                const notes = localStorage.getItem("pauta_notes") || "";
-                
-                if (notes.trim() !== "") {
-                    try {
-                        // Chama a função do arquivo js/emailService.js
-                        await sendNotesByEmail(notes, currentUserName, auth.currentUser?.email);
-                        showNotification("Anotações enviadas para seu e-mail por segurança!", "info");
-                    } catch (err) {
-                        console.error("Falha ao enviar backup das notas:", err);
-                    }
-                }
-            }
-        }, 1000); // 1 segundo de delay para garantir que o banco atualizou antes
-    });
-}
+  document.getElementById('confirm-action')?.addEventListener('click', () => {
+      if (actionToConfirm) actionToConfirm();
+      confirmModal.classList.add('hidden');
+      actionToConfirm = null;
+  });
+
+  document.getElementById('cancel-action')?.addEventListener('click', () => {
+      confirmModal.classList.add('hidden');
+      actionToConfirm = null;
+  });
 </script>
-</html>
+
 
