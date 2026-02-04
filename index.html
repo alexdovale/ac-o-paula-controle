@@ -1358,31 +1358,90 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         
         // Inicialização do EmailJS usando o novo arquivo de config
         emailjs.init(emailJsConfig.publicKey);
-        // --- LÓGICA DO PAINEL DE ADMIN ---
-        
+    
         // --- LIGAÇÕES DO PAINEL ADMIN (ATUALIZADO) ---
         
-        // Abrir o Painel (ID: admin-panel-btn)
+// =======================================================
+        // --- SEÇÃO DEFINITIVA: PAINEL DO ADMINISTRADOR ---
+        // =======================================================
+
+        // Elementos da Janela e Botões
+        const adminModal = document.getElementById('admin-modal');
+        const adminWindow = document.getElementById('admin-window');
+        const adminContent = document.getElementById('admin-content-area');
         const btnAdmin = document.getElementById('admin-panel-btn');
+        
+        // Controles de Janela
+        const maxBtn = document.getElementById('max-admin-btn');
+        const minBtn = document.getElementById('min-admin-btn');
+        const closeAdminBtn = document.getElementById('close-admin-modal-btn');
+
+        // 1. Abrir o Painel
         if (btnAdmin) {
             btnAdmin.onclick = () => {
-                document.getElementById('admin-modal').classList.remove('hidden');
-                loadUsersList(db); 
+                adminModal.classList.remove('hidden');
+                loadUsersList(db); // Carrega usuários
             };
         }
 
-
-        // ... código anterior ...
-
-        // --- LIGAÇÕES DO PAINEL ADMIN (ATUALIZADO) ---
-        
-        const btnAdmin = document.getElementById('admin-panel-btn');
-        if (btnAdmin) {
-            btnAdmin.onclick = () => {
-                document.getElementById('admin-modal').classList.remove('hidden');
-                loadUsersList(db); 
+        // 2. Maximizar / Restaurar
+        if (maxBtn && adminWindow) {
+            maxBtn.onclick = () => {
+                if (adminWindow.classList.contains('max-w-4xl')) {
+                    adminWindow.classList.replace('max-w-4xl', 'max-w-none');
+                    adminWindow.style.width = '100%';
+                    adminWindow.style.height = '100vh';
+                    adminWindow.style.maxHeight = '100vh';
+                    adminWindow.classList.remove('rounded-lg');
+                    maxBtn.textContent = '❐';
+                } else {
+                    adminWindow.classList.replace('max-w-none', 'max-w-4xl');
+                    adminWindow.style.width = '';
+                    adminWindow.style.height = '';
+                    adminWindow.style.maxHeight = '90vh';
+                    adminWindow.classList.add('rounded-lg');
+                    maxBtn.textContent = '▢';
+                }
             };
         }
+
+        // 3. Minimizar (Recolher)
+        if (minBtn && adminContent) {
+            minBtn.onclick = () => {
+                adminContent.classList.toggle('hidden');
+                minBtn.textContent = adminContent.classList.contains('hidden') ? '+' : '_';
+            };
+        }
+
+        // 4. Fechar Painel
+        if (closeAdminBtn) {
+            closeAdminBtn.onclick = () => adminModal.classList.add('hidden');
+        }
+
+        // 5. Botões de Ação do Admin (Limpeza e Logs)
+        const btnCleanup = document.getElementById('cleanup-old-data-btn');
+        if (btnCleanup) btnCleanup.onclick = () => cleanupOldData(db);
+
+        const btnViewLogs = document.getElementById('view-audit-logs-btn');
+        if (btnViewLogs) btnViewLogs.onclick = () => loadAuditLogs(db);
+
+        const btnExportLogs = document.getElementById('export-audit-pdf-btn');
+        if (btnExportLogs) btnExportLogs.onclick = () => exportAuditLogsPDF(db);
+
+        // --- PONTES PARA O HTML (Ações da Lista de Usuários) ---
+        window.approveUserWithRole = (id) => {
+            const roleSelect = document.getElementById(`role-select-${id}`);
+            if (roleSelect) approveUser(db, id, roleSelect.value);
+        };
+
+        window.updateUserRole = (id) => {
+            const roleSelect = document.getElementById(`role-select-${id}`);
+            if (roleSelect) updateUserRole(db, id, roleSelect.value);
+        };
+
+        window.deleteUser = (id) => {
+            if(confirm("Excluir usuário permanentemente?")) deleteUser(db, id);
+        };
 
         export const loadAuditLogs = async (db) => {
             const logsContainer = document.getElementById('audit-logs-container');
@@ -4391,6 +4450,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
