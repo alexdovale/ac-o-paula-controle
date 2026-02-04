@@ -1384,46 +1384,54 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             };
         }
 
-        // --- CONTROLES DE JANELA DO PAINEL ADMIN ---
-        const adminWindow = document.getElementById('admin-window');
-        const adminContent = document.getElementById('admin-content-area');
-        const maxBtn = document.getElementById('max-admin-btn');
-        const minBtn = document.getElementById('min-admin-btn');
-        const closeAdminBtn = document.getElementById('close-admin-modal-btn');
-        const adminModal = document.getElementById('admin-modal');
-
-        if (maxBtn && adminWindow) {
-            maxBtn.onclick = () => {
-                if (adminWindow.classList.contains('max-w-4xl')) {
-                    adminWindow.classList.replace('max-w-4xl', 'max-w-none');
-                    adminWindow.style.width = '100%';
-                    adminWindow.style.height = '100vh';
-                    adminWindow.style.maxHeight = '100vh';
-                    adminWindow.classList.remove('rounded-lg');
-                    maxBtn.textContent = '❐';
-                } else {
-                    adminWindow.classList.replace('max-w-none', 'max-w-4xl');
-                    adminWindow.style.width = '';
-                    adminWindow.style.height = '';
-                    adminWindow.style.maxHeight = '90vh';
-                    adminWindow.classList.add('rounded-lg');
-                    maxBtn.textContent = '▢';
+        export const loadAuditLogs = async (db) => {
+            const logsContainer = document.getElementById('audit-logs-container');
+            const tableBody = document.getElementById('audit-logs-table-body');
+            const pdfBtn = document.getElementById('export-audit-pdf-btn');
+            
+            if (!logsContainer || !tableBody) return;
+        
+            logsContainer.classList.remove('hidden');
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-400">Buscando registros...</td></tr>';
+        
+            try {
+                const logsRef = collection(db, "audit_logs");
+                const q = query(logsRef, orderBy("timestamp", "desc"), limit(100));
+                const snapshot = await getDocs(q);
+        
+                if (snapshot.empty) {
+                    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-10">Nenhum log encontrado.</td></tr>';
+                    if (pdfBtn) pdfBtn.classList.add('hidden');
+                    return;
                 }
-            };
-        }
-
-        if (minBtn && adminContent) {
-            minBtn.onclick = () => {
-                adminContent.classList.toggle('hidden');
-                minBtn.textContent = adminContent.classList.contains('hidden') ? '+' : '_';
-            };
-        }
-
-        if (closeAdminBtn && adminModal) {
-            closeAdminBtn.onclick = () => {
-                adminModal.classList.add('hidden');
-            };
-        }
+        
+                tableBody.innerHTML = '';
+                if (pdfBtn) pdfBtn.classList.remove('hidden');
+        
+                snapshot.forEach((docSnap) => {
+                    const log = docSnap.data();
+                    const date = new Date(log.timestamp).toLocaleString('pt-BR');
+                    const row = document.createElement('tr');
+                    row.className = "border-b hover:bg-gray-50";
+                    row.innerHTML = `
+                        <td class="px-3 py-2 whitespace-nowrap">${date}</td>
+                        <td class="px-3 py-2">
+                            <p class="font-bold text-gray-800">${escapeHTML(log.userName)}</p>
+                            <p class="text-[9px] text-gray-400">${escapeHTML(log.userEmail)}</p>
+                        </td>
+                        <td class="px-3 py-2 text-center">
+                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-purple-100 text-purple-700 uppercase">
+                                ${escapeHTML(log.action)}
+                            </span>
+                        </td>
+                        <td class="px-3 py-2 italic text-gray-500">${escapeHTML(log.details)}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Erro ao carregar logs.</td></tr>';
+            }
+        };
         
         // Botão para Carregar Logs
         const btnViewLogs = document.getElementById('view-audit-logs-btn');
@@ -4383,6 +4391,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
