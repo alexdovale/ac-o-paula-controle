@@ -1325,52 +1325,50 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         emailjs.init(emailJsConfig.publicKey);
         // --- LÓGICA DO PAINEL DE ADMIN ---
         
-        // --- LIGAÇÕES DO PAINEL ADMIN ---
+        // --- LIGAÇÕES DO PAINEL ADMIN (ATUALIZADO) ---
         
         // Abrir o Painel (ID: admin-panel-btn)
         const btnAdmin = document.getElementById('admin-panel-btn');
         if (btnAdmin) {
             btnAdmin.onclick = () => {
                 document.getElementById('admin-modal').classList.remove('hidden');
-                loadUsersList(db); // Chama a função que você importou
+                loadUsersList(db); 
             };
         }
         
-        // Botão de Limpeza LGPD (ID: cleanup-old-data-btn)
+        // Botão de Limpeza LGPD
         const btnCleanup = document.getElementById('cleanup-old-data-btn');
         if (btnCleanup) {
             btnCleanup.onclick = () => {
-                cleanupOldData(db); // Chama a função que você importou
+                cleanupOldData(db);
             };
         }
         
-       // Função para Salvar Alterações ou Aprovar Usuário (Unificada)
-        window.handleUserUpdate = async (id) => {
+        // --- PONTES PARA O HTML (Ações da Lista de Usuários) ---
+
+        // Aprovar usuário pendente com o cargo selecionado
+        window.approveUserWithRole = async (id) => {
             const roleSelect = document.getElementById(`role-select-${id}`);
-            const selectedRole = roleSelect.value;
-            
-            try {
-                await updateUserProfile(db, id, selectedRole);
-                showNotification("Perfil atualizado com sucesso!");
-                loadUsersList(db); // Recarrega a lista para mostrar a mudança
-            } catch (error) {
-                showNotification("Erro ao atualizar perfil.", "error");
+            if (roleSelect) {
+                await approveUser(db, id, roleSelect.value);
             }
         };
         
-        // Função para Excluir Usuário
-        window.handleUserDelete = async (id) => {
-            if(confirm("ATENÇÃO: Deseja excluir permanentemente este usuário? Ele perderá acesso a todas as pautas.")) {
-                try {
-                    await deleteUser(db, id);
-                    showNotification("Usuário removido do sistema.");
-                    loadUsersList(db); // Recarrega a lista
-                } catch (error) {
-                    showNotification("Erro ao excluir usuário.", "error");
-                }
+        // Alterar cargo de usuário já aprovado
+        window.updateUserRole = async (id) => {
+            const roleSelect = document.getElementById(`role-select-${id}`);
+            if (roleSelect) {
+                await updateUserRole(db, id, roleSelect.value);
             }
         };
-
+        
+        // Excluir usuário permanentemente
+        window.deleteUser = async (id) => {
+            if(confirm("Deseja excluir permanentemente este usuário?")) {
+                await deleteUser(db, id);
+            }
+        };
+        
         // Ponte simplificada para a Auditoria (Módulo js/admin.js)
         const logAction = (type, details, targetId = null) => {
             // Chama a função do arquivo usando o "apelido" logActionDB
@@ -4284,6 +4282,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
