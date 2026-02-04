@@ -233,3 +233,59 @@ export const cleanupOldData = async (db) => {
     }
     showNotification(`${count} registros limpos. Estatísticas salvas no histórico.`);
 };
+
+/**
+ * BUSCA E EXIBE OS LOGS DE AUDITORIA
+ */
+export const loadAuditLogs = async (db) => {
+    const logsContainer = document.getElementById('audit-logs-container');
+    const tableBody = document.getElementById('audit-logs-table-body');
+    const noLogsMsg = document.getElementById('no-logs-msg');
+    
+    if (!logsContainer || !tableBody) return;
+
+    // Mostra o container e limpa a tabela
+    logsContainer.classList.remove('hidden');
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-400">Carregando histórico...</td></tr>';
+    noLogsMsg.classList.add('hidden');
+
+    try {
+        // Busca os últimos 100 logs ordenados por data
+        const logsRef = collection(db, "audit_logs");
+        const q = query(logsRef, orderBy("timestamp", "desc"), limit(100));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            tableBody.innerHTML = '';
+            noLogsMsg.classList.remove('hidden');
+            return;
+        }
+
+        tableBody.innerHTML = '';
+        snapshot.forEach((docSnap) => {
+            const log = docSnap.data();
+            const date = new Date(log.timestamp).toLocaleString('pt-BR');
+            
+            const row = document.createElement('tr');
+            row.className = "border-b hover:bg-gray-50 transition-colors";
+            row.innerHTML = `
+                <td class="px-3 py-2 whitespace-nowrap text-gray-600">${date}</td>
+                <td class="px-3 py-2">
+                    <p class="font-bold text-gray-800">${escapeHTML(log.userName)}</p>
+                    <p class="text-[10px] text-gray-400">${escapeHTML(log.userEmail)}</p>
+                </td>
+                <td class="px-3 py-2">
+                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-purple-100 text-purple-700 uppercase">
+                        ${escapeHTML(log.action)}
+                    </span>
+                </td>
+                <td class="px-3 py-2 text-gray-600 italic">${escapeHTML(log.details)}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+    } catch (error) {
+        console.error("Erro ao carregar logs:", error);
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Erro ao carregar logs. Verifique as permissões.</td></tr>';
+    }
+};
