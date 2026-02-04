@@ -2702,12 +2702,12 @@ function renderColaboradores() {
         } else {
             // USUÁRIO DESLOGADO: Mostrar tela de login
             showScreen('login');
-            // Resetar estados do Admin caso estivessem visíveis
-            // No lugar de adminPanelBtn.classList.toggle(...)
+            
+            // Se o usuário está deslogado, o botão de admin deve ficar sempre escondido
             const btnAdmin = document.getElementById('admin-panel-btn');
             if (btnAdmin) {
-                btnAdmin.classList.toggle('hidden', userData.role !== 'admin' && userData.role !== 'superadmin');
-            };
+                btnAdmin.classList.add('hidden');
+            }
         }
     });
 };
@@ -4269,3 +4269,4 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
