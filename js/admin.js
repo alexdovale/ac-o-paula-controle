@@ -289,3 +289,85 @@ export const loadAuditLogs = async (db) => {
         tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Erro ao carregar logs. Verifique as permissões.</td></tr>';
     }
 };
+
+/**
+ * GERA PDF DOS LOGS DE AUDITORIA
+ */
+export const exportAuditLogsPDF = async (db) => {
+    const { jsPDF } = window.jspdf;
+    const docPDF = new jsPDF({ orientation: 'p' });
+
+    // Busca os logs (pegamos até 200 para o relatório)
+    const logsRef = collection(db, "audit_logs");
+    const q = query(logsRef, orderBy("timestamp", "desc"), limit(200));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) return;
+
+    docPDF.setFontSize(16);
+    docPDF.setTextColor(126, 34, 206); // Roxo do sistema
+    docPDF.text("Relatório de Auditoria e Segurança - SIGAP", 14, 20);
+    
+    docPDF.setFontSize(10);
+    docPDF.setTextColor(100);
+    docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
+
+    const head = [['Data/Hora', 'Usuário', 'Ação', 'Detalhes']];
+    const body = snapshot.docs.map(docSnap => {
+        const log = docSnap.data();
+        return [
+            new Date(log.timestamp).toLocaleString('pt-BR'),
+            `${log.userName}\n(${log.userEmail})`,
+            log.action,
+            log.details
+        ];
+    });
+
+    docPDF.autoTable({
+        head,
+        body,
+        startY: 35,
+        theme: 'striped',
+        headStyles: { fillColor: [126, 34, 206] },
+        styles: { fontSize: 8 },
+        columnStyles: { 0: { cellWidth: 35 }, 1: { cellWidth: 45 }, 2: { cellWidth: 30 } }
+    });
+
+    docPDF.save(`auditoria_sigap_${new Date().toISOString().slice(0,10)}.pdf`);
+};
+
+// Atualize a sua loadAuditLogs existente para mostrar o botão PDF:
+export const loadAuditLogs = async (db) => {
+    const container = document.getElementById('audit-logs-container');
+    const tableBody = document.getElementById('audit-logs-table-body');
+    const pdfBtn = document.getElementById('export-audit-pdf-btn');
+    
+    container.classList.remove('hidden');
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Carregando...</td></tr>';
+
+    const logsRef = collection(db, "audit_logs");
+    const q = query(logsRef, orderBy("timestamp", "desc"), limit(100));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Vazio</td></tr>';
+        if (pdfBtn) pdfBtn.classList.add('hidden');
+        return;
+    }
+
+    tableBody.innerHTML = '';
+    if (pdfBtn) pdfBtn.classList.remove('hidden'); // Mostra o botão PDF
+
+    snapshot.forEach(docSnap => {
+        const log = docSnap.data();
+        const row = document.createElement('tr');
+        row.className = "border-b text-[11px]";
+        row.innerHTML = `
+            <td class="px-3 py-2 whitespace-nowrap">${new Date(log.timestamp).toLocaleString('pt-BR')}</td>
+            <td class="px-3 py-2 font-bold">${escapeHTML(log.userName)}<br><span class="font-normal text-gray-400">${escapeHTML(log.userEmail)}</span></td>
+            <td class="px-3 py-2 text-center"><span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-[9px] font-bold">${log.action}</span></td>
+            <td class="px-3 py-2 italic text-gray-600">${escapeHTML(log.details)}</td>
+        `;
+        tableBody.appendChild(row);
+    });
+};
