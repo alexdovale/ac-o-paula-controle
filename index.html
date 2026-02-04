@@ -1312,7 +1312,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { parsePautaCSV } from './js/csvHandler.js';
         import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
         import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
-        import { logAction as logActionDB, loadUsersList, cleanupOldData, updateUserProfile, deleteUser } from './js/admin.js';
+        import { logAction as logActionDB, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser } from './js/admin.js';
         import { 
             setupAttendancesListener, 
             updateAttendanceStatus, 
@@ -4284,6 +4284,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
