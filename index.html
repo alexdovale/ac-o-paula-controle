@@ -1312,7 +1312,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { parsePautaCSV } from './js/csvHandler.js';
         import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
         import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
-        import { logAction as logActionDB, loadUsersList, cleanupOldData } from './js/admin.js';
+        import { logAction as logActionDB, loadUsersList, cleanupOldData, updateUserProfile, deleteUser } from './js/admin.js';
         import { 
             setupAttendancesListener, 
             updateAttendanceStatus, 
@@ -1344,16 +1344,30 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             };
         }
         
-        // Funções para os botões "Aprovar" e "Excluir" que ficam dentro da lista
-        window.approveUserWithRole = async (id) => {
-            const role = document.getElementById(`role-select-${id}`).value;
-            // Importa o módulo na hora e executa a aprovação
-            import('./js/admin.js').then(m => m.approveUser(db, id, role));
+       // Função para Salvar Alterações ou Aprovar Usuário (Unificada)
+        window.handleUserUpdate = async (id) => {
+            const roleSelect = document.getElementById(`role-select-${id}`);
+            const selectedRole = roleSelect.value;
+            
+            try {
+                await updateUserProfile(db, id, selectedRole);
+                showNotification("Perfil atualizado com sucesso!");
+                loadUsersList(db); // Recarrega a lista para mostrar a mudança
+            } catch (error) {
+                showNotification("Erro ao atualizar perfil.", "error");
+            }
         };
         
-        window.deleteUser = async (id) => {
-            if(confirm("Deseja excluir permanentemente este usuário?")) {
-                import('./js/admin.js').then(m => m.deleteUser(db, id));
+        // Função para Excluir Usuário
+        window.handleUserDelete = async (id) => {
+            if(confirm("ATENÇÃO: Deseja excluir permanentemente este usuário? Ele perderá acesso a todas as pautas.")) {
+                try {
+                    await deleteUser(db, id);
+                    showNotification("Usuário removido do sistema.");
+                    loadUsersList(db); // Recarrega a lista
+                } catch (error) {
+                    showNotification("Erro ao excluir usuário.", "error");
+                }
             }
         };
 
@@ -4270,6 +4284,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
