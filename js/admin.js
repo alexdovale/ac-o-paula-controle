@@ -25,7 +25,7 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
 };
 
 /**
- * Carrega Usuários Pendentes e Aprovados
+ * Carrega Usuários Pendentes e Aprovados com Seletor de Cargos
  */
 export const loadUsersList = async (db) => {
     const snapshot = await getDocs(collection(db, "users"));
@@ -39,19 +39,94 @@ export const loadUsersList = async (db) => {
         const user = docSnap.data();
         const userId = docSnap.id;
         const row = document.createElement('div');
-        row.className = "flex justify-between items-center p-3 bg-gray-50 rounded border mb-2";
-        row.innerHTML = `
-            <div class="text-xs">
-                <p class="font-bold">${escapeHTML(user.name)}</p>
-                <p class="text-gray-500">${escapeHTML(user.email)}</p>
-            </div>
-            <div class="flex gap-2">
-                ${user.status === 'pending' ? 
-                `<button onclick="window.approveUserWithRole('${userId}')" class="bg-green-500 text-white px-2 py-1 rounded text-[10px]">APROVAR</button>` : 
-                `<button onclick="window.deleteUser('${userId}')" class="text-red-500 text-[10px]">EXCLUIR</button>`}
-            </div>`;
-        user.status === 'pending' ? pendingList.appendChild(row) : approvedList.appendChild(row);
+        row.className = "flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-white rounded border mb-2 shadow-sm gap-3";
+        
+        // Template do Seletor de Cargos
+        const roleSelector = `
+            <select id="role-select-${userId}" class="text-[10px] border rounded p-1 bg-gray-50 focus:ring-1 focus:ring-blue-500 outline-none">
+                <option value="user" ${user.role === 'user' ? 'selected' : ''}>Usuário</option>
+                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>Superadmin</option>
+            </select>
+        `;
+
+        if (user.status === 'pending') {
+            // Layout para Pendentes
+            row.innerHTML = `
+                <div class="text-xs">
+                    <p class="font-bold text-orange-600">PENDENTE: ${escapeHTML(user.name)}</p>
+                    <p class="text-gray-500">${escapeHTML(user.email)}</p>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    ${roleSelector}
+                    <button onclick="window.approveUserWithRole('${userId}')" class="bg-green-600 text-white px-3 py-1 rounded text-[10px] font-bold hover:bg-green-700 transition">APROVAR</button>
+                    <button onclick="window.deleteUser('${userId}')" class="text-red-500 text-[10px] hover:underline">REJEITAR</button>
+                </div>`;
+            pendingList.appendChild(row);
+        } else {
+            // Layout para Aprovados
+            row.innerHTML = `
+                <div class="text-xs">
+                    <p class="font-bold text-gray-800">${escapeHTML(user.name)}</p>
+                    <p class="text-gray-500">${escapeHTML(user.email)}</p>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    ${roleSelector}
+                    <button onclick="window.updateUserRole('${userId}')" class="bg-blue-500 text-white px-2 py-1 rounded text-[10px] hover:bg-blue-600 transition" title="Salvar Alteração de Cargo">SALVAR</button>
+                    <button onclick="window.deleteUser('${userId}')" class="bg-gray-100 text-red-500 px-2 py-1 rounded text-[10px] hover:bg-red-50 transition" title="Excluir Usuário">EXCLUIR</button>
+                </div>`;
+            approvedList.appendChild(row);
+        }
     });
+};
+
+/**
+ * APROVAR USUÁRIO COM O CARGO SELECIONADO
+ */
+export const approveUser = async (db, userId, role) => {
+    try {
+        const userRef = doc(db, "users", userId);
+        await updateDoc(userRef, {
+            status: 'approved',
+            role: role,
+            approvedAt: new Date().toISOString()
+        });
+        showNotification("Usuário aprovado com sucesso!");
+        loadUsersList(db);
+    } catch (error) {
+        console.error("Erro ao aprovar:", error);
+        showNotification("Erro ao aprovar usuário.", "error");
+    }
+};
+
+/**
+ * ATUALIZAR APENAS O CARGO DE UM USUÁRIO JÁ APROVADO
+ */
+export const updateUserRole = async (db, userId, role) => {
+    try {
+        const userRef = doc(db, "users", userId);
+        await updateDoc(userRef, { role: role });
+        showNotification("Cargo atualizado com sucesso!");
+        loadUsersList(db);
+    } catch (error) {
+        console.error("Erro ao atualizar cargo:", error);
+        showNotification("Erro ao atualizar cargo.", "error");
+    }
+};
+
+/**
+ * EXCLUIR USUÁRIO PERMANENTEMENTE
+ */
+export const deleteUser = async (db, userId) => {
+    try {
+        const userRef = doc(db, "users", userId);
+        await deleteDoc(userRef);
+        showNotification("Usuário removido permanentemente.");
+        loadUsersList(db);
+    } catch (error) {
+        console.error("Erro ao deletar:", error);
+        showNotification("Erro ao remover usuário.", "error");
+    }
 };
 
 /**
@@ -66,7 +141,6 @@ export const updateAdminStats = async (db) => {
     if(document.getElementById('stats-total-pautas')) 
         document.getElementById('stats-total-pautas').textContent = totalPautas;
     
-    // Lista o histórico simples no painel
     const container = document.getElementById('permanent-stats-container');
     if(container) {
         container.innerHTML = '<h4 class="font-bold text-xs uppercase mb-2">Histórico de Pautas Eliminadas</h4>';
@@ -83,7 +157,6 @@ export const updateAdminStats = async (db) => {
 
 /**
  * GERA PDF CUSTOMIZADO DO PAINEL ADMIN
- * @param {Array} columns - Ex: ['nome', 'data', 'criador', 'atendidos']
  */
 export const generateCustomAdminPDF = async (db, columns) => {
     const { jsPDF } = window.jspdf;
@@ -98,7 +171,6 @@ export const generateCustomAdminPDF = async (db, columns) => {
     const head = [];
     const body = [];
 
-    // Define Cabeçalhos baseados na escolha
     const headerRow = [];
     if(columns.includes('nome')) headerRow.push('Pauta');
     if(columns.includes('criador')) headerRow.push('Responsável');
@@ -106,7 +178,6 @@ export const generateCustomAdminPDF = async (db, columns) => {
     if(columns.includes('atendidos')) headerRow.push('Atendidos');
     head.push(headerRow);
 
-    // Junta Pautas Ativas e Histórico
     const todas = [
         ...snapshot.docs.map(d => ({...d.data(), status: 'Ativa'})),
         ...historico.docs.map(d => ({...d.data(), status: 'Eliminada (Histórico)'}))
@@ -143,7 +214,6 @@ export const cleanupOldData = async (db) => {
         const snapshot = await getDocs(q);
 
         if (!snapshot.empty) {
-            // ANTES DE APAGAR: Salva o resumo na coleção permanente
             const atendidos = snapshot.docs.filter(d => d.data().status === 'atendido').length;
             
             await addDoc(collection(db, "estatisticas_permanentes"), {
@@ -155,7 +225,6 @@ export const cleanupOldData = async (db) => {
                 limpezaExecutadaEm: new Date().toISOString()
             });
 
-            // AGORA APAGA OS ATENDIMENTOS
             const batch = writeBatch(db);
             snapshot.docs.forEach(d => batch.delete(d.ref));
             await batch.commit();
