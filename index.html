@@ -1312,7 +1312,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { parsePautaCSV } from './js/csvHandler.js';
         import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
         import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
-        import { logAction as logActionDB, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser } from './js/admin.js';
+        import { logAction as logActionDB, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser, loadAuditLogs } from './js/admin.js';
         import { 
             setupAttendancesListener, 
             updateAttendanceStatus, 
@@ -1333,6 +1333,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             btnAdmin.onclick = () => {
                 document.getElementById('admin-modal').classList.remove('hidden');
                 loadUsersList(db); 
+            };
+        }
+
+        // Botão para Carregar Logs de Auditoria
+        const btnViewLogs = document.getElementById('view-audit-logs-btn');
+        if (btnViewLogs) {
+            btnViewLogs.onclick = () => {
+                loadAuditLogs(db);
             };
         }
         
@@ -4282,6 +4290,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
