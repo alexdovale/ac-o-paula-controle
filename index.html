@@ -2700,13 +2700,15 @@ function renderColaboradores() {
                 showNotification("Erro de conexão com o servidor.", "error");
             }
         } else {
-            // USUÁRIO DESLOGADO: Mostrar tela de login
-            showScreen('login');
-            
-            // Se o usuário está deslogado, o botão de admin deve ficar sempre escondido
-            const btnAdmin = document.getElementById('admin-panel-btn');
-            if (btnAdmin) {
-                btnAdmin.classList.add('hidden');
+                // USUÁRIO DESLOGADO: Mostrar tela de login
+                showScreen('login');
+                
+                // Esconder todos os possíveis botões de admin ao deslogar
+                const btnAdmin1 = document.getElementById('admin-panel-btn');
+                const btnAdmin2 = document.getElementById('admin-btn-main');
+                
+                if (btnAdmin1) btnAdmin1.classList.add('hidden');
+                if (btnAdmin2) btnAdmin2.classList.add('hidden');
             }
         }
     });
@@ -4269,4 +4271,5 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
