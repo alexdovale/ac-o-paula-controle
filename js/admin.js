@@ -1,7 +1,7 @@
 // js/admin.js
 import { 
     collection, addDoc, getDocs, updateDoc, deleteDoc, doc, 
-    query, orderBy, limit, where, writeBatch, serverTimestamp 
+    query, orderBy, limit, where, writeBatch 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
@@ -78,56 +78,45 @@ export const loadUsersList = async (db) => {
 };
 
 /**
- * APROVAR USUÁRIO
+ * Ações de Usuários (Aprovar, Atualizar, Deletar)
  */
 export const approveUser = async (db, userId, role) => {
     try {
-        const userRef = doc(db, "users", userId);
-        await updateDoc(userRef, { status: 'approved', role: role, approvedAt: new Date().toISOString() });
-        showNotification("Usuário aprovado!");
-        loadUsersList(db);
-    } catch (error) { showNotification("Erro ao aprovar.", "error"); }
+        await updateDoc(doc(db, "users", userId), { status: 'approved', role: role, approvedAt: new Date().toISOString() });
+        showNotification("Usuário aprovado!"); loadUsersList(db);
+    } catch (e) { showNotification("Erro ao aprovar.", "error"); }
 };
 
-/**
- * ATUALIZAR CARGO
- */
 export const updateUserRole = async (db, userId, role) => {
     try {
-        const userRef = doc(db, "users", userId);
-        await updateDoc(userRef, { role: role });
-        showNotification("Cargo atualizado!");
-        loadUsersList(db);
-    } catch (error) { showNotification("Erro ao atualizar cargo.", "error"); }
+        await updateDoc(doc(db, "users", userId), { role: role });
+        showNotification("Cargo atualizado!"); loadUsersList(db);
+    } catch (e) { showNotification("Erro ao atualizar cargo.", "error"); }
 };
 
-/**
- * EXCLUIR USUÁRIO
- */
 export const deleteUser = async (db, userId) => {
     try {
-        const userRef = doc(db, "users", userId);
-        await deleteDoc(userRef);
-        showNotification("Usuário removido.");
-        loadUsersList(db);
-    } catch (error) { showNotification("Erro ao remover.", "error"); }
+        await deleteDoc(doc(db, "users", userId));
+        showNotification("Usuário removido."); loadUsersList(db);
+    } catch (e) { showNotification("Erro ao remover.", "error"); }
 };
 
 /**
  * ATUALIZA ESTATÍSTICAS
  */
 export const updateAdminStats = async (db) => {
-    const pautasAtivas = await getDocs(collection(db, "pautas"));
-    const historico = await getDocs(collection(db, "estatisticas_permanentes"));
-    const totalPautas = pautasAtivas.size + historico.size;
-    if(document.getElementById('stats-total-pautas')) document.getElementById('stats-total-pautas').textContent = totalPautas;
+    try {
+        const pautasAtivas = await getDocs(collection(db, "pautas"));
+        if(document.getElementById('stats-total-pautas')) 
+            document.getElementById('stats-total-pautas').textContent = pautasAtivas.size;
+    } catch (e) { console.error(e); }
 };
 
 /**
  * LIMPEZA LGPD
  */
 export const cleanupOldData = async (db) => {
-    if (!confirm("Deseja executar a limpeza?")) return;
+    if (!confirm("Deseja executar a limpeza de 7 dias?")) return;
     const limitDate = new Date();
     limitDate.setDate(limitDate.getDate() - 7);
     const pautas = await getDocs(collection(db, "pautas"));
@@ -148,7 +137,7 @@ export const cleanupOldData = async (db) => {
 };
 
 /**
- * BUSCA E EXIBE OS LOGS DE AUDITORIA (Versão Corrigida)
+ * BUSCA E EXIBE OS LOGS DE AUDITORIA
  */
 export const loadAuditLogs = async (db) => {
     const logsContainer = document.getElementById('audit-logs-container');
@@ -160,7 +149,7 @@ export const loadAuditLogs = async (db) => {
 
     logsContainer.classList.remove('hidden');
     tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-400">Carregando histórico...</td></tr>';
-    noLogsMsg.classList.add('hidden');
+    if(noLogsMsg) noLogsMsg.classList.add('hidden');
 
     try {
         const logsRef = collection(db, "audit_logs");
@@ -169,7 +158,7 @@ export const loadAuditLogs = async (db) => {
 
         if (snapshot.empty) {
             tableBody.innerHTML = '';
-            noLogsMsg.classList.remove('hidden');
+            if(noLogsMsg) noLogsMsg.classList.remove('hidden');
             if (pdfBtn) pdfBtn.classList.add('hidden');
             return;
         }
@@ -199,7 +188,7 @@ export const loadAuditLogs = async (db) => {
         });
     } catch (error) {
         console.error("Erro log:", error);
-        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Erro ao carregar.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Erro ao carregar registros.</td></tr>';
     }
 };
 
@@ -214,7 +203,10 @@ export const exportAuditLogsPDF = async (db) => {
     const q = query(logsRef, orderBy("timestamp", "desc"), limit(200));
     const snapshot = await getDocs(q);
 
-    if (snapshot.empty) return;
+    if (snapshot.empty) {
+        showNotification("Nenhum log para exportar.", "info");
+        return;
+    }
 
     docPDF.setFontSize(16);
     docPDF.setTextColor(126, 34, 206);
