@@ -1,11 +1,11 @@
 /**
  * detalhes.js - SIGAP
- * Gerencia o modal de detalhes com função de Reset/Cancelamento de seleção.
+ * Gerencia o modal de detalhes, checklists interativos, dados do Réu e Planilha de Despesas.
  */
 
 import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- 1. CONSTANTES E BASE DE DADOS ---
+// --- 1. CONSTANTES E BASE DE DADOS (LISTA INTEGRAL) ---
 
 const BASE_DOCS = ['Carteira de Identidade (RG) ou Habilitação (CNH)', 'CPF', 'Comprovante de Residência (Atualizado - últimos 3 meses)'];
 const INCOME_DOCS_STRUCTURED = [
@@ -52,12 +52,15 @@ const modal = document.getElementById('documents-modal'),
       assistedNameEl = document.getElementById('documents-assisted-name'),
       actionSelectionView = document.getElementById('document-action-selection'),
       checklistView = document.getElementById('document-checklist-view'),
+      checklistHeader = document.getElementById('document-checklist-view-header'), // CABEÇALHO NOVO
+      searchContainer = document.getElementById('checklist-search-container'),   // BUSCA NOVA
       checklistContainer = document.getElementById('checklist-container'),
       checklistTitle = document.getElementById('checklist-title'),
       backBtn = document.getElementById('back-to-action-selection-btn'),
       saveBtn = document.getElementById('save-checklist-btn'),
       printBtn = document.getElementById('print-checklist-btn'),
-      resetBtn = document.getElementById('reset-checklist-btn'); // NOVO BOTÃO
+      resetBtn = document.getElementById('reset-checklist-btn'),
+      searchInp = document.getElementById('checklist-search');
 
 // --- 3. UTILITÁRIOS ---
 
@@ -68,7 +71,6 @@ const parseCurrency = (s) => !s ? 0 : parseFloat(s.replace(/[^\d,]/g, '').replac
 async function updateVisualStatus(state, actionTitle = null) {
     const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
     const updateData = { documentState: state };
-    // Se o state for null, limpa os nomes
     if (state === null) {
         updateData.selectedAction = null;
         updateData.documentState = null;
@@ -90,6 +92,11 @@ function renderChecklist(actionKey) {
 
     checklistTitle.textContent = data.title;
     checklistContainer.innerHTML = '';
+    searchInp.value = '';
+
+    // MOSTRA CABEÇALHOS ESPECÍFICOS
+    checklistHeader.classList.remove('hidden');
+    searchContainer.classList.remove('hidden');
 
     data.sections.forEach((section, sIdx) => {
         const div = document.createElement('div');
@@ -143,33 +150,9 @@ function renderChecklist(actionKey) {
     });
 
     if (ACTIONS_ALWAYS_EXPENSES.includes(actionKey)) checklistContainer.appendChild(renderExpenseTable());
-    checklistContainer.appendChild(renderReuForm(actionKey));
-
-    if (saved) {
-        if (saved.reuData) fillReuData(saved.reuData);
-        if (saved.expenseData) fillExpenseData(saved.expenseData);
-    }
+    
+    // Dispara contador inicial
     checklistContainer.dispatchEvent(new Event('change', { bubbles: true }));
-}
-
-function renderReuForm(actionKey) {
-    const div = document.createElement('div');
-    div.className = 'mt-8 p-4 bg-slate-50 border border-slate-200 rounded-xl';
-    div.innerHTML = `<h3 class="text-[10px] font-black text-slate-400 mb-4 uppercase">Dados do Réu</h3>
-        <div class="space-y-3">
-            <input type="text" id="nome-reu" placeholder="Nome Completo" class="w-full p-2 border rounded text-sm">
-            <div class="grid grid-cols-2 gap-2">
-                <input type="text" id="cpf-reu" placeholder="CPF" class="p-2 border rounded text-sm">
-                <input type="text" id="telefone-reu" placeholder="WhatsApp" class="p-2 border rounded text-sm">
-            </div>
-            <div class="grid grid-cols-3 gap-2">
-                <input type="text" id="cep-reu" placeholder="CEP" maxlength="9" class="p-2 border rounded text-sm">
-                <input type="text" id="rua-reu" placeholder="Rua" class="col-span-2 p-2 border rounded text-sm bg-white">
-                <input type="text" id="numero-reu" placeholder="Nº" class="p-2 border rounded text-sm">
-                <input type="text" id="bairro-reu" placeholder="Bairro" class="col-span-2 p-2 border rounded text-sm bg-white">
-            </div>
-        </div>`;
-    return div;
 }
 
 function renderExpenseTable() {
@@ -180,6 +163,18 @@ function renderExpenseTable() {
         rows += `<tr class="border-b border-green-50"><td class="py-2 text-[10px] font-bold text-green-800 uppercase">${c.label}</td><td><input type="text" id="expense-${c.id}" class="expense-input w-full p-1 bg-white border rounded text-right text-xs" placeholder="R$ 0,00"></td></tr>`;
     });
     div.innerHTML = `<h3 class="text-[10px] font-black text-green-700 mb-3 uppercase">Planilha de Gastos</h3><table class="w-full">${rows}</table><div class="mt-2 text-right font-black text-green-900" id="expense-total">Total: R$ 0,00</div>`;
+    
+    div.querySelectorAll('.expense-input').forEach(inp => {
+        inp.oninput = (e) => {
+            let v = e.target.value.replace(/\D/g, '');
+            v = (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            e.target.value = v;
+            let total = 0;
+            div.querySelectorAll('.expense-input').forEach(i => total += parseCurrency(i.value));
+            document.getElementById('expense-total').textContent = `Total: ${formatCurrency(total)}`;
+            updateVisualStatus('filling');
+        };
+    });
     return div;
 }
 
@@ -195,7 +190,6 @@ async function handleSave() {
         documentChecklist: {
             action: currentChecklistAction,
             checkedIds, docTypes,
-            reuData: { nome: document.getElementById('nome-reu')?.value || '' },
             expenseData: getExpenseData()
         },
         documentState: 'saved'
@@ -203,27 +197,27 @@ async function handleSave() {
 
     try {
         await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), payload);
-        showNotification("Checklist salvo!");
+        if (showNotification) showNotification("Checklist salvo com sucesso!");
         modal.classList.add('hidden');
     } catch (e) { console.error(e); }
 }
 
 async function handleResetSelection() {
-    if (!confirm("Isso apagará todo o checklist e o endereço salvo para este assistido. Deseja mudar de assunto?")) return;
-
+    if (!confirm("Isso apagará todo o checklist salvo para este assistido. Deseja mudar de assunto?")) return;
     try {
+        await updateVisualStatus(null);
         const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
-        await updateDoc(docRef, {
-            documentChecklist: null,
-            documentState: null,
-            selectedAction: null
-        });
-        
+        await updateDoc(docRef, { documentChecklist: null });
         showNotification("Seleção resetada.");
-        // Volta para a tela de escolha
-        checklistView.classList.replace('flex','hidden');
-        actionSelectionView.classList.remove('hidden');
+        handleBack();
     } catch (e) { console.error(e); }
+}
+
+function handleBack() {
+    checklistView.classList.add('hidden');
+    checklistHeader.classList.add('hidden');
+    searchContainer.classList.add('hidden');
+    actionSelectionView.classList.remove('hidden');
 }
 
 function getExpenseData() {
@@ -232,16 +226,21 @@ function getExpenseData() {
     return d;
 }
 
-function fillReuData(d) { if(document.getElementById('nome-reu')) document.getElementById('nome-reu').value = d.nome || ''; }
-function fillExpenseData(d) { EXPENSE_CATEGORIES.forEach(c => { if(document.getElementById(`expense-${c.id}`)) document.getElementById(`expense-${c.id}`).value = d[c.id] || ''; }); }
+function fillExpenseData(d) { 
+    EXPENSE_CATEGORIES.forEach(c => { 
+        const el = document.getElementById(`expense-${c.id}`);
+        if(el) el.value = d[c.id] || '';
+    });
+}
 
-// --- 6. PDF ---
+// --- 6. PDF (BLINDADO) ---
 
 async function handlePdf() {
     try {
         await updateVisualStatus('pdf');
         const { jsPDF } = window.jspdf;
         const docPDF = new jsPDF();
+        
         docPDF.setFontSize(16); docPDF.text("Checklist de Documentos - SIGAP", 105, 20, { align: "center" });
         docPDF.setFontSize(12); docPDF.text(`Assistido: ${assistedNameEl.textContent}`, 15, 35);
         docPDF.text(`Matéria: ${checklistTitle.textContent}`, 15, 42);
@@ -251,8 +250,9 @@ async function handlePdf() {
             const text = cb.closest('label').querySelector('span').textContent;
             docPDF.text(`[X] ${text}`, 20, y);
             y += 6;
+            if (y > 280) { docPDF.addPage(); y = 20; }
         });
-        docPDF.save(`Checklist_${normalizeLocal(assistedNameEl.textContent).replace(/\s+/g, '_')}.pdf`);
+        docPDF.save(`Checklist_${assistedNameEl.textContent.replace(/\s+/g, '_')}.pdf`);
     } catch (err) { console.error(err); }
 }
 
@@ -269,13 +269,20 @@ export function setupDetailsModal(config) {
         renderChecklist(key);
         actionSelectionView.classList.add('hidden');
         checklistView.classList.remove('hidden');
-        checklistView.classList.add('flex');
     });
 
-    backBtn.onclick = () => { checklistView.classList.replace('flex','hidden'); actionSelectionView.classList.remove('hidden'); };
+    backBtn.onclick = handleBack;
     saveBtn.onclick = handleSave;
     printBtn.onclick = handlePdf;
-    resetBtn.onclick = handleResetSelection; // LIGA O BOTÃO DE RESET
+    resetBtn.onclick = handleResetSelection;
+    
+    searchInp.oninput = (e) => {
+        const term = normalizeLocal(e.target.value);
+        checklistContainer.querySelectorAll('label').forEach(li => {
+            const text = normalizeLocal(li.textContent);
+            li.closest('div').style.display = text.includes(term) ? 'block' : 'none';
+        });
+    };
 }
 
 export function openDetailsModal(config) {
@@ -290,17 +297,17 @@ export function openDetailsModal(config) {
         const btn = document.createElement('button');
         btn.dataset.action = k;
         btn.className = "text-left p-4 bg-white border-2 border-gray-100 hover:border-green-500 rounded-xl transition-all shadow-sm group";
-        btn.innerHTML = `<span class="font-bold text-gray-700 uppercase text-xs">${documentsData[k].title}</span>`;
-        btn.onclick = () => { renderChecklist(k); actionSelectionView.classList.add('hidden'); checklistView.classList.remove('hidden'); checklistView.classList.add('flex');};
+        btn.innerHTML = `<div class="flex justify-between items-center"><span class="font-bold text-gray-700 group-hover:text-green-700 uppercase text-xs">${documentsData[k].title}</span><svg class="w-4 h-4 text-gray-300 group-hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-width="3"></path></svg></div>`;
+        btn.onclick = () => { renderChecklist(k); actionSelectionView.classList.add('hidden'); checklistView.classList.remove('hidden'); };
         grid.appendChild(btn);
     });
 
     if (assisted.documentChecklist?.action) {
         renderChecklist(assisted.documentChecklist.action);
         actionSelectionView.classList.add('hidden');
-        checklistView.classList.remove('hidden'); checklistView.classList.add('flex');
+        checklistView.classList.remove('hidden');
     } else {
-        checklistView.classList.replace('flex','hidden'); actionSelectionView.classList.remove('hidden');
+        handleBack();
     }
     modal.classList.remove('hidden');
 }
