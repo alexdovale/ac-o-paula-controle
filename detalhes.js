@@ -93,14 +93,14 @@ async function updateVisualStatus(state, actionTitle = null) {
 
 // --- 4. FORMULÁRIO DO RÉU COM BUSCA DE CEP ---
 
-function renderReuForm() {
-    const container = getEl('address-editor-container');
+function renderReuForm(containerId) {
+    const container = getEl(containerId);
     if (!container) return;
 
     const showWork = ACTIONS_WITH_WORK_INFO.includes(currentChecklistAction);
 
     container.innerHTML = `
-        <div class="p-6 bg-blue-50 border-2 border-blue-200 rounded-2xl shadow-sm">
+        <div class="p-6 bg-blue-50 border-2 border-blue-200 rounded-2xl shadow-sm mt-6">
             <h3 class="text-xs font-black text-blue-600 mb-4 uppercase flex items-center gap-2">📍 DADOS DA PARTE CONTRÁRIA (RÉU)</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="col-span-2"><label class="text-[9px] font-black text-gray-400 uppercase">Nome Completo</label><input type="text" id="nome-reu" class="w-full p-2 border rounded-lg bg-white"></div>
@@ -153,7 +153,6 @@ function renderChecklist(actionKey) {
     const assisted = allAssisted.find(a => a.id === currentAssistedId);
     const saved = assisted?.documentChecklist;
 
-    // CORREÇÃO: Pegando o elemento pelo ID de forma segura
     const containerEl = getEl('checklist-container');
     if (!containerEl) return;
 
@@ -163,6 +162,7 @@ function renderChecklist(actionKey) {
     
     containerEl.innerHTML = ''; // Limpa a lista anterior
 
+    // Renderiza Seções
     data.sections.forEach((section, sIdx) => {
         const sectionDiv = document.createElement('div');
         sectionDiv.className = "mb-6";
@@ -198,21 +198,30 @@ function renderChecklist(actionKey) {
         containerEl.appendChild(sectionDiv);
     });
 
-    // Injeta os componentes extras
+    // Injeta Tabela de Gastos (se necessário)
     if (ACTIONS_ALWAYS_EXPENSES.includes(actionKey)) {
         containerEl.appendChild(renderExpenseTable());
         if (saved?.expenseData) fillExpenseData(saved.expenseData);
     }
 
-    // Gatilho do Formulário do Réu
+    // CRIAÇÃO DO CONTAINER DO RÉU DENTRO DO CHECKLIST (Para não ficar solto no index)
+    const dynamicReuContainer = document.createElement('div');
+    dynamicReuContainer.id = 'dynamic-reu-container';
+    dynamicReuContainer.className = 'hidden transition-all duration-300';
+    containerEl.appendChild(dynamicReuContainer);
+
+    // Lógica de visibilidade do Réu
     const checkReuVisibility = () => {
-        const checkedLabels = Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.closest('label').querySelector('span').textContent);
-        const needsReu = checkedLabels.some(txt => txt.includes('Endereço') || txt.includes('Dados de trabalho') || txt.includes('Sobre o Réu') || txt.includes('Sobre o Cônjuge'));
-        const reuContainer = getEl('address-editor-container');
+        const checkedLabels = Array.from(containerEl.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.closest('label').querySelector('span').textContent);
+        const needsReu = checkedLabels.some(txt => txt.includes('Endereço') || txt.includes('Dados de trabalho') || txt.includes('Sobre o Réu') || txt.includes('Sobre o Cônjuge') || txt.includes('Suposto Pai'));
+        
+        const reuContainer = getEl('dynamic-reu-container');
         if (reuContainer) {
             reuContainer.classList.toggle('hidden', !needsReu);
-            if (needsReu) {
-                renderReuForm();
+            
+            // Só renderiza se estiver visível E vazio (para não apagar dados enquanto digita e clica em outro checkbox)
+            if (needsReu && reuContainer.innerHTML.trim() === '') {
+                renderReuForm('dynamic-reu-container');
                 if (saved?.reuData) fillReuData(saved.reuData);
             }
         }
@@ -288,6 +297,7 @@ async function handleSave() {
 }
 
 function getReuDataFromForm() {
+    // Se o elemento não existir (form escondido/não renderizado), retorna null ou objeto vazio seguro
     if (!getEl('nome-reu')) return null;
     return {
         nome: getEl('nome-reu').value, cpf: getEl('cpf-reu').value, telefone: getEl('telefone-reu').value,
@@ -324,8 +334,8 @@ async function handlePdf() {
         const { jsPDF } = window.jspdf;
         const docPDF = new jsPDF();
         docPDF.setFontSize(16); docPDF.text("Checklist SIGAP", 105, 20, { align: "center" });
-        docPDF.setFontSize(12); docPDF.text(`Assistido: ${assistedNameEl.textContent}`, 15, 35);
-        docPDF.text(`Ação: ${checklistTitle.textContent}`, 15, 42);
+        docPDF.setFontSize(12); docPDF.text(`Assistido: ${getEl('documents-assisted-name')?.textContent || ''}`, 15, 35);
+        docPDF.text(`Ação: ${getEl('checklist-title')?.textContent || ''}`, 15, 42);
         let y = 60;
         const checked = document.querySelectorAll('.doc-checkbox:checked');
         checked.forEach(cb => {
@@ -333,7 +343,7 @@ async function handlePdf() {
             docPDF.text(`[X] ${text}`, 20, y);
             y += 7; if (y > 280) { docPDF.addPage(); y = 20; }
         });
-        docPDF.save(`Checklist_${assistedNameEl.textContent.replace(/\s+/g, '_')}.pdf`);
+        docPDF.save(`Checklist_SIGAP.pdf`);
     } catch (err) { console.error(err); }
 }
 
@@ -351,7 +361,7 @@ function handleBack() {
     if (getEl('document-checklist-view-header')) getEl('document-checklist-view-header').classList.add('hidden');
     if (getEl('checklist-search-container')) getEl('checklist-search-container').classList.add('hidden');
     if (getEl('document-action-selection')) getEl('document-action-selection').classList.remove('hidden');
-    if (getEl('address-editor-container')) getEl('address-editor-container').classList.add('hidden');
+    // Não precisamos mais esconder o address-editor-container manualmente pois ele está dentro do checklist-view
 }
 
 // --- 7. EXPORTS ---
