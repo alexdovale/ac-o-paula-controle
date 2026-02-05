@@ -2311,33 +2311,6 @@ render(atendidosList, atendidos, a => {
             }
         });
 
-        document.body.addEventListener('click', async (e) => { // Este listener já existe, vou apenas adicionar a parte de remover membro
-            if (e.target.classList.contains('remove-member-btn')) {
-                const email = e.target.dataset.email;
-                if (confirm(`Tem certeza que deseja remover ${email} desta pauta?`)) {
-                    const usersRef = collection(db, "users");
-                    const q = query(usersRef, where("email", "==", email));
-                    const querySnapshot = await getDocs(q);
-                    if (!querySnapshot.empty) {
-                        const userIdToRemove = querySnapshot.docs[0].id;
-                        const pautaRef = doc(db, "pautas", currentPautaId);
-                        try {
-                            await updateDoc(pautaRef, {
-                                members: arrayRemove(userIdToRemove),
-                                memberEmails: arrayRemove(email)
-                            });
-                            showNotification(`Membro ${email} removido da pauta.`);
-                            showMembersModal(); // Atualiza a lista no modal
-                        } catch (error) {
-                            console.error("Erro ao remover membro:", error);
-                            showNotification("Erro ao remover membro.", "error");
-                        }
-                    }
-                }
-            }
-        });
-        // --- FIM DA LÓGICA DE GERENCIAR MEMBROS DA PAUTA ---
-
 
         // --- INÍCIO DA LÓGICA DE GERENCIAR COLABORADORES (LISTA DE PRESENÇA) ---
         // Referências aos elementos do modal de colaboradores
@@ -4573,6 +4546,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
