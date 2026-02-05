@@ -102,7 +102,7 @@ export const deleteUser = async (db, userId) => {
 };
 
 /**
- * ATUALIZA ESTATÍSTICAS
+ * ATUALIZA ESTATÍSTICAS DO PAINEL (Resumo de pautas ativas)
  */
 export const updateAdminStats = async (db) => {
     try {
@@ -113,27 +113,147 @@ export const updateAdminStats = async (db) => {
 };
 
 /**
- * LIMPEZA LGPD
+ * LIMPEZA LGPD COM SALVAMENTO DE BI (Observatório)
  */
 export const cleanupOldData = async (db) => {
-    if (!confirm("Deseja executar a limpeza de 7 dias?")) return;
+    if (!confirm("Isso apagará dados sensíveis de assistidos com mais de 7 dias. Os números de produtividade serão salvos anonimamente. Confirmar?")) return;
+
     const limitDate = new Date();
     limitDate.setDate(limitDate.getDate() - 7);
     const pautas = await getDocs(collection(db, "pautas"));
     let count = 0;
 
     for (const pautaDoc of pautas.docs) {
+        const pautaData = pautaDoc.data();
         const attRef = collection(db, "pautas", pautaDoc.id, "attendances");
         const q = query(attRef, where("createdAt", "<", limitDate.toISOString()));
         const snapshot = await getDocs(q);
+
         if (!snapshot.empty) {
+            // CRIAR RESUMO AGREGADO (Sem nomes ou CPFs)
+            const stats = {
+                pautaName: pautaData.name,
+                creatorEmail: pautaData.ownerEmail || 'Desconhecido',
+                dataReferencia: limitDate.toISOString(),
+                total: snapshot.size,
+                atendidos: snapshot.docs.filter(d => d.data().status === 'atendido').length,
+                faltosos: snapshot.docs.filter(d => d.data().status === 'faltoso').length,
+                assuntos: {}
+            };
+
+            // Contabiliza assuntos de forma anônima
+            snapshot.docs.forEach(d => {
+                const sub = d.data().subject || 'Não informado';
+                stats.assuntos[sub] = (stats.assuntos[sub] || 0) + 1;
+            });
+
+            // SALVA NO HISTÓRICO PERMANENTE
+            await addDoc(collection(db, "estatisticas_permanentes"), stats);
+
+            // APAGA OS REGISTROS ORIGINAIS
             const batch = writeBatch(db);
             snapshot.docs.forEach(d => batch.delete(d.ref));
             await batch.commit();
             count += snapshot.size;
         }
     }
-    showNotification(`${count} registros limpos.`);
+    showNotification(`Sucesso! ${count} registros sensíveis limpos e métricas salvas.`);
+};
+
+/**
+ * CARREGA O DASHBOARD DE BI (OBSERVATÓRIO)
+ */
+export const loadDashboardData = async (db) => {
+    const start = document.getElementById('stats-filter-start').value;
+    const end = document.getElementById('stats-filter-end').value;
+    const userFilter = document.getElementById('stats-filter-user').value;
+    const resultsArea = document.getElementById('dashboard-results');
+
+    if (!resultsArea) return;
+    resultsArea.classList.remove('hidden');
+    showNotification("Analisando dados históricos...");
+
+    try {
+        const snapshot = await getDocs(collection(db, "estatisticas_permanentes"));
+        let filteredData = snapshot.docs.map(d => d.data());
+
+        // Filtro de Data
+        if (start) filteredData = filteredData.filter(d => d.dataReferencia >= start);
+        if (end) filteredData = filteredData.filter(d => d.dataReferencia <= end + "T23:59:59");
+        
+        // Filtro por Criador
+        if (userFilter !== 'all') filteredData = filteredData.filter(d => d.creatorEmail === userFilter);
+
+        // Consolidação dos Cálculos
+        let totalGeral = 0;
+        let totalAtendidos = 0;
+        let totalFaltosos = 0;
+        let mapAssuntos = {};
+        let mapUsers = {};
+
+        filteredData.forEach(d => {
+            totalGeral += d.total;
+            totalAtendidos += d.atendidos;
+            totalFaltosos += d.faltosos;
+            
+            // Soma assuntos entre documentos
+            for (let [key, val] of Object.entries(d.assuntos || {})) {
+                mapAssuntos[key] = (mapAssuntos[key] || 0) + val;
+            }
+
+            // Soma produtividade por usuário
+            const userKey = d.creatorEmail;
+            mapUsers[userKey] = (mapUsers[userKey] || 0) + d.atendidos;
+        });
+
+        // Atualização da Interface (Cards Superiores)
+        document.getElementById('dash-total-geral').textContent = totalGeral;
+        document.getElementById('dash-total-atendidos').textContent = totalAtendidos;
+        const taxa = totalGeral > 0 ? ((totalFaltosos / totalGeral) * 100).toFixed(1) : 0;
+        document.getElementById('dash-taxa-falta').textContent = taxa + "%";
+
+        // Renderização de Listas (Ranking)
+        const renderRanking = (elementId, dataMap) => {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            const sorted = Object.entries(dataMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            
+            if (sorted.length === 0) {
+                el.innerHTML = '<p class="text-center text-gray-400 py-4">Sem dados para o filtro.</p>';
+                return;
+            }
+
+            el.innerHTML = sorted.map(([name, count]) => `
+                <div class="flex justify-between items-center border-b pb-1">
+                    <span class="truncate pr-2" title="${name}">${name}</span>
+                    <span class="font-bold text-green-700">${count}</span>
+                </div>
+            `).join('');
+        };
+
+        renderRanking('dash-subjects-list', mapAssuntos);
+        renderRanking('dash-users-list', mapUsers);
+
+    } catch (error) {
+        console.error("Dashboard Error:", error);
+        showNotification("Erro ao processar dados.", "error");
+    }
+};
+
+/**
+ * ALIMENTA O FILTRO DE USUÁRIOS DO DASHBOARD
+ */
+export const populateUserFilter = async (db) => {
+    const select = document.getElementById('stats-filter-user');
+    if (!select) return;
+    try {
+        const snapshot = await getDocs(collection(db, "users"));
+        select.innerHTML = '<option value="all">Todos os Usuários</option>';
+        snapshot.forEach(d => {
+            const u = d.data();
+            if (u.email) select.innerHTML += `<option value="${u.email}">${escapeHTML(u.name)}</option>`;
+        });
+    } catch (e) { console.error(e); }
 };
 
 /**
@@ -142,14 +262,12 @@ export const cleanupOldData = async (db) => {
 export const loadAuditLogs = async (db) => {
     const logsContainer = document.getElementById('audit-logs-container');
     const tableBody = document.getElementById('audit-logs-table-body');
-    const noLogsMsg = document.getElementById('no-logs-msg');
     const pdfBtn = document.getElementById('export-audit-pdf-btn');
     
     if (!logsContainer || !tableBody) return;
 
     logsContainer.classList.remove('hidden');
     tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-400">Carregando histórico...</td></tr>';
-    if(noLogsMsg) noLogsMsg.classList.add('hidden');
 
     try {
         const logsRef = collection(db, "audit_logs");
@@ -157,8 +275,7 @@ export const loadAuditLogs = async (db) => {
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
-            tableBody.innerHTML = '';
-            if(noLogsMsg) noLogsMsg.classList.remove('hidden');
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-400 text-xs">Nenhum registro encontrado.</td></tr>';
             if (pdfBtn) pdfBtn.classList.add('hidden');
             return;
         }
@@ -203,15 +320,11 @@ export const exportAuditLogsPDF = async (db) => {
     const q = query(logsRef, orderBy("timestamp", "desc"), limit(200));
     const snapshot = await getDocs(q);
 
-    if (snapshot.empty) {
-        showNotification("Nenhum log para exportar.", "info");
-        return;
-    }
+    if (snapshot.empty) return;
 
     docPDF.setFontSize(16);
     docPDF.setTextColor(126, 34, 206);
     docPDF.text("Relatório de Auditoria e Segurança - SIGAP", 14, 20);
-    
     docPDF.setFontSize(10);
     docPDF.setTextColor(100);
     docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
