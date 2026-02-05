@@ -1240,6 +1240,22 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             color: #b91c1c;           /* Red 700 */
             transform: scale(1.05);
         }
+        /* Realce para itens marcados no checklist */
+        .checklist-row {
+            transition: all 0.2s ease;
+            padding: 8px;
+            border-radius: 6px;
+            display: block;
+            cursor: pointer;
+        }
+        .checklist-row:hover { background-color: #f8fafc; }
+        
+        /* Quando o checkbox dentro da linha for marcado, muda a cor */
+        .checklist-row:has(input:checked) {
+            background-color: #f0fdf4 !important; /* Verde bem clarinho */
+            border: 1px solid #bbf7d0;
+            transform: translateX(4px);
+        }
     </style>
 
      <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1338,6 +1354,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     <div class="flex items-center gap-4">
                         <button id="back-to-action-selection-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
                         <h3 id="checklist-title" class="text-xl font-bold text-gray-800"></h3>
+                        <span id="checklist-counter" class="text-[10px] font-bold uppercase text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                            0 itens selecionados
+                        </span>
                     </div>
                     <div class="flex space-x-4">
                         <button id="cancel-checklist-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
@@ -4362,6 +4381,59 @@ if (btnAdmin) {
                 
                 editSubjectInput.value = selectedText;
             });
+
+        // --- LOGICA DE FEEDBACK VISUAL PARA O MODAL DE DETALHES ---
+
+        // 1. Contador de Documentos em Tempo Real
+        document.getElementById('checklist-container').addEventListener('change', () => {
+            const total = document.querySelectorAll('#checklist-container input[type="checkbox"]').length;
+            const marcados = document.querySelectorAll('#checklist-container input[type="checkbox"]:checked').length;
+            const counter = document.getElementById('checklist-counter');
+            
+            if (counter) {
+                counter.textContent = `${marcados} de ${total} documentos selecionados`;
+                counter.classList.toggle('text-green-600', marcados > 0);
+                counter.classList.toggle('bg-green-50', marcados > 0);
+            }
+        });
+        
+        // 2. Feedback do Botão Salvar
+        const btnSalvarDoc = document.getElementById('save-checklist-btn');
+        if (btnSalvarDoc) {
+            const originalContent = btnSalvarDoc.innerHTML;
+            btnSalvarDoc.addEventListener('click', () => {
+                btnSalvarDoc.disabled = true;
+                btnSalvarDoc.innerHTML = "⌛ Salvando...";
+                
+                // Simula o tempo de resposta do Firebase para dar o feedback
+                setTimeout(() => {
+                    btnSalvarDoc.innerHTML = "✅ Salvo!";
+                    btnSalvarDoc.classList.replace('bg-green-600', 'bg-blue-600');
+                    
+                    setTimeout(() => {
+                        btnSalvarDoc.disabled = false;
+                        btnSalvarDoc.innerHTML = originalContent;
+                        btnSalvarDoc.classList.replace('bg-blue-600', 'bg-green-600');
+                    }, 2000);
+                }, 500);
+            });
+        }
+        
+        // 3. Feedback do Botão PDF
+        const btnPdfDoc = document.getElementById('print-checklist-btn');
+        if (btnPdfDoc) {
+            const originalContentPdf = btnPdfDoc.innerHTML;
+            btnPdfDoc.addEventListener('click', () => {
+                btnPdfDoc.innerHTML = "⚙️ Gerando...";
+                
+                setTimeout(() => {
+                    btnPdfDoc.innerHTML = "📄 PDF Emitido!";
+                    setTimeout(() => {
+                        btnPdfDoc.innerHTML = originalContentPdf;
+                    }, 3000);
+                }, 1000);
+            });
+        }
     </script>
 
 <!-- Modal de Anotações -->
@@ -4492,6 +4564,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
