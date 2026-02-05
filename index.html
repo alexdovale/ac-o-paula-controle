@@ -1416,16 +1416,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
            // const adminModal = document.getElementById('admin-modal');
             
             // 1. Mostrar o botão apenas se for Admin
-            // Versão corrigida da função
-            const checkAdminStatus = (userData) => {
-                // Pegamos o botão diretamente pelo ID para não depender de variáveis globais
-                const btn = document.getElementById('admin-panel-btn');
-                if (btn && (userData.role === 'admin' || userData.role === 'superadmin')) {
-                    btn.classList.remove('hidden');
-                }
-    };
+
         
-        document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
             // ... outros códigos de inicialização que você já tem ...
         
         });
@@ -2705,8 +2698,14 @@ function renderColaboradores() {
                     currentUserName = userData.name || user.email;
 
                     // 2. Verifica se o usuário é Admin/Superadmin para mostrar o botão
-                    checkAdminStatus(userData);
 
+// --- Lógica de Visibilidade do Botão Admin (Coloque aqui dentro do handleAuthState) ---
+const btnAdmin = document.getElementById('admin-panel-btn');
+if (btnAdmin) {
+    // Se for admin ou superadmin, remove o 'hidden' (mostra). Senão, adiciona 'hidden' (esconde).
+    const isAdmin = userData.role === 'admin' || userData.role === 'superadmin';
+    btnAdmin.classList.toggle('hidden', !isAdmin);
+}
                     // 3. Verifica o Status de Aprovação
                     if (userData.status === 'approved') {
                         // USUÁRIO APROVADO: Prosseguir para o sistema
