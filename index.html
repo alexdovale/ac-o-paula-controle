@@ -1335,71 +1335,63 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
 
-    <!-- ***** INÍCIO DO HTML DO MODAL DE DETALHES ***** -->
-    <div id="documents-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl flex flex-col" style="max-height: 90vh;">
-            <div class="flex justify-between items-center mb-4 flex-shrink-0">
-                <h2 class="text-2xl font-bold text-gray-800">
-                    Detalhes para <span id="documents-assisted-name" class="text-green-600"></span>
-                </h2>
-                <button id="close-documents-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+<!-- ***** MODAL DE DETALHES REESTRUTURADO ***** -->
+<div id="documents-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl flex flex-col" style="max-height: 95vh; min-height: 60vh;">
+        
+        <!-- LINHA 1: Título Principal e Fechar -->
+        <div class="flex justify-between items-center p-4 border-b bg-gray-50 rounded-t-xl">
+            <h2 class="text-lg font-bold text-gray-800">
+                Detalhes para <span id="documents-assisted-name" class="text-green-600 uppercase"></span>
+            </h2>
+            <button id="close-documents-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl leading-none">&times;</button>
+        </div>
+
+        <!-- LINHA 2: Barra de Ferramentas (Toolbar) - Só aparece na visualização do checklist -->
+        <div id="document-checklist-view-header" class="hidden p-3 bg-white border-b flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <button id="back-to-action-selection-btn" class="bg-white border border-gray-300 text-gray-700 font-bold py-2 px-3 rounded-lg hover:bg-gray-100 text-xs shadow-sm flex items-center gap-1">
+                    &larr; Voltar
+                </button>
+                <div class="flex flex-col">
+                    <h3 id="checklist-title" class="text-sm font-black text-gray-700 uppercase leading-none mb-1"></h3>
+                    <span id="checklist-counter" class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full w-max">
+                        0 itens selecionados
+                    </span>
+                </div>
             </div>
 
-            <div id="document-action-selection" class="flex-grow overflow-y-auto scrollable-content pr-2">
-                <!-- O conteúdo será inserido aqui pelo detalhes.js -->
+            <div class="flex items-center gap-2 ml-auto">
+                <button id="print-checklist-btn" class="bg-red-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-red-700 text-xs shadow-md">PDF</button>
+                <button id="reset-checklist-btn" class="bg-amber-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-amber-600 text-xs shadow-md">MUDAR ASSUNTO</button>
+                <button id="save-checklist-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 text-xs shadow-lg">SALVAR</button>
+            </div>
+        </div>
+
+        <!-- LINHA 3: Busca (Fixa no topo do conteúdo) -->
+        <div id="checklist-search-container" class="hidden p-3 bg-gray-50 border-b">
+            <input type="search" id="checklist-search" placeholder="Pesquisar documento no checklist..." class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none">
+        </div>
+
+        <!-- CONTEÚDO SCROLLABLE (A lista de documentos) -->
+        <div class="flex-grow overflow-y-auto p-4 scrollable-content bg-white">
+            <div id="document-action-selection">
+                <!-- Grid de Escolha de Ação (Aparece primeiro) -->
             </div>
 
-            <div id="document-checklist-view" class="hidden flex-grow flex flex-col">
-                <div class="flex justify-between items-center mb-4 flex-shrink-0">
-                    <div class="flex items-center gap-4">
-                        <button id="back-to-action-selection-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
-                        <h3 id="checklist-title" class="text-xl font-bold text-gray-800"></h3>
-                        <span id="checklist-counter" class="text-[10px] font-bold uppercase text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                            0 itens selecionados
-                        </span>
-                    </div>
-                    <div class="flex space-x-4">
-                        <button id="cancel-checklist-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
-                        <button id="print-checklist-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">PDF</button>
-                        <button id="reset-checklist-btn" class="bg-amber-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-600 text-xs uppercase">Mudar Assunto</button>
-                        <button id="save-checklist-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar</button>
-                    </div>
+            <div id="document-checklist-view" class="hidden flex-col">
+                <div id="checklist-container" class="space-y-2">
+                    <!-- O Checklist gerado pelo JS entra aqui -->
                 </div>
-                 <div class="mb-4 flex-shrink-0">
-                    <input type="search" id="checklist-search" placeholder="Pesquisar documento..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
-                </div>
-                <div id="checklist-container" class="space-y-4 overflow-y-auto pr-2 flex-grow border rounded-lg p-4 bg-gray-50" style="max-height: 55vh;">
+                
+                <!-- O endereço do Réu aparece aqui embaixo da lista -->
+                <div id="address-editor-container" class="mt-8 border-t pt-6">
+                    <!-- Conteúdo do Réu -->
                 </div>
             </div>
         </div>
     </div>
-    <div id="address-editor-container" class="mt-8 p-4 bg-gray-50 rounded-lg border hidden">
-    <h3 class="text-lg font-bold text-gray-800 mb-4">Endereço da Parte Contrária (Réu)</h3>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="md:col-span-1">
-            <label for="cep-reu" class="block text-sm font-medium text-gray-700">CEP</label>
-            <input type="text" id="cep-reu" placeholder="Digite o CEP" maxlength="9" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-        </div>
-        <div class="md:col-span-2">
-            <label for="rua-reu" class="block text-sm font-medium text-gray-700">Rua/Avenida</label>
-            <input type="text" id="rua-reu" placeholder="Rua será preenchida" class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-200" readonly>
-        </div>
-        <div class="md:col-span-1">
-            <label for="numero-reu" class="block text-sm font-medium text-gray-700">Número</label>
-            <input type="text" id="numero-reu" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-        </div>
-        <div class="md:col-span-1">
-            <label for="bairro-reu" class="block text-sm font-medium text-gray-700">Bairro</label>
-            <input type="text" id="bairro-reu" class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-200" readonly>
-        </div>
-        <div class="md:col-span-1">
-            <label for="cidade-reu" class="block text-sm font-medium text-gray-700">Cidade/UF</label>
-            <div class="flex gap-2">
-                <input type="text" id="cidade-reu" class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-200" readonly>
-                <input type="text" id="estado-reu" maxlength="2" class="mt-1 block w-1/3 p-2 border border-gray-300 rounded-md bg-gray-200" readonly>
-            </div>
-        </div>
-    </div>
+</div>
 </div>
     <!-- ***** FIM DO HTML DO MODAL DE DETALHES ***** -->
     
@@ -4569,6 +4561,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
