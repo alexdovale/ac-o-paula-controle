@@ -28,30 +28,35 @@ export const documentsData = {
 
 /**
  * Retorna o HTML formatado do checklist baseado no assunto.
+ * Agora com suporte a Checkboxes e a classe checklist-row para feedback visual.
  */
 export const getChecklistHTML = (subject) => {
-    // Busca inteligente: verifica se o assunto contém a palavra chave (ex: "Alimentos" em "Ação de Alimentos")
+    // Busca inteligente: verifica se o assunto contém a palavra chave
     const key = Object.keys(documentsData).find(k => subject.toLowerCase().includes(k.toLowerCase()));
     const data = documentsData[key];
 
-    if (!data) return `<p class="text-gray-500 text-sm italic p-4">Nenhum checklist de documentos cadastrado para o assunto: "${subject}".</p>`;
+    if (!data) return `<p class="text-gray-500 text-sm italic p-4 text-center">Nenhum checklist de documentos cadastrado para o assunto: "${subject}".</p>`;
 
-    let html = `<div class="space-y-4 p-2">
-                    <h3 class="font-bold text-green-700 border-b pb-2 flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+    let html = `<div class="space-y-6 p-2">
+                    <h3 class="font-bold text-green-700 border-b-2 border-green-100 pb-2 flex items-center gap-2 text-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         ${data.title}
                     </h3>`;
 
     data.sections.forEach(section => {
-        html += `<div>
-                    <h4 class="text-xs font-bold uppercase text-gray-500 tracking-wider mb-2">${section.title}</h4>
-                    <ul class="space-y-1">
+        html += `<div class="mb-4">
+                    <h4 class="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-gray-300 rounded-full"></span>
+                        ${section.title}
+                    </h4>
+                    <div class="space-y-2">
                         ${section.docs.map(doc => `
-                            <li class="flex items-start text-sm text-gray-700">
-                                <span class="text-green-500 mr-2">•</span> ${doc}
-                            </li>
+                            <label class="checklist-row flex items-center gap-3 w-full cursor-pointer p-3 bg-white border border-gray-100 rounded-lg shadow-sm hover:shadow-md transition-all">
+                                <input type="checkbox" class="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 transition-transform active:scale-90">
+                                <span class="text-sm text-gray-700 font-medium">${doc}</span>
+                            </label>
                         `).join('')}
-                    </ul>
+                    </div>
                 </div>`;
     });
 
