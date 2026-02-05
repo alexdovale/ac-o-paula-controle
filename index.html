@@ -216,7 +216,64 @@
                             </div>
                         </div>
                     </div>
-                                    
+
+
+                <!-- Seção do Dashboard de Estatísticas -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4 border-l-4 border-green-500 pl-2">Análise de Dados (BI)</h3>
+                    <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                        <div class="flex flex-wrap items-end gap-4 mb-6">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase">Início</label>
+                                <input type="date" id="stats-filter-start" class="border rounded p-2 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase">Fim</label>
+                                <input type="date" id="stats-filter-end" class="border rounded p-2 text-sm">
+                            </div>
+                            <div class="flex-grow">
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase">Criador da Pauta</label>
+                                <select id="stats-filter-user" class="w-full border rounded p-2 text-sm">
+                                    <option value="all">Todos os Usuários</option>
+                                </select>
+                            </div>
+                            <button id="btn-load-dashboard" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700 transition shadow-md">
+                                Gerar Relatório
+                            </button>
+                        </div>
+                
+                        <!-- Área dos Gráficos e Números -->
+                        <div id="dashboard-results" class="hidden space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="p-4 bg-blue-50 rounded-lg text-center">
+                                    <p class="text-xs text-blue-600 font-bold uppercase">Total de Assistidos</p>
+                                    <h4 id="dash-total-geral" class="text-3xl font-black text-blue-800">0</h4>
+                                </div>
+                                <div class="p-4 bg-green-50 rounded-lg text-center">
+                                    <p class="text-xs text-green-600 font-bold uppercase">Efetivamente Atendidos</p>
+                                    <h4 id="dash-total-atendidos" class="text-3xl font-black text-green-800">0</h4>
+                                </div>
+                                <div class="p-4 bg-orange-50 rounded-lg text-center">
+                                    <p class="text-xs text-orange-600 font-bold uppercase">Taxa de Absenteísmo</p>
+                                    <h4 id="dash-taxa-falta" class="text-3xl font-black text-orange-800">0%</h4>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="border rounded-lg p-4 bg-gray-50">
+                                    <h5 class="text-xs font-bold mb-4 uppercase text-gray-500">Top 5 Assuntos</h5>
+                                    <div id="dash-subjects-list" class="space-y-2 text-xs"></div>
+                                </div>
+                                <div class="border rounded-lg p-4 bg-gray-50">
+                                    <h5 class="text-xs font-bold mb-4 uppercase text-gray-500">Volume por Criador</h5>
+                                    <div id="dash-users-list" class="space-y-2 text-xs"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+</div>
+
+                    
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <h3 class="font-semibold text-gray-700 mb-2">Usuários Pendentes</h3>
@@ -1343,12 +1400,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const maxBtn = document.getElementById('max-admin-btn');
             const minBtn = document.getElementById('min-admin-btn');
             const closeAdminBtn = document.getElementById('close-admin-modal-btn');
+        // Adicione junto com os outros botões do admin:
+            const btnDashboard = document.getElementById('btn-load-dashboard');
+            if (btnDashboard) {
+                btnDashboard.onclick = () => loadDashboardData(db);
+            }
+
     
             // 2. Lógica de Abrir/Fechar e Maximizar/Minimizar
             if (btnAdmin) {
                 btnAdmin.onclick = () => {
                     adminModal.classList.remove('hidden');
                     loadUsersList(db); 
+                    populateUserFilter(db); 
                 };
             }
     
@@ -4319,6 +4383,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
