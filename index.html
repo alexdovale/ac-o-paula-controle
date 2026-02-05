@@ -3651,7 +3651,7 @@ if (btnAdmin) {
                 modal.classList.remove('hidden');
             };
 
-            document.body.addEventListener('click', async (e) => {
+          document.body.addEventListener('click', async (e) => {
                 const button = e.target.closest('button');
 
                 // Se clicou em um botão de categoria de prioridade (p-chip)
@@ -4350,6 +4350,7 @@ if (btnAdmin) {
                 });
             });
 
+
             // Adiciona a lógica de autocompletar e formatação ao campo de assunto na modal de edição
             const editSubjectInput = document.getElementById('edit-assisted-subject');
             editSubjectInput.addEventListener('change', () => {
@@ -4546,6 +4547,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
