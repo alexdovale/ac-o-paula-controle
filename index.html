@@ -3641,6 +3641,12 @@ if (btnAdmin) {
 
             document.body.addEventListener('click', async (e) => {
                 const button = e.target.closest('button');
+
+                // Se clicou em um botão de categoria de prioridade (p-chip)
+                if (e.target.classList.contains('p-chip')) {
+                    e.target.classList.toggle('selected'); // Liga/desliga a cor vermelha
+                    return; // Para aqui para não executar outras lógicas de botão
+                }
                 
                 // --- NOVO: Botão de Renomear Sala ---
                 const editRoomBtn = e.target.closest('.edit-room-name-btn');
@@ -4030,11 +4036,37 @@ if (btnAdmin) {
                     button.closest('.fixed').classList.add('hidden');
                 }
                 if (button.id === 'confirm-priority-reason-btn') {
-                    const reason = document.getElementById('priority-reason-input').value.trim();
-                    if (!reason) { showNotification("O motivo é obrigatório.", "error"); return; }
-                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ priority: 'URGENTE', priorityReason: reason }));
+                    // Pega os textos de todos os botões que estão "acesos" (classe .selected)
+                    const selectedChips = Array.from(document.querySelectorAll('.p-chip.selected'))
+                                               .map(chip => chip.dataset.value);
+                                               
+                    const customReason = document.getElementById('priority-reason-input').value.trim();
+                    
+                    // Une as seleções dos botões com o texto manual
+                    let finalReason = selectedChips.join(', ');
+                    if (customReason) {
+                        finalReason = finalReason ? `${finalReason} | Obs: ${customReason}` : customReason;
+                    }
+                
+                    if (!finalReason) { 
+                        showNotification("Selecione uma categoria ou descreva o motivo.", "error"); 
+                        return; 
+                    }
+                
+                    const docRef = doc(db, "pautas", currentPautaId, "attendances", assistedIdToHandle);
+                    await updateDoc(docRef, getUpdatePayload({ 
+                        priority: 'URGENTE', 
+                        priorityReason: finalReason 
+                    }));
+                
+                    // Limpa o modal para a próxima vez
+                    document.querySelectorAll('.p-chip').forEach(c => c.classList.remove('selected'));
+                    document.getElementById('priority-reason-input').value = '';
+                    
                     button.closest('.fixed').classList.add('hidden');
+                    showNotification("Prioridade Ativada!");
                 }
+                
                 if (button.id === 'confirm-edit-assisted-btn') {
                     const name = document.getElementById('edit-assisted-name').value.trim();
                     if (!name) { showNotification("O nome não pode ficar em branco.", "error"); return; }
@@ -4421,6 +4453,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
