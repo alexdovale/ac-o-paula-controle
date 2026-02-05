@@ -1256,6 +1256,18 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             border: 1px solid #bbf7d0;
             transform: translateX(4px);
         }
+
+        /* Melhora a aparência das linhas do checklist */
+        .checklist-row {
+            border: 1px solid #f1f5f9;
+            transition: all 0.2s ease;
+        }
+        
+        .checklist-row:has(input:checked) {
+            background-color: #f0fdf4 !important;
+            border-color: #86efac;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
     </style>
 
      <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -4561,6 +4573,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
