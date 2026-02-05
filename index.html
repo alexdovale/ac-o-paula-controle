@@ -1204,44 +1204,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
         </div>
     </div>
-    <!-- Modal de Atendimento Prioritário Atualizado -->
-    <div id="priority-reason-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border-t-8 border-red-600">
-            <h2 class="text-2xl font-bold mb-2 text-gray-800">Atendimento Prioritário</h2>
-            <p class="mb-6 text-sm text-gray-500">Selecione uma ou mais categorias de prioridade legal:</p>
-            
-            <!-- Grid de Botões de Seleção -->
-            <div id="priority-types-grid" class="grid grid-cols-2 gap-2 mb-6">
-                <button type="button" data-value="Idoso (60+)" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">👴 Idoso (60+)</button>
-                <button type="button" data-value="Idoso (80+)" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">🎖️ Idoso (80+)</button>
-                <button type="button" data-value="Deficiência (PCD)" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">♿ Deficiência</button>
-                <button type="button" data-value="Autismo (TEA)" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">🧩 Autismo</button>
-                <button type="button" data-value="Gestante" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">🤰 Gestante</button>
-                <button type="button" data-value="Criança de Colo" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">👶 Criança de Colo</button>
-                <button type="button" data-value="Obesidade" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">⚖️ Obesidade</button>
-                <button type="button" data-value="Urgência Médica" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">🚑 Urgência Médica</button>
-            </div>
-    
-            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Outros / Observações:</label>
-            <textarea id="priority-reason-input" placeholder="Ex: Advogado com prazo, viagem agendada..." class="w-full p-3 border border-gray-300 rounded-lg mb-6 h-20 text-sm"></textarea>
-            
+    <div id="priority-reason-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Atendimento Prioritário</h2>
+            <p class="mb-4 text-gray-600">Por favor, informe o motivo da prioridade.</p>
+            <textarea id="priority-reason-input" placeholder="Motivo..." class="w-full p-3 border border-gray-300 rounded-lg mb-6 h-24"></textarea>
             <div class="flex justify-end space-x-4">
-                <button id="cancel-priority-reason-btn" class="bg-gray-200 text-gray-700 font-bold py-2 px-6 rounded-lg hover:bg-gray-300 transition">Cancelar</button>
-                <button id="confirm-priority-reason-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 transition shadow-lg">Confirmar Prioridade</button>
+                <button id="cancel-priority-reason-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-priority-reason-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">Confirmar Prioridade</button>
             </div>
         </div>
     </div>
-    
-    <style>
-        /* Estilo para quando o botão de prioridade estiver selecionado */
-        .p-chip.selected {
-            background-color: #fee2e2; /* Red 100 */
-            border-color: #ef4444;    /* Red 500 */
-            color: #b91c1c;           /* Red 700 */
-            transform: scale(1.05);
-        }
-    </style>
-
      <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 80vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -1400,18 +1373,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { parsePautaCSV } from './js/csvHandler.js';
         import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
         import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
-        import { 
-                logAction as logActionDB, 
-                loadUsersList, 
-                cleanupOldData, 
-                approveUser, 
-                updateUserRole, 
-                deleteUser, 
-                loadAuditLogs, 
-                exportAuditLogsPDF, 
-                loadDashboardData, 
-                populateUserFilter 
-            } from './js/admin.js';
+        import { logAction as logActionDB, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser, loadAuditLogs, exportAuditLogsPDF } from './js/admin.js';
         import { 
             setupAttendancesListener, 
             updateAttendanceStatus, 
@@ -1828,35 +1790,24 @@ document.addEventListener('DOMContentLoaded', () => {
             ? `<button data-id="${a.id}" data-name="${escapeHTML(a.name)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`
             : `<button data-id="${a.id}" data-name="${escapeHTML(a.name)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>`;
     
-       card.innerHTML = `
-                ${rankAndControls}
-                <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors">...</button>
-                <div class="flex flex-col h-full ${isManual ? 'pl-3' : ''}">
-                    <!-- ADICIONADO: Etiqueta com o nome da prioridade logo acima do nome -->
-                    ${a.priority === 'URGENTE' ? `
-                        <div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">
-                            <span class="animate-ping inline-flex h-2 w-2 rounded-full bg-red-400 opacity-75"></span>
-                            🚨 ${escapeHTML(a.priorityReason)}
-                        </div>
-                    ` : ''}
-            
-                    <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(a.name)}</p>
-                    <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(a.subject)}</strong></p>
-                    
-                    <div class="flex flex-wrap gap-2 mb-3">
-                        <span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">${arrival}</span>
-                        ${a.room ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(a.room)}</span>` : ''}
-                    </div>
-            
-                    <div class="mt-auto grid grid-cols-2 gap-2">
-                        ${atenderButton}
-                        <!-- ALTERADO: Texto do botão condicional -->
-                        <button data-id="${a.id}" class="priority-btn ${a.priority === 'URGENTE' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-red-500 hover:bg-red-600'} text-white font-semibold py-2 rounded-lg text-xs transition-colors">
-                            ${a.priority === 'URGENTE' ? 'Urgente Ativado' : 'Prioridade'}
-                        </button>
-                    </div>
-                    <button data-id="${a.id}" class="view-details-btn ...">Ver Detalhes</button>
+        card.innerHTML = `
+            ${rankAndControls}
+            <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
+            <div class="flex flex-col h-full ${isManual ? 'pl-3' : ''}">
+                <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(a.name)}</p>
+                <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(a.subject)}</strong></p>
+                <div class="flex flex-wrap gap-2 mb-3">
+                    <span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">${arrival}</span>
+                    ${a.room ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(a.room)}</span>` : ''}
                 </div>
+                <div class="mt-auto grid grid-cols-2 gap-2">
+                    ${atenderButton}
+                    <button data-id="${a.id}" class="priority-btn ${a.priority === 'URGENTE' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-red-500 hover:bg-red-600'} text-white font-semibold py-2 rounded-lg text-xs transition-colors">
+                        ${a.priority === 'URGENTE' ? 'Urgente Ativado' : 'Prioridade'}
+                    </button>
+                </div>
+                <button data-id="${a.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
+            </div>
         `;
         return card;
     };
@@ -3652,12 +3603,6 @@ if (btnAdmin) {
 
             document.body.addEventListener('click', async (e) => {
                 const button = e.target.closest('button');
-
-                // Se clicou em um botão de categoria de prioridade (p-chip)
-                if (e.target.classList.contains('p-chip')) {
-                    e.target.classList.toggle('selected'); // Liga/desliga a cor vermelha
-                    return; // Para aqui para não executar outras lógicas de botão
-                }
                 
                 // --- NOVO: Botão de Renomear Sala ---
                 const editRoomBtn = e.target.closest('.edit-room-name-btn');
@@ -3805,26 +3750,7 @@ if (btnAdmin) {
                     if (button.classList.contains('return-to-aguardando-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', attendant: null, attendedTime: null, assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
                     if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
                     if (button.classList.contains('delete-btn')) { if(confirm("Tem certeza que deseja apagar este registro permanentemente?")) { const assisted = allAssisted.find(a => a.id === id); const name = assisted ? assisted.name : 'Desconhecido'; logAction('DELETE_ASSISTED', `Apagou o assistido: ${name}`, id); await deleteDoc(docRef); showNotification("Registro apagado."); }}
-                    if (button.classList.contains('priority-btn')) {
-                        const assisted = allAssisted.find(a => a.id === id);
-                        
-                        // SE JÁ ESTIVER URGENTE: Pergunta se quer remover
-                        if (assisted && assisted.priority === 'URGENTE') {
-                            if (confirm(`Deseja remover o status de Urgência de ${assisted.name}?`)) {
-                                const docRef = doc(collection(db, "pautas", currentPautaId, "attendances"), id);
-                                await updateDoc(docRef, getUpdatePayload({ 
-                                    priority: null, 
-                                    priorityReason: null 
-                                }));
-                                showNotification("Status de urgência removido.");
-                            }
-                        } 
-                        // SE NÃO ESTIVER: Abre o modal para escolher
-                        else {
-                            assistedIdToHandle = id;
-                            document.getElementById('priority-reason-modal').classList.remove('hidden');
-                        }
-                    }
+                    if (button.classList.contains('priority-btn')) { assistedIdToHandle = id; document.getElementById('priority-reason-modal').classList.remove('hidden'); }
                     if (button.classList.contains('unpriority-btn')) { 
                         if(confirm("Tem certeza que deseja remover o status de Prioridade Urgente? A prioridade será recalculada.")) {
                             await updateDoc(docRef, getUpdatePayload({ priority: null, priorityReason: null })); 
@@ -4066,37 +3992,11 @@ if (btnAdmin) {
                     button.closest('.fixed').classList.add('hidden');
                 }
                 if (button.id === 'confirm-priority-reason-btn') {
-                    // Pega os textos de todos os botões que estão "acesos" (classe .selected)
-                    const selectedChips = Array.from(document.querySelectorAll('.p-chip.selected'))
-                                               .map(chip => chip.dataset.value);
-                                               
-                    const customReason = document.getElementById('priority-reason-input').value.trim();
-                    
-                    // Une as seleções dos botões com o texto manual
-                    let finalReason = selectedChips.join(', ');
-                    if (customReason) {
-                        finalReason = finalReason ? `${finalReason} | Obs: ${customReason}` : customReason;
-                    }
-                
-                    if (!finalReason) { 
-                        showNotification("Selecione uma categoria ou descreva o motivo.", "error"); 
-                        return; 
-                    }
-                
-                    const docRef = doc(db, "pautas", currentPautaId, "attendances", assistedIdToHandle);
-                    await updateDoc(docRef, getUpdatePayload({ 
-                        priority: 'URGENTE', 
-                        priorityReason: finalReason 
-                    }));
-                
-                    // Limpa o modal para a próxima vez
-                    document.querySelectorAll('.p-chip').forEach(c => c.classList.remove('selected'));
-                    document.getElementById('priority-reason-input').value = '';
-                    
+                    const reason = document.getElementById('priority-reason-input').value.trim();
+                    if (!reason) { showNotification("O motivo é obrigatório.", "error"); return; }
+                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ priority: 'URGENTE', priorityReason: reason }));
                     button.closest('.fixed').classList.add('hidden');
-                    showNotification("Prioridade Ativada!");
                 }
-                
                 if (button.id === 'confirm-edit-assisted-btn') {
                     const name = document.getElementById('edit-assisted-name').value.trim();
                     if (!name) { showNotification("O nome não pode ficar em branco.", "error"); return; }
@@ -4483,23 +4383,3 @@ if (closePautaBtn) {
 }
 </script>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
