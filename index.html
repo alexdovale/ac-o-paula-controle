@@ -1852,7 +1852,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${atenderButton}
                         <!-- ALTERADO: Texto do botão condicional -->
                         <button data-id="${a.id}" class="priority-btn ${a.priority === 'URGENTE' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-red-500 hover:bg-red-600'} text-white font-semibold py-2 rounded-lg text-xs transition-colors">
-                            ${a.priority === 'URGENTE' ? 'Urgente Ativado' : 'Prioridade'}
+                            ${a.priority === 'URGENTE' ? 'Prioridade Ativado' : 'Prioridade'}
                         </button>
                     </div>
                     <button data-id="${a.id}" class="view-details-btn ...">Ver Detalhes</button>
@@ -4492,6 +4492,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
