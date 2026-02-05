@@ -1,11 +1,11 @@
 /**
  * detalhes.js - SIGAP
- * Gerencia o modal de detalhes, checklists interativos, dados do Réu e Planilha de Despesas.
+ * Gerencia o modal de detalhes com função de Reset/Cancelamento de seleção.
  */
 
 import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- 1. CONSTANTES E BASE DE DADOS (LISTA COMPLETA) ---
+// --- 1. CONSTANTES E BASE DE DADOS ---
 
 const BASE_DOCS = ['Carteira de Identidade (RG) ou Habilitação (CNH)', 'CPF', 'Comprovante de Residência (Atualizado - últimos 3 meses)'];
 const INCOME_DOCS_STRUCTURED = [
@@ -28,8 +28,6 @@ const EXPENSE_CATEGORIES = [
 ];
 
 const ACTIONS_ALWAYS_EXPENSES = ['alimentos_fixacao_majoracao_oferta', 'alimentos_gravidicos', 'alimentos_avoengos', 'investigacao_paternidade', 'guarda'];
-const ACTIONS_CONDITIONAL_EXPENSES = ['divorcio_litigioso', 'divorcio_consensual', 'uniao_estavel_reconhecimento_dissolucao'];
-const ACTIONS_WITH_WORK_INFO = ['alimentos_fixacao_majoracao_oferta', 'alimentos_gravidicos', 'alimentos_avoengos', 'divorcio_litigioso', 'uniao_estavel_reconhecimento_dissolucao', 'investigacao_paternidade'];
 
 export const documentsData = {
     obrigacao_fazer: { title: 'Obrigação de Fazer', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Contrato/Acordo', 'Provas do descumprimento'] }] },
@@ -50,16 +48,16 @@ export const documentsData = {
 
 let currentAssistedId = null, currentPautaId = null, db = null, showNotification = null, allAssisted = [], currentChecklistAction = null;
 
-const modal = document.getElementById('documents-modal'), 
-      assistedNameEl = document.getElementById('documents-assisted-name'), 
-      actionSelectionView = document.getElementById('document-action-selection'), 
-      checklistView = document.getElementById('document-checklist-view'), 
-      checklistContainer = document.getElementById('checklist-container'), 
-      checklistTitle = document.getElementById('checklist-title'), 
-      backBtn = document.getElementById('back-to-action-selection-btn'), 
-      saveBtn = document.getElementById('save-checklist-btn'), 
-      printBtn = document.getElementById('print-checklist-btn'), 
-      searchInp = document.getElementById('checklist-search');
+const modal = document.getElementById('documents-modal'),
+      assistedNameEl = document.getElementById('documents-assisted-name'),
+      actionSelectionView = document.getElementById('document-action-selection'),
+      checklistView = document.getElementById('document-checklist-view'),
+      checklistContainer = document.getElementById('checklist-container'),
+      checklistTitle = document.getElementById('checklist-title'),
+      backBtn = document.getElementById('back-to-action-selection-btn'),
+      saveBtn = document.getElementById('save-checklist-btn'),
+      printBtn = document.getElementById('print-checklist-btn'),
+      resetBtn = document.getElementById('reset-checklist-btn'); // NOVO BOTÃO
 
 // --- 3. UTILITÁRIOS ---
 
@@ -70,7 +68,13 @@ const parseCurrency = (s) => !s ? 0 : parseFloat(s.replace(/[^\d,]/g, '').replac
 async function updateVisualStatus(state, actionTitle = null) {
     const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
     const updateData = { documentState: state };
-    if (actionTitle) updateData.selectedAction = actionTitle;
+    // Se o state for null, limpa os nomes
+    if (state === null) {
+        updateData.selectedAction = null;
+        updateData.documentState = null;
+    } else if (actionTitle) {
+        updateData.selectedAction = actionTitle;
+    }
     await updateDoc(docRef, updateData);
 }
 
@@ -91,7 +95,6 @@ function renderChecklist(actionKey) {
         const div = document.createElement('div');
         div.className = "mb-6";
         div.innerHTML = `<h4 class="font-bold text-gray-700 mb-3 border-b pb-1 uppercase text-[10px] tracking-widest">${section.title}</h4>`;
-        
         const ul = document.createElement('ul');
         ul.className = 'space-y-1';
 
@@ -127,7 +130,6 @@ function renderChecklist(actionKey) {
         checklistContainer.appendChild(div);
     });
 
-    // Eventos de Checklist
     checklistContainer.querySelectorAll('.doc-checkbox').forEach(cb => {
         cb.addEventListener('change', (e) => {
             const typeDiv = document.getElementById(`type-${e.target.id}`);
@@ -135,14 +137,11 @@ function renderChecklist(actionKey) {
                 typeDiv.classList.remove('hidden');
                 if (!typeDiv.querySelector('input:checked')) typeDiv.querySelector('input[value="Físico"]').checked = true;
             } else { typeDiv.classList.add('hidden'); }
-            
-            // Notifica o index.html para atualizar o contador verde
             checklistContainer.dispatchEvent(new Event('change', { bubbles: true }));
             updateVisualStatus('filling');
         });
     });
 
-    // Seções Adicionais
     if (ACTIONS_ALWAYS_EXPENSES.includes(actionKey)) checklistContainer.appendChild(renderExpenseTable());
     checklistContainer.appendChild(renderReuForm(actionKey));
 
@@ -150,15 +149,13 @@ function renderChecklist(actionKey) {
         if (saved.reuData) fillReuData(saved.reuData);
         if (saved.expenseData) fillExpenseData(saved.expenseData);
     }
-
     checklistContainer.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
 function renderReuForm(actionKey) {
     const div = document.createElement('div');
     div.className = 'mt-8 p-4 bg-slate-50 border border-slate-200 rounded-xl';
-    div.innerHTML = `
-        <h3 class="text-[10px] font-black text-slate-400 mb-4 uppercase">Dados do Réu</h3>
+    div.innerHTML = `<h3 class="text-[10px] font-black text-slate-400 mb-4 uppercase">Dados do Réu</h3>
         <div class="space-y-3">
             <input type="text" id="nome-reu" placeholder="Nome Completo" class="w-full p-2 border rounded text-sm">
             <div class="grid grid-cols-2 gap-2">
@@ -166,24 +163,12 @@ function renderReuForm(actionKey) {
                 <input type="text" id="telefone-reu" placeholder="WhatsApp" class="p-2 border rounded text-sm">
             </div>
             <div class="grid grid-cols-3 gap-2">
-                <input type="text" id="cep-reu" placeholder="CEP" class="p-2 border rounded text-sm">
+                <input type="text" id="cep-reu" placeholder="CEP" maxlength="9" class="p-2 border rounded text-sm">
                 <input type="text" id="rua-reu" placeholder="Rua" class="col-span-2 p-2 border rounded text-sm bg-white">
                 <input type="text" id="numero-reu" placeholder="Nº" class="p-2 border rounded text-sm">
                 <input type="text" id="bairro-reu" placeholder="Bairro" class="col-span-2 p-2 border rounded text-sm bg-white">
             </div>
         </div>`;
-    
-    const cep = div.querySelector('#cep-reu');
-    if(cep) cep.onblur = async (e) => {
-        const val = e.target.value.replace(/\D/g,'');
-        if(val.length === 8) {
-            const r = await fetch(`https://viacep.com.br/ws/${val}/json/`).then(res => res.json());
-            if(!r.erro) {
-                div.querySelector('#rua-reu').value = r.logradouro;
-                div.querySelector('#bairro-reu').value = r.bairro;
-            }
-        }
-    };
     return div;
 }
 
@@ -195,22 +180,10 @@ function renderExpenseTable() {
         rows += `<tr class="border-b border-green-50"><td class="py-2 text-[10px] font-bold text-green-800 uppercase">${c.label}</td><td><input type="text" id="expense-${c.id}" class="expense-input w-full p-1 bg-white border rounded text-right text-xs" placeholder="R$ 0,00"></td></tr>`;
     });
     div.innerHTML = `<h3 class="text-[10px] font-black text-green-700 mb-3 uppercase">Planilha de Gastos</h3><table class="w-full">${rows}</table><div class="mt-2 text-right font-black text-green-900" id="expense-total">Total: R$ 0,00</div>`;
-    
-    div.querySelectorAll('.expense-input').forEach(inp => {
-        inp.oninput = (e) => {
-            let v = e.target.value.replace(/\D/g, '');
-            v = (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            e.target.value = v;
-            let total = 0;
-            div.querySelectorAll('.expense-input').forEach(i => total += parseCurrency(i.value));
-            document.getElementById('expense-total').textContent = `Total: ${formatCurrency(total)}`;
-            updateVisualStatus('filling');
-        };
-    });
     return div;
 }
 
-// --- 5. SALVAMENTO ---
+// --- 5. SALVAMENTO E RESET ---
 
 async function handleSave() {
     if (!currentAssistedId) return;
@@ -230,8 +203,26 @@ async function handleSave() {
 
     try {
         await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), payload);
-        if (showNotification) showNotification("Checklist salvo com sucesso!");
+        showNotification("Checklist salvo!");
         modal.classList.add('hidden');
+    } catch (e) { console.error(e); }
+}
+
+async function handleResetSelection() {
+    if (!confirm("Isso apagará todo o checklist e o endereço salvo para este assistido. Deseja mudar de assunto?")) return;
+
+    try {
+        const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
+        await updateDoc(docRef, {
+            documentChecklist: null,
+            documentState: null,
+            selectedAction: null
+        });
+        
+        showNotification("Seleção resetada.");
+        // Volta para a tela de escolha
+        checklistView.classList.replace('flex','hidden');
+        actionSelectionView.classList.remove('hidden');
     } catch (e) { console.error(e); }
 }
 
@@ -242,12 +233,7 @@ function getExpenseData() {
 }
 
 function fillReuData(d) { if(document.getElementById('nome-reu')) document.getElementById('nome-reu').value = d.nome || ''; }
-function fillExpenseData(d) { 
-    EXPENSE_CATEGORIES.forEach(c => { 
-        const el = document.getElementById(`expense-${c.id}`);
-        if(el) el.value = d[c.id] || '';
-    });
-}
+function fillExpenseData(d) { EXPENSE_CATEGORIES.forEach(c => { if(document.getElementById(`expense-${c.id}`)) document.getElementById(`expense-${c.id}`).value = d[c.id] || ''; }); }
 
 // --- 6. PDF ---
 
@@ -256,24 +242,16 @@ async function handlePdf() {
         await updateVisualStatus('pdf');
         const { jsPDF } = window.jspdf;
         const docPDF = new jsPDF();
-        
         docPDF.setFontSize(16); docPDF.text("Checklist de Documentos - SIGAP", 105, 20, { align: "center" });
         docPDF.setFontSize(12); docPDF.text(`Assistido: ${assistedNameEl.textContent}`, 15, 35);
         docPDF.text(`Matéria: ${checklistTitle.textContent}`, 15, 42);
-
         let y = 55;
-        docPDF.setFontSize(10); docPDF.text("DOCUMENTAÇÃO ENTREGUE:", 15, y);
-        y += 7;
-
         const checked = checklistContainer.querySelectorAll('.doc-checkbox:checked');
         checked.forEach(cb => {
             const text = cb.closest('label').querySelector('span').textContent;
-            const type = document.querySelector(`input[name="type-${cb.id}"]:checked`)?.value || 'Físico';
-            docPDF.text(`[X] ${text} (${type})`, 20, y);
+            docPDF.text(`[X] ${text}`, 20, y);
             y += 6;
-            if (y > 280) { docPDF.addPage(); y = 20; }
         });
-
         docPDF.save(`Checklist_${normalizeLocal(assistedNameEl.textContent).replace(/\s+/g, '_')}.pdf`);
     } catch (err) { console.error(err); }
 }
@@ -297,12 +275,7 @@ export function setupDetailsModal(config) {
     backBtn.onclick = () => { checklistView.classList.replace('flex','hidden'); actionSelectionView.classList.remove('hidden'); };
     saveBtn.onclick = handleSave;
     printBtn.onclick = handlePdf;
-    searchInp.oninput = (e) => {
-        const term = normalizeLocal(e.target.value);
-        checklistContainer.querySelectorAll('ul li').forEach(li => {
-            li.style.display = normalizeLocal(li.textContent).includes(term) ? 'block' : 'none';
-        });
-    };
+    resetBtn.onclick = handleResetSelection; // LIGA O BOTÃO DE RESET
 }
 
 export function openDetailsModal(config) {
@@ -310,14 +283,15 @@ export function openDetailsModal(config) {
     const assisted = allAssisted.find(a => a.id === currentAssistedId); if (!assisted) return;
     assistedNameEl.textContent = assisted.name;
     
-    actionSelectionView.innerHTML = '<p class="text-gray-500 mb-6 text-sm">Selecione o assunto:</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 action-grid"></div>';
+    actionSelectionView.innerHTML = '<p class="text-gray-500 mb-6 text-sm text-center">Selecione o assunto jurídico:</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 action-grid"></div>';
     const grid = actionSelectionView.querySelector('.action-grid');
     
     Object.keys(documentsData).forEach(k => {
         const btn = document.createElement('button');
         btn.dataset.action = k;
         btn.className = "text-left p-4 bg-white border-2 border-gray-100 hover:border-green-500 rounded-xl transition-all shadow-sm group";
-        btn.innerHTML = `<div class="flex justify-between items-center"><span class="font-bold text-gray-700 group-hover:text-green-700 uppercase text-xs">${documentsData[k].title}</span><svg class="w-4 h-4 text-gray-300 group-hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-width="3"></path></svg></div>`;
+        btn.innerHTML = `<span class="font-bold text-gray-700 uppercase text-xs">${documentsData[k].title}</span>`;
+        btn.onclick = () => { renderChecklist(k); actionSelectionView.classList.add('hidden'); checklistView.classList.remove('hidden'); checklistView.classList.add('flex');};
         grid.appendChild(btn);
     });
 
