@@ -3805,7 +3805,26 @@ if (btnAdmin) {
                     if (button.classList.contains('return-to-aguardando-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', attendant: null, attendedTime: null, assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
                     if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
                     if (button.classList.contains('delete-btn')) { if(confirm("Tem certeza que deseja apagar este registro permanentemente?")) { const assisted = allAssisted.find(a => a.id === id); const name = assisted ? assisted.name : 'Desconhecido'; logAction('DELETE_ASSISTED', `Apagou o assistido: ${name}`, id); await deleteDoc(docRef); showNotification("Registro apagado."); }}
-                    if (button.classList.contains('priority-btn')) { assistedIdToHandle = id; document.getElementById('priority-reason-modal').classList.remove('hidden'); }
+                    if (button.classList.contains('priority-btn')) {
+                        const assisted = allAssisted.find(a => a.id === id);
+                        
+                        // SE JÁ ESTIVER URGENTE: Pergunta se quer remover
+                        if (assisted && assisted.priority === 'URGENTE') {
+                            if (confirm(`Deseja remover o status de Urgência de ${assisted.name}?`)) {
+                                const docRef = doc(collection(db, "pautas", currentPautaId, "attendances"), id);
+                                await updateDoc(docRef, getUpdatePayload({ 
+                                    priority: null, 
+                                    priorityReason: null 
+                                }));
+                                showNotification("Status de urgência removido.");
+                            }
+                        } 
+                        // SE NÃO ESTIVER: Abre o modal para escolher
+                        else {
+                            assistedIdToHandle = id;
+                            document.getElementById('priority-reason-modal').classList.remove('hidden');
+                        }
+                    }
                     if (button.classList.contains('unpriority-btn')) { 
                         if(confirm("Tem certeza que deseja remover o status de Prioridade Urgente? A prioridade será recalculada.")) {
                             await updateDoc(docRef, getUpdatePayload({ priority: null, priorityReason: null })); 
@@ -4464,6 +4483,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
