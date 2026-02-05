@@ -1,12 +1,11 @@
 /**
  * detalhes.js
  * Gerencia o modal de detalhes, checklist (Físico/Digital), dados do Réu e Planilha de Despesas.
- * INTEGRADO COM STATUS DE BADGES NO INDEX
  */
 
-import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- 1. CONSTANTES DE DOCUMENTAÇÃO (MANTIDAS ORIGINAIS) ---
+// --- 1. CONSTANTES DE DOCUMENTAÇÃO ---
 
 const BASE_DOCS = ['Carteira de Identidade (RG) ou Habilitação (CNH)', 'CPF', 'Comprovante de Residência (Atualizado - últimos 3 meses)'];
 const INCOME_DOCS_STRUCTURED = [
@@ -26,6 +25,7 @@ const EXPENSE_CATEGORIES = [
     { id: 'lazer', label: '6. LAZER E TRANSPORTE', desc: 'Passeios, festas, transporte para atividades.' },
     { id: 'outras', label: '7. OUTRAS DESPESAS', desc: 'Babá, pet, cursos livres, etc.' }
 ];
+
 const ACTIONS_ALWAYS_EXPENSES = ['alimentos_fixacao_majoracao_oferta', 'alimentos_gravidicos', 'alimentos_avoengos', 'investigacao_paternidade', 'guarda'];
 const ACTIONS_CONDITIONAL_EXPENSES = ['divorcio_litigioso', 'divorcio_consensual', 'uniao_estavel_reconhecimento_dissolucao'];
 const ACTIONS_WITH_WORK_INFO = ['alimentos_fixacao_majoracao_oferta', 'alimentos_gravidicos', 'alimentos_avoengos', 'divorcio_litigioso', 'uniao_estavel_reconhecimento_dissolucao', 'investigacao_paternidade'];
@@ -65,12 +65,12 @@ const documentsData = {
     alvara_viagem_menor: { title: 'Alvará Viagem (Menor)', sections: [{ title: 'Documentação Pessoal e Renda', docs: COMMON_DOCS_FULL }, { title: 'Viagem', docs: ['Passagens', 'Destino', 'Acompanhante', 'Endereço genitor ausente'] }] }
 };
 
-// --- 3. ESTADO GLOBAL ---
+// --- 2. ESTADO GLOBAL ---
 
 let currentAssistedId = null, currentPautaId = null, db = null, getUpdatePayload = null, showNotification = null, allAssisted = [], currentChecklistAction = null;
 const modal = document.getElementById('documents-modal'), assistedNameEl = document.getElementById('documents-assisted-name'), actionSelectionView = document.getElementById('document-action-selection'), checklistView = document.getElementById('document-checklist-view'), checklistContainer = document.getElementById('checklist-container'), checklistTitle = document.getElementById('checklist-title'), backToActionSelectionBtn = document.getElementById('back-to-action-selection-btn'), saveChecklistBtn = document.getElementById('save-checklist-btn'), printChecklistBtn = document.getElementById('print-checklist-btn'), checklistSearch = document.getElementById('checklist-search'), closeBtn = document.getElementById('close-documents-modal-btn'), cancelBtn = document.getElementById('cancel-checklist-btn');
 
-// --- 4. UTILITÁRIOS ---
+// --- 3. UTILITÁRIOS ---
 
 const normalizeTextLocal = (str) => str ? str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : '';
 const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -83,7 +83,6 @@ async function getAddressByCep(cep) {
 
 function setupCepListener(cepInputId, fields) {
     const cepInput = document.getElementById(cepInputId); if (!cepInput) return;
-    cepInput.addEventListener('input', (e) => { let v = e.target.value.replace(/\D/g, ''); if (v.length > 5) v = v.substring(0, 5) + '-' + v.substring(5, 8); e.target.value = v; });
     cepInput.addEventListener('blur', async (e) => {
         const data = await getAddressByCep(e.target.value);
         if (data) {
@@ -95,7 +94,6 @@ function setupCepListener(cepInputId, fields) {
     });
 }
 
-// --- NOVO: FUNÇÃO PARA ATUALIZAR STATUS VISUAL NO FIREBASE ---
 async function updateVisualStatus(state, actionTitle = null) {
     const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
     const data = { documentState: state };
@@ -103,207 +101,300 @@ async function updateVisualStatus(state, actionTitle = null) {
     await updateDoc(docRef, data);
 }
 
-// --- 5. COMPONENTES UI ---
-
-function renderReuForm(actionKey) {
-    const showWorkInfo = ACTIONS_WITH_WORK_INFO.includes(actionKey);
-    const container = document.createElement('div'); container.id = 'dynamic-reu-form'; container.className = 'mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg';
-    container.innerHTML = `
-        <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Dados da Parte Contrária (Réu)</h3>
-        <div class="mb-4"><label class="block text-sm font-bold text-gray-700">Nome Completo</label><input type="text" id="nome-reu" placeholder="Nome completo do Réu" class="mt-1 block w-full p-2 border rounded-md"></div>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-            <div><label class="block text-sm text-gray-700">CPF</label><input type="text" id="cpf-reu" class="mt-1 block w-full p-2 border rounded-md"></div>
-            <div><label class="block text-sm text-gray-700">RG</label><input type="text" id="rg-reu" class="mt-1 block w-full p-2 border rounded-md"></div>
-            <div><label class="block text-sm text-gray-700">Telefone/Zap</label><input type="text" id="telefone-reu" class="mt-1 block w-full p-2 border rounded-md"></div>
-            <div><label class="block text-sm text-gray-700">E-mail</label><input type="email" id="email-reu" class="mt-1 block w-full p-2 border rounded-md"></div>
-        </div>
-        <h4 class="text-sm font-semibold text-gray-600 mb-2">Endereço</h4>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div><label class="block text-xs text-gray-500">CEP</label><input type="text" id="cep-reu" maxlength="9" class="w-full p-2 border rounded-md"></div>
-            <div class="md:col-span-2"><label class="block text-xs text-gray-500">Rua</label><input type="text" id="rua-reu" class="w-full p-2 border rounded-md bg-gray-100" readonly></div>
-            <div><label class="block text-xs text-gray-500">Número</label><input type="text" id="numero-reu" class="w-full p-2 border rounded-md"></div>
-            <div><label class="block text-xs text-gray-500">Bairro</label><input type="text" id="bairro-reu" class="w-full p-2 border rounded-md bg-gray-100" readonly></div>
-            <div><label class="block text-xs text-gray-500">Cidade/UF</label><div class="flex gap-2"><input type="text" id="cidade-reu" class="w-full p-2 border rounded-md bg-gray-100" readonly><input type="text" id="estado-reu" class="w-16 p-2 border rounded-md bg-gray-100" readonly></div></div>
-        </div>
-        ${showWorkInfo ? `<div class="border-t pt-4 mt-4"><h4 class="text-sm font-semibold text-blue-700 mb-2">Dados Profissionais</h4><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="block text-sm text-gray-700">Empresa/Empregador</label><input type="text" id="empresa-reu" class="mt-1 w-full p-2 border rounded-md"></div><div><label class="block text-sm text-gray-700">Endereço Trabalho</label><input type="text" id="endereco-trabalho-reu" class="mt-1 w-full p-2 border rounded-md"></div></div></div>` : ''}`;
-    return container;
-}
-
-function renderExpenseTable() {
-    const container = document.createElement('div'); container.id = 'expense-table-container'; container.className = 'mt-4 p-4 bg-green-50 border border-green-200 rounded-lg';
-    let rowsHtml = '';
-    EXPENSE_CATEGORIES.forEach(cat => {
-        rowsHtml += `<tr class="bg-white border-b hover:bg-gray-50"><td class="p-3 text-sm font-semibold text-gray-700">${cat.label}</td><td class="p-3 text-xs text-gray-500">${cat.desc}</td><td class="p-3"><input type="text" id="expense-${cat.id}" class="expense-input w-full p-2 border rounded text-right" placeholder="R$ 0,00" oninput="formatExpenseInput(this)"></td></tr>`;
-    });
-    container.innerHTML = `<h3 class="text-lg font-bold text-green-800 mb-2">Planilha de Despesas (Criança)</h3><div class="overflow-x-auto"><table class="w-full text-left border-collapse"><thead><tr class="bg-green-100 text-green-800 text-xs uppercase"><th class="p-3 w-1/4">Categoria</th><th class="p-3 w-1/2">Orientação</th><th class="p-3 w-1/4 text-right">Valor</th></tr></thead><tbody>${rowsHtml}</tbody><tfoot><tr class="bg-green-200 font-bold text-green-900"><td colspan="2" class="p-3 text-right">TOTAL:</td><td class="p-3 text-right" id="expense-total">R$ 0,00</td></tr></tfoot></table></div>`;
-    return container;
-}
-
-window.formatExpenseInput = function(input) { let value = input.value.replace(/\D/g, ''); value = (Number(value) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); input.value = value; calculateExpenseTotal(); }
-function calculateExpenseTotal() { let total = 0; document.querySelectorAll('.expense-input').forEach(input => total += parseCurrency(input.value)); document.getElementById('expense-total').textContent = formatCurrency(total); }
-
-// --- 6. RENDERIZAÇÃO LÓGICA ---
-
-function populateActionSelection() {
-    const container = document.getElementById('document-action-selection'); if (!container) return;
-    let searchInput = document.getElementById('action-search-input');
-    if (!searchInput) { searchInput = document.createElement('input'); searchInput.id = 'action-search-input'; searchInput.type = 'text'; searchInput.placeholder = 'Pesquisar assunto...'; searchInput.className = 'w-full p-2 border border-gray-300 rounded-md mb-4'; searchInput.addEventListener('input', handleActionSearch); container.prepend(searchInput); }
-    let grid = container.querySelector('.action-grid'); if (grid) return;
-    grid = document.createElement('div'); grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-3 action-grid';
-    Object.keys(documentsData).forEach((key) => { const btn = document.createElement('button'); btn.dataset.action = key; btn.className = 'text-left p-3 bg-white border hover:bg-green-50 rounded-lg transition shadow-sm'; btn.innerHTML = `<span class="font-semibold text-gray-700">${documentsData[key].title}</span>`; grid.appendChild(btn); });
-    container.appendChild(grid);
-}
+// --- 4. RENDERIZAÇÃO ---
 
 function renderChecklist(actionKey) {
-    currentChecklistAction = actionKey; const data = documentsData[actionKey]; if (!data) return;
-    const assisted = allAssisted.find(a => a.id === currentAssistedId); const saved = assisted?.documentChecklist;
-    checklistTitle.textContent = data.title; checklistContainer.innerHTML = ''; checklistSearch.value = '';
+    currentChecklistAction = actionKey; 
+    const data = documentsData[actionKey]; 
+    if (!data) return;
+
+    const assisted = allAssisted.find(a => a.id === currentAssistedId); 
+    const saved = assisted?.documentChecklist;
+    
+    checklistTitle.textContent = data.title; 
+    checklistContainer.innerHTML = ''; 
+    checklistSearch.value = '';
 
     data.sections.forEach((section, sIdx) => {
-        const div = document.createElement('div'); div.innerHTML = `<h4 class="font-bold text-gray-700 mt-4 mb-2 border-b">${section.title}</h4>`;
-        const ul = document.createElement('ul'); ul.className = 'space-y-2';
+        const sectionDiv = document.createElement('div');
+        sectionDiv.className = "mb-6";
+        sectionDiv.innerHTML = `<h4 class="font-bold text-gray-700 mb-3 border-b-2 border-gray-100 pb-1 uppercase text-xs tracking-wider">${section.title}</h4>`;
+        
+        const ul = document.createElement('ul'); 
+        ul.className = 'space-y-2';
+
         section.docs.forEach((docItem, dIdx) => {
             const li = document.createElement('li');
-            if (typeof docItem === 'object' && docItem.type === 'title') { li.innerHTML = `<div class="font-bold text-blue-700 text-sm mt-3 mb-1 bg-blue-50 p-1 rounded">${docItem.text}</div>`; } 
-            else {
+            if (typeof docItem === 'object' && docItem.type === 'title') {
+                li.innerHTML = `<div class="font-bold text-blue-700 text-[11px] mt-4 mb-2 bg-blue-50 p-2 rounded border-l-4 border-blue-400 uppercase tracking-tighter">${docItem.text}</div>`;
+            } else {
                 const docText = typeof docItem === 'string' ? docItem : docItem.text;
                 const id = `doc-${actionKey}-${sIdx}-${dIdx}`;
                 const isChecked = saved?.checkedIds?.includes(id) ? 'checked' : '';
                 const savedType = saved?.docTypes ? saved.docTypes[id] : '';
-                li.innerHTML = `<div class="flex flex-col mb-1 border-b border-gray-50 pb-1"><label class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded"><input type="checkbox" id="${id}" class="doc-checkbox h-5 w-5 text-green-600 rounded border-gray-300 mr-2" ${isChecked}><span class="text-sm text-gray-700 flex-1">${docText}</span></label><div id="type-${id}" class="ml-8 mt-1 text-xs text-gray-600 flex gap-4 ${isChecked ? '' : 'hidden'}"><label class="flex items-center"><input type="radio" name="type-${id}" value="Físico" class="mr-1" ${savedType === 'Físico' ? 'checked' : ''}> Físico</label><label class="flex items-center"><input type="radio" name="type-${id}" value="Digital" class="mr-1" ${savedType === 'Digital' ? 'checked' : ''}> Digital</label></div></div>`;
+
+                // ESTRUTURA COM A CLASSE checklist-row PARA FEEDBACK VERDE
+                li.innerHTML = `
+                    <div class="flex flex-col border-b border-gray-50 pb-2">
+                        <label class="checklist-row flex items-center gap-3 w-full cursor-pointer p-2 rounded-lg transition-all hover:bg-gray-50">
+                            <input type="checkbox" id="${id}" class="doc-checkbox h-5 w-5 text-green-600 rounded border-gray-300" ${isChecked}>
+                            <span class="text-sm text-gray-700 font-medium">${docText}</span>
+                        </label>
+                        <div id="type-${id}" class="ml-10 mt-1 flex gap-6 ${isChecked ? '' : 'hidden'} animate-fade-in">
+                            <label class="flex items-center text-[10px] font-bold text-gray-500 cursor-pointer">
+                                <input type="radio" name="type-${id}" value="Físico" class="mr-1" ${savedType === 'Físico' ? 'checked' : ''}> FÍSICO
+                            </label>
+                            <label class="flex items-center text-[10px] font-bold text-gray-500 cursor-pointer">
+                                <input type="radio" name="type-${id}" value="Digital" class="mr-1" ${savedType === 'Digital' ? 'checked' : ''}> DIGITAL
+                            </label>
+                        </div>
+                    </div>`;
             }
             ul.appendChild(li);
         });
-        div.appendChild(ul); checklistContainer.appendChild(div);
+        sectionDiv.appendChild(ul); 
+        checklistContainer.appendChild(sectionDiv);
     });
 
+    // Eventos de alteração para contador e visual
     checklistContainer.querySelectorAll('.doc-checkbox').forEach(cb => {
         cb.addEventListener('change', (e) => {
-            updateVisualStatus('filling'); // ATUALIZA PARA "EM PREENCHIMENTO"
             const typeDiv = document.getElementById(`type-${e.target.id}`);
-            if (typeDiv) {
-                if (e.target.checked) { typeDiv.classList.remove('hidden'); if (!typeDiv.querySelector('input:checked')) typeDiv.querySelector('input[value="Físico"]').checked = true; } 
-                else { typeDiv.classList.add('hidden'); }
+            if (e.target.checked) {
+                typeDiv.classList.remove('hidden');
+                if (!typeDiv.querySelector('input:checked')) typeDiv.querySelector('input[value="Físico"]').checked = true;
+            } else {
+                typeDiv.classList.add('hidden');
             }
+            // Dispara o contador do index.html
+            checklistContainer.dispatchEvent(new Event('change', { bubbles: true }));
+            updateVisualStatus('filling'); 
         });
     });
 
-    const isAlways = ACTIONS_ALWAYS_EXPENSES.includes(actionKey); const isConditional = ACTIONS_CONDITIONAL_EXPENSES.includes(actionKey); const savedHasMinors = saved?.hasMinors || false;
-    if (isAlways) { checklistContainer.appendChild(renderExpenseTable()); if (saved?.expenseData) fillExpenseData(saved.expenseData); } 
-    else if (isConditional) {
-        const toggleDiv = document.createElement('div'); toggleDiv.className = 'mt-6 bg-blue-50 p-3 rounded-lg border border-blue-200';
-        toggleDiv.innerHTML = `<label class="flex items-center cursor-pointer font-bold text-blue-800"><input type="checkbox" id="check-has-minors" class="h-5 w-5 text-blue-600 rounded mr-2" ${savedHasMinors ? 'checked' : ''}> Há filhos menores envolvidos?</label><div id="conditional-expense-wrapper" class="${savedHasMinors ? '' : 'hidden'}"></div>`;
+    // Lógica de Despesas e Outros
+    if (ACTIONS_ALWAYS_EXPENSES.includes(actionKey)) {
+        checklistContainer.appendChild(renderExpenseTable());
+        if (saved?.expenseData) fillExpenseData(saved.expenseData);
+    } else if (ACTIONS_CONDITIONAL_EXPENSES.includes(actionKey)) {
+        const toggleDiv = document.createElement('div');
+        toggleDiv.className = 'mt-6 bg-blue-50 p-4 rounded-xl border-2 border-blue-100 shadow-sm';
+        toggleDiv.innerHTML = `<label class="flex items-center cursor-pointer font-black text-blue-800 uppercase text-xs"><input type="checkbox" id="check-has-minors" class="h-5 w-5 text-blue-600 rounded mr-3" ${saved?.hasMinors ? 'checked' : ''}> Há filhos menores / Pedido de Alimentos?</label><div id="conditional-expense-wrapper" class="${saved?.hasMinors ? '' : 'hidden'}"></div>`;
         checklistContainer.appendChild(toggleDiv);
-        const wrapper = toggleDiv.querySelector('#conditional-expense-wrapper'); const checkbox = toggleDiv.querySelector('#check-has-minors');
-        wrapper.appendChild(renderExpenseTable()); if (saved?.expenseData) fillExpenseData(saved.expenseData);
-        checkbox.addEventListener('change', (e) => { wrapper.classList.toggle('hidden', !e.target.checked); updateVisualStatus('filling'); });
+        const wrapper = toggleDiv.querySelector('#conditional-expense-wrapper');
+        wrapper.appendChild(renderExpenseTable());
+        if (saved?.expenseData) fillExpenseData(saved.expenseData);
+        toggleDiv.querySelector('#check-has-minors').addEventListener('change', (e) => { wrapper.classList.toggle('hidden', !e.target.checked); });
     }
 
-    const obsDiv = document.createElement('div'); obsDiv.className = 'mt-6 bg-yellow-50 p-4 rounded-lg border border-yellow-100'; obsDiv.innerHTML = `<h4 class="font-bold text-gray-800 mb-2">Status da Documentação</h4>`;
+    // Seção de Observações
+    const obsDiv = document.createElement('div');
+    obsDiv.className = 'mt-8 p-4 bg-amber-50 border-2 border-amber-100 rounded-xl';
+    obsDiv.innerHTML = `<h4 class="font-black text-amber-800 text-xs uppercase mb-3">Status da Entrega</h4>`;
     const obsOptions = ['Documentação Pendente', 'Documentos Organizados', 'Assistido Ciente'];
     const savedObs = saved?.observations?.selected || [];
-    obsOptions.forEach(opt => { const checked = savedObs.includes(opt) ? 'checked' : ''; obsDiv.innerHTML += `<label class="flex items-center cursor-pointer mb-1"><input type="checkbox" class="obs-opt h-4 w-4 text-yellow-600 mr-2" value="${opt}" ${checked}> ${opt}</label>`; });
-    const otherText = saved?.observations?.otherText || ''; const showOther = !!otherText;
-    obsDiv.innerHTML += `<div class="mt-2"><label class="flex items-center cursor-pointer"><input type="checkbox" id="check-other" class="h-4 w-4 text-yellow-600 mr-2" ${showOther ? 'checked' : ''}> Outras Observações</label><textarea id="text-other" class="w-full mt-2 p-2 border rounded text-sm ${showOther ? '' : 'hidden'}" rows="2">${otherText}</textarea></div>`;
-    obsDiv.querySelector('#check-other').addEventListener('change', (e) => { document.getElementById('text-other').classList.toggle('hidden', !e.target.checked); updateVisualStatus('filling'); });
+    obsOptions.forEach(opt => {
+        const checked = savedObs.includes(opt) ? 'checked' : '';
+        obsDiv.innerHTML += `<label class="flex items-center cursor-pointer mb-2 text-sm text-amber-900"><input type="checkbox" class="obs-opt h-4 w-4 text-amber-600 mr-3" value="${opt}" ${checked}> ${opt}</label>`;
+    });
+    obsDiv.innerHTML += `<div class="mt-4"><label class="flex items-center cursor-pointer text-sm font-bold text-amber-900"><input type="checkbox" id="check-other" class="h-4 w-4 text-amber-600 mr-3" ${saved?.observations?.otherText ? 'checked' : ''}> Outras Observações</label><textarea id="text-other" class="w-full mt-2 p-3 border border-amber-200 rounded-lg text-sm bg-white ${saved?.observations?.otherText ? '' : 'hidden'}" rows="3" placeholder="Digite aqui...">${saved?.observations?.otherText || ''}</textarea></div>`;
+    obsDiv.querySelector('#check-other').addEventListener('change', (e) => { document.getElementById('text-other').classList.toggle('hidden', !e.target.checked); });
     checklistContainer.appendChild(obsDiv);
 
-    const reuForm = renderReuForm(actionKey); checklistContainer.appendChild(reuForm);
+    // Formulário do Réu
+    const reuForm = renderReuForm(actionKey); 
+    checklistContainer.appendChild(reuForm);
     setupCepListener('cep-reu', { rua: 'rua-reu', bairro: 'bairro-reu', cidade: 'cidade-reu', uf: 'estado-reu' });
     if (saved?.reuData) fillReuData(saved.reuData);
+
+    // Força atualização do contador inicial
+    checklistContainer.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-// --- 7. GET/SET DATA ---
+function renderReuForm(actionKey) {
+    const showWorkInfo = ACTIONS_WITH_WORK_INFO.includes(actionKey);
+    const container = document.createElement('div'); 
+    container.id = 'dynamic-reu-form'; 
+    container.className = 'mt-8 p-5 bg-slate-50 border border-slate-200 rounded-xl shadow-inner';
+    container.innerHTML = `
+        <h3 class="text-md font-black text-slate-700 mb-4 border-b pb-2 uppercase tracking-tighter">Dados do Réu / Parte Contrária</h3>
+        <div class="mb-4"><label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Nome Completo</label><input type="text" id="nome-reu" class="w-full p-2 border rounded-md"></div>
+        <div class="grid grid-cols-2 gap-3 mb-4">
+            <div><label class="block text-[10px] font-black text-slate-400 uppercase mb-1">CPF</label><input type="text" id="cpf-reu" class="w-full p-2 border rounded-md"></div>
+            <div><label class="block text-[10px] font-black text-slate-400 uppercase mb-1">WhatsApp</label><input type="text" id="telefone-reu" class="w-full p-2 border rounded-md"></div>
+        </div>
+        <div class="grid grid-cols-3 gap-2 mb-4">
+            <div><label class="block text-[10px] font-black text-slate-400 uppercase">CEP</label><input type="text" id="cep-reu" class="w-full p-2 border rounded-md"></div>
+            <div class="col-span-2"><label class="block text-[10px] font-black text-slate-400 uppercase">Rua</label><input type="text" id="rua-reu" class="w-full p-2 border rounded-md bg-white"></div>
+            <div><label class="block text-[10px] font-black text-slate-400 uppercase">Nº</label><input type="text" id="numero-reu" class="w-full p-2 border rounded-md"></div>
+            <div class="col-span-2"><label class="block text-[10px] font-black text-slate-400 uppercase">Bairro</label><input type="text" id="bairro-reu" class="w-full p-2 border rounded-md bg-white"></div>
+            <div class="col-span-2"><label class="block text-[10px] font-black text-slate-400 uppercase">Cidade</label><input type="text" id="cidade-reu" class="w-full p-2 border rounded-md bg-white"></div>
+            <div><label class="block text-[10px] font-black text-slate-400 uppercase">UF</label><input type="text" id="estado-reu" class="w-full p-2 border rounded-md bg-white"></div>
+        </div>
+        ${showWorkInfo ? `<div class="border-t mt-4 pt-4"><label class="block text-[10px] font-black text-blue-400 uppercase mb-1">Local de Trabalho</label><input type="text" id="empresa-reu" class="w-full p-2 border rounded-md mb-2" placeholder="Nome da empresa"><input type="text" id="endereco-trabalho-reu" class="w-full p-2 border rounded-md" placeholder="Endereço do trabalho"></div>` : ''}`;
+    return container;
+}
 
-function fillReuData(data) { const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val || ''; }; setVal('nome-reu', data.nome); setVal('cpf-reu', data.cpf); setVal('rg-reu', data.rg); setVal('telefone-reu', data.telefone); setVal('email-reu', data.email); setVal('cep-reu', data.cep); setVal('rua-reu', data.rua); setVal('numero-reu', data.numero); setVal('bairro-reu', data.bairro); setVal('cidade-reu', data.cidade); setVal('estado-reu', data.uf); setVal('empresa-reu', data.empresa); setVal('endereco-trabalho-reu', data.enderecoTrabalho); }
-function getReuData() { const getVal = (id) => { const el = document.getElementById(id); return el ? el.value : ''; }; const ids = ['nome-reu', 'cpf-reu', 'rg-reu', 'telefone-reu', 'email-reu', 'cep-reu', 'rua-reu', 'empresa-reu']; if (!ids.some(id => getVal(id) !== '')) return null; return { nome: getVal('nome-reu'), cpf: getVal('cpf-reu'), rg: getVal('rg-reu'), telefone: getVal('telefone-reu'), email: getVal('email-reu'), cep: getVal('cep-reu'), rua: getVal('rua-reu'), numero: getVal('numero-reu'), bairro: getVal('bairro-reu'), cidade: getVal('cidade-reu'), uf: getVal('estado-reu'), empresa: getVal('empresa-reu'), enderecoTrabalho: getVal('endereco-trabalho-reu') }; }
-function fillExpenseData(data) { EXPENSE_CATEGORIES.forEach(cat => { const input = document.getElementById(`expense-${cat.id}`); if(input) input.value = data[cat.id] || ''; }); calculateExpenseTotal(); }
-function getExpenseData() { if (!document.getElementById('expense-table-container')) return null; const wrapper = document.getElementById('conditional-expense-wrapper'); if (wrapper && wrapper.classList.contains('hidden')) return null; const data = {}; EXPENSE_CATEGORIES.forEach(cat => { const input = document.getElementById(`expense-${cat.id}`); if(input) data[cat.id] = input.value; }); return data; }
+function renderExpenseTable() {
+    const container = document.createElement('div'); 
+    container.id = 'expense-table-container'; 
+    container.className = 'mt-6 p-4 bg-green-50 border-2 border-green-100 rounded-xl shadow-sm';
+    let rows = '';
+    EXPENSE_CATEGORIES.forEach(c => {
+        rows += `<tr class="border-b border-green-100"><td class="py-2 text-xs font-bold text-green-800">${c.label}</td><td><input type="text" id="expense-${c.id}" class="expense-input w-full p-1 bg-white border rounded text-right text-xs" placeholder="R$ 0,00"></td></tr>`;
+    });
+    container.innerHTML = `<h3 class="text-xs font-black text-green-700 mb-3 uppercase tracking-widest">Planilha Mensal de Gastos</h3><table class="w-full">${rows}</table><div class="mt-3 flex justify-between font-black text-green-900 border-t pt-2"><span>TOTAL:</span><span id="expense-total">R$ 0,00</span></div>`;
+    
+    // Listener para soma
+    container.querySelectorAll('.expense-input').forEach(input => {
+        input.addEventListener('input', (e) => {
+            let v = e.target.value.replace(/\D/g, '');
+            v = (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            e.target.value = v;
+            let total = 0;
+            container.querySelectorAll('.expense-input').forEach(i => total += parseCurrency(i.value));
+            document.getElementById('expense-total').textContent = formatCurrency(total);
+            updateVisualStatus('filling');
+        });
+    });
+    return container;
+}
+
+// --- 5. LÓGICA DE SALVAMENTO ---
 
 async function handleSave() {
-    if (!currentAssistedId || !currentPautaId) return;
-    const checkedCheckboxes = checklistContainer.querySelectorAll('.doc-checkbox:checked');
-    const checkedIds = []; const docTypes = {};
-    checkedCheckboxes.forEach(cb => { checkedIds.push(cb.id); const radio = document.querySelector(`input[name="type-${cb.id}"]:checked`); if (radio) docTypes[cb.id] = radio.value; });
-    const obsSelected = Array.from(checklistContainer.querySelectorAll('.obs-opt:checked')).map(cb => cb.value);
-    const otherText = document.getElementById('check-other')?.checked ? document.getElementById('text-other').value : '';
-    const hasMinors = document.getElementById('check-has-minors')?.checked || false;
-    const payload = { documentChecklist: { action: currentChecklistAction, checkedIds: checkedIds, docTypes: docTypes, hasMinors: hasMinors, observations: { selected: obsSelected, otherText: otherText }, reuData: getReuData(), expenseData: getExpenseData() } };
+    if (!currentAssistedId) return;
+    const checkedIds = Array.from(checklistContainer.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id);
+    const docTypes = {};
+    checkedIds.forEach(id => { docTypes[id] = document.querySelector(`input[name="type-${id}"]:checked`)?.value || 'Físico'; });
     
-    // ATUALIZA STATUS PARA "SALVO"
-    payload.documentState = 'saved'; 
+    const payload = {
+        documentChecklist: {
+            action: currentChecklistAction,
+            checkedIds,
+            docTypes,
+            hasMinors: document.getElementById('check-has-minors')?.checked || false,
+            observations: {
+                selected: Array.from(checklistContainer.querySelectorAll('.obs-opt:checked')).map(c => c.value),
+                otherText: document.getElementById('check-other')?.checked ? document.getElementById('text-other').value : ''
+            },
+            reuData: getReuData(),
+            expenseData: getExpenseData()
+        },
+        documentState: 'saved' // STATUS FINAL
+    };
 
     try {
-        await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), getUpdatePayload(payload));
-        if (showNotification) showNotification("Dados salvos!", "success");
-        closeModal();
+        await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), payload);
+        if (showNotification) showNotification("Progresso salvo com sucesso!");
+        modal.classList.add('hidden');
     } catch (e) { console.error(e); }
 }
 
-// --- 8. EVENTOS ---
-async function handleActionSelect(e) { 
-    const btn = e.target.closest('button[data-action]'); if (!btn) return; 
-    const actionKey = btn.dataset.action;
-    
-    // ATUALIZA STATUS PARA "SELECIONADO"
-    await updateVisualStatus('selected', documentsData[actionKey].title);
-    
-    renderChecklist(actionKey); 
-    actionSelectionView.classList.add('hidden'); checklistView.classList.remove('hidden'); checklistView.classList.add('flex'); 
+function getReuData() {
+    const nome = document.getElementById('nome-reu')?.value;
+    if (!nome) return null;
+    return {
+        nome, cpf: document.getElementById('cpf-reu').value, telefone: document.getElementById('telefone-reu').value,
+        cep: document.getElementById('cep-reu').value, rua: document.getElementById('rua-reu').value,
+        numero: document.getElementById('numero-reu').value, bairro: document.getElementById('bairro-reu').value,
+        cidade: document.getElementById('cidade-reu').value, uf: document.getElementById('estado-reu').value,
+        empresa: document.getElementById('empresa-reu')?.value || '',
+        enderecoTrabalho: document.getElementById('endereco-trabalho-reu')?.value || ''
+    };
 }
 
-function handleBack() { checklistView.classList.add('hidden'); checklistView.classList.remove('flex'); actionSelectionView.classList.remove('hidden'); }
-function handleActionSearch(e) { const term = normalizeTextLocal(e.target.value); actionSelectionView.querySelectorAll('.action-grid button').forEach(btn => btn.style.display = normalizeTextLocal(btn.textContent).includes(term) ? 'block' : 'none'); }
-function handleSearch(e) { const term = normalizeTextLocal(e.target.value); checklistContainer.querySelectorAll('ul li').forEach(li => li.style.display = normalizeTextLocal(li.textContent).includes(term) ? 'block' : 'none'); }
-function closeModal() { modal.classList.add('hidden'); }
-
-// --- 9. PDF ---
-async function handleGeneratePdf() {
-    if (printChecklistBtn) printChecklistBtn.textContent = "Gerando...";
-    
-    // ATUALIZA STATUS PARA "PDF"
-    await updateVisualStatus('pdf');
-
-    const { jsPDF } = window.jspdf || await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-    const doc = new jsPDF(); const pageWidth = doc.internal.pageSize.getWidth(); const pageHeight = doc.internal.pageSize.getHeight(); let y = 20;
-    doc.setFontSize(14); doc.setFont("helvetica", "bold"); doc.text("Checklist de Atendimento", pageWidth / 2, y, { align: "center" }); y += 15;
-    doc.setFontSize(11); doc.setFont("helvetica", "normal"); doc.text(`Assistido(a): ${assistedNameEl.textContent}`, 15, y); y += 7;
-    doc.text(`Ação: ${checklistTitle.textContent}`, 15, y); y += 15;
-    doc.setFont("helvetica", "bold"); doc.text("Documentos Entregues:", 15, y); y += 8;
-    doc.setFont("helvetica", "normal"); doc.setFontSize(10);
-    const checked = checklistContainer.querySelectorAll('.doc-checkbox:checked');
-    if (checked.length > 0) { checked.forEach(cb => { const text = cb.nextElementSibling.textContent.trim(); const radio = document.querySelector(`input[name="type-${cb.id}"]:checked`); const typeStr = radio ? ` [${radio.value}]` : ''; const lines = doc.splitTextToSize(`- ${text}${typeStr}`, pageWidth - 30); if (y + (lines.length * 4) > pageHeight - 20) { doc.addPage(); y = 20; } doc.text(lines, 20, y); y += lines.length * 4.5; }); } 
-    else { doc.text("- Nenhum documento marcado.", 20, y); y += 7; }
-    const expenses = getExpenseData(); const shouldPrint = ACTIONS_ALWAYS_EXPENSES.includes(currentChecklistAction) || (ACTIONS_CONDITIONAL_EXPENSES.includes(currentChecklistAction) && document.getElementById('check-has-minors')?.checked);
-    if (shouldPrint && expenses && Object.values(expenses).some(v => v)) { y += 8; if (y > pageHeight - 120) { doc.addPage(); y = 20; } doc.setLineWidth(0.5); doc.line(15, y, pageWidth - 15, y); y += 10; doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.text("Planilha de Despesas (Criança)", 15, y); y += 8; doc.setFont("helvetica", "normal"); doc.setFontSize(9); let total = 0; EXPENSE_CATEGORIES.forEach(cat => { const valStr = expenses[cat.id]; if (valStr) { doc.text(`${cat.label}`, 20, y); doc.text(`${valStr}`, pageWidth - 30, y, { align: 'right' }); y += 4; doc.setLineWidth(0.1); doc.setDrawColor(200); doc.line(40, y, pageWidth - 40, y); doc.setDrawColor(0); y += 8; total += parseCurrency(valStr); if (y > pageHeight - 30) { doc.addPage(); y = 20; } } }); y += 4; doc.setFont("helvetica", "bold"); doc.text("TOTAL MENSAL:", 20, y); doc.text(formatCurrency(total), pageWidth - 30, y, { align: 'right' }); y += 10; }
-    y += 8; if (y > pageHeight - 40) { doc.addPage(); y = 20; }
-    doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.text("Status / Observações:", 15, y); y += 6;
-    doc.setFont("helvetica", "normal"); doc.setFontSize(9); checklistContainer.querySelectorAll('.obs-opt:checked').forEach(cb => { doc.text(`[X] ${cb.value}`, 20, y); y += 5; });
-    const other = document.getElementById('text-other'); if (other && !other.classList.contains('hidden') && other.value) { const lines = doc.splitTextToSize(`Obs: ${other.value}`, pageWidth - 30); doc.text(lines, 20, y); y += lines.length * 4.5; }
-    const reuData = getReuData();
-    if (reuData) { y += 10; if (y > pageHeight - 80) { doc.addPage(); y = 20; } doc.setLineWidth(0.5); doc.line(15, y, pageWidth - 15, y); y += 10; doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Dados da Parte Contrária (Réu)", 15, y); y += 8; doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.text(`Nome: ${reuData.nome}`, 20, y); y += 5; doc.text(`CPF: ${reuData.cpf}   RG: ${reuData.rg}   Tel: ${reuData.telefone}`, 20, y); y += 5; if (reuData.email) { doc.text(`E-mail: ${reuData.email}`, 20, y); y += 5; } let end = [reuData.rua, reuData.numero, reuData.bairro, reuData.cidade, reuData.uf].filter(Boolean).join(', '); if (reuData.cep) end += ` (CEP: ${reuData.cep})`; if (end.length > 5) { const lines = doc.splitTextToSize(`Endereço: ${end}`, pageWidth - 40); doc.text(lines, 20, y); y += lines.length * 4.5; } }
-    doc.save(`Checklist_${normalizeTextLocal(assistedNameEl.textContent).replace(/\s+/g, '_')}.pdf`);
-    if (printChecklistBtn) printChecklistBtn.textContent = "Baixar PDF";
+function getExpenseData() {
+    const data = {};
+    EXPENSE_CATEGORIES.forEach(c => { data[c.id] = document.getElementById(`expense-${c.id}`)?.value || ''; });
+    return data;
 }
 
-// --- 10. EXPORTS ---
+function fillReuData(d) {
+    const s = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+    s('nome-reu', d.nome); s('cpf-reu', d.cpf); s('telefone-reu', d.telefone); s('cep-reu', d.cep); s('rua-reu', d.rua);
+    s('numero-reu', d.numero); s('bairro-reu', d.bairro); s('cidade-reu', d.cidade); s('estado-reu', d.uf);
+    s('empresa-reu', d.empresa); s('endereco-trabalho-reu', d.enderecoTrabalho);
+}
+
+function fillExpenseData(d) {
+    EXPENSE_CATEGORIES.forEach(c => { const el = document.getElementById(`expense-${c.id}`); if (el) el.value = d[c.id] || ''; });
+    let total = 0;
+    document.querySelectorAll('.expense-input').forEach(i => total += parseCurrency(i.value));
+    document.getElementById('expense-total').textContent = formatCurrency(total);
+}
+
+// --- 6. EXPORTS ---
+
 export function setupDetailsModal(config) {
     db = config.db; getUpdatePayload = config.getUpdatePayload; showNotification = config.showNotification;
-    actionSelectionView.addEventListener('click', handleActionSelect);
-    backToActionSelectionBtn.addEventListener('click', handleBack);
+    actionSelectionView.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const key = btn.dataset.action;
+        await updateVisualStatus('selected', documentsData[key].title);
+        renderChecklist(key);
+        actionSelectionView.classList.add('hidden');
+        checklistView.classList.remove('hidden');
+        checklistView.classList.add('flex');
+    });
+    backToActionSelectionBtn.addEventListener('click', () => {
+        checklistView.classList.add('hidden');
+        actionSelectionView.classList.remove('hidden');
+    });
     saveChecklistBtn.addEventListener('click', handleSave);
-    checklistSearch.addEventListener('input', handleSearch);
-    closeBtn.addEventListener('click', closeModal);
-    cancelBtn.addEventListener('click', closeModal);
-    if (printChecklistBtn) printChecklistBtn.addEventListener('click', handleGeneratePdf);
+    checklistSearch.addEventListener('input', (e) => {
+        const term = normalizeTextLocal(e.target.value);
+        checklistContainer.querySelectorAll('ul li').forEach(li => {
+            li.style.display = normalizeTextLocal(li.textContent).includes(term) ? 'block' : 'none';
+        });
+    });
+    closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+    cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
 }
 
 export function openDetailsModal(config) {
-    populateActionSelection();
-    currentAssistedId = config.assistedId; currentPautaId = config.pautaId; allAssisted = config.allAssisted;
-    const assisted = allAssisted.find(a => a.id === currentAssistedId); if (!assisted) return;
+    currentAssistedId = config.assistedId; 
+    currentPautaId = config.pautaId; 
+    allAssisted = config.allAssisted;
+    
+    const assisted = allAssisted.find(a => a.id === currentAssistedId); 
+    if (!assisted) return;
+
     assistedNameEl.textContent = assisted.name;
-    if (assisted.documentChecklist?.action) { renderChecklist(assisted.documentChecklist.action); actionSelectionView.classList.add('hidden'); checklistView.classList.remove('hidden'); checklistView.classList.add('flex'); } 
-    else { handleBack(); }
+    
+    // Limpa a grid de seleção
+    actionSelectionView.innerHTML = '';
+    const search = document.createElement('input');
+    search.placeholder = "Pesquisar assunto...";
+    search.className = "w-full p-3 border rounded-xl mb-6 shadow-sm focus:ring-2 focus:ring-green-500 outline-none transition-all";
+    search.addEventListener('input', (e) => {
+        const term = normalizeTextLocal(e.target.value);
+        document.querySelectorAll('.action-grid button').forEach(b => {
+            b.style.display = normalizeTextLocal(b.textContent).includes(term) ? 'block' : 'none';
+        });
+    });
+    actionSelectionView.appendChild(search);
+    
+    const grid = document.createElement('div');
+    grid.className = "grid grid-cols-1 md:grid-cols-2 gap-4 action-grid";
+    Object.keys(documentsData).forEach(k => {
+        const btn = document.createElement('button');
+        btn.dataset.action = k;
+        btn.className = "text-left p-4 bg-white border-2 border-gray-100 hover:border-green-500 hover:bg-green-50 rounded-xl transition-all shadow-sm group";
+        btn.innerHTML = `<div class="flex justify-between items-center"><span class="font-bold text-gray-700 group-hover:text-green-700">${documentsData[k].title}</span><svg class="w-5 h-5 text-gray-300 group-hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-width="3"></path></svg></div>`;
+        grid.appendChild(btn);
+    });
+    actionSelectionView.appendChild(grid);
+
+    if (assisted.documentChecklist?.action) {
+        renderChecklist(assisted.documentChecklist.action);
+        actionSelectionView.classList.add('hidden');
+        checklistView.classList.remove('hidden');
+        checklistView.classList.add('flex');
+    } else {
+        checklistView.classList.add('hidden');
+        actionSelectionView.classList.remove('hidden');
+    }
     modal.classList.remove('hidden');
 }
