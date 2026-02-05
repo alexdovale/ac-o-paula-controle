@@ -1204,17 +1204,44 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
         </div>
     </div>
-    <div id="priority-reason-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-            <h2 class="text-2xl font-bold mb-4">Atendimento Prioritário</h2>
-            <p class="mb-4 text-gray-600">Por favor, informe o motivo da prioridade.</p>
-            <textarea id="priority-reason-input" placeholder="Motivo..." class="w-full p-3 border border-gray-300 rounded-lg mb-6 h-24"></textarea>
+    <!-- Modal de Atendimento Prioritário Atualizado -->
+    <div id="priority-reason-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border-t-8 border-red-600">
+            <h2 class="text-2xl font-bold mb-2 text-gray-800">Atendimento Prioritário</h2>
+            <p class="mb-6 text-sm text-gray-500">Selecione uma ou mais categorias de prioridade legal:</p>
+            
+            <!-- Grid de Botões de Seleção -->
+            <div id="priority-types-grid" class="grid grid-cols-2 gap-2 mb-6">
+                <button type="button" data-value="Idoso (60+)" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">👴 Idoso (60+)</button>
+                <button type="button" data-value="Idoso (80+)" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">🎖️ Idoso (80+)</button>
+                <button type="button" data-value="Deficiência (PCD)" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">♿ Deficiência</button>
+                <button type="button" data-value="Autismo (TEA)" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">🧩 Autismo</button>
+                <button type="button" data-value="Gestante" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">🤰 Gestante</button>
+                <button type="button" data-value="Criança de Colo" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">👶 Criança de Colo</button>
+                <button type="button" data-value="Obesidade" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">⚖️ Obesidade</button>
+                <button type="button" data-value="Urgência Médica" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">🚑 Urgência Médica</button>
+            </div>
+    
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Outros / Observações:</label>
+            <textarea id="priority-reason-input" placeholder="Ex: Advogado com prazo, viagem agendada..." class="w-full p-3 border border-gray-300 rounded-lg mb-6 h-20 text-sm"></textarea>
+            
             <div class="flex justify-end space-x-4">
-                <button id="cancel-priority-reason-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
-                <button id="confirm-priority-reason-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">Confirmar Prioridade</button>
+                <button id="cancel-priority-reason-btn" class="bg-gray-200 text-gray-700 font-bold py-2 px-6 rounded-lg hover:bg-gray-300 transition">Cancelar</button>
+                <button id="confirm-priority-reason-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 transition shadow-lg">Confirmar Prioridade</button>
             </div>
         </div>
     </div>
+    
+    <style>
+        /* Estilo para quando o botão de prioridade estiver selecionado */
+        .p-chip.selected {
+            background-color: #fee2e2; /* Red 100 */
+            border-color: #ef4444;    /* Red 500 */
+            color: #b91c1c;           /* Red 700 */
+            transform: scale(1.05);
+        }
+    </style>
+
      <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 80vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -4394,6 +4421,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
