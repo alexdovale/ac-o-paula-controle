@@ -1,6 +1,6 @@
 /**
  * detalhes.js - SIGAP
- * Versão Ultra-Robusta (Previne erros de null / classList)
+ * Gerencia o modal de detalhes, checklists, dados do Réu com CEP e Planilha de Despesas.
  */
 
 import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -25,7 +25,6 @@ const EXPENSE_CATEGORIES = [
 // --- 2. ESTADO GLOBAL ---
 let currentAssistedId = null, currentPautaId = null, db = null, showNotification = null, allAssisted = [], currentChecklistAction = null;
 
-// Função de segurança para capturar elementos sem dar erro de 'null'
 const getEl = (id) => document.getElementById(id);
 
 // --- 3. UTILITÁRIOS ---
@@ -39,23 +38,52 @@ async function updateVisualStatus(state, actionTitle = null) {
     const updateData = { documentState: state };
     if (state === null) { updateData.selectedAction = null; updateData.documentState = null; }
     else if (actionTitle) { updateData.selectedAction = actionTitle; }
-    try { await updateDoc(docRef, updateData); } catch(e) { console.error("Erro status visual:", e); }
+    try { await updateDoc(docRef, updateData); } catch(e) { console.error(e); }
 }
 
-// --- 4. NAVEGAÇÃO ---
-function handleBack() {
-    const view = getEl('document-checklist-view');
-    const header = getEl('document-checklist-view-header');
-    const search = getEl('checklist-search-container');
-    const selection = getEl('document-action-selection');
+// --- 4. FORMULÁRIO DO RÉU COM BUSCA DE CEP ---
+function renderReuForm() {
+    const container = getEl('address-editor-container');
+    if (!container) return;
 
-    if (view) view.classList.add('hidden');
-    if (header) header.classList.add('hidden');
-    if (search) search.classList.add('hidden');
-    if (selection) selection.classList.remove('hidden');
+    container.innerHTML = `
+        <div class="p-6 bg-blue-50 border-2 border-blue-200 rounded-2xl shadow-sm">
+            <h3 class="text-xs font-black text-blue-600 mb-4 uppercase flex items-center gap-2">📍 DADOS DA PARTE CONTRÁRIA (RÉU)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="col-span-2"><label class="text-[9px] font-black text-gray-400 uppercase">Nome Completo</label><input type="text" id="nome-reu" class="w-full p-2 border rounded-lg bg-white"></div>
+                <div><label class="text-[9px] font-black text-gray-400 uppercase">CPF</label><input type="text" id="cpf-reu" class="w-full p-2 border rounded-lg bg-white"></div>
+                <div><label class="text-[9px] font-black text-gray-400 uppercase">WhatsApp</label><input type="text" id="telefone-reu" class="w-full p-2 border rounded-lg bg-white"></div>
+            </div>
+            <div class="mt-4 grid grid-cols-3 gap-2">
+                <div><label class="text-[9px] font-black text-blue-500 uppercase font-bold">CEP (Busca Auto)</label><input type="text" id="cep-reu" maxlength="9" placeholder="00000-000" class="w-full p-2 border-2 border-blue-300 rounded-lg bg-white font-bold text-blue-700"></div>
+                <div class="col-span-2"><label class="text-[9px] font-black text-gray-400 uppercase">Rua</label><input type="text" id="rua-reu" class="w-full p-2 border rounded-lg bg-white"></div>
+                <div><label class="text-[9px] font-black text-gray-400 uppercase">Nº</label><input type="text" id="numero-reu" class="w-full p-2 border rounded-lg bg-white"></div>
+                <div class="col-span-2"><label class="text-[9px] font-black text-gray-400 uppercase">Bairro</label><input type="text" id="bairro-reu" class="w-full p-2 border rounded-lg bg-white"></div>
+                <div class="col-span-2"><label class="text-[9px] font-black text-gray-400 uppercase">Cidade</label><input type="text" id="cidade-reu" class="w-full p-2 border rounded-lg bg-white"></div>
+                <div><label class="text-[9px] font-black text-gray-400 uppercase">UF</label><input type="text" id="estado-reu" class="w-full p-2 border rounded-lg bg-white text-center"></div>
+            </div>
+        </div>`;
+
+    // Lógica ViaCEP
+    const cepInp = getEl('cep-reu');
+    if (cepInp) {
+        cepInp.onblur = async () => {
+            const val = cepInp.value.replace(/\D/g, '');
+            if (val.length === 8) {
+                const r = await fetch(`https://viacep.com.br/ws/${val}/json/`).then(res => res.json());
+                if (!r.erro) {
+                    getEl('rua-reu').value = r.logradouro;
+                    getEl('bairro-reu').value = r.bairro;
+                    getEl('cidade-reu').value = r.localidade;
+                    getEl('estado-reu').value = r.uf;
+                    getEl('numero-reu').focus();
+                }
+            }
+        };
+    }
 }
 
-// --- 5. RENDERIZAÇÃO ---
+// --- 5. RENDERIZAÇÃO DO CHECKLIST ---
 function renderChecklist(actionKey) {
     currentChecklistAction = actionKey;
     const data = documentsData[actionKey];
@@ -64,15 +92,10 @@ function renderChecklist(actionKey) {
     const assisted = allAssisted.find(a => a.id === currentAssistedId);
     const saved = assisted?.documentChecklist;
 
-    const titleEl = getEl('checklist-title');
-    const containerEl = getEl('checklist-container');
-    const headerEl = getEl('document-checklist-view-header');
-    const searchEl = getEl('checklist-search-container');
-
-    if (titleEl) titleEl.textContent = data.title;
-    if (headerEl) headerEl.classList.remove('hidden');
-    if (searchEl) searchEl.classList.remove('hidden');
-    if (containerEl) containerEl.innerHTML = '';
+    if (getEl('checklist-title')) getEl('checklist-title').textContent = data.title;
+    if (getEl('document-checklist-view-header')) getEl('document-checklist-view-header').classList.remove('hidden');
+    if (getEl('checklist-search-container')) getEl('checklist-search-container').classList.remove('hidden');
+    if (getEl('checklist-container')) getEl('checklist-container').innerHTML = '';
 
     data.sections.forEach((section, sIdx) => {
         const sectionDiv = document.createElement('div');
@@ -86,7 +109,6 @@ function renderChecklist(actionKey) {
             const docText = typeof docItem === 'string' ? docItem : docItem.text;
             const id = `doc-${actionKey}-${sIdx}-${dIdx}`;
             const isChecked = saved?.checkedIds?.includes(id) ? 'checked' : '';
-            const savedType = saved?.docTypes ? saved.docTypes[id] : '';
 
             li.innerHTML = `
                 <div class="flex flex-col border-b border-gray-50 pb-1">
@@ -94,65 +116,61 @@ function renderChecklist(actionKey) {
                         <input type="checkbox" id="${id}" class="doc-checkbox h-5 w-5 text-green-600 rounded border-gray-300" ${isChecked}>
                         <span class="text-sm text-gray-700 font-medium">${docText}</span>
                     </label>
-                    <div id="type-${id}" class="ml-10 mt-1 flex gap-4 ${isChecked ? '' : 'hidden'}">
-                        <label class="text-[10px] text-gray-500 cursor-pointer"><input type="radio" name="type-${id}" value="Físico" ${savedType === 'Físico' ? 'checked' : ''}> FÍSICO</label>
-                        <label class="text-[10px] text-gray-500 cursor-pointer"><input type="radio" name="type-${id}" value="Digital" ${savedType === 'Digital' ? 'checked' : ''}> DIGITAL</label>
-                    </div>
                 </div>`;
             ul.appendChild(li);
         });
         sectionDiv.appendChild(ul);
-        if (containerEl) containerEl.appendChild(sectionDiv);
+        if (getEl('checklist-container')) getEl('checklist-container').appendChild(sectionDiv);
     });
 
+    // Gatilho do Formulário do Réu
     const checkReuVisibility = () => {
         const checkedLabels = Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.closest('label').textContent);
         const needsReu = checkedLabels.some(txt => txt.includes('Endereço') || txt.includes('Trabalho'));
-        const reuContainer = getEl('address-editor-container');
-        if (reuContainer) reuContainer.classList.toggle('hidden', !needsReu);
+        if (getEl('address-editor-container')) getEl('address-editor-container').classList.toggle('hidden', !needsReu);
     };
 
+    renderReuForm(); // Cria o formulário
+    if (saved?.reuData) fillReuData(saved.reuData); // Popula dados se existirem
+    checkReuVisibility(); // Verifica se deve mostrar agora
+
     document.querySelectorAll('.doc-checkbox').forEach(cb => {
-        cb.onchange = (e) => {
-            const t = getEl(`type-${e.target.id}`);
-            if (t) t.classList.toggle('hidden', !e.target.checked);
+        cb.onchange = () => {
             checkReuVisibility();
-            if (containerEl) containerEl.dispatchEvent(new Event('change', { bubbles: true }));
+            if (getEl('checklist-container')) getEl('checklist-container').dispatchEvent(new Event('change', { bubbles: true }));
             updateVisualStatus('filling');
         };
     });
-
-    if (saved?.reuData) fillReuData(saved.reuData);
-    checkReuVisibility();
 }
 
-// --- 6. FORMULÁRIO RÉU (CEP) ---
-function fillReuData(d) {
-    const s = (id, v) => { const el = getEl(id); if (el) el.value = v || ''; };
-    s('nome-reu', d.nome); s('cep-reu', d.cep); s('rua-reu', d.rua); s('bairro-reu', d.bairro);
-}
-
-// --- 7. SALVAMENTO E PDF ---
+// --- 6. SALVAMENTO E AÇÕES ---
 async function handleSave() {
     if (!currentAssistedId) return;
     const container = getEl('checklist-container');
     if (!container) return;
 
     const checkedIds = Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id);
-    const docTypes = {};
-    checkedIds.forEach(id => { docTypes[id] = document.querySelector(`input[name="type-${id}"]:checked`)?.value || 'Físico'; });
+    
+    // Coleta dados do Réu
+    const reuData = {
+        nome: getEl('nome-reu')?.value || '',
+        cpf: getEl('cpf-reu')?.value || '',
+        telefone: getEl('telefone-reu')?.value || '',
+        cep: getEl('cep-reu')?.value || '',
+        rua: getEl('rua-reu')?.value || '',
+        numero: getEl('numero-reu')?.value || '',
+        bairro: getEl('bairro-reu')?.value || '',
+        cidade: getEl('cidade-reu')?.value || '',
+        uf: getEl('estado-reu')?.value || ''
+    };
 
     const payload = {
-        documentChecklist: {
-            action: currentChecklistAction,
-            checkedIds, docTypes,
-            reuData: { nome: getEl('nome-reu')?.value || '', cep: getEl('cep-reu')?.value || '' }
-        },
+        documentChecklist: { action: currentChecklistAction, checkedIds, reuData },
         documentState: 'saved'
     };
 
     await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), payload);
-    if (showNotification) showNotification("Salvo!");
+    if (showNotification) showNotification("Progresso salvo!");
     if (getEl('documents-modal')) getEl('documents-modal').classList.add('hidden');
 }
 
@@ -160,18 +178,21 @@ async function handlePdf() {
     await updateVisualStatus('pdf');
     const { jsPDF } = window.jspdf;
     const docPDF = new jsPDF();
-    docPDF.text("Checklist SIGAP", 10, 10);
-    docPDF.save("Checklist.pdf");
+    docPDF.setFontSize(14);
+    docPDF.text(`Checklist - ${assistedNameEl.textContent}`, 15, 20);
+    docPDF.save("Checklist_SIGAP.pdf");
 }
 
 async function handleReset() {
-    if (!confirm("Resetar seleção?")) return;
+    if (!confirm("Isso apagará o checklist e os dados do réu. Continuar?")) return;
     await updateVisualStatus(null);
     await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), { documentChecklist: null });
-    handleBack();
+    if (getEl('document-checklist-view')) getEl('document-checklist-view').classList.add('hidden');
+    if (getEl('document-checklist-view-header')) getEl('document-checklist-view-header').classList.add('hidden');
+    if (getEl('document-action-selection')) getEl('document-action-selection').classList.remove('hidden');
 }
 
-// --- 8. EXPORTS ---
+// --- 7. EXPORTS ---
 export function setupDetailsModal(config) {
     db = config.db; showNotification = config.showNotification;
     
@@ -187,7 +208,12 @@ export function setupDetailsModal(config) {
         };
     }
 
-    if (getEl('back-to-action-selection-btn')) getEl('back-to-action-selection-btn').onclick = handleBack;
+    if (getEl('back-to-action-selection-btn')) getEl('back-to-action-selection-btn').onclick = () => {
+        if (getEl('document-checklist-view')) getEl('document-checklist-view').classList.add('hidden');
+        if (getEl('document-checklist-view-header')) getEl('document-checklist-view-header').classList.add('hidden');
+        if (getEl('document-action-selection')) getEl('document-action-selection').classList.remove('hidden');
+    };
+
     if (getEl('save-checklist-btn')) getEl('save-checklist-btn').onclick = handleSave;
     if (getEl('print-checklist-btn')) getEl('print-checklist-btn').onclick = handlePdf;
     if (getEl('reset-checklist-btn')) getEl('reset-checklist-btn').onclick = handleReset;
@@ -207,7 +233,7 @@ export function openDetailsModal(config) {
         Object.keys(documentsData).forEach(k => {
             const btn = document.createElement('button');
             btn.dataset.action = k;
-            btn.className = "text-left p-4 bg-white border-2 border-gray-100 hover:border-green-500 rounded-xl transition-all shadow-sm";
+            btn.className = "text-left p-4 bg-white border-2 border-gray-100 hover:border-green-500 rounded-xl transition-all shadow-sm group";
             btn.innerHTML = `<span class="font-bold text-gray-700 uppercase text-xs">${documentsData[k].title}</span>`;
             grid.appendChild(btn);
         });
@@ -218,7 +244,9 @@ export function openDetailsModal(config) {
         if (selectionArea) selectionArea.classList.add('hidden');
         if (getEl('document-checklist-view')) getEl('document-checklist-view').classList.remove('hidden');
     } else {
-        handleBack();
+        if (getEl('document-checklist-view')) getEl('document-checklist-view').classList.add('hidden');
+        if (getEl('document-checklist-view-header')) getEl('document-checklist-view-header').classList.add('hidden');
+        if (selectionArea) selectionArea.classList.remove('hidden');
     }
     if (getEl('documents-modal')) getEl('documents-modal').classList.remove('hidden');
 }
