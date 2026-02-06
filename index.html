@@ -2357,102 +2357,20 @@ render(atendidosList, atendidos, a => {
             });
         }
 
-// --- LÓGICA DE ORDENAÇÃO ---
-window.sortColaboradores = (criterio) => {
-    const cargoPrioridade = { "Defensor(a)": 1, "Servidor(a)": 2, "CRC": 3, "Residente": 4, "Estagiário(a)": 5 };
-
-    // Dentro da lógica de ordenação por EQUIPE:
-    colaboradores.sort((a, b) => {
-        // 1. Primeiro separa por número de equipe (1, 2, 3...)
-        if (a.equipe !== b.equipe) return a.equipe - b.equipe;
-    
-        // 2. Se for a mesma equipe, olha o Cargo
-        const pesos = { "Defensor(a)": 1, "Servidor(a)": 2, "CRC": 3, "Residente": 4, "Estagiário(a)": 5 };
-        const pesoA = pesos[a.cargo] || 99;
-        const pesoB = pesos[b.cargo] || 99;
-    
-        if (pesoA !== pesoB) return pesoA - pesoB;
-    
-        // 3. Se até o cargo for igual, ordena por nome (A-Z)
-        return a.nome.localeCompare(b.nome);
-    });
-    renderColaboradores(); // Recarrega a tabela com a nova ordem
-};
-
-    // --- RENDERIZAÇÃO DA TABELA CORRIGIDA ---
-    function renderColaboradores() {
-        const tableBody = document.querySelector('#collaborators-list-table-modal tbody');
-        if (!tableBody) return;
-        tableBody.innerHTML = '';
-    
-        let selfTransport = 0;
-        let companyTransport = 0;
-    
-        colaboradores.forEach((colab) => {
-            if (colab.transporte === 'Meios Próprios') selfTransport++;
-            if (colab.transporte === 'Com a Empresa') companyTransport++;
-    
-            const row = document.createElement('tr');
-            row.className = "border-b hover:bg-gray-50 transition-colors";
-    
-            row.innerHTML = `
-                <td class="p-3 font-bold text-gray-800">${escapeHTML(colab.nome)}</td>
-                <td class="p-3 text-center">
-                    <input type="checkbox" class="checkin-checkbox w-5 h-5 text-green-600 rounded" 
-                    data-id="${colab.id}" ${colab.presente ? 'checked' : ''} ${isPautaClosed ? 'disabled' : ''}>
-                </td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full bg-gray-100 text-[10px] font-bold">${escapeHTML(colab.cargo || 'N/A')}</span></td>
-                <td class="p-3"><span class="font-black text-blue-600">EQP ${colab.equipe || '?'}</span></td>
-                <td class="p-3 text-gray-400 font-mono">${colab.horario || '--:--'}</td>
-                <td class="p-3 text-[10px]">${escapeHTML(colab.transporte || 'Não Conf.')}</td>
-                <td class="p-3 text-center">
-                    <a href="https://wa.me/55${colab.telefone?.replace(/\D/g, '')}" target="_blank" class="text-blue-500 hover:text-blue-700 font-bold">Mensagem</a>
-                </td>
-                <td class="p-3 text-center flex justify-center gap-2">
-                    <button class="edit-collaborator-btn text-gray-400 hover:text-blue-600" data-id="${colab.id}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/></svg>
-                    </button>
-                    <button class="delete-collaborator-btn text-gray-400 hover:text-red-600" data-id="${colab.id}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
-                    </button>
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
-    
-           // --- ATUALIZAÇÃO SEGURA DAS ESTATÍSTICAS (SEM ERRO DE GETEL) ---
-        const totalP = document.getElementById('total-participants-count');
-        if (totalP) totalP.textContent = colaboradores.length;
-    
-        const selfT = document.getElementById('self-transport-count');
-        if (selfT) selfT.textContent = selfTransport;
-    
-        const compT = document.getElementById('company-transport-count');
-        if (compT) compT.textContent = companyTransport;
-    
-        // Garante que os botões de editar e excluir funcionem
-        if (typeof addEventListenersToModalListActions === 'function') {
-            addEventListenersToModalListActions();
-        } 
-    }
-
-// --- LÓGICA DE COLABORADORES (VERSÃO DEFINITIVA) ---
-
-        // 1. Resetar Formulário
 // ================================================================
-// --- LÓGICA DE EQUIPE (VERSÃO ÚNICA - SEM DUPLICIDADE) ---
-// ================================================================
+        // --- LÓGICA DE EQUIPE (SISTEMA DE COLABORADORES - VERSÃO FINAL) ---
+        // ================================================================
 
-        // 1. Resetar Formulário com Segurança
+        // 1. Limpar Formulário
         function resetCollaboratorFormModal() {
             const form = document.getElementById('collaborator-form-modal');
             if (form) form.reset();
             editCollaboratorId = null;
             const btn = document.getElementById('add-collaborator-btn-modal');
-            if (btn) btn.textContent = "Salvar na Lista";
+            if (btn) btn.textContent = "Salvar Membro";
         }
-        
-        // 2. Ordenação (Hierarquia: Defensor -> Servidor -> CRC -> Estagiário)
+
+        // 2. Ordenação Inteligente (Time -> Defensor no Topo -> Nome)
         window.sortColaboradores = (criterio) => {
             const pesos = { "Defensor(a)": 1, "Servidor(a)": 2, "CRC": 3, "Residente": 4, "Estagiário(a)": 5 };
             
@@ -2468,21 +2386,21 @@ window.sortColaboradores = (criterio) => {
             });
             renderColaboradores();
         };
-        
-        // 3. Renderizar Tabela (Apenas esta versão deve existir!)
+
+        // 3. Renderizar Tabela Organizada
         function renderColaboradores() {
             const tableBody = document.querySelector('#collaborators-list-table-modal tbody');
             if (!tableBody) return;
             tableBody.innerHTML = '';
             let selfT = 0, compT = 0;
-        
+
             colaboradores.forEach((colab) => {
                 if (colab.transporte === 'Meios Próprios') selfT++; else compT++;
                 const row = document.createElement('tr');
                 row.className = "border-b hover:bg-gray-50 transition-colors";
                 row.innerHTML = `
                     <td class="p-3 font-bold text-gray-800">${escapeHTML(colab.nome)}</td>
-                    <td class="p-3 text-center"><input type="checkbox" class="checkin-checkbox w-5 h-5 text-green-600" data-id="${colab.id}" ${colab.presente ? 'checked' : ''}></td>
+                    <td class="p-3 text-center"><input type="checkbox" class="checkin-checkbox w-5 h-5 text-green-600 rounded" data-id="${colab.id}" ${colab.presente ? 'checked' : ''}></td>
                     <td class="p-3 text-[10px]"><b>${colab.cargo}</b><br><span class="text-blue-600 font-black uppercase">EQP ${colab.equipe}</span></td>
                     <td class="p-3 font-mono text-[10px] text-gray-400">${colab.horario || '--:--'}</td>
                     <td class="p-3 text-center flex justify-center gap-3">
@@ -2492,23 +2410,21 @@ window.sortColaboradores = (criterio) => {
                 `;
                 tableBody.appendChild(row);
             });
-        
-            // Atualiza contadores com verificação de segurança
+
+            // Atualiza contadores com segurança
             const elTotal = document.getElementById('total-participants-count');
             const elSelf = document.getElementById('self-transport-count');
             const elComp = document.getElementById('company-transport-count');
-            
             if (elTotal) elTotal.textContent = colaboradores.length;
             if (elSelf) elSelf.textContent = selfT;
             if (elComp) elComp.textContent = compT;
-        
+
             addEventListenersToModalListActions();
         }
-        
-        // 4. Salvar Colaborador (Escutador Único)
+
+        // 4. Salvar Colaborador (Cadastro/Edição)
         const colabFormElement = document.getElementById('collaborator-form-modal');
         if (colabFormElement) {
-            // Removemos qualquer listener anterior para não duplicar
             colabFormElement.onsubmit = async (e) => {
                 e.preventDefault();
                 const nome = document.getElementById('collaborator-name-modal').value.trim();
@@ -2516,11 +2432,11 @@ window.sortColaboradores = (criterio) => {
                 const equipe = document.getElementById('collaborator-team-modal').value;
                 const email = document.getElementById('collaborator-email-modal')?.value || '';
                 const telefone = document.getElementById('collaborator-phone-modal')?.value || '';
-                const transporteEl = colabFormElement.querySelector('input[name="transporte-colaborador"]:checked');
-                const transporte = transporteEl ? transporteEl.value : 'Meios Próprios';
-        
+                const transpEl = colabFormElement.querySelector('input[name="transporte-colaborador"]:checked');
+                const transporte = transpEl ? transpEl.value : 'Meios Próprios';
+
                 if (!nome) { showNotification("Nome obrigatório", "error"); return; }
-        
+
                 const data = { nome, cargo, equipe, email, telefone, transporte };
                 try {
                     const colRef = collection(db, "pautas", currentPautaId, "collaborators");
@@ -2532,117 +2448,52 @@ window.sortColaboradores = (criterio) => {
                         showNotification("Membro adicionado!");
                     }
                     resetCollaboratorFormModal();
-                } catch (error) { console.error(error); }
+                } catch (error) { console.error("Erro ao salvar:", error); }
             };
         }
-    
+
+        // 5. Escutadores da Tabela (Check, Editar, Excluir)
         function addEventListenersToModalListActions() {
             document.querySelectorAll('#collaborators-modal .checkin-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', async (e) => {
+                checkbox.onchange = async (e) => {
                     const docId = e.target.dataset.id;
                     const presente = e.target.checked;
                     const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-                    const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", docId);
-                    await updateDoc(collaboratorRef, { presente, horario });
-                });
+                    await updateDoc(doc(db, "pautas", currentPautaId, "collaborators", docId), { presente, horario });
+                };
             });
 
-            document.querySelectorAll('#collaborators-modal .edit-collaborator-btn').forEach(button => {
-                button.addEventListener('click', async (e) => {
+            document.querySelectorAll('#collaborators-modal .edit-collaborator-btn').forEach(btn => {
+                btn.onclick = async (e) => {
                     const docId = e.currentTarget.dataset.id;
-                    const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", docId);
-                    const docSnap = await getDoc(collaboratorRef);
-                    if (docSnap.exists()) {
-                       const colaborador = docSnap.data();
+                    const snap = await getDoc(doc(db, "pautas", currentPautaId, "collaborators", docId));
+                    if (snap.exists()) {
+                        const c = snap.data();
                         editCollaboratorId = docId;
-                        collaboratorNameModal.value = colaborador.nome;
-                        collaboratorEmailModal.value = colaborador.email || ''; // Preenche o campo de email
-                        collaboratorPhoneModal.value = colaborador.telefone;
-                        collaboratorObsModal.value = colaborador.observacao || '';
+                        document.getElementById('collaborator-name-modal').value = c.nome;
+                        document.getElementById('collaborator-role-modal').value = c.cargo;
+                        document.getElementById('collaborator-team-modal').value = c.equipe;
+                        document.getElementById('collaborator-phone-modal').value = c.telefone || '';
+                        if(document.getElementById('collaborator-email-modal')) document.getElementById('collaborator-email-modal').value = c.email || '';
                         
-                        // --- INÍCIO DA CORREÇÃO: PREENCHE CARGO E EQUIPE AO EDITAR ---
-                        const roleSelect = document.getElementById('collaborator-role-modal');
-                        if(roleSelect) roleSelect.value = colaborador.cargo || ''; 
-                        
-                        const teamSelect = document.getElementById('collaborator-team-modal');
-                        if(teamSelect) teamSelect.value = colaborador.equipe || '';
-                        // --- FIM DA CORREÇÃO ---
-                        
-                        const transporteRadio = document.querySelector(`input[name="transporte-colaborador"][value="${colaborador.transporte}"]`);
-                        if (transporteRadio) {
-                            transporteRadio.checked = true;
-                            transporteRadio.dispatchEvent(new Event('change'));
-                        }
+                        const rTransp = document.querySelector(`input[name="transporte-colaborador"][value="${c.transporte}"]`);
+                        if (rTransp) rTransp.checked = true;
 
-                        const localEncontroRadio = document.querySelector(`input[name="localEncontro-colaborador"][value="${colaborador.localEncontro}"]`);
-                        if (localEncontroRadio) {
-                            localEncontroRadio.checked = true;
-                            localEncontroRadio.dispatchEvent(new Event('change'));
-                        }
-
-                        collaboratorsModal.querySelector('h2').textContent = "Editar Colaborador"; // Update modal title if needed
-                        addCollaboratorBtnModal.textContent = "Salvar Alterações";
-                        collaboratorsModal.querySelector('.flex-grow.overflow-y-auto.pr-2').scrollTop = 0; // Scroll to top of form
+                        document.getElementById('add-collaborator-btn-modal').textContent = "Atualizar Membro";
+                        // Scroll automático para o topo (onde está o formulário) para facilitar no celular
+                        document.querySelector('#collaborators-modal .overflow-y-auto').scrollTo({ top: 0, behavior: 'smooth' });
                     }
-                });
+                };
             });
 
-            document.querySelectorAll('#collaborators-modal .delete-collaborator-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
+            document.querySelectorAll('#collaborators-modal .delete-collaborator-btn').forEach(btn => {
+                btn.onclick = (e) => {
                     const docId = e.currentTarget.dataset.id;
-                    // Usando o modal de confirmação existente no index.html
-                    showConfirmModal(() => {
-                        const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", docId);
-                        deleteDoc(collaboratorRef);
-                    }, `Tem certeza que deseja excluir este colaborador?`);
-                });
+                    if(confirm("Remover este membro?")) deleteDoc(doc(db, "pautas", currentPautaId, "collaborators", docId));
+                };
             });
         }
-        
-        // PDF Download for modal's lis
-        // Relatório de Assistidos
-        document.getElementById('download-pdf-btn').addEventListener('click', () => {
-            const atendidos = allAssisted.filter(a => a.status === 'atendido');
-            generateAtendidosPDF(document.getElementById('pauta-title').textContent, atendidos);
-        });
-        
-        // PDF da Equipe
-        downloadCollaboratorsPdfBtnModal.addEventListener('click', () => {
-        // 1. Pega quais colunas o usuário marcou
-        const selectedCols = Array.from(document.querySelectorAll('.pdf-col-check:checked'))
-                                  .map(cb => cb.value);
-    
-        if (selectedCols.length === 0) {
-            showNotification("Selecione pelo menos uma coluna para o PDF.", "error");
-            return;
-        }
-    
-        const pautaTitle = document.getElementById('pauta-title').textContent;
-    
-        // 2. Chama a função de gerar PDF passando as colunas escolhidas
-        // Certifique-se de que seu pdfService.js está pronto para receber 'selectedCols'
-        generateCollaboratorsPDF(pautaTitle, colaboradores, selectedCols);
-        
-        showNotification("Relatório gerado com as colunas selecionadas!");
-    });
-            
-        // Clear list for modal's list
-        clearCollaboratorsListBtnModal.addEventListener('click', () => {
-            // Usando o modal de confirmação existente no index.html
-            showConfirmModal(async () => {
-                const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
-                const snapshot = await getDocs(collaboratorsCollectionRef);
-                if (snapshot.empty) {
-                    showNotification("A lista já está limpa.", "info");
-                    return;
-                }
-                const batch = writeBatch(db);
-                snapshot.docs.forEach(doc => batch.delete(doc.ref));
-                await batch.commit();
-                resetCollaboratorFormModal();
-                showNotification("Lista de colaboradores limpa.", "success");
-            }, 'Tem certeza que deseja limpar toda a lista?<br>Esta ação não pode ser desfeita.');
-        });
+        // --- FIM DA LÓGICA DE COLABORADORES ---
         // --- FIM DA LÓGICA DE COLABORADORES ---
 
         const loadPauta = async (pautaId, pautaName, pautaType) => {
@@ -4553,6 +4404,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
