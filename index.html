@@ -1341,31 +1341,32 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </div>
 
     <!-- ***** INÍCIO DO HTML DO MODAL DE DETALHES ***** -->
-    <div id="documents-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl flex flex-col" style="max-height: 90vh;">
-            <div class="flex justify-between items-center mb-4 flex-shrink-0">
-                <h2 class="text-2xl font-bold text-gray-800">
-                    Detalhes para <span id="documents-assisted-name" class="text-green-600"></span>
-                </h2>
-                <button id="close-documents-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
-            </div>
-
-            <div id="document-action-selection" class="flex-grow overflow-y-auto scrollable-content pr-2">
-                <!-- O conteúdo será inserido aqui pelo detalhes.js -->
-            </div>
-
-            <div id="document-checklist-view" class="hidden flex-grow flex flex-col">
-                <div class="flex justify-between items-center mb-4 flex-shrink-0">
-                    <div class="flex items-center gap-4">
-                        <button id="back-to-action-selection-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar</button>
-                        <h3 id="checklist-title" class="text-xl font-bold text-gray-800"></h3>
-                    </div>
-                    <div class="flex space-x-4">
-                        <button id="cancel-checklist-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
-                        <button id="print-checklist-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">PDF</button>
-                        <button id="save-checklist-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar</button>
-                    </div>
+    <!-- Cabeçalho Principal (Nome do Assistido) -->
+        <div class="flex justify-between items-center p-3 border-b bg-gray-50 shrink-0">
+            <h2 class="text-sm sm:text-lg font-bold text-gray-800 truncate">
+                <span id="documents-assisted-name" class="text-green-600 uppercase"></span>
+            </h2>
+            <button id="close-documents-modal-btn" class="text-gray-400 text-3xl p-1">&times;</button>
+        </div>
+        
+        <!-- BARRA DE FERRAMENTAS RESPONSIVA -->
+        <div id="document-checklist-view-header" class="hidden p-2 bg-white border-b flex flex-col gap-2 shrink-0">
+            <!-- Linha 1: Voltar e Título -->
+            <div class="flex items-center gap-2">
+                <button id="back-to-action-selection-btn" class="bg-gray-100 border p-2 rounded-lg text-xs font-bold shrink-0">&larr;</button>
+                <div class="overflow-hidden">
+                    <h3 id="checklist-title" class="text-[10px] font-black text-gray-500 uppercase truncate"></h3>
+                    <span id="checklist-counter" class="text-[9px] font-bold text-blue-600">0 selecionados</span>
                 </div>
+            </div>
+        
+            <!-- Linha 2: Botões de Ação (No celular eles se ajustam em 3 colunas) -->
+            <div class="grid grid-cols-3 gap-1 w-full">
+                <button id="print-checklist-btn" class="bg-red-600 text-white font-bold py-2 rounded-lg text-[10px] uppercase shadow-sm">PDF</button>
+                <button id="reset-checklist-btn" class="bg-amber-500 text-white font-bold py-2 rounded-lg text-[10px] uppercase shadow-sm">Mudar</button>
+                <button id="save-checklist-btn" class="bg-green-600 text-white font-bold py-2 rounded-lg text-[10px] uppercase shadow-md">Salvar</button>
+            </div>
+        </div>
                  <div class="mb-4 flex-shrink-0">
                     <input type="search" id="checklist-search" placeholder="Pesquisar documento..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                 </div>
@@ -4489,4 +4490,5 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
