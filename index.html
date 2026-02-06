@@ -2439,14 +2439,20 @@ window.sortColaboradores = (criterio) => {
 // --- LÓGICA DE COLABORADORES (VERSÃO DEFINITIVA) ---
 
         // 1. Resetar Formulário
+// ================================================================
+// --- LÓGICA DE EQUIPE (VERSÃO ÚNICA - SEM DUPLICIDADE) ---
+// ================================================================
+
+        // 1. Resetar Formulário com Segurança
         function resetCollaboratorFormModal() {
             const form = document.getElementById('collaborator-form-modal');
             if (form) form.reset();
             editCollaboratorId = null;
-            document.getElementById('add-collaborator-btn-modal').textContent = "Salvar na Lista";
+            const btn = document.getElementById('add-collaborator-btn-modal');
+            if (btn) btn.textContent = "Salvar na Lista";
         }
         
-        // 2. Ordenação (Time -> Cargo -> Nome)
+        // 2. Ordenação (Hierarquia: Defensor -> Servidor -> CRC -> Estagiário)
         window.sortColaboradores = (criterio) => {
             const pesos = { "Defensor(a)": 1, "Servidor(a)": 2, "CRC": 3, "Residente": 4, "Estagiário(a)": 5 };
             
@@ -2463,7 +2469,7 @@ window.sortColaboradores = (criterio) => {
             renderColaboradores();
         };
         
-        // 3. Renderizar Tabela
+        // 3. Renderizar Tabela (Apenas esta versão deve existir!)
         function renderColaboradores() {
             const tableBody = document.querySelector('#collaborators-list-table-modal tbody');
             if (!tableBody) return;
@@ -2473,50 +2479,61 @@ window.sortColaboradores = (criterio) => {
             colaboradores.forEach((colab) => {
                 if (colab.transporte === 'Meios Próprios') selfT++; else compT++;
                 const row = document.createElement('tr');
-                row.className = "border-b hover:bg-gray-50";
+                row.className = "border-b hover:bg-gray-50 transition-colors";
                 row.innerHTML = `
                     <td class="p-3 font-bold text-gray-800">${escapeHTML(colab.nome)}</td>
                     <td class="p-3 text-center"><input type="checkbox" class="checkin-checkbox w-5 h-5 text-green-600" data-id="${colab.id}" ${colab.presente ? 'checked' : ''}></td>
-                    <td class="p-3 text-[10px]"><b>${colab.cargo}</b><br><span class="text-blue-600 font-black">EQP ${colab.equipe}</span></td>
+                    <td class="p-3 text-[10px]"><b>${colab.cargo}</b><br><span class="text-blue-600 font-black uppercase">EQP ${colab.equipe}</span></td>
                     <td class="p-3 font-mono text-[10px] text-gray-400">${colab.horario || '--:--'}</td>
                     <td class="p-3 text-center flex justify-center gap-3">
-                        <button class="edit-collaborator-btn text-blue-400" data-id="${colab.id}">✏️</button>
-                        <button class="delete-collaborator-btn text-red-300" data-id="${colab.id}">🗑️</button>
+                        <button class="edit-collaborator-btn text-blue-400 text-lg" data-id="${colab.id}" title="Editar">✏️</button>
+                        <button class="delete-collaborator-btn text-red-300 text-lg" data-id="${colab.id}" title="Excluir">🗑️</button>
                     </td>
                 `;
                 tableBody.appendChild(row);
             });
         
-            document.getElementById('total-participants-count').textContent = colaboradores.length;
-            document.getElementById('self-transport-count').textContent = selfT;
-            document.getElementById('company-transport-count').textContent = compT;
+            // Atualiza contadores com verificação de segurança
+            const elTotal = document.getElementById('total-participants-count');
+            const elSelf = document.getElementById('self-transport-count');
+            const elComp = document.getElementById('company-transport-count');
+            
+            if (elTotal) elTotal.textContent = colaboradores.length;
+            if (elSelf) elSelf.textContent = selfT;
+            if (elComp) elComp.textContent = compT;
+        
             addEventListenersToModalListActions();
         }
         
-        // 4. Salvar (Submit) - CORREÇÃO DA LINHA 2511
+        // 4. Salvar Colaborador (Escutador Único)
         const colabFormElement = document.getElementById('collaborator-form-modal');
         if (colabFormElement) {
-            colabFormElement.addEventListener('submit', async (e) => {
+            // Removemos qualquer listener anterior para não duplicar
+            colabFormElement.onsubmit = async (e) => {
                 e.preventDefault();
                 const nome = document.getElementById('collaborator-name-modal').value.trim();
                 const cargo = document.getElementById('collaborator-role-modal').value;
                 const equipe = document.getElementById('collaborator-team-modal').value;
                 const email = document.getElementById('collaborator-email-modal')?.value || '';
                 const telefone = document.getElementById('collaborator-phone-modal')?.value || '';
-                const transporte = colabFormElement.querySelector('input[name="transporte-colaborador"]:checked').value;
+                const transporteEl = colabFormElement.querySelector('input[name="transporte-colaborador"]:checked');
+                const transporte = transporteEl ? transporteEl.value : 'Meios Próprios';
+        
+                if (!nome) { showNotification("Nome obrigatório", "error"); return; }
         
                 const data = { nome, cargo, equipe, email, telefone, transporte };
                 try {
                     const colRef = collection(db, "pautas", currentPautaId, "collaborators");
                     if (editCollaboratorId) {
                         await updateDoc(doc(colRef, editCollaboratorId), data);
+                        showNotification("Membro atualizado!");
                     } else {
                         await addDoc(colRef, { ...data, presente: false, horario: '--:--' });
+                        showNotification("Membro adicionado!");
                     }
                     resetCollaboratorFormModal();
-                    showNotification("Membro salvo!");
                 } catch (error) { console.error(error); }
-            });
+            };
         }
     
         function addEventListenersToModalListActions() {
@@ -4536,6 +4553,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
