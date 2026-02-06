@@ -2422,6 +2422,58 @@ render(atendidosList, atendidos, a => {
             addEventListenersToModalListActions();
         }
 
+        // --- BOTÕES DE AÇÃO DO MODAL DE EQUIPE (PDF E LIMPAR) ---
+
+        // 1. Botão Emitir PDF Personalizado
+        const btnPdfEquipe = document.getElementById('download-collaborators-pdf-modal');
+        if (btnPdfEquipe) {
+            btnPdfEquipe.onclick = () => {
+                // Captura as colunas que você marcou nos checkboxes violetas
+                const selectedCols = Array.from(document.querySelectorAll('.pdf-col-check:checked'))
+                                          .map(cb => cb.value);
+
+                if (selectedCols.length === 0) {
+                    showNotification("Selecione ao menos uma coluna para o PDF!", "error");
+                    return;
+                }
+
+                if (colaboradores.length === 0) {
+                    showNotification("A lista está vazia. Não há nada para exportar.", "info");
+                    return;
+                }
+
+                const pautaTitle = document.getElementById('pauta-title').textContent;
+                
+                // Chama a função que está no seu js/pdfService.js
+                generateCollaboratorsPDF(pautaTitle, colaboradores, selectedCols);
+                showNotification("PDF da equipe gerado com sucesso!");
+            };
+        }
+
+        // 2. Botão Limpar Toda a Lista
+        const btnLimparLista = document.getElementById('clear-collaborators-list-modal');
+        if (btnLimparLista) {
+            btnLimparLista.onclick = () => {
+                showConfirmModal(async () => {
+                    try {
+                        const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
+                        const snapshot = await getDocs(collaboratorsCollectionRef);
+                        
+                        if (snapshot.empty) return;
+
+                        const batch = writeBatch(db);
+                        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                        await batch.commit();
+                        
+                        resetCollaboratorFormModal();
+                        showNotification("Lista de colaboradores esvaziada.", "success");
+                    } catch (error) {
+                        console.error("Erro ao limpar lista:", error);
+                    }
+                }, 'Tem certeza que deseja apagar TODOS os membros desta equipe?');
+            };
+        }
+        
         // 4. Salvar Colaborador (Cadastro/Edição)
         const colabFormElement = document.getElementById('collaborator-form-modal');
         if (colabFormElement) {
@@ -4404,6 +4456,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
