@@ -4330,22 +4330,23 @@ if (btnAdmin) {
         // ================================================================
         // --- ATIVAÇÃO DOS BOTÕES DE PDF (DENTRO DO MÓDULO) ---
         // ================================================
-
-        // 1. PDF de Assistidos (Botão azul na coluna 'Atendidos')
         const btnMainPdf = document.getElementById('download-pdf-btn');
         if (btnMainPdf) {
             btnMainPdf.onclick = (e) => {
                 e.preventDefault();
-                // Filtra apenas quem está com status 'atendido'
-                const listaAtendidos = allAssisted.filter(a => a.status === 'atendido');
-
-                if (listaAtendidos.length === 0) {
-                    showNotification("A lista de atendidos está vazia.", "info");
+                
+                // FILTRO IMPORTANTE: Pega os dados atuais da tela
+                const listaParaExportar = allAssisted.filter(a => a.status === 'atendido');
+        
+                if (listaParaExportar.length === 0) {
+                    showNotification("A lista de 'Atendidos' está vazia.", "info");
                     return;
                 }
-
-                const pautaTitle = document.getElementById('pauta-title').textContent;
-                generateAtendidosPDF(pautaTitle, listaAtendidos);
+        
+                const pautaTitle = document.getElementById('pauta-title').textContent || 'Pauta';
+                
+                // Chama a função robusta do pdfService.js
+                generateAtendidosPDF(pautaTitle, listaParaExportar);
             };
         }
 
@@ -4503,6 +4504,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
