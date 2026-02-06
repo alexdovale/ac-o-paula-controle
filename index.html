@@ -4326,6 +4326,53 @@ if (btnAdmin) {
                 
                 editSubjectInput.value = selectedText;
             });
+
+        // ================================================================
+        // --- ATIVAÇÃO DOS BOTÕES DE PDF (DENTRO DO MÓDULO) ---
+        // ================================================
+
+        // 1. PDF de Assistidos (Botão azul na coluna 'Atendidos')
+        const btnMainPdf = document.getElementById('download-pdf-btn');
+        if (btnMainPdf) {
+            btnMainPdf.onclick = (e) => {
+                e.preventDefault();
+                // Filtra apenas quem está com status 'atendido'
+                const listaAtendidos = allAssisted.filter(a => a.status === 'atendido');
+
+                if (listaAtendidos.length === 0) {
+                    showNotification("A lista de atendidos está vazia.", "info");
+                    return;
+                }
+
+                const pautaTitle = document.getElementById('pauta-title').textContent;
+                generateAtendidosPDF(pautaTitle, listaAtendidos);
+            };
+        }
+
+        // 2. PDF de Equipe (Botão dentro do modal de colaboradores)
+        const btnEquipePdfModal = document.getElementById('download-collaborators-pdf-modal');
+        if (btnEquipePdfModal) {
+            btnEquipePdfModal.onclick = (e) => {
+                e.preventDefault();
+                // Pega as colunas marcadas no painel violeta
+                const selectedCols = Array.from(document.querySelectorAll('.pdf-col-check:checked'))
+                                          .map(cb => cb.value);
+
+                if (selectedCols.length === 0) {
+                    showNotification("Selecione ao menos uma coluna!", "error");
+                    return;
+                }
+
+                if (colaboradores.length === 0) {
+                    showNotification("Não há colaboradores na lista.", "info");
+                    return;
+                }
+
+                const pautaTitle = document.getElementById('pauta-title').textContent;
+                generateCollaboratorsPDF(pautaTitle, colaboradores, selectedCols);
+            };
+        }
+        
     </script>
 
 <!-- Modal de Anotações -->
@@ -4456,6 +4503,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
