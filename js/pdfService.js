@@ -31,82 +31,91 @@ const calculateDuration = (totalMinutes) => {
 };
 
 /**
- * GERA O RELATÓRIO DE ATENDIDOS
+ * GERA O RELATÓRIO DE ATENDIDOS - VERSÃO ROBUSTA
  */
 export const generateAtendidosPDF = (pautaName, atendidos) => {
     try {
+        if (!window.jspdf) {
+            alert("Erro: Biblioteca PDF não carregada. Recarregue a página.");
+            return;
+        }
+
         const { jsPDF } = window.jspdf;
         const docPDF = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' }); 
 
-        // Cabeçalho do Documento
+        // Título
         docPDF.setFontSize(18);
-        docPDF.setTextColor(22, 101, 52); // Verde Escuro
-        docPDF.text(`Relatório de Atendidos - ${pautaName}`, 40, 40);
+        docPDF.setTextColor(22, 101, 52); 
+        docPDF.text(`Relatório de Atendidos - ${pautaName || 'Sem Título'}`, 40, 40);
         
         docPDF.setFontSize(10);
         docPDF.setTextColor(100);
-        const totalAssuntos = atendidos.reduce((acc, a) => acc + 1 + (a.demandas?.quantidade || 0), 0);
-        
-        docPDF.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, 55);
-        docPDF.text(`Total de Assistidos: ${atendidos.length} | Total de Assuntos: ${totalAssuntos}`, 40, 68);
+        docPDF.text(`Emitido em: ${new Date().toLocaleString('pt-BR')}`, 40, 55);
 
-        // Configuração das Colunas
-        const tableColumn = ["#", "Nome", "Agendado", "Chegou", "Finalizado", "Duração", "Assunto Principal", "Atendente", "Confirmado"]; 
+        // Cabeçalho da Tabela
+        const tableColumn = ["#", "Nome", "Agendado", "Chegou", "Finalizado", "Duração", "Assunto", "Atendente"]; 
         const tableRows = [];
 
         atendidos.forEach((item, index) => {
+            // Garantia de strings seguras para não quebrar o PDF
+            const nomeAssistido = String(item.name || 'NOME NÃO INFORMADO');
+            const assunto = String(item.subject || 'NÃO INFORMADO');
+            
+            // Tratamento de datas
             const arrivalDate = getSafeDate(item.arrivalTime);
             const attendedDate = getSafeDate(item.attendedTime);
             
             let duration = 'N/A';
-            let formattedAttendedTime = 'N/A';
+            let formattedArrival = arrivalDate ? arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+            let formattedAttended = attendedDate ? attendedDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
 
             if (arrivalDate && attendedDate) {
                 const diffMs = attendedDate.getTime() - arrivalDate.getTime();
-                const totalMins = Math.round(diffMs / 60000);
-                if (totalMins >= 0) duration = calculateDuration(totalMins);
-                formattedAttendedTime = attendedDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                duration = calculateDuration(Math.round(diffMs / 60000));
             }
             
-            const scheduledTimeStr = item.type === 'avulso' ? 'Avulso' : (item.scheduledTime || 'N/A');
-            const arrivalTimeStr = arrivalDate ? arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
-            const confirmedStatus = item.isConfirmed ? `Sim (${item.confirmationDetails?.confirmedBy || 'N/A'})` : 'Não';
-            
-            const attendantName = (typeof item.attendant === 'object' && item.attendant !== null) 
-                                ? item.attendant.nome || item.attendant.name || 'N/A'
-                                : item.attendant || 'N/A';
+            // Tratamento do Atendente (pode ser string ou objeto)
+            let nomeAtendente = 'N/A';
+            if (item.attendant) {
+                nomeAtendente = (typeof item.attendant === 'object') 
+                    ? (item.attendant.nome || item.attendant.name || 'N/A') 
+                    : String(item.attendant);
+            }
 
             tableRows.push([
                 index + 1,
-                cleanString(item.name),
-                scheduledTimeStr,
-                arrivalTimeStr,
-                formattedAttendedTime,
+                nomeAssistido,
+                item.scheduledTime || (item.type === 'avulso' ? 'Avulso' : 'N/A'),
+                formattedArrival,
+                formattedAttended,
                 duration,
-                cleanString(item.subject),
-                cleanString(attendantName),
-                confirmedStatus
+                assunto,
+                nomeAtendente
             ]);
         });
 
+        // Gerar Tabela
         docPDF.autoTable({
             head: [tableColumn],
             body: tableRows,
-            startY: 80,
+            startY: 70,
             theme: 'striped',
-            styles: { fontSize: 7, cellPadding: 3, overflow: 'linebreak' },
-            headStyles: { fillColor: [22, 163, 74] }, // Verde SIGAP
+            headStyles: { fillColor: [22, 163, 74] },
+            styles: { fontSize: 8, cellPadding: 3 },
             columnStyles: {
-                0: { cellWidth: 20 },
-                1: { cellWidth: 100 },
-                6: { cellWidth: 130 }
+                0: { cellWidth: 25 },
+                1: { cellWidth: 120 },
+                6: { cellWidth: 150 }
             }
         });
         
-        docPDF.save(`relatorio_atendidos_${pautaName.replace(/\s+/g, '_')}.pdf`);
+        const fileName = `atendidos_${(pautaName || 'pauta').replace(/\s+/g, '_')}.pdf`;
+        docPDF.save(fileName);
+        console.log("PDF de Atendidos gerado com sucesso.");
+
     } catch (error) {
-        console.error("Erro ao gerar PDF de Atendidos:", error);
-        alert("Erro ao gerar PDF. Verifique o console.");
+        console.error("ERRO CRÍTICO NO PDF ATENDIDOS:", error);
+        alert("Ocorreu um erro técnico ao gerar o PDF. Verifique se há nomes com caracteres muito estranhos na lista.");
     }
 };
 
