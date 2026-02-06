@@ -878,119 +878,122 @@
         </div>
     </div>
     
-    <!-- MODAL DE GERENCIAR COLABORADORES (LISTA DE PRESENÇA) - INTEGRADO -->
-   <!-- MODAL DE GERENCIAR COLABORADORES (LISTA DE PRESENÇA) - ATUALIZADO -->
-<div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-6xl flex flex-col" style="max-height: 90vh;">
-        <div class="flex justify-between items-center mb-4 flex-shrink-0">
-            <h2 class="text-2xl font-bold text-gray-800">Lista de Presença de Colaboradores</h2>
-            <button id="close-collaborators-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
-        </div>
-
-        <div class="flex-grow overflow-y-auto pr-2">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div>
-                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Adicionar/Editar Colaborador (Equipe de Campo)</h3>
-                    <form id="collaborator-form-modal">
-                        <div class="space-y-4">
+   
+    <!-- NOVO MODAL DE COLABORADORES ORGANIZADO E RESPONSIVO -->
+    <div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl flex flex-col transition-all duration-300" style="max-height: 95vh;">
+            
+            <!-- CABEÇALHO -->
+            <div class="flex justify-between items-center bg-gray-100 px-4 py-3 rounded-t-xl border-b shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="text-violet-600">👥</span>
+                    <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Lista de Presença da Equipe</h2>
+                </div>
+                <button id="close-collaborators-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl font-bold p-1 leading-none">&times;</button>
+            </div>
+    
+            <!-- CONTEÚDO COM ROLAGEM -->
+            <div class="flex-grow overflow-y-auto p-4 md:p-6 space-y-8 scrollable-content">
+                
+                <!-- 1. ÁREA DE CADASTRO (TOPO) -->
+                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <h3 class="text-[10px] font-black text-gray-400 uppercase mb-4 tracking-widest border-b pb-2">Adicionar / Editar Membro da Equipe</h3>
+                    <form id="collaborator-form-modal" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label for="collaborator-name-modal" class="block text-sm font-medium text-gray-700">Nome do Colaborador:</label>
-                                <input type="text" id="collaborator-name-modal" name="nome-colaborador" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nome Completo:</label>
+                                <input type="text" id="collaborator-name-modal" required class="w-full p-2 border rounded-lg text-sm bg-gray-50">
                             </div>
-
-                            <!-- CAMPO CARGO ADICIONADO -->
                             <div>
-                                <label for="collaborator-role-modal" class="block text-sm font-medium text-gray-700">Cargo:</label>
-                                <select id="collaborator-role-modal" name="cargo-colaborador" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                                    <option value="" disabled selected>Selecione o cargo</option>
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cargo:</label>
+                                <select id="collaborator-role-modal" required class="w-full p-2 border rounded-lg text-sm bg-gray-50">
                                     <option value="Defensor(a)">Defensor(a)</option>
                                     <option value="Servidor(a)">Servidor(a)</option>
                                     <option value="CRC">CRC</option>
+                                    <option value="Residente">Residente</option>
+                                    <option value="Estagiário(a)">Estagiário(a)</option>
                                 </select>
                             </div>
-
-                            <!-- CAMPO EQUIPE ATUALIZADO PARA SELECT -->
                             <div>
-                                <label for="collaborator-team-modal" class="block text-sm font-medium text-gray-700">Equipe:</label>
-                                <select id="collaborator-team-modal" name="equipe-colaborador" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                                    <option value="" disabled selected>Selecione a equipe</option>
-                                    <option value="1">1</option>
-                                    <option value="2">2</option>
-                                    <option value="3">3</option>
-                                    <option value="4">4</option>
-                                    <option value="5">5</option>
-                                    <option value="6">6</option>
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Equipe:</label>
+                                <select id="collaborator-team-modal" required class="w-full p-2 border rounded-lg text-sm bg-gray-50">
+                                    <option value="1">Equipe 1</option>
+                                    <option value="2">Equipe 2</option>
+                                    <option value="3">Equipe 3</option>
+                                    <option value="4">Equipe 4</option>
+                                    <option value="Apoio">Apoio</option>
                                 </select>
                             </div>
-
-                            <div>
-                                <label for="collaborator-email-modal" class="block text-sm font-medium text-gray-700">Email do Colaborador (opcional):</label>
-                                <input type="email" id="collaborator-email-modal" name="email-colaborador" placeholder="email@exemplo.com" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                            </div>
-
-                            <div>
-                                <label for="collaborator-phone-modal" class="block text-sm font-medium text-gray-700">Telefone (com DDD):</label>
-                                <input type="tel" id="collaborator-phone-modal" name="telefone-colaborador" placeholder="Ex: 21999998888" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Como vai se deslocar?</label>
-                                <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
-                                    <label><input type="radio" id="transporte-nao-confirmado-modal" name="transporte-colaborador" value="Não Confirmado" checked required> Não Confirmado</label>
-                                    <label><input type="radio" id="transporte-meios-proprios-modal" name="transporte-colaborador" value="Meios Próprios"> Meios Próprios</label>
-                                    <label><input type="radio" id="transporte-com-empresa-modal" name="transporte-colaborador" value="Com a Empresa"> Com a Empresa</label>
-                                </div>
-                            </div>
-                            <div id="local-encontro-group-modal" class="hidden">
-                                <label class="block text-sm font-medium text-gray-700">Ponto de Encontro:</label>
-                                <div class="mt-1 flex items-center space-x-4">
-                                    <label><input type="radio" id="local-sede-modal" name="localEncontro-colaborador" value="Sede"> Sede</label>
-                                    <label><input type="radio" id="local-meio-caminho-modal" name="localEncontro-colaborador" value="Meio do Caminho"> No meio do caminho</label>
-                                </div>
-                            </div>
-                            <div id="observacao-group-modal" class="hidden">
-                                <label for="collaborator-obs-modal" class="block text-sm font-medium text-gray-700">Observação:</label>
-                                <textarea id="collaborator-obs-modal" name="observacao-colaborador" rows="3" class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></textarea>
-                            </div>
-                            <button type="submit" id="add-collaborator-btn-modal" class="w-full bg-green-600 text-white font-bold py-2 rounded-md hover:bg-green-700 transition">Adicionar Colaborador</button>
                         </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">WhatsApp (com DDD):</label>
+                                <input type="tel" id="collaborator-phone-modal" placeholder="21999998888" class="w-full p-2 border rounded-lg text-sm bg-gray-50">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Transporte:</label>
+                                <div class="flex gap-4 mt-2 text-xs">
+                                    <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="transporte-colaborador" value="Meios Próprios" checked> Próprio</label>
+                                    <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="transporte-colaborador" value="Com a Empresa"> Empresa</label>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" id="add-collaborator-btn-modal" class="w-full bg-green-600 text-white font-bold py-2.5 rounded-lg hover:bg-green-700 transition shadow-md uppercase text-xs">Salvar na Lista</button>
                     </form>
                 </div>
-
-                <div>
-                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Estatísticas e Lista</h3>
-                    <div id="presence-stats" class="mb-4 text-sm text-gray-700 space-y-1">
-                        <p>Total de Participantes: <strong id="total-participants-count">0</strong></p>
-                        <p>Meios Próprios: <strong id="self-transport-count">0</strong></p>
-                        <p>Com a Empresa: <strong id="company-transport-count">0</strong></p>
+    
+                <!-- 2. ÁREA DA LISTA E ESTATÍSTICAS (BAIXO) -->
+                <div class="space-y-4">
+                    <div class="flex flex-wrap justify-between items-center gap-4">
+                        <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Controle de Presença e Relatório</h3>
+                        <div class="flex gap-3 text-[10px] font-bold uppercase">
+                            <span class="bg-blue-50 text-blue-600 p-2 rounded border border-blue-100">Total: <b id="total-participants-count">0</b></span>
+                            <span class="bg-gray-50 text-gray-600 p-2 rounded border border-gray-200">Próprio: <b id="self-transport-count">0</b></span>
+                            <span class="bg-gray-50 text-gray-600 p-2 rounded border border-gray-200">Empresa: <b id="company-transport-count">0</b></span>
+                        </div>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table id="collaborators-list-table-modal" class="w-full text-sm text-left text-gray-500">
-                          <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="py-3 px-6">Nome</th>
-                                        <th scope="col" class="py-3 px-6">Cargo</th>
-                                        <th scope="col" class="py-3 px-6">Equipe</th>
-                                        <th scope="col" class="py-3 px-6">Presença</th>       <th scope="col" class="py-3 px-6">Horário</th>
-                                        <th scope="col" class="py-3 px-6">Email</th>          <th scope="col" class="py-3 px-6">Deslocamento</th>
-                                        <th scope="col" class="py-3 px-6">WhatsApp</th>
-                                        <th scope="col" class="py-3 px-6">Ações</th>
-                                    </tr>
-                                </thead>
-                            <tbody>
-                                <!-- As linhas da tabela serão preenchidas via JavaScript -->
+    
+                    <!-- CONFIGURAÇÃO DO PDF -->
+                    <div class="p-4 bg-violet-50 border border-violet-100 rounded-xl">
+                        <p class="text-[10px] font-black text-violet-800 uppercase mb-3 flex items-center gap-2">
+                            ⚙️ Selecione as colunas para o PDF:
+                        </p>
+                        <div class="flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-bold text-violet-700">
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="pdf-col-check" value="nome" checked> NOME</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="pdf-col-check" value="cargo" checked> CARGO</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="pdf-col-check" value="equipe" checked> EQUIPE</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="pdf-col-check" value="presenca" checked> PRESENÇA</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="pdf-col-check" value="transporte" checked> TRANSPORTE</label>
+                        </div>
+                    </div>
+    
+                    <!-- TABELA -->
+                    <div class="overflow-x-auto border border-gray-100 rounded-xl shadow-sm">
+                        <table id="collaborators-list-table-modal" class="w-full text-left border-collapse bg-white">
+                            <thead class="bg-gray-50 text-[9px] font-black text-gray-400 uppercase border-b">
+                                <tr>
+                                    <th class="p-3">Membro</th>
+                                    <th class="p-3 text-center">Presença</th>
+                                    <th class="p-3">Cargo / Equipe</th>
+                                    <th class="p-3 text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-xs text-gray-600">
+                                <!-- JS PREENCHE -->
                             </tbody>
                         </table>
                     </div>
-                    <div class="flex justify-between items-center mt-4">
-                        <button id="download-collaborators-pdf-modal" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">PDF</button>
-                        <button id="clear-collaborators-list-modal" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Limpar Lista</button>
+    
+                    <div class="flex justify-between items-center pt-4">
+                        <button id="download-collaborators-pdf-modal" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 text-xs shadow-md uppercase transition-all">Emitir PDF Personalizado</button>
+                        <button id="clear-collaborators-list-modal" class="text-gray-400 hover:text-red-600 text-[10px] font-bold uppercase transition-colors">Limpar Toda Lista</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-<!-- FIM MODAL DE GERENCIAR COLABORADORES -->
+    <!-- FIM MODAL DE GERENCIAR COLABORADORES -->
+
     
     <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4"></div>
     <div id="arrival-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
@@ -2564,10 +2567,24 @@ function renderColaboradores() {
         
         // PDF da Equipe
         downloadCollaboratorsPdfBtnModal.addEventListener('click', () => {
-            generateCollaboratorsPDF(document.getElementById('pauta-title').textContent, colaboradores);
-        });
-
+        // 1. Pega quais colunas o usuário marcou
+        const selectedCols = Array.from(document.querySelectorAll('.pdf-col-check:checked'))
+                                  .map(cb => cb.value);
+    
+        if (selectedCols.length === 0) {
+            showNotification("Selecione pelo menos uma coluna para o PDF.", "error");
+            return;
+        }
+    
+        const pautaTitle = document.getElementById('pauta-title').textContent;
+    
+        // 2. Chama a função de gerar PDF passando as colunas escolhidas
+        // Certifique-se de que seu pdfService.js está pronto para receber 'selectedCols'
+        generateCollaboratorsPDF(pautaTitle, colaboradores, selectedCols);
         
+        showNotification("Relatório gerado com as colunas selecionadas!");
+    });
+            
         // Clear list for modal's list
         clearCollaboratorsListBtnModal.addEventListener('click', () => {
             // Usando o modal de confirmação existente no index.html
@@ -4495,4 +4512,5 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
