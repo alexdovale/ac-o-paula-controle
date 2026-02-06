@@ -953,11 +953,9 @@
                         </div>
                     </div>
     
-                    <!-- CONFIGURAÇÃO DO PDF -->
-                    <div class="p-4 bg-violet-50 border border-violet-100 rounded-xl">
-                        <p class="text-[10px] font-black text-violet-800 uppercase mb-3 flex items-center gap-2">
-                            ⚙️ Selecione as colunas para o PDF:
-                        </p>
+                    <!-- CONFIGURAÇÃO DO PDF (Mantida) -->
+                    <div class="p-4 bg-violet-50 border border-violet-100 rounded-xl mb-4">
+                        <p class="text-[10px] font-black text-violet-800 uppercase mb-3 flex items-center gap-2">⚙️ Selecione as colunas para o PDF:</p>
                         <div class="flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-bold text-violet-700">
                             <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="pdf-col-check" value="nome" checked> NOME</label>
                             <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="pdf-col-check" value="cargo" checked> CARGO</label>
@@ -966,15 +964,19 @@
                             <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="pdf-col-check" value="transporte" checked> TRANSPORTE</label>
                         </div>
                     </div>
-    
-                    <!-- TABELA -->
+                    
+                    <!-- TABELA COM TÍTULOS CORRIGIDOS E BOTÕES DE ORDENAR -->
                     <div class="overflow-x-auto border border-gray-100 rounded-xl shadow-sm">
                         <table id="collaborators-list-table-modal" class="w-full text-left border-collapse bg-white">
                             <thead class="bg-gray-50 text-[9px] font-black text-gray-400 uppercase border-b">
                                 <tr>
-                                    <th class="p-3">Membro</th>
+                                    <th class="p-3 cursor-pointer hover:text-violet-600 transition-colors" onclick="window.sortColaboradores('nome')">Membro ↕️</th>
                                     <th class="p-3 text-center">Presença</th>
-                                    <th class="p-3">Cargo / Equipe</th>
+                                    <th class="p-3 cursor-pointer hover:text-violet-600 transition-colors" onclick="window.sortColaboradores('cargo')">Cargo ↕️</th>
+                                    <th class="p-3 cursor-pointer hover:text-violet-600 transition-colors" onclick="window.sortColaboradores('equipe')">Equipe ↕️</th>
+                                    <th class="p-3">Horário</th>
+                                    <th class="p-3">Transporte</th>
+                                    <th class="p-3 text-center">WhatsApp</th>
                                     <th class="p-3 text-center">Ações</th>
                                 </tr>
                             </thead>
@@ -2368,71 +2370,81 @@ render(atendidosList, atendidos, a => {
             });
         }
 
-function renderColaboradores() {
-            collaboratorListTableBodyModal.innerHTML = '';
+// --- LÓGICA DE ORDENAÇÃO ---
+window.sortColaboradores = (criterio) => {
+    const cargoPrioridade = { "Defensor(a)": 1, "Servidor(a)": 2, "CRC": 3, "Residente": 4, "Estagiário(a)": 5 };
 
-            let selfTransport = 0;
-            let companyTransport = 0;
-            
-            if (colaboradores.length === 0) {
-                // Ajustei o colspan para 9 para cobrir todas as colunas
-                collaboratorListTableBodyModal.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-gray-500">Nenhum colaborador adicionado.</td></tr>'; 
-                totalParticipantsCount.textContent = 0;
-                selfTransportCount.textContent = 0;
-                companyTransportCount.textContent = 0;
-                return;
-            }
-            
-            colaboradores.forEach((colaborador) => {
-                const newRow = document.createElement('tr');
-                newRow.className = "bg-white border-b";
-
-                let deslocamentoTexto = colaborador.transporte || 'Não Confirmado';
-                if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro) {
-                    deslocamentoTexto += ` (${colaborador.localEncontro})`;
-                }
-                if (colaborador.transporte === 'Meios Próprios') selfTransport++;
-                if (colaborador.transporte === 'Com a Empresa') companyTransport++;
-
-                // --- CORREÇÃO: Apenas UMA declaração de nomeElement ---
-                let nomeElement = escapeHTML(colaborador.nome); 
-                if (colaborador.transporte === 'Com a Empresa' && colaborador.localEncontro === 'Sede') {
-                     nomeElement = `<strong>${escapeHTML(colaborador.nome)}</strong>`;
-                }
-                // -----------------------------------------------------
-
-                newRow.innerHTML = `
-                    <td class="py-4 px-6 font-medium text-gray-900">${nomeElement}</td>
-                    <td class="py-4 px-6">${escapeHTML(colaborador.cargo || 'N/A')}</td>     
-                    <td class="py-4 px-6">${escapeHTML(colaborador.equipe || 'N/A')}</td>     
-                    <td class="py-4 px-6"><input type="checkbox" class="checkin-checkbox" data-id="${colaborador.id}" ${colaborador.presente ? 'checked' : ''} ${isPautaClosed ? 'disabled' : ''}></td> 
-                    <td class="py-4 px-6">${colaborador.horario || '--:--'}</td> 
-                    <td class="py-4 px-6">${escapeHTML(colaborador.email || 'N/A')}</td>       
-                    <td class="py-4 px-6">${escapeHTML(deslocamentoTexto)}</td>
-                    <td class="py-4 px-6">
-                        <a href="https://wa.me/55${colaborador.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Bom dia! Poderia, por gentileza, informar se já está chegando? Estamos quase saindo.`)}" 
-                            class="text-blue-600 hover:underline" target="_blank">
-                            Mensagem
-                        </a>
-                    </td>
-                    <td class="py-4 px-6 space-x-2">
-                        <button class="edit-collaborator-btn text-gray-500 hover:text-gray-900" data-id="${colaborador.id}" title="Editar" ${isPautaClosed ? 'disabled' : ''}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                        </button>
-                        <button class="delete-collaborator-btn text-red-500 hover:text-red-700" data-id="${colaborador.id}" title="Excluir" ${isPautaClosed ? 'disabled' : ''}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                        </button>
-                    </td>
-                `;
-                collaboratorListTableBodyModal.appendChild(newRow);
-            });
-            
-            totalParticipantsCount.textContent = colaboradores.length;
-            selfTransportCount.textContent = selfTransport;
-            companyTransportCount.textContent = companyTransport;
-
-            addEventListenersToModalListActions(); 
+    colaboradores.sort((a, b) => {
+        if (criterio === 'nome') {
+            return a.nome.localeCompare(b.nome);
+        } 
+        if (criterio === 'equipe') {
+            // Primeiro ordena por número da equipe
+            if (a.equipe !== b.equipe) return a.equipe - b.equipe;
+            // Se for a mesma equipe, coloca Defensor no topo
+            const pA = cargoPrioridade[a.cargo] || 99;
+            const pB = cargoPrioridade[b.cargo] || 99;
+            if (pA !== pB) return pA - pB;
+            return a.nome.localeCompare(b.nome); // Desempate por nome
         }
+        if (criterio === 'cargo') {
+            const pA = cargoPrioridade[a.cargo] || 99;
+            const pB = cargoPrioridade[b.cargo] || 99;
+            if (pA !== pB) return pA - pB;
+            return a.nome.localeCompare(b.nome);
+        }
+    });
+    renderColaboradores(); // Recarrega a tabela com a nova ordem
+};
+
+    // --- RENDERIZAÇÃO DA TABELA CORRIGIDA ---
+    function renderColaboradores() {
+        const tableBody = document.querySelector('#collaborators-list-table-modal tbody');
+        if (!tableBody) return;
+        tableBody.innerHTML = '';
+    
+        let selfTransport = 0;
+        let companyTransport = 0;
+    
+        colaboradores.forEach((colab) => {
+            if (colab.transporte === 'Meios Próprios') selfTransport++;
+            if (colab.transporte === 'Com a Empresa') companyTransport++;
+    
+            const row = document.createElement('tr');
+            row.className = "border-b hover:bg-gray-50 transition-colors";
+    
+            row.innerHTML = `
+                <td class="p-3 font-bold text-gray-800">${escapeHTML(colab.nome)}</td>
+                <td class="p-3 text-center">
+                    <input type="checkbox" class="checkin-checkbox w-5 h-5 text-green-600 rounded" 
+                    data-id="${colab.id}" ${colab.presente ? 'checked' : ''} ${isPautaClosed ? 'disabled' : ''}>
+                </td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full bg-gray-100 text-[10px] font-bold">${escapeHTML(colab.cargo || 'N/A')}</span></td>
+                <td class="p-3"><span class="font-black text-blue-600">EQP ${colab.equipe || '?'}</span></td>
+                <td class="p-3 text-gray-400 font-mono">${colab.horario || '--:--'}</td>
+                <td class="p-3 text-[10px]">${escapeHTML(colab.transporte || 'Não Conf.')}</td>
+                <td class="p-3 text-center">
+                    <a href="https://wa.me/55${colab.telefone?.replace(/\D/g, '')}" target="_blank" class="text-blue-500 hover:text-blue-700 font-bold">Mensagem</a>
+                </td>
+                <td class="p-3 text-center flex justify-center gap-2">
+                    <button class="edit-collaborator-btn text-gray-400 hover:text-blue-600" data-id="${colab.id}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/></svg>
+                    </button>
+                    <button class="delete-collaborator-btn text-gray-400 hover:text-red-600" data-id="${colab.id}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    
+        // Atualiza Stats (Total de participantes)
+        if (getEl('total-participants-count')) getEl('total-participants-count').textContent = colaboradores.length;
+        if (getEl('self-transport-count')) getEl('self-transport-count').textContent = selfTransport;
+        if (getEl('company-transport-count')) getEl('company-transport-count').textContent = companyTransport;
+    
+        addEventListenersToModalListActions(); 
+    }
 
         function resetCollaboratorFormModal() {
             // 1. Limpa o formulário (campos de texto e selects)
@@ -4536,6 +4548,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
