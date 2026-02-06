@@ -259,9 +259,18 @@ function renderExpenseTable() {
     div.className = 'mt-6 p-4 bg-green-50 border-2 border-green-100 rounded-xl shadow-sm mb-4';
     let rows = '';
     EXPENSE_CATEGORIES.forEach(c => {
-        rows += `<tr class="border-b border-green-50"><td class="py-2 text-[10px] font-bold text-green-800 uppercase">${c.label}</td><td><input type="text" id="expense-${c.id}" class="expense-input w-full p-1 bg-white border rounded text-right text-xs shadow-sm" placeholder="R$ 0,00"></td></tr>`;
+        // CORREÇÃO: Adicionada a descrição abaixo do rótulo
+        rows += `<tr class="border-b border-green-50">
+            <td class="py-2 pr-2">
+                <div class="text-[10px] font-bold text-green-800 uppercase">${c.label}</div>
+                <div class="text-[9px] text-green-600 font-normal leading-tight mt-0.5">${c.desc}</div>
+            </td>
+            <td class="w-28 align-middle">
+                <input type="text" id="expense-${c.id}" class="expense-input w-full p-1 bg-white border rounded text-right text-xs shadow-sm" placeholder="R$ 0,00">
+            </td>
+        </tr>`;
     });
-    div.innerHTML = `<h3 class="text-[10px] font-black text-green-700 mb-3 uppercase text-center">Planilha de Gastos</h3><table class="w-full">${rows}</table><div class="mt-3 flex justify-between font-black text-green-900 border-t pt-2"><span>TOTAL:</span><span id="expense-total">R$ 0,00</span></div>`;
+    div.innerHTML = `<h3 class="text-[10px] font-black text-green-700 mb-3 uppercase text-center">Planilha de Gastos</h3><table class="w-full">${rows}</table><div class="mt-3 flex justify-between font-black text-green-900 border-t border-green-200 pt-2"><span>TOTAL:</span><span id="expense-total">R$ 0,00</span></div>`;
     
     div.querySelectorAll('.expense-input').forEach(inp => {
         inp.oninput = (e) => {
