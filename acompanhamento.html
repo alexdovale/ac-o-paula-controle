@@ -11,7 +11,6 @@
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .modal-enter { animation: fadeIn 0.2s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        /* Cursor pointer nos cards */
         .card-interactive { cursor: pointer; }
     </style>
 </head>
@@ -20,141 +19,108 @@
     <!-- Tela de Carregamento -->
     <div id="loading" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-        <p class="mt-4 text-gray-600">Carregando pauta...</p>
+        <p class="mt-4 text-gray-600 font-bold uppercase text-xs tracking-widest">Conectando ao vivo...</p>
     </div>
 
-    <!-- Tela de Erro -->
+    <!-- Tela de Erro (Apenas se a pauta não existir no banco) -->
     <div id="error-screen" class="hidden fixed inset-0 bg-gray-100 flex flex-col items-center justify-center text-center p-4">
         <div class="bg-white p-8 rounded-xl shadow-lg max-w-md">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-red-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
-            <h1 class="text-2xl font-bold text-gray-800 mb-2">Acesso Restrito</h1>
-            <p class="text-gray-600">Esta pauta não está pública no momento ou o link está incorreto.</p>
+            <h1 class="text-2xl font-bold text-gray-800 mb-2">Pauta não encontrada</h1>
+            <p class="text-gray-600">Verifique se o link está correto ou se a pauta ainda existe no sistema.</p>
         </div>
     </div>
 
     <!-- Conteúdo Principal -->
     <div id="app-content" class="hidden w-full max-w-7xl mx-auto flex-1 flex flex-col h-full">
         
-        <!-- CABEÇALHO -->
         <header class="mb-6 bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4">
-            
             <div class="text-center md:text-left">
-                <h1 id="pauta-title" class="text-2xl md:text-3xl font-bold text-gray-800"></h1>
+                <h1 id="pauta-title" class="text-2xl md:text-3xl font-black text-gray-800 uppercase tracking-tighter leading-tight">---</h1>
                 <div class="flex items-center justify-center md:justify-start gap-2 mt-1">
                     <span class="relative flex h-2.5 w-2.5">
                       <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                       <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
                     </span>
-                    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Atualização em tempo real</p>
+                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Atualização em Tempo Real</p>
                 </div>
             </div>
 
-            <!-- Botão Total Atendidos (Clicável) -->
-            <button id="open-atendidos-btn" class="group bg-blue-50 hover:bg-blue-100 border border-blue-100 transition-all px-6 py-3 rounded-lg flex flex-col items-center justify-center shadow-sm min-w-[150px] cursor-pointer">
-                <div class="flex items-center gap-1">
-                    <span class="text-xs font-bold text-blue-400 uppercase tracking-wider group-hover:text-blue-600">Total Atendidos</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-blue-400 group-hover:text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                </div>
-                <span id="total-atendidos-count" class="text-3xl font-bold text-blue-700 leading-none mt-1">0</span>
+            <button id="open-atendidos-btn" class="group bg-blue-600 hover:bg-blue-700 transition-all px-6 py-3 rounded-xl flex flex-col items-center justify-center shadow-lg min-w-[150px]">
+                <span class="text-[10px] font-bold text-blue-100 uppercase tracking-wider">Finalizados</span>
+                <span id="total-atendidos-count" class="text-3xl font-black text-white leading-none mt-1">0</span>
             </button>
-
-            <div id="last-update" class="text-xs text-gray-400 font-mono"></div>
         </header>
 
-        <!-- GRID PRINCIPAL -->
-        <div id="main-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0 transition-all duration-300">
+        <div id="main-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
             
             <!-- Coluna Aguardando -->
             <div id="col-aguardando" class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-[65vh] lg:h-[75vh]">
-                <div class="bg-yellow-500 p-4 text-white shadow-sm z-10 flex justify-between items-center">
-                    <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        Aguardando
-                    </h2>
-                    <span id="count-aguardando" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 px-3 py-1 rounded-full text-lg font-bold">0</span>
+                <div class="bg-amber-500 p-4 text-white flex justify-between items-center shadow-md shrink-0">
+                    <h2 class="text-lg font-black uppercase flex items-center gap-2">⏳ Fila de Espera</h2>
+                    <span id="count-aguardando" class="bg-white text-amber-600 px-3 py-0.5 rounded-full text-sm font-black">0</span>
                 </div>
                 <div id="list-aguardando" class="p-4 overflow-y-auto flex-1 space-y-3 bg-gray-50"></div>
             </div>
 
-            <!-- Coluna Em Atendimento (Pode ser escondida) -->
+            <!-- Coluna Em Atendimento -->
             <div id="col-atendimento" class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-[65vh] lg:h-[75vh]">
-                <div class="bg-green-600 p-4 text-white shadow-sm z-10 flex justify-between items-center">
-                    <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                        Em Atendimento
-                    </h2>
-                    <span id="count-atendimento" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 px-3 py-1 rounded-full text-lg font-bold">0</span>
+                <div class="bg-green-600 p-4 text-white flex justify-between items-center shadow-md shrink-0">
+                    <h2 class="text-lg font-black uppercase flex items-center gap-2">👩‍💻 No Atendimento</h2>
+                    <span id="count-atendimento" class="bg-white text-green-700 px-3 py-0.5 rounded-full text-sm font-black">0</span>
                 </div>
                 <div id="list-atendimento" class="p-4 overflow-y-auto flex-1 space-y-3 bg-gray-50"></div>
             </div>
-
         </div>
+        <div id="last-update" class="mt-4 text-center text-[10px] text-gray-400 font-bold uppercase tracking-widest">Sincronizando...</div>
     </div>
 
-    <!-- MODAL DE DETALHES DO ASSISTIDO -->
-    <div id="details-modal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl modal-enter flex flex-col">
+    <!-- MODAL DE DETALHES -->
+    <div id="details-modal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl modal-enter flex flex-col overflow-hidden">
             <div class="p-6">
-                <div class="flex justify-between items-start mb-4">
-                    <h2 id="modal-name" class="text-2xl font-bold text-gray-800">Nome do Assistido</h2>
-                    <button id="close-details-btn" class="text-gray-400 hover:text-gray-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                <div class="flex justify-between items-start mb-6">
+                    <h2 id="modal-name" class="text-2xl font-black text-gray-800 leading-tight uppercase">---</h2>
+                    <button id="close-details-btn" class="text-gray-400 hover:text-red-500 transition-colors">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="3" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
                 
                 <div class="space-y-4">
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <p class="text-xs text-gray-500 uppercase tracking-wide">Assunto Principal</p>
-                        <p id="modal-subject" class="text-gray-800 font-medium">...</p>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Assunto</p>
+                        <p id="modal-subject" class="text-gray-800 font-bold">---</p>
                     </div>
 
-                    <!-- Seção de Quantidade e Detalhes -->
                     <div id="modal-service-info" class="hidden">
-                        <div class="flex gap-4 mb-3">
-                            <div class="bg-blue-50 p-3 rounded-lg flex-1">
-                                <p class="text-xs text-blue-500 uppercase tracking-wide font-bold">Total de Demandas</p>
-                                <p id="modal-qtd" class="text-3xl font-bold text-blue-700">0</p>
-                            </div>
+                        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-4">
+                            <p class="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Demandas Totais</p>
+                            <p id="modal-qtd" class="text-4xl font-black text-blue-700">0</p>
                         </div>
                         <div>
-                            <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Demandas Adicionais / Observações</p>
-                            <div id="modal-details" class="bg-gray-50 p-3 rounded-lg text-sm text-gray-700 whitespace-pre-wrap border border-gray-100 max-h-60 overflow-y-auto">...</div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Observações / Detalhes</p>
+                            <div id="modal-details" class="bg-gray-50 p-4 rounded-xl text-sm text-gray-700 whitespace-pre-wrap border border-gray-100 max-h-60 overflow-y-auto font-medium">---</div>
                         </div>
                     </div>
 
-                    <div id="modal-no-info" class="text-center py-6 text-gray-400 text-sm italic bg-gray-50 rounded-lg">
-                        Nenhuma informação adicional registrada pelo servidor.
+                    <div id="modal-no-info" class="text-center py-10 text-gray-400 text-xs italic bg-gray-50 rounded-xl border-2 border-dashed">
+                        Informações adicionais não registradas.
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL DE LISTA DE ATENDIDOS (HISTÓRICO) -->
-    <div id="atendidos-modal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl modal-enter flex flex-col max-h-[85vh]">
-            <!-- Header Modal -->
-            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-blue-50 rounded-t-2xl">
-                <div class="flex items-center gap-3">
-                    <div class="bg-blue-100 p-2 rounded-lg text-blue-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    </div>
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-800">Histórico de Atendidos</h2>
-                        <p class="text-xs text-gray-500">Listagem por ordem de finalização</p>
-                    </div>
-                </div>
-                <button id="close-atendidos-btn" class="text-gray-400 hover:text-gray-600 hover:bg-white p-2 rounded-full transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
+    <!-- MODAL HISTÓRICO ATENDIDOS -->
+    <div id="atendidos-modal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
+        <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl modal-enter flex flex-col max-h-[85vh]">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-blue-50 rounded-t-3xl shrink-0">
+                <h2 class="text-xl font-black text-blue-900 uppercase tracking-tighter">✅ Histórico de Atendidos</h2>
+                <button id="close-atendidos-btn" class="text-blue-300 hover:text-blue-600 text-3xl font-bold">&times;</button>
             </div>
-            
-            <!-- Lista Modal -->
-            <div id="list-atendidos-content" class="p-4 overflow-y-auto flex-1 space-y-2 bg-gray-50/50">
-                <p class="text-center text-gray-400 py-4">Nenhum atendimento finalizado ainda.</p>
-            </div>
+            <div id="list-atendidos-content" class="p-4 overflow-y-auto flex-1 space-y-2 bg-gray-50/50"></div>
         </div>
     </div>
 
@@ -162,55 +128,30 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Configuração do Firebase
+        // Configuração do Firebase (MANTIDA)
         const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
-        
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
         const urlParams = new URLSearchParams(window.location.search);
         const pautaId = urlParams.get('id');
 
-        // Elementos DOM
-        const loading = document.getElementById('loading');
-        const errorScreen = document.getElementById('error-screen');
-        const appContent = document.getElementById('app-content');
-        const listAguardando = document.getElementById('list-aguardando');
-        const listAtendimento = document.getElementById('list-atendimento');
-        const mainGrid = document.getElementById('main-grid');
-        const colAtendimento = document.getElementById('col-atendimento');
-        
-        // Modal Atendidos
-        const modal = document.getElementById('atendidos-modal');
-        const listAtendidosContent = document.getElementById('list-atendidos-content');
-        const openModalBtn = document.getElementById('open-atendidos-btn');
-        const closeModalBtn = document.getElementById('close-atendidos-btn');
-
-        // Modal Detalhes
-        const detailsModal = document.getElementById('details-modal');
-        const closeDetailsBtn = document.getElementById('close-details-btn');
-
         let maskNames = false;
         let pautaRooms = [];
-        let globalAtendidosList = []; // Para guardar a lista e renderizar no modal
-        let allItemsGlobal = []; // Para buscar dados para o modal de detalhes
+        let allItemsGlobal = [];
 
-        // Função para formatar nome
         function formatName(name) {
             if (!maskNames || !name) return name;
             const parts = name.trim().split(' ');
             if (parts.length === 1) return name;
-            return `${parts[0]} ${parts[parts.length - 1].charAt(0)}...`; 
+            return `${parts[0]} ${parts[parts.length - 1].charAt(0)}.***`; 
         }
 
-        // --- FUNÇÃO PARA ABRIR O MODAL DE DETALHES ---
         window.openDetails = (itemId) => {
             const item = allItemsGlobal.find(i => i.id === itemId);
             if (!item) return;
-
             document.getElementById('modal-name').textContent = formatName(item.name);
-            document.getElementById('modal-subject').textContent = item.subject || 'Sem assunto';
-
+            document.getElementById('modal-subject').textContent = item.subject || 'Geral';
             const serviceInfo = document.getElementById('modal-service-info');
             const noInfo = document.getElementById('modal-no-info');
 
@@ -218,19 +159,11 @@
             let displayDetails = '';
             let hasInfo = false;
 
-            // 1. Verifica se veio do Atendimento Externo (campo 'demandas')
             if (item.demandas && item.demandas.descricoes && item.demandas.descricoes.length > 0) {
                 hasInfo = true;
-                // A quantidade é o assunto principal (1) + demandas adicionais
-                // Mas geralmente o campo 'quantidade' no objeto demandas já soma. 
-                // Se for array de strings:
-                displayQtd = item.demandas.quantidade || (item.demandas.descricoes.length);
-                
-                // Formata a lista com bullet points
+                displayQtd = item.demandas.quantidade || item.demandas.descricoes.length;
                 displayDetails = item.demandas.descricoes.map(d => `• ${d}`).join('\n');
-            } 
-            // 2. Verifica se veio do Fluxo de Distribuição (campos serviceQuantity/serviceDetails)
-            else if (item.serviceQuantity || item.serviceDetails) {
+            } else if (item.serviceQuantity || item.serviceDetails) {
                 hasInfo = true;
                 displayQtd = item.serviceQuantity || '-';
                 displayDetails = item.serviceDetails || '-';
@@ -245,215 +178,127 @@
                 serviceInfo.classList.add('hidden');
                 noInfo.classList.remove('hidden');
             }
-
-            detailsModal.classList.remove('hidden');
+            document.getElementById('details-modal').classList.remove('hidden');
         };
 
-        closeDetailsBtn.addEventListener('click', () => {
-            detailsModal.classList.add('hidden');
-        });
-        detailsModal.addEventListener('click', (e) => {
-            if (e.target === detailsModal) detailsModal.classList.add('hidden');
-        });
-
-
-        // Função para criar card (Aguardando / Em Atendimento)
         function createCard(item, isAtendimento = false) {
             const div = document.createElement('div');
-            let borderColor = isAtendimento ? 'border-l-4 border-green-500' : (item.priority === 'URGENTE' ? 'border-l-4 border-red-500' : 'border-l-4 border-gray-300');
-            let bgColor = isAtendimento ? 'bg-green-50' : (item.priority === 'URGENTE' ? 'bg-red-50' : 'bg-white');
-            
-            let salaBadge = item.room ? `<span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded ml-auto uppercase tracking-wide border border-blue-200">📍 ${item.room}</span>` : '';
-            
-            let collabInfo = '';
-            if (isAtendimento && item.assignedCollaborator) {
-                collabInfo = `<div class="mt-2 pt-2 border-t border-green-200 flex items-center text-sm text-green-800"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg><span class="font-semibold">${item.assignedCollaborator.name}</span></div>`;
-            }
+            const borderColor = isAtendimento ? 'border-l-4 border-green-500' : (item.priority === 'URGENTE' ? 'border-l-4 border-red-500' : 'border-l-4 border-gray-300');
+            const bgColor = isAtendimento ? 'bg-green-50/50' : (item.priority === 'URGENTE' ? 'bg-red-50/50' : 'bg-white');
+            const sala = item.room ? `<span class="bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full ml-auto uppercase tracking-tighter">📍 ${item.room}</span>` : '';
+            const collab = (isAtendimento && item.assignedCollaborator) ? `<p class="mt-2 text-[10px] font-bold text-green-700 uppercase border-t border-green-100 pt-1">Atendente: ${item.assignedCollaborator.name}</p>` : '';
+            const hasExtra = (item.serviceQuantity || item.serviceDetails || (item.demandas?.descricoes?.length > 0)) ? '📝' : '';
 
-            // Verifica se tem detalhes para mostrar o ícone
-            let hasDetails = (item.serviceQuantity || item.serviceDetails || (item.demandas?.descricoes?.length > 0));
-            let detailsBadge = hasDetails ? `<span class="text-[10px] bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded ml-2 border border-cyan-200 font-semibold flex items-center gap-1" title="Ver detalhes"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> Detalhes</span>` : '';
-
-            div.className = `card-interactive p-4 rounded-lg shadow-sm ${borderColor} ${bgColor} transition-all hover:shadow-md hover:-translate-y-1`;
+            div.className = `card-interactive p-4 rounded-xl shadow-sm border ${borderColor} ${bgColor} transition-all hover:shadow-lg active:scale-95 mb-3`;
             div.onclick = () => window.openDetails(item.id);
-
             div.innerHTML = `
-                <div class="flex justify-between items-start mb-1 gap-2">
-                    <h3 class="text-lg font-bold text-gray-800 break-words leading-tight flex flex-wrap items-center gap-2">
-                        ${formatName(item.name)}
-                        ${detailsBadge}
-                    </h3>
-                    ${item.priority === 'URGENTE' && !isAtendimento ? '<span class="shrink-0 bg-red-100 text-red-700 text-[10px] font-extrabold px-2 py-1 rounded border border-red-200 animate-pulse">URGENTE</span>' : ''}
+                <div class="flex justify-between items-start gap-2">
+                    <h3 class="text-md font-bold text-gray-800 uppercase leading-tight">${formatName(item.name)} ${hasExtra}</h3>
+                    ${item.priority === 'URGENTE' && !isAtendimento ? '<span class="bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded animate-pulse shrink-0">PRIORIDADE</span>' : ''}
                 </div>
-                <div class="flex items-center justify-between mt-1">
-                    <p class="text-sm text-gray-500 truncate mr-2" title="${item.subject || ''}">${item.subject || 'Sem assunto'}</p>
-                    ${salaBadge}
+                <div class="flex items-center justify-between mt-2">
+                    <p class="text-xs text-gray-500 font-medium truncate italic max-w-[70%]">${item.subject || '---'}</p>
+                    ${sala}
                 </div>
-                ${collabInfo}
+                ${collab}
             `;
             return div;
         }
 
-        // Função para criar card do Modal (Histórico Atendidos)
-        function createAtendidoRow(item, index) {
-            const div = document.createElement('div');
-            div.className = "bg-white p-3 rounded-lg border border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 hover:bg-blue-50 transition-colors cursor-pointer";
-            div.onclick = () => window.openDetails(item.id); 
-
-            const timeStr = item.attendedTime ? new Date(item.attendedTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
-            const attendant = typeof item.attendant === 'object' && item.attendant ? item.attendant.nome : (item.attendant || 'N/A');
-
-            let hasDetails = (item.serviceQuantity || item.serviceDetails || (item.demandas?.descricoes?.length > 0));
-            let detailsBadge = hasDetails ? `📝` : '';
-
-            div.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <span class="bg-gray-100 text-gray-600 font-mono text-xs px-2 py-1 rounded-md border border-gray-300">#${index}</span>
-                    <div>
-                        <p class="font-bold text-gray-800 flex items-center gap-1">${formatName(item.name)} <span class="text-xs" title="Tem detalhes">${detailsBadge}</span></p>
-                        <p class="text-xs text-gray-500">${item.subject || 'Sem assunto'}</p>
-                    </div>
-                </div>
-                <div class="text-right flex flex-col sm:items-end w-full sm:w-auto mt-2 sm:mt-0 pl-9 sm:pl-0">
-                    <span class="text-sm font-semibold text-green-700 flex items-center gap-1 sm:justify-end">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                        ${timeStr}
-                    </span>
-                    <span class="text-xs text-gray-400">Por: ${attendant}</span>
-                </div>
-            `;
-            return div;
-        }
-
-        // Renderiza o modal de atendidos
-        function renderModal() {
-            listAtendidosContent.innerHTML = '';
-            if (globalAtendidosList.length === 0) {
-                listAtendidosContent.innerHTML = '<div class="flex flex-col items-center justify-center py-10 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg><p>Nenhum atendimento finalizado.</p></div>';
-                return;
-            }
-            globalAtendidosList.forEach((item, index) => {
-                listAtendidosContent.appendChild(createAtendidoRow(item, globalAtendidosList.length - index));
-            });
-        }
-
-        openModalBtn.addEventListener('click', () => { renderModal(); modal.classList.remove('hidden'); });
-        const closeModal = () => modal.classList.add('hidden');
-        closeModalBtn.addEventListener('click', closeModal);
-        modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
-
-
-        // Inicialização
         if (!pautaId) {
-            loading.classList.add('hidden');
-            errorScreen.classList.remove('hidden');
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('error-screen').classList.remove('hidden');
         } else {
-            // 1. Pauta Info
+            // Monitor da Pauta (Removida checagem de isPublic para acesso livre via ID)
             onSnapshot(doc(db, "pautas", pautaId), (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    if (!data.isPublic) {
-                        appContent.classList.add('hidden');
-                        errorScreen.classList.remove('hidden');
-                        loading.classList.add('hidden');
-                        return;
-                    }
-                    errorScreen.classList.add('hidden');
-                    appContent.classList.remove('hidden');
-                    loading.classList.add('hidden');
-
                     document.getElementById('pauta-title').textContent = data.name;
                     maskNames = data.maskNames || false;
                     pautaRooms = data.rooms || [];
-
-                    // --- LÓGICA DE VISIBILIDADE DAS COLUNAS ---
+                    
                     if (data.useDelegationFlow) {
-                        colAtendimento.classList.remove('hidden');
-                        mainGrid.classList.remove('grid-cols-1');
-                        mainGrid.classList.add('lg:grid-cols-2');
+                        document.getElementById('col-atendimento').classList.remove('hidden');
+                        document.getElementById('main-grid').classList.replace('grid-cols-1', 'lg:grid-cols-2');
                     } else {
-                        colAtendimento.classList.add('hidden');
-                        mainGrid.classList.remove('lg:grid-cols-2');
-                        mainGrid.classList.add('grid-cols-1');
+                        document.getElementById('col-atendimento').classList.add('hidden');
+                        document.getElementById('main-grid').classList.replace('lg:grid-cols-2', 'grid-cols-1');
                     }
 
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('app-content').classList.remove('hidden');
                 } else {
-                    loading.classList.add('hidden');
-                    errorScreen.classList.remove('hidden');
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('error-screen').classList.remove('hidden');
                 }
             }, (error) => {
                 console.error(error);
-                loading.classList.add('hidden');
-                errorScreen.classList.remove('hidden');
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('error-screen').classList.remove('hidden');
             });
 
-            // 2. Atendimentos
+            // Monitor de Atendimentos
             onSnapshot(collection(db, "pautas", pautaId, "attendances"), (snapshot) => {
-                const allItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                allItemsGlobal = allItems; // Salva globalmente para o modal de detalhes
-                
-                const aguardando = allItems.filter(i => i.status === 'aguardando');
-                
-                // Agrupa "Em Atendimento" e "Aguardando Distribuição"
-                const emAtendimento = allItems.filter(i => i.status === 'emAtendimento' || i.status === 'aguardando_distribuicao'); 
-                
-                const atendidos = allItems.filter(i => i.status === 'atendido');
+                const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                allItemsGlobal = items;
 
-                // Atualizar Global List para o Modal (Ordenado por hora de fim desc)
-                globalAtendidosList = atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
+                const aguardando = items.filter(i => i.status === 'aguardando');
+                const emAtendimento = items.filter(i => i.status === 'emAtendimento' || i.status === 'aguardando_distribuicao');
+                const atendidos = items.filter(i => i.status === 'atendido').sort((a,b) => new Date(b.attendedTime) - new Date(a.attendedTime));
 
-                // Ordenação Aguardando
-                aguardando.sort((a, b) => {
-                    if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-                    if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-                    const timeA = a.arrivalTime ? new Date(a.arrivalTime) : new Date(a.createdAt);
-                    const timeB = b.arrivalTime ? new Date(b.arrivalTime) : new Date(b.createdAt);
-                    return timeA - timeB;
-                });
-
-                // Ordenação Em Atendimento
-                emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
-
-                // Counters
                 document.getElementById('count-aguardando').textContent = aguardando.length;
                 document.getElementById('count-atendimento').textContent = emAtendimento.length;
                 document.getElementById('total-atendidos-count').textContent = atendidos.length;
-                document.getElementById('last-update').textContent = `Atualizado às ${new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}`;
+                document.getElementById('last-update').textContent = `Dados sincronizados às ${new Date().toLocaleTimeString('pt-BR')}`;
 
-                // Renders
-                listAguardando.innerHTML = '';
-                listAtendimento.innerHTML = '';
+                const listAg = document.getElementById('list-aguardando');
+                const listAt = document.getElementById('list-atendimento');
+                const listHist = document.getElementById('list-atendidos-content');
 
-                // Render Aguardando
+                listAg.innerHTML = ''; listAt.innerHTML = ''; listHist.innerHTML = '';
+
+                // Render Aguardando com Salas
                 if (pautaRooms.length > 0) {
                     pautaRooms.forEach(room => {
                         const inRoom = aguardando.filter(x => x.room === room);
                         if(inRoom.length > 0) {
-                            const header = document.createElement('div');
-                            header.className = "sticky top-0 bg-gray-100/95 backdrop-blur text-xs font-bold text-gray-500 uppercase tracking-wider py-2 px-3 border-b border-gray-200 mt-2 mb-2 first:mt-0 shadow-sm z-10";
-                            header.innerHTML = `🏢 ${room} <span class="ml-2 text-[10px] bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full border border-gray-300">${inRoom.length}</span>`;
-                            listAguardando.appendChild(header);
-                            inRoom.forEach(item => listAguardando.appendChild(createCard(item)));
+                            const h = document.createElement('div');
+                            h.className = "sticky top-0 bg-gray-200/90 backdrop-blur text-[9px] font-black text-gray-500 uppercase p-2 border-b z-10 rounded-t-lg mt-2";
+                            h.textContent = `SALA: ${room}`;
+                            listAg.appendChild(h);
+                            inRoom.sort((a,b) => (a.manualIndex || 0) - (b.manualIndex || 0)).forEach(item => listAg.appendChild(createCard(item)));
                         }
                     });
-                    const noRoom = aguardando.filter(x => !x.room || !pautaRooms.includes(x.room));
-                    if(noRoom.length > 0) {
-                        const header = document.createElement('div');
-                        header.className = "sticky top-0 bg-gray-100/95 backdrop-blur text-xs font-bold text-gray-500 uppercase tracking-wider py-2 px-3 border-b border-gray-200 mt-2 mb-2 shadow-sm z-10";
-                        header.textContent = "Geral";
-                        listAguardando.appendChild(header);
-                        noRoom.forEach(item => listAguardando.appendChild(createCard(item)));
-                    }
-                    if (aguardando.length === 0) listAguardando.innerHTML = '<div class="text-center text-gray-400 mt-10 py-10">Ninguém aguardando no momento.</div>';
                 } else {
-                    if (aguardando.length === 0) listAguardando.innerHTML = '<div class="text-center text-gray-400 mt-10 py-10">Ninguém aguardando no momento.</div>';
-                    else aguardando.forEach(item => listAguardando.appendChild(createCard(item)));
+                    aguardando.sort((a,b) => (a.manualIndex || 0) - (b.manualIndex || 0)).forEach(item => listAg.appendChild(createCard(item)));
                 }
 
                 // Render Em Atendimento
-                if (emAtendimento.length === 0) listAtendimento.innerHTML = '<div class="text-center text-gray-400 mt-10 py-10">Nenhum atendimento em andamento.</div>';
-                else emAtendimento.forEach(item => listAtendimento.appendChild(createCard(item, true)));
+                emAtendimento.forEach(item => listAt.appendChild(createCard(item, true)));
+
+                // Render Histórico
+                atendidos.forEach((item, idx) => {
+                    const row = document.createElement('div');
+                    row.className = "bg-white p-3 rounded-xl border flex justify-between items-center text-sm hover:bg-blue-50 cursor-pointer mb-2 transition-colors";
+                    row.onclick = () => window.openDetails(item.id);
+                    row.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="text-[10px] font-black text-gray-300">#${atendidos.length - idx}</span>
+                            <span class="font-bold text-gray-700 uppercase">${formatName(item.name)}</span>
+                        </div>
+                        <span class="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-full font-black">OK</span>
+                    `;
+                    listHist.appendChild(row);
+                });
             });
+        }
+
+        document.getElementById('open-atendidos-btn').onclick = () => document.getElementById('atendidos-modal').classList.remove('hidden');
+        document.getElementById('close-atendidos-btn').onclick = () => document.getElementById('atendidos-modal').classList.add('hidden');
+        document.getElementById('close-details-btn').onclick = () => document.getElementById('details-modal').classList.add('hidden');
+        window.onclick = (e) => {
+            if (e.target.id === 'atendidos-modal') document.getElementById('atendidos-modal').classList.add('hidden');
+            if (e.target.id === 'details-modal') document.getElementById('details-modal').classList.add('hidden');
         }
     </script>
 </body>
