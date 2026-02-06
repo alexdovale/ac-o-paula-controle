@@ -535,8 +535,10 @@
                                 🚫 Faltosos
                                 <span id="faltosos-count" class="text-base font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
                             </h3>
+                            <!-- ADICIONADO BOTÃO PDF -->
+                            <button id="download-faltosos-pdf-btn" class="bg-red-600 text-white font-bold py-1 px-3 rounded-lg hover:bg-red-700 text-sm">PDF</button>
                         </div>
-                        <input type="search" id="faltosos-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                        <input type="search" id="faltosos-search" placeholder="Pesquisar..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                     </div>
                     <div id="faltosos-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
@@ -2175,28 +2177,31 @@ render(atendidosList, atendidos, a => {
 
             render(faltososList, faltosos, a => {
                 const card = document.createElement('div');
-                // ... (lógica de confirmação mantém igual) ...
-
+                card.className = 'relative bg-gray-50 p-4 rounded-lg shadow-sm border';
+            
+                // --- DEFINIÇÃO DAS VARIÁVEIS QUE ESTAVAM FALTANDO ---
+                const confirmedBtnBgClass = a.isConfirmed ? 'bg-green-500' : 'bg-gray-400';
+                const confirmedBtnHoverClass = a.isConfirmed ? 'hover:bg-green-600' : 'hover:bg-gray-500';
+                const confirmationInfo = a.isConfirmed && a.confirmationDetails ? 
+                    `<span class="text-[9px] text-gray-400 block mt-1 italic">Presença confirmada por: ${escapeHTML(a.confirmationDetails.confirmedBy)}</span>` : '';
+            
                 card.innerHTML = `
-                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg ...></svg></button>
+                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
                     <div class="flex items-center justify-between">
-                        <p class="font-bold text-lg inline-flex items-center">
-                            ${escapeHTML(a.name)}
-                        </p>
+                        <p class="font-bold text-lg text-gray-800">${escapeHTML(a.name)}</p>
                         <button data-id="${a.id}" class="toggle-confirmed-faltoso confirm-btn-style ${confirmedBtnBgClass} ${confirmedBtnHoverClass} text-white">
                             <svg class="confirm-btn-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/></svg>
                         </button>
                     </div>
-                    <div class="mt-2 space-y-2">
-                        ${a.cpf ? `<p class="text-sm">CPF: <strong>${escapeHTML(a.cpf)}</strong></p>` : ''}
-                        <p class="text-sm">Assunto: <strong>${escapeHTML(a.subject)}</strong></p>
-                        <p class="text-sm">Agendado: <strong>${a.scheduledTime}</strong></p>
+                    <div class="mt-2 space-y-1">
+                        ${a.cpf ? `<p class="text-xs text-gray-500">CPF: <strong>${escapeHTML(a.cpf)}</strong></p>` : ''}
+                        <p class="text-xs">Assunto: <strong>${escapeHTML(a.subject)}</strong></p>
+                        <p class="text-xs">Agendado: <strong>${a.scheduledTime || 'N/A'}</strong></p>
                         <div class="mt-3">
-                            <button data-id="${a.id}" class="return-to-pauta-from-faltoso-btn w-full bg-gray-500 text-white font-semibold py-1 rounded-lg hover:bg-gray-600 text-xs">Revertido para Pauta</button>
+                            <button data-id="${a.id}" class="return-to-pauta-from-faltoso-btn w-full bg-gray-500 text-white font-semibold py-1 rounded-lg hover:bg-gray-600 text-[10px] uppercase">Reverter para Pauta</button>
                         </div>
                         ${confirmationInfo}
                     </div>
-                    ${a.lastActionBy ? `<div class="text-xs text-right text-gray-400 mt-2 pt-2 border-t">Última ação por: <strong>${escapeHTML(a.lastActionBy)}</strong></div>` : ''}
                 `;
                 return card;
             });
@@ -4373,6 +4378,21 @@ if (btnAdmin) {
                 generateCollaboratorsPDF(pautaTitle, colaboradores, selectedCols);
             };
         }
+
+            // Botão PDF de Faltosos
+    const btnFaltososPdf = document.getElementById('download-faltosos-pdf-btn');
+    if (btnFaltososPdf) {
+        btnFaltososPdf.onclick = () => {
+            const faltosos = allAssisted.filter(a => a.status === 'faltoso');
+            if (faltosos.length === 0) {
+                showNotification("Não há faltosos na lista.", "info");
+                return;
+            }
+            const pautaTitle = document.getElementById('pauta-title').textContent;
+            // Reutiliza a lógica do PDF de atendidos mas rotulando como Faltosos
+            generateAtendidosPDF(`${pautaTitle} (FALTOSOS)`, faltosos);
+        };
+    }
         
     </script>
 
@@ -4504,6 +4524,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
