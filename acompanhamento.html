@@ -3,318 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acompanhamento de Pauta - SIGAP</title>
-    <!-- Tailwind CSS -->
+    <title>Acompanhamento ao Vivo - SIGAP</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .modal-enter { animation: fadeIn 0.2s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        .card-interactive { cursor: pointer; }
-        .scrollable-content::-webkit-scrollbar { width: 6px; }
-        .scrollable-content::-webkit-scrollbar-track { background: #f1f1f1; }
-        .scrollable-content::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
     </style>
 </head>
-<body class="p-4 md:p-8 min-h-screen flex flex-col">
+<body class="p-4 md:p-8 min-h-screen">
 
     <!-- Tela de Carregamento -->
-    <div id="loading" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50 transition-opacity duration-300">
+    <div id="loading" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-        <p class="mt-4 text-gray-600 font-medium">Conectando à pauta ao vivo...</p>
+        <p class="mt-4 text-gray-600 font-bold">Sincronizando pauta...</p>
     </div>
 
     <!-- Tela de Erro / Acesso Restrito -->
-    <div id="error-screen" class="hidden fixed inset-0 bg-gray-100 flex flex-col items-center justify-center text-center p-4 z-50">
+    <div id="error-screen" class="hidden fixed inset-0 bg-gray-100 flex flex-col items-center justify-center text-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border-t-8 border-red-500">
             <div class="text-6xl mb-4">🔒</div>
             <h1 class="text-2xl font-bold text-gray-800 mb-2">Acesso Restrito</h1>
-            <p class="text-gray-600 mb-6">Esta pauta não está pública no momento ou o link de acesso expirou.</p>
-            <button onclick="location.reload()" class="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-bold hover:bg-gray-200 transition">Tentar Novamente</button>
+            <p id="error-message" class="text-gray-600 mb-6">Esta pauta não está pública no momento.</p>
+            <button onclick="location.reload()" class="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-bold">Recarregar</button>
         </div>
     </div>
 
     <!-- Conteúdo Principal -->
-    <div id="app-content" class="hidden w-full max-w-7xl mx-auto flex-1 flex flex-col h-full">
-        
-        <!-- CABEÇALHO -->
-        <header class="mb-6 bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div class="text-center md:text-left">
-                <h1 id="pauta-title" class="text-2xl md:text-3xl font-extrabold text-gray-800 tracking-tight uppercase">---</h1>
-                <div class="flex items-center justify-center md:justify-start gap-2 mt-1">
-                    <span class="relative flex h-3 w-3">
-                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                    </span>
-                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Painel Público • SIGAP</p>
-                </div>
+    <div id="app-content" class="hidden w-full max-w-2xl mx-auto">
+        <header class="text-center mb-8">
+            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo" class="h-16 mx-auto mb-4">
+            <h1 id="pauta-title" class="text-2xl font-black text-slate-800 uppercase tracking-tight">---</h1>
+            <div class="flex items-center justify-center gap-2 mt-2">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <p class="text-[10px] text-gray-400 font-black uppercase tracking-widest">Painel de Acompanhamento</p>
             </div>
-
-            <!-- Botão Total Atendidos -->
-            <button id="open-atendidos-btn" class="bg-blue-600 hover:bg-blue-700 text-white transition-all px-6 py-3 rounded-xl flex flex-col items-center justify-center shadow-lg min-w-[160px]">
-                <span class="text-[10px] font-black uppercase tracking-wider opacity-80">Finalizados Hoje</span>
-                <span id="total-atendidos-count" class="text-3xl font-black leading-none mt-1">0</span>
-            </button>
         </header>
 
-        <!-- GRID PRINCIPAL -->
-        <div id="main-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
-            
-            <!-- Coluna Aguardando -->
-            <div id="col-aguardando" class="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-[65vh] lg:h-[75vh]">
-                <div class="bg-amber-500 p-4 text-white flex justify-between items-center shrink-0 shadow-md">
-                    <h2 class="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
-                        ⏳ Fila de Espera
-                    </h2>
-                    <span id="count-aguardando" class="bg-white text-amber-600 px-3 py-0.5 rounded-full text-sm font-black">0</span>
-                </div>
-                <div id="list-aguardando" class="p-4 overflow-y-auto flex-1 space-y-3 bg-gray-50 scrollable-content"></div>
+        <div class="space-y-4">
+            <div class="bg-white rounded-2xl shadow-sm border p-4 flex justify-between items-center">
+                <span class="text-xs font-black text-slate-400 uppercase">Aguardando</span>
+                <span id="count-aguardando" class="bg-amber-100 text-amber-700 px-3 py-0.5 rounded-full font-black">0</span>
             </div>
-
-            <!-- Coluna Em Atendimento -->
-            <div id="col-atendimento" class="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-[65vh] lg:h-[75vh]">
-                <div class="bg-green-600 p-4 text-white flex justify-between items-center shrink-0 shadow-md">
-                    <h2 class="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
-                        👩‍💻 Em Atendimento
-                    </h2>
-                    <span id="count-atendimento" class="bg-white text-green-700 px-3 py-0.5 rounded-full text-sm font-black">0</span>
-                </div>
-                <div id="list-atendimento" class="p-4 overflow-y-auto flex-1 space-y-3 bg-gray-50 scrollable-content"></div>
-            </div>
+            <div id="list-aguardando" class="space-y-3"></div>
         </div>
-
-        <footer id="last-update" class="mt-4 text-center text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-            Aguardando sincronização...
-        </footer>
-    </div>
-
-    <!-- MODAL DE DETALHES -->
-    <div id="details-modal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl modal-enter overflow-hidden">
-            <div class="p-6">
-                <div class="flex justify-between items-start mb-6">
-                    <h2 id="modal-name" class="text-2xl font-black text-gray-800 leading-tight uppercase">---</h2>
-                    <button id="close-details-btn" class="text-gray-300 hover:text-red-500 transition-colors">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="3" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                </div>
-                <div class="space-y-5">
-                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Assunto</p>
-                        <p id="modal-subject" class="text-gray-700 font-bold">---</p>
-                    </div>
-                    <div id="modal-service-info" class="hidden">
-                        <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100 mb-4">
-                            <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Total de Demandas</p>
-                            <p id="modal-qtd" class="text-4xl font-black text-blue-700">0</p>
-                        </div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Observações do Servidor</p>
-                        <div id="modal-details" class="bg-slate-50 p-4 rounded-2xl text-sm text-gray-600 whitespace-pre-wrap border border-slate-100 max-h-48 overflow-y-auto scrollable-content font-medium">---</div>
-                    </div>
-                    <div id="modal-no-info" class="text-center py-8 text-gray-400 text-xs italic bg-gray-50 rounded-2xl border border-dashed border-gray-200 uppercase font-bold tracking-tighter">
-                        Informações adicionais pendentes.
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL HISTÓRICO ATENDIDOS -->
-    <div id="atendidos-modal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[90] p-4">
-        <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl modal-enter flex flex-col max-h-[85vh]">
-            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-blue-50 rounded-t-3xl shrink-0">
-                <h2 class="text-xl font-black text-blue-900 uppercase italic tracking-tighter">✅ Histórico de Atendidos</h2>
-                <button id="close-atendidos-btn" class="text-blue-300 hover:text-blue-600 text-3xl font-bold">&times;</button>
-            </div>
-            <div id="list-atendidos-content" class="p-4 overflow-y-auto flex-1 space-y-2 bg-gray-50 scrollable-content"></div>
+        
+        <div class="mt-8 pt-6 border-t">
+             <button id="open-atendidos-btn" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold shadow-lg">
+                Ver Histórico de Atendidos (<span id="total-atendidos-count">0</span>)
+             </button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // CONFIGURAÇÃO DO FIREBASE (MANTIDA)
+        
+        // Sua configuração (confirme se o projectId está correto)
         const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
+        
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
         const urlParams = new URLSearchParams(window.location.search);
-        const pautaId = urlParams.get('id');
+        const pId = urlParams.get('id');
 
-        let maskNames = false;
-        let pautaRooms = [];
-        let allItemsGlobal = [];
+        if (!pId) {
+            showError("ID da pauta não fornecido na URL.");
+        } else {
+            // Monitorar Pauta
+            onSnapshot(doc(db, "pautas", pId), (snap) => {
+                if (!snap.exists()) {
+                    showError("Esta pauta foi excluída ou não existe.");
+                    return;
+                }
+                const data = snap.data();
+                
+                // DIAGNÓSTICO: Mostra no console o que está vindo
+                console.log("Status da Pauta:", data.name, "Pública:", data.isPublic);
 
-        function escapeHTML(str) { return str ? str.toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) : ''; }
+                if (data.isPublic !== true) {
+                    showError("O Administrador desativou o compartilhamento desta pauta.");
+                    return;
+                }
 
-        function formatName(name) {
-            if (!maskNames || !name) return name;
-            const parts = name.trim().split(' ');
-            if (parts.length === 1) return name;
-            return `${parts[0]} ${parts[parts.length - 1].charAt(0)}.***`; 
+                document.getElementById('pauta-title').textContent = data.name;
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('app-content').classList.remove('hidden');
+
+                // Monitorar Itens
+                onSnapshot(collection(db, "pautas", pId, "attendances"), (attSnap) => {
+                    const items = attSnap.docs.map(d => d.data());
+                    const aguardando = items.filter(i => i.status === 'aguardando');
+                    const atendidos = items.filter(i => i.status === 'atendido');
+
+                    document.getElementById('count-aguardando').textContent = aguardando.length;
+                    document.getElementById('total-atendidos-count').textContent = atendidos.length;
+
+                    const list = document.getElementById('list-aguardando');
+                    list.innerHTML = aguardando.length ? aguardando.map((a, i) => `
+                        <div class="bg-white p-4 rounded-xl border-l-4 border-amber-500 shadow-sm flex justify-between items-center">
+                            <div>
+                                <p class="text-[10px] font-bold text-gray-400 uppercase">${i+1}º da Fila</p>
+                                <p class="font-bold text-gray-800">${a.name}</p>
+                            </div>
+                            <span class="text-[10px] font-black bg-slate-100 px-2 py-1 rounded uppercase">${a.room || 'Geral'}</span>
+                        </div>
+                    `).join('') : '<p class="text-center text-gray-400 py-10">Fila vazia.</p>';
+                });
+
+            }, (err) => {
+                console.error("Erro Firebase:", err.code);
+                showError("Erro de permissão do Firebase. Verifique as Security Rules.");
+            });
         }
 
-        window.openDetails = (itemId) => {
-            const item = allItemsGlobal.find(i => i.id === itemId);
-            if (!item) return;
-
-            document.getElementById('modal-name').textContent = formatName(item.name);
-            document.getElementById('modal-subject').textContent = item.subject || 'Assunto Geral';
-
-            const serviceInfo = document.getElementById('modal-service-info');
-            const noInfo = document.getElementById('modal-no-info');
-
-            let displayQtd = '0';
-            let displayDetails = '';
-            let hasInfo = false;
-
-            if (item.demandas && item.demandas.descricoes && item.demandas.descricoes.length > 0) {
-                hasInfo = true;
-                displayQtd = item.demandas.quantidade || item.demandas.descricoes.length;
-                displayDetails = item.demandas.descricoes.map(d => `• ${d}`).join('\n');
-            } else if (item.serviceQuantity || item.serviceDetails) {
-                hasInfo = true;
-                displayQtd = item.serviceQuantity || '-';
-                displayDetails = item.serviceDetails || '-';
-            }
-
-            if (hasInfo) {
-                serviceInfo.classList.remove('hidden');
-                noInfo.classList.add('hidden');
-                document.getElementById('modal-qtd').textContent = displayQtd;
-                document.getElementById('modal-details').textContent = displayDetails;
-            } else {
-                serviceInfo.classList.add('hidden');
-                noInfo.classList.remove('hidden');
-            }
-            document.getElementById('details-modal').classList.remove('hidden');
-        };
-
-        function createCard(item, isAtendimento = false) {
-            const div = document.createElement('div');
-            const borderColor = isAtendimento ? 'border-l-4 border-green-500' : (item.priority === 'URGENTE' ? 'border-l-4 border-red-500' : 'border-l-4 border-gray-300');
-            const bgColor = isAtendimento ? 'bg-green-50/50' : (item.priority === 'URGENTE' ? 'bg-red-50/50' : 'bg-white');
-            
-            const sala = item.room ? `<span class="bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full ml-auto uppercase tracking-tighter shadow-sm">📍 ${item.room}</span>` : '';
-            const collab = (isAtendimento && item.assignedCollaborator) ? `<p class="mt-2 text-[10px] font-bold text-green-700 uppercase flex items-center gap-1 border-t border-green-100 pt-1"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"></path></svg> Atendente: ${item.assignedCollaborator.name}</p>` : '';
-            const hasExtra = (item.serviceQuantity || item.serviceDetails || (item.demandas?.descricoes?.length > 0)) ? '📝' : '';
-
-            div.className = `card-interactive p-4 rounded-xl shadow-sm border ${borderColor} ${bgColor} transition-all hover:shadow-lg active:scale-95`;
-            div.onclick = () => window.openDetails(item.id);
-
-            div.innerHTML = `
-                <div class="flex justify-between items-start gap-2">
-                    <h3 class="text-md font-bold text-gray-800 uppercase leading-tight">${formatName(item.name)} ${hasExtra}</h3>
-                    ${item.priority === 'URGENTE' && !isAtendimento ? '<span class="bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded animate-pulse">PRIORIDADE</span>' : ''}
-                </div>
-                <div class="flex items-center justify-between mt-2">
-                    <p class="text-xs text-gray-500 font-medium truncate italic max-w-[70%]">${item.subject || '---'}</p>
-                    ${sala}
-                </div>
-                ${collab}
-            `;
-            return div;
-        }
-
-        if (!pautaId) {
+        function showError(msg) {
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('error-screen').classList.remove('hidden');
-        } else {
-            // Monitor da Pauta
-            onSnapshot(doc(db, "pautas", pautaId), (docSnap) => {
-                if (docSnap.exists() && docSnap.data().isPublic) {
-                    const data = docSnap.data();
-                    document.getElementById('pauta-title').textContent = data.name;
-                    maskNames = data.maskNames || false;
-                    pautaRooms = data.rooms || [];
-                    
-                    if (data.useDelegationFlow) {
-                        document.getElementById('col-atendimento').classList.remove('hidden');
-                        document.getElementById('main-grid').classList.replace('grid-cols-1', 'lg:grid-cols-2');
-                    } else {
-                        document.getElementById('col-atendimento').classList.add('hidden');
-                        document.getElementById('main-grid').classList.replace('lg:grid-cols-2', 'grid-cols-1');
-                    }
-
-                    document.getElementById('loading').classList.add('opacity-0');
-                    setTimeout(() => document.getElementById('loading').classList.add('hidden'), 300);
-                    document.getElementById('app-content').classList.remove('hidden');
-                } else {
-                    document.getElementById('loading').classList.add('hidden');
-                    document.getElementById('error-screen').classList.remove('hidden');
-                }
-            }, () => {
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('error-screen').classList.remove('hidden');
-            });
-
-            // Monitor de Atendimentos
-            onSnapshot(collection(db, "pautas", pautaId, "attendances"), (snapshot) => {
-                const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                allItemsGlobal = items;
-
-                const aguardando = items.filter(i => i.status === 'aguardando');
-                const emAtendimento = items.filter(i => i.status === 'emAtendimento' || i.status === 'aguardando_distribuicao');
-                const atendidos = items.filter(i => i.status === 'atendido').sort((a,b) => new Date(b.attendedTime) - new Date(a.attendedTime));
-
-                document.getElementById('count-aguardando').textContent = aguardando.length;
-                document.getElementById('count-atendimento').textContent = emAtendimento.length;
-                document.getElementById('total-atendidos-count').textContent = atendidos.length;
-                document.getElementById('last-update').textContent = `Dados sincronizados às ${new Date().toLocaleTimeString('pt-BR')}`;
-
-                const listAg = document.getElementById('list-aguardando');
-                const listAt = document.getElementById('list-atendimento');
-                const listHist = document.getElementById('list-atendidos-content');
-
-                listAg.innerHTML = ''; listAt.innerHTML = ''; listHist.innerHTML = '';
-
-                // Render Aguardando com Salas
-                if (pautaRooms.length > 0) {
-                    pautaRooms.forEach(room => {
-                        const inRoom = aguardando.filter(x => x.room === room);
-                        if(inRoom.length > 0) {
-                            const h = document.createElement('div');
-                            h.className = "sticky top-0 bg-gray-200/80 backdrop-blur text-[9px] font-black text-gray-500 uppercase p-2 border-b z-10 rounded-t-lg";
-                            h.textContent = `🏢 SALA: ${room}`;
-                            listAg.appendChild(h);
-                            inRoom.sort((a,b) => (a.manualIndex || 0) - (b.manualIndex || 0)).forEach(item => listAg.appendChild(createCard(item)));
-                        }
-                    });
-                } else {
-                    aguardando.sort((a,b) => (a.manualIndex || 0) - (b.manualIndex || 0)).forEach(item => listAg.appendChild(createCard(item)));
-                }
-
-                // Render Em Atendimento
-                emAtendimento.forEach(item => listAt.appendChild(createCard(item, true)));
-
-                // Render Histórico
-                if (atendidos.length === 0) listHist.innerHTML = '<p class="text-center text-gray-400 py-10">Histórico vazio.</p>';
-                atendidos.forEach((item, idx) => {
-                    const row = document.createElement('div');
-                    row.className = "bg-white p-3 rounded-xl border flex justify-between items-center text-sm hover:bg-blue-50 cursor-pointer transition-colors";
-                    row.onclick = () => window.openDetails(item.id);
-                    row.innerHTML = `
-                        <div class="flex items-center gap-3">
-                            <span class="text-[10px] font-black text-gray-300">#${atendidos.length - idx}</span>
-                            <span class="font-bold text-gray-700">${formatName(item.name)}</span>
-                        </div>
-                        <span class="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-full font-black">OK</span>
-                    `;
-                    listHist.appendChild(row);
-                });
-            });
-        }
-
-        // Modais
-        document.getElementById('open-atendidos-btn').onclick = () => document.getElementById('atendidos-modal').classList.remove('hidden');
-        document.getElementById('close-atendidos-btn').onclick = () => document.getElementById('atendidos-modal').classList.add('hidden');
-        document.getElementById('close-details-btn').onclick = () => document.getElementById('details-modal').classList.add('hidden');
-        
-        window.onclick = (e) => {
-            if (e.target.id === 'atendidos-modal') document.getElementById('atendidos-modal').classList.add('hidden');
-            if (e.target.id === 'details-modal') document.getElementById('details-modal').classList.add('hidden');
+            document.getElementById('error-message').textContent = msg;
         }
     </script>
 </body>
