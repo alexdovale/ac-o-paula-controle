@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acompanhamento ao Vivo - SIGAP</title>
+    <title>Acompanhamento de Fila - SIGAP</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap" rel="stylesheet">
     <style>
@@ -16,57 +16,46 @@
 </head>
 <body class="p-4 md:p-8 min-h-screen flex flex-col">
 
-    <!-- Tela de Carregamento -->
     <div id="loading" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-        <p class="mt-4 text-gray-500 font-bold uppercase text-xs tracking-widest">Sincronizando Fila...</p>
+        <p class="mt-4 text-gray-500 font-bold uppercase text-xs">Sincronizando Fila...</p>
     </div>
 
-    <!-- Tela de Erro -->
     <div id="error-screen" class="hidden fixed inset-0 bg-gray-100 flex flex-col items-center justify-center text-center p-4 z-50">
         <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full border-t-8 border-red-500">
-            <div class="text-6xl mb-4">🔒</div>
             <h1 class="text-2xl font-black text-gray-800 mb-2 uppercase">Acesso Restrito</h1>
-            <p id="error-message" class="text-gray-600 mb-6 text-sm">Esta pauta não está pública no momento.</p>
-            <button onclick="location.reload()" class="bg-gray-800 text-white px-8 py-3 rounded-xl font-bold">Recarregar</button>
+            <p id="error-message" class="text-gray-600 mb-6 text-sm">Esta pauta não está pública.</p>
+            <button onclick="location.reload()" class="bg-slate-800 text-white px-8 py-3 rounded-xl font-bold">Recarregar</button>
         </div>
     </div>
 
-    <!-- Conteúdo Principal -->
     <div id="app-content" class="hidden w-full max-w-4xl mx-auto flex-1 flex flex-col h-full">
-        <header class="text-center mb-8 bg-white p-6 rounded-3xl shadow-sm border border-gray-100 shrink-0">
-            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo" class="h-16 mx-auto mb-4">
-            <h1 id="pauta-title" class="text-xl md:text-2xl font-black text-slate-800 uppercase tracking-tight leading-tight">---</h1>
-            <div class="flex items-center justify-center gap-2 mt-3">
-                <span class="relative flex h-3 w-3"><span class="animate-ping absolute h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative rounded-full h-3 w-3 bg-green-500"></span></span>
-                <p class="text-[10px] text-gray-400 font-black uppercase tracking-widest">Painel ao Vivo • SIGAP</p>
+        <header class="text-center mb-6 bg-white p-6 rounded-3xl shadow-sm border shrink-0">
+            <h1 id="pauta-title" class="text-xl md:text-2xl font-black text-slate-800 uppercase leading-tight tracking-tighter">---</h1>
+            <div class="flex items-center justify-center gap-2 mt-2">
+                <span class="relative flex h-2 w-2"><span class="animate-ping absolute h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative rounded-full h-2 w-2 bg-green-500"></span></span>
+                <p id="last-sync" class="text-[9px] text-gray-400 font-black uppercase tracking-widest">Conectado ao vivo</p>
             </div>
         </header>
 
-        <div class="space-y-4 flex-1 overflow-y-auto scrollable-content pb-10">
-            <div class="bg-white rounded-2xl shadow-sm border p-4 flex justify-between items-center sticky top-0 z-10">
-                <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Aguardando na Fila</span>
-                <span id="count-aguardando" class="bg-amber-100 text-amber-700 px-3 py-0.5 rounded-full font-black">0</span>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-h-0">
+            <!-- AGUARDANDO -->
+            <div class="bg-white rounded-3xl shadow-md border overflow-hidden flex flex-col h-[60vh] lg:h-[75vh]">
+                <div class="bg-amber-500 p-4 text-white flex justify-between items-center shrink-0">
+                    <h2 class="text-sm font-black uppercase tracking-tighter">⏳ Fila de Espera</h2>
+                    <span id="count-aguardando" class="bg-white text-amber-600 px-3 py-0.5 rounded-full text-xs font-black">0</span>
+                </div>
+                <div id="list-aguardando" class="p-4 overflow-y-auto flex-1 space-y-3 bg-gray-50 scrollable-content"></div>
             </div>
-            <div id="list-aguardando" class="space-y-3"></div>
-        </div>
 
-        <footer class="shrink-0 pt-4 border-t border-gray-200">
-             <button id="open-atendidos-btn" class="w-full bg-slate-800 text-white py-3 rounded-2xl font-bold shadow-lg flex justify-between px-6 items-center">
-                <span>VER HISTÓRICO DE ATENDIDOS</span>
-                <span id="total-atendidos-count" class="bg-white/20 px-2 py-0.5 rounded-lg text-sm">0</span>
-             </button>
-        </footer>
-    </div>
-
-    <!-- MODAL HISTÓRICO -->
-    <div id="atendidos-modal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl modal-enter flex flex-col max-h-[80vh] overflow-hidden">
-            <div class="p-5 border-b flex justify-between items-center bg-blue-50">
-                <h2 class="text-lg font-black text-blue-900 uppercase">✅ Finalizados</h2>
-                <button id="close-atendidos-btn" class="text-blue-300 hover:text-blue-600 text-3xl font-bold">&times;</button>
+            <!-- EM ATENDIMENTO -->
+            <div id="col-atendimento" class="bg-white rounded-3xl shadow-md border overflow-hidden flex flex-col h-[60vh] lg:h-[75vh]">
+                <div class="bg-green-600 p-4 text-white flex justify-between items-center shrink-0">
+                    <h2 class="text-sm font-black uppercase tracking-tighter">👩‍💻 No Guichê</h2>
+                    <span id="count-atendimento" class="bg-white text-green-700 px-3 py-0.5 rounded-full text-xs font-black">0</span>
+                </div>
+                <div id="list-atendimento" class="p-4 overflow-y-auto flex-1 space-y-3 bg-gray-50 scrollable-content"></div>
             </div>
-            <div id="list-atendidos-content" class="p-4 overflow-y-auto flex-1 space-y-2 bg-gray-50"></div>
         </div>
     </div>
 
@@ -76,72 +65,120 @@
         import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
         
         const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
-        
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // ATIVAÇÃO OBRIGATÓRIA DO APP CHECK
-        try {
-            initializeAppCheck(app, {
-                provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
-                isTokenAutoRefreshEnabled: true
-            });
-        } catch(e) {}
+        try { initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'), isTokenAutoRefreshEnabled: true }); } catch(e) {}
 
         const urlParams = new URLSearchParams(window.location.search);
         const pId = urlParams.get('id');
 
-        if (!pId) {
-            showError("ID da pauta inválido.");
-        } else {
-            // Monitorar Pauta
+        let pautaConfig = { ordemAtendimento: 'padrao', maskNames: false };
+
+        // --- LÓGICA DE PRIORIDADE (IDÊNTICA À INTERNA) ---
+        const getPriorityLevel = (item) => {
+            if (item.priority === 'URGENTE') return 0; // Topo absoluto
+            if (item.type === 'avulso') return 2; // Média
+            if (!item.scheduledTime || !item.arrivalTime) return 2;
+
+            const scheduled = new Date(`1970-01-01T${item.scheduledTime}`);
+            const arrival = new Date(item.arrivalTime);
+            const arrivalOnlyTime = new Date(`1970-01-01T${arrival.toTimeString().slice(0, 5)}`);
+            const diffMinutes = (arrivalOnlyTime - scheduled) / (1000 * 60);
+
+            if (diffMinutes <= 0) return 1; // Máxima (No horário ou adiantado)
+            if (diffMinutes <= 20) return 2; // Média (Até 20min atraso)
+            return 3; // Mínima (Mais de 20min atraso)
+        };
+
+        function sortFila(list, mode) {
+            return list.sort((a, b) => {
+                // 1. Urgência sempre primeiro
+                if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+                if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+
+                if (mode === 'manual') {
+                    return (a.manualIndex || 0) - (b.manualIndex || 0);
+                }
+                
+                if (mode === 'chegada') {
+                    const timeA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
+                    const timeB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
+                    return timeA - timeB;
+                }
+
+                // Modo Padrão (Lógica de Pontualidade)
+                const levelA = getPriorityLevel(a);
+                const levelB = getPriorityLevel(b);
+                if (levelA !== levelB) return levelA - levelB;
+
+                // Desempate por Horário Agendado
+                if (levelA === 1 && a.scheduledTime && b.scheduledTime) {
+                    return a.scheduledTime.localeCompare(b.scheduledTime);
+                }
+
+                // Desempate Final: Horário de Chegada
+                const arrivalA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : Infinity;
+                const arrivalB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : Infinity;
+                return arrivalA - arrivalB;
+            });
+        }
+
+        function formatName(name) {
+            if (!name) return "---";
+            if (!pautaConfig.maskNames) return name;
+            const parts = name.trim().split(' ');
+            return parts.length > 1 ? `${parts[0]} ${parts[1][0]}.***` : name;
+        }
+
+        if (pId) {
             onSnapshot(doc(db, "pautas", pId), (snap) => {
-                if (!snap.exists()) { showError("Esta pauta não existe."); return; }
-                const pData = snap.data();
-                if (pData.isPublic !== true) { showError("O compartilhamento desta pauta foi desativado."); return; }
+                if (snap.exists() && snap.data().isPublic) {
+                    const data = snap.data();
+                    pautaConfig = data;
+                    document.getElementById('pauta-title').textContent = data.name;
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('app-content').classList.remove('hidden');
 
-                document.getElementById('pauta-title').textContent = pData.name;
-                const mask = pData.maskNames || false;
-
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('app-content').classList.remove('hidden');
-
-                // Monitorar Fila
-                onSnapshot(collection(db, "pautas", pId, "attendances"), (attSnap) => {
-                    const items = attSnap.docs.map(d => ({id: d.id, ...d.data()}));
-                    const ag = items.filter(i => i.status === 'aguardando').sort((a,b) => (a.manualIndex || 0) - (b.manualIndex || 0));
-                    const done = items.filter(i => i.status === 'atendido').sort((a,b) => new Date(b.attendedTime) - new Date(a.attendedTime));
-
-                    document.getElementById('count-aguardando').textContent = ag.length;
-                    document.getElementById('total-atendidos-count').textContent = done.length;
-
-                    const listAg = document.getElementById('list-aguardando');
-                    listAg.innerHTML = ag.length ? ag.map((a, i) => {
-                        // Lógica de Badge de Documentação
-                        let docBadge = a.documentState === 'saved' ? '<span class="ml-2 text-[8px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-black shrink-0">DOCS OK</span>' : '';
+                    onSnapshot(collection(db, "pautas", pId, "attendances"), (attSnap) => {
+                        const all = attSnap.docs.map(d => ({id: d.id, ...d.data()}));
                         
-                        return `
-                        <div class="bg-white p-4 rounded-2xl border-l-8 ${a.priority === 'URGENTE' ? 'border-red-500' : 'border-amber-400'} shadow-sm flex justify-between items-center transition-all">
-                            <div class="min-w-0">
-                                <p class="text-[9px] font-black text-gray-400 uppercase">${i+1}º DA FILA</p>
-                                <p class="font-bold text-gray-800 text-lg uppercase truncate">${mask ? a.name.split(' ')[0] + ' ' + (a.name.split(' ')[1] ? a.name.split(' ')[1][0] : '') + '***' : a.name}</p>
-                            </div>
-                            <div class="flex flex-col items-end gap-1 shrink-0">
-                                <span class="text-[9px] font-black bg-slate-100 px-2 py-1 rounded uppercase">${a.room || 'Geral'}</span>
-                                ${docBadge}
-                            </div>
-                        </div>`;
-                    }).join('') : '<div class="text-center py-10 opacity-30 font-black text-xs uppercase tracking-widest">Fila Vazia</div>';
+                        const aguardando = all.filter(i => i.status === 'aguardando');
+                        const sortedAguardando = sortFila(aguardando, data.ordemAtendimento);
+                        const emAtendimento = all.filter(i => i.status === 'emAtendimento' || i.status === 'aguardando_distribuicao')
+                                                 .sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
 
-                    const listDone = document.getElementById('list-atendidos-content');
-                    listDone.innerHTML = done.map(d => `
-                        <div class="bg-white p-3 rounded-xl border flex justify-between items-center text-sm">
-                            <span class="font-bold text-gray-600 truncate">${mask ? d.name.split(' ')[0] + '***' : d.name}</span>
-                            <span class="text-[10px] font-black text-green-600">OK</span>
-                        </div>
-                    `).join('');
-                });
-            }, (err) => { showError("Permissão negada. Verifique se a pauta é pública."); });
+                        document.getElementById('count-aguardando').textContent = aguardando.length;
+                        document.getElementById('count-atendimento').textContent = emAtendimento.length;
+                        document.getElementById('last-sync').textContent = `Sincronizado às ${new Date().toLocaleTimeString('pt-BR')}`;
+
+                        const listAg = document.getElementById('list-aguardando');
+                        listAg.innerHTML = sortedAguardando.map((item, idx) => `
+                            <div class="bg-white p-4 rounded-2xl border-l-8 ${item.priority === 'URGENTE' ? 'border-red-500 bg-red-50' : 'border-amber-400'} shadow-sm flex justify-between items-center">
+                                <div class="min-w-0">
+                                    <p class="text-[9px] font-black text-gray-400 uppercase">${idx + 1}º DA FILA ${item.priority === 'URGENTE' ? '• URGENTE' : ''}</p>
+                                    <p class="font-bold text-gray-800 text-lg truncate uppercase">${formatName(item.name)}</p>
+                                </div>
+                                <span class="bg-slate-100 text-slate-600 text-[9px] font-black px-2 py-1 rounded uppercase shrink-0 ml-2">${item.room || 'Geral'}</span>
+                            </div>
+                        `).join('');
+
+                        const listAt = document.getElementById('list-atendimento');
+                        listAt.innerHTML = emAtendimento.map(item => `
+                            <div class="bg-white p-4 rounded-2xl border-l-8 border-green-500 shadow-sm flex justify-between items-center animate-pulse">
+                                <div class="min-w-0">
+                                    <p class="text-[9px] font-black text-green-600 uppercase tracking-widest">No Atendimento</p>
+                                    <p class="font-bold text-gray-800 text-lg truncate uppercase">${formatName(item.name)}</p>
+                                </div>
+                                <span class="text-xl">👩‍💻</span>
+                            </div>
+                        `).join('');
+                    });
+                } else {
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('error-screen').classList.remove('hidden');
+                }
+            });
         }
 
         function showError(msg) {
@@ -149,9 +186,6 @@
             document.getElementById('error-screen').classList.remove('hidden');
             document.getElementById('error-message').textContent = msg;
         }
-
-        document.getElementById('open-atendidos-btn').onclick = () => document.getElementById('atendidos-modal').classList.remove('hidden');
-        document.getElementById('close-atendidos-btn').onclick = () => document.getElementById('atendidos-modal').classList.add('hidden');
     </script>
 </body>
 </html>
