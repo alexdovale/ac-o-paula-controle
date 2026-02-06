@@ -2374,25 +2374,20 @@ render(atendidosList, atendidos, a => {
 window.sortColaboradores = (criterio) => {
     const cargoPrioridade = { "Defensor(a)": 1, "Servidor(a)": 2, "CRC": 3, "Residente": 4, "Estagiário(a)": 5 };
 
+    // Dentro da lógica de ordenação por EQUIPE:
     colaboradores.sort((a, b) => {
-        if (criterio === 'nome') {
-            return a.nome.localeCompare(b.nome);
-        } 
-        if (criterio === 'equipe') {
-            // Primeiro ordena por número da equipe
-            if (a.equipe !== b.equipe) return a.equipe - b.equipe;
-            // Se for a mesma equipe, coloca Defensor no topo
-            const pA = cargoPrioridade[a.cargo] || 99;
-            const pB = cargoPrioridade[b.cargo] || 99;
-            if (pA !== pB) return pA - pB;
-            return a.nome.localeCompare(b.nome); // Desempate por nome
-        }
-        if (criterio === 'cargo') {
-            const pA = cargoPrioridade[a.cargo] || 99;
-            const pB = cargoPrioridade[b.cargo] || 99;
-            if (pA !== pB) return pA - pB;
-            return a.nome.localeCompare(b.nome);
-        }
+        // 1. Primeiro separa por número de equipe (1, 2, 3...)
+        if (a.equipe !== b.equipe) return a.equipe - b.equipe;
+    
+        // 2. Se for a mesma equipe, olha o Cargo
+        const pesos = { "Defensor(a)": 1, "Servidor(a)": 2, "CRC": 3, "Residente": 4, "Estagiário(a)": 5 };
+        const pesoA = pesos[a.cargo] || 99;
+        const pesoB = pesos[b.cargo] || 99;
+    
+        if (pesoA !== pesoB) return pesoA - pesoB;
+    
+        // 3. Se até o cargo for igual, ordena por nome (A-Z)
+        return a.nome.localeCompare(b.nome);
     });
     renderColaboradores(); // Recarrega a tabela com a nova ordem
 };
@@ -2438,12 +2433,20 @@ window.sortColaboradores = (criterio) => {
             tableBody.appendChild(row);
         });
     
-        // Atualiza Stats (Total de participantes)
-        if (getEl('total-participants-count')) getEl('total-participants-count').textContent = colaboradores.length;
-        if (getEl('self-transport-count')) getEl('self-transport-count').textContent = selfTransport;
-        if (getEl('company-transport-count')) getEl('company-transport-count').textContent = companyTransport;
+           // --- ATUALIZAÇÃO SEGURA DAS ESTATÍSTICAS (SEM ERRO DE GETEL) ---
+        const totalP = document.getElementById('total-participants-count');
+        if (totalP) totalP.textContent = colaboradores.length;
     
-        addEventListenersToModalListActions(); 
+        const selfT = document.getElementById('self-transport-count');
+        if (selfT) selfT.textContent = selfTransport;
+    
+        const compT = document.getElementById('company-transport-count');
+        if (compT) compT.textContent = companyTransport;
+    
+        // Garante que os botões de editar e excluir funcionem
+        if (typeof addEventListenersToModalListActions === 'function') {
+            addEventListenersToModalListActions();
+        } 
     }
 
         function resetCollaboratorFormModal() {
@@ -4548,6 +4551,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
