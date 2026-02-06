@@ -880,123 +880,107 @@
     
    
                     <!-- NOVO MODAL DE COLABORADORES ORGANIZADO E RESPONSIVO -->
-                    <div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
-                        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl flex flex-col transition-all duration-300" style="max-height: 95vh;">
-                            
-                            <!-- CABEÇALHO -->
-                            <div class="flex justify-between items-center bg-gray-100 px-4 py-3 rounded-t-xl border-b shrink-0">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-violet-600">👥</span>
-                                    <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Lista de Presença da Equipe</h2>
-                                </div>
-                                <button id="close-collaborators-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl font-bold p-1 leading-none">&times;</button>
-                            </div>
+            <!-- MODAL DE COLABORADORES REESTRUTURADO -->
+            <div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-0 sm:p-4">
+                <div class="bg-white w-full max-w-4xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;">
                     
-                            <!-- CONTEÚDO COM ROLAGEM -->
-                            <div class="flex-grow overflow-y-auto p-4 md:p-6 space-y-8 scrollable-content">
-                                
-                                <!-- 1. ÁREA DE CADASTRO (TOPO) -->
-                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nome Completo:</label>
-                        <input type="text" id="collaborator-name-modal" required class="w-full p-2 border rounded-lg text-sm bg-gray-50">
+                    <!-- CABEÇALHO -->
+                    <div class="flex justify-between items-center p-4 border-b bg-gray-50 sm:rounded-t-xl shrink-0">
+                        <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                            <span class="text-violet-600">👥</span> Lista de Presença da Equipe
+                        </h2>
+                        <button id="close-collaborators-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl p-1 leading-none">&times;</button>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cargo:</label>
-                        <select id="collaborator-role-modal" required class="w-full p-2 border rounded-lg text-sm bg-gray-50">
-                            <option value="Defensor(a)">Defensor(a)</option>
-                            <option value="Servidor(a)">Servidor(a)</option>
-                            <option value="CRC">CRC</option>
-                            <option value="Residente">Residente</option>
-                            <option value="Estagiário(a)">Estagiário(a)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Equipe:</label>
-                        <select id="collaborator-team-modal" required class="w-full p-2 border rounded-lg text-sm bg-gray-50">
-                            <option value="1">Equipe 1</option>
-                            <option value="2">Equipe 2</option>
-                            <option value="3">Equipe 3</option>
-                            <option value="4">Equipe 4</option>
-                            <option value="Apoio">Apoio</option>
-                        </select>
-                    </div>
-                </div>
-                <!-- NOVA LINHA COM WHATSAPP E E-MAIL -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">WhatsApp:</label>
-                        <input type="tel" id="collaborator-phone-modal" placeholder="21999998888" class="w-full p-2 border rounded-lg text-sm bg-gray-50">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">E-mail (Opcional):</label>
-                        <input type="email" id="collaborator-email-modal" placeholder="email@exemplo.com" class="w-full p-2 border rounded-lg text-sm bg-gray-50">
-                    </div>
-                </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Transporte:</label>
-                                <div class="flex gap-4 mt-2 text-xs">
-                                    <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="transporte-colaborador" value="Meios Próprios" checked> Próprio</label>
-                                    <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="transporte-colaborador" value="Com a Empresa"> Empresa</label>
+            
+                    <!-- CONTEÚDO SCROLLABLE -->
+                    <div class="flex-grow overflow-y-auto p-4 sm:p-6 space-y-6 scrollable-content bg-white">
+                        
+                        <!-- 1. FORMULÁRIO DE CADASTRO -->
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+                            <h3 class="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest border-b pb-2">Cadastro / Edição</h3>
+                            <form id="collaborator-form-modal" class="space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div>
+                                        <label class="text-[9px] font-black text-gray-500 uppercase">Nome Completo</label>
+                                        <input type="text" id="collaborator-name-modal" required class="w-full p-2 border rounded-lg text-sm bg-white">
+                                    </div>
+                                    <div>
+                                        <label class="text-[9px] font-black text-gray-500 uppercase">Cargo</label>
+                                        <select id="collaborator-role-modal" required class="w-full p-2 border rounded-lg text-sm bg-white">
+                                            <option value="Defensor(a)">Defensor(a)</option>
+                                            <option value="Servidor(a)">Servidor(a)</option>
+                                            <option value="CRC">CRC</option>
+                                            <option value="Residente">Residente</option>
+                                            <option value="Estagiário(a)">Estagiário(a)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="text-[9px] font-black text-gray-500 uppercase">Equipe</label>
+                                        <select id="collaborator-team-modal" required class="w-full p-2 border rounded-lg text-sm bg-white">
+                                            <option value="1">Equipe 1</option>
+                                            <option value="2">Equipe 2</option>
+                                            <option value="3">Equipe 3</option>
+                                            <option value="4">Equipe 4</option>
+                                        </select>
+                                    </div>
                                 </div>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                                    <div class="md:col-span-1">
+                                        <label class="text-[9px] font-black text-gray-500 uppercase">WhatsApp</label>
+                                        <input type="tel" id="collaborator-phone-modal" placeholder="21999998888" class="w-full p-2 border rounded-lg text-sm bg-white">
+                                    </div>
+                                    <div class="md:col-span-1">
+                                        <label class="text-[9px] font-black text-gray-500 uppercase">E-mail</label>
+                                        <input type="email" id="collaborator-email-modal" class="w-full p-2 border rounded-lg text-sm bg-white">
+                                    </div>
+                                    <div class="flex gap-4 p-2 bg-white border rounded-lg">
+                                        <label class="text-[9px] font-black text-gray-500 uppercase mr-2">Transp:</label>
+                                        <label class="flex items-center gap-1 text-xs cursor-pointer"><input type="radio" name="transporte-colaborador" value="Meios Próprios" checked> Próprio</label>
+                                        <label class="flex items-center gap-1 text-xs cursor-pointer"><input type="radio" name="transporte-colaborador" value="Com a Empresa"> Empresa</label>
+                                    </div>
+                                </div>
+                                <button type="submit" id="add-collaborator-btn-modal" class="w-full bg-green-600 text-white font-bold py-2.5 rounded-lg hover:bg-green-700 transition shadow-md uppercase text-xs">Salvar Membro</button>
+                            </form>
+                        </div>
+            
+                        <!-- 2. ESTATÍSTICAS E OPÇÕES PDF -->
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-3 bg-violet-50 p-3 rounded-xl border border-violet-100">
+                            <div class="flex gap-3 text-[10px] font-bold text-violet-800 uppercase">
+                                <span>Total: <b id="total-participants-count">0</b></span>
+                                <span>Próprio: <b id="self-transport-count">0</b></span>
+                                <span>Empresa: <b id="company-transport-count">0</b></span>
+                            </div>
+                            <div class="flex flex-wrap gap-3 text-[9px] font-black text-violet-600 uppercase border-l-0 sm:border-l sm:pl-3 border-violet-200">
+                                <label class="flex items-center gap-1"><input type="checkbox" class="pdf-col-check" value="nome" checked> Nome</label>
+                                <label class="flex items-center gap-1"><input type="checkbox" class="pdf-col-check" value="cargo" checked> Cargo</label>
+                                <label class="flex items-center gap-1"><input type="checkbox" class="pdf-col-check" value="equipe" checked> Equipe</label>
+                                <label class="flex items-center gap-1"><input type="checkbox" class="pdf-col-check" value="transporte" checked> Transp</label>
                             </div>
                         </div>
-                        <button type="submit" id="add-collaborator-btn-modal" class="w-full bg-green-600 text-white font-bold py-2.5 rounded-lg hover:bg-green-700 transition shadow-md uppercase text-xs">Salvar na Lista</button>
-                    </form>
-                </div>
-    
-                <!-- 2. ÁREA DA LISTA E ESTATÍSTICAS (BAIXO) -->
-                <div class="space-y-4">
-                    <div class="flex flex-wrap justify-between items-center gap-4">
-                        <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Controle de Presença e Relatório</h3>
-                        <div class="flex gap-3 text-[10px] font-bold uppercase">
-                            <span class="bg-blue-50 text-blue-600 p-2 rounded border border-blue-100">Total: <b id="total-participants-count">0</b></span>
-                            <span class="bg-gray-50 text-gray-600 p-2 rounded border border-gray-200">Próprio: <b id="self-transport-count">0</b></span>
-                            <span class="bg-gray-50 text-gray-600 p-2 rounded border border-gray-200">Empresa: <b id="company-transport-count">0</b></span>
+            
+                        <!-- 3. TABELA (ORDENÁVEL) -->
+                        <div class="overflow-x-auto border border-gray-100 rounded-xl shadow-sm">
+                            <table id="collaborators-list-table-modal" class="w-full text-left border-collapse bg-white">
+                                <thead class="bg-gray-50 text-[9px] font-black text-gray-400 uppercase border-b">
+                                    <tr>
+                                        <th class="p-3 cursor-pointer hover:text-violet-600" onclick="window.sortColaboradores('nome')">Membro ↕️</th>
+                                        <th class="p-3 text-center">Presença</th>
+                                        <th class="p-3 cursor-pointer hover:text-violet-600" onclick="window.sortColaboradores('equipe')">Cargo/Equipe ↕️</th>
+                                        <th class="p-3">Horário</th>
+                                        <th class="p-3 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-xs text-gray-600"></tbody>
+                            </table>
+                        </div>
+            
+                        <div class="flex justify-between items-center pt-2">
+                            <button id="download-collaborators-pdf-modal" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 text-[10px] shadow-md uppercase">Emitir PDF</button>
+                            <button id="clear-collaborators-list-modal" class="text-gray-400 hover:text-red-600 text-[10px] font-bold uppercase">Limpar Lista</button>
                         </div>
                     </div>
-    
-                    <!-- CONFIGURAÇÃO DO PDF (Mantida) -->
-                    <div class="p-4 bg-violet-50 border border-violet-100 rounded-xl mb-4">
-                        <p class="text-[10px] font-black text-violet-800 uppercase mb-3 flex items-center gap-2">⚙️ Selecione as colunas para o PDF:</p>
-                        <div class="flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-bold text-violet-700">
-                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="pdf-col-check" value="nome" checked> NOME</label>
-                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="pdf-col-check" value="cargo" checked> CARGO</label>
-                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="pdf-col-check" value="equipe" checked> EQUIPE</label>
-                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="pdf-col-check" value="presenca" checked> PRESENÇA</label>
-                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="pdf-col-check" value="transporte" checked> TRANSPORTE</label>
-                        </div>
-                    </div>
-                    
-                    <!-- TABELA COM TÍTULOS CORRIGIDOS E BOTÕES DE ORDENAR -->
-                    <div class="overflow-x-auto border border-gray-100 rounded-xl shadow-sm">
-                        <table id="collaborators-list-table-modal" class="w-full text-left border-collapse bg-white">
-                            <thead class="bg-gray-50 text-[9px] font-black text-gray-400 uppercase border-b">
-                                <tr>
-                                    <th class="p-3 cursor-pointer hover:text-violet-600 transition-colors" onclick="window.sortColaboradores('nome')">Membro ↕️</th>
-                                    <th class="p-3 text-center">Presença</th>
-                                    <th class="p-3 cursor-pointer hover:text-violet-600 transition-colors" onclick="window.sortColaboradores('cargo')">Cargo ↕️</th>
-                                    <th class="p-3 cursor-pointer hover:text-violet-600 transition-colors" onclick="window.sortColaboradores('equipe')">Equipe ↕️</th>
-                                    <th class="p-3">Horário</th>
-                                    <th class="p-3">Transporte</th>
-                                    <th class="p-3 text-center">WhatsApp</th>
-                                    <th class="p-3 text-center">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody class="text-xs text-gray-600">
-                                <!-- JS PREENCHE -->
-                            </tbody>
-                        </table>
-                    </div>
-    
-                    <div class="flex justify-between items-center pt-4">
-                        <button id="download-collaborators-pdf-modal" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 text-xs shadow-md uppercase transition-all">Emitir PDF Personalizado</button>
-                        <button id="clear-collaborators-list-modal" class="text-gray-400 hover:text-red-600 text-[10px] font-bold uppercase transition-colors">Limpar Toda Lista</button>
-                    </div>
                 </div>
-            </div>
-        </div>
-    </div>
+</div>
     <!-- FIM MODAL DE GERENCIAR COLABORADORES -->
 
     
@@ -2452,105 +2436,86 @@ window.sortColaboradores = (criterio) => {
         } 
     }
 
+// --- LÓGICA DE COLABORADORES (VERSÃO DEFINITIVA) ---
+
+        // 1. Resetar Formulário
         function resetCollaboratorFormModal() {
-            // 1. Limpa o formulário (campos de texto e selects)
-            if (collaboratorFormModal) {
-                collaboratorFormModal.reset();
-            }
-        
-            // 2. Define o transporte padrão para "Meios Próprios" (que existe no seu novo HTML)
-            const defaultRadio = document.querySelector('input[name="transporte-colaborador"][value="Meios Próprios"]');
-            if (defaultRadio) {
-                defaultRadio.checked = true;
-            }
-        
-            // 3. Reseta o ID de edição para que o próximo clique seja uma "Nova Adição" e não uma "Edição"
+            const form = document.getElementById('collaborator-form-modal');
+            if (form) form.reset();
             editCollaboratorId = null;
-        
-            // 4. Reseta os textos da interface
-            if (collaboratorsModal) {
-                const title = collaboratorsModal.querySelector('h2');
-                if (title) title.textContent = "Lista de Presença da Equipe";
-            }
-            
-            if (addCollaboratorBtnModal) {
-                addCollaboratorBtnModal.textContent = "Salvar na Lista";
-            }
-        
-            // 5. Esconde grupos condicionais apenas se eles existirem no seu HTML atual
-            if (typeof localEncontroGroupModal !== 'undefined' && localEncontroGroupModal) {
-                localEncontroGroupModal.classList.add('hidden');
-            }
-            if (typeof observacaoGroupModal !== 'undefined' && observacaoGroupModal) {
-                observacaoGroupModal.classList.add('hidden');
-            }
+            document.getElementById('add-collaborator-btn-modal').textContent = "Salvar na Lista";
         }
-
-        transporteOptionsModal.forEach(option => {
-            option.addEventListener('change', (event) => {
-                localEncontroGroupModal.classList.toggle('hidden', event.target.value !== 'Com a Empresa');
-                observacaoGroupModal.add('hidden'); 
-                if (event.target.value !== 'Com a Empresa') {
-                    document.querySelectorAll('input[name="localEncontro-colaborador"]').forEach(localOption => localOption.checked = false);
+        
+        // 2. Ordenação (Time -> Cargo -> Nome)
+        window.sortColaboradores = (criterio) => {
+            const pesos = { "Defensor(a)": 1, "Servidor(a)": 2, "CRC": 3, "Residente": 4, "Estagiário(a)": 5 };
+            
+            colaboradores.sort((a, b) => {
+                if (criterio === 'nome') return a.nome.localeCompare(b.nome);
+                if (criterio === 'equipe') {
+                    if (a.equipe !== b.equipe) return a.equipe - b.equipe;
+                    const pA = pesos[a.cargo] || 99;
+                    const pB = pesos[b.cargo] || 99;
+                    return pA !== pB ? pA - pB : a.nome.localeCompare(b.nome);
                 }
+                return 0;
             });
-        });
-
-        document.querySelectorAll('input[name="localEncontro-colaborador"]').forEach(option => {
-            option.addEventListener('change', (event) => {
-                observacaoGroupModal.classList.toggle('hidden', event.target.value !== 'Meio do Caminho');
+            renderColaboradores();
+        };
+        
+        // 3. Renderizar Tabela
+        function renderColaboradores() {
+            const tableBody = document.querySelector('#collaborators-list-table-modal tbody');
+            if (!tableBody) return;
+            tableBody.innerHTML = '';
+            let selfT = 0, compT = 0;
+        
+            colaboradores.forEach((colab) => {
+                if (colab.transporte === 'Meios Próprios') selfT++; else compT++;
+                const row = document.createElement('tr');
+                row.className = "border-b hover:bg-gray-50";
+                row.innerHTML = `
+                    <td class="p-3 font-bold text-gray-800">${escapeHTML(colab.nome)}</td>
+                    <td class="p-3 text-center"><input type="checkbox" class="checkin-checkbox w-5 h-5 text-green-600" data-id="${colab.id}" ${colab.presente ? 'checked' : ''}></td>
+                    <td class="p-3 text-[10px]"><b>${colab.cargo}</b><br><span class="text-blue-600 font-black">EQP ${colab.equipe}</span></td>
+                    <td class="p-3 font-mono text-[10px] text-gray-400">${colab.horario || '--:--'}</td>
+                    <td class="p-3 text-center flex justify-center gap-3">
+                        <button class="edit-collaborator-btn text-blue-400" data-id="${colab.id}">✏️</button>
+                        <button class="delete-collaborator-btn text-red-300" data-id="${colab.id}">🗑️</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
             });
-        });
-
-    // --- VERSÃO CORRIGIDA E SEGURA PARA NÃO TRAVAR O SISTEMA ---
-        const colabForm = document.getElementById('collaborator-form-modal');
         
-        if (colabForm) {
-            colabForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
+            document.getElementById('total-participants-count').textContent = colaboradores.length;
+            document.getElementById('self-transport-count').textContent = selfT;
+            document.getElementById('company-transport-count').textContent = compT;
+            addEventListenersToModalListActions();
+        }
         
-                // CAPTURA DOS VALORES COM PROTEÇÃO (Se o campo não existir, ele não trava)
-                const nome = document.getElementById('collaborator-name-modal')?.value || '';
-                const cargo = document.getElementById('collaborator-role-modal')?.value || '';
-                const equipe = document.getElementById('collaborator-team-modal')?.value || '';
+        // 4. Salvar (Submit) - CORREÇÃO DA LINHA 2511
+        const colabFormElement = document.getElementById('collaborator-form-modal');
+        if (colabFormElement) {
+            colabFormElement.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const nome = document.getElementById('collaborator-name-modal').value.trim();
+                const cargo = document.getElementById('collaborator-role-modal').value;
+                const equipe = document.getElementById('collaborator-team-modal').value;
+                const email = document.getElementById('collaborator-email-modal')?.value || '';
                 const telefone = document.getElementById('collaborator-phone-modal')?.value || '';
-                const emailInput = document.getElementById('collaborator-email-modal');
-                const email = emailInput ? emailInput.value : '';
+                const transporte = colabFormElement.querySelector('input[name="transporte-colaborador"]:checked').value;
         
-                // Pega o transporte selecionado de forma segura
-                const transporteEl = colabForm.querySelector('input[name="transporte-colaborador"]:checked');
-                const transporte = transporteEl ? transporteEl.value : 'Meios Próprios';
-        
-                if (!nome) {
-                    showNotification("O nome é obrigatório", "error");
-                    return;
-                }
-        
-                const collaboratorData = { nome, cargo, equipe, email, telefone, transporte };
-        
+                const data = { nome, cargo, equipe, email, telefone, transporte };
                 try {
-                    // Verifica se existe uma pauta selecionada antes de tentar salvar
-                    if (!currentPautaId) {
-                        showNotification("Nenhuma pauta selecionada.", "error");
-                        return;
-                    }
-        
-                    const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
-                    
+                    const colRef = collection(db, "pautas", currentPautaId, "collaborators");
                     if (editCollaboratorId) {
-                        const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", editCollaboratorId);
-                        await updateDoc(collaboratorRef, collaboratorData);
-                        showNotification("Colaborador atualizado com sucesso!");
+                        await updateDoc(doc(colRef, editCollaboratorId), data);
                     } else {
-                        await addDoc(collaboratorsCollectionRef, { ...collaboratorData, presente: false, horario: '--:--' });
-                        showNotification("Colaborador adicionado com sucesso!");
+                        await addDoc(colRef, { ...data, presente: false, horario: '--:--' });
                     }
-                    
-                    resetCollaboratorFormModal(); // Limpa o formulário após salvar
-                } catch (error) {
-                    console.error("Erro ao salvar colaborador: ", error);
-                    showNotification("Erro ao salvar no banco de dados.", "error");
-                }
+                    resetCollaboratorFormModal();
+                    showNotification("Membro salvo!");
+                } catch (error) { console.error(error); }
             });
         }
     
@@ -4571,6 +4536,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
