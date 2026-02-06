@@ -2553,19 +2553,7 @@ window.sortColaboradores = (criterio) => {
                 }
             });
         }
-        
-        // Mantenha a sua função addEventListenersToModalListActions logo abaixo:
-        function addEventListenersToModalListActions() {
-            document.querySelectorAll('#collaborators-modal .checkin-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', async (e) => {
-                    const docId = e.target.dataset.id;
-                    const presente = e.target.checked;
-                    const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-                    const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", docId);
-                    await updateDoc(collaboratorRef, { presente, horario });
-                });
-            });
-        }
+    
         function addEventListenersToModalListActions() {
             document.querySelectorAll('#collaborators-modal .checkin-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', async (e) => {
@@ -4583,6 +4571,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
