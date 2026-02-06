@@ -1,4 +1,4 @@
-// js/pdfService.js
+// js/pdfService.js 
 
 /**
  * Função utilitária para limpar strings e evitar erros no PDF
@@ -37,7 +37,6 @@ export const generateAtendidosPDF = (pautaName, atendidos) => {
     const { jsPDF } = window.jspdf;
     const docPDF = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' }); 
 
-    // Cabeçalho do Documento
     docPDF.setFontSize(18);
     docPDF.text(`Relatório de Atendidos - ${pautaName}`, 14, 22);
     
@@ -48,7 +47,6 @@ export const generateAtendidosPDF = (pautaName, atendidos) => {
     docPDF.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 35);
     docPDF.text(`Total de Atendidos: ${atendidos.length} | Total de Assuntos: ${totalAssuntos}`, 14, 48);
 
-    // Configuração das Colunas
     const tableColumn = ["#", "Nome", "Agendado", "Chegou", "Finalizado", "Duração", "Assunto Principal", "Atendente", "Confirmado"]; 
     const tableRows = [];
 
@@ -90,43 +88,63 @@ export const generateAtendidosPDF = (pautaName, atendidos) => {
     docPDF.autoTable(tableColumn, tableRows, { 
         startY: 60,
         styles: { fontSize: 8, overflow: 'linebreak' },
-        headStyles: { fillColor: [22, 163, 74] }, // Verde SIGAP
-        columnStyles: {
-            0: { cellWidth: 20 },
-            6: { cellWidth: 150 }
-        }
+        headStyles: { fillColor: [22, 163, 74] },
+        columnStyles: { 0: { cellWidth: 20 }, 6: { cellWidth: 150 } }
     });
     
-    docPDF.save(`relatorio_${pautaName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+    docPDF.save(`relatorio_${pautaName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
 };
 
 /**
- * GERA A LISTA DE PRESENÇA DA EQUIPE (COLABORADORES)
+ * GERA A LISTA DE PRESENÇA DA EQUIPE (DINÂMICA)
+ * @param {string} pautaName - Nome da pauta
+ * @param {Array} colaboradores - Lista completa de colaboradores
+ * @param {Array} selectedCols - Chaves das colunas escolhidas (ex: ['nome', 'equipe'])
  */
-export const generateCollaboratorsPDF = (pautaName, colaboradores) => {
+export const generateCollaboratorsPDF = (pautaName, colaboradores, selectedCols = ['nome', 'cargo', 'equipe', 'presenca', 'transporte']) => {
     const { jsPDF } = window.jspdf;
     const docPDF = new jsPDF();
-    const presentes = colaboradores.filter(c => c.presente);
 
-    docPDF.setFontSize(18);
-    docPDF.text(`Lista de Presença - Equipe`, 14, 20);
-    docPDF.setFontSize(12);
-    docPDF.text(`Pauta: ${pautaName}`, 14, 32);
+    // 1. Definição do Mapa de Colunas (Configuração centralizada)
+    const colMap = {
+        'nome': { label: 'Membro da Equipe', getData: (c) => c.nome },
+        'cargo': { label: 'Cargo', getData: (c) => c.cargo || 'N/A' },
+        'equipe': { label: 'Equipe', getData: (c) => c.equipe || 'N/A' },
+        'presenca': { label: 'Status / Horário', getData: (c) => c.presente ? `Presente (${c.horario})` : 'Ausente' },
+        'transporte': { label: 'Deslocamento', getData: (c) => {
+            let desc = c.transporte || 'Não Informado';
+            if (c.transporte === 'Com a Empresa' && c.localEncontro) desc += ` (${c.localEncontro})`;
+            return desc;
+        }}
+    };
 
-    const head = [['Nome', 'Cargo', 'Equipe', 'Email', 'Deslocamento', 'Horário']];
-    const tableBody = presentes.map(c => {
-        let deslocamento = c.transporte || 'Não Confirmado';
-        if (c.transporte === 'Com a Empresa' && c.localEncontro) deslocamento += ` (${c.localEncontro})`;
-        
-        return [c.nome, c.cargo || 'N/A', c.equipe || 'N/A', c.email || 'N/A', deslocamento, c.horario];
-    });
+    // 2. Monta Cabeçalho e Corpo baseado na seleção do usuário
+    const header = [selectedCols.map(key => colMap[key].label)];
+    const tableData = colaboradores.map(c => 
+        selectedCols.map(key => colMap[key].getData(c))
+    );
+
+    // 3. Desenho do PDF
+    docPDF.setFontSize(16);
+    docPDF.setTextColor(40);
+    docPDF.text("Lista de Presença da Equipe", 14, 20);
+    
+    docPDF.setFontSize(10);
+    docPDF.setTextColor(100);
+    docPDF.text(`Pauta: ${pautaName}`, 14, 30);
+    docPDF.text(`Emitido em: ${new Date().toLocaleString('pt-BR')}`, 14, 40);
 
     docPDF.autoTable({
-        head: head, 
-        body: tableBody, 
-        startY: 40,
-        headStyles: { fillColor: [34, 197, 94] }
+        head: header,
+        body: tableData,
+        startY: 50,
+        theme: 'striped',
+        headStyles: { fillColor: [139, 92, 246] }, // Violeta para combinar com o botão
+        styles: { fontSize: 9, cellPadding: 5 },
+        alternateRowStyles: { fillColor: [245, 243, 255] }
     });
 
-    docPDF.save(`equipe_${pautaName.replace(/\s/g, '_')}.pdf`);
+    // 4. Salva o arquivo
+    const fileName = `equipe_${pautaName.replace(/\s+/g, '_')}.pdf`;
+    docPDF.save(fileName);
 };
