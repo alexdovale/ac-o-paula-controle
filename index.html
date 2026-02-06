@@ -2435,13 +2435,37 @@ function renderColaboradores() {
         }
 
         function resetCollaboratorFormModal() {
-            collaboratorFormModal.reset();
-            document.querySelector('input[name="transporte-colaborador"][value="Não Confirmado"]').checked = true;
+            // 1. Limpa o formulário (campos de texto e selects)
+            if (collaboratorFormModal) {
+                collaboratorFormModal.reset();
+            }
+        
+            // 2. Define o transporte padrão para "Meios Próprios" (que existe no seu novo HTML)
+            const defaultRadio = document.querySelector('input[name="transporte-colaborador"][value="Meios Próprios"]');
+            if (defaultRadio) {
+                defaultRadio.checked = true;
+            }
+        
+            // 3. Reseta o ID de edição para que o próximo clique seja uma "Nova Adição" e não uma "Edição"
             editCollaboratorId = null;
-            collaboratorsModal.querySelector('h2').textContent = "Lista de Presença de Colaboradores"; // Reset modal title
-            addCollaboratorBtnModal.textContent = "Adicionar Colaborador";
-            localEncontroGroupModal.classList.add('hidden');
-            observacaoGroupModal.classList.add('hidden');
+        
+            // 4. Reseta os textos da interface
+            if (collaboratorsModal) {
+                const title = collaboratorsModal.querySelector('h2');
+                if (title) title.textContent = "Lista de Presença da Equipe";
+            }
+            
+            if (addCollaboratorBtnModal) {
+                addCollaboratorBtnModal.textContent = "Salvar na Lista";
+            }
+        
+            // 5. Esconde grupos condicionais apenas se eles existirem no seu HTML atual
+            if (typeof localEncontroGroupModal !== 'undefined' && localEncontroGroupModal) {
+                localEncontroGroupModal.classList.add('hidden');
+            }
+            if (typeof observacaoGroupModal !== 'undefined' && observacaoGroupModal) {
+                observacaoGroupModal.classList.add('hidden');
+            }
         }
 
         transporteOptionsModal.forEach(option => {
@@ -4512,5 +4536,6 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
