@@ -879,57 +879,60 @@
     </div>
     
    
-    <!-- NOVO MODAL DE COLABORADORES ORGANIZADO E RESPONSIVO -->
-    <div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl flex flex-col transition-all duration-300" style="max-height: 95vh;">
-            
-            <!-- CABEÇALHO -->
-            <div class="flex justify-between items-center bg-gray-100 px-4 py-3 rounded-t-xl border-b shrink-0">
-                <div class="flex items-center gap-2">
-                    <span class="text-violet-600">👥</span>
-                    <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Lista de Presença da Equipe</h2>
+                    <!-- NOVO MODAL DE COLABORADORES ORGANIZADO E RESPONSIVO -->
+                    <div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
+                        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl flex flex-col transition-all duration-300" style="max-height: 95vh;">
+                            
+                            <!-- CABEÇALHO -->
+                            <div class="flex justify-between items-center bg-gray-100 px-4 py-3 rounded-t-xl border-b shrink-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-violet-600">👥</span>
+                                    <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Lista de Presença da Equipe</h2>
+                                </div>
+                                <button id="close-collaborators-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl font-bold p-1 leading-none">&times;</button>
+                            </div>
+                    
+                            <!-- CONTEÚDO COM ROLAGEM -->
+                            <div class="flex-grow overflow-y-auto p-4 md:p-6 space-y-8 scrollable-content">
+                                
+                                <!-- 1. ÁREA DE CADASTRO (TOPO) -->
+                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nome Completo:</label>
+                        <input type="text" id="collaborator-name-modal" required class="w-full p-2 border rounded-lg text-sm bg-gray-50">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cargo:</label>
+                        <select id="collaborator-role-modal" required class="w-full p-2 border rounded-lg text-sm bg-gray-50">
+                            <option value="Defensor(a)">Defensor(a)</option>
+                            <option value="Servidor(a)">Servidor(a)</option>
+                            <option value="CRC">CRC</option>
+                            <option value="Residente">Residente</option>
+                            <option value="Estagiário(a)">Estagiário(a)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Equipe:</label>
+                        <select id="collaborator-team-modal" required class="w-full p-2 border rounded-lg text-sm bg-gray-50">
+                            <option value="1">Equipe 1</option>
+                            <option value="2">Equipe 2</option>
+                            <option value="3">Equipe 3</option>
+                            <option value="4">Equipe 4</option>
+                            <option value="Apoio">Apoio</option>
+                        </select>
+                    </div>
                 </div>
-                <button id="close-collaborators-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl font-bold p-1 leading-none">&times;</button>
-            </div>
-    
-            <!-- CONTEÚDO COM ROLAGEM -->
-            <div class="flex-grow overflow-y-auto p-4 md:p-6 space-y-8 scrollable-content">
-                
-                <!-- 1. ÁREA DE CADASTRO (TOPO) -->
-                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                    <h3 class="text-[10px] font-black text-gray-400 uppercase mb-4 tracking-widest border-b pb-2">Adicionar / Editar Membro da Equipe</h3>
-                    <form id="collaborator-form-modal" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nome Completo:</label>
-                                <input type="text" id="collaborator-name-modal" required class="w-full p-2 border rounded-lg text-sm bg-gray-50">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cargo:</label>
-                                <select id="collaborator-role-modal" required class="w-full p-2 border rounded-lg text-sm bg-gray-50">
-                                    <option value="Defensor(a)">Defensor(a)</option>
-                                    <option value="Servidor(a)">Servidor(a)</option>
-                                    <option value="CRC">CRC</option>
-                                    <option value="Residente">Residente</option>
-                                    <option value="Estagiário(a)">Estagiário(a)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Equipe:</label>
-                                <select id="collaborator-team-modal" required class="w-full p-2 border rounded-lg text-sm bg-gray-50">
-                                    <option value="1">Equipe 1</option>
-                                    <option value="2">Equipe 2</option>
-                                    <option value="3">Equipe 3</option>
-                                    <option value="4">Equipe 4</option>
-                                    <option value="Apoio">Apoio</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">WhatsApp (com DDD):</label>
-                                <input type="tel" id="collaborator-phone-modal" placeholder="21999998888" class="w-full p-2 border rounded-lg text-sm bg-gray-50">
-                            </div>
+                <!-- NOVA LINHA COM WHATSAPP E E-MAIL -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">WhatsApp:</label>
+                        <input type="tel" id="collaborator-phone-modal" placeholder="21999998888" class="w-full p-2 border rounded-lg text-sm bg-gray-50">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">E-mail (Opcional):</label>
+                        <input type="email" id="collaborator-email-modal" placeholder="email@exemplo.com" class="w-full p-2 border rounded-lg text-sm bg-gray-50">
+                    </div>
+                </div>
                             <div>
                                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Transporte:</label>
                                 <div class="flex gap-4 mt-2 text-xs">
@@ -2499,24 +2502,30 @@ window.sortColaboradores = (criterio) => {
             });
         });
 
-       collaboratorFormModal.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const nome = collaboratorNameModal.value;
-            
-            // --- INÍCIO DA CORREÇÃO: CAPTURANDO CARGO E EQUIPE ---
-            const cargo = document.getElementById('collaborator-role-modal').value;
-            const equipe = document.getElementById('collaborator-team-modal').value;
-            // --- FIM DA CORREÇÃO ---
-
-            const email = collaboratorEmailModal.value.trim() || null;
-            const telefone = collaboratorPhoneModal.value;
-            const transporte = collaboratorFormModal.querySelector('input[name="transporte-colaborador"]:checked').value;
-            const localEncontro = collaboratorFormModal.querySelector('input[name="localEncontro-colaborador"]:checked')?.value || '';
-            const observacao = collaboratorObsModal.value;
-
-            // Incluindo Cargo e Equipe no objeto de dados
-            const collaboratorData = { nome, cargo, equipe, email, telefone, transporte, localEncontro, observacao }; 
-
+    collaboratorFormModal.addEventListener('submit', async (event) => {
+        event.preventDefault();
+    
+        // PEGA OS VALORES COM SEGURANÇA (Se o campo for null, retorna vazio em vez de erro)
+        const nome = document.getElementById('collaborator-name-modal')?.value || '';
+        const cargo = document.getElementById('collaborator-role-modal')?.value || '';
+        const equipe = document.getElementById('collaborator-team-modal')?.value || '';
+        const telefone = document.getElementById('collaborator-phone-modal')?.value || '';
+        
+        // LINHA 2511 CORRIGIDA:
+        const emailInput = document.getElementById('collaborator-email-modal');
+        const email = emailInput ? emailInput.value : '';
+    
+        const transporteEl = collaboratorFormModal.querySelector('input[name="transporte-colaborador"]:checked');
+        const transporte = transporteEl ? transporteEl.value : 'Meios Próprios';
+    
+        // Se o nome estiver vazio, não salva
+        if (!nome) {
+            showNotification("O nome é obrigatório", "error");
+            return;
+        }
+    
+        const collaboratorData = { nome, cargo, equipe, email, telefone, transporte };
+    
             try {
                 const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
                 if (editCollaboratorId) {
@@ -4551,6 +4560,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
