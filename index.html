@@ -2502,47 +2502,70 @@ window.sortColaboradores = (criterio) => {
             });
         });
 
-    collaboratorFormModal.addEventListener('submit', async (event) => {
-        event.preventDefault();
-    
-        // PEGA OS VALORES COM SEGURANÇA (Se o campo for null, retorna vazio em vez de erro)
-        const nome = document.getElementById('collaborator-name-modal')?.value || '';
-        const cargo = document.getElementById('collaborator-role-modal')?.value || '';
-        const equipe = document.getElementById('collaborator-team-modal')?.value || '';
-        const telefone = document.getElementById('collaborator-phone-modal')?.value || '';
+    // --- VERSÃO CORRIGIDA E SEGURA PARA NÃO TRAVAR O SISTEMA ---
+        const colabForm = document.getElementById('collaborator-form-modal');
         
-        // LINHA 2511 CORRIGIDA:
-        const emailInput = document.getElementById('collaborator-email-modal');
-        const email = emailInput ? emailInput.value : '';
-    
-        const transporteEl = collaboratorFormModal.querySelector('input[name="transporte-colaborador"]:checked');
-        const transporte = transporteEl ? transporteEl.value : 'Meios Próprios';
-    
-        // Se o nome estiver vazio, não salva
-        if (!nome) {
-            showNotification("O nome é obrigatório", "error");
-            return;
-        }
-    
-        const collaboratorData = { nome, cargo, equipe, email, telefone, transporte };
-    
-            try {
-                const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
-                if (editCollaboratorId) {
-                    const collaboratorRef = doc(collaboratorsCollectionRef, editCollaboratorId);
-                    await updateDoc(collaboratorRef, collaboratorData);
-                    showNotification("Colaborador atualizado com sucesso!");
-                } else {
-                    // Adiciona o novo colaborador com todos os dados
-                    await addDoc(collaboratorsCollectionRef, { ...collaboratorData, presente: false, horario: '--:--' });
-                    showNotification("Colaborador adicionado com sucesso!");
+        if (colabForm) {
+            colabForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+        
+                // CAPTURA DOS VALORES COM PROTEÇÃO (Se o campo não existir, ele não trava)
+                const nome = document.getElementById('collaborator-name-modal')?.value || '';
+                const cargo = document.getElementById('collaborator-role-modal')?.value || '';
+                const equipe = document.getElementById('collaborator-team-modal')?.value || '';
+                const telefone = document.getElementById('collaborator-phone-modal')?.value || '';
+                const emailInput = document.getElementById('collaborator-email-modal');
+                const email = emailInput ? emailInput.value : '';
+        
+                // Pega o transporte selecionado de forma segura
+                const transporteEl = colabForm.querySelector('input[name="transporte-colaborador"]:checked');
+                const transporte = transporteEl ? transporteEl.value : 'Meios Próprios';
+        
+                if (!nome) {
+                    showNotification("O nome é obrigatório", "error");
+                    return;
                 }
-                resetCollaboratorFormModal();
-            } catch (error) {
-                console.error("Erro ao salvar colaborador: ", error);
-                showNotification("Erro ao salvar colaborador.", "error");
-            }
-        });
+        
+                const collaboratorData = { nome, cargo, equipe, email, telefone, transporte };
+        
+                try {
+                    // Verifica se existe uma pauta selecionada antes de tentar salvar
+                    if (!currentPautaId) {
+                        showNotification("Nenhuma pauta selecionada.", "error");
+                        return;
+                    }
+        
+                    const collaboratorsCollectionRef = collection(db, "pautas", currentPautaId, "collaborators");
+                    
+                    if (editCollaboratorId) {
+                        const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", editCollaboratorId);
+                        await updateDoc(collaboratorRef, collaboratorData);
+                        showNotification("Colaborador atualizado com sucesso!");
+                    } else {
+                        await addDoc(collaboratorsCollectionRef, { ...collaboratorData, presente: false, horario: '--:--' });
+                        showNotification("Colaborador adicionado com sucesso!");
+                    }
+                    
+                    resetCollaboratorFormModal(); // Limpa o formulário após salvar
+                } catch (error) {
+                    console.error("Erro ao salvar colaborador: ", error);
+                    showNotification("Erro ao salvar no banco de dados.", "error");
+                }
+            });
+        }
+        
+        // Mantenha a sua função addEventListenersToModalListActions logo abaixo:
+        function addEventListenersToModalListActions() {
+            document.querySelectorAll('#collaborators-modal .checkin-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', async (e) => {
+                    const docId = e.target.dataset.id;
+                    const presente = e.target.checked;
+                    const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                    const collaboratorRef = doc(db, "pautas", currentPautaId, "collaborators", docId);
+                    await updateDoc(collaboratorRef, { presente, horario });
+                });
+            });
+        }
         function addEventListenersToModalListActions() {
             document.querySelectorAll('#collaborators-modal .checkin-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', async (e) => {
@@ -4560,6 +4583,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
