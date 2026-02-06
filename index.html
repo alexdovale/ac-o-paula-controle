@@ -93,6 +93,27 @@
             margin-top: 0.25rem; 
         }
 
+        /* Ajuste de Janela para Celular */
+        #documents-modal > div {
+            width: 95% !important;   /* Ocupa quase toda a largura */
+            max-height: 90vh !important; /* Nunca ultrapassa a altura da tela */
+            margin: auto;
+        }
+        
+        @media (max-width: 640px) {
+            /* Faz os itens do checklist ficarem maiores para o dedo tocar melhor */
+            .checklist-row {
+                padding: 10px 5px !important;
+                margin-bottom: 4px;
+            }
+            
+            /* Garante que o texto longo dos documentos não empurre os botões */
+            .checklist-row span {
+                font-size: 12px !important;
+                line-height: 1.2;
+            }
+        }
+        
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -4468,3 +4489,4 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
