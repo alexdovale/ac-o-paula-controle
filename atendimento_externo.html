@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel do Colaborador - SIGAP</title>
-    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png">
+    <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -12,7 +12,7 @@
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #16a34a; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .tab-active { border-bottom: 2px solid #16a34a; color: #16a34a; font-weight: 600; }
-        .tab-inactive { color: #6b7280; hover:color: #374151; }
+        .tab-inactive { color: #6b7280; }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
@@ -20,373 +20,193 @@
     <!-- Loading -->
     <div id="loading" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
         <div class="loader"></div>
-        <p class="mt-4 text-gray-600 font-medium">Verificando link...</p>
+        <p class="mt-4 text-gray-600 font-medium">Sincronizando atendimento...</p>
     </div>
 
-    <!-- Tela de Link Expirado / Já Finalizado -->
-    <div id="expired-container" class="hidden bg-white p-8 rounded-xl shadow-lg text-center max-w-md w-full">
+    <!-- Tela de Bloqueio -->
+    <div id="expired-container" class="hidden bg-white p-8 rounded-2xl shadow-xl text-center max-w-md w-full border-t-8 border-gray-400">
         <div class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-gray-100 mb-6">
-            <svg class="h-10 w-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            <svg class="h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
         </div>
-        <h2 class="text-2xl font-bold text-gray-800 mb-2">Acesso Bloqueado</h2>
-        <p class="text-gray-600">Este atendimento já foi finalizado e registrado no sistema.</p>
-        <p class="text-sm text-gray-400 mt-4">Se você precisa fazer alterações, entre em contato com a gerência da pauta.</p>
+        <h2 class="text-2xl font-bold text-gray-800 mb-2 uppercase tracking-tighter">Acesso Encerrado</h2>
+        <p class="text-gray-600">Este atendimento já foi finalizado no sistema SIGAP.</p>
     </div>
 
     <!-- Painel Principal -->
-    <div id="main-card" class="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden hidden flex flex-col h-[90vh] md:h-auto">
+    <div id="main-card" class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden hidden flex flex-col h-[90vh] md:h-auto">
         
-        <!-- Cabeçalho -->
-        <div class="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white text-center flex-shrink-0">
-            <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" class="h-16 w-auto mx-auto mb-3 bg-white rounded-lg p-1 shadow-md">
-            <h1 class="text-xl font-bold">Painel do Colaborador</h1>
-            <p class="text-xs opacity-90 mt-1">SIGAP - Acesso Externo</p>
+        <div class="bg-green-600 p-6 text-white text-center shrink-0">
+            <h1 class="text-xl font-black uppercase tracking-tighter">Finalização de Atendimento</h1>
+            <p class="text-[10px] opacity-80 font-bold uppercase tracking-widest mt-1">Defensoria Pública - SIGAP</p>
         </div>
 
-        <!-- Info do Assistido -->
-        <div class="p-4 bg-gray-50 border-b flex-shrink-0">
-            <h2 id="assisted-name" class="text-xl font-bold text-gray-800 text-center">...</h2>
-            <p id="assisted-subject" class="text-sm text-gray-500 text-center mt-1">...</p>
+        <div class="p-4 bg-slate-50 border-b shrink-0">
+            <h2 id="assisted-name" class="text-lg font-black text-slate-800 text-center uppercase tracking-tight">---</h2>
+            <p id="assisted-subject" class="text-xs text-slate-500 text-center font-medium mt-1">---</p>
         </div>
 
-        <!-- Navegação (Tabs) -->
-        <div class="flex border-b border-gray-200 flex-shrink-0">
-            <button id="tab-finish" class="flex-1 py-3 text-center text-sm tab-active transition">Finalizar Atendimento</button>
-            <button id="tab-docs" class="flex-1 py-3 text-center text-sm tab-inactive transition">Verificar Documentos</button>
+        <div class="flex border-b shrink-0">
+            <button id="tab-finish" class="flex-1 py-3 text-[10px] uppercase font-black tab-active">Finalizar</button>
+            <button id="tab-docs" class="flex-1 py-3 text-[10px] uppercase font-black tab-inactive">Documentos</button>
         </div>
 
-        <!-- CONTEÚDO SCROLLÁVEL -->
-        <div class="flex-grow overflow-y-auto p-6" style="max-height: 60vh;">
-            
+        <div class="flex-grow overflow-y-auto p-6">
             <!-- ABA 1: FINALIZAR -->
             <div id="content-finish" class="space-y-6">
-                
-                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 text-blue-700 rounded-r">
-                    <p class="font-bold text-sm">Responsável pelo Atendimento</p>
-                    <p class="text-xs mt-1">Confirme seu nome antes de finalizar.</p>
+                <div>
+                    <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Seu Nome (Atendente)</label>
+                    <input type="text" id="attendant-name" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-bold text-gray-700">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Seu Nome</label>
-                    <input type="text" id="attendant-name" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" placeholder="Nome do Defensor/Servidor">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Houve demanda adicional?</label>
+                    <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Acrescentar Demanda Adicional?</label>
                     <div class="flex gap-2">
-                        <input type="text" id="new-demand-input" list="subjects-list-external" class="flex-grow p-2 border border-gray-300 rounded-lg text-sm" placeholder="Selecione o assunto...">
-                        <datalist id="subjects-list-external"></datalist>
-                        <button id="add-demand-btn" class="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-bold hover:bg-gray-300">Add</button>
+                        <input type="text" id="new-demand-input" class="flex-grow p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" placeholder="Ex: Dano Moral...">
+                        <button id="add-demand-btn" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase">Add</button>
                     </div>
-                    <ul id="demands-list" class="mt-3 space-y-2 text-sm text-gray-600"></ul>
+                    <ul id="demands-list" class="mt-4 space-y-2"></ul>
                 </div>
 
-                <div class="pt-4 border-t">
-                    <button id="finish-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition transform active:scale-95 text-lg">
-                        Finalizar e Salvar
+                <div class="pt-6">
+                    <button id="finish-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-black py-4 rounded-2xl shadow-lg transition uppercase tracking-widest active:scale-95">
+                        Confirmar e Encerrar
                     </button>
                 </div>
             </div>
 
             <!-- ABA 2: DOCUMENTOS -->
-            <div id="content-docs" class="hidden space-y-4">
-                <div id="checklist-status" class="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-yellow-800 text-sm mb-4">
-                    <p><strong>Status da Documentação:</strong> <span id="doc-status-text">Não verificado</span></p>
-                </div>
-
-                <div id="checklist-container" class="space-y-4">
-                    <p class="text-center text-gray-400 py-8">Carregando lista de documentos...</p>
-                </div>
-                
-                <div id="expense-container" class="hidden">
-                    <h3 class="font-bold text-gray-800 mb-2 border-b pb-1">Planilha de Despesas</h3>
-                    <div id="expense-content" class="bg-green-50 p-3 rounded text-sm text-gray-700 space-y-1 border border-green-100"></div>
-                </div>
-                
-                <div id="reu-data-container" class="mt-6 border-t pt-4 hidden">
-                    <h3 class="font-bold text-gray-800 mb-2">Dados da Parte Contrária (Réu)</h3>
-                    <div id="reu-data-content" class="text-sm text-gray-600 space-y-1 bg-gray-50 p-3 rounded border"></div>
+            <div id="content-docs" class="hidden space-y-6">
+                <div id="checklist-container" class="space-y-6"></div>
+                <div id="reu-data-container" class="hidden bg-blue-50 p-4 rounded-2xl border border-blue-100">
+                    <h3 class="text-[10px] font-black text-blue-800 uppercase mb-3">Dados do Réu</h3>
+                    <div id="reu-data-content" class="text-xs text-blue-900 space-y-1 font-medium"></div>
                 </div>
             </div>
-
         </div>
         
-        <!-- Tela de Sucesso -->
-        <div id="success-overlay" class="absolute inset-0 bg-white flex flex-col items-center justify-center z-50 hidden">
-            <div class="text-green-500 text-6xl mb-4">✓</div>
-            <h3 class="text-2xl font-bold text-gray-800">Sucesso!</h3>
-            <p class="text-gray-500">Atendimento registrado e encerrado.</p>
+        <div id="success-overlay" class="absolute inset-0 bg-white flex flex-col items-center justify-center z-50 hidden text-center p-6">
+            <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl mb-4 shadow-inner">✓</div>
+            <h3 class="text-2xl font-black text-gray-800 uppercase tracking-tighter">Atendimento Concluído</h3>
+            <p class="text-gray-500 mt-2 font-medium">As informações foram enviadas para a pauta principal.</p>
         </div>
-
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
-        // --- ÁRVORE DE ASSUNTOS (COMPLETA) ---
-        const subjectTree = [
-            { text: "Orientação Jurídica" }, { text: "Atendimento Jurídico Integral e Gratuito" }, { text: "Ajuizamento e Acompanhamento de Ações Judiciais" }, { text: "Consultas Processuais" },
-            { text: "Processos Cíveis (gerais)", children: [ { text: "Ação de Obrigação de Fazer" }, { text: "Ação Declaratória de Nulidade" }, { text: "Ação de Indenização (Danos Morais e Materiais)" }, { text: "Ação Revisional de Débito" }, { text: "Ação de Exigir Contas" } ] },
-            { text: "Processos de Família", children: [ { text: "Alimentos", children: [ { text: "Ação de Fixação de Alimentos" }, { text: "Ação de Majoração de Alimentos" }, { text: "Ação de Oferta de Alimentos" }, { text: "Ação de Alimentos Gravídicos" }, { text: "Ação de Alimentos Avoengos (contra avós)" } ] }, { text: "Divórcio", children: [ { text: "Divórcio Consensual" }, { text: "Divórcio Litigioso" } ] }, { text: "União Estável", children: [ { text: "Reconhecimento e Dissolução de União Estável" }, { text: "Reconhecimento / Dissolução de União Estável Post Mortem" }, { text: "Conversão de União Estável Homoafetiva em Casamento" } ] }, { text: "Guarda", children: [ { text: "Guarda (pedida pelos pais)" }, { text: "Guarda (pedida por outra pessoa que não o pai ou a mãe)" }, { text: "Guarda Compartilhada" } ] }, { text: "Regulamentação de Convivência Familiar (Visitas)" }, { text: "Investigação de Paternidade (DNA)", children: [ { text: "Investigação de Paternidade Cumulada com Alimentos" }, { text: "Investigação de Paternidade Pós Morte" } ] }, { text: "Curatela", children: [ { text: "Procedimento de Fixação dos Limites da Curatela (antiga interdição)" }, { text: "Levantamento de Curatela" } ] }, { text: "Tutela" }, { text: "Adoção" } ] },
-            { text: "Processos Criminais", children: [ { text: "Defesa de Acusados em Processo Criminal" }, { text: "Acompanhamento do Cumprimento da Pena (Execução Penal)" }, { text: "Atuação em Audiência de Custódia" } ] },
-            { text: "Processos de Fazenda Pública", children: [ { text: "Fornecimento de Medicamentos" }, { text: "Indenizações contra o Poder Público" }, { text: "Previdência Social (estadual e municipal)" }, { text: "Questionamentos em Cobranças de Impostos, Taxas e Multas" } ] },
-            { text: "Processos de Infância e Juventude", children: [ { text: "Vaga em Escolas e Creches" }, { text: "Profissionais de Apoio Escolar" }, { text: "Obrigação de Fazer (genérica)" }, { text: "Transporte (demanda de transporte gratuito)" } ] },
-            { text: "Processos Relacionados a Direitos Humanos" }, { text: "Mediação e Conciliação" },
-            { text: "Facilitação de Acesso à Documentação Básica", children: [ { text: "Emissão de Carteira de Identidade (1ª e 2ª via)" }, { text: "Emissão de Certidões (Nascimento, Casamento, Óbito - 1ª e 2ª via)" }, { text: "Obtenção de 'Nada Consta'" } ] },
-            { text: "Atendimento em Demandas de Saúde (CRLS)", children: [ { text: "Acesso a Medicamentos" }, { text: "Agendamento de Procedimentos Cirúrgicos ou Exames" } ] },
-            { text: "Orientação sobre Execução Penal", children: [ { text: "Progressão de Regime" }, { text: "Visita Periódica ao Lar (VPL)" }, { text: "Trabalho/Estudo Extramuros" }, { text: "Livramento Condicional" }, { text: "Indulto" } ] },
-            { text: "Retificação de Registro Civil", children: [ { text: "Retificação de Dados Registrais (Nascimento, Casamento, Óbito)" }, { text: "Alteração de Gênero e Nome" } ] },
-            { text: "Alvará Judicial", children: [ { text: "Alvará para Levantamento de Valores (FGTS, PIS/PASEP)" }, { text: "Alvará para Autorização de Viagem ao Exterior (para menor)" } ] },
-            { text: "Apoio Psicossocial" }, { text: "Defesa de Direitos Homoafetivos" }
-        ];
-
-        function flattenTreeWithObjects(nodes) {
-            let flatList = [];
-            nodes.forEach(node => {
-                flatList.push({ value: node.text });
-                if (node.children) flatList = flatList.concat(flattenTreeWithObjects(node.children));
-            });
-            return flatList;
-        }
-
-        // --- DADOS DOS DOCUMENTOS ---
-        const BASE_DOCS = ['RG/CNH', 'CPF', 'Comprovante de Residência'];
-        const INCOME_DOCS = ['Contracheque', 'CTPS', 'Extrato INSS', 'Extrato Bancário', 'Declaração Hipossuficiência', 'IRPF'];
-        const COMMON_DOCS = [...BASE_DOCS, ...INCOME_DOCS];
-
-        const documentsData = {
-            obrigacao_fazer: { title: 'Ação de Obrigação de Fazer', sections: [{ title: 'Documentos Pessoais', docs: COMMON_DOCS }, { title: 'Específicos', docs: ['Contrato/Acordo', 'Provas do descumprimento'] }] },
-            alimentos_fixacao_majoracao_oferta: { title: 'Alimentos', sections: [{ title: 'Documentos Pessoais', docs: COMMON_DOCS }, { title: 'Do Alimentando', docs: ['Certidão de Nascimento', 'Comprovantes de despesas'] }] },
-            divorcio_consensual: { title: 'Divórcio Consensual', sections: [{ title: 'Ambos', docs: ['RG/CPF', 'Comp. Residência', 'Certidão Casamento', 'Hipossuficiência'] }] },
-            divorcio_litigioso: { title: 'Divórcio Litigioso', sections: [{ title: 'Documentos Pessoais', docs: [...COMMON_DOCS, 'Certidão Casamento'] }, { title: 'Filhos/Bens', docs: ['Certidão Nascimento', 'Bens'] }] },
-            investigacao_paternidade: { title: 'Investigação de Paternidade', sections: [{ title: 'Documentos Pessoais', docs: COMMON_DOCS }, { title: 'Da Criança', docs: ['Certidão Nascimento'] }] },
-            default: { title: 'Documentação Geral', sections: [{ title: 'Documentos Comuns', docs: COMMON_DOCS }] }
-        };
-
-        const EXPENSE_LABELS = {
-            moradia: 'Moradia', alimentacao: 'Alimentação', educacao: 'Educação',
-            saude: 'Saúde', vestuario: 'Vestuário', lazer: 'Lazer', outras: 'Outras'
-        };
-
-        // --- CONFIGURAÇÃO FIREBASE ---
         const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // --- LÓGICA PRINCIPAL ---
+        // App Check (Mesma chave do index.html)
+        try { initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'), isTokenAutoRefreshEnabled: true }); } catch(e) {}
+
         const urlParams = new URLSearchParams(window.location.search);
         const pautaId = urlParams.get('pautaId');
         const assistidoId = urlParams.get('assistidoId');
-        const collabName = urlParams.get('collaboratorName');
-
-        const loading = document.getElementById('loading');
-        const mainCard = document.getElementById('main-card');
-        const tabFinish = document.getElementById('tab-finish');
-        const tabDocs = document.getElementById('tab-docs');
-        const contentFinish = document.getElementById('content-finish');
-        const contentDocs = document.getElementById('content-docs');
-        const datalist = document.getElementById('subjects-list-external');
-        const expiredContainer = document.getElementById('expired-container'); // NOVO CONTAINER
-
-        const flatSubjects = flattenTreeWithObjects(subjectTree);
-        flatSubjects.forEach(subject => {
-            const option = document.createElement('option');
-            option.value = subject.value;
-            datalist.appendChild(option);
-        });
 
         if (!pautaId || !assistidoId) {
-            alert("Link inválido.");
-            loading.classList.add('hidden');
+            document.getElementById('loading').innerHTML = "<p class='text-red-500 font-bold'>Erro: Link Inválido.</p>";
         } else {
             const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
 
-            getDoc(docRef).then((docSnap) => {
-                loading.classList.add('hidden');
-                
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-
-                    // --- VERIFICAÇÃO DE SEGURANÇA ---
-                    if (data.finalizadoPeloColaborador === true) {
-                        // Se já finalizou, mostra tela de bloqueio e para.
-                        expiredContainer.classList.remove('hidden');
-                        return; // INTERROMPE O SCRIPT
+            getDoc(docRef).then((snap) => {
+                if (snap.exists()) {
+                    const data = snap.data();
+                    if (data.finalizadoPeloColaborador) {
+                        document.getElementById('expired-container').classList.remove('hidden');
+                        document.getElementById('loading').classList.add('hidden');
+                        return;
                     }
-                    // ---------------------------------
 
-                    mainCard.classList.remove('hidden');
-
+                    document.getElementById('main-card').classList.remove('hidden');
+                    document.getElementById('loading').classList.add('hidden');
                     document.getElementById('assisted-name').textContent = data.name;
                     document.getElementById('assisted-subject').textContent = data.subject;
-                    document.getElementById('attendant-name').value = data.attendant || collabName || '';
+                    document.getElementById('attendant-name').value = urlParams.get('collaboratorName') || '';
 
-                    if (data.demandas?.descricoes) {
-                        data.demandas.descricoes.forEach(addDemandToList);
-                    }
-
-                    renderChecklist(data);
-                } else {
-                    alert("Atendimento não encontrado.");
+                    renderChecklistDisplay(data.documentChecklist);
                 }
-            }).catch(err => {
-                console.error(err);
-                alert("Erro ao carregar dados.");
-                loading.classList.add('hidden');
+            }).catch(() => {
+                document.getElementById('loading').innerHTML = "<p class='text-red-500 font-bold'>Erro de conexão.</p>";
             });
+        }
 
-            tabFinish.addEventListener('click', () => {
-                tabFinish.className = "flex-1 py-3 text-center text-sm tab-active transition";
-                tabDocs.className = "flex-1 py-3 text-center text-sm tab-inactive transition";
-                contentFinish.classList.remove('hidden');
-                contentDocs.classList.add('hidden');
-            });
+        function renderChecklistDisplay(checklist) {
+            const container = document.getElementById('checklist-container');
+            if (!checklist) {
+                container.innerHTML = "<p class='text-center text-gray-400 py-10'>Nenhum checklist definido.</p>";
+                return;
+            }
 
-            tabDocs.addEventListener('click', () => {
-                tabDocs.className = "flex-1 py-3 text-center text-sm tab-active transition";
-                tabFinish.className = "flex-1 py-3 text-center text-sm tab-inactive transition";
-                contentDocs.classList.remove('hidden');
-                contentFinish.classList.add('hidden');
-            });
+            container.innerHTML = `<h4 class='text-xs font-black text-gray-400 uppercase border-b pb-2 mb-4'>Verificação de Documentos</h4>`;
+            
+            // Exibe documentos marcados
+            const savedIds = checklist.checkedIds || [];
+            const docTypes = checklist.docTypes || {};
 
-            function renderChecklist(data) {
-                const checklistContainer = document.getElementById('checklist-container');
-                checklistContainer.innerHTML = '';
-
-                let actionKey = 'default';
-                const subject = normalizeText(data.subject);
-                for (const key in documentsData) {
-                    if (subject.includes(key.replace(/_/g, ' '))) {
-                        actionKey = key;
-                        break;
-                    }
-                }
-                const template = documentsData[actionKey] || documentsData['default'];
-                const savedChecklist = data.documentChecklist || {};
-                const docTypes = savedChecklist.docTypes || {};
-
-                const obs = savedChecklist.observations?.selected || [];
-                document.getElementById('doc-status-text').textContent = obs.length > 0 ? obs.join(', ') : 'Não verificado';
-
-                template.sections.forEach((section, sIdx) => {
+            if (savedIds.length === 0) {
+                container.innerHTML += "<p class='text-sm text-amber-600 font-bold bg-amber-50 p-4 rounded-xl'>Nenhum documento foi marcado pela triagem.</p>";
+            } else {
+                savedIds.forEach(id => {
+                    const type = docTypes[id] || 'Físico';
                     const div = document.createElement('div');
-                    div.innerHTML = `<h4 class="font-bold text-gray-700 text-xs uppercase border-b pb-1 mb-2">${section.title}</h4>`;
-                    const ul = document.createElement('ul');
-                    ul.className = 'space-y-2';
-                    
-                    section.docs.forEach((docName, dIdx) => {
-                        const li = document.createElement('li');
-                        const potentialId = `doc-${savedChecklist.action || actionKey}-${sIdx}-${dIdx}`;
-                        const isChecked = savedChecklist.checkedIds?.includes(potentialId);
-                        const type = docTypes[potentialId] || '';
-                        
-                        const icon = isChecked ? '<span class="text-green-600 font-bold">✓</span>' : '<span class="text-gray-300">○</span>';
-                        const style = isChecked ? 'text-gray-800 font-medium' : 'text-gray-400';
-                        const typeBadge = type ? `<span class="text-xs bg-blue-100 text-blue-700 px-1 rounded ml-2">${type}</span>` : '';
-
-                        li.innerHTML = `
-                            <div class="flex items-start">
-                                <div class="mt-0.5 mr-2">${icon}</div>
-                                <div class="flex-1">
-                                    <span class="text-sm ${style}">${docName}</span>
-                                    ${typeBadge}
-                                </div>
-                            </div>
-                        `;
-                        ul.appendChild(li);
-                    });
-                    div.appendChild(ul);
-                    checklistContainer.appendChild(div);
+                    div.className = "flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl shadow-sm";
+                    div.innerHTML = `<span class='text-xs font-bold text-gray-700 uppercase'>✓ Documento Recebido</span><span class='text-[10px] font-black bg-blue-100 text-blue-600 px-2 py-0.5 rounded'>${type}</span>`;
+                    container.appendChild(div);
                 });
-
-                if (savedChecklist.reuData) {
-                    const r = savedChecklist.reuData;
-                    const rContainer = document.getElementById('reu-data-container');
-                    const rContent = document.getElementById('reu-data-content');
-                    rContainer.classList.remove('hidden');
-                    
-                    let html = '';
-                    if (r.nome) html += `<p><strong>Nome:</strong> ${r.nome}</p>`;
-                    if (r.cpf) html += `<p><strong>CPF:</strong> ${r.cpf}</p>`;
-                    if (r.telefone) html += `<p><strong>Tel:</strong> ${r.telefone}</p>`;
-                    let end = [r.rua, r.numero, r.bairro, r.cidade, r.uf].filter(Boolean).join(', ');
-                    if (end) html += `<p><strong>Endereço:</strong> ${end}</p>`;
-                    if (r.empresa) html += `<p><strong>Empresa:</strong> ${r.empresa}</p>`;
-                    
-                    rContent.innerHTML = html || '<p class="italic">Dados vazios.</p>';
-                }
-
-                if (savedChecklist.expenseData) {
-                    const ex = savedChecklist.expenseData;
-                    if (Object.values(ex).some(val => val && val !== '')) {
-                        const exContainer = document.getElementById('expense-container');
-                        const exContent = document.getElementById('expense-content');
-                        exContainer.classList.remove('hidden');
-                        
-                        let html = '';
-                        let total = 0;
-                        for (const key in ex) {
-                            if (ex[key]) {
-                                html += `<div class="flex justify-between"><span>${EXPENSE_LABELS[key] || key}:</span> <strong>${ex[key]}</strong></div>`;
-                                total += parseFloat(ex[key].replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-                            }
-                        }
-                        html += `<div class="border-t border-green-200 mt-2 pt-1 flex justify-between font-bold text-green-800"><span>TOTAL:</span> <span>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}</span></div>`;
-                        exContent.innerHTML = html;
-                    }
-                }
             }
 
-            const addDemandBtn = document.getElementById('add-demand-btn');
-            const newDemandInput = document.getElementById('new-demand-input');
-            const demandsList = document.getElementById('demands-list');
-
-            newDemandInput.addEventListener('change', () => {
-                const originalValue = newDemandInput.value;
-                if (originalValue.includes(' > ')) {
-                    const parts = originalValue.split(' > ');
-                    newDemandInput.value = parts[parts.length - 1];
-                }
-            });
-
-            function addDemandToList(text) {
-                const li = document.createElement('li');
-                li.className = "flex justify-between bg-gray-50 p-2 rounded border";
-                li.innerHTML = `<span>${text}</span> <button class="text-red-500 font-bold ml-2">x</button>`;
-                li.querySelector('button').onclick = () => li.remove();
-                demandsList.appendChild(li);
+            // Exibe Réu se existir
+            if (checklist.reuData && checklist.reuData.nome) {
+                document.getElementById('reu-data-container').classList.remove('hidden');
+                document.getElementById('reu-data-content').innerHTML = `
+                    <p>NOME: ${checklist.reuData.nome}</p>
+                    <p>CPF: ${checklist.reuData.cpf || 'N/A'}</p>
+                    <p>ENDEREÇO: ${checklist.reuData.rua || ''}, ${checklist.reuData.numero || ''}</p>
+                `;
             }
+        }
 
-            addDemandBtn.addEventListener('click', () => {
-                if (newDemandInput.value.trim()) {
-                    addDemandToList(newDemandInput.value.trim());
-                    newDemandInput.value = '';
-                }
-            });
+        // Tabs
+        document.getElementById('tab-finish').onclick = () => {
+            document.getElementById('content-finish').classList.remove('hidden');
+            document.getElementById('content-docs').classList.add('hidden');
+            document.getElementById('tab-finish').className = "flex-1 py-3 text-[10px] uppercase font-black tab-active";
+            document.getElementById('tab-docs').className = "flex-1 py-3 text-[10px] uppercase font-black tab-inactive";
+        };
+        document.getElementById('tab-docs').onclick = () => {
+            document.getElementById('content-docs').classList.remove('hidden');
+            document.getElementById('content-finish').classList.add('hidden');
+            document.getElementById('tab-docs').className = "flex-1 py-3 text-[10px] uppercase font-black tab-active";
+            document.getElementById('tab-finish').className = "flex-1 py-3 text-[10px] uppercase font-black tab-inactive";
+        };
 
-            document.getElementById('finish-btn').addEventListener('click', async () => {
-                const attendantName = document.getElementById('attendant-name').value.trim();
-                const demands = Array.from(demandsList.querySelectorAll('li span')).map(s => s.textContent);
+        // Salvar
+        document.getElementById('finish-btn').onclick = async () => {
+            const name = document.getElementById('attendant-name').value.trim();
+            if (!name) { alert("Por favor, informe seu nome."); return; }
 
-                const currentDemands = (await getDoc(docRef)).data().demandas?.descricoes || [];
-                const finalDemands = [...new Set([...currentDemands, ...demands])];
+            document.getElementById('finish-btn').disabled = true;
+            document.getElementById('finish-btn').textContent = "SALVANDO...";
 
+            try {
+                const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
                 await updateDoc(docRef, {
                     status: 'atendido',
-                    attendant: attendantName,
+                    attendant: name,
                     attendedTime: new Date().toISOString(),
-                    finalizadoPeloColaborador: true, // MARCA COMO FINALIZADO PARA BLOQUEAR ACESSO FUTURO
-                    demandas: { descricoes: finalDemands, quantidade: finalDemands.length }
+                    finalizadoPeloColaborador: true
                 });
-
-                document.getElementById('main-card').classList.add('hidden');
                 document.getElementById('success-overlay').classList.remove('hidden');
-            });
-        }
-
-        function normalizeText(str) {
-            return str ? str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : '';
-        }
+            } catch (e) {
+                alert("Erro ao salvar. Verifique se o atendimento já foi encerrado.");
+                document.getElementById('finish-btn').disabled = false;
+                document.getElementById('finish-btn').textContent = "CONFIRMAR E ENCERRAR";
+            }
+        };
     </script>
 </body>
+</html>
