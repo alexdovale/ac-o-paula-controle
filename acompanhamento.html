@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acompanhamento SIGAP</title>
+    <title>Acompanhamento de Fila - SIGAP</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap" rel="stylesheet">
     <style>
@@ -34,27 +34,31 @@
     <div id="app-content" class="hidden w-full max-w-7xl mx-auto flex-1 flex flex-col">
         
         <header class="mb-6 bg-white p-5 rounded-3xl shadow-sm border flex flex-col md:flex-row items-center justify-between gap-4">
-            <div class="text-center md:text-left">
-                <h1 id="pauta-title" class="text-xl md:text-2xl font-black text-gray-800 uppercase tracking-tighter">---</h1>
-                <div class="flex items-center justify-center md:justify-start gap-2 mt-1">
-                    <span class="relative flex h-2 w-2">
-                        <span class="animate-ping absolute h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span class="relative rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
-                    <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Painel Público SIGAP</p>
+            <div class="flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
+                <!-- LOGO BASE DO INDEX -->
+                <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGAP" class="h-14 w-auto drop-shadow-sm">
+                
+                <div>
+                    <h1 id="pauta-title" class="text-xl md:text-2xl font-black text-gray-800 uppercase tracking-tighter leading-tight">---</h1>
+                    <div class="flex items-center justify-center md:justify-start gap-2 mt-1">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span class="relative rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                        <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Painel Público SIGAP • Atualização ao vivo</p>
+                    </div>
                 </div>
             </div>
 
             <button id="open-atendidos-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl flex flex-col items-center shadow-lg transition-all min-w-[140px]">
-                <span class="text-[9px] font-black uppercase opacity-70">Atendidos Hoje</span>
+                <span class="text-[9px] font-black uppercase opacity-70">Finalizados Hoje</span>
                 <span id="total-atendidos-count" class="text-2xl font-black">0</span>
             </button>
         </header>
 
-        <!-- GRID DINÂMICA (As colunas mudam sozinhas) -->
+        <!-- GRID DINÂMICA -->
         <div id="main-grid" class="grid grid-cols-1 gap-4 flex-1 min-h-0">
             
-            <!-- COLUNA: AGUARDANDO (Sempre visível) -->
             <div id="col-aguardando" class="bg-white rounded-3xl shadow-md border overflow-hidden flex flex-col h-full min-h-[400px]">
                 <div class="bg-amber-500 p-4 text-white flex justify-between items-center shadow-md">
                     <h2 class="text-sm font-black uppercase">⏳ Fila de Espera</h2>
@@ -63,7 +67,6 @@
                 <div id="list-aguardando" class="p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50 scrollable-content"></div>
             </div>
 
-            <!-- COLUNA: EM ATENDIMENTO (Opcional) -->
             <div id="col-atendimento" class="hidden bg-white rounded-3xl shadow-md border overflow-hidden flex flex-col h-full min-h-[400px]">
                 <div class="bg-green-600 p-4 text-white flex justify-between items-center shadow-md">
                     <h2 class="text-sm font-black uppercase">👩‍💻 Em Atendimento</h2>
@@ -72,7 +75,6 @@
                 <div id="list-atendimento" class="p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50 scrollable-content"></div>
             </div>
 
-            <!-- COLUNA: DISTRIBUIÇÃO (Opcional) -->
             <div id="col-distribuicao" class="hidden bg-white rounded-3xl shadow-md border overflow-hidden flex flex-col h-full min-h-[400px]">
                 <div class="bg-cyan-600 p-4 text-white flex justify-between items-center shadow-md">
                     <h2 class="text-sm font-black uppercase">⚖️ Distribuição</h2>
@@ -80,7 +82,6 @@
                 </div>
                 <div id="list-distribuicao" class="p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50 scrollable-content"></div>
             </div>
-
         </div>
     </div>
 
@@ -106,107 +107,99 @@
 
         try { initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'), isTokenAutoRefreshEnabled: true }); } catch(e) {}
 
-        const pId = new URLSearchParams(window.location.search).get('id');
+        const urlParams = new URLSearchParams(window.location.search);
+        const pId = urlParams.get('id');
 
+        // --- LÓGICA DE ABREVIAÇÃO LGPD SOLICITADA ---
         function formatName(name, mask) {
             if (!name) return "---";
             if (!mask) return name;
-            const parts = name.trim().split(' ');
-            if (parts.length === 1) return name;
-            // Abrevia o sobrenome: João Silva -> João S.***
-            return `${parts[0]} ${parts[1][0]}.***`; 
+            
+            const parts = name.trim().split(/\s+/);
+            if (parts.length === 1) return parts[0];
+
+            // Conectores que devem ser mantidos por extenso
+            const connectors = ["de", "da", "do", "dos", "das"];
+
+            return parts.map((part, index) => {
+                if (index === 0) return part; // Primeiro nome completo
+                if (connectors.includes(part.toLowerCase())) return part; // Conectores completos
+                return part.charAt(0).toUpperCase() + "."; // Inicial do sobrenome
+            }).join(' ');
         }
 
         if (pId) {
-            // 1. Escuta a Pauta para configurar as colunas
             onSnapshot(doc(db, "pautas", pId), (snap) => {
-                if (!snap.exists() || !snap.data().isPublic) {
+                if (snap.exists() && snap.data().isPublic) {
+                    const data = snap.data();
+                    document.getElementById('pauta-title').textContent = data.name;
+                    
+                    const grid = document.getElementById('main-grid');
+                    let columnsCount = 1;
+
+                    if (data.useDelegationFlow) { document.getElementById('col-atendimento').classList.remove('hidden'); columnsCount++; }
+                    else { document.getElementById('col-atendimento').classList.add('hidden'); }
+
+                    if (data.useDistribution) { document.getElementById('col-distribuicao').classList.remove('hidden'); columnsCount++; }
+                    else { document.getElementById('col-distribuicao').classList.add('hidden'); }
+
+                    grid.className = `grid grid-cols-1 ${columnsCount > 1 ? 'lg:grid-cols-' + columnsCount : ''} gap-4 flex-1 min-h-0`;
+
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('app-content').classList.remove('hidden');
+
+                    onSnapshot(collection(db, "pautas", pId, "attendances"), (attSnap) => {
+                        const items = attSnap.docs.map(d => ({id: d.id, ...d.data()}));
+                        
+                        const ag = items.filter(i => i.status === 'aguardando').sort((a,b) => {
+                            if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+                            if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+                            return data.ordemAtendimento === 'manual' ? (a.manualIndex || 0) - (b.manualIndex || 0) : new Date(a.arrivalTime) - new Date(b.arrivalTime);
+                        });
+
+                        const serv = items.filter(i => i.status === 'emAtendimento').sort((a,b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
+                        const dist = items.filter(i => i.status === 'aguardando_distribuicao');
+                        const done = items.filter(i => i.status === 'atendido').sort((a,b) => new Date(b.attendedTime) - new Date(a.attendedTime));
+
+                        document.getElementById('count-aguardando').textContent = ag.length;
+                        document.getElementById('count-atendimento').textContent = serv.length;
+                        document.getElementById('count-distribuicao').textContent = dist.length;
+                        document.getElementById('total-atendidos-count').textContent = done.length;
+
+                        const renderList = (elId, list, color, type) => {
+                            const el = document.getElementById(elId);
+                            el.innerHTML = list.length ? list.map((a, i) => `
+                                <div class="bg-white p-4 rounded-2xl border-l-8 ${a.priority === 'URGENTE' ? 'border-red-500 bg-red-50' : color} shadow-sm flex justify-between items-center">
+                                    <div class="min-w-0">
+                                        <p class="text-[9px] font-black text-gray-400 uppercase">${type === 'wait' ? (i+1) + 'º DA FILA' : 'PROCESSO ATIVO'}</p>
+                                        <p class="font-bold text-gray-800 text-lg uppercase truncate">${formatName(a.name, data.maskNames)}</p>
+                                    </div>
+                                    <div class="flex flex-col items-end shrink-0 ml-2">
+                                        <span class="bg-blue-600 text-white text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-tighter">${a.room || 'GERAL'}</span>
+                                        ${a.documentState === 'saved' ? '<span class="text-[8px] font-black text-green-600 uppercase bg-green-50 px-1 rounded mt-1">Docs OK</span>' : ''}
+                                    </div>
+                                </div>
+                            `).join('') : '<p class="text-center text-gray-300 py-10 text-[10px] font-black uppercase">Vazio</p>';
+                        };
+
+                        renderList('list-aguardando', ag, 'border-amber-400', 'wait');
+                        renderList('list-atendimento', serv, 'border-green-500', 'pulse');
+                        renderList('list-distribuicao', dist, 'border-cyan-500', 'normal');
+
+                        document.getElementById('list-atendidos-content').innerHTML = done.map(d => `
+                            <div class="bg-white p-3 rounded-xl border flex justify-between items-center text-sm">
+                                <span class="font-bold text-gray-700 truncate">${formatName(d.name, data.maskNames)}</span>
+                                <span class="text-[9px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-full uppercase tracking-widest">OK</span>
+                            </div>
+                        `).join('') || '<p class="text-center text-gray-400 py-10 uppercase text-xs font-bold">Ninguém finalizado ainda.</p>';
+                    });
+                } else {
                     document.getElementById('loading').classList.add('hidden');
                     document.getElementById('error-screen').classList.remove('hidden');
-                    return;
                 }
-                
-                const data = snap.data();
-                document.getElementById('pauta-title').textContent = data.name;
-                
-                // AJUSTE DINÂMICO DE COLUNAS
-                const grid = document.getElementById('main-grid');
-                let columnsCount = 1; // Sempre tem o aguardando
-
-                if (data.useDelegationFlow) {
-                    document.getElementById('col-atendimento').classList.remove('hidden');
-                    columnsCount++;
-                } else {
-                    document.getElementById('col-atendimento').classList.add('hidden');
-                }
-
-                if (data.useDistribution) {
-                    document.getElementById('col-distribuicao').classList.remove('hidden');
-                    columnsCount++;
-                } else {
-                    document.getElementById('col-distribuicao').classList.add('hidden');
-                }
-
-                // Aplica a grade responsiva
-                grid.className = `grid grid-cols-1 ${columnsCount > 1 ? 'lg:grid-cols-' + columnsCount : ''} gap-4 flex-1 min-h-0`;
-
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('app-content').classList.remove('hidden');
-
-                // 2. Escuta os Atendimentos
-                onSnapshot(collection(db, "pautas", pId, "attendances"), (attSnap) => {
-                    const all = attSnap.docs.map(d => ({id: d.id, ...d.data()}));
-                    
-                    // FILTROS
-                    const ag = all.filter(i => i.status === 'aguardando').sort((a,b) => {
-                        if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-                        if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-                        return data.ordemAtendimento === 'manual' ? (a.manualIndex || 0) - (b.manualIndex || 0) : new Date(a.arrivalTime) - new Date(b.arrivalTime);
-                    });
-
-                    const serv = all.filter(i => i.status === 'emAtendimento').sort((a,b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
-                    const dist = all.filter(i => i.status === 'aguardando_distribuicao');
-                    const done = all.filter(i => i.status === 'atendido').sort((a,b) => new Date(b.attendedTime) - new Date(a.attendedTime));
-
-                    // ATUALIZA NÚMEROS
-                    document.getElementById('count-aguardando').textContent = ag.length;
-                    document.getElementById('count-atendimento').textContent = serv.length;
-                    document.getElementById('count-distribuicao').textContent = dist.length;
-                    document.getElementById('total-atendidos-count').textContent = done.length;
-
-                    // RENDERIZA LISTAS
-                    const renderList = (elId, list, color, type) => {
-                        const el = document.getElementById(elId);
-                        el.innerHTML = list.length ? list.map((a, i) => `
-                            <div class="bg-white p-4 rounded-2xl border-l-8 ${a.priority === 'URGENTE' ? 'border-red-500 bg-red-50' : color} shadow-sm flex justify-between items-center transition-all ${type === 'pulse' ? 'animate-pulse' : ''}">
-                                <div class="min-w-0">
-                                    <p class="text-[9px] font-black text-gray-400 uppercase">${type === 'wait' ? (i+1) + 'º DA FILA' : 'PROCESSO ATIVO'}</p>
-                                    <p class="font-bold text-gray-800 text-lg uppercase truncate">${formatName(a.name, data.maskNames)}</p>
-                                </div>
-                                <div class="flex flex-col items-end shrink-0 ml-2">
-                                    <span class="bg-blue-600 text-white text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-tighter">${a.room || 'GERAL'}</span>
-                                    ${a.documentState === 'saved' ? '<span class="text-[8px] font-black text-green-600 uppercase bg-green-50 px-1 rounded mt-1">Docs OK</span>' : ''}
-                                </div>
-                            </div>
-                        `).join('') : '<p class="text-center text-gray-300 py-10 text-[10px] font-black uppercase">Vazio</p>';
-                    };
-
-                    renderList('list-aguardando', ag, 'border-amber-400', 'wait');
-                    renderList('list-atendimento', serv, 'border-green-500', 'pulse');
-                    renderList('list-distribuicao', dist, 'border-cyan-500', 'normal');
-
-                    // MODAL HISTÓRICO
-                    document.getElementById('list-atendidos-content').innerHTML = done.map(d => `
-                        <div class="bg-white p-3 rounded-xl border flex justify-between items-center">
-                            <span class="font-bold text-gray-700 truncate">${formatName(d.name, data.maskNames)}</span>
-                            <span class="text-[9px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-full">OK</span>
-                        </div>
-                    `).join('') || '<p class="text-center text-gray-400 py-10">Nenhum finalizado.</p>';
-                });
             });
         }
 
-        // CONTROLES MODAL
         document.getElementById('open-atendidos-btn').onclick = () => document.getElementById('atendidos-modal').classList.remove('hidden');
         document.getElementById('close-atendidos-btn').onclick = () => document.getElementById('atendidos-modal').classList.add('hidden');
     </script>
