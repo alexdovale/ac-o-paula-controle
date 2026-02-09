@@ -4019,30 +4019,22 @@ if (btnAdmin) {
                 // Ação de confirmar atendimento (antiga, agora para "Finalizar Diretamente")
                 // NOVO CÓDIGO SUGERIDO (Linha 1845)
                 if (button.id === 'confirm-attendant-btn') {
-                    const attendantName = document.getElementById('attendant-name').value.trim();
-                    
-                    // 1. Tenta encontrar o colaborador completo na lista (incluindo cargo e equipe)
-                    const selectedCollab = colaboradores.find(c => c.nome === attendantName);
-                    
-                    let attendantData;
-                
-                    if (selectedCollab) {
-                        // Se encontrado, usa o objeto completo
-                        attendantData = { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe };
-                    } else {
-                        // Se não encontrado, usa o nome como string (cairá em 'Sem Grupo' se for o caso)
-                        attendantData = attendantName;
-                    }
-                
-                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ 
-                        status: 'atendido', 
-                        // ATUALIZAÇÃO: Salva o objeto completo se encontrado, senão salva o nome string.
-                        attendant: attendantData, 
-                        attendedTime: new Date().toISOString() 
-                    }));
-                    
-                    button.closest('.fixed').classList.add('hidden');
-                }
+    const attendantName = document.getElementById('attendant-name').value.trim();
+    
+    // Se a pauta tem o fluxo de distribuição habilitado, o status vai para 'aguardandoDistribuicao'
+    // Caso contrário, vai direto para 'atendido' (finalizado)
+    const useDist = document.getElementById('check-use-distribution')?.checked || currentPautaData?.useDistributionFlow;
+    const novoStatus = useDist ? 'aguardandoDistribuicao' : 'atendido';
+
+    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ 
+        status: novoStatus, 
+        attendant: attendantName, 
+        attendedTime: new Date().toISOString() 
+    }));
+    
+    showNotification(novoStatus === 'atendido' ? "Finalizado!" : "Enviado para Distribuição!");
+    button.closest('.fixed').classList.add('hidden');
+}
                 if (button.id === 'confirm-priority-reason-btn') {
                     // Pega os textos de todos os botões que estão "acesos" (classe .selected)
                     const selectedChips = Array.from(document.querySelectorAll('.p-chip.selected'))
