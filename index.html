@@ -4512,11 +4512,21 @@ if (btnAdmin) {
   });
 
 // Envio de E-mail de Delegação (Modular)
-document.getElementById('send-delegate-email-btn').addEventListener('click', async () => {
-    const collaboratorEmail = document.getElementById('collaborator-email-input').value.trim();
-    if (!collaboratorEmail) return showNotification("Insira o e-mail.", "error");
+// --- LÓGICA DE ENVIO DO E-MAIL DE DELEGAÇÃO (DENTRO DO MÓDULO) ---
+if (button.id === 'send-delegate-email-btn') {
+    const emailInput = document.getElementById('collaborator-email-input');
+    const collaboratorEmail = emailInput ? emailInput.value.trim() : '';
+
+    if (!collaboratorEmail) {
+        showNotification("Por favor, insira o e-mail do colaborador.", "error");
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Enviando...";
 
     try {
+        // Agora o código consegue usar a função showNotification e sendDelegationEmail
         await sendDelegationEmail({
             toEmail: collaboratorEmail,
             assistedName: assistedNameForDelegation,
@@ -4526,11 +4536,18 @@ document.getElementById('send-delegate-email-btn').addEventListener('click', asy
             senderName: currentUserName,
             senderEmail: auth.currentUser?.email
         });
+
         showNotification("Link enviado por e-mail!");
         document.getElementById('delegate-email-modal').classList.add('hidden');
+        emailInput.value = '';
     } catch (error) {
+        console.error("Erro e-mail:", error);
         showNotification("Erro ao enviar e-mail.", "error");
+    } finally {
+        button.disabled = false;
+        button.textContent = "Enviar Link por E-mail";
     }
+    return;
 });
 
   // C. Envio automático de anotações ao fechar a pauta (Modular)
@@ -4560,6 +4577,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
