@@ -15,9 +15,19 @@ export const sendDelegationEmail = async (params) => {
         senderEmail 
     } = params;
 
-    // Gera o link dinâmico
-    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-    const externalLink = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${assistedId}&collaboratorName=${encodeURIComponent(collaboratorName)}`;
+    // --- CONSTRUÇÃO SEGURA DO LINK ---
+    // Pega o endereço base do site (ex: https://alexdovale.github.io/ac-o-paula-controle/)
+    const pathParts = window.location.pathname.split('/');
+    pathParts.pop(); // Remove o 'index.html'
+    const baseUrl = window.location.origin + pathParts.join('/') + '/';
+    
+    // Verifique se o seu arquivo se chama 'atendimento_externo.html' ou 'colaborador.html'
+    // Mude o nome abaixo se necessário:
+    const fileName = 'atendimento_externo.html'; 
+
+    const externalLink = `${baseUrl}${fileName}?pautaId=${pautaId}&assistidoId=${assistedId}&collaboratorName=${encodeURIComponent(collaboratorName || '')}`;
+
+    console.log("Link gerado:", externalLink); // Para você conferir no console (F12)
 
     return emailjs.send(
         emailJsConfig.serviceId,
@@ -44,7 +54,7 @@ export const sendNotesByEmail = async (notes, senderName, senderEmail) => {
         emailJsConfig.templates.anotacoes,
         {
             message: notes,
-            email_to: senderEmail, // Geralmente envia para o próprio usuário
+            email_to: senderEmail,
             name: senderName,
             email: senderEmail
         }
