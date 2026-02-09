@@ -4511,8 +4511,7 @@ if (btnAdmin) {
     notesModal.classList.add("hidden");
   });
 
-// Envio de E-mail de Delegação (Modular)
-// --- LÓGICA DE ENVIO DO E-MAIL DE DELEGAÇÃO (DENTRO DO MÓDULO) ---
+// --- LÓGICA DE ENVIO DO E-MAIL DE DELEGAÇÃO ---
 if (button.id === 'send-delegate-email-btn') {
     const emailInput = document.getElementById('collaborator-email-input');
     const collaboratorEmail = emailInput ? emailInput.value.trim() : '';
@@ -4523,10 +4522,10 @@ if (button.id === 'send-delegate-email-btn') {
     }
 
     button.disabled = true;
+    const originalText = button.textContent;
     button.textContent = "Enviando...";
 
     try {
-        // Agora o código consegue usar a função showNotification e sendDelegationEmail
         await sendDelegationEmail({
             toEmail: collaboratorEmail,
             assistedName: assistedNameForDelegation,
@@ -4539,16 +4538,16 @@ if (button.id === 'send-delegate-email-btn') {
 
         showNotification("Link enviado por e-mail!");
         document.getElementById('delegate-email-modal').classList.add('hidden');
-        emailInput.value = '';
+        if (emailInput) emailInput.value = '';
     } catch (error) {
         console.error("Erro e-mail:", error);
         showNotification("Erro ao enviar e-mail.", "error");
     } finally {
         button.disabled = false;
-        button.textContent = "Enviar Link por E-mail";
+        button.textContent = originalText;
     }
     return;
-});
+}
 
   // C. Envio automático de anotações ao fechar a pauta (Modular)
 const closePautaBtn = document.getElementById("close-pauta-btn");
@@ -4577,6 +4576,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
