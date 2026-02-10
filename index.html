@@ -2189,15 +2189,19 @@ render(atendidosList, atendidos, a => {
             render(distList, distribuicao, a => {
                 const card = document.createElement('div');
                 card.className = 'relative bg-cyan-50 p-4 rounded-lg shadow-sm border border-cyan-200 mb-2';
+                
+                // GERAÇÃO CORRETA DO LINK PARA ESTE CARD ESPECÍFICO
                 const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                //const linkExterno = `${baseUrl}/atendimento_distribuicao.html?pautaId=${currentPautaId}&assistidoId=${a.id}&collaboratorName=${encodeURIComponent(a.attendant || '')}`;
-                const linkFinalizacao = `${baseUrl}/atendimento_distribuicao.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(currentUserName)}`;
+                const linkExterno = `${baseUrl}/atendimento_distribuicao.html?pautaId=${currentPautaId}&assistidoId=${a.id}&collaboratorName=${encodeURIComponent(a.attendant || '')}`;
 
                 card.innerHTML = `
+                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg>
+                    </button>
                     <p class="font-bold text-gray-800 text-sm">${escapeHTML(a.name)}</p>
                     <p class="text-[10px] text-cyan-700 font-bold uppercase mt-1">⚖️ Pendente de Distribuição</p>
                     <div class="mt-3 space-y-2">
-                        <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white text-[10px] font-bold py-2 rounded hover:bg-cyan-700 uppercase">
+                        <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white text-[10px] font-bold py-2 rounded hover:bg-cyan-700 uppercase shadow-sm">
                             Abrir Painel de Protocolo
                         </button>
                         <button data-id="${a.id}" class="return-to-aguardando-from-dist-btn w-full bg-white text-gray-400 border border-gray-200 text-[9px] py-1 rounded hover:bg-gray-50 uppercase font-semibold">
@@ -4134,39 +4138,41 @@ if (btnAdmin) {
 
                 // --- ENVIO DE E-MAIL DE DELEGAÇÃO (DENTRO DO CÉREBRO ÚNICO) ---
                 if (button.id === 'send-delegate-email-btn') {
-                    const collaboratorEmail = document.getElementById('collaborator-email-input').value.trim();
-                    
-                    if (!collaboratorEmail) {
-                        showNotification("Por favor, insira o e-mail do colaborador.", "error");
+                        const collaboratorEmail = document.getElementById('collaborator-email-input').value.trim();
+                        if (!collaboratorEmail) {
+                            showNotification("Por favor, insira o e-mail do colaborador.", "error");
+                            return;
+                        }
+                
+                        button.disabled = true;
+                        button.textContent = "Enviando...";
+    
+                        // GERA O LINK QUE SERÁ ENVIADO NO CORPO DO E-MAIL
+                        const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                        const urlFinalizacao = `${baseUrl}/atendimento_distribuicao.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(currentUserName)}`;
+                
+                        try {
+                            await sendDelegationEmail({
+                                toEmail: collaboratorEmail,
+                                assistedName: assistedNameForDelegation,
+                                collaboratorName: collaboratorNameForDelegation,
+                                pautaId: currentPautaId,
+                                assistedId: assistedIdForDelegation,
+                                senderName: currentUserName,
+                                senderEmail: auth.currentUser?.email,
+                                externalLink: urlFinalizacao // Passa o link pronto para o serviço de e-mail
+                            });
+                
+                            showNotification("Link de finalização enviado com sucesso!");
+                            document.getElementById('delegate-email-modal').classList.add('hidden');
+                        } catch (error) {
+                            showNotification("Falha ao enviar e-mail.", "error");
+                        } finally {
+                            button.disabled = false;
+                            button.textContent = "Enviar Link por E-mail";
+                        }
                         return;
                     }
-            
-                    button.disabled = true;
-                    button.textContent = "Enviando...";
-            
-                    try {
-                        // Chama o serviço de e-mail importado
-                        await sendDelegationEmail({
-                            toEmail: collaboratorEmail,
-                            assistedName: assistedNameForDelegation,
-                            collaboratorName: collaboratorNameForDelegation,
-                            pautaId: currentPautaId,
-                            assistedId: assistedIdForDelegation,
-                            senderName: currentUserName,
-                            senderEmail: auth.currentUser?.email
-                        });
-            
-                        showNotification("Link de finalização enviado com sucesso!");
-                        document.getElementById('delegate-email-modal').classList.add('hidden');
-                    } catch (error) {
-                        console.error("Erro ao enviar e-mail:", error);
-                        showNotification("Falha ao enviar e-mail. Tente novamente.", "error");
-                    } finally {
-                        button.disabled = false;
-                        button.textContent = "Enviar Link por E-mail";
-                    }
-                    return;
-                }
                 
                 if (button.id === 'confirm-edit-assisted-btn') {
                     const name = document.getElementById('edit-assisted-name').value.trim();
@@ -4633,6 +4639,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
