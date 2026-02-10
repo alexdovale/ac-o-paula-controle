@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fluxo de Distribuição - SIGAP</title>
+    <title>Painel de Conclusão de Atendimento - SIGAP</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -14,16 +14,18 @@
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
 
+    <!-- Tela de Carregamento -->
     <div id="loading" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
         <div class="loader"></div>
-        <p class="mt-4 text-gray-600 font-medium">Carregando...</p>
+        <p class="mt-4 text-gray-600 font-medium">Carregando dados com segurança...</p>
     </div>
 
+    <!-- Card Principal -->
     <div id="main-card" class="bg-white w-full max-w-lg rounded-xl shadow-2xl overflow-hidden hidden">
         
         <div class="bg-cyan-700 p-6 text-white text-center">
-            <h1 class="text-xl font-bold">Fluxo de Distribuição</h1>
-            <p class="text-xs opacity-80 mt-1">SIGAP - Acesso Externo</p>
+            <h1 class="text-xl font-bold">Conclusão de Atendimento</h1>
+            <p class="text-xs opacity-80 mt-1">SIGAP - Gerenciamento Externo</p>
         </div>
 
         <div class="p-6">
@@ -33,82 +35,83 @@
                 <p id="assisted-subject" class="text-sm text-gray-500 mt-1">...</p>
             </div>
 
-            <!-- REGISTRO DE ATIVIDADES (NOVO) -->
-            <!-- Aparece durante o processo para o servidor preencher -->
+            <!-- REGISTRO DE ATIVIDADES -->
             <div id="activity-log-section" class="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200 hidden">
-                <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z"/><path d="M3 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 8a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 8zm0 2.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z"/></svg>
-                    Registro de Atividades
+                <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2 text-sm uppercase">
+                    📝 Registro de Atividades
                 </h3>
                 
                 <div class="space-y-3">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 uppercase">Quantidade de Atendimentos/Casos</label>
-                        <input type="number" id="input-qtd" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500" placeholder="Ex: 1, 2...">
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase">Quantidade de Casos</label>
+                        <input type="number" id="input-qtd" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 text-sm" placeholder="Ex: 1, 2...">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 uppercase">Descrição dos Casos</label>
-                        <textarea id="input-details" rows="3" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500" placeholder="Descreva brevemente o que foi feito ou os casos tratados..."></textarea>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase">Descrição/Resumo</label>
+                        <textarea id="input-details" rows="2" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 text-sm" placeholder="O que foi feito?"></textarea>
                     </div>
-                    <button id="btn-save-details" class="w-full bg-gray-200 text-gray-700 font-bold py-2 rounded hover:bg-gray-300 text-xs">
-                        Salvar Detalhes
+                    <button id="btn-save-details" class="w-full bg-gray-200 text-gray-700 font-bold py-2 rounded hover:bg-gray-300 text-[10px] uppercase">
+                        Salvar Atividades
                     </button>
-                    <p id="save-msg" class="text-xs text-green-600 text-center hidden">Dados salvos!</p>
+                    <p id="save-msg" class="text-[10px] text-green-600 text-center hidden">Dados salvos!</p>
                 </div>
             </div>
 
-            <!-- ETAPA 1: PENDENTE DE ASSINATURA -->
-            <!-- ETAPA 1: PENDENTE DE ASSINATURA -->
+            <!-- ETAPA 1: ASSINATURA -->
             <div id="step-signature" class="hidden text-center space-y-4">
-                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
                     <div class="text-4xl mb-2">✍️</div>
                     <h3 class="font-bold text-yellow-800">Assinatura Pendente</h3>
+                    <p class="text-xs text-yellow-700 mt-1">Confirme se o assistido assinou a petição.</p>
                 </div>
-                <button id="btn-signed" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 rounded-lg shadow">
+                
+                <button id="btn-signed" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-lg shadow transition uppercase text-sm">
                     Confirmar Assinatura e Seguir
                 </button>
-                
-                <!-- NOVO BOTÃO: Só aparece se a pauta tiver distribuição ativa -->
-                <button id="btn-send-to-dist" class="hidden w-full bg-cyan-100 text-cyan-700 font-bold py-2 rounded-lg border border-cyan-300 text-xs">
-                    Encaminhar para Fila de Distribuição
+
+                <!-- BOTÃO DE ENCAMINHAR (Só aparece se a pauta usar distribuição) -->
+                <button id="btn-send-to-dist" class="hidden w-full bg-cyan-100 text-cyan-700 font-bold py-3 px-4 rounded-lg border border-cyan-300 text-xs uppercase hover:bg-cyan-200 transition">
+                    Encaminhar p/ Fila de Distribuição
                 </button>
             </div>
 
-<!-- ETAPA 2: PRONTO PARA PROTOCOLO -->
-<div id="step-protocol" class="hidden space-y-4">
-    <div class="bg-green-50 border-l-4 border-green-500 p-4 text-green-700 mb-4 rounded-r">
-        <p class="font-bold text-sm">Pronto para Protocolo</p>
-    </div>
+            <!-- ETAPA 2: PROTOCOLO / FINALIZAÇÃO -->
+            <div id="step-protocol" class="hidden space-y-4">
+                <div class="bg-green-50 border-l-4 border-green-500 p-4 text-green-700 mb-4 rounded-r">
+                    <p class="font-bold text-sm">Pronto para Finalizar</p>
+                    <p class="text-[10px]">Informe os dados do protocolo para encerrar.</p>
+                </div>
 
-    <!-- SELETOR DE DEFENSOR -->
-    <div>
-        <label class="block text-xs font-semibold text-gray-600 uppercase">Defensor(a) Responsável pela Petição</label>
-        <select id="select-defensor" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 text-sm">
-            <option value="">Selecione o Defensor...</option>
-        </select>
-    </div>
+                <!-- SELETOR DE DEFENSOR -->
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Defensor(a) Responsável</label>
+                    <select id="select-defensor" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 text-sm">
+                        <option value="">Carregando lista...</option>
+                    </select>
+                </div>
 
-    <div>
-        <label class="block text-xs font-semibold text-gray-600 uppercase">Nº do Processo (Opcional)</label>
-        <input type="text" id="input-process" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500" placeholder="0000.00.00.0000">
-    </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nº do Processo (Opcional)</label>
+                    <input type="text" id="input-process" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 text-sm" placeholder="0000.00.00.0000">
+                </div>
 
-    <!-- UPLOAD DE PDF -->
-    <div>
-        <label class="block text-xs font-semibold text-gray-600 uppercase">Anexar Petição/Protocolo (PDF)</label>
-        <input type="file" id="input-pdf" accept="application/pdf" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100">
-    </div>
+                <!-- UPLOAD DE PDF -->
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Anexar Petição/Protocolo (PDF)</label>
+                    <input type="file" id="input-pdf" accept="application/pdf" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100">
+                </div>
 
-    <button id="btn-finish" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow transition">
-        Finalizar e Sincronizar
-    </button>
-</div>
+                <button id="btn-finish" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow transition uppercase text-sm">
+                    Salvar e Finalizar Tudo
+                </button>
+            </div>
 
             <!-- ETAPA 3: FINALIZADO -->
-            <div id="step-done" class="hidden text-center py-8">
+            <div id="step-done" class="hidden text-center py-12">
                 <div class="text-green-500 text-6xl mb-4">✓</div>
-                <h3 class="text-lg font-bold text-gray-800">Processo Distribuído!</h3>
-                <p class="text-sm text-gray-500">O atendimento foi encerrado com sucesso.</p>
+                <h3 class="text-lg font-bold text-gray-800">Atendimento Concluído!</h3>
+                <p class="text-sm text-gray-500">O registro foi atualizado com sucesso no sistema.</p>
+                <button onclick="window.close()" class="mt-6 text-cyan-600 font-bold text-xs underline">Fechar esta aba</button>
             </div>
 
         </div>
@@ -119,7 +122,7 @@
         import { getFirestore, doc, getDoc, updateDoc, onSnapshot, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // Substitua pelos seus dados reais do Firebase (copie do seu index.html)
+        // CONFIGURAÇÃO DO FIREBASE (Certifique-se que estes dados batem com o seu index.html)
         const firebaseConfig = { 
             apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", 
             authDomain: "pauta-ce162.firebaseapp.com", 
@@ -136,9 +139,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         const pautaId = urlParams.get('pautaId');
         const assistidoId = urlParams.get('assistidoId');
-        const collabName = urlParams.get('collaboratorName');
 
-        // Elementos da tela
         const loading = document.getElementById('loading');
         const mainCard = document.getElementById('main-card');
         const stepSignature = document.getElementById('step-signature');
@@ -146,46 +147,53 @@
         const stepDone = document.getElementById('step-done');
         const activitySection = document.getElementById('activity-log-section');
 
-        // --- INÍCIO DA LÓGICA BLINDADA ---
+        // Monitora autenticação e inicia
         onAuthStateChanged(auth, async (user) => {
-            // Mesmo que não haja login (auth == null), as regras que você colocou agora permitem a leitura.
-            // O código abaixo rodará assim que o Firebase estiver pronto.
             if (!pautaId || !assistidoId) {
-                alert("Link inválido ou incompleto.");
-                loading.innerText = "Erro: Link Inválido";
+                loading.innerText = "Link Inválido.";
                 return;
             }
-            
-            // Inicia o carregamento dos dados
-            await initPagina();
+            initPagina();
         });
 
         async function initPagina() {
             const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
+            const pautaRef = doc(db, "pautas", pautaId);
 
-            // 1. Carregar lista de Defensores (da subcoleção colaboradores da pauta)
+            // 1. Carregar Defensores
             await loadDefensores();
 
-            // 2. Escuta em tempo real os dados do Assistido
-            onSnapshot(docRef, (docSnap) => {
+            // 2. Listener em tempo real
+            onSnapshot(docRef, async (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
+                    const pautaSnap = await getDoc(pautaRef);
+                    const pautaData = pautaSnap.data();
+
                     loading.classList.add('hidden');
                     mainCard.classList.remove('hidden');
 
                     document.getElementById('assisted-name').textContent = data.name;
                     document.getElementById('assisted-subject').textContent = data.subject;
 
-                    // Preencher campos de atividade se já existirem
                     if (data.serviceQuantity) document.getElementById('input-qtd').value = data.serviceQuantity;
                     if (data.serviceDetails) document.getElementById('input-details').value = data.serviceDetails;
 
-                    // Gerenciar Etapas Visuais
+                    // Esconde todos
                     [stepSignature, stepProtocol, stepDone, activitySection].forEach(el => el.classList.add('hidden'));
 
+                    // Lógica de Visibilidade do Botão de Encaminhar
+                    const btnSendToDist = document.getElementById('btn-send-to-dist');
+                    if (pautaData?.useDistributionFlow === true) {
+                        btnSendToDist.classList.remove('hidden');
+                    } else {
+                        btnSendToDist.classList.add('hidden');
+                    }
+
+                    // Controle de Etapas
                     if (data.status === 'atendido') {
                         stepDone.classList.remove('hidden');
-                    } else if (data.distributionStatus === 'signed') {
+                    } else if (data.distributionStatus === 'signed' || data.status === 'aguardandoDistribuicao') {
                         stepProtocol.classList.remove('hidden');
                         activitySection.classList.remove('hidden');
                     } else {
@@ -198,24 +206,18 @@
             });
         }
 
-        // Função para carregar os Defensores
         async function loadDefensores() {
             const select = document.getElementById('select-defensor');
-            if (!select) return;
-
             try {
                 const colabRef = collection(db, "pautas", pautaId, "collaborators");
-                // Filtra apenas por quem tem o cargo exato de "Defensor(a)"
                 const q = query(colabRef, where("cargo", "==", "Defensor(a)"));
                 const snap = await getDocs(q);
                 
                 select.innerHTML = '<option value="">Selecione o(a) Defensor(a)...</option>';
-                
                 if (snap.empty) {
-                    select.innerHTML = '<option value="">Nenhum Defensor encontrado</option>';
+                    select.innerHTML = '<option value="">Nenhum Defensor na lista da pauta</option>';
                     return;
                 }
-
                 snap.forEach(doc => {
                     const d = doc.data();
                     const opt = document.createElement('option');
@@ -224,12 +226,12 @@
                     select.appendChild(opt);
                 });
             } catch (e) {
-                console.error("Erro ao carregar defensores:", e);
-                select.innerHTML = '<option value="">Erro ao carregar lista</option>';
+                console.error(e);
+                select.innerHTML = '<option value="">Erro ao carregar colaboradores</option>';
             }
         }
 
-        // AÇÃO: Marcar como Assinado (Avança para a próxima etapa)
+        // AÇÃO: Confirmar Assinatura (Avança localmente para o protocolo)
         document.getElementById('btn-signed').addEventListener('click', async () => {
             const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
             await updateDoc(docRef, { 
@@ -238,7 +240,23 @@
             });
         });
 
-        // AÇÃO: Salvar e Finalizar Processo
+        // AÇÃO: Encaminhar para Fila de Distribuição (Muda para a coluna azul no painel principal)
+        document.getElementById('btn-send-to-dist').addEventListener('click', async () => {
+            const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
+            const qtd = document.getElementById('input-qtd').value;
+            const details = document.getElementById('input-details').value;
+
+            await updateDoc(docRef, {
+                status: 'aguardandoDistribuicao',
+                serviceQuantity: qtd,
+                serviceDetails: details,
+                lastActionBy: 'Externo via E-mail',
+                lastActionTimestamp: new Date().toISOString()
+            });
+            alert("Processo encaminhado para a Fila de Distribuição!");
+        });
+
+        // AÇÃO: Finalizar Tudo (Move para a coluna verde 'Atendidos')
         document.getElementById('btn-finish').addEventListener('click', async () => {
             const defensor = document.getElementById('select-defensor').value;
             const processNumber = document.getElementById('input-process').value;
@@ -247,27 +265,25 @@
             const details = document.getElementById('input-details').value;
 
             if (!defensor) {
-                alert("Por favor, selecione o Defensor que assinou a petição.");
+                alert("Por favor, selecione o Defensor responsável.");
                 return;
             }
 
             const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
-            
-            // Salva os dados finais e muda o status para 'atendido' (move o card para a coluna verde no painel principal)
             await updateDoc(docRef, {
                 status: 'atendido',
                 processNumber: processNumber,
                 defensorResponsavel: defensor,
-                nomeArquivoPdf: pdfFile ? pdfFile.name : null, // Salva o nome como referência
+                nomeArquivoPdf: pdfFile ? pdfFile.name : null,
                 serviceQuantity: qtd,
                 serviceDetails: details,
                 attendedTime: new Date().toISOString(),
-                finalizadoVia: 'Painel de Distribuição',
-                attendant: defensor // Atualiza o atendente final para o Defensor
+                finalizadoVia: 'Painel Externo',
+                attendant: defensor // Define o defensor como o atendente final
             });
         });
 
-        // AÇÃO: Salvar Atividades Parciais
+        // AÇÃO: Salvar Detalhes Parciais
         document.getElementById('btn-save-details').addEventListener('click', async () => {
             const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
             const qtd = document.getElementById('input-qtd').value;
@@ -282,35 +298,6 @@
             msg.classList.remove('hidden');
             setTimeout(() => msg.classList.add('hidden'), 2000);
         });
-
-            // AÇÃO: Marcar como Assinado
-            document.getElementById('btn-signed').addEventListener('click', async () => {
-                // Salva os detalhes também ao avançar
-                const qtd = document.getElementById('input-qtd').value;
-                const details = document.getElementById('input-details').value;
-                await updateDoc(docRef, { 
-                    distributionStatus: 'signed',
-                    serviceQuantity: qtd,
-                    serviceDetails: details
-                });
-            });
-
-            // AÇÃO: Finalizar com Número
-            document.getElementById('btn-finish').addEventListener('click', async () => {
-                const processNumber = document.getElementById('input-process').value;
-                const qtd = document.getElementById('input-qtd').value;
-                const details = document.getElementById('input-details').value;
-
-                await updateDoc(docRef, {
-                    status: 'atendido',
-                    processNumber: processNumber,
-                    attendedTime: new Date().toISOString(),
-                    attendant: collabName,
-                    serviceQuantity: qtd, // Garante que salva ao finalizar
-                    serviceDetails: details
-                });
-            });
-        }
     </script>
 </body>
 </html>
