@@ -3515,6 +3515,7 @@ if (btnAdmin) {
                         type: pautaType,
                         ordemAtendimento: ordemAtendimento,
                         useDelegationFlow: useDelegationFlow, // Salva a escolha
+                        useDistributionFlow: document.getElementById('check-use-distribution').checked, // ADICIONE ESTA LINHA
                         owner: user.uid,
                         ownerEmail: user.email,
                         members: [user.uid],
@@ -4053,30 +4054,27 @@ if (btnAdmin) {
                 // Ação de confirmar atendimento (antiga, agora para "Finalizar Diretamente")
                 // NOVO CÓDIGO SUGERIDO (Linha 1845)
                 if (button.id === 'confirm-attendant-btn') {
-                    const attendantName = document.getElementById('attendant-name').value.trim();
-                    
-                    // Se a pauta tem o fluxo de distribuição habilitado, o status vai para 'aguardandoDistribuicao'
-                    // Caso contrário, vai direto para 'atendido' (finalizado)
-                    const useDist = document.getElementById('check-use-distribution')?.checked || currentPautaData?.useDistributionFlow;
-                    try {
-                    await addDoc(collection(db, "pautas"), {
-                        name: pautaName,
-                        type: pautaType,
-                        ordemAtendimento: ordemAtendimento,
-                        useDelegationFlow: useDelegationFlow,
-                        useDistributionFlow: document.getElementById('check-use-distribution').checked, // ADICIONE ESTA LINHA
-                        owner: user.uid,
-                    const novoStatus = useDist ? 'aguardandoDistribuicao' : 'atendido';
+                                    const attendantName = document.getElementById('attendant-name').value.trim();
+                                    
+                                    // --- ESSA É A LÓGICA QUE DEFINE O DESTINO DO PROCESSO ---
+                                    const useDist = currentPautaData?.useDistributionFlow === true;
+                                    const novoStatus = useDist ? 'aguardandoDistribuicao' : 'atendido';
+                                    // -------------------------------------------------------
                 
-                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ 
-                        status: novoStatus, 
-                        attendant: attendantName, 
-                        attendedTime: new Date().toISOString() 
-                    }));
-                    
-                    showNotification(novoStatus === 'atendido' ? "Finalizado!" : "Enviado para Distribuição!");
-                    button.closest('.fixed').classList.add('hidden');
-                }
+                                    const selectedCollab = colaboradores.find(c => c.nome === attendantName);
+                                    let attendantData = selectedCollab ? 
+                                        { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe } : 
+                                        attendantName;
+                
+                                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ 
+                                        status: novoStatus, 
+                                        attendant: attendantData, 
+                                        attendedTime: new Date().toISOString() 
+                                    }));
+                                    
+                                    showNotification(novoStatus === 'atendido' ? "Finalizado com sucesso!" : "Enviado para Fila de Distribuição!");
+                                    button.closest('.fixed').classList.add('hidden');
+                                }
                 if (button.id === 'confirm-priority-reason-btn') {
                     // Pega os textos de todos os botões que estão "acesos" (classe .selected)
                     const selectedChips = Array.from(document.querySelectorAll('.p-chip.selected'))
@@ -4610,6 +4608,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
