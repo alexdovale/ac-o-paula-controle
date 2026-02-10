@@ -2645,7 +2645,31 @@ render(atendidosList, atendidos, a => {
                     mainContent.classList.remove('lg:grid-cols-4');
                     mainContent.classList.add('lg:grid-cols-3');
                 }
+                // LÓGICA DE LAYOUT DINÂMICO DOS CARDS
+                if (pautaData.useDelegationFlow) {
+                    emAtendimentoColumn.classList.remove('hidden');
+                    mainContent.classList.remove('lg:grid-cols-3');
+                    mainContent.classList.add('lg:grid-cols-4');
+                } else {
+                    emAtendimentoColumn.classList.add('hidden');
+                    mainContent.classList.remove('lg:grid-cols-4');
+                    mainContent.classList.add('lg:grid-cols-3');
+                }
 
+                // --- COLE O CÓDIGO AQUI ---
+                // FAZ A COLUNA DE DISTRIBUIÇÃO APARECER SE ESTIVER ATIVADA
+                const distColumn = document.getElementById('distribuicao-column');
+                if (pautaData.useDistributionFlow) {
+                    distColumn.classList.remove('hidden');
+                    // Opcional: ajustar o grid para 5 colunas se as duas (Delegação e Distribuição) estiverem ativas
+                    if (pautaData.useDelegationFlow) {
+                        mainContent.classList.replace('lg:grid-cols-4', 'lg:grid-cols-5');
+                    } else {
+                        mainContent.classList.replace('lg:grid-cols-3', 'lg:grid-cols-4');
+                    }
+                } else {
+                    distColumn.classList.add('hidden');
+                }  
             }
              if (pautaType === 'agendado') {
                  tabAgendamento.classList.remove('hidden');
@@ -4608,6 +4632,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
