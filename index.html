@@ -546,6 +546,13 @@
             <div class="mt-8 flex justify-center">
                 <button id="toggle-faltosos-btn" class="w-full sm:w-auto bg-purple-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-purple-700">Ver Faltosos</button>
             </div>
+            
+            // Filtro para a nova coluna de Distribuição
+            const distribuicaoSearchTerm = normalizeText(document.getElementById('distribuicao-search').value);
+            const distribuicao = allAssisted.filter(a => a.status === 'aguardandoDistribuicao' && searchFilter(a, distribuicaoSearchTerm));
+            
+            
+            
               <footer class="mt-12 bg-white p-6 rounded-lg shadow-md">
                   <h3 id="order-explanation-title" class="text-xl font-semibold text-gray-800 mb-2 text-center">Entenda a Ordem de Atendimento</h3>
                   <div id="order-explanation-content">
@@ -2174,6 +2181,34 @@ render(atendidosList, atendidos, a => {
                     </div>`;
                 return card;
             });
+
+// Renderização da Coluna de Distribuição
+            document.getElementById('distribuicao-count').textContent = distribuicao.length;
+            const distList = document.getElementById('distribuicao-list');
+            distList.innerHTML = '';
+
+            render(distList, distribuicao, a => {
+                const card = document.createElement('div');
+                card.className = 'relative bg-cyan-50 p-4 rounded-lg shadow-sm border border-cyan-200 mb-2';
+                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                const linkExterno = `${baseUrl}/atendimento_distribuicao.html?pautaId=${currentPautaId}&assistidoId=${a.id}&collaboratorName=${encodeURIComponent(a.attendant || '')}`;
+
+                card.innerHTML = `
+                    <p class="font-bold text-gray-800 text-sm">${escapeHTML(a.name)}</p>
+                    <p class="text-[10px] text-cyan-700 font-bold uppercase mt-1">⚖️ Pendente de Distribuição</p>
+                    <div class="mt-3 space-y-2">
+                        <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white text-[10px] font-bold py-2 rounded hover:bg-cyan-700 uppercase">
+                            Abrir Painel de Protocolo
+                        </button>
+                        <button data-id="${a.id}" class="return-to-aguardando-from-dist-btn w-full bg-white text-gray-400 border border-gray-200 text-[9px] py-1 rounded hover:bg-gray-50 uppercase font-semibold">
+                            Reverter Atendimento
+                        </button>
+                    </div>
+                `;
+                return card;
+            });
+
+
 
             render(faltososList, faltosos, a => {
                 const card = document.createElement('div');
