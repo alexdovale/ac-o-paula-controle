@@ -4053,22 +4053,30 @@ if (btnAdmin) {
                 // Ação de confirmar atendimento (antiga, agora para "Finalizar Diretamente")
                 // NOVO CÓDIGO SUGERIDO (Linha 1845)
                 if (button.id === 'confirm-attendant-btn') {
-    const attendantName = document.getElementById('attendant-name').value.trim();
-    
-    // Se a pauta tem o fluxo de distribuição habilitado, o status vai para 'aguardandoDistribuicao'
-    // Caso contrário, vai direto para 'atendido' (finalizado)
-    const useDist = document.getElementById('check-use-distribution')?.checked || currentPautaData?.useDistributionFlow;
-    const novoStatus = useDist ? 'aguardandoDistribuicao' : 'atendido';
-
-    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ 
-        status: novoStatus, 
-        attendant: attendantName, 
-        attendedTime: new Date().toISOString() 
-    }));
-    
-    showNotification(novoStatus === 'atendido' ? "Finalizado!" : "Enviado para Distribuição!");
-    button.closest('.fixed').classList.add('hidden');
-}
+                    const attendantName = document.getElementById('attendant-name').value.trim();
+                    
+                    // Se a pauta tem o fluxo de distribuição habilitado, o status vai para 'aguardandoDistribuicao'
+                    // Caso contrário, vai direto para 'atendido' (finalizado)
+                    const useDist = document.getElementById('check-use-distribution')?.checked || currentPautaData?.useDistributionFlow;
+                    try {
+                    await addDoc(collection(db, "pautas"), {
+                        name: pautaName,
+                        type: pautaType,
+                        ordemAtendimento: ordemAtendimento,
+                        useDelegationFlow: useDelegationFlow,
+                        useDistributionFlow: document.getElementById('check-use-distribution').checked, // ADICIONE ESTA LINHA
+                        owner: user.uid,
+                    const novoStatus = useDist ? 'aguardandoDistribuicao' : 'atendido';
+                
+                    await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ 
+                        status: novoStatus, 
+                        attendant: attendantName, 
+                        attendedTime: new Date().toISOString() 
+                    }));
+                    
+                    showNotification(novoStatus === 'atendido' ? "Finalizado!" : "Enviado para Distribuição!");
+                    button.closest('.fixed').classList.add('hidden');
+                }
                 if (button.id === 'confirm-priority-reason-btn') {
                     // Pega os textos de todos os botões que estão "acesos" (classe .selected)
                     const selectedChips = Array.from(document.querySelectorAll('.p-chip.selected'))
@@ -4442,21 +4450,21 @@ if (btnAdmin) {
         }
 
             // Botão PDF de Faltosos
-    const btnFaltososPdf = document.getElementById('download-faltosos-pdf-btn');
-    if (btnFaltososPdf) {
-        btnFaltososPdf.onclick = () => {
-            const faltosos = allAssisted.filter(a => a.status === 'faltoso');
-            if (faltosos.length === 0) {
-                showNotification("Não há faltosos na lista.", "info");
-                return;
-            }
-            const pautaTitle = document.getElementById('pauta-title').textContent;
-            // Reutiliza a lógica do PDF de atendidos mas rotulando como Faltosos
-            generateAtendidosPDF(`${pautaTitle} (FALTOSOS)`, faltosos);
-        };
-    }
-        
-    </script>
+        const btnFaltososPdf = document.getElementById('download-faltosos-pdf-btn');
+        if (btnFaltososPdf) {
+            btnFaltososPdf.onclick = () => {
+                const faltosos = allAssisted.filter(a => a.status === 'faltoso');
+                if (faltosos.length === 0) {
+                    showNotification("Não há faltosos na lista.", "info");
+                    return;
+                }
+                const pautaTitle = document.getElementById('pauta-title').textContent;
+                // Reutiliza a lógica do PDF de atendidos mas rotulando como Faltosos
+                generateAtendidosPDF(`${pautaTitle} (FALTOSOS)`, faltosos);
+            };
+        }
+            
+        </script>
 
 <!-- Modal de Anotações -->
 <div id="notes-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
@@ -4602,6 +4610,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
