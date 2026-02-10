@@ -2596,7 +2596,7 @@ render(atendidosList, atendidos, a => {
             currentPautaId = pautaId;
             document.getElementById('pauta-title').textContent = pautaName;
 
-            // Salva a pauta atual no localStorage
+            // Salva a pauta atual no localStorage para persistência ao recarregar
             localStorage.setItem('lastPautaId', pautaId);
             localStorage.setItem('lastPautaType', pautaType);
 
@@ -2604,12 +2604,14 @@ render(atendidosList, atendidos, a => {
             const tabAvulso = document.getElementById('tab-avulso');
             const pautaColumn = document.getElementById('pauta-column');
             const emAtendimentoColumn = document.getElementById('em-atendimento-column');
+            const distColumn = document.getElementById('distribuicao-column');
             const mainContent = document.getElementById('main-content');
 
             const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
             if (pautaDoc.exists()) {
                 const pautaData = pautaDoc.data();
 
+                // Verificação de Prazo (7 dias)
                 const creationDate = pautaData.createdAt ? new Date(pautaData.createdAt) : new Date();
                 const expirationDate = new Date(creationDate);
                 expirationDate.setDate(creationDate.getDate() + 7);
@@ -2622,61 +2624,49 @@ render(atendidosList, atendidos, a => {
                 currentPautaOwnerId = pautaData.owner;
                 isPautaClosed = pautaData.isClosed || false;
                 
+                // Configuração da explicação da lógica de fila
                 const ordem = currentPautaData.ordemAtendimento || 'padrao';
                 document.getElementById('logic-explanation-padrao').classList.toggle('hidden', ordem !== 'padrao');
                 document.getElementById('logic-explanation-chegada').classList.toggle('hidden', ordem !== 'chegada');
                 document.getElementById('order-explanation-title').textContent = ordem === 'padrao' ? 'Entenda a Ordem de Atendimento Padrão' : 'Entenda a Ordem de Chegada';
-                document.getElementById('toggle-logic-btn-padrao').addEventListener('click', (e) => {
-                    const explanationDiv = document.getElementById('logic-explanation-padrao-content');
-                    const isHidden = explanationDiv.classList.toggle('hidden');
-                    e.target.textContent = isHidden ? 'Por que esta ordem é justa? (Clique para expandir)' : 'Ocultar explicação';
-                });
 
                 togglePautaLock(isPautaClosed);
 
+                // Permissão para editar nome (apenas dono)
                 if (pautaData.owner === auth.currentUser.uid) {
                     document.getElementById('edit-pauta-name-btn').classList.remove('hidden');
                 } else {
                     document.getElementById('edit-pauta-name-btn').classList.add('hidden');
                 }
 
-                // LÓGICA DE LAYOUT DINÂMICO DOS CARDS
+                // --- GESTÃO DINÂMICA DE COLUNAS E GRID ---
+                
+                // 1. Mostrar/Esconder Coluna de Delegação (Em Atendimento)
                 if (pautaData.useDelegationFlow) {
                     emAtendimentoColumn.classList.remove('hidden');
-                    mainContent.classList.remove('lg:grid-cols-3');
-                    mainContent.classList.add('lg:grid-cols-4');
                 } else {
                     emAtendimentoColumn.classList.add('hidden');
-                    mainContent.classList.remove('lg:grid-cols-4');
-                    mainContent.classList.add('lg:grid-cols-3');
-                }
-                // LÓGICA DE LAYOUT DINÂMICO DOS CARDS
-                if (pautaData.useDelegationFlow) {
-                    emAtendimentoColumn.classList.remove('hidden');
-                    mainContent.classList.remove('lg:grid-cols-3');
-                    mainContent.classList.add('lg:grid-cols-4');
-                } else {
-                    emAtendimentoColumn.classList.add('hidden');
-                    mainContent.classList.remove('lg:grid-cols-4');
-                    mainContent.classList.add('lg:grid-cols-3');
                 }
 
-                // --- COLE O CÓDIGO AQUI ---
-                // FAZ A COLUNA DE DISTRIBUIÇÃO APARECER SE ESTIVER ATIVADA
-                const distColumn = document.getElementById('distribuicao-column');
+                // 2. Mostrar/Esconder Coluna de Distribuição (Fila ⚖️)
                 if (pautaData.useDistributionFlow) {
                     distColumn.classList.remove('hidden');
-                    // Opcional: ajustar o grid para 5 colunas se as duas (Delegação e Distribuição) estiverem ativas
-                    if (pautaData.useDelegationFlow) {
-                        mainContent.classList.replace('lg:grid-cols-4', 'lg:grid-cols-5');
-                    } else {
-                        mainContent.classList.replace('lg:grid-cols-3', 'lg:grid-cols-4');
-                    }
                 } else {
                     distColumn.classList.add('hidden');
-                }  
+                }
+
+                // 3. Ajuste do Layout do Grid (lg:grid-cols-X)
+                mainContent.classList.remove('lg:grid-cols-3', 'lg:grid-cols-4', 'lg:grid-cols-5');
+                
+                let numColunas = 3; // Padrão: Pauta, Aguardando, Atendidos
+                if (pautaData.useDelegationFlow) numColunas++;
+                if (pautaData.useDistributionFlow) numColunas++;
+                
+                mainContent.classList.add(`lg:grid-cols-${numColunas}`);
             }
-             if (pautaType === 'agendado') {
+
+            // Configuração visual das abas conforme o tipo de pauta criada
+            if (pautaType === 'agendado') {
                  tabAgendamento.classList.remove('hidden');
                  tabAvulso.classList.add('hidden');
                  pautaColumn.classList.remove('hidden');
@@ -2694,7 +2684,7 @@ render(atendidosList, atendidos, a => {
             }
 
             setupRealtimeListener(pautaId);
-            setupCollaboratorsListener(pautaId); // Inicia o listener para colaboradores
+            setupCollaboratorsListener(pautaId);
             showScreen('app');
         };
 
@@ -4639,6 +4629,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
