@@ -4128,41 +4128,42 @@ if (btnAdmin) {
 
                 // --- ENVIO DE E-MAIL DE DELEGAÇÃO (DENTRO DO CÉREBRO ÚNICO) ---
                 if (button.id === 'send-delegate-email-btn') {
-                        const collaboratorEmail = document.getElementById('collaborator-email-input').value.trim();
-                        if (!collaboratorEmail) {
-                            showNotification("Por favor, insira o e-mail do colaborador.", "error");
-                            return;
-                        }
-                
-                        button.disabled = true;
-                        button.textContent = "Enviando...";
-    
-                        // GERA O LINK QUE SERÁ ENVIADO NO CORPO DO E-MAIL
-                        const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                        const urlFinalizacao = `${baseUrl}/atendimento_distribuicao.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(currentUserName)}`;
-                
-                        try {
-                            await sendDelegationEmail({
-                                toEmail: collaboratorEmail,
-                                assistedName: assistedNameForDelegation,
-                                collaboratorName: collaboratorNameForDelegation,
-                                pautaId: currentPautaId,
-                                assistedId: assistedIdForDelegation,
-                                senderName: currentUserName,
-                                senderEmail: auth.currentUser?.email,
-                                externalLink: urlFinalizacao // Passa o link pronto para o serviço de e-mail
-                            });
-                
-                            showNotification("Link de finalização enviado com sucesso!");
-                            document.getElementById('delegate-email-modal').classList.add('hidden');
-                        } catch (error) {
-                            showNotification("Falha ao enviar e-mail.", "error");
-                        } finally {
-                            button.disabled = false;
-                            button.textContent = "Enviar Link por E-mail";
-                        }
+                    const collaboratorEmail = document.getElementById('collaborator-email-input').value.trim();
+                    
+                    if (!collaboratorEmail) {
+                        showNotification("Por favor, insira o e-mail do colaborador.", "error");
                         return;
                     }
+            
+                    button.disabled = true;
+                    button.textContent = "Enviando...";
+
+                    // GERA O LINK QUE SERÁ ENVIADO NO CORPO DO E-MAIL
+                    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                    const urlFinalizacao = `${baseUrl}/atendimento_distribuicao.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(currentUserName)}`;
+            
+                    try {
+                        // Verifique se as chaves abaixo (to_email, assisted_name, etc) 
+                        // são as mesmas que você usa entre {{ }} lá no template do EmailJS
+                        await emailjs.send(emailJsConfig.serviceId, emailJsConfig.templateId, {
+                            to_email: collaboratorEmail,        // O e-mail que você digitou no modal
+                            to_name: collaboratorNameForDelegation,
+                            assisted_name: assistedNameForDelegation,
+                            sender_name: currentUserName,
+                            link_finalizacao: urlFinalizacao
+                        });
+            
+                        showNotification("Link enviado para " + collaboratorEmail);
+                        document.getElementById('delegate-email-modal').classList.add('hidden');
+                    } catch (error) {
+                        console.error("Erro EmailJS:", error);
+                        showNotification("Falha ao enviar e-mail.", "error");
+                    } finally {
+                        button.disabled = false;
+                        button.textContent = "Enviar Link por E-mail";
+                    }
+                    return;
+                }
                 
                 if (button.id === 'confirm-edit-assisted-btn') {
                     const name = document.getElementById('edit-assisted-name').value.trim();
@@ -4629,6 +4630,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
