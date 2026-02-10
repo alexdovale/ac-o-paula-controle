@@ -111,17 +111,29 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, onSnapshot, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
+        // Substitua pelos seus dados reais do Firebase (copie do seu index.html)
+        const firebaseConfig = { 
+            apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", 
+            authDomain: "pauta-ce162.firebaseapp.com", 
+            projectId: "pauta-ce162", 
+            storageBucket: "pauta-ce162.appspot.com", 
+            messagingSenderId: "87113750208", 
+            appId: "1:87113750208:web:4abba0024f4d4af699bf25" 
+        };
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
         const urlParams = new URLSearchParams(window.location.search);
         const pautaId = urlParams.get('pautaId');
         const assistidoId = urlParams.get('assistidoId');
         const collabName = urlParams.get('collaboratorName');
 
+        // Elementos da tela
         const loading = document.getElementById('loading');
         const mainCard = document.getElementById('main-card');
         const stepSignature = document.getElementById('step-signature');
@@ -129,13 +141,27 @@
         const stepDone = document.getElementById('step-done');
         const activitySection = document.getElementById('activity-log-section');
 
-        if (!pautaId || !assistidoId) {
-            alert("Link inválido.");
-            loading.classList.add('hidden');
-        } else {
+        // --- INÍCIO DA LÓGICA BLINDADA ---
+        onAuthStateChanged(auth, async (user) => {
+            // Mesmo que não haja login (auth == null), as regras que você colocou agora permitem a leitura.
+            // O código abaixo rodará assim que o Firebase estiver pronto.
+            if (!pautaId || !assistidoId) {
+                alert("Link inválido ou incompleto.");
+                loading.innerText = "Erro: Link Inválido";
+                return;
+            }
+            
+            // Inicia o carregamento dos dados
+            await initPagina();
+        });
+
+        async function initPagina() {
             const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
 
-            // Escuta em tempo real para atualizar a tela se o status mudar
+            // 1. Carregar lista de Defensores (da subcoleção colaboradores da pauta)
+            await loadDefensores();
+
+            // 2. Escuta em tempo real os dados do Assistido
             onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
@@ -145,45 +171,112 @@
                     document.getElementById('assisted-name').textContent = data.name;
                     document.getElementById('assisted-subject').textContent = data.subject;
 
-                    // Preencher inputs se já existirem dados
+                    // Preencher campos de atividade se já existirem
                     if (data.serviceQuantity) document.getElementById('input-qtd').value = data.serviceQuantity;
                     if (data.serviceDetails) document.getElementById('input-details').value = data.serviceDetails;
 
-                    // Lógica de Exibição das Etapas
-                    stepSignature.classList.add('hidden');
-                    stepProtocol.classList.add('hidden');
-                    stepDone.classList.add('hidden');
-                    activitySection.classList.add('hidden'); // Esconde por padrão
+                    // Gerenciar Etapas Visuais
+                    [stepSignature, stepProtocol, stepDone, activitySection].forEach(el => el.classList.add('hidden'));
 
                     if (data.status === 'atendido') {
                         stepDone.classList.remove('hidden');
                     } else if (data.distributionStatus === 'signed') {
                         stepProtocol.classList.remove('hidden');
-                        activitySection.classList.remove('hidden'); // Mostra na etapa de protocolo
+                        activitySection.classList.remove('hidden');
                     } else {
-                        // Padrão: Aguardando Assinatura
                         stepSignature.classList.remove('hidden');
-                        activitySection.classList.remove('hidden'); // Mostra na etapa de assinatura
+                        activitySection.classList.remove('hidden');
                     }
                 } else {
                     alert("Atendimento não encontrado.");
                 }
             });
+        }
 
-            // AÇÃO: Salvar Detalhes Parcialmente
-            document.getElementById('btn-save-details').addEventListener('click', async () => {
-                const qtd = document.getElementById('input-qtd').value;
-                const details = document.getElementById('input-details').value;
+        // Função para carregar os Defensores
+        async function loadDefensores() {
+            const select = document.getElementById('select-defensor');
+            if (!select) return;
+
+            try {
+                const colabRef = collection(db, "pautas", pautaId, "collaborators");
+                // Filtra apenas por quem tem o cargo exato de "Defensor(a)"
+                const q = query(colabRef, where("cargo", "==", "Defensor(a)"));
+                const snap = await getDocs(q);
                 
-                await updateDoc(docRef, { 
-                    serviceQuantity: qtd,
-                    serviceDetails: details
+                select.innerHTML = '<option value="">Selecione o(a) Defensor(a)...</option>';
+                
+                if (snap.empty) {
+                    select.innerHTML = '<option value="">Nenhum Defensor encontrado</option>';
+                    return;
+                }
+
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    const opt = document.createElement('option');
+                    opt.value = d.nome;
+                    opt.textContent = d.nome;
+                    select.appendChild(opt);
                 });
-                
-                const msg = document.getElementById('save-msg');
-                msg.classList.remove('hidden');
-                setTimeout(() => msg.classList.add('hidden'), 2000);
+            } catch (e) {
+                console.error("Erro ao carregar defensores:", e);
+                select.innerHTML = '<option value="">Erro ao carregar lista</option>';
+            }
+        }
+
+        // AÇÃO: Marcar como Assinado (Avança para a próxima etapa)
+        document.getElementById('btn-signed').addEventListener('click', async () => {
+            const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
+            await updateDoc(docRef, { 
+                distributionStatus: 'signed',
+                lastActionTimestamp: new Date().toISOString()
             });
+        });
+
+        // AÇÃO: Salvar e Finalizar Processo
+        document.getElementById('btn-finish').addEventListener('click', async () => {
+            const defensor = document.getElementById('select-defensor').value;
+            const processNumber = document.getElementById('input-process').value;
+            const pdfFile = document.getElementById('input-pdf').files[0];
+            const qtd = document.getElementById('input-qtd').value;
+            const details = document.getElementById('input-details').value;
+
+            if (!defensor) {
+                alert("Por favor, selecione o Defensor que assinou a petição.");
+                return;
+            }
+
+            const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
+            
+            // Salva os dados finais e muda o status para 'atendido' (move o card para a coluna verde no painel principal)
+            await updateDoc(docRef, {
+                status: 'atendido',
+                processNumber: processNumber,
+                defensorResponsavel: defensor,
+                nomeArquivoPdf: pdfFile ? pdfFile.name : null, // Salva o nome como referência
+                serviceQuantity: qtd,
+                serviceDetails: details,
+                attendedTime: new Date().toISOString(),
+                finalizadoVia: 'Painel de Distribuição',
+                attendant: defensor // Atualiza o atendente final para o Defensor
+            });
+        });
+
+        // AÇÃO: Salvar Atividades Parciais
+        document.getElementById('btn-save-details').addEventListener('click', async () => {
+            const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
+            const qtd = document.getElementById('input-qtd').value;
+            const details = document.getElementById('input-details').value;
+            
+            await updateDoc(docRef, { 
+                serviceQuantity: qtd,
+                serviceDetails: details
+            });
+            
+            const msg = document.getElementById('save-msg');
+            msg.classList.remove('hidden');
+            setTimeout(() => msg.classList.add('hidden'), 2000);
+        });
 
             // AÇÃO: Marcar como Assinado
             document.getElementById('btn-signed').addEventListener('click', async () => {
