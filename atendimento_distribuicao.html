@@ -58,14 +58,19 @@
             </div>
 
             <!-- ETAPA 1: PENDENTE DE ASSINATURA -->
-            <div id="step-signature" class="hidden text-center space-y-6">
+            <!-- ETAPA 1: PENDENTE DE ASSINATURA -->
+            <div id="step-signature" class="hidden text-center space-y-4">
                 <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <div class="text-4xl mb-2">✍️</div>
-                    <h3 class="font-bold text-yellow-800">Aguardando Assinatura</h3>
-                    <p class="text-xs text-yellow-700 mt-1">Peça ao assistido para assinar a petição.</p>
+                    <h3 class="font-bold text-yellow-800">Assinatura Pendente</h3>
                 </div>
-                <button id="btn-signed" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-lg shadow transition">
-                    Confirmar Assinatura
+                <button id="btn-signed" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 rounded-lg shadow">
+                    Confirmar Assinatura e Seguir
+                </button>
+                
+                <!-- NOVO BOTÃO: Só aparece se a pauta tiver distribuição ativa -->
+                <button id="btn-send-to-dist" class="hidden w-full bg-cyan-100 text-cyan-700 font-bold py-2 rounded-lg border border-cyan-300 text-xs">
+                    Encaminhar para Fila de Distribuição
                 </button>
             </div>
 
