@@ -140,20 +140,24 @@
 
         async function init() {
             if (!pautaId || !assistidoId) {
-                document.getElementById('loading').innerHTML = "Link Inválido.";
+                document.getElementById('loading').innerHTML = "<p class='text-red-500 font-bold'>Link Inválido ou Malformado.</p>";
                 return;
             }
 
             try {
                 const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
                 const pautaRef = doc(db, "pautas", pautaId);
+
+                // Tenta buscar os documentos
                 const [snap, pSnap] = await Promise.all([getDoc(docRef), getDoc(pautaRef)]);
 
                 if (snap.exists() && pSnap.exists()) {
                     const data = snap.data();
                     const pData = pSnap.data();
+                    useDist = pData.useDistributionFlow || false;
 
-                    if (data.status === 'atendido') {
+                    // Se já finalizado, bloqueia
+                    if (data.status === 'atendido' && data.finalizadoPeloColaborador) {
                         document.getElementById('expired-container').classList.remove('hidden');
                         document.getElementById('loading').classList.add('hidden');
                         return;
@@ -163,26 +167,32 @@
                     document.getElementById('assisted-subject').textContent = data.subject;
                     document.getElementById('attendant-name').value = urlParams.get('collaboratorName') || '';
 
-                    // Lógica de Modos (Distribuição ou Padrão)
-                    if (pData.useDistributionFlow) {
-                        document.getElementById('distribution-ui').classList.remove('hidden');
+                    if (useDist) {
                         document.getElementById('header-bg').className = "bg-cyan-700 p-6 text-white text-center flex-shrink-0";
-                        document.getElementById('pauta-mode-text').textContent = "Modo: Atendimento com Distribuição";
+                        document.getElementById('pauta-mode-text').textContent = "MODO: ATENDIMENTO COM DISTRIBUIÇÃO";
                         loadDefensores();
                     } else {
-                        document.getElementById('standard-ui').classList.remove('hidden');
+                        document.getElementById('section-standard-finish').classList.remove('hidden');
+                        document.getElementById('section-signature').classList.add('hidden');
                     }
 
                     renderChecklist(data.documentChecklist);
                     document.getElementById('main-card').classList.remove('hidden');
                     document.getElementById('loading').classList.add('hidden');
+                } else {
+                    document.getElementById('loading').innerHTML = "<p class='text-gray-500'>O atendimento não foi encontrado no banco de dados.</p>";
                 }
             } catch (e) {
-                console.error(e);
-                document.getElementById('loading').innerHTML = "Erro de permissão ou conexão.";
+                console.error("Erro de permissão:", e);
+                document.getElementById('loading').innerHTML = `
+                    <div class='text-center p-6'>
+                        <p class='text-red-500 font-bold'>Erro de Acesso (Permissão Negada)</p>
+                        <p class='text-xs text-gray-500 mt-2'>Isso ocorre se as Regras do Firebase não foram publicadas ou se o link expirou.</p>
+                        <button onclick="location.reload()" class="mt-4 bg-gray-200 px-4 py-2 rounded text-xs">Tentar Novamente</button>
+                    </div>`;
             }
         }
-
+        
         async function loadDefensores() {
             const q = query(collection(db, "pautas", pautaId, "collaborators"), where("cargo", "==", "Defensor(a)"));
             const snap = await getDocs(q);
