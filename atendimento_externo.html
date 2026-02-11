@@ -174,15 +174,55 @@
             }
         }
 
-        async function loadDefensores() {
-            const q = query(collection(db, "pautas", pautaId, "collaborators"), where("cargo", "==", "Defensor(a)"));
-            const snap = await getDocs(q);
-            const select = document.getElementById('select-defensor');
-            snap.forEach(d => {
-                const opt = document.createElement('option');
-                opt.value = d.data().nome; opt.textContent = d.data().nome; select.appendChild(opt);
-            });
-        }
+        async function init() {
+                    if (!pautaId || !assistidoId) {
+                        document.getElementById('loading').innerHTML = "<p class='text-red-500'>Link Inválido.</p>";
+                        return;
+                    }
+                    
+                    try {
+                        const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
+                        const pautaRef = doc(db, "pautas", pautaId);
+        
+                        // Carrega os dados básicos
+                        const snap = await getDoc(docRef);
+                        const pautaSnap = await getDoc(pautaRef);
+        
+                        if (snap.exists() && pautaSnap.exists()) {
+                            const data = snap.data();
+                            const pData = pautaSnap.data();
+                            useDist = pData.useDistributionFlow || false;
+        
+                            // Se já finalizado e não for para distribuição, trava o acesso
+                            if (data.finalizadoPeloColaborador && data.status === 'atendido') {
+                                document.getElementById('expired-container').classList.remove('hidden');
+                                document.getElementById('loading').classList.add('hidden');
+                                return;
+                            }
+        
+                            document.getElementById('assisted-name').textContent = data.name;
+                            document.getElementById('assisted-subject').textContent = data.subject;
+                            document.getElementById('attendant-name').value = urlParams.get('collaboratorName') || '';
+        
+                            // Lógica visual da Distribuição
+                            if (useDist) {
+                                document.getElementById('header-bg').className = "bg-cyan-700 p-6 text-white text-center flex-shrink-0";
+                                document.getElementById('pauta-mode-text').textContent = "Modo: Atendimento com Distribuição";
+                                document.getElementById('standard-finish-section').classList.add('hidden');
+                                document.getElementById('distribution-section').classList.remove('hidden');
+                                loadDefensores(); // Carrega a lista se houver distribuição
+                            }
+        
+                            document.getElementById('main-card').classList.remove('hidden');
+                            document.getElementById('loading').classList.add('hidden');
+                        } else {
+                            document.getElementById('loading').innerHTML = "<p class='text-gray-500'>Atendimento não localizado.</p>";
+                        }
+                    } catch (error) {
+                        console.error("Erro na inicialização:", error);
+                        document.getElementById('loading').innerHTML = "<p class='text-red-500 font-bold'>Erro de Permissão.<br><small>Verifique as regras do Firebase.</small></p>";
+                    }
+                }
 
         // --- AÇÕES ---
 
