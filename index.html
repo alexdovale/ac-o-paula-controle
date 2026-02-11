@@ -1945,12 +1945,14 @@ const createAguardandoCard = (a, index) => {
             const emAtendimentoSearchTerm = normalizeText(document.getElementById('em-atendimento-search').value);
             const atendidosSearchTerm = normalizeText(document.getElementById('atendidos-search').value);
             const faltososSearchTerm = normalizeText(document.getElementById('faltosos-search').value);
+            const distribuicaoSearchTerm = normalizeText(document.getElementById('distribuicao-search').value);
 
             const pauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && searchFilter(a, pautaSearchTerm));
             const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm));
             const emAtendimento = allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode && searchFilter(a, emAtendimentoSearchTerm));
             const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && searchFilter(a, atendidosSearchTerm));
             const faltosos = allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento' && searchFilter(a, faltososSearchTerm));
+            const distribuicao = allAssisted.filter(a => a.status === 'aguardandoDistribuicao' && searchFilter(a, distribuicaoSearchTerm));
 
             pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
             atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
@@ -4604,6 +4606,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
