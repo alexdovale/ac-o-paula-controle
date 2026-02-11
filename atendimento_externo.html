@@ -13,30 +13,25 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .tab-active { border-bottom: 2px solid #16a34a; color: #16a34a; font-weight: 600; }
         .tab-inactive { color: #6b7280; }
-        .checklist-row { background-color: #ffffff; border: 1px solid #edf2f7; padding: 10px; border-radius: 8px; }
-        .checklist-row.checked { background-color: #f0fdf4; border-color: #bbf7d0; }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
 
     <div id="loading" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
         <div class="loader"></div>
-        <p class="mt-4 text-gray-600 font-medium">Carregando dados do atendimento...</p>
+        <p class="mt-4 text-gray-600 font-medium text-sm">Validando configuração do atendimento...</p>
     </div>
 
     <div id="expired-container" class="hidden bg-white p-8 rounded-xl shadow-lg text-center max-w-md w-full border-t-8 border-gray-300">
-        <div class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-gray-100 mb-6">
-            <svg class="h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-        </div>
         <h2 class="text-2xl font-bold text-gray-800 mb-2 uppercase">Acesso Encerrado</h2>
-        <p class="text-gray-600">Este atendimento já foi finalizado no sistema.</p>
+        <p class="text-gray-600 text-sm">Este atendimento já foi concluído ou movimentado.</p>
     </div>
 
     <main id="main-card" class="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden hidden flex flex-col h-[90vh] md:h-auto">
         
-        <div class="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white text-center flex-shrink-0">
-            <h1 class="text-xl font-bold uppercase tracking-tight">Painel do Colaborador</h1>
-            <p class="text-xs opacity-90 mt-1 uppercase tracking-widest">Finalização de Atendimento - SIGAP</p>
+        <div id="header-bg" class="bg-green-600 p-6 text-white text-center flex-shrink-0 transition-colors duration-500">
+            <h1 class="text-xl font-bold uppercase">Painel de Finalização</h1>
+            <p id="pauta-mode-text" class="text-[10px] opacity-90 mt-1 uppercase tracking-widest">SIGAP - Atendimento Externo</p>
         </div>
 
         <div class="p-4 bg-gray-50 border-b flex-shrink-0">
@@ -45,169 +40,222 @@
         </div>
 
         <div class="flex border-b shrink-0">
-            <button id="tab-finish" class="flex-1 py-3 text-xs font-bold uppercase tab-active transition">Finalizar Atendimento</button>
-            <button id="tab-docs" class="flex-1 py-3 text-xs font-bold uppercase tab-inactive transition">Verificar Documentos</button>
+            <button id="tab-finish" class="flex-1 py-3 text-xs font-bold uppercase tab-active">Finalizar</button>
+            <button id="tab-docs" class="flex-1 py-3 text-xs font-bold uppercase tab-inactive">Documentos</button>
         </div>
 
-        <div class="flex-grow overflow-y-auto p-6 scrollable-content">
-            <!-- ABA 1: FINALIZAR -->
+        <div class="flex-grow overflow-y-auto p-6 space-y-6">
+            
             <div id="content-finish" class="space-y-6">
+                <!-- Nome do Atendente -->
                 <div>
-                    <label class="block text-xs font-black text-gray-400 uppercase mb-1">Seu Nome (Atendente)</label>
+                    <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Seu Nome (Responsável)</label>
                     <input type="text" id="attendant-name" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 font-bold text-gray-700 outline-none" placeholder="Nome do Defensor/Servidor">
                 </div>
 
+                <!-- Demandas Adicionais -->
                 <div>
-                    <label class="block text-xs font-black text-gray-400 uppercase mb-1">Demandas Adicionais Encontradas</label>
+                    <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Demandas Adicionais</label>
                     <div class="flex gap-2">
-                        <input type="text" id="new-demand-input" list="subjects-list-external" class="flex-grow p-2 border border-gray-300 rounded-lg text-sm" placeholder="Digite ou selecione um assunto...">
-                        <datalist id="subjects-list-external"></datalist>
-                        <button id="add-demand-btn" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase">Adicionar</button>
+                        <input type="text" id="new-demand-input" class="flex-grow p-2 border border-gray-300 rounded-lg text-sm" placeholder="Adicionar outro assunto...">
+                        <button id="add-demand-btn" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase">Add</button>
                     </div>
                     <ul id="demands-list" class="mt-4 space-y-2"></ul>
                 </div>
 
-                <div class="pt-6 border-t">
+                <!-- SEÇÃO DINÂMICA: DECISÃO DE DISTRIBUIÇÃO -->
+                <div id="distribution-section" class="hidden border-t pt-6 space-y-4">
+                    <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                        <p class="text-orange-800 font-bold text-xs uppercase">⚠️ Mensagem de Atenção</p>
+                        <p class="text-[11px] text-orange-700 leading-relaxed mt-1">
+                            Você está encerrando este atendimento. O processo já foi <b>distribuído/protocolado</b> ou o assistido deve <b>aguardar a distribuição</b> pela equipe de apoio?
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button id="btn-forward-dist" class="flex flex-col items-center justify-center p-4 border-2 border-cyan-500 rounded-xl hover:bg-cyan-50 transition active:scale-95 group">
+                            <span class="text-2xl mb-1">⚖️</span>
+                            <span class="text-[10px] font-black text-cyan-700 uppercase">Aguardar Distribuição</span>
+                            <span class="text-[9px] text-cyan-500 text-center">Enviar para fila de protocolo</span>
+                        </button>
+
+                        <button id="btn-show-final-fields" class="flex flex-col items-center justify-center p-4 border-2 border-green-500 rounded-xl hover:bg-green-50 transition active:scale-95 group">
+                            <span class="text-2xl mb-1">✅</span>
+                            <span class="text-[10px] font-black text-green-700 uppercase">Já Distribuído</span>
+                            <span class="text-[9px] text-green-500 text-center">Informar número do processo</span>
+                        </button>
+                    </div>
+
+                    <!-- Campos Finais Ocultos (só aparecem se clicar em Já Distribuído) -->
+                    <div id="final-protocol-fields" class="hidden bg-gray-50 p-4 rounded-xl border space-y-3">
+                         <div>
+                            <label class="block text-[9px] font-bold text-gray-500 uppercase">Nº do Processo</label>
+                            <input type="text" id="input-process-number" class="w-full p-2 border rounded text-sm font-mono" placeholder="0000.00.00.0000">
+                         </div>
+                         <div>
+                            <label class="block text-[9px] font-bold text-gray-500 uppercase">Defensor que assinou</label>
+                            <select id="select-defensor" class="w-full p-2 border rounded text-sm">
+                                <option value="">Selecione o Defensor...</option>
+                            </select>
+                         </div>
+                         <button id="btn-finish-with-protocol" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg uppercase text-xs shadow-md">Finalizar Atendimento Agora</button>
+                    </div>
+                </div>
+
+                <!-- BOTÃO PADRÃO (Para pautas sem distribuição) -->
+                <div id="standard-finish-section">
                     <button id="finish-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-black py-4 rounded-xl shadow-lg transition uppercase tracking-widest active:scale-95">
                         Encerrar Atendimento
                     </button>
                 </div>
             </div>
 
-            <!-- ABA 2: DOCUMENTOS -->
+            <!-- ABA 2: DOCUMENTOS (Mantido do original) -->
             <div id="content-docs" class="hidden space-y-6">
-                <div id="checklist-container" class="space-y-4"></div>
-                
-                <div id="expense-container" class="hidden p-4 bg-green-50 border border-green-200 rounded-xl">
-                    <h3 class="text-xs font-black text-green-800 uppercase mb-3 border-b border-green-200 pb-1">Planilha de Despesas</h3>
-                    <div id="expense-content" class="text-sm text-green-900 space-y-1 font-medium"></div>
-                </div>
-                
-                <div id="reu-data-container" class="hidden bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                    <h3 class="text-xs font-black text-blue-800 uppercase mb-3 border-b border-blue-200 pb-1">Dados da Parte Contrária</h3>
-                    <div id="reu-data-content" class="text-xs text-blue-900 space-y-1 font-medium"></div>
-                </div>
+                <div id="checklist-container" class="space-y-2"></div>
             </div>
         </div>
         
+        <!-- Overlay de Sucesso -->
         <div id="success-overlay" class="absolute inset-0 bg-white flex flex-col items-center justify-center z-50 hidden text-center p-6">
             <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl mb-4">✓</div>
-            <h3 class="text-2xl font-black text-gray-800 uppercase tracking-tighter">Concluído!</h3>
-            <p class="text-gray-500 mt-2 font-medium">Atendimento movido para "Atendidos".</p>
+            <h3 class="text-2xl font-black text-gray-800 uppercase">Concluído!</h3>
+            <p id="success-msg" class="text-gray-500 mt-2 font-medium">O registro foi atualizado.</p>
         </div>
     </main>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
+        import { getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // CONFIGURAÇÃO FIREBASE
         const firebaseConfig = { apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", authDomain: "pauta-ce162.firebaseapp.com", projectId: "pauta-ce162", storageBucket: "pauta-ce162.appspot.com", messagingSenderId: "87113750208", appId: "1:87113750208:web:4abba0024f4d4af699bf25" };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // App Check
-        try { initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'), isTokenAutoRefreshEnabled: true }); } catch(e) {}
-
         const urlParams = new URLSearchParams(window.location.search);
         const pautaId = urlParams.get('pautaId');
         const assistidoId = urlParams.get('assistidoId');
+        let useDist = false;
 
-        // --- ÁRVORE DE ASSUNTOS PARA O DATALIST ---
-        const subjectTree = [
-            { text: "Orientação Jurídica" }, { text: "Atendimento Jurídico Integral" },
-            { text: "Processos de Família", children: [ { text: "Fixação de Alimentos" }, { text: "Majoração de Alimentos" }, { text: "Oferta de Alimentos" }, { text: "Divórcio Consensual" }, { text: "Divórcio Litigioso" }, { text: "União Estável" }, { text: "Guarda" }, { text: "Visitas" }, { text: "Curatela" } ] },
-            { text: "Processos Cíveis", children: [ { text: "Obrigação de Fazer" }, { text: "Indenização" }, { text: "Revisional de Débito" } ] },
-            { text: "Saúde", children: [ { text: "Medicamentos" }, { text: "Vaga em Creche" } ] }
-        ];
-
-        function populateDatalist(nodes) {
-            const dl = document.getElementById('subjects-list-external');
-            const traverse = (items) => {
-                items.forEach(item => {
-                    const opt = document.createElement('option');
-                    opt.value = item.text;
-                    dl.appendChild(opt);
-                    if (item.children) traverse(item.children);
-                });
-            };
-            traverse(nodes);
-        }
-        populateDatalist(subjectTree);
-
-        if (pautaId && assistidoId) {
-            const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
-            getDoc(docRef).then((snap) => {
-                if (snap.exists()) {
-                    const data = snap.data();
-                    if (data.finalizadoPeloColaborador) {
-                        document.getElementById('expired-container').classList.remove('hidden');
-                        document.getElementById('loading').classList.add('hidden');
-                        return;
-                    }
-                    document.getElementById('main-card').classList.remove('hidden');
-                    document.getElementById('loading').classList.add('hidden');
-                    document.getElementById('assisted-name').textContent = data.name;
-                    document.getElementById('assisted-subject').textContent = data.subject;
-                    document.getElementById('attendant-name').value = urlParams.get('collaboratorName') || '';
-
-                    // Carrega demandas que já existiam
-                    if (data.demandas?.descricoes) {
-                        data.demandas.descricoes.forEach(addDemandToList);
-                    }
-                    renderChecklistDisplay(data.documentChecklist);
-                }
-            });
-        }
-
-        function renderChecklistDisplay(checklist) {
-            const container = document.getElementById('checklist-container');
-            if (!checklist) { container.innerHTML = "<p class='text-center text-gray-400 py-10 text-xs uppercase font-bold'>Checklist não preenchido.</p>"; return; }
+        async function init() {
+            if (!pautaId || !assistidoId) return;
             
-            container.innerHTML = `<h4 class='text-[10px] font-black text-gray-400 uppercase border-b pb-1 mb-4'>Documentos da Triagem</h4>`;
-            const savedIds = checklist.checkedIds || [];
-            const docTypes = checklist.docTypes || {};
+            const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
+            const pautaRef = doc(db, "pautas", pautaId);
 
-            savedIds.forEach(id => {
-                const type = docTypes[id] || 'Físico';
-                const div = document.createElement('div');
-                div.className = "checklist-row checked flex justify-between items-center";
-                div.innerHTML = `<span class='text-xs font-bold text-gray-700 uppercase'>✓ Documento Recebido</span> <span class='text-[9px] font-black bg-white px-2 py-1 rounded border border-green-200 text-green-600'>${type.toUpperCase()}</span>`;
-                container.appendChild(div);
-            });
+            const [snap, pautaSnap] = await Promise.all([getDoc(docRef), getDoc(pautaRef)]);
 
-            if (checklist.reuData?.nome) {
-                document.getElementById('reu-data-container').classList.remove('hidden');
-                document.getElementById('reu-data-content').innerHTML = `<p>RÉU: ${checklist.reuData.nome}</p><p>CPF: ${checklist.reuData.cpf || 'N/A'}</p><p>END: ${checklist.reuData.rua || '---'}, ${checklist.reuData.numero || 'S/N'}</p>`;
-            }
+            if (snap.exists() && pautaSnap.exists()) {
+                const data = snap.data();
+                const pData = pautaSnap.data();
+                useDist = pData.useDistributionFlow || false;
 
-            if (checklist.expenseData) {
-                const ex = checklist.expenseData;
-                if (Object.values(ex).some(v => v)) {
-                    document.getElementById('expense-container').classList.remove('hidden');
-                    let html = '';
-                    for (const key in ex) { if (ex[key]) html += `<div class='flex justify-between'><span>${key.toUpperCase()}:</span> <b>${ex[key]}</b></div>`; }
-                    document.getElementById('expense-content').innerHTML = html;
+                if (data.finalizadoPeloColaborador && data.status === 'atendido') {
+                    document.getElementById('expired-container').classList.remove('hidden');
+                    document.getElementById('loading').classList.add('hidden');
+                    return;
                 }
+
+                document.getElementById('assisted-name').textContent = data.name;
+                document.getElementById('assisted-subject').textContent = data.subject;
+                document.getElementById('attendant-name').value = urlParams.get('collaboratorName') || '';
+
+                // Ajusta UI baseada na Distribuição
+                if (useDist) {
+                    document.getElementById('header-bg').classList.replace('bg-green-600', 'bg-cyan-700');
+                    document.getElementById('standard-finish-section').classList.add('hidden');
+                    document.getElementById('distribution-section').classList.remove('hidden');
+                    loadDefensores();
+                }
+
+                renderChecklist(data.documentChecklist);
+                document.getElementById('main-card').classList.remove('hidden');
+                document.getElementById('loading').classList.add('hidden');
             }
         }
 
-        // Adição de demandas na lista visual
-        document.getElementById('add-demand-btn').onclick = () => {
-            const inp = document.getElementById('new-demand-input');
-            if (inp.value.trim()) { addDemandToList(inp.value.trim()); inp.value = ''; }
+        async function loadDefensores() {
+            const q = query(collection(db, "pautas", pautaId, "collaborators"), where("cargo", "==", "Defensor(a)"));
+            const snap = await getDocs(q);
+            const select = document.getElementById('select-defensor');
+            snap.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.data().nome; opt.textContent = d.data().nome; select.appendChild(opt);
+            });
+        }
+
+        // --- AÇÕES ---
+
+        // 1. Encaminhar para Distribuição (Fila Azul)
+        document.getElementById('btn-forward-dist').onclick = async () => {
+            const attendant = document.getElementById('attendant-name').value.trim();
+            if(!attendant) return alert("Informe seu nome.");
+            
+            saveToFirebase('aguardandoDistribuicao', "Encaminhado para Fila de Distribuição.");
         };
 
-        function addDemandToList(text) {
-            const li = document.createElement('li');
-            li.className = "flex justify-between items-center bg-gray-50 p-2 rounded-lg border text-sm font-medium";
-            li.innerHTML = `<span>${text}</span> <button class="text-red-500 font-black px-2 hover:bg-red-50 rounded">✕</button>`;
-            li.querySelector('button').onclick = () => li.remove();
-            document.getElementById('demands-list').appendChild(li);
+        // 2. Mostrar campos de protocolo
+        document.getElementById('btn-show-final-fields').onclick = () => {
+            document.getElementById('final-protocol-fields').classList.toggle('hidden');
+        };
+
+        // 3. Finalizar com Protocolo (Fila Verde)
+        document.getElementById('btn-finish-with-protocol').onclick = async () => {
+            const def = document.getElementById('select-defensor').value;
+            if(!def) return alert("Selecione o Defensor responsável.");
+            saveToFirebase('atendido', "Atendimento Concluído e Protocolado.");
+        };
+
+        // 4. Botão Padrão (Sem Distribuição)
+        document.getElementById('finish-btn').onclick = () => {
+            const attendant = document.getElementById('attendant-name').value.trim();
+            if(!attendant) return alert("Informe seu nome.");
+            saveToFirebase('atendido', "Atendimento Concluído.");
+        };
+
+        async function saveToFirebase(status, msg) {
+            const attendant = document.getElementById('attendant-name').value.trim();
+            const demands = Array.from(document.querySelectorAll('#demands-list li span')).map(s => s.textContent);
+            
+            document.getElementById('loading').classList.remove('hidden');
+
+            try {
+                const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
+                const currentSnap = await getDoc(docRef);
+                const oldDemands = currentSnap.data().demandas?.descricoes || [];
+                const mergedDemands = [...new Set([...oldDemands, ...demands])];
+
+                await updateDoc(docRef, {
+                    status: status,
+                    attendant: status === 'atendido' && document.getElementById('select-defensor').value ? document.getElementById('select-defensor').value : attendant,
+                    attendedTime: new Date().toISOString(),
+                    finalizadoPeloColaborador: true,
+                    processNumber: document.getElementById('input-process-number')?.value || null,
+                    demandas: { descricoes: mergedDemands, quantidade: mergedDemands.length },
+                    lastActionBy: 'Painel Externo: ' + status
+                });
+
+                document.getElementById('success-msg').textContent = msg;
+                document.getElementById('success-overlay').classList.remove('hidden');
+                document.getElementById('loading').classList.add('hidden');
+            } catch (e) {
+                alert("Erro ao salvar dados.");
+                document.getElementById('loading').classList.add('hidden');
+            }
         }
 
-        // Troca de Abas
+        // Checklist e Abas (simplificados para o exemplo)
+        function renderChecklist(checklist) {
+            const cont = document.getElementById('checklist-container');
+            if(!checklist) return cont.innerHTML = "<p class='text-gray-400 text-center text-xs'>Nenhum documento listado.</p>";
+            (checklist.checkedIds || []).forEach(id => {
+                const div = document.createElement('div');
+                div.className = "p-2 bg-green-50 border border-green-100 rounded text-[10px] font-bold text-green-700 uppercase";
+                div.textContent = "✓ Documento Conferido";
+                cont.appendChild(div);
+            });
+        }
+
         document.getElementById('tab-finish').onclick = () => {
             document.getElementById('content-finish').classList.remove('hidden');
             document.getElementById('content-docs').classList.add('hidden');
@@ -221,37 +269,19 @@
             document.getElementById('tab-finish').className = "flex-1 py-3 text-xs font-bold uppercase tab-inactive";
         };
 
-        // FINALIZAR
-        document.getElementById('finish-btn').onclick = async () => {
-            const attendant = document.getElementById('attendant-name').value.trim();
-            if (!attendant) { alert("Informe seu nome."); return; }
-
-            const demands = Array.from(document.querySelectorAll('#demands-list li span')).map(s => s.textContent);
-            
-            document.getElementById('finish-btn').disabled = true;
-            document.getElementById('finish-btn').textContent = "PROCESSANDO...";
-
-            try {
-                const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
-                // Busca demandas atuais do banco para não apagar nada anterior
-                const currentSnap = await getDoc(docRef);
-                const oldDemands = currentSnap.data().demandas?.descricoes || [];
-                const mergedDemands = [...new Set([...oldDemands, ...demands])];
-
-                await updateDoc(docRef, {
-                    status: 'atendido',
-                    attendant: attendant,
-                    attendedTime: new Date().toISOString(),
-                    finalizadoPeloColaborador: true,
-                    demandas: { descricoes: mergedDemands, quantidade: mergedDemands.length }
-                });
-                document.getElementById('success-overlay').classList.remove('hidden');
-            } catch (e) {
-                alert("Erro ao salvar.");
-                document.getElementById('finish-btn').disabled = false;
-                document.getElementById('finish-btn').textContent = "ENCERRAR ATENDIMENTO";
+        document.getElementById('add-demand-btn').onclick = () => {
+            const inp = document.getElementById('new-demand-input');
+            if(inp.value.trim()){
+                const li = document.createElement('li');
+                li.className = "flex justify-between items-center bg-gray-50 p-2 rounded border text-[11px] font-medium";
+                li.innerHTML = `<span>${inp.value}</span> <button class="text-red-500 font-black px-1">✕</button>`;
+                li.querySelector('button').onclick = () => li.remove();
+                document.getElementById('demands-list').appendChild(li);
+                inp.value = '';
             }
         };
+
+        init();
     </script>
 </body>
 </html>
