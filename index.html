@@ -2033,20 +2033,49 @@ const createAguardandoCard = (a, index) => {
             }
 
             // Coluna: Em Atendimento (Delegação)
+            // --- COLUNA: EM ATENDIMENTO (RESTAURANDO SUA INTERFACE ORIGINAL) ---
             render(emAtendimentoList, emAtendimento, (a, index) => {
                 const card = document.createElement('div');
-                card.className = `relative bg-purple-50 p-4 rounded-lg shadow-sm border border-purple-100 mb-2`;
+                // Mantendo o estilo de card com bordas arredondadas e sombra leve
+                card.className = `relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
+                
+                const startTime = a.inAttendanceTime ? new Date(a.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                
+                // Geração do link correto para o arquivo unificado
                 const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
                 const linkExterno = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${a.id}&collaboratorName=${encodeURIComponent(currentUserName)}`;
 
                 card.innerHTML = `
-                    <p class="font-bold text-gray-800">${escapeHTML(a.name)}</p>
-                    <p class="text-[9px] text-purple-600 font-bold uppercase mb-2">Atendente: ${escapeHTML(a.assignedCollaborator?.name || 'Não atribuído')}</p>
-                    <div class="mt-3 space-y-2">
-                        <button data-id="${a.id}" data-name="${escapeHTML(a.name)}" class="delegate-finalization-btn w-full bg-indigo-500 text-white text-[10px] font-bold py-2 rounded uppercase shadow-sm">Encaminhar E-mail</button>
-                        <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-purple-600 text-white text-[10px] font-bold py-2 rounded uppercase shadow-sm">Abrir Painel</button>
-                        <button data-id="${a.id}" class="return-to-aguardando-from-emAtendimento-btn w-full bg-white text-gray-400 border border-gray-200 text-[9px] py-1 rounded uppercase">Recuar</button>
+                    <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg>
+                    </button>
+
+                    <p class="font-bold text-2xl text-gray-800">${index + 1}. ${escapeHTML(a.name)}</p>
+                    <p class="text-sm mt-1">Assunto: <strong>${escapeHTML(a.subject)}</strong></p>
+                    <p class="text-sm">Colaborador: ${escapeHTML(a.assignedCollaborator?.name || 'Não atribuído')}</p>
+                    <p class="text-sm text-gray-400">Início: ${startTime}</p>
+
+                    <div class="mt-4 flex flex-col gap-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <!-- Botão Roxo (Delegar) -->
+                            <button data-id="${a.id}" data-name="${escapeHTML(a.name)}" data-collaborator-name="${escapeHTML(a.assignedCollaborator?.name || 'Não informado')}" class="delegate-finalization-btn bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95 leading-tight">
+                                Delegar<br>Finalização
+                            </button>
+                            <!-- Botão Verde (Finalizar) -->
+                            <button onclick="window.open('${linkExterno}', '_blank')" class="bg-green-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95 leading-tight">
+                                Finalizar<br>Diretamente
+                            </button>
+                        </div>
+                        <!-- Botão Cinza (Voltar) -->
+                        <button data-id="${a.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95">
+                            Voltar p/ Aguardando
+                        </button>
                     </div>
+
+                    ${a.lastActionBy ? `
+                    <div class="mt-4 pt-2 border-t border-gray-50 text-right">
+                        <p class="text-[11px] text-gray-400 uppercase tracking-tighter">Última ação por: <strong>${escapeHTML(a.lastActionBy)}</strong></p>
+                    </div>` : ''}
                 `;
                 return card;
             });
@@ -4445,6 +4474,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
