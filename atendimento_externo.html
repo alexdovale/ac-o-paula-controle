@@ -17,46 +17,41 @@
 </head>
 <body class="flex items-center justify-center min-h-screen p-2 md:p-4">
 
-    <!-- Carregamento -->
     <div id="loading" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
         <div class="loader"></div>
-        <p class="mt-4 text-gray-600 font-semibold text-sm">Sincronizando com o sistema...</p>
+        <p class="mt-4 text-gray-600 font-semibold text-sm">Sincronizando atendimento...</p>
     </div>
 
-    <!-- Erro -->
     <div id="error-screen" class="hidden bg-white p-8 rounded-xl shadow-lg text-center max-w-md w-full border-t-8 border-red-500">
         <div class="text-5xl mb-4">⚠️</div>
         <h2 class="text-xl font-bold text-gray-800 mb-2 uppercase">Acesso Indisponível</h2>
-        <p id="error-text" class="text-gray-600 text-sm">Atendimento finalizado ou link inválido.</p>
-        <button onclick="location.reload()" class="mt-6 bg-gray-100 px-4 py-2 rounded text-xs font-bold hover:bg-gray-200 text-gray-700">Tentar Novamente</button>
+        <p id="error-text" class="text-gray-600 text-sm">Erro de permissão ou link inválido.</p>
+        <button onclick="location.reload()" class="mt-6 bg-gray-100 px-4 py-2 rounded text-xs font-bold hover:bg-gray-200">Tentar Novamente</button>
     </div>
 
     <main id="main-card" class="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden hidden flex flex-col h-[95vh] md:h-auto">
-        
         <div id="header-bg" class="bg-green-600 p-5 text-white text-center flex-shrink-0 transition-colors">
             <h1 class="text-lg font-bold uppercase">Painel de Finalização</h1>
             <p id="pauta-mode-text" class="text-[9px] opacity-90 mt-1 uppercase font-bold tracking-widest text-white">Atendimento Externo - SIGAP</p>
         </div>
 
-        <div class="p-4 bg-gray-50 border-b flex-shrink-0">
-            <h2 id="assisted-name" class="text-lg font-bold text-gray-800 text-center uppercase tracking-tighter">---</h2>
-            <p id="assisted-subject" class="text-xs text-gray-500 text-center mt-0.5">---</p>
+        <div class="p-4 bg-gray-50 border-b flex-shrink-0 text-center">
+            <h2 id="assisted-name" class="text-lg font-bold text-gray-800 uppercase">---</h2>
+            <p id="assisted-subject" class="text-xs text-gray-500 mt-0.5">---</p>
         </div>
 
         <div class="flex border-b bg-white">
             <button id="tab-finish" class="flex-1 py-3 text-[10px] uppercase tab-active">Encerrar Atendimento</button>
-            <button id="tab-docs" class="flex-1 py-3 text-[10px] uppercase tab-inactive">Documentos / Triagem</button>
+            <button id="tab-docs" class="flex-1 py-3 text-[10px] uppercase tab-inactive">Documentos</button>
         </div>
 
         <div class="flex-grow overflow-y-auto p-4 md:p-6 space-y-6">
             <div id="content-finish" class="space-y-6">
-                <!-- Atendente -->
                 <div>
                     <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Seu Nome (Responsável)</label>
                     <input type="text" id="attendant-name" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 font-bold text-gray-700 outline-none" placeholder="Informe seu nome">
                 </div>
 
-                <!-- Demandas -->
                 <div>
                     <label class="block text-[10px] font-black text-gray-400 uppercase mb-2">Demandas Adicionais</label>
                     <div class="flex gap-2">
@@ -66,30 +61,29 @@
                     <ul id="demands-list" class="mt-3 space-y-1.5"></ul>
                 </div>
 
-                <!-- FLUXO COM DISTRIBUIÇÃO -->
                 <div id="ui-distribution" class="hidden border-t pt-4 space-y-4">
-                    <div id="section-signature" class="text-center space-y-4">
+                    <div id="step-signature" class="text-center space-y-4">
                         <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                             <p class="text-yellow-800 font-bold text-xs uppercase">✍️ Passo 1: Assinatura</p>
-                            <p class="text-[10px] text-yellow-600">O assistido já assinou a petição?</p>
+                            <p class="text-[10px] text-yellow-600">O assistido assinou a petição?</p>
                         </div>
-                        <button id="btn-confirm-signature" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-black py-4 rounded-xl shadow uppercase text-sm">Confirmar e Seguir</button>
+                        <button id="btn-confirm-signature" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-black py-4 rounded-xl shadow uppercase text-sm">Confirmar e Continuar</button>
                     </div>
 
-                    <div id="section-decision" class="hidden space-y-4">
-                        <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-400">
+                    <div id="step-decision" class="hidden space-y-4">
+                        <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-400 text-left">
                             <p class="text-orange-800 font-bold text-xs uppercase">⚠️ Mensagem de Atenção</p>
                             <p class="text-[11px] text-orange-700 leading-relaxed mt-1">
-                                Se o processo já foi protocolado, escolha <b>Já Distribuído</b>. Se precisa ser protocolado depois pela secretaria, escolha <b>Aguardar Distribuição</b>.
+                                O processo já foi protocolado agora ou o assistido deve aguardar a distribuição futura pela secretaria?
                             </p>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <button id="btn-wait-dist" class="flex flex-col items-center justify-center p-4 border-2 border-cyan-500 rounded-xl hover:bg-cyan-50 transition">
+                            <button id="btn-wait-dist" class="flex flex-col items-center justify-center p-4 border-2 border-cyan-500 rounded-xl hover:bg-cyan-50 transition active:scale-95">
                                 <span class="text-2xl mb-1">⚖️</span>
                                 <span class="text-[10px] font-black text-cyan-700 uppercase">Aguardar Distribuição</span>
                             </button>
-                            <button id="btn-show-fields" class="flex flex-col items-center justify-center p-4 border-2 border-green-500 rounded-xl hover:bg-green-50 transition">
+                            <button id="btn-show-fields" class="flex flex-col items-center justify-center p-4 border-2 border-green-500 rounded-xl hover:bg-green-50 transition active:scale-95">
                                 <span class="text-2xl mb-1">✅</span>
                                 <span class="text-[10px] font-black text-green-700 uppercase">Já Distribuído</span>
                             </button>
@@ -97,26 +91,20 @@
 
                         <div id="fields-protocol" class="hidden bg-gray-50 p-4 rounded-xl border space-y-3">
                              <input type="text" id="input-process-number" class="w-full p-3 border rounded-lg text-sm font-mono" placeholder="Nº do Processo">
-                             <select id="select-defensor" class="w-full p-3 border rounded-lg text-sm bg-white font-semibold">
-                                <option value="">Selecione o Defensor Responsável...</option>
-                             </select>
-                             <div class="p-2 bg-white border rounded-lg">
-                                <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Anexar Protocolo (PDF Máx 1MB)</label>
-                                <input type="file" id="input-pdf" accept="application/pdf" class="w-full text-[10px]">
-                             </div>
+                             <select id="select-defensor" class="w-full p-3 border rounded-lg text-sm bg-white font-semibold"><option value="">Selecione o Defensor...</option></select>
+                             <input type="file" id="input-pdf" accept="application/pdf" class="w-full text-[10px] text-gray-500">
                              <button id="btn-finish-dist-now" class="w-full bg-green-600 text-white font-black py-4 rounded-xl uppercase text-xs shadow-lg">Finalizar Agora</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- FLUXO PADRÃO -->
                 <div id="ui-standard" class="hidden border-t pt-4">
                     <button id="btn-standard-finish" class="w-full bg-green-600 hover:bg-green-700 text-white font-black py-5 rounded-xl shadow-xl uppercase">Encerrar Atendimento</button>
                 </div>
             </div>
 
             <div id="content-docs" class="hidden space-y-4">
-                <div id="checklist-container" class="space-y-2"></div>
+                <div id="checklist-container" class="space-y-2 text-center"></div>
             </div>
         </div>
         
@@ -135,20 +123,25 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // --- SOLUÇÃO PARA VARIAÇÕES DE NOME DE PARÂMETRO NO LINK ---
         const urlParams = new URLSearchParams(window.location.search);
-        const pautaId = urlParams.get('pautaId');
-        const assistidoId = urlParams.get('assistidoId');
+        const pautaId = urlParams.get('pautaId') || urlParams.get('pautaid') || urlParams.get('pautald');
+        const assistidoId = urlParams.get('assistidoId') || urlParams.get('assistidoid') || urlParams.get('assistidold');
 
         async function init() {
-            if (!pautaId || !assistidoId || pautaId === "null") { showError("Link inválido."); return; }
+            if (!pautaId || !assistidoId) {
+                showError("Link inválido. IDs de acesso não localizados.");
+                return;
+            }
+
             try {
                 const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
                 const pSnap = await getDoc(doc(db, "pautas", pautaId));
                 const snap = await getDoc(docRef);
 
-                if (snap.exists() && pSnap.exists()) {
+                if (snap.exists()) {
                     const data = snap.data();
-                    const pData = pSnap.data();
+                    const pData = pSnap.exists() ? pSnap.data() : { useDistributionFlow: false };
 
                     if (data.status === 'atendido' && data.finalizadoPeloColaborador) {
                         showError("Atendimento já finalizado."); return;
@@ -171,23 +164,25 @@
                     renderChecklist(data.documentChecklist);
                     document.getElementById('main-card').classList.remove('hidden');
                     document.getElementById('loading').classList.add('hidden');
-                } else { showError("Registro não encontrado."); }
-            } catch (e) { showError("Erro de permissão."); }
+                } else { showError("Atendimento não encontrado no banco."); }
+            } catch (e) { 
+                console.error(e);
+                showError("Erro de Permissão: Verifique as Rules do Firebase."); 
+            }
         }
 
         async function loadDefensores() {
-            const q = query(collection(db, "pautas", pautaId, "collaborators"), where("cargo", "==", "Defensor(a)"));
-            const snap = await getDocs(q);
-            const select = document.getElementById('select-defensor');
-            snap.forEach(d => {
-                const opt = document.createElement('option');
-                opt.value = d.data().nome; opt.textContent = d.data().nome; select.appendChild(opt);
-            });
+            try {
+                const q = query(collection(db, "pautas", pautaId, "collaborators"), where("cargo", "==", "Defensor(a)"));
+                const snap = await getDocs(q);
+                const select = document.getElementById('select-defensor');
+                snap.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.data().nome; opt.textContent = d.data().nome; select.appendChild(opt);
+                });
+            } catch (e) {}
         }
 
-        const bind = (id, func) => { const el = document.getElementById(id); if(el) el.onclick = func; };
-
-        // CONVERSOR DE PDF PARA BASE64 (Texto)
         const toBase64 = file => new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
@@ -195,20 +190,20 @@
             reader.onerror = error => reject(error);
         });
 
+        const bind = (id, func) => { const el = document.getElementById(id); if(el) el.onclick = func; };
+
         bind('btn-confirm-signature', () => {
             document.getElementById('section-signature').classList.add('hidden');
-            document.getElementById('section-decision').classList.remove('hidden');
+            document.getElementById('step-decision').classList.remove('hidden');
         });
 
-        bind('btn-wait-dist', () => executeSave('aguardandoDistribuicao', "Encaminhado para Fila de Distribuição ⚖️"));
+        bind('btn-wait-dist', () => executeSave('aguardandoDistribuicao', "Encaminhado para Distribuição ⚖️"));
         bind('btn-show-fields', () => document.getElementById('fields-protocol').classList.remove('hidden'));
-        
         bind('btn-finish-dist-now', () => {
             const d = document.getElementById('select-defensor').value;
             if(!d) return alert("Selecione o Defensor.");
             executeSave('atendido', "Finalizado e Protocolado ✅", d);
         });
-
         bind('btn-standard-finish', () => executeSave('atendido', "Atendimento Concluído ✅"));
 
         async function executeSave(status, msg, finalAttendant = null) {
@@ -217,20 +212,18 @@
 
             const pdfFile = document.getElementById('input-pdf')?.files[0];
             let pdfContent = null;
-
             if (pdfFile) {
-                if (pdfFile.size > 1024 * 1024) return alert("Arquivo muito grande. O limite é 1MB.");
+                if (pdfFile.size > 1024 * 1024) return alert("PDF muito grande (Máx 1MB).");
                 pdfContent = await toBase64(pdfFile);
             }
 
             document.getElementById('loading').classList.remove('hidden');
-            const demands = Array.from(document.querySelectorAll('#demands-list li span')).map(s => s.textContent);
 
             try {
                 const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
                 const snap = await getDoc(docRef);
                 const oldDemands = snap.data().demandas?.descricoes || [];
-                const merged = [...new Set([...oldDemands, ...demands])];
+                const merged = [...new Set([...oldDemands, ...Array.from(document.querySelectorAll('#demands-list li span')).map(s => s.textContent)])];
 
                 await updateDoc(docRef, {
                     status: status,
@@ -238,10 +231,10 @@
                     attendedTime: new Date().toISOString(),
                     finalizadoPeloColaborador: true,
                     processNumber: document.getElementById('input-process-number')?.value || null,
-                    arquivoPdfConteudo: pdfContent, // SALVA O PDF AQUI
+                    arquivoPdfConteudo: pdfContent,
                     nomeArquivoPdf: pdfFile ? pdfFile.name : null,
                     demandas: { descricoes: merged, quantidade: merged.length },
-                    finalizadoVia: 'Painel Externo Unificado (Base64)'
+                    finalizadoVia: 'Painel Externo Único'
                 });
 
                 document.getElementById('success-msg').textContent = msg;
@@ -252,11 +245,11 @@
 
         function renderChecklist(checklist) {
             const cont = document.getElementById('checklist-container');
-            if(!checklist) return cont.innerHTML = "<p class='text-gray-400 text-center text-xs py-10'>Sem checklist.</p>";
+            if(!checklist) return cont.innerHTML = "<p class='text-gray-400 text-xs py-10'>Sem checklist disponível.</p>";
             (checklist.checkedIds || []).forEach(id => {
                 const d = document.createElement('div');
-                d.className = "p-2 bg-green-50 border border-green-100 rounded text-[9px] font-bold text-green-700 uppercase mb-1";
-                d.textContent = "✓ Documento Conferido na Triagem";
+                d.className = "p-2 bg-green-50 border border-green-100 rounded text-[10px] font-bold text-green-700 uppercase mb-1";
+                d.textContent = "✓ Conferido na Triagem";
                 cont.appendChild(d);
             });
         }
@@ -268,11 +261,24 @@
             if(val) {
                 const li = document.createElement('li');
                 li.className = "flex justify-between items-center bg-white p-2 rounded border text-xs";
-                li.innerHTML = `<span>${val}</span> <button class="text-red-500 font-bold px-1">✕</button>`;
+                li.innerHTML = `<span>${val}</span> <button class="text-red-500 font-bold px-2">✕</button>`;
                 li.querySelector('button').onclick = () => li.remove();
                 document.getElementById('demands-list').appendChild(li);
                 document.getElementById('new-demand-input').value = '';
             }
+        });
+
+        bind('tab-finish', () => {
+            document.getElementById('content-finish').classList.remove('hidden');
+            document.getElementById('content-docs').classList.add('hidden');
+            document.getElementById('tab-finish').className = "flex-1 py-3 text-[10px] uppercase tab-active";
+            document.getElementById('tab-docs').className = "flex-1 py-3 text-[10px] uppercase tab-inactive";
+        });
+        bind('tab-docs', () => {
+            document.getElementById('content-docs').classList.remove('hidden');
+            document.getElementById('content-finish').classList.add('hidden');
+            document.getElementById('tab-docs').className = "flex-1 py-3 text-[10px] uppercase tab-active";
+            document.getElementById('tab-finish').className = "flex-1 py-3 text-[10px] uppercase tab-inactive";
         });
 
         init();
