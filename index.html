@@ -4537,43 +4537,45 @@ if (btnAdmin) {
     notesModal.classList.add("hidden");
   });
 
-// --- LÓGICA DE ENVIO DO E-MAIL DE DELEGAÇÃO ---
 if (button.id === 'send-delegate-email-btn') {
-    const emailInput = document.getElementById('collaborator-email-input');
-    const collaboratorEmail = emailInput ? emailInput.value.trim() : '';
+                    const emailInput = document.getElementById('collaborator-email-input');
+                    const emailDestino = emailInput ? emailInput.value.trim() : '';
 
-    if (!collaboratorEmail) {
-        showNotification("Por favor, insira o e-mail do colaborador.", "error");
-        return;
-    }
+                    if (!emailDestino) {
+                        showNotification("Por favor, insira o e-mail do colaborador.", "error");
+                        return;
+                    }
 
-    button.disabled = true;
-    const originalText = button.textContent;
-    button.textContent = "Enviando...";
+                    button.disabled = true;
+                    const originalText = button.textContent;
+                    button.textContent = "Enviando...";
 
-    try {
-        await sendDelegationEmail({
-            toEmail: collaboratorEmail,
-            assistedName: assistedNameForDelegation,
-            collaboratorName: collaboratorNameForDelegation,
-            pautaId: currentPautaId,
-            assistedId: assistedIdForDelegation,
-            senderName: currentUserName,
-            senderEmail: auth.currentUser?.email
-        });
+                    // GERA O LINK ÚNICO PARA O PAINEL DE CONCLUSÃO
+                    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                    const urlPainelUnico = `${baseUrl}/atendimento_distribuicao.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(currentUserName)}`;
 
-        showNotification("Link enviado por e-mail!");
-        document.getElementById('delegate-email-modal').classList.add('hidden');
-        if (emailInput) emailInput.value = '';
-    } catch (error) {
-        console.error("Erro e-mail:", error);
-        showNotification("Erro ao enviar e-mail.", "error");
-    } finally {
-        button.disabled = false;
-        button.textContent = originalText;
-    }
-    return;
-}
+                    try {
+                        // ENVIANDO PARA O TEMPLATE ÚNICO
+                        await emailjs.send(emailJsConfig.serviceId, "template_atendimento", {
+                            to_email: emailDestino,
+                            to_name: collaboratorNameForDelegation || "Colaborador",
+                            assisted_name: assistedNameForDelegation,
+                            sender_name: currentUserName,
+                            link_atendimento: urlPainelUnico
+                        });
+
+                        showNotification("Link enviado com sucesso para " + emailDestino);
+                        document.getElementById('delegate-email-modal').classList.add('hidden');
+                        if (emailInput) emailInput.value = '';
+                    } catch (error) {
+                        console.error("Erro ao enviar e-mail:", error);
+                        showNotification("Falha ao enviar e-mail. Verifique a configuração.", "error");
+                    } finally {
+                        button.disabled = false;
+                        button.textContent = originalText;
+                    }
+                    return;
+                }
 
   // C. Envio automático de anotações ao fechar a pauta (Modular)
 const closePautaBtn = document.getElementById("close-pauta-btn");
@@ -4602,6 +4604,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
