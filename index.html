@@ -2113,72 +2113,82 @@ const createAguardandoCard = (a, index) => {
                 return card;
             });
 render(atendidosList, atendidos, a => {
-                const card = document.createElement('div');
-                const confirmedBtnBgClass = a.isConfirmed ? 'bg-green-500' : 'bg-gray-400';
-                const confirmedBtnHoverClass = a.isConfirmed ? 'hover:bg-green-600' : 'hover:bg-gray-500';
-                const confirmationInfo = a.isConfirmed && a.confirmationDetails ? 
-                    `<span class="text-xs opacity-75 block">Por: ${escapeHTML(a.confirmationDetails.confirmedBy)} em ${new Date(a.confirmationDetails.confirmedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}</span>` : '';
+    const card = document.createElement('div');
+    const confirmedBtnBgClass = a.isConfirmed ? 'bg-green-500' : 'bg-gray-400';
+    const confirmedBtnHoverClass = a.isConfirmed ? 'hover:bg-green-600' : 'hover:bg-gray-500';
+    const confirmationInfo = a.isConfirmed && a.confirmationDetails ? 
+        `<span class="text-xs opacity-75 block">Por: ${escapeHTML(a.confirmationDetails.confirmedBy)} em ${new Date(a.confirmationDetails.confirmedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}</span>` : '';
 
-                card.className = 'relative bg-green-50 p-4 rounded-lg shadow-sm border-green-200';
-                const totalAssuntos = 1 + (a.demandas?.quantidade ? Number(a.demandas.quantidade) : 0);
+    card.className = 'relative bg-green-50 p-4 rounded-lg shadow-sm border-green-200';
+    const totalAssuntos = 1 + (a.demandas?.quantidade ? Number(a.demandas.quantidade) : 0);
+    
+    // Sanitização das Demandas Adicionais
+    const demandasInfo = a.demandas?.descricoes?.length > 0 ? 
+        `<div class="mt-2 text-xs bg-gray-100 p-2 rounded"><strong class="text-gray-700">Demandas Adicionais (${a.demandas.quantidade || 0}):</strong><ul class="list-disc list-inside pl-2 text-gray-600">${a.demandas.descricoes.map(d => `<li>${escapeHTML(d)}</li>`).join('')}</ul></div>` : '';
+    
+    // Sanitização do nome do atendente
+    let attendantNameDisplay = 'Não informado';
+    if (a.attendant) {
+        if (typeof a.attendant === 'object' && a.attendant !== null) {
+            attendantNameDisplay = a.attendant.nome || a.attendant.name || 'Sem nome';
+        } else {
+            attendantNameDisplay = a.attendant;
+        }
+    }
+    attendantNameDisplay = escapeHTML(attendantNameDisplay);
+    
+    card.innerHTML = `
+        <div class="flex items-center justify-between">
+            <p class="font-bold text-lg inline-flex items-center">
+                ${escapeHTML(a.name)} ${totalAssuntos > 1 ? `<span class="text-sm font-medium text-green-600 ml-1">(${totalAssuntos} assuntos)</span>` : ''}
+            </p>
+            <button data-id="${a.id}" class="toggle-confirmed-atendido confirm-btn-style ${confirmedBtnBgClass} ${confirmedBtnHoverClass} text-white">
+                <svg class="confirm-btn-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/></svg>
+            </button>
+        </div>
+        <div class="card-details mt-2 space-y-2">
+            ${a.cpf ? `<p class="text-sm">CPF: <strong>${escapeHTML(a.cpf)}</strong></p>` : ''}
+            <p class="text-sm">Assunto Principal: <strong>${escapeHTML(a.subject)}</strong></p>
+            <div class="text-xs text-gray-600 grid grid-cols-3 gap-2 text-center border-y py-2">
+                <div><strong>Agendado:</strong><br>${a.scheduledTime || 'N/A'}</div>
+                <div><strong>Chegou:</strong><br>${a.arrivalTime ? new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</div>
+                <div><strong>Finalizado:</strong><br>${formatTime(a.attendedTime)}</div>
+            </div>
+            ${demandasInfo}
+            
+            <div class="flex justify-between items-center mt-2">
+                <p class="text-sm">Por: <strong>${attendantNameDisplay}</strong></p>
                 
-                // Sanitização das Demandas Adicionais
-                const demandasInfo = a.demandas?.descricoes?.length > 0 ? 
-                    `<div class="mt-2 text-xs bg-gray-100 p-2 rounded"><strong class="text-gray-700">Demandas Adicionais (${a.demandas.quantidade || 0}):</strong><ul class="list-disc list-inside pl-2 text-gray-600">${a.demandas.descricoes.map(d => `<li>${escapeHTML(d)}</li>`).join('')}</ul></div>` : '';
-                
-                // Sanitização do nome do atendente
-                let attendantNameDisplay = 'Não informado';
-                if (a.attendant) {
-                    if (typeof a.attendant === 'object' && a.attendant !== null) {
-                        attendantNameDisplay = a.attendant.nome || a.attendant.name || 'Sem nome';
-                    } else {
-                        attendantNameDisplay = a.attendant;
-                    }
-                }
-                attendantNameDisplay = escapeHTML(attendantNameDisplay);
-                
-                card.innerHTML = `
-                    <div class="flex items-center justify-between">
-                        <p class="font-bold text-lg inline-flex items-center">
-                            ${escapeHTML(a.name)} ${totalAssuntos > 1 ? `<span class="text-sm font-medium text-green-600 ml-1">(${totalAssuntos} assuntos)</span>` : ''}
-                        </p>
-                        <button data-id="${a.id}" class="toggle-confirmed-atendido confirm-btn-style ${confirmedBtnBgClass} ${confirmedBtnHoverClass} text-white">
-                            <svg class="confirm-btn-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/></svg>
-                        </button>
-                    </div>
-                    <div class="card-details mt-2 space-y-2">
-                        ${a.cpf ? `<p class="text-sm">CPF: <strong>${escapeHTML(a.cpf)}</strong></p>` : ''}
-                        <p class="text-sm">Assunto Principal: <strong>${escapeHTML(a.subject)}</strong></p>
-                        <div class="text-xs text-gray-600 grid grid-cols-3 gap-2 text-center border-y py-2">
-                            <div><strong>Agendado:</strong><br>${a.scheduledTime || 'N/A'}</div>
-                            <div><strong>Chegou:</strong><br>${a.arrivalTime ? new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</div>
-                            <div><strong>Finalizado:</strong><br>${formatTime(a.attendedTime)}</div>
-                        </div>
-                        ${demandasInfo}
-                        <div class="flex justify-between items-center mt-2">
-                            <p class="text-sm">Por: <strong>${attendantNameDisplay}</strong></p>
-                            <div class="flex items-center gap-1 flex-wrap">
-                                <button data-id="${a.id}" class="manage-demands-btn text-blue-600 hover:text-blue-800 font-semibold text-xs py-1 px-2 rounded hover:bg-blue-100">Demandas</button>
-                                <button data-id="${a.id}" class="edit-assisted-btn text-gray-600 hover:text-gray-800 font-semibold text-xs py-1 px-2 rounded hover:bg-gray-100">Dados</button>
-                                <button data-id="${a.id}" class="edit-attendant-btn text-green-600 hover:text-green-800 font-semibold text-xs py-1 px-2 rounded hover:bg-green-100">Atendente</button>
-                                <button data-id="${a.id}" class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs py-1 px-2 rounded hover:bg-red-100">Deletar</button>
-                            </div>
-                        </div>
-                        <div class="mt-2 pt-2 border-t flex justify-between items-center">
-                            ${a.lastActionBy ? `<p class="text-xs text-gray-500">Última ação por: <strong>${escapeHTML(a.lastActionBy)}</strong></p>` : '<div></div>'}
-                            <button data-id="${a.id}" data-assigned-collaborator='${JSON.stringify(a.assignedCollaborator || null)}' class="return-from-atendido-btn ${currentPautaData?.useDelegationFlow ? 'bg-orange-500 hover:bg-orange-600' : 'bg-yellow-500 hover:bg-yellow-600'} text-white font-semibold py-1 px-3 rounded-lg text-xs">
-                                ${currentPautaData?.useDelegationFlow ? 'Voltar p/ Em Atendimento' : 'Voltar p/ Aguardando'}
-                            </button>
-                        </div>
-                        ${confirmationInfo}
-                    </div>
-                    <div class="text-right mt-1">
-                         <button class="toggle-details-btn text-gray-500 hover:text-gray-800 p-1">
-                             <svg class="pointer-events-none" style="transform: rotate(180deg);" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
-                         </button>
-                    </div>`;
-                return card;
-            });
+                ${a.arquivoPdfConteudo ? `
+                    <a href="${a.arquivoPdfConteudo}" download="${a.nomeArquivoPdf || 'protocolo.pdf'}" 
+                       class="bg-blue-600 text-white font-bold py-1 px-3 rounded-lg text-[10px] hover:bg-blue-700 transition">
+                       📄 BAIXAR PDF
+                    </a>
+                ` : ''}
+
+                <div class="flex items-center gap-1 flex-wrap">
+                    <button data-id="${a.id}" class="manage-demands-btn text-blue-600 hover:text-blue-800 font-semibold text-xs py-1 px-2 rounded hover:bg-blue-100">Demandas</button>
+                    <button data-id="${a.id}" class="edit-assisted-btn text-gray-600 hover:text-gray-800 font-semibold text-xs py-1 px-2 rounded hover:bg-gray-100">Dados</button>
+                    <button data-id="${a.id}" class="edit-attendant-btn text-green-600 hover:text-green-800 font-semibold text-xs py-1 px-2 rounded hover:bg-green-100">Atendente</button>
+                    <button data-id="${a.id}" class="delete-btn text-red-600 hover:text-red-800 font-semibold text-xs py-1 px-2 rounded hover:bg-red-100">Deletar</button>
+                </div>
+            </div>
+            
+            <div class="mt-2 pt-2 border-t flex justify-between items-center">
+                ${a.lastActionBy ? `<p class="text-xs text-gray-500">Última ação por: <strong>${escapeHTML(a.lastActionBy)}</strong></p>` : '<div></div>'}
+                <button data-id="${a.id}" data-assigned-collaborator='${JSON.stringify(a.assignedCollaborator || null)}' class="return-from-atendido-btn ${currentPautaData?.useDelegationFlow ? 'bg-orange-500 hover:bg-orange-600' : 'bg-yellow-500 hover:bg-yellow-600'} text-white font-semibold py-1 px-3 rounded-lg text-xs">
+                    ${currentPautaData?.useDelegationFlow ? 'Voltar p/ Em Atendimento' : 'Voltar p/ Aguardando'}
+                </button>
+            </div>
+            ${confirmationInfo}
+        </div>
+        <div class="text-right mt-1">
+             <button class="toggle-details-btn text-gray-500 hover:text-gray-800 p-1">
+                 <svg class="pointer-events-none" style="transform: rotate(180deg);" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
+             </button>
+        </div>`;
+    return card;
+});
 
 // Renderização da Coluna de Distribuição
             document.getElementById('distribuicao-count').textContent = distribuicao.length;
@@ -4606,6 +4616,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
