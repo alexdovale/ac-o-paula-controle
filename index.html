@@ -2034,16 +2034,14 @@ const createAguardandoCard = (a, index) => {
 
             // Coluna: Em Atendimento (Delegação)
             // --- COLUNA: EM ATENDIMENTO (RESTAURANDO SUA INTERFACE ORIGINAL) ---
+            // --- COLUNA: EM ATENDIMENTO (RESTAURANDO INTERFACE ORIGINAL) ---
             render(emAtendimentoList, emAtendimento, (a, index) => {
                 const card = document.createElement('div');
-                // Mantendo o estilo de card com bordas arredondadas e sombra leve
                 card.className = `relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
                 
                 const startTime = a.inAttendanceTime ? new Date(a.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-                
-                // Geração do link correto para o arquivo unificado
                 const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                const linkExterno = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${a.id}&collaboratorName=${encodeURIComponent(currentUserName)}`;
+                const linkDireto = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${a.id}&collaboratorName=${encodeURIComponent(currentUserName)}`;
 
                 card.innerHTML = `
                     <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500">
@@ -2057,25 +2055,19 @@ const createAguardandoCard = (a, index) => {
 
                     <div class="mt-4 flex flex-col gap-2">
                         <div class="grid grid-cols-2 gap-2">
-                            <!-- Botão Roxo (Delegar) -->
                             <button data-id="${a.id}" data-name="${escapeHTML(a.name)}" data-collaborator-name="${escapeHTML(a.assignedCollaborator?.name || 'Não informado')}" class="delegate-finalization-btn bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95 leading-tight">
                                 Delegar<br>Finalização
                             </button>
-                            <!-- Botão Verde (Finalizar) -->
-                            <button onclick="window.open('${linkExterno}', '_blank')" class="bg-green-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95 leading-tight">
+                            <button onclick="window.open('${linkDireto}', '_blank')" class="bg-green-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95 leading-tight">
                                 Finalizar<br>Diretamente
                             </button>
                         </div>
-                        <!-- Botão Cinza (Voltar) -->
                         <button data-id="${a.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95">
                             Voltar p/ Aguardando
                         </button>
                     </div>
 
-                    ${a.lastActionBy ? `
-                    <div class="mt-4 pt-2 border-t border-gray-50 text-right">
-                        <p class="text-[11px] text-gray-400 uppercase tracking-tighter">Última ação por: <strong>${escapeHTML(a.lastActionBy)}</strong></p>
-                    </div>` : ''}
+                    ${a.lastActionBy ? `<p class="text-[10px] text-gray-400 mt-4 text-right uppercase">Última ação por: <b>${escapeHTML(a.lastActionBy)}</b></p>` : ''}
                 `;
                 return card;
             });
@@ -4419,18 +4411,17 @@ if (button.id === 'send-delegate-email-btn') {
                     button.textContent = "Enviando...";
 
                     const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                    // Geração do link (Garantindo assistidoId com I maiúsculo)
-                    const urlPainelUnico = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(currentUserName)}`;
+                    // Link para o painel externo unificado
+                    const urlFinal = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(currentUserName)}`;
 
                     try {
-                        // ENVIANDO PARA O SEU TEMPLATE: template_jslp9ny
+                        // Enviando para o seu template template_jslp9ny
                         await emailjs.send(emailJsConfig.serviceId, "template_jslp9ny", {
                             to_email: emailDestino,
-                            // collaboratorNameForDelegation vem do botão "Delegar" do card
-                            to_name: collaboratorNameForDelegation || "Colaborador", 
+                            to_name: collaboratorNameForDelegation || "Colaborador",
                             assisted_name: assistedNameForDelegation,
                             sender_name: currentUserName,
-                            link_finalizacao: urlPainelUnico // <--- AGORA COMBINA COM O EMAILJS
+                            link_finalizacao: urlFinal // <--- NOME IGUAL AO DO SEU EMAILJS
                         });
 
                         showNotification("E-mail enviado com sucesso!");
@@ -4474,6 +4465,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
