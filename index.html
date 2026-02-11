@@ -4387,36 +4387,36 @@ if (button.id === 'send-delegate-email-btn') {
                     }
 
                     button.disabled = true;
-                    const originalText = button.textContent;
                     button.textContent = "Enviando...";
 
-                    // GERA O LINK ÚNICO PARA O PAINEL DE CONCLUSÃO
+                    // GERA O LINK ÚNICO (ATENÇÃO AO assistidoId COM "I" MAIÚSCULO)
                     const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                    // CORREÇÃO DO LINK NO E-MAIL
                     const urlPainelUnico = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(currentUserName)}`;
+
                     try {
-                        // ENVIANDO PARA O TEMPLATE ÚNICO
-                        await emailjs.send(emailJsConfig.serviceId, "template_atendimento", {
+                        // USANDO O SEU ID DO PRINT: template_jslp9ny
+                        await emailjs.send(emailJsConfig.serviceId, "template_jslp9ny", {
                             to_email: emailDestino,
                             to_name: collaboratorNameForDelegation || "Colaborador",
                             assisted_name: assistedNameForDelegation,
                             sender_name: currentUserName,
-                            link_atendimento: urlPainelUnico
+                            link_atendimento: urlPainelUnico // Verifique se no EmailJS você usou {{link_atendimento}}
                         });
 
-                        showNotification("Link enviado com sucesso para " + emailDestino);
+                        showNotification("E-mail enviado para " + emailDestino);
                         document.getElementById('delegate-email-modal').classList.add('hidden');
                         if (emailInput) emailInput.value = '';
                     } catch (error) {
-                        console.error("Erro ao enviar e-mail:", error);
-                        showNotification("Falha ao enviar e-mail. Verifique a configuração.", "error");
+                        console.error("Erro EmailJS:", error);
+                        showNotification("Falha ao enviar e-mail. Verifique o console.", "error");
                     } finally {
                         button.disabled = false;
-                        button.textContent = originalText;
+                        button.textContent = "Enviar Link por E-mail";
                     }
                     return;
                 }
 
+    
   // C. Envio automático de anotações ao fechar a pauta (Modular)
 const closePautaBtn = document.getElementById("close-pauta-btn");
 if (closePautaBtn) {
@@ -4444,6 +4444,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
