@@ -2091,30 +2091,56 @@ const createAguardandoCard = (a, index) => {
             });
 
             // Coluna: Atendidos (Finalizados com PDF)
+           // --- COLUNA: ATENDIDOS (VISUAL IDENTICO À FOTO + DOWNLOAD PDF) ---
             render(atendidosList, atendidos, a => {
                 const card = document.createElement('div');
-                card.className = 'relative bg-green-50 p-4 rounded-lg shadow-sm border border-green-200 mb-2';
-                let attendantDisplay = typeof a.attendant === 'object' ? a.attendant.nome : a.attendant;
+                card.className = 'relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4';
+                
+                const arrivalT = a.arrivalTime ? new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                const attendedT = a.attendedTime ? new Date(a.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                const atendenteNome = typeof a.attendant === 'object' ? (a.attendant.nome || a.attendant.name) : (a.attendant || 'Não informado');
 
                 card.innerHTML = `
                     <div class="flex justify-between items-start">
-                        <p class="font-bold text-gray-800 text-sm truncate pr-2">${escapeHTML(a.name)}</p>
-                        <button data-id="${a.id}" class="toggle-confirmed-atendido confirm-btn-style ${a.isConfirmed ? 'bg-green-500' : 'bg-gray-400'} text-white">
-                            <svg class="confirm-btn-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/></svg>
+                        <p class="font-bold text-xl text-gray-800">${escapeHTML(a.name)}</p>
+                        <button data-id="${a.id}" class="toggle-confirmed-atendido w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center ${a.isConfirmed ? 'bg-green-500 border-green-500 text-white' : 'bg-slate-100 text-slate-300'} shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/></svg>
                         </button>
                     </div>
-                    <p class="text-[9px] text-green-600 font-bold uppercase mt-1">Por: ${escapeHTML(attendantDisplay || 'N/A')}</p>
                     
+                    <p class="text-sm mt-1 text-gray-700">Assunto Principal: <b>${escapeHTML(a.subject)}</b></p>
+                    
+                    <div class="grid grid-cols-3 gap-2 text-center border-t border-b py-3 my-3 text-[10px] text-gray-400 uppercase font-bold tracking-wider">
+                        <div>Agendado:<br><span class="text-gray-600">${a.scheduledTime || 'N/A'}</span></div>
+                        <div>Chegou:<br><span class="text-gray-600">${arrivalT}</span></div>
+                        <div>Finalizado:<br><span class="text-gray-600">${attendedT}</span></div>
+                    </div>
+
+                    <div class="flex justify-between items-center text-xs mb-4">
+                        <p class="text-gray-500">Por: <b class="text-gray-800">${escapeHTML(atendenteNome)}</b></p>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-right">
+                            <button data-id="${a.id}" class="manage-demands-btn text-blue-500 font-bold hover:underline">Demandas</button>
+                            <button data-id="${a.id}" class="edit-assisted-btn text-slate-400 font-bold hover:underline">Dados</button>
+                            <button data-id="${a.id}" class="edit-attendant-btn text-green-600 font-bold hover:underline">Atendente</button>
+                            <button data-id="${a.id}" class="delete-btn text-red-500 font-bold hover:underline">Deletar</button>
+                        </div>
+                    </div>
+
+                    <!-- BOTÃO DE DOWNLOAD DO PDF (SE EXISTIR NO BANCO) -->
                     ${a.arquivoPdfConteudo ? `
                         <a href="${a.arquivoPdfConteudo}" download="${a.nomeArquivoPdf || 'protocolo.pdf'}" 
-                           class="mt-3 flex items-center justify-center gap-1 w-full bg-blue-600 text-white font-bold py-2 rounded-lg text-[10px] hover:bg-blue-700 transition shadow-sm">
-                           📄 BAIXAR PROTOCOLO PDF
+                           class="mb-4 flex items-center justify-center gap-2 w-full bg-blue-50 text-blue-600 font-bold py-2.5 rounded-xl text-[10px] uppercase border border-blue-100 hover:bg-blue-100 transition">
+                           📄 Baixar Protocolo Anexado
                         </a>
                     ` : ''}
 
-                    <div class="mt-3 flex justify-between items-center border-t pt-2 gap-2">
-                        <button data-id="${a.id}" class="manage-demands-btn text-blue-600 text-[9px] font-bold uppercase">Demandas</button>
-                        <button data-id="${a.id}" class="return-from-atendido-btn bg-white text-gray-400 border border-gray-200 px-2 py-1 rounded text-[9px] font-bold uppercase">Recuar</button>
+                    <div class="pt-3 border-t">
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
+                            <p class="text-[9px] text-gray-400 uppercase italic">Última ação: ${escapeHTML(a.lastActionBy || 'Sistema')}</p>
+                            <button data-id="${a.id}" class="return-from-atendido-btn w-full sm:w-auto bg-orange-500 text-white font-black py-3 px-8 rounded-xl text-[10px] uppercase shadow-md active:scale-95 transition-all">
+                                Voltar p/ Em Atendimento
+                            </button>
+                        </div>
                     </div>
                 `;
                 return card;
@@ -3783,6 +3809,20 @@ if (btnAdmin) {
                         showNotification(`Atendimento de ${currentAssisted.name} revertido para ${currentPautaData?.useDelegationFlow ? 'Em Atendimento' : 'Aguardando'}.`, 'info');
                     }
 
+                }
+                
+                // AÇÃO: Finalizar diretamente na coluna "Em Atendimento"
+                if (button.classList.contains('finish-directly-btn')) {
+                    const docRef = doc(db, "pautas", currentPautaId, "attendances", id);
+                    const atendenteParaSalvar = button.dataset.attendant || currentUserName;
+
+                    await updateDoc(docRef, getUpdatePayload({ 
+                        status: 'atendido', 
+                        attendant: atendenteParaSalvar, 
+                        attendedTime: new Date().toISOString(),
+                        finalizadoVia: 'Painel Interno'
+                    }));
+                    showNotification("Atendimento finalizado!");
                 }
 
                 if (button.id === 'back-to-pautas-btn') {
