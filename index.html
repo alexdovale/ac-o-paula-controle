@@ -4408,31 +4408,38 @@ if (button.id === 'send-delegate-email-btn') {
                     }
 
                     button.disabled = true;
+                    const originalText = button.textContent;
                     button.textContent = "Enviando...";
 
+                    // GERA O LINK PARA O NOVO PAINEL ÚNICO (atendimento_externo.html)
                     const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                    // Link para o painel externo unificado
-                    const urlFinal = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(currentUserName)}`;
+                    const urlPainelUnico = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(currentUserName)}`;
+
+                    // CORREÇÃO DO NOME: Se estiver "Não informado", envia como "Colega"
+                    let nomeParaEnviar = collaboratorNameForDelegation;
+                    if (!nomeParaEnviar || nomeParaEnviar === "Não informado" || nomeParaEnviar === "undefined") {
+                        nomeParaEnviar = "Colega Colaborador";
+                    }
 
                     try {
-                        // Enviando para o seu template template_jslp9ny
-                        await emailjs.send(emailJsConfig.serviceId, "template_jslp9ny", {
+                        // ENVIANDO OS DADOS PARA O EMAILJS
+                        await emailjs.send(emailJsConfig.serviceId, "template_atendimento", {
                             to_email: emailDestino,
-                            to_name: collaboratorNameForDelegation || "Colaborador",
+                            to_name: nomeParaEnviar, // Nome corrigido aqui
                             assisted_name: assistedNameForDelegation,
                             sender_name: currentUserName,
-                            link_finalizacao: urlFinal // <--- NOME IGUAL AO DO SEU EMAILJS
+                            link_atendimento: urlPainelUnico // Verifique se no site está exatamente assim
                         });
 
-                        showNotification("E-mail enviado com sucesso!");
+                        showNotification("Link enviado com sucesso para " + emailDestino);
                         document.getElementById('delegate-email-modal').classList.add('hidden');
                         if (emailInput) emailInput.value = '';
                     } catch (error) {
-                        console.error("Erro EmailJS:", error);
-                        showNotification("Falha ao enviar e-mail.", "error");
+                        console.error("Erro ao enviar e-mail:", error);
+                        showNotification("Falha no envio. Verifique o console.", "error");
                     } finally {
                         button.disabled = false;
-                        button.textContent = "Enviar Link por E-mail";
+                        button.textContent = originalText;
                     }
                     return;
                 }
