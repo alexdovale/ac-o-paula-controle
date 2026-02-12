@@ -3992,30 +3992,31 @@ if (button.id === 'send-delegate-email-btn') {
                     button.disabled = true;
                     button.textContent = "Enviando...";
 
-                    // GERA O LINK COMPLETO
                     const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
                     const urlFinal = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(currentUserName)}`;
 
-                    // CORREÇÃO DO NOME (Para não ir vazio ou "Não informado")
+                    // Garante que o nome não vá "Não informado" ou vazio
                     let nomeColega = collaboratorNameForDelegation;
-                    if (!nomeColega || nomeColega === "Não informado") nomeColega = "Colega Colaborador";
+                    if (!nomeColega || nomeColega === "Não informado" || nomeColega === "undefined") {
+                        nomeColega = "Colega Colaborador";
+                    }
 
                     try {
-                        // ENVIANDO PARA O EMAILJS
-                        await emailjs.send(emailJsConfig.serviceId, "template_atendimento", {
+                        // USANDO O SEU ID REAL: template_jslp9ny
+                        await emailjs.send(emailJsConfig.serviceId, "template_jslp9ny", {
                             to_email: emailDestino,
                             to_name: nomeColega,
                             assisted_name: assistedNameForDelegation,
                             sender_name: currentUserName,
-                            link_atendimento: urlFinal // ESTA É A VARIÁVEL DO LINK
+                            link_atendimento: urlFinal
                         });
 
-                        showNotification("Link enviado com sucesso!");
+                        showNotification("E-mail enviado com sucesso!");
                         document.getElementById('delegate-email-modal').classList.add('hidden');
                         if (emailInput) emailInput.value = '';
                     } catch (error) {
                         console.error("Erro e-mail:", error);
-                        showNotification("Falha no envio.", "error");
+                        showNotification("Falha no envio do e-mail.", "error");
                     } finally {
                         button.disabled = false;
                         button.textContent = "Enviar Link por E-mail";
@@ -4435,30 +4436,31 @@ if (button.id === 'send-delegate-email-btn') {
                     button.disabled = true;
                     button.textContent = "Enviando...";
 
-                    // GERA O LINK COMPLETO
                     const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
                     const urlFinal = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(currentUserName)}`;
 
-                    // CORREÇÃO DO NOME (Para não ir vazio ou "Não informado")
+                    // Garante que o nome não vá "Não informado" ou vazio
                     let nomeColega = collaboratorNameForDelegation;
-                    if (!nomeColega || nomeColega === "Não informado") nomeColega = "Colega Colaborador";
+                    if (!nomeColega || nomeColega === "Não informado" || nomeColega === "undefined") {
+                        nomeColega = "Colega Colaborador";
+                    }
 
                     try {
-                        // ENVIANDO PARA O EMAILJS
-                        await emailjs.send(emailJsConfig.serviceId, "template_atendimento", {
+                        // USANDO O SEU ID REAL: template_jslp9ny
+                        await emailjs.send(emailJsConfig.serviceId, "template_jslp9ny", {
                             to_email: emailDestino,
                             to_name: nomeColega,
                             assisted_name: assistedNameForDelegation,
                             sender_name: currentUserName,
-                            link_atendimento: urlFinal // ESTA É A VARIÁVEL DO LINK
+                            link_atendimento: urlFinal
                         });
 
-                        showNotification("Link enviado com sucesso!");
+                        showNotification("E-mail enviado com sucesso!");
                         document.getElementById('delegate-email-modal').classList.add('hidden');
                         if (emailInput) emailInput.value = '';
                     } catch (error) {
                         console.error("Erro e-mail:", error);
-                        showNotification("Falha no envio.", "error");
+                        showNotification("Falha no envio do e-mail.", "error");
                     } finally {
                         button.disabled = false;
                         button.textContent = "Enviar Link por E-mail";
@@ -4494,6 +4496,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
