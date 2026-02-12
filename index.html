@@ -3676,7 +3676,19 @@ if (btnAdmin) {
                     if (button.classList.contains('return-to-pauta-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'pauta', arrivalTime: null, priority: null, assignedCollaborator: null, inAttendanceTime: null, room: null })); showNotification("Retornado para a pauta."); }
                     if (button.classList.contains('return-to-pauta-from-faltoso-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'pauta' })); showNotification("Revertido para a pauta."); }
                     if (button.classList.contains('return-to-aguardando-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', attendant: null, attendedTime: null, assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
-                    if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) { await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', assignedCollaborator: null, inAttendanceTime: null })); showNotification("Retornado para aguardando."); }
+                    if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) { 
+                                            await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', assignedCollaborator: null, inAttendanceTime: null })); 
+                                            showNotification("Retornado para aguardando."); 
+                                        }
+                    
+                                        // --- COLE O SEU CÓDIGO NOVO AQUI ---
+                                        if (button.classList.contains('return-to-aguardando-from-dist-btn')) {
+                                            await updateDoc(docRef, getUpdatePayload({ 
+                                                status: 'aguardando',
+                                                distributionStatus: null 
+                                            }));
+                                            showNotification("Retornado para a fila de espera.");
+                                        }                    
                     if (button.classList.contains('delete-btn')) { if(confirm("Tem certeza que deseja apagar este registro permanentemente?")) { const assisted = allAssisted.find(a => a.id === id); const name = assisted ? assisted.name : 'Desconhecido'; logAction('DELETE_ASSISTED', `Apagou o assistido: ${name}`, id); await deleteDoc(docRef); showNotification("Registro apagado."); }}
                     if (button.classList.contains('priority-btn')) {
                         const assisted = allAssisted.find(a => a.id === id);
@@ -4469,6 +4481,7 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
 
