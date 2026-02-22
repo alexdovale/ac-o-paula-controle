@@ -552,38 +552,52 @@
               <footer class="mt-12 bg-white p-6 rounded-lg shadow-md">
                   <h3 id="order-explanation-title" class="text-xl font-semibold text-gray-800 mb-2 text-center">Entenda a Ordem de Atendimento</h3>
                   <div id="order-explanation-content">
-                      <div id="logic-explanation-padrao">
-                          <div class="text-center mb-4">
-                              <button id="toggle-logic-btn-padrao" class="text-green-600 hover:text-green-800 text-sm hover:underline transition-colors duration-300">Por que esta ordem é justa? (Clique para expandir)</button>
-                          </div>
-                          <div id="logic-explanation-padrao-content" class="hidden mt-4 text-left p-4 bg-gray-50 rounded-lg border space-y-3">
-                              <p>A lógica foi pensada para balancear a <strong>pontualidade</strong> com a <strong>realidade</strong> do dia a dia, criando um sistema justo para todos.</p>
-                              <ul class="list-disc list-inside space-y-2 text-gray-700">
-                                  <li><strong>Recompensa a Pontualidade:</strong> Valoriza quem chega no horário, atendendo-os primeiro. Para assistidos que chegam adiantados, a ordem de atendimento respeita o horário original do agendamento.</li>
-                                  <li><strong>Oferece Tolerância:</strong> Reconhece que imprevistos acontecem, com uma janela de 20 minutos para pequenos atrasos.</li>
-                                  <li><strong>Gerencia Atrasos Maiores:</strong> Coloca quem se atrasou muito no fim da fila para não prejudicar os outros.</li>
-                                  <li><strong>Permite Flexibilidade:</strong> O botão "Prioridade" garante que casos graves sejam atendidos imediatamente.</li>
-                                  <li><strong>Critério de Desempate:</strong> Para assistidos com a mesma prioridade, a ordem é definida pelo <strong>horário de chegada informado</strong> (quem chegou mais cedo é atendido primeiro). Se dois ou mais assistidos chegarem exatamente no mesmo horário, a preferência é de quem teve a chegada <strong>registrada primeiro</strong> no sistema.</li>
-                              </ul>
-                              <p class="font-semibold text-gray-800 pt-2">O resultado é uma fila transparente, previsível e justa tanto para os assistidos quanto para a equipe.</p>
-                          </div>
-                          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center mt-4">
-                              <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500"><p class="font-bold text-red-700">Prioridade Urgente</p><p class="text-sm text-gray-600 mt-1">Definida manualmente para casos que necessitam de atendimento imediato.</p></div>
-                              <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500"><p class="font-bold text-green-700">Prioridade Máxima</p><p class="text-sm text-gray-600 mt-1">Assistidos que chegaram no horário agendado ou adiantados.</p></div>
-                              <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500"><p class="font-bold text-orange-700">Prioridade Média</p><p class="text-sm text-gray-600 mt-1">Assistidos agendados com até 20 min de atraso ou atendimentos avulsos.</p></div>
-                              <div class="bg-gray-100 p-4 rounded-lg border-l-4 border-gray-500"><p class="font-bold text-gray-700">Prioridade Mínima</p><p class="text-sm text-gray-600 mt-1">Assistidos que chegaram com 30 minutos ou mais de atraso.</p></div>
-                          </div>
-                      </div>
-                      <div id="logic-explanation-chegada" class="hidden text-center">
-                          <p class="text-gray-700 p-4 bg-gray-50 rounded-lg border">
-                              Neste modo, a fila de "Aguardando Atendimento" é organizada <strong>estritamente pela ordem de chegada</strong>. O primeiro assistido a ter sua chegada registrada no sistema será o primeiro a ser atendido, independentemente de ter horário agendado ou ser um atendimento avulso. A única exceção é o uso do botão <strong>"Prioridade"</strong>, que move o assistido para o topo da fila.
-                          </p>
-                      </div>
-                  </div>
-                  <p class="text-center text-sm text-gray-500 mt-8">Desenvolvido por Alex do Vale</p>
-              </footer>
+                     <div id="logic-explanation-padrao">
+    <div class="text-center mb-4">
+        <button id="toggle-logic-btn-padrao" class="text-green-600 hover:text-green-800 text-sm hover:underline transition-colors duration-300 font-bold">Por que esta ordem é a mais justa? (Clique para expandir)</button>
+    </div>
+    
+    <!-- CONTEÚDO EXPANSÍVEL ATUALIZADO -->
+    <div id="logic-explanation-padrao-content" class="hidden mt-4 text-left p-4 bg-gray-50 rounded-lg border space-y-3">
+        <p>Implementamos o conceito de <b>"Tempo Virtual"</b> para garantir que ninguém fique preso no fim da fila para sempre:</p>
+        <ul class="list-disc list-inside space-y-2 text-gray-700 text-sm">
+            <li><b>Hierarquia Legal:</b> Casos urgentes não são apenas "primeiros", eles seguem a lei (80+ tem preferência sobre 60+, por exemplo).</li>
+            <li><b>Penalidade Limitada:</b> Quem atrasa muito (>30 min) recebe uma "multa virtual" de 45 minutos na sua posição. Isso permite que os pontuais passem à frente, mas impede que o atrasado espere infinitamente se novos pontuais continuarem chegando.</li>
+            <li><b>Equilíbrio Avulso:</b> Atendimentos sem agendamento entram na fila com base no horário exato em que chegaram.</li>
+        </ul>
+    </div>
+
+    <!-- CARDS DE PRIORIDADE ATUALIZADOS -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center mt-4">
+        <!-- URGENTE -->
+        <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500">
+            <p class="font-bold text-red-700">Hierarquia Legal 🚨</p>
+            <p class="text-[10px] text-gray-600 mt-1 uppercase font-bold">Topo Absoluto</p>
+            <p class="text-xs text-gray-600 mt-1 text-left">Organizado por: Idoso 80+, Urgência Médica, PCD/TEA, Gestante e Idoso 60+.</p>
+        </div>
+
+        <!-- MÁXIMA -->
+        <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
+            <p class="font-bold text-green-700">Prioridade Máxima</p>
+            <p class="text-[10px] text-green-600 mt-1 uppercase font-bold">Pontuais</p>
+            <p class="text-xs text-gray-600 mt-1 text-left">Assistidos que fizeram check-in antes ou exatamente no horário agendado.</p>
+        </div>
+
+        <!-- MÉDIA -->
+        <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500">
+            <p class="font-bold text-orange-700">Prioridade Média</p>
+            <p class="text-[10px] text-orange-600 mt-1 uppercase font-bold">+15 min de espera</p>
+            <p class="text-xs text-gray-600 mt-1 text-left">Atrasos leves (até 30 min) ou Atendimentos Avulsos (por ordem de chegada).</p>
+        </div>
+
+        <!-- MÍNIMA -->
+        <div class="bg-gray-100 p-4 rounded-lg border-l-4 border-gray-400">
+            <p class="font-bold text-gray-700">Atraso Grave</p>
+            <p class="text-[10px] text-gray-500 mt-1 uppercase font-bold">+45 min de espera</p>
+            <p class="text-xs text-gray-600 mt-1 text-left">Quem atrasou mais de 30 min. Perde a vez para os pontuais próximos, mas mantém posição geral.</p>
         </div>
     </div>
+</div>
 
     <!-- Rodapé do Sistema -->
         <footer class="bg-white border-t border-gray-200 mt-8 pt-6 pb-6 text-center">
