@@ -1923,64 +1923,63 @@ const createAguardandoCard = (a, index) => {
                 showNotification("Erro ao renomear a sala.", "error");
             }
         };
-// Ordenação com Hierarquia de Urgência Legal + Horário Virtual
+
+        const renderAssistedList = () => {
+            // 1. Recalcular prioridades automáticas
+            allAssisted.forEach(a => {
+                if (a.status === 'aguardando' && a.priority !== 'URGENTE') {
+                    a.priority = getPriorityLevel(a);
+                }
+            });
+
+            const pautaList = document.getElementById('pauta-list');
+            const aguardandoList = document.getElementById('aguardando-list');
+            const emAtendimentoList = document.getElementById('em-atendimento-list');
+            const atendidosList = document.getElementById('atendidos-list');
+            const faltososList = document.getElementById('faltosos-list');
+            const distList = document.getElementById('distribuicao-list');
+
+            // Limpa as listas antes de renderizar novas informações
+            [pautaList, aguardandoList, emAtendimentoList, atendidosList, faltososList, distList].forEach(el => {
+                if (el) el.innerHTML = '';
+            });
+
+            const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
+
+            // 2. Captura termos de pesquisa dos inputs
+            const pautaSearchTerm = normalizeText(document.getElementById('pauta-search').value);
+            const aguardandoSearchTerm = normalizeText(document.getElementById('aguardando-search').value);
+            const emAtendimentoSearchTerm = normalizeText(document.getElementById('em-atendimento-search').value);
+            const atendidosSearchTerm = normalizeText(document.getElementById('atendidos-search').value);
+            const faltososSearchTerm = normalizeText(document.getElementById('faltosos-search').value);
+            const distSearchTerm = normalizeText(document.getElementById('distribuicao-search').value);
+
+            // 3. Filtragem dos Dados por Status
+            const pauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && searchFilter(a, pautaSearchTerm));
+            const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm));
+            const emAtendimento = allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode && searchFilter(a, emAtendimentoSearchTerm));
+            const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && searchFilter(a, atendidosSearchTerm));
+            const faltosos = allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento' && searchFilter(a, faltososSearchTerm));
+            const distribuicao = allAssisted.filter(a => a.status === 'aguardandoDistribuicao' && searchFilter(a, distSearchTerm));
+
+            // 4. Ordenação das Listas
+            pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
+            atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
+            faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
+            emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
+            
             aguardando.sort((a, b) => {
                 const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
-                
-                // --- LÓGICA DE PESOS PARA CASOS URGENTES ---
-                const obterPesoUrgencia = (item) => {
-                    if (item.priority !== 'URGENTE') return 999; // Não urgente
-                    const r = item.priorityReason || "";
-                    
-                    if (r.includes("Idoso (80+)")) return 1;
-                    if (r.includes("Urgência Médica")) return 2;
-                    if (r.includes("Deficiência") || r.includes("Autismo")) return 3;
-                    if (r.includes("Gestante") || r.includes("Criança de Colo")) return 4;
-                    if (r.includes("Idoso (60+)")) return 5;
-                    return 6; // Outros casos marcados como prioridade
-                };
-
-                const pesoA = obterPesoUrgencia(a);
-                const pesoB = obterPesoUrgencia(b);
-
-                // Se houver alguém urgente na disputa, decide pelo peso legal
-                if (pesoA !== pesoB) return pesoA - pesoB;
-                
-                // Se ambos tiverem a mesma urgência legal (ex: dois idosos 80+),
-                // o desempate é por quem chegou primeiro (arrivalTime)
-                if (pesoA < 999 && pesoB < 999) {
-                    return new Date(a.arrivalTime).getTime() - new Date(b.arrivalTime).getTime();
-                }
-
-                // --- SE NÃO FOREM URGENTES, SEGUE A LÓGICA DO MODO ESCOLHIDO ---
-
                 if (pautaOrder === 'manual') {
+                    if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+                    if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
                     return (a.manualIndex || 0) - (b.manualIndex || 0);
                 }
-
                 if (pautaOrder === 'chegada') {
-                    return new Date(a.arrivalTime || 0).getTime() - new Date(b.arrivalTime || 0).getTime();
+                    return new Date(a.arrivalTime || 0) - new Date(b.arrivalTime || 0);
                 }
-
-                if (pautaOrder === 'padrao') {
-                    const calcularTempoVirtual = (item) => {
-                        if (item.type === 'avulso') return new Date(item.arrivalTime).getTime();
-
-                        const agendadoMS = new Date(`1970-01-01T${item.scheduledTime}`).getTime();
-                        const chegadaSoHora = new Date(`1970-01-01T${new Date(item.arrivalTime).toTimeString().slice(0,5)}`).getTime();
-                        const atrasoMinutos = (chegadaSoHora - agendadoMS) / 60000;
-
-                        if (atrasoMinutos > 30) return agendadoMS + (45 * 60 * 1000); 
-                        if (atrasoMinutos > 0) return agendadoMS + (15 * 60 * 1000);
-                        return agendadoMS;
-                    };
-
-                    const virtualA = calcularTempoVirtual(a);
-                    const virtualB = calcularTempoVirtual(b);
-                    if (virtualA !== virtualB) return virtualA - virtualB;
-                }
-
-                return (a.createdAt || 0) - (b.createdAt || 0);
+                const order = { 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
+                return (order[a.priority] || 2) - (order[b.priority] || 2);
             });
 
             // 5. Atualizar Contadores Visuais
@@ -4537,35 +4536,3 @@ if (closePautaBtn) {
 }
 </script>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
