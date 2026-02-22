@@ -1968,18 +1968,82 @@ const createAguardandoCard = (a, index) => {
             faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
             emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
             
+            // ORDENAÇÃO COM HIERARQUIA DE URGÊNCIA LEGAL + HORÁRIO VIRTUAL
             aguardando.sort((a, b) => {
                 const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
+                
+                // 1. LÓGICA DE PESOS PARA CASOS URGENTES (🚨)
+                // Quanto menor o número, mais no topo a pessoa fica
+                const obterPesoUrgencia = (item) => {
+                    if (item.priority !== 'URGENTE') return 999; // Não urgente vai para o fim desta categoria
+                    const r = item.priorityReason || "";
+                    
+                    if (r.includes("Idoso (80+)")) return 1;
+                    if (r.includes("Urgência Médica")) return 2;
+                    if (r.includes("Deficiência") || r.includes("Autismo")) return 3;
+                    if (r.includes("Gestante") || r.includes("Criança de Colo")) return 4;
+                    if (r.includes("Idoso (60+)")) return 5;
+                    return 6; // Outros casos (Ex: Obesidade ou descrição manual)
+                };
+
+                const pesoA = obterPesoUrgencia(a);
+                const pesoB = obterPesoUrgencia(b);
+
+                // Se pelo menos um for URGENTE, decide pelo peso legal
+                if (pesoA !== pesoB) return pesoA - pesoB;
+                
+                // Se ambos forem URGENTES com o mesmo peso (ex: dois idosos 80+),
+                // o desempate é por quem chegou primeiro (check-in)
+                if (pesoA < 999 && pesoB < 999) {
+                    return new Date(a.arrivalTime).getTime() - new Date(b.arrivalTime).getTime();
+                }
+
+                // 2. SE NÃO FOREM URGENTES, SEGUE A LÓGICA DO MODO DA PAUTA
+                
+                // MODO MANUAL: Respeita o arrastar e soltar
                 if (pautaOrder === 'manual') {
-                    if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-                    if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
                     return (a.manualIndex || 0) - (b.manualIndex || 0);
                 }
+
+                // MODO ORDEM DE CHEGADA: Estritamente pelo check-in
                 if (pautaOrder === 'chegada') {
-                    return new Date(a.arrivalTime || 0) - new Date(b.arrivalTime || 0);
+                    return new Date(a.arrivalTime || 0).getTime() - new Date(b.arrivalTime || 0).getTime();
                 }
-                const order = { 'Máxima': 1, 'Média': 2, 'Mínima': 3 };
-                return (order[a.priority] || 2) - (order[b.priority] || 2);
+
+                // MODO PADRÃO: Horário Virtual (Punição de atraso sem espera infinita)
+                if (pautaOrder === 'padrao') {
+                    const calcularTempoVirtual = (item) => {
+                        // Atendimentos Avulsos valem pela hora que chegaram
+                        if (item.type === 'avulso') return new Date(item.arrivalTime).getTime();
+
+                        const agendadoMS = new Date(`1970-01-01T${item.scheduledTime}`).getTime();
+                        
+                        // Pegamos apenas a hora do check-in para comparar com o agendamento
+                        const chegadaData = new Date(item.arrivalTime);
+                        const chegadaSoHoraMS = new Date(`1970-01-01T${chegadaData.getHours().toString().padStart(2,'0')}:${chegadaData.getMinutes().toString().padStart(2,'0')}`).getTime();
+                        
+                        const atrasoMinutos = (chegadaSoHoraMS - agendadoMS) / 60000;
+
+                        if (atrasoMinutos > 30) {
+                            // ATRASO GRAVE: Perde 45 minutos de posição na fila
+                            return agendadoMS + (45 * 60 * 1000); 
+                        } else if (atrasoMinutos > 0) {
+                            // ATRASO LEVE: Perde 15 minutos de posição
+                            return agendadoMS + (15 * 60 * 1000);
+                        }
+                        
+                        // PONTUAL: Vale o horário original agendado
+                        return agendadoMS;
+                    };
+
+                    const virtualA = calcularTempoVirtual(a);
+                    const virtualB = calcularTempoVirtual(b);
+                    
+                    if (virtualA !== virtualB) return virtualA - virtualB;
+                }
+
+                // Desempate final (segurança): ordem de criação no banco
+                return (a.createdAt || 0) - (b.createdAt || 0);
             });
 
             // 5. Atualizar Contadores Visuais
@@ -4536,3 +4600,4 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
