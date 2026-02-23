@@ -557,44 +557,55 @@
         <button id="toggle-logic-btn-padrao" class="text-green-600 hover:text-green-800 text-sm hover:underline transition-colors duration-300 font-bold">Por que esta ordem é a mais justa? (Clique para expandir)</button>
     </div>
     
-    <!-- CONTEÚDO EXPANSÍVEL ATUALIZADO -->
-    <div id="logic-explanation-padrao-content" class="hidden mt-4 text-left p-4 bg-gray-50 rounded-lg border space-y-3">
-        <p>Implementamos o conceito de <b>"Tempo Virtual"</b> para garantir que ninguém fique preso no fim da fila para sempre:</p>
-        <ul class="list-disc list-inside space-y-2 text-gray-700 text-sm">
-            <li><b>Hierarquia Legal:</b> Casos urgentes não são apenas "primeiros", eles seguem a lei (80+ tem preferência sobre 60+, por exemplo).</li>
-            <li><b>Penalidade Limitada:</b> Quem atrasa muito (>30 min) recebe uma "multa virtual" de 45 minutos na sua posição. Isso permite que os pontuais passem à frente, mas impede que o atrasado espere infinitamente se novos pontuais continuarem chegando.</li>
-            <li><b>Equilíbrio Avulso:</b> Atendimentos sem agendamento entram na fila com base no horário exato em que chegaram.</li>
+    <!-- CONTEÚDO EXPANSÍVEL COM EXEMPLO PRÁTICO -->
+    <div id="logic-explanation-padrao-content" class="hidden mt-4 text-left p-5 bg-white rounded-xl border border-gray-200 shadow-inner space-y-4">
+        <div class="border-l-4 border-green-500 pl-4">
+            <h4 class="font-bold text-gray-800 text-sm uppercase">💡 A Regra de Ouro</h4>
+            <p class="text-xs text-gray-600">Priorizamos a <b>Pontualidade</b>. Em caso de empate (mesmo horário agendado), o critério de desempate é a <b>Hora da Chegada Real</b> na recepção.</p>
+        </div>
+
+        <!-- MINI EXEMPLO PRÁTICO -->
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <h4 class="font-bold text-gray-700 text-[10px] uppercase mb-3 tracking-widest text-center">Exemplo Prático (Desempate)</h4>
+            <div class="space-y-2 text-[11px]">
+                <div class="flex justify-between border-b pb-1">
+                    <span><b>João:</b> Agendado 09:00 | Chegou 08:08</span>
+                    <span class="text-green-600 font-bold">1º na Fila</span>
+                </div>
+                <div class="flex justify-between border-b pb-1">
+                    <span><b>Maria:</b> Agendado 09:00 | Chegou 08:30</span>
+                    <span class="text-blue-600 font-bold">2º na Fila</span>
+                </div>
+                <p class="text-[9px] text-gray-500 mt-2 italic">* João fica na frente porque, embora ambos sejam das 09h, ele chegou fisicamente antes na unidade.</p>
+            </div>
+        </div>
+
+        <ul class="list-disc list-inside space-y-2 text-gray-700 text-[11px]">
+            <li><b>Hierarquia Legal:</b> Idoso 80+ e Urgência Médica têm prioridade sobre todos os outros.</li>
+            <li><b>Atrasos:</b> Quem atrasa muito perde a vez para os pontuais do próximo horário, mas não vai para o "fim da fila" de quem agendou horas depois.</li>
         </ul>
     </div>
 
-    <!-- CARDS DE PRIORIDADE ATUALIZADOS -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center mt-4">
-        <!-- URGENTE -->
+    <!-- CARDS DE PRIORIDADE VISUAIS -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center mt-6">
         <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500">
-            <p class="font-bold text-red-700">Hierarquia Legal 🚨</p>
-            <p class="text-[10px] text-gray-600 mt-1 uppercase font-bold">Topo Absoluto</p>
-            <p class="text-xs text-gray-600 mt-1 text-left">Organizado por: Idoso 80+, Urgência Médica, PCD/TEA, Gestante e Idoso 60+.</p>
+            <p class="font-bold text-red-700 text-xs">Lei Brasileira 🚨</p>
+            <p class="text-[9px] text-gray-600 mt-1">Preferência absoluta para 80+, Urgências, PCD, Gestantes e 60+ (nesta ordem).</p>
         </div>
 
-        <!-- MÁXIMA -->
         <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
-            <p class="font-bold text-green-700">Prioridade Máxima</p>
-            <p class="text-[10px] text-green-600 mt-1 uppercase font-bold">Pontuais</p>
-            <p class="text-xs text-gray-600 mt-1 text-left">Assistidos que fizeram check-in antes ou exatamente no horário agendado.</p>
+            <p class="font-bold text-green-700 text-xs">Pontuais ✅</p>
+            <p class="text-[9px] text-gray-600 mt-1">Quem chegou no horário ou antes. O desempate é por quem fez o check-in primeiro.</p>
         </div>
 
-        <!-- MÉDIA -->
         <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500">
-            <p class="font-bold text-orange-700">Prioridade Média</p>
-            <p class="text-[10px] text-orange-600 mt-1 uppercase font-bold">+15 min de espera</p>
-            <p class="text-xs text-gray-600 mt-1 text-left">Atrasos leves (até 30 min) ou Atendimentos Avulsos (por ordem de chegada).</p>
+            <p class="font-bold text-orange-700 text-xs">Atraso Leve / Avulso ⏳</p>
+            <p class="text-[9px] text-gray-600 mt-1">Atrasos de até 30 min ou atendimentos sem agendamento (ordem de chegada).</p>
         </div>
 
-        <!-- MÍNIMA -->
         <div class="bg-gray-100 p-4 rounded-lg border-l-4 border-gray-400">
-            <p class="font-bold text-gray-700">Atraso Grave</p>
-            <p class="text-[10px] text-gray-500 mt-1 uppercase font-bold">+45 min de espera</p>
-            <p class="text-xs text-gray-600 mt-1 text-left">Quem atrasou mais de 30 min. Perde a vez para os pontuais próximos, mas mantém posição geral.</p>
+            <p class="font-bold text-gray-700 text-xs">Atraso Grave ⚠️</p>
+            <p class="text-[9px] text-gray-500 mt-1">Atraso superior a 30 min. O assistido aguarda uma brecha entre os pontuais.</p>
         </div>
     </div>
 </div>
