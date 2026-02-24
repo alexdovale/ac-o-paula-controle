@@ -1993,7 +1993,7 @@ const createAguardandoCard = (a, index) => {
             faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
             emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
             
-           // ORDENAÇÃO POR SLOT DE HORÁRIO + ORDEM REAL DE MARCAÇÃO
+ // ORDENAÇÃO POR SLOT DE HORÁRIO + ORDEM REAL DE MARCAÇÃO
             aguardando.sort((a, b) => {
                 const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
                 
@@ -4640,4 +4640,5 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
