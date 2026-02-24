@@ -1993,11 +1993,11 @@ const createAguardandoCard = (a, index) => {
             faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
             emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
             
-            // ORDENAÇÃO DEFINITIVA: COMPROMISSO AGENDADO + PRECISÃO NA CHEGADA REAL
+           // ORDENAÇÃO POR SLOT DE HORÁRIO + ORDEM REAL DE MARCAÇÃO
             aguardando.sort((a, b) => {
                 const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
                 
-                // --- 1. FILTRO DE ELITE: HIERARQUIA LEGAL (🚨) ---
+                // 1. URGÊNCIAS LEGAIS (🚨)
                 const obterPesoUrgencia = (item) => {
                     if (item.priority !== 'URGENTE') return 999;
                     const r = item.priorityReason || "";
@@ -2011,24 +2011,14 @@ const createAguardandoCard = (a, index) => {
 
                 const pesoA = obterPesoUrgencia(a);
                 const pesoB = obterPesoUrgencia(b);
-
                 if (pesoA !== pesoB) return pesoA - pesoB;
                 
-                // Se ambos são urgentes do mesmo nível, quem chegou primeiro ganha a vaga
+                // Desempate de Urgências pelo momento em que você marcou a prioridade
                 if (pesoA < 999 && pesoB < 999) {
-                    return new Date(a.arrivalTime).getTime() - new Date(b.arrivalTime).getTime();
+                    return (a.checkInOrder || 0) - (b.checkInOrder || 0);
                 }
 
-                // --- 2. FILTRO GERAL: LOGICA DO MODO ESCOLHIDO ---
-
-                if (pautaOrder === 'manual') {
-                    return (a.manualIndex || 0) - (b.manualIndex || 0);
-                }
-
-                if (pautaOrder === 'chegada') {
-                    return new Date(a.arrivalTime || 0).getTime() - new Date(b.arrivalTime || 0).getTime();
-                }
-
+                // 2. LOGICA PADRÃO (Agendados e Avulsos)
                 if (pautaOrder === 'padrao') {
                     const calcularTempoVirtual = (item) => {
                         if (item.type === 'avulso') return new Date(item.arrivalTime).getTime();
@@ -2039,24 +2029,29 @@ const createAguardandoCard = (a, index) => {
                         
                         const atrasoMinutos = (chegadaSoHoraMS - agendadoMS) / 60000;
 
+                        // Se atrasou mais de 30 min, o "lugar na fila" dele vira Horário + 45min
                         if (atrasoMinutos > 30) return agendadoMS + (45 * 60 * 1000); 
+                        // Se atrasou pouco, o "lugar" vira Horário + 15min
                         if (atrasoMinutos > 0) return agendadoMS + (15 * 60 * 1000);
+                        // Se foi pontual, o lugar é o horário agendado
                         return agendadoMS;
                     };
 
                     const virtualA = calcularTempoVirtual(a);
                     const virtualB = calcularTempoVirtual(b);
                     
-                    // Se o horário virtual for diferente (ex: um das 09h e outro das 10h), segue o horário
+                    // Se os horários forem diferentes, respeita o horário (Ex: 09h antes das 10h)
                     if (virtualA !== virtualB) return virtualA - virtualB;
 
-                    // --- CRITÉRIO DE DESEMPATE ABSOLUTO (CHEGADA REAL) ---
-                    // Se o horário virtual empatar (Ex: A, B e C todos das 09:00h),
-                    // o sistema compara quem marcou a chegada primeiro no cronômetro.
-                    return new Date(a.arrivalTime).getTime() - new Date(b.arrivalTime).getTime();
+                    // --- DESEMPATE REAL (ORDEM DE MARCAÇÃO NO SISTEMA) ---
+                    // Se empatou no horário (Ex: Aline, Camila e Carlos todos às 09:00),
+                    // o sistema usa a ordem exata em que você clicou no botão.
+                    return (a.checkInOrder || 0) - (b.checkInOrder || 0);
                 }
 
-                return (a.createdAt || 0) - (b.createdAt || 0);
+                // Outros modos (Manual/Chegada)
+                if (pautaOrder === 'manual') return (a.manualIndex || 0) - (b.manualIndex || 0);
+                return new Date(a.arrivalTime || 0) - new Date(b.arrivalTime || 0);
             });
 
             // 5. Atualizar Contadores Visuais
