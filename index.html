@@ -1436,6 +1436,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     <div id="statistics-modal" class="hidden z-50">
         <!-- O conteúdo, incluindo cabeçalho e botões, será gerado dinamicamente pelo script 'estatisticas.js' -->
     </div>
+    <!-- Carrega a biblioteca do EmailJS -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>  
+                      
     <script type="module">
         // 1. IMPORTS E CONFIGURAÇÕES
         import { firebaseConfig, emailJsConfig } from './js/config.js';
@@ -1452,7 +1455,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { getAuth, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, where, getDoc, writeBatch, arrayUnion, arrayRemove, setDoc, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        emailjs.init(emailJsConfig.publicKey);
+        window.emailjs.init(emailJsConfig.publicKey);
+
 
         // 2. VARIÁVEIS GLOBAIS
         let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '', currentPautaOwnerId = null, isPautaClosed = false;
@@ -1645,7 +1649,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const url = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(currentUserName)}`;
                 
                 try {
-                    await emailjs.send(emailJsConfig.serviceId, "template_jslp9ny", {
+                    await window.emailjs.send(emailJsConfig.serviceId, "template_jslp9ny", {
                         to_email: email, to_name: collaboratorNameForDelegation || "Colega",
                         assisted_name: assistedNameForDelegation, sender_name: currentUserName, link_atendimento: url
                     });
@@ -1728,3 +1732,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 </body>
 </html>
                       
+
