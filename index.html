@@ -1436,9 +1436,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     <div id="statistics-modal" class="hidden z-50">
         <!-- O conteúdo, incluindo cabeçalho e botões, será gerado dinamicamente pelo script 'estatisticas.js' -->
     </div>
-    <!-- Carrega a biblioteca do EmailJS -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>  
-                      
+<!-- Carrega a biblioteca do EmailJS -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
     <script type="module">
         // 1. IMPORTS E CONFIGURAÇÕES
         import { firebaseConfig, emailJsConfig } from './js/config.js';
@@ -1457,25 +1457,63 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
         window.emailjs.init(emailJsConfig.publicKey);
 
-
-        // 2. VARIÁVEIS GLOBAIS
+        // 2. VARIÁVEIS GLOBAIS E FUNÇÕES DE APOIO
         let db, auth, allAssisted = [], currentPautaId = null, unsubscribeFromAttendances = () => {}, currentUserName = '', currentPautaOwnerId = null, isPautaClosed = false;
         let currentPautaData = null, assistedIdToHandle = null, assistedNameToHandle = null;
         let assistedIdForDelegation = null, assistedNameForDelegation = null, collaboratorNameForDelegation = null;
         let colaboradores = [], editCollaboratorId = null, unsubscribeFromCollaborators = () => {};
 
-        // 3. FUNÇÃO DE RENDERIZAÇÃO PRINCIPAL
+        const getUpdatePayload = (data) => ({
+            ...data,
+            lastActionBy: currentUserName,
+            lastActionTimestamp: new Date().toISOString()
+        });
+
+        const searchFilter = (assisted, term) => {
+            if (!term) return true;
+            const norm = normalizeText(term);
+            return normalizeText(assisted.name).includes(norm) || (assisted.cpf && assisted.cpf.includes(norm));
+        };
+
+        const getPriorityClass = (p) => {
+            if (p === 'URGENTE') return 'priority-urgente';
+            if (p === 'Máxima') return 'priority-maxima';
+            if (p === 'Média') return 'priority-media';
+            return 'priority-minima';
+        };
+
+        const togglePautaLock = (closed) => {
+            isPautaClosed = closed;
+            document.getElementById('closed-pauta-alert').classList.toggle('hidden', !closed);
+        };
+
+        // 3. CRIAÇÃO DOS CARDS DE AGUARDANDO
+        const createAguardandoCard = (a, index) => {
+            const card = document.createElement('div');
+            card.className = `relative bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)} mb-2`;
+            card.innerHTML = `
+                <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
+                <div class="flex flex-col h-full">
+                    ${a.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase">🚨 ${escapeHTML(a.priorityReason)}</div>` : ''}
+                    <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(a.name)}</p>
+                    <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(a.subject)}</strong></p>
+                    <div class="mt-4 grid grid-cols-2 gap-2">
+                        <button data-id="${a.id}" data-name="${escapeHTML(a.name)}" data-collaborator-name="${escapeHTML(a.assignedCollaborator?.name || 'Não informado')}" class="delegate-finalization-btn bg-indigo-500 text-white font-bold py-2 rounded-lg text-xs">Delegar</button>
+                        <button data-id="${a.id}" data-name="${escapeHTML(a.name)}" data-attendant="${escapeHTML(a.assignedCollaborator?.name || currentUserName)}" class="finish-directly-btn bg-green-500 text-white font-bold py-2 rounded-lg text-xs">Finalizar</button>
+                    </div>
+                </div>`;
+            return card;
+        };
+
+        // 4. FUNÇÃO PRINCIPAL DE RENDERIZAÇÃO
         const renderAssistedList = () => {
             const pautaList = document.getElementById('pauta-list');
             const aguardandoList = document.getElementById('aguardando-list');
-            const emAtendimentoList = document.getElementById('em-atendimento-list');
             const atendidosList = document.getElementById('atendidos-list');
-            const faltososList = document.getElementById('faltosos-list');
             const distList = document.getElementById('distribuicao-list');
 
             const pautaSearchTerm = normalizeText(document.getElementById('pauta-search').value);
             const aguardandoSearchTerm = normalizeText(document.getElementById('aguardando-search').value);
-            const emAtendimentoSearchTerm = normalizeText(document.getElementById('em-atendimento-search').value);
             const atendidosSearchTerm = normalizeText(document.getElementById('atendidos-search').value);
             const distSearchTerm = document.getElementById('distribuicao-search') ? normalizeText(document.getElementById('distribuicao-search').value) : "";
 
@@ -1487,7 +1525,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const distribuicao = allAssisted.filter(a => a.status === 'aguardandoDistribuicao' && searchFilter(a, distSearchTerm));
             const aguardandoBase = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm));
 
-            // ORDENAÇÃO (MILISSEGUNDOS + HIERARQUIA LEGAL)
+            // Ordenação da Fila
             aguardandoBase.sort((a, b) => {
                 const obterPeso = (item) => {
                     if (item.priority !== 'URGENTE') return 999;
@@ -1501,52 +1539,32 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 };
                 const pA = obterPeso(a); const pB = obterPeso(b);
                 if (pA !== pB) return pA - pB;
-                if (pA < 999) return (a.checkInOrder || 0) - (b.checkInOrder || 0);
-
-                if ((currentPautaData?.ordemAtendimento || 'padrao') === 'padrao') {
-                    const calcVirtual = (item) => {
-                        if (item.type === 'avulso') return (item.checkInOrder || 0);
-                        const agMS = new Date(`1970-01-01T${item.scheduledTime}`).getTime();
-                        const chegData = new Date(item.arrivalTime);
-                        const chegSoHora = new Date(`1970-01-01T${chegData.getHours().toString().padStart(2,'0')}:${chegData.getMinutes().toString().padStart(2,'0')}`).getTime();
-                        const atraso = (chegSoHora - agMS) / 60000;
-                        if (atraso > 30) return agMS + (45 * 60 * 1000);
-                        if (atraso > 0) return agMS + (15 * 60 * 1000);
-                        return agMS;
-                    };
-                    const vA = calcVirtual(a); const vB = calcVirtual(b);
-                    if (vA !== vB) return vA - vB;
-                }
                 return (a.checkInOrder || a.createdAt || 0) - (b.checkInOrder || b.createdAt || 0);
             });
 
-            [pautaList, aguardandoList, emAtendimentoList, atendidosList, distList].forEach(el => { if(el) el.innerHTML = ''; });
+            [pautaList, aguardandoList, atendidosList, distList, document.getElementById('em-atendimento-list')].forEach(el => { if(el) el.innerHTML = ''; });
 
-            // RENDERIZAÇÃO COLUNA PAUTA (VISUAL RESTAURADO)
-            pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
+            // RENDER PAUTA
             render(pautaList, pauta, a => {
                 const card = document.createElement('div');
                 card.className = 'relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3';
-                card.innerHTML = `<button data-id="${a.id}" class="delete-btn absolute top-3 right-3 text-gray-300 hover:text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg></button>
-                    <p class="font-bold text-xl text-gray-800">${escapeHTML(a.name).toUpperCase()}</p>
+                card.innerHTML = `<p class="font-bold text-xl text-gray-800">${escapeHTML(a.name).toUpperCase()}</p>
                     <p class="text-xs mt-1">Assunto: <b class="uppercase">${escapeHTML(a.subject)}</b></p>
-                    <p class="text-xs">Agendado: <b>${a.scheduledTime || '--:--'}</b></p>
                     <div class="mt-4 grid grid-cols-2 gap-2">
-                        <button data-id="${a.id}" class="check-in-btn bg-green-500 text-white font-bold py-2 rounded text-[10px] uppercase shadow-sm">Marcar Chegada</button>
-                        <button data-id="${a.id}" class="faltou-btn bg-yellow-500 text-white font-bold py-2 rounded text-[10px] uppercase shadow-sm">Faltou</button>
-                    </div>
-                    <button data-id="${a.id}" class="edit-assisted-btn mt-2 w-full bg-slate-500 text-white font-bold py-2 rounded text-[10px] uppercase">Editar Dados</button>`;
+                        <button data-id="${a.id}" class="check-in-btn bg-green-500 text-white font-bold py-2 rounded text-[10px] uppercase">Chegou</button>
+                        <button data-id="${a.id}" class="faltou-btn bg-yellow-500 text-white font-bold py-2 rounded text-[10px] uppercase">Faltou</button>
+                    </div>`;
                 return card;
             });
 
-            // RENDERIZAÇÃO AGUARDANDO (FILTRO ANDARES INTELIGENTE)
+            // RENDER AGUARDANDO (Salas + Filtro)
             if (currentPautaData?.type === 'multisala' && currentPautaData.rooms?.length > 0) {
                 currentPautaData.rooms.forEach(roomName => {
                     const people = aguardandoBase.filter(a => a.room === roomName);
-                    if (aguardandoSearchTerm !== '' && people.length === 0) return; 
+                    if (aguardandoSearchTerm !== '' && people.length === 0) return;
                     const roomHeader = document.createElement('div');
                     roomHeader.className = "bg-blue-50 text-blue-800 font-black px-3 py-1.5 rounded mt-4 mb-2 text-[10px] uppercase flex justify-between border border-blue-100";
-                    roomHeader.innerHTML = `<span>🏢 ${escapeHTML(roomName)}</span> <span class="bg-blue-200 px-2 rounded-full">${people.length}</span>`;
+                    roomHeader.innerHTML = `<span>🏢 ${escapeHTML(roomName)}</span> <span>${people.length}</span>`;
                     aguardandoList.appendChild(roomHeader);
                     people.forEach((item, index) => aguardandoList.appendChild(createAguardandoCard(item, index)));
                 });
@@ -1554,176 +1572,121 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 render(aguardandoList, aguardandoBase, (item, index) => createAguardandoCard(item, index));
             }
 
-            // RENDERIZAÇÃO EM ATENDIMENTO
-            render(emAtendimentoList, emAtendimento, (a, index) => {
-                const card = document.createElement('div');
-                card.className = `relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
-                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                const url = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${a.id}&collaboratorName=${encodeURIComponent(currentUserName)}`;
-                card.innerHTML = `<p class="font-bold text-2xl text-gray-800">${index + 1}. ${escapeHTML(a.name)}</p>
-                    <p class="text-sm mt-1 text-gray-500 italic">Atribuído a: ${escapeHTML(a.assignedCollaborator?.name || 'Não atribuído')}</p>
-                    <div class="mt-4 grid grid-cols-2 gap-2">
-                        <button data-id="${a.id}" data-name="${escapeHTML(a.name)}" data-collaborator-name="${escapeHTML(a.assignedCollaborator?.name || 'Não informado')}" class="delegate-finalization-btn bg-indigo-500 text-white font-bold py-3 rounded-xl text-xs uppercase shadow-md">Delegar E-mail</button>
-                        <button data-id="${a.id}" data-name="${escapeHTML(a.name)}" data-attendant="${escapeHTML(a.assignedCollaborator?.name || currentUserName)}" class="finish-directly-btn bg-green-500 text-white font-bold py-3 rounded-xl text-xs uppercase shadow-md">Finalizar Agora</button>
-                    </div>
-                    <button data-id="${a.id}" class="return-to-aguardando-from-emAtendimento-btn mt-2 w-full bg-slate-400 text-white font-bold py-2 rounded-lg text-[10px] uppercase">Recuar p/ Fila</button>`;
-                return card;
-            });
-
-            // RENDERIZAÇÃO DISTRIBUIÇÃO
-            render(distList, distribuicao, a => {
-                const card = document.createElement('div');
-                card.className = 'relative bg-cyan-50 p-4 rounded-lg shadow-sm border border-cyan-200 mb-2';
-                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                const link = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${a.id}&collaboratorName=${encodeURIComponent(a.attendant || '')}`;
-                card.innerHTML = `<p class="font-bold text-gray-800 text-sm">${escapeHTML(a.name)}</p>
-                    <button onclick="window.open('${link}', '_blank')" class="w-full bg-cyan-600 text-white text-[10px] font-bold py-2 rounded mt-3 uppercase">Abrir Protocolo</button>
-                    <button data-id="${a.id}" class="return-to-aguardando-from-dist-btn w-full bg-white text-gray-400 border border-gray-200 text-[9px] py-1 mt-1 rounded uppercase">Reverter</button>`;
-                return card;
-            });
-
-            // RENDERIZAÇÃO ATENDIDOS (VISUAL FOTO)
+            // RENDER ATENDIDOS
             render(atendidosList, atendidos, a => {
                 const card = document.createElement('div');
                 card.className = 'relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4';
                 const arrivalT = a.arrivalTime ? new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
                 const atendente = typeof a.attendant === 'object' ? a.attendant.nome : (a.attendant || 'N/A');
-                card.innerHTML = `<div class="flex justify-between items-start"><p class="font-bold text-xl text-gray-800 truncate pr-2">${escapeHTML(a.name)}</p>
-                    <button data-id="${a.id}" class="toggle-confirmed-atendido w-7 h-7 rounded-full border ${a.isConfirmed ? 'bg-green-500 border-green-500 text-white' : 'bg-slate-100 text-slate-300'} flex items-center justify-center shadow-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/></svg>
-                    </button></div>
-                    <p class="text-sm mt-1 text-gray-700 font-bold">Assunto: ${escapeHTML(a.subject)}</p>
+                card.innerHTML = `<div class="flex justify-between items-start"><p class="font-bold text-xl text-gray-800">${escapeHTML(a.name)}</p></div>
                     <div class="grid grid-cols-3 gap-2 text-center border-t border-b py-3 my-3 text-[10px] text-gray-400 uppercase font-bold tracking-wider">
                         <div>Agendado:<br><span class="text-gray-600">${a.scheduledTime || 'N/A'}</span></div>
-                        <div>Chegou:<br><span class="text-gray-600">${arrivalT}</span></div>
+                        <div>Finalizado:<br><span class="text-gray-600">${formatTime(a.attendedTime)}</span></div>
                         <div>Por:<br><span class="text-gray-600">${escapeHTML(atendente)}</span></div>
                     </div>
-                    <div class="grid grid-cols-2 gap-4 text-center mb-4">
-                        <button data-id="${a.id}" class="manage-demands-btn text-blue-500 font-bold text-xs uppercase underline">Demandas</button>
-                        <button data-id="${a.id}" class="edit-assisted-btn text-slate-400 font-bold text-xs uppercase underline">Dados</button>
-                    </div>
-                    ${a.nomeArquivoPdf ? `<p class="text-[9px] text-blue-500 font-bold mb-2 uppercase text-center italic">📄 Protocolo: ${a.nomeArquivoPdf}</p>` : ''}
-                    <button data-id="${a.id}" class="return-from-atendido-btn w-full bg-orange-500 text-white font-black py-3 rounded-xl text-[10px] uppercase shadow-md active:scale-95 transition-all">Voltar p/ Em Atendimento</button>`;
+                    <button data-id="${a.id}" class="return-from-atendido-btn w-full bg-orange-500 text-white font-black py-3 rounded-xl text-[10px] uppercase">Recuar</button>`;
                 return card;
             });
 
+            const renderEmAtendimento = (el, data) => {
+                data.forEach((a, index) => {
+                    const card = document.createElement('div');
+                    card.className = `relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
+                    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                    const url = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${a.id}&collaboratorName=${encodeURIComponent(currentUserName)}`;
+                    card.innerHTML = `<p class="font-bold text-2xl text-gray-800">${index + 1}. ${escapeHTML(a.name)}</p>
+                        <div class="mt-4 grid grid-cols-2 gap-2">
+                            <button data-id="${a.id}" data-name="${escapeHTML(a.name)}" data-collaborator-name="${escapeHTML(a.assignedCollaborator?.name || 'Não informado')}" class="delegate-finalization-btn bg-indigo-500 text-white font-bold py-3 rounded-xl text-xs uppercase shadow-md leading-tight">E-mail</button>
+                            <button onclick="window.open('${url}', '_blank')" class="bg-green-500 text-white font-bold py-3 rounded-xl text-xs uppercase shadow-md leading-tight">Abrir</button>
+                        </div>`;
+                    el.appendChild(card);
+                });
+            };
+            renderEmAtendimento(document.getElementById('em-atendimento-list'), emAtendimento);
+
             document.getElementById('pauta-count').textContent = pauta.length;
             document.getElementById('aguardando-count').textContent = aguardandoBase.length;
-            document.getElementById('em-atendimento-count').textContent = emAtendimento.length;
             document.getElementById('atendidos-count').textContent = atendidos.length;
-            if(document.getElementById('distribuicao-count')) document.getElementById('distribuicao-count').textContent = distribuicao.length;
 
             togglePautaLock(isPautaClosed);
-            setupManualSort();
         };
 
-        // 4. LOGICA GERAL DE CLIQUES (GLOBAL)
+        const render = (el, data, gen) => { if(data.length === 0) el.innerHTML = '<p class="text-center text-gray-400 py-4 text-xs">Vazio</p>'; else data.forEach(i => el.appendChild(gen(i))); };
+
+        // 5. CLIQUES GLOBAIS
         document.body.addEventListener('click', async (e) => {
-            const button = e.target.closest('button');
-            if (!button) return;
-            const id = button.dataset.id;
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const id = btn.dataset.id;
             const docRef = id ? doc(db, "pautas", currentPautaId, "attendances", id) : null;
 
-            if (button.id === 'back-to-pautas-btn') { 
-                if (unsubscribeFromAttendances) unsubscribeFromAttendances();
-                showPautaSelectionScreen(auth.currentUser.uid); 
-                return; 
-            }
-
-            // Finalizar Direto (Instantâneo)
-            if (button.classList.contains('finish-directly-btn')) {
-                const useDist = currentPautaData?.useDistributionFlow === true;
-                const statusDest = useDist ? 'aguardandoDistribuicao' : 'atendido';
-                await updateDoc(docRef, getUpdatePayload({ 
-                    status: statusDest, attendant: button.dataset.attendant, attendedTime: new Date().toISOString() 
-                }));
-                showNotification(useDist ? "Enviado para Distribuição ⚖️" : "Atendimento Finalizado!");
-            }
-
-            // Enviar Link por E-mail (Template Real)
-            if (button.id === 'send-delegate-email-btn') {
-                const email = document.getElementById('collaborator-email-input').value.trim();
-                if (!email) return showNotification("Informe o e-mail.", "error");
-                button.disabled = true; button.textContent = "Enviando...";
-                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                const url = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(currentUserName)}`;
-                
-                try {
-                    await window.emailjs.send(emailJsConfig.serviceId, "template_jslp9ny", {
-                        to_email: email, to_name: collaboratorNameForDelegation || "Colega",
-                        assisted_name: assistedNameForDelegation, sender_name: currentUserName, link_atendimento: url
-                    });
-                    showNotification("Link enviado com sucesso!");
-                    document.getElementById('delegate-email-modal').classList.add('hidden');
-                } catch (err) { showNotification("Erro no e-mail.", "error"); }
-                finally { button.disabled = false; button.textContent = "Enviar Link"; }
-            }
-
-            // Reversões
-            if (button.classList.contains('return-to-aguardando-from-dist-btn')) await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', distributionStatus: null }));
-            if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) await updateDoc(docRef, getUpdatePayload({ status: 'aguardando', assignedCollaborator: null }));
-            if (button.classList.contains('return-from-atendido-btn')) await updateDoc(docRef, getUpdatePayload({ status: 'emAtendimento' }));
-
-            // Check-in (Salvando Milissegundo)
-            if (button.classList.contains('check-in-btn')) {
+            if (btn.classList.contains('check-in-btn')) {
                 assistedIdToHandle = id;
                 document.getElementById('arrival-modal').classList.remove('hidden');
-                document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5);
-                const rc = document.getElementById('arrival-room-container');
-                if (currentPautaData?.type === 'multisala') {
-                    rc.classList.remove('hidden'); const sel = document.getElementById('arrival-room-select');
-                    sel.innerHTML = ''; currentPautaData.rooms.forEach(r => { const o = document.createElement('option'); o.value = r; o.textContent = r; sel.appendChild(o); });
-                } else rc.classList.add('hidden');
             }
-            if (button.id === 'confirm-arrival-btn') {
-                const [h, m] = document.getElementById('arrival-time-input').value.split(':');
-                const d = new Date(); d.setHours(h, m, 0, 0);
-                const rm = currentPautaData?.type === 'multisala' ? document.getElementById('arrival-room-select').value : null;
-                await updateDoc(doc(db, "pautas", currentPautaId, "attendances", assistedIdToHandle), getUpdatePayload({ 
-                    status: 'aguardando', arrivalTime: d.toISOString(), checkInOrder: Date.now(), room: rm
-                }));
+
+            if (btn.id === 'confirm-arrival-btn') {
+                const time = document.getElementById('arrival-time-input').value;
+                await updateDoc(doc(db, "pautas", currentPautaId, "attendances", assistedIdToHandle), getUpdatePayload({ status: 'aguardando', arrivalTime: new Date().toISOString(), checkInOrder: Date.now() }));
                 document.getElementById('arrival-modal').classList.add('hidden');
             }
 
-            // Deletar
-            if (button.classList.contains('delete-btn')) { if(confirm("Apagar registro permanentemente?")) await deleteDoc(docRef); }
+            if (btn.classList.contains('delegate-finalization-btn')) {
+                assistedIdForDelegation = id;
+                assistedNameForDelegation = btn.dataset.name;
+                collaboratorNameForDelegation = btn.dataset.collaboratorName;
+                document.getElementById('delegate-email-modal').classList.remove('hidden');
+            }
+
+            if (btn.id === 'send-delegate-email-btn') {
+                const email = document.getElementById('collaborator-email-input').value.trim();
+                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                const url = `${baseUrl}/atendimento_externo.html?pautaId=${currentPautaId}&assistidoId=${assistedIdForDelegation}&collaboratorName=${encodeURIComponent(currentUserName)}`;
+                await window.emailjs.send(emailJsConfig.serviceId, "template_jslp9ny", { to_email: email, assisted_name: assistedNameForDelegation, link_atendimento: url, sender_name: currentUserName });
+                showNotification("Enviado!");
+                document.getElementById('delegate-email-modal').classList.add('hidden');
+            }
+
+            if (btn.classList.contains('delete-btn')) { if(confirm("Deletar?")) await deleteDoc(docRef); }
         });
 
-        // 5. INICIALIZAÇÃO DO FIREBASE E ESTADO
-        const mainInit = () => {
-            try {
-                const firebaseApp = initializeApp(firebaseConfig);
-                db = getFirestore(firebaseApp);
-                auth = getAuth(firebaseApp);
-                setupDetailsModal({ db, getChecklistHTML, getUpdatePayload, showNotification });
-                
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        const uSnap = await getDoc(doc(db, "users", user.uid));
-                        if(uSnap.exists()) {
-                            currentUserName = uSnap.data().name;
-                            const lastId = localStorage.getItem('lastPautaId');
-                            const lastType = localStorage.getItem('lastPautaType');
-                            if(lastId && lastType) loadPauta(lastId, "Carregando...", lastType);
-                            else showPautaSelectionScreen(user.uid);
-                        }
-                    } else showScreen('login');
-                });
-            } catch(e) { console.error("Erro Firebase", e); }
-        };
+        // 6. INICIALIZAÇÃO
+        const mainInit = async () => {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            setupDetailsModal({ db, getChecklistHTML, getUpdatePayload, showNotification });
 
-        const setupRealtimeListener = (id) => {
-            if (unsubscribeFromAttendances) unsubscribeFromAttendances();
-            unsubscribeFromAttendances = onSnapshot(collection(db, "pautas", id, "attendances"), (snap) => {
-                allAssisted = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderAssistedList();
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    const snap = await getDoc(doc(db, "users", user.uid));
+                    if(snap.exists()) {
+                        currentUserName = snap.data().name;
+                        const lastId = localStorage.getItem('lastPautaId');
+                        if (lastId) loadPauta(lastId, "Pauta Carregada", localStorage.getItem('lastPautaType'));
+                        else showPautaSelectionScreen(user.uid);
+                    }
+                } else showScreen('login');
             });
         };
 
-        const setupCollaboratorsListener = (id) => {
-            if (unsubscribeFromCollaborators) unsubscribeFromCollaborators();
-            unsubscribeFromCollaborators = onSnapshot(collection(db, "pautas", id, "collaborators"), (snap) => {
-                colaboradores = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const loadPauta = async (id, name, type) => {
+            currentPautaId = id;
+            document.getElementById('pauta-title').textContent = name;
+            const pSnap = await getDoc(doc(db, "pautas", id));
+            if (pSnap.exists()) {
+                currentPautaData = pSnap.data();
+                document.getElementById('em-atendimento-column').classList.toggle('hidden', !currentPautaData.useDelegationFlow);
+                document.getElementById('distribuicao-column').classList.toggle('hidden', !currentPautaData.useDistributionFlow);
+                setupRealtimeListener(id);
+                showScreen('app');
+            }
+        };
+
+        const setupRealtimeListener = (id) => {
+            onSnapshot(collection(db, "pautas", id, "attendances"), (snap) => {
+                allAssisted = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderAssistedList();
             });
         };
 
@@ -1731,5 +1694,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
-                      
-
