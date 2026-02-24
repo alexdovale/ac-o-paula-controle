@@ -1993,12 +1993,11 @@ const createAguardandoCard = (a, index) => {
             faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
             emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
             
-            // ORDENAÇÃO COM HIERARQUIA DE URGÊNCIA LEGAL + HORÁRIO VIRTUAL
-            // ORDENAÇÃO CORRIGIDA: FOCO NO DESEMPATE PELA CHEGADA REAL
+            // ORDENAÇÃO DEFINITIVA: COMPROMISSO AGENDADO + PRECISÃO NA CHEGADA REAL
             aguardando.sort((a, b) => {
                 const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
                 
-                // 1. HIERARQUIA DE URGÊNCIA LEGAL (🚨)
+                // --- 1. FILTRO DE ELITE: HIERARQUIA LEGAL (🚨) ---
                 const obterPesoUrgencia = (item) => {
                     if (item.priority !== 'URGENTE') return 999;
                     const r = item.priorityReason || "";
@@ -2015,12 +2014,12 @@ const createAguardandoCard = (a, index) => {
 
                 if (pesoA !== pesoB) return pesoA - pesoB;
                 
-                // Se ambos forem URGENTES com mesmo peso, desempata pela CHEGADA REAL
+                // Se ambos são urgentes do mesmo nível, quem chegou primeiro ganha a vaga
                 if (pesoA < 999 && pesoB < 999) {
                     return new Date(a.arrivalTime).getTime() - new Date(b.arrivalTime).getTime();
                 }
 
-                // 2. LÓGICA PARA OS DEMAIS (NÃO URGENTES)
+                // --- 2. FILTRO GERAL: LOGICA DO MODO ESCOLHIDO ---
 
                 if (pautaOrder === 'manual') {
                     return (a.manualIndex || 0) - (b.manualIndex || 0);
@@ -2042,23 +2041,19 @@ const createAguardandoCard = (a, index) => {
 
                         if (atrasoMinutos > 30) return agendadoMS + (45 * 60 * 1000); 
                         if (atrasoMinutos > 0) return agendadoMS + (15 * 60 * 1000);
-                        
-                        return agendadoMS; // Pontuais ficam com o horário do agendamento
+                        return agendadoMS;
                     };
 
                     const virtualA = calcularTempoVirtual(a);
                     const virtualB = calcularTempoVirtual(b);
                     
-                    // SE O TEMPO VIRTUAL FOR DIFERENTE (ex: um 09:00 e outro 09:30), segue a regra
+                    // Se o horário virtual for diferente (ex: um das 09h e outro das 10h), segue o horário
                     if (virtualA !== virtualB) return virtualA - virtualB;
 
-                    // --- AQUI ESTÁ A CORREÇÃO: CRITÉRIO DE DESEMPATE ---
-                    // Se o Tempo Virtual empatar (ex: ambos agendados para 09:00 e ambos pontuais),
-                    // o sistema DEVE usar o horário de chegada real (check-in) para decidir.
-                    const chegadaRealA = new Date(a.arrivalTime).getTime();
-                    const chegadaRealB = new Date(b.arrivalTime).getTime();
-                    
-                    return chegadaRealA - chegadaRealB;
+                    // --- CRITÉRIO DE DESEMPATE ABSOLUTO (CHEGADA REAL) ---
+                    // Se o horário virtual empatar (Ex: A, B e C todos das 09:00h),
+                    // o sistema compara quem marcou a chegada primeiro no cronômetro.
+                    return new Date(a.arrivalTime).getTime() - new Date(b.arrivalTime).getTime();
                 }
 
                 return (a.createdAt || 0) - (b.createdAt || 0);
