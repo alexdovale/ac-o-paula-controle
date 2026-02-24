@@ -1997,7 +1997,7 @@ const createAguardandoCard = (a, index) => {
             aguardando.sort((a, b) => {
                 const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
                 
-                // 1. URGÊNCIAS LEGAIS (🚨)
+                // 1. PRIORIDADE LEGAL (🚨) - SEMPRE NO TOPO
                 const obterPesoUrgencia = (item) => {
                     if (item.priority !== 'URGENTE') return 999;
                     const r = item.priorityReason || "";
@@ -2013,15 +2013,16 @@ const createAguardandoCard = (a, index) => {
                 const pesoB = obterPesoUrgencia(b);
                 if (pesoA !== pesoB) return pesoA - pesoB;
                 
-                // Desempate de Urgências pelo momento em que você marcou a prioridade
+                // Se ambos forem urgentes, ganha quem você clicou primeiro
                 if (pesoA < 999 && pesoB < 999) {
-                    return (a.checkInOrder || 0) - (b.checkInOrder || 0);
+                    return (a.checkInOrder || a.createdAt || 0) - (b.checkInOrder || b.createdAt || 0);
                 }
 
-                // 2. LOGICA PADRÃO (Agendados e Avulsos)
+                // 2. LÓGICA PADRÃO (AGENDADOS E AVULSOS)
                 if (pautaOrder === 'padrao') {
                     const calcularTempoVirtual = (item) => {
-                        if (item.type === 'avulso') return new Date(item.arrivalTime).getTime();
+                        // Avulsos valem pelo momento do clique
+                        if (item.type === 'avulso') return (item.checkInOrder || 0);
 
                         const agendadoMS = new Date(`1970-01-01T${item.scheduledTime}`).getTime();
                         const chegadaData = new Date(item.arrivalTime);
@@ -2029,29 +2030,25 @@ const createAguardandoCard = (a, index) => {
                         
                         const atrasoMinutos = (chegadaSoHoraMS - agendadoMS) / 60000;
 
-                        // Se atrasou mais de 30 min, o "lugar na fila" dele vira Horário + 45min
                         if (atrasoMinutos > 30) return agendadoMS + (45 * 60 * 1000); 
-                        // Se atrasou pouco, o "lugar" vira Horário + 15min
                         if (atrasoMinutos > 0) return agendadoMS + (15 * 60 * 1000);
-                        // Se foi pontual, o lugar é o horário agendado
                         return agendadoMS;
                     };
 
-                    const virtualA = calcularTempoVirtual(a);
-                    const virtualB = calcularTempoVirtual(b);
+                    const vA = calcularTempoVirtual(a);
+                    const vB = calcularTempoVirtual(b);
                     
-                    // Se os horários forem diferentes, respeita o horário (Ex: 09h antes das 10h)
-                    if (virtualA !== virtualB) return virtualA - virtualB;
+                    // Se os horários de agendamento são diferentes, respeita o horário.
+                    // Se EMPATAR (Carlos, Aline, Camila todos das 09h), usa o checkInOrder.
+                    if (vA !== vB) return vA - vB;
 
-                    // --- DESEMPATE REAL (ORDEM DE MARCAÇÃO NO SISTEMA) ---
-                    // Se empatou no horário (Ex: Aline, Camila e Carlos todos às 09:00),
-                    // o sistema usa a ordem exata em que você clicou no botão.
-                    return (a.checkInOrder || 0) - (b.checkInOrder || 0);
+                    // --- DESEMPATE POR ORDEM DE CLIQUE ---
+                    return (a.checkInOrder || a.createdAt || 0) - (b.checkInOrder || b.createdAt || 0);
                 }
 
-                // Outros modos (Manual/Chegada)
+                // Outros modos
                 if (pautaOrder === 'manual') return (a.manualIndex || 0) - (b.manualIndex || 0);
-                return new Date(a.arrivalTime || 0) - new Date(b.arrivalTime || 0);
+                return (a.checkInOrder || 0) - (b.checkInOrder || 0);
             });
 
             // 5. Atualizar Contadores Visuais
@@ -4023,24 +4020,21 @@ if (btnAdmin) {
 
                 if (button.id === 'confirm-arrival-btn') {
                     const arrivalTimeInput = document.getElementById('arrival-time-input').value;
-                    if (!arrivalTimeInput) { showNotification("Por favor, informe o horário.", "error"); return; }
+                    if (!arrivalTimeInput) { showNotification("Informe o horário.", "error"); return; }
+                    
                     const [hours, minutes] = arrivalTimeInput.split(':');
                     const arrivalDate = new Date();
                     arrivalDate.setHours(hours, minutes, 0, 0);
 
-                    // --- INÍCIO DA CORREÇÃO ---
-                    let roomData = null;
-                    // Se for pauta multi-salas, pega o valor do select
-                    if (currentPautaData?.type === 'multisala') {
-                        roomData = document.getElementById('arrival-room-select').value;
-                    }
+                    // Pega a sala se for multi-sala
+                    let roomData = currentPautaData?.type === 'multisala' ? document.getElementById('arrival-room-select').value : null;
 
                     await updateDoc(doc(collectionRef, assistedIdToHandle), getUpdatePayload({ 
                         status: 'aguardando', 
-                        arrivalTime: arrivalDate.toISOString(),
-                        room: roomData // <--- ADICIONADO: Agora salva a sala no banco
+                        arrivalTime: arrivalDate.toISOString(), // Hora que você digitou (Ex: 08:00)
+                        checkInOrder: Date.now(),              // MOMENTO REAL DO CLIQUE (O Desempate)
+                        room: roomData
                     }));
-                    // --- FIM DA CORREÇÃO ---
 
                     button.closest('.fixed').classList.add('hidden');
                 }
@@ -4640,5 +4634,6 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
 
