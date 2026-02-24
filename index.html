@@ -2122,42 +2122,19 @@ const createAguardandoCard = (a, index) => {
 
             // Coluna: Aguardando (Multi-Salas)
             // --- LÓGICA DE PESQUISA DENTRO DOS ANDARES/SALAS ---
+            // Coluna: Aguardando (Multi-Salas)
             if (currentPautaData?.type === 'multisala' && currentPautaData.rooms?.length > 0) {
                 currentPautaData.rooms.forEach(roomName => {
-                    // Filtra as pessoas desse andar que TAMBÉM passam pelo filtro de pesquisa
                     const peopleInRoom = aguardando.filter(a => a.room === roomName);
-                    
-                    // SE NÃO HOUVER NINGUÉM NESTE ANDAR COM O NOME PESQUISADO, PULA PARA O PRÓXIMO
-                    if (peopleInRoom.length === 0 && aguardandoSearchTerm !== '') {
-                        return; 
-                    }
-
-                    // Cria o cabeçalho do andar
                     const roomHeader = document.createElement('div');
-                    roomHeader.className = "bg-blue-50 text-blue-800 font-black px-3 py-1.5 rounded mt-4 mb-2 text-[10px] uppercase flex justify-between border border-blue-100 sticky top-0 z-10";
-                    roomHeader.innerHTML = `
-                        <span>🏢 ${escapeHTML(roomName)}</span> 
-                        <span class="bg-blue-200 px-1.5 rounded-full">${peopleInRoom.length}</span>
-                    `;
+                    roomHeader.className = "bg-blue-50 text-blue-800 font-black px-3 py-1.5 rounded mt-4 mb-2 text-[10px] uppercase flex justify-between border border-blue-100";
+                    roomHeader.innerHTML = `<span>🏢 ${escapeHTML(roomName)}</span> <span>${peopleInRoom.length}</span>`;
                     aguardandoList.appendChild(roomHeader);
-
-                    // Se o andar estiver vazio (sem pesquisa), mostra o aviso de "Vazio"
-                    if (peopleInRoom.length === 0) {
-                        const emptyMsg = document.createElement('div');
-                        emptyMsg.className = "text-gray-400 text-center text-[10px] py-2 italic";
-                        emptyMsg.textContent = "Ninguém aguardando aqui";
-                        aguardandoList.appendChild(emptyMsg);
-                    } else {
-                        // Renderiza os cards das pessoas encontradas
-                        peopleInRoom.forEach((item, index) => {
-                            aguardandoList.appendChild(createAguardandoCard(item, index));
-                        });
-                    }
+                    peopleInRoom.forEach((item, index) => aguardandoList.appendChild(createAguardandoCard(item, index)));
                 });
             } else {
-                // Modo padrão sem andares
                 render(aguardandoList, aguardando, (item, index) => createAguardandoCard(item, index));
-            }};
+            }
 
             // Coluna: Em Atendimento (Delegação)
             // --- COLUNA: EM ATENDIMENTO (RESTAURANDO SUA INTERFACE ORIGINAL) ---
@@ -4663,4 +4640,5 @@ if (closePautaBtn) {
 }
 </script>
 </html>
+
 
