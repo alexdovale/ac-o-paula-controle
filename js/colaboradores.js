@@ -228,6 +228,3 @@ export function sortColaboradores(criterio, lista = colaboradores) {
     renderColaboradores(sortedList);
     return sortedList;
 }
-
-// Aliás para compatibilidade
-export const setupCollaborators = setupCollaboratorsListener;
