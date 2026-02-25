@@ -1281,147 +1281,215 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     <!-- ======================================================= -->
 
     <script type="module">
-        // =======================================================
-        // IMPORTAÇÕES DOS MÓDULOS
-        // =======================================================
-        
-        // Configurações
-        import { firebaseConfig, emailJsConfig } from './js/config.js';
+    // =======================================================
+    // IMPORTAÇÕES DOS MÓDULOS
+    // =======================================================
+    
+    // Configurações
+    import { firebaseConfig, emailJsConfig } from './js/config.js';
 
-        // Utilitários
-        import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
+    // Utilitários
+    import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
 
-        // Dados e Lógica de Negócio
-        import { subjectTree, flatSubjects } from './js/assuntos.js';
-        import { getChecklistHTML } from './js/checklist.js';
-        import { parsePautaCSV } from './js/csvHandler.js';
+    // Dados e Lógica de Negócio
+    import { subjectTree, flatSubjects } from './js/assuntos.js';
+    import { getChecklistHTML } from './js/checklist.js';
+    import { parsePautaCSV } from './js/csvHandler.js';
 
-        // Serviços
-        import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
-        import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
+    // Serviços
+    import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
+    import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
 
-        // Admin e Estatísticas
-        import { 
-            logAction as logActionDB, 
-            loadUsersList, 
-            cleanupOldData, 
-            approveUser, 
-            updateUserRole, 
-            deleteUser, 
-            loadAuditLogs, 
-            exportAuditLogsPDF, 
-            loadDashboardData, 
-            populateUserFilter 
-        } from './js/admin.js';
-        import { renderStatisticsModal } from './js/estatisticas.js';
-        import { loadHistoricoStats, exportStatsToCSV } from './js/historicoStats.js';
-        // Gerenciamento de Pauta
-        import { 
-            setupAttendancesListener, 
-            updateAttendanceStatus, 
-            deleteAttendance, 
-            moveInQueueLogic, 
-            saveImportedPauta 
-        } from './js/pauta.js';
+    // Admin e Estatísticas
+    import { 
+        logAction as logActionDB, 
+        loadUsersList, 
+        cleanupOldData, 
+        approveUser, 
+        updateUserRole, 
+        deleteUser, 
+        loadAuditLogs, 
+        exportAuditLogsPDF, 
+        loadDashboardData, 
+        populateUserFilter 
+    } from './js/admin.js';
+    import { renderStatisticsModal } from './js/estatisticas.js';
+    import { loadHistoricoStats, exportStatsToCSV } from './js/historicoStats.js';
 
-     // Colaboradores
-        import { 
-            setupCollaboratorsListener,  // <-- NOME CORRETO
-            renderColaboradores,
-            resetCollaboratorForm,
-            sortColaboradores,
-            saveCollaboratorData,        // <-- ADICIONE ESTAS TAMBÉM (opcional)
-            toggleCollaboratorPresence,
-            deleteCollaborator,
-            clearCollaborators
-        } from './js/colaboradores.js';
+    // Gerenciamento de Pauta
+    import { 
+        setupAttendancesListener, 
+        updateAttendanceStatus, 
+        deleteAttendance, 
+        moveInQueueLogic, 
+        saveImportedPauta 
+    } from './js/pauta.js';
 
-        // UI e Modais
-        import { setupDetailsModal, openDetailsModal } from './js/detalhes.js';
-        import { setupNotes, sendNotesOnClose } from './js/notes.js';
-        import { setupConfirmModal, showConfirmModal } from './js/confirmModal.js';
+    // Colaboradores
+    import { 
+        setupCollaboratorsListener,
+        renderColaboradores,
+        resetCollaboratorForm,
+        sortColaboradores,
+        saveCollaboratorData,
+        toggleCollaboratorPresence,
+        deleteCollaborator,
+        clearCollaborators
+    } from './js/colaboradores.js';
 
-        // Firebase
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, where, orderBy, limit, getDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove, setDoc, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
+    // UI e Modais
+    import { setupDetailsModal, openDetailsModal } from './js/detalhes.js';
+    import { setupNotes, sendNotesOnClose } from './js/notes.js';
+    import { setupConfirmModal, showConfirmModal } from './js/confirmModal.js';
 
-        // =======================================================
-        // INICIALIZAÇÃO
-        // =======================================================
-        
-        // Inicialização do EmailJS
-        emailjs.init(emailJsConfig.publicKey);
+    // Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, where, orderBy, limit, getDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove, setDoc, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
-        // Inicialização dos componentes UI
-        document.addEventListener('DOMContentLoaded', () => {
-            setupNotes();
-            setupConfirmModal();
-            setupClosePautaNotes();
+    // =======================================================
+    // INICIALIZAÇÃO DO FIREBASE (PRECISA SER PRIMEIRO)
+    // =======================================================
+    
+    console.log("Inicializando Firebase...");
+    const app = initializeApp(firebaseConfig);
+    console.log("Firebase inicializado com sucesso!");
+    
+    // Inicializa Auth e Firestore
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    
+    // Tenta ativar persistência offline
+    try {
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code == 'failed-precondition') {
+                console.warn('Persistência falhou: Múltiplas abas abertas.');
+            } else if (err.code == 'unimplemented') {
+                console.warn('Persistência falhou: Navegador não suportado.');
+            }
         });
+        console.log("Persistência Offline Ativada!");
+    } catch (e) {
+        console.log("Erro ao ativar persistência:", e);
+    }
 
-        // =======================================================
-        // FUNÇÕES AUXILIARES
-        // =======================================================
+    // =======================================================
+    // INICIALIZAÇÃO DO EMAILJS
+    // =======================================================
+    
+    console.log("Inicializando EmailJS...");
+    emailjs.init(emailJsConfig.publicKey);
+    console.log("EmailJS inicializado com sucesso!");
 
-        function setupClosePautaNotes() {
-            const closePautaBtn = document.getElementById("close-pauta-btn");
-            const confirmCloseBtn = document.getElementById("confirm-close-pauta-btn");
-            
-            if (!closePautaBtn || !confirmCloseBtn) return;
-            
-            let shouldSendNotes = false;
-            
-            closePautaBtn.addEventListener("click", () => {
-                shouldSendNotes = true;
-            });
-            
-            confirmCloseBtn.addEventListener("click", async () => {
-                setTimeout(async () => {
-                    if (shouldSendNotes) {
-                        const isPasswordModalHidden = document.getElementById('close-pauta-modal').classList.contains('hidden');
-                        
-                        if (isPasswordModalHidden) {
-                            try {
-                                await sendNotesOnClose(window.currentUserName, window.auth?.currentUser?.email);
-                            } catch (err) {
-                                console.error("Erro ao enviar notas:", err);
-                            }
+    // =======================================================
+    // VARIÁVEIS GLOBAIS
+    // =======================================================
+    
+    // Expõe as variáveis necessárias para outros módulos
+    window.db = db;
+    window.auth = auth;
+    window.currentUserName = '';
+    window.currentPautaId = null;
+    window.currentPautaData = null;
+    window.currentPautaOwnerId = null;
+    window.isPautaClosed = false;
+    window.allAssisted = [];
+    window.colaboradores = [];
+
+    // =======================================================
+    // INICIALIZAÇÃO DOS COMPONENTES UI
+    // =======================================================
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log("DOM carregado, inicializando componentes UI...");
+        setupNotes();
+        setupConfirmModal();
+        setupClosePautaNotes();
+        
+        // Esconde o loading e mostra a tela de login
+        setTimeout(() => {
+            document.getElementById('loading-container').classList.add('hidden');
+            document.getElementById('login-container').classList.remove('hidden');
+        }, 1000);
+    });
+
+    // =======================================================
+    // FUNÇÕES AUXILIARES
+    // =======================================================
+
+    function setupClosePautaNotes() {
+        const closePautaBtn = document.getElementById("close-pauta-btn");
+        const confirmCloseBtn = document.getElementById("confirm-close-pauta-btn");
+        
+        if (!closePautaBtn || !confirmCloseBtn) return;
+        
+        let shouldSendNotes = false;
+        
+        closePautaBtn.addEventListener("click", () => {
+            shouldSendNotes = true;
+        });
+        
+        confirmCloseBtn.addEventListener("click", async () => {
+            setTimeout(async () => {
+                if (shouldSendNotes) {
+                    const isPasswordModalHidden = document.getElementById('close-pauta-modal').classList.contains('hidden');
+                    
+                    if (isPasswordModalHidden) {
+                        try {
+                            await sendNotesOnClose(window.currentUserName, auth?.currentUser?.email);
+                        } catch (err) {
+                            console.error("Erro ao enviar notas:", err);
                         }
-                        shouldSendNotes = false;
                     }
-                }, 1000);
-            });
-        }
-
-        // =======================================================
-        // EXPOR FUNÇÕES PARA O ESCOPO GLOBAL
-        // =======================================================
-        
-        window.sortColaboradores = sortColaboradores;
-        window.showConfirmModal = showConfirmModal;
-        
-    </script>
-
-    <!-- Script Bridge para variáveis globais -->
-    <script>
-        function exposeGlobalVariables() {
-            const checkInterval = setInterval(() => {
-                if (window.auth && window.currentUserName !== undefined) {
-                    window.dispatchEvent(new CustomEvent('userDataReady', {
-                        detail: {
-                            auth: window.auth,
-                            currentUserName: window.currentUserName
-                        }
-                    }));
-                    clearInterval(checkInterval);
+                    shouldSendNotes = false;
                 }
-            }, 100);
-        }
-        
-        document.addEventListener('DOMContentLoaded', exposeGlobalVariables);
-    </script>
+            }, 1000);
+        });
+    }
+
+    // =======================================================
+    // MONITORES DE CONEXÃO
+    // =======================================================
+    
+    window.addEventListener('offline', () => {
+        const indicator = document.getElementById('offline-indicator');
+        if(indicator) indicator.classList.remove('hidden');
+    });
+
+    window.addEventListener('online', () => {
+        const indicator = document.getElementById('offline-indicator');
+        if(indicator) indicator.classList.add('hidden');
+        showNotification("Conexão restabelecida! Sincronizando...", "success");
+    });
+
+    // =======================================================
+    // EXPOR FUNÇÕES PARA O ESCOPO GLOBAL
+    // =======================================================
+    
+    window.sortColaboradores = sortColaboradores;
+    window.showConfirmModal = showConfirmModal;
+    
+</script>
+
+<!-- Script Bridge para variáveis globais -->
+<script>
+    function exposeGlobalVariables() {
+        const checkInterval = setInterval(() => {
+            if (window.auth && window.currentUserName !== undefined) {
+                window.dispatchEvent(new CustomEvent('userDataReady', {
+                    detail: {
+                        auth: window.auth,
+                        currentUserName: window.currentUserName
+                    }
+                }));
+                clearInterval(checkInterval);
+            }
+        }, 100);
+    }
+    
+    document.addEventListener('DOMContentLoaded', exposeGlobalVariables);
+</script>
 
 </body>
 </html>
