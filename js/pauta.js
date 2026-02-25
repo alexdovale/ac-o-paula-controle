@@ -1,5 +1,5 @@
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { Utils } from './utils.js';
+import { showNotification, normalizeText, escapeHTML } from './utils.js';
 
 export const PautaService = {
     currentListeners: new Map(),
