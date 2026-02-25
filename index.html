@@ -1273,541 +1273,79 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     <!-- SCRIPT PRINCIPAL - COMPLETO COM TODAS AS FUNÇÕES -->
     <!-- ======================================================= -->
 
+     <!-- ======================================================= -->
+    <!-- SCRIPT DE TESTE - APENAS PARA VER SE LOGIN FUNCIONA -->
+    <!-- ======================================================= -->
+
     <script type="module">
-        // =======================================================
-        // IMPORTAÇÕES DOS MÓDULOS
-        // =======================================================
-        
-        // Configurações
-        import { firebaseConfig, emailJsConfig } from './js/config.js';
-
-        // Utilitários
-        import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
-
-        // Dados e Lógica de Negócio
-        import { subjectTree, flatSubjects } from './js/assuntos.js';
-        import { getChecklistHTML } from './js/checklist.js';
-        import { parsePautaCSV } from './js/csvHandler.js';
-
-        // Serviços
-        import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
-        import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
-
-        // Admin e Estatísticas
-        import { 
-            logAction as logActionDB, 
-            loadUsersList, 
-            cleanupOldData, 
-            approveUser, 
-            updateUserRole, 
-            deleteUser, 
-            loadAuditLogs, 
-            exportAuditLogsPDF, 
-            loadDashboardData, 
-            populateUserFilter 
-        } from './js/admin.js';
-        import { renderStatisticsModal } from './js/estatisticas.js';
-        import { loadHistoricoStats, exportStatsToCSV } from './js/historicoStats.js';
-
-        // Gerenciamento de Pauta
-        import { 
-            setupAttendancesListener, 
-            updateAttendanceStatus, 
-            deleteAttendance, 
-            moveInQueueLogic, 
-            saveImportedPauta 
-        } from './js/pauta.js';
-
-        // Colaboradores
-        import { 
-            setupCollaboratorsListener,
-            renderColaboradores,
-            resetCollaboratorForm,
-            sortColaboradores,
-            saveCollaboratorData,
-            toggleCollaboratorPresence,
-            deleteCollaborator,
-            clearCollaborators
-        } from './js/colaboradores.js';
-
-        // UI e Modais
-        import { setupDetailsModal, openDetailsModal } from './js/detalhes.js';
-        import { setupNotes, sendNotesOnClose } from './js/notes.js';
-        import { setupConfirmModal, showConfirmModal } from './js/confirmModal.js';
-
-        // Firebase
+        // Importações básicas
+        import { firebaseConfig } from './js/config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, where, orderBy, limit, getDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove, setDoc, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // =======================================================
-        // INICIALIZAÇÃO DO FIREBASE
-        // =======================================================
-        
-        console.log("🚀 Inicializando Firebase...");
+        // Inicializa Firebase
+        console.log("1. Inicializando Firebase...");
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        // Ativa persistência offline
-        try {
-            enableIndexedDbPersistence(db).catch((err) => {
-                if (err.code == 'failed-precondition') {
-                    console.warn('Persistência falhou: Múltiplas abas abertas.');
-                } else if (err.code == 'unimplemented') {
-                    console.warn('Persistência falhou: Navegador não suportado.');
-                }
-            });
-        } catch (e) {
-            console.log("Erro ao ativar persistência:", e);
-        }
+        console.log("2. Firebase OK");
 
-        // =======================================================
-        // INICIALIZAÇÃO DO EMAILJS
-        // =======================================================
-        
-        emailjs.init(emailJsConfig.publicKey);
-
-        // =======================================================
-        // VARIÁVEIS GLOBAIS
-        // =======================================================
-        
-        let allAssisted = [], 
-            currentPautaId = null, 
-            unsubscribeFromAttendances = () => {}, 
-            currentUserName = '', 
-            currentPautaOwnerId = null, 
-            isPautaClosed = false;
-        let currentPautaData = null;
-        let assistedIdToHandle = null;
-        let assistedNameToHandle = null;
-        let customRoomsList = [];
-        let assistedIdForDelegation = null;
-        let assistedNameForDelegation = null;
-        let collaboratorNameForDelegation = null;
-        let colaboradores = [];
-        let editCollaboratorId = null;
-        let unsubscribeFromCollaborators = () => {};
-
-        // Expõe variáveis globalmente
-        window.db = db;
-        window.auth = auth;
-        window.currentUserName = currentUserName;
-        window.currentPautaId = currentPautaId;
-        window.currentPautaData = currentPautaData;
-        window.currentPautaOwnerId = currentPautaOwnerId;
-        window.isPautaClosed = isPautaClosed;
-        window.allAssisted = allAssisted;
-        window.colaboradores = colaboradores;
-        window.signOut = signOut;
-
-        // =======================================================
-        // ELEMENTOS DO DOM
-        // =======================================================
-
-        const loadingContainer = document.getElementById('loading-container');
+        // Elementos
+        const loading = document.getElementById('loading-container');
         const loginContainer = document.getElementById('login-container');
-        const pautaSelectionContainer = document.getElementById('pauta-selection-container');
-        const appContainer = document.getElementById('app-container');
-        const loadingText = document.getElementById('loading-text');
+        
+        // Mostra tela de login após 1 segundo
+        setTimeout(() => {
+            loading.classList.add('hidden');
+            loginContainer.classList.remove('hidden');
+            console.log("3. Tela de login visível");
+        }, 1000);
 
         // =======================================================
-        // FUNÇÕES UTILITÁRIAS
-        // =======================================================
-
-        const showScreen = (screenName) => {
-            loadingContainer?.classList.toggle('hidden', screenName !== 'loading');
-            loginContainer?.classList.toggle('hidden', screenName !== 'login');
-            pautaSelectionContainer?.classList.toggle('hidden', screenName !== 'pautaSelection');
-            appContainer?.classList.toggle('hidden', screenName !== 'app');
-        };
-
-        const showNotification = (message, type = 'success') => {
-            const colors = { info: 'blue', error: 'red', success: 'green' };
-            const notification = document.createElement('div');
-            notification.className = `fixed top-5 right-5 bg-${colors[type]}-500 text-white py-3 px-6 rounded-lg shadow-lg z-[100] transition-transform transform translate-x-full`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-
-            requestAnimationFrame(() => notification.classList.remove('translate-x-full'));
-
-            setTimeout(() => {
-                notification.classList.add('translate-x-full');
-                notification.addEventListener('transitionend', () => notification.remove());
-            }, 3000);
-        };
-
-        const getUpdatePayload = (data) => {
-            return {
-                ...data,
-                lastActionBy: currentUserName,
-                lastActionTimestamp: new Date().toISOString()
-            };
-        };
-
-        // =======================================================
-        // FUNÇÃO DE LOGIN (CRÍTICA!)
-        // =======================================================
-
-        async function handleLogin(email, password) {
-            try {
-                console.log("Tentando login com:", email);
-                await signInWithEmailAndPassword(auth, email, password);
-                console.log("Login bem sucedido!");
-                return true;
-            } catch (error) {
-                console.error("Erro no login:", error);
-                let errorMessage = "Email ou senha inválidos.";
-                if (error.code === 'auth/user-not-found') {
-                    errorMessage = "Usuário não encontrado.";
-                } else if (error.code === 'auth/wrong-password') {
-                    errorMessage = "Senha incorreta.";
-                } else if (error.code === 'auth/too-many-requests') {
-                    errorMessage = "Muitas tentativas. Tente mais tarde.";
-                }
-                showNotification(errorMessage, 'error');
-                return false;
-            }
-        }
-
-        // =======================================================
-        // FUNÇÃO DE CADASTRO
-        // =======================================================
-
-        async function handleRegister(name, email, password) {
-            try {
-                console.log("Tentando cadastrar:", email);
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
-
-                await setDoc(doc(db, "users", user.uid), {
-                    name: name,
-                    email: email,
-                    uid: user.uid,
-                    status: 'pending',
-                    role: 'user',
-                    createdAt: new Date().toISOString()
-                });
-
-                showNotification('Conta criada! Aguarde aprovação.', 'success');
-                return true;
-            } catch (error) {
-                console.error("Erro no cadastro:", error);
-                let errorMessage = "Erro ao criar conta.";
-                if (error.code === 'auth/email-already-in-use') {
-                    errorMessage = "Email já está em uso.";
-                } else if (error.code === 'auth/weak-password') {
-                    errorMessage = "Senha muito fraca.";
-                }
-                showNotification(errorMessage, 'error');
-                return false;
-            }
-        }
-
-        // =======================================================
-        // FUNÇÃO setupClosePautaNotes
+        // FUNÇÃO DE LOGIN SIMPLES
         // =======================================================
         
-        function setupClosePautaNotes() {
-            const closePautaBtn = document.getElementById("close-pauta-btn");
-            const confirmCloseBtn = document.getElementById("confirm-close-pauta-btn");
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            console.log("4. Formulário enviado!");
             
-            if (!closePautaBtn || !confirmCloseBtn) return;
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errorDiv = document.getElementById('auth-error');
             
-            let shouldSendNotes = false;
+            console.log("5. Email:", email);
             
-            closePautaBtn.addEventListener("click", () => {
-                shouldSendNotes = true;
-            });
-            
-            confirmCloseBtn.addEventListener("click", async () => {
-                setTimeout(async () => {
-                    if (shouldSendNotes) {
-                        const isPasswordModalHidden = document.getElementById('close-pauta-modal')?.classList.contains('hidden');
-                        
-                        if (isPasswordModalHidden) {
-                            try {
-                                const notes = localStorage.getItem("pauta_notes") || "";
-                                if (notes.trim() !== "") {
-                                    await sendNotesByEmail(notes, currentUserName, auth?.currentUser?.email);
-                                    showNotification("Anotações enviadas para seu e-mail!", "info");
-                                }
-                            } catch (err) {
-                                console.error("Erro ao enviar notas:", err);
-                            }
-                        }
-                        shouldSendNotes = false;
-                    }
-                }, 1000);
-            });
-        }
-
-        // =======================================================
-        // FUNÇÕES DE NAVEGAÇÃO
-        // =======================================================
-
-        const showPautaSelectionScreen = (userId) => {
-            localStorage.removeItem('lastPautaId');
-            localStorage.removeItem('lastPautaType');
-            showScreen('pautaSelection');
-            
-            // Aqui você pode adicionar a lógica para carregar a lista de pautas
-            const pautasList = document.getElementById('pautas-list');
-            if (pautasList) {
-                pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500">Nenhuma pauta encontrada. Crie uma para começar.</p>';
+            try {
+                console.log("6. Tentando signInWithEmailAndPassword...");
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                console.log("7. SUCESSO! Usuário:", userCredential.user.email);
+                
+                errorDiv.classList.add('hidden');
+                alert("Login bem sucedido! Redirecionando...");
+                
+            } catch (error) {
+                console.error("8. ERRO:", error);
+                errorDiv.textContent = 'Email ou senha inválidos: ' + error.code;
+                errorDiv.classList.remove('hidden');
             }
-        };
+        });
 
-        const loadPauta = async (pautaId, pautaName, pautaType) => {
-            currentPautaId = pautaId;
-            window.currentPautaId = pautaId;
-            
-            const titleEl = document.getElementById('pauta-title');
-            if (titleEl) titleEl.textContent = pautaName;
-
-            localStorage.setItem('lastPautaId', pautaId);
-            localStorage.setItem('lastPautaType', pautaType);
-
-            // Usando a função IMPORTADA do módulo
-            if (typeof setupCollaboratorsListener === 'function') {
-                setupCollaboratorsListener(db, pautaId, (lista) => {
-                    colaboradores = lista;
-                    window.colaboradores = lista;
-                });
-            }
-            
-            showScreen('app');
-        };
-
-        // =======================================================
-        // INICIALIZAÇÃO PRINCIPAL
-        // =======================================================
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log("📄 DOM carregado, inicializando componentes...");
-            
-            // =======================================================
-            // LOGIN FORM
-            // =======================================================
-            const loginForm = document.getElementById('login-form');
-            if (loginForm) {
-                loginForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    console.log("Formulário de login submetido");
-                    
-                    const email = document.getElementById('login-email').value;
-                    const password = document.getElementById('login-password').value;
-                    const errorDiv = document.getElementById('auth-error');
-                    
-                    // Mostra loading no botão
-                    const submitBtn = loginForm.querySelector('button[type="submit"]');
-                    const originalText = submitBtn.textContent;
-                    submitBtn.textContent = "Entrando...";
-                    submitBtn.disabled = true;
-                    
-                    const success = await handleLogin(email, password);
-                    
-                    if (success) {
-                        if (errorDiv) errorDiv.classList.add('hidden');
-                    } else {
-                        if (errorDiv) errorDiv.classList.remove('hidden');
-                    }
-                    
-                    // Restaura botão
-                    submitBtn.textContent = originalText;
-                    submitBtn.disabled = false;
-                });
+        // Monitor de autenticação
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                console.log("Usuário logado:", user.email);
             } else {
-                console.error("Formulário de login não encontrado!");
-            }
-
-            // =======================================================
-            // REGISTER FORM
-            // =======================================================
-            const registerForm = document.getElementById('register-form');
-            if (registerForm) {
-                registerForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    
-                    const name = document.getElementById('register-name').value;
-                    const email = document.getElementById('register-email').value;
-                    const password = document.getElementById('register-password').value;
-                    const errorDiv = document.getElementById('auth-error');
-                    
-                    if (password.length < 6) {
-                        if (errorDiv) {
-                            errorDiv.textContent = 'A senha deve ter pelo menos 6 caracteres.';
-                            errorDiv.classList.remove('hidden');
-                        }
-                        return;
-                    }
-                    
-                    // Mostra loading no botão
-                    const submitBtn = registerForm.querySelector('button[type="submit"]');
-                    const originalText = submitBtn.textContent;
-                    submitBtn.textContent = "Cadastrando...";
-                    submitBtn.disabled = true;
-                    
-                    const success = await handleRegister(name, email, password);
-                    
-                    if (success) {
-                        if (errorDiv) errorDiv.classList.add('hidden');
-                        // Muda para a aba de login
-                        document.getElementById('login-tab-btn')?.click();
-                        registerForm.reset();
-                    }
-                    
-                    // Restaura botão
-                    submitBtn.textContent = originalText;
-                    submitBtn.disabled = false;
-                });
-            }
-
-            // =======================================================
-            // TABS LOGIN/REGISTER
-            // =======================================================
-            const loginTabBtn = document.getElementById('login-tab-btn');
-            const registerTabBtn = document.getElementById('register-tab-btn');
-            
-            if (loginTabBtn && registerTabBtn) {
-                loginTabBtn.addEventListener('click', () => {
-                    loginTabBtn.classList.add('border-green-600', 'text-green-600');
-                    loginTabBtn.classList.remove('text-gray-500');
-                    registerTabBtn.classList.remove('border-green-600', 'text-green-600');
-                    registerTabBtn.classList.add('text-gray-500');
-                    document.getElementById('login-form')?.classList.remove('hidden');
-                    document.getElementById('register-form')?.classList.add('hidden');
-                });
-
-                registerTabBtn.addEventListener('click', () => {
-                    registerTabBtn.classList.add('border-green-600', 'text-green-600');
-                    registerTabBtn.classList.remove('text-gray-500');
-                    loginTabBtn.classList.remove('border-green-600', 'text-green-600');
-                    loginTabBtn.classList.add('text-gray-500');
-                    document.getElementById('register-form')?.classList.remove('hidden');
-                    document.getElementById('login-form')?.classList.add('hidden');
-                });
-            }
-
-            // =======================================================
-            // FORGOT PASSWORD
-            // =======================================================
-            const forgotLink = document.getElementById('forgot-password-link');
-            if (forgotLink) {
-                forgotLink.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const email = prompt("Digite seu email para redefinir a senha:");
-                    if (email) {
-                        sendPasswordResetEmail(auth, email)
-                            .then(() => showNotification("Email de redefinição enviado!", "success"))
-                            .catch(() => showNotification("Erro ao enviar email.", "error"));
-                    }
-                });
-            }
-
-            // =======================================================
-            // INICIALIZA COMPONENTES UI
-            // =======================================================
-            
-            // Inicializa componentes
-            if (typeof setupNotes === 'function') setupNotes();
-            if (typeof setupConfirmModal === 'function') setupConfirmModal();
-            setupClosePautaNotes();  // Função local
-            
-            // Monitor de autenticação
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    console.log("Usuário autenticado:", user.email);
-                    try {
-                        const userDocRef = doc(db, "users", user.uid);
-                        const userDoc = await getDoc(userDocRef);
-
-                        if (userDoc.exists()) {
-                            const userData = userDoc.data();
-                            currentUserName = userData.name || user.email;
-                            window.currentUserName = currentUserName;
-
-                            if (userData.status === 'approved') {
-                                console.log("Usuário aprovado, mostrando pautas");
-                                showPautaSelectionScreen(user.uid);
-                            } else {
-                                console.log("Usuário pendente");
-                                showScreen('loading');
-                                if (loadingText) {
-                                    loadingText.innerHTML = `
-                                        <div class="text-center">
-                                            <p class="text-xl font-bold text-orange-600">Acesso Pendente</p>
-                                            <p class="mt-2 text-gray-600">Olá, <b>${currentUserName}</b>!</p>
-                                            <p class="text-sm text-gray-500">Sua conta foi criada, mas um administrador precisa aprová-la.</p>
-                                            <button onclick="signOut(auth)" class="mt-6 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Sair</button>
-                                        </div>
-                                    `;
-                                }
-                            }
-                        } else {
-                            console.log("Documento do usuário não encontrado");
-                            await signOut(auth);
-                        }
-                    } catch (error) {
-                        console.error("Erro ao verificar usuário:", error);
-                    }
-                } else {
-                    console.log("Usuário não autenticado");
-                    showScreen('login');
-                }
-            });
-
-            // Esconde loading após 1 segundo (fallback)
-            setTimeout(() => {
-                if (loadingContainer && !loadingContainer.classList.contains('hidden')) {
-                    loadingContainer.classList.add('hidden');
-                    if (loginContainer) loginContainer.classList.remove('hidden');
-                }
-            }, 1000);
-        });
-
-        // =======================================================
-        // MONITORES DE CONEXÃO
-        // =======================================================
-        
-        window.addEventListener('offline', () => {
-            document.getElementById('offline-indicator')?.classList.remove('hidden');
-        });
-
-        window.addEventListener('online', () => {
-            document.getElementById('offline-indicator')?.classList.add('hidden');
-            if (typeof showNotification === 'function') {
-                showNotification("Conexão restabelecida!", "success");
+                console.log("Ninguém logado");
             }
         });
 
-        // =======================================================
-        // EXPOR FUNÇÕES PARA O ESCOPO GLOBAL
-        // =======================================================
-        
-        window.sortColaboradores = sortColaboradores;
-        window.showConfirmModal = showConfirmModal;
-        window.showNotification = showNotification;
-        
-    </script>
+        // Botão de cadastro (simplificado)
+        document.getElementById('register-tab-btn').addEventListener('click', () => {
+            alert("Função de cadastro desabilitada para teste");
+        });
 
-    <!-- Script Bridge -->
-    <script>
-        function exposeGlobalVariables() {
-            const checkInterval = setInterval(() => {
-                if (window.auth && window.currentUserName !== undefined) {
-                    window.dispatchEvent(new CustomEvent('userDataReady', {
-                        detail: {
-                            auth: window.auth,
-                            currentUserName: window.currentUserName
-                        }
-                    }));
-                    clearInterval(checkInterval);
-                }
-            }, 100);
-        }
-        document.addEventListener('DOMContentLoaded', exposeGlobalVariables);
     </script>
 
 </body>
