@@ -1468,6 +1468,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             moveInQueueLogic, 
             saveImportedPauta 
         } from './js/pauta.js';
+        import { setupNotes, sendNotesOnClose } from './js/notes.js';
+        import { setupConfirmModal, showConfirmModal } from './js/confirmModal.js';
         
         // Inicialização do EmailJS usando o novo arquivo de config
         emailjs.init(emailJsConfig.publicKey);
