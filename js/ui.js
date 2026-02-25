@@ -1,5 +1,5 @@
 // ui.js
-import { Utils } from './utils.js';
+import { escapeHTML, normalizeText, showNotification } from './utils.js';
 import { PautaService } from './pauta.js';
 
 export const UIService = {
