@@ -1,5 +1,5 @@
 import { collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { Utils } from './utils.js';
+import { escapeHTML } from './utils.js'; // ✅ Importa apenas a função que precisa
 
 export const ModalService = {
     openPautaTypeModal(app) {
@@ -43,7 +43,7 @@ export const ModalService = {
                 const li = document.createElement('li');
                 li.className = "flex justify-between items-center bg-white border p-2 rounded";
                 li.innerHTML = `
-                    <span>🏢 ${Utils.escapeHTML(room)}</span>
+                    <span>🏢 ${escapeHTML(room)}</span> <!-- ✅ Agora funciona -->
                     <button class="remove-room-btn text-red-500" data-index="${index}">Remover</button>
                 `;
                 list.appendChild(li);
@@ -183,7 +183,7 @@ export const ModalService = {
                 const li = document.createElement('li');
                 li.className = 'flex justify-between items-center p-2 bg-white rounded-md';
                 li.innerHTML = `
-                    <span>${Utils.escapeHTML(demand)}</span>
+                    <span>${escapeHTML(demand)}</span> <!-- ✅ Agora funciona -->
                     <button class="remove-demand-item-btn text-red-500 text-xs">Remover</button>
                 `;
                 container.appendChild(li);
