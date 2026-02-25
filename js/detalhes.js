@@ -4,6 +4,7 @@
  */
 
 import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { showNotification } from './utils.js';
 
 // --- 1. CONSTANTES DE DOCUMENTAÇÃO (LISTA INTEGRAL) ---
 
