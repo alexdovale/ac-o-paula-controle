@@ -2072,25 +2072,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         }
     };
 
-    // Função para configurar listener de colaboradores
-    const setupCollaboratorsListener = (pautaId) => {
-        if (unsubscribeFromCollaborators) {
-            unsubscribeFromCollaborators();
-        }
-        const collaboratorsCollectionRef = collection(db, "pautas", pautaId, "collaborators");
-        unsubscribeFromCollaborators = onSnapshot(collaboratorsCollectionRef, (snapshot) => {
-            colaboradores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            window.colaboradores = colaboradores;
-            colaboradores.sort((a, b) => a.nome.localeCompare(b.nome)); 
-            // Se o modal estiver aberto, atualiza a tabela
-            if (!document.getElementById('collaborators-modal').classList.contains('hidden')) {
-                renderColaboradores(colaboradores);
-            }
-        }, (error) => {
-            console.error("Erro no listener de colaboradores: ", error);
-        });
-    };
-
     // =======================================================
     // EVENT LISTENERS PRINCIPAIS
     // =======================================================
