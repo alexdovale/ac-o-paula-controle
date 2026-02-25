@@ -2,6 +2,9 @@
 import { showNotification } from './utils.js';
 import { sendNotesByEmail } from './emailService.js';
 
+/**
+ * Configura o modal de anotações
+ */
 export function setupNotes() {
     const notesBtn = document.getElementById("notes-btn");
     const notesModal = document.getElementById("notes-modal");
@@ -9,33 +12,58 @@ export function setupNotes() {
     const saveNotesBtn = document.getElementById("save-notes-btn");
     const notesText = document.getElementById("notes-text");
     
-    if (!notesBtn || !notesModal) return;
+    if (!notesBtn || !notesModal) {
+        console.warn("Elementos do modal de anotações não encontrados");
+        return;
+    }
 
+    // Abrir modal
     notesBtn.addEventListener("click", () => {
         const saved = localStorage.getItem("pauta_notes") || "";
         notesText.value = saved;
         notesModal.classList.remove("hidden");
     });
 
-    closeNotesBtn.addEventListener("click", () => {
-        notesModal.classList.add("hidden");
-    });
+    // Fechar modal (botão X)
+    if (closeNotesBtn) {
+        closeNotesBtn.addEventListener("click", () => {
+            notesModal.classList.add("hidden");
+        });
+    }
 
-    saveNotesBtn.addEventListener("click", () => {
-        localStorage.setItem("pauta_notes", notesText.value);
-        showNotification("Anotação salva!", "success");
-        notesModal.classList.add("hidden");
+    // Salvar anotações
+    if (saveNotesBtn) {
+        saveNotesBtn.addEventListener("click", () => {
+            localStorage.setItem("pauta_notes", notesText.value);
+            showNotification("Anotação salva!", "success");
+            notesModal.classList.add("hidden");
+        });
+    }
+
+    // Fechar ao clicar fora do modal
+    notesModal.addEventListener("click", (e) => {
+        if (e.target === notesModal) {
+            notesModal.classList.add("hidden");
+        }
     });
 }
 
-export async function sendNotesOnClose(currentUserName, currentUserEmail) {
+/**
+ * Envia as anotações por email ao fechar a pauta
+ * @param {string} currentUserName - Nome do usuário atual
+ * @param {string} userEmail - Email do usuário
+ */
+export async function sendNotesOnClose(currentUserName, userEmail) {
     const notes = localStorage.getItem("pauta_notes") || "";
-    if (notes.trim() !== "") {
-        try {
-            await sendNotesByEmail(notes, currentUserName, currentUserEmail);
-            showNotification("Anotações enviadas para seu e-mail por segurança!", "info");
-        } catch (err) {
-            console.error("Falha ao enviar backup das notas:", err);
-        }
+    
+    if (notes.trim() === "") {
+        return;
+    }
+    
+    try {
+        await sendNotesByEmail(notes, currentUserName, userEmail);
+        showNotification("Anotações enviadas para seu e-mail por segurança!", "info");
+    } catch (err) {
+        console.error("Falha ao enviar backup das notas:", err);
     }
 }
