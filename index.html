@@ -1269,8 +1269,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
         </div>
     </div>
-        <!-- ======================================================= -->
-    <!-- SCRIPT PRINCIPAL - CORRIGIDO E COMPLETO -->
+      <!-- ======================================================= -->
+    <!-- SCRIPT PRINCIPAL - COMPLETO COM TODAS AS FUNÇÕES -->
     <!-- ======================================================= -->
 
     <script type="module">
@@ -1320,7 +1320,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
         // Colaboradores
         import { 
-            setupCollaboratorsListener,  // ÚNICA DECLARAÇÃO (vem do módulo)
+            setupCollaboratorsListener,
             renderColaboradores,
             resetCollaboratorForm,
             sortColaboradores,
@@ -1400,6 +1400,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         window.isPautaClosed = isPautaClosed;
         window.allAssisted = allAssisted;
         window.colaboradores = colaboradores;
+        window.signOut = signOut;
 
         // =======================================================
         // ELEMENTOS DO DOM
@@ -1416,10 +1417,25 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         // =======================================================
 
         const showScreen = (screenName) => {
-            loadingContainer.classList.toggle('hidden', screenName !== 'loading');
-            loginContainer.classList.toggle('hidden', screenName !== 'login');
-            pautaSelectionContainer.classList.toggle('hidden', screenName !== 'pautaSelection');
-            appContainer.classList.toggle('hidden', screenName !== 'app');
+            loadingContainer?.classList.toggle('hidden', screenName !== 'loading');
+            loginContainer?.classList.toggle('hidden', screenName !== 'login');
+            pautaSelectionContainer?.classList.toggle('hidden', screenName !== 'pautaSelection');
+            appContainer?.classList.toggle('hidden', screenName !== 'app');
+        };
+
+        const showNotification = (message, type = 'success') => {
+            const colors = { info: 'blue', error: 'red', success: 'green' };
+            const notification = document.createElement('div');
+            notification.className = `fixed top-5 right-5 bg-${colors[type]}-500 text-white py-3 px-6 rounded-lg shadow-lg z-[100] transition-transform transform translate-x-full`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            requestAnimationFrame(() => notification.classList.remove('translate-x-full'));
+
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                notification.addEventListener('transitionend', () => notification.remove());
+            }, 3000);
         };
 
         const getUpdatePayload = (data) => {
@@ -1430,63 +1446,67 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             };
         };
 
-        const getPriorityClass = (priority) => ({
-            'URGENTE': 'priority-urgente',
-            'Máxima': 'priority-maxima',
-            'Média': 'priority-media',
-            'Mínima': 'priority-minima'
-        }[priority] || '');
-
-        const searchFilter = (assisted, term) => {
-            if (!term) return true;
-            
-            const arrivalTimeFormatted = assisted.arrivalTime ? new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
-            const normalizedTerm = normalizeText(term);
-            const attendantName = (typeof assisted.attendant === 'object' && assisted.attendant !== null) 
-                                  ? assisted.attendant.name || assisted.attendant.nome || '' 
-                                  : assisted.attendant || '';
-            
-            return normalizeText(assisted.name).includes(normalizedTerm) ||
-                   (assisted.cpf && normalizeText(assisted.cpf).includes(normalizedTerm)) ||
-                   normalizeText(assisted.subject).includes(normalizedTerm) ||
-                   (assisted.scheduledTime && assisted.scheduledTime.includes(normalizedTerm)) ||
-                   (arrivalTimeFormatted && arrivalTimeFormatted.includes(normalizedTerm)) ||
-                   (attendantName && normalizeText(attendantName).includes(normalizedTerm)) ||
-                   (assisted.assignedCollaborator?.name && normalizeText(assisted.assignedCollaborator.name).includes(normalizedTerm));
-        };
-
         // =======================================================
-        // FUNÇÕES DE RENDERIZAÇÃO (SIMPLIFICADAS)
+        // FUNÇÃO DE LOGIN (CRÍTICA!)
         // =======================================================
 
-        const renderAssistedList = () => {
-            // Implementação completa será adicionada depois
-            console.log("Renderizando lista...");
-        };
-
-        const togglePautaLock = (isClosed) => {
-            isPautaClosed = isClosed;
-            window.isPautaClosed = isClosed;
-            
-            const closedAlert = document.getElementById('closed-pauta-alert');
-            const closeBtn = document.getElementById('close-pauta-btn');
-            const reopenBtn = document.getElementById('reopen-pauta-btn');
-            
-            if (closedAlert) {
-                if (isClosed) {
-                    closedAlert.classList.remove('hidden');
-                    if (closeBtn) closeBtn.classList.add('hidden');
-                    if (reopenBtn) reopenBtn.classList.remove('hidden');
-                } else {
-                    closedAlert.classList.add('hidden');
-                    if (closeBtn) closeBtn.classList.remove('hidden');
-                    if (reopenBtn) reopenBtn.classList.add('hidden');
+        async function handleLogin(email, password) {
+            try {
+                console.log("Tentando login com:", email);
+                await signInWithEmailAndPassword(auth, email, password);
+                console.log("Login bem sucedido!");
+                return true;
+            } catch (error) {
+                console.error("Erro no login:", error);
+                let errorMessage = "Email ou senha inválidos.";
+                if (error.code === 'auth/user-not-found') {
+                    errorMessage = "Usuário não encontrado.";
+                } else if (error.code === 'auth/wrong-password') {
+                    errorMessage = "Senha incorreta.";
+                } else if (error.code === 'auth/too-many-requests') {
+                    errorMessage = "Muitas tentativas. Tente mais tarde.";
                 }
+                showNotification(errorMessage, 'error');
+                return false;
             }
-        };
+        }
 
         // =======================================================
-        // FUNÇÃO CORRIGIDA: setupClosePautaNotes (NÃO REMOVER!)
+        // FUNÇÃO DE CADASTRO
+        // =======================================================
+
+        async function handleRegister(name, email, password) {
+            try {
+                console.log("Tentando cadastrar:", email);
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                await setDoc(doc(db, "users", user.uid), {
+                    name: name,
+                    email: email,
+                    uid: user.uid,
+                    status: 'pending',
+                    role: 'user',
+                    createdAt: new Date().toISOString()
+                });
+
+                showNotification('Conta criada! Aguarde aprovação.', 'success');
+                return true;
+            } catch (error) {
+                console.error("Erro no cadastro:", error);
+                let errorMessage = "Erro ao criar conta.";
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage = "Email já está em uso.";
+                } else if (error.code === 'auth/weak-password') {
+                    errorMessage = "Senha muito fraca.";
+                }
+                showNotification(errorMessage, 'error');
+                return false;
+            }
+        }
+
+        // =======================================================
+        // FUNÇÃO setupClosePautaNotes
         // =======================================================
         
         function setupClosePautaNotes() {
@@ -1531,6 +1551,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             localStorage.removeItem('lastPautaId');
             localStorage.removeItem('lastPautaType');
             showScreen('pautaSelection');
+            
+            // Aqui você pode adicionar a lógica para carregar a lista de pautas
+            const pautasList = document.getElementById('pautas-list');
+            if (pautasList) {
+                pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500">Nenhuma pauta encontrada. Crie uma para começar.</p>';
+            }
         };
 
         const loadPauta = async (pautaId, pautaName, pautaType) => {
@@ -1543,11 +1569,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             localStorage.setItem('lastPautaId', pautaId);
             localStorage.setItem('lastPautaType', pautaType);
 
-            // Usando a função IMPORTADA do módulo (NÃO redeclarada)
-            setupCollaboratorsListener(db, pautaId, (lista) => {
-                colaboradores = lista;
-                window.colaboradores = lista;
-            });
+            // Usando a função IMPORTADA do módulo
+            if (typeof setupCollaboratorsListener === 'function') {
+                setupCollaboratorsListener(db, pautaId, (lista) => {
+                    colaboradores = lista;
+                    window.colaboradores = lista;
+                });
+            }
             
             showScreen('app');
         };
@@ -1559,21 +1587,138 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         document.addEventListener('DOMContentLoaded', () => {
             console.log("📄 DOM carregado, inicializando componentes...");
             
-            // Inicializa componentes UI
-            setupNotes();
-            setupConfirmModal();
-            setupClosePautaNotes();  // AGORA ESTÁ DEFINIDA!
-            
-            // Esconde loading e mostra login após 1 segundo
-            setTimeout(() => {
-                if (loadingContainer) loadingContainer.classList.add('hidden');
-                if (loginContainer) loginContainer.classList.remove('hidden');
-                console.log("🔓 Tela de login exibida");
-            }, 1000);
+            // =======================================================
+            // LOGIN FORM
+            // =======================================================
+            const loginForm = document.getElementById('login-form');
+            if (loginForm) {
+                loginForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    console.log("Formulário de login submetido");
+                    
+                    const email = document.getElementById('login-email').value;
+                    const password = document.getElementById('login-password').value;
+                    const errorDiv = document.getElementById('auth-error');
+                    
+                    // Mostra loading no botão
+                    const submitBtn = loginForm.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.textContent;
+                    submitBtn.textContent = "Entrando...";
+                    submitBtn.disabled = true;
+                    
+                    const success = await handleLogin(email, password);
+                    
+                    if (success) {
+                        if (errorDiv) errorDiv.classList.add('hidden');
+                    } else {
+                        if (errorDiv) errorDiv.classList.remove('hidden');
+                    }
+                    
+                    // Restaura botão
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                });
+            } else {
+                console.error("Formulário de login não encontrado!");
+            }
 
+            // =======================================================
+            // REGISTER FORM
+            // =======================================================
+            const registerForm = document.getElementById('register-form');
+            if (registerForm) {
+                registerForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    const name = document.getElementById('register-name').value;
+                    const email = document.getElementById('register-email').value;
+                    const password = document.getElementById('register-password').value;
+                    const errorDiv = document.getElementById('auth-error');
+                    
+                    if (password.length < 6) {
+                        if (errorDiv) {
+                            errorDiv.textContent = 'A senha deve ter pelo menos 6 caracteres.';
+                            errorDiv.classList.remove('hidden');
+                        }
+                        return;
+                    }
+                    
+                    // Mostra loading no botão
+                    const submitBtn = registerForm.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.textContent;
+                    submitBtn.textContent = "Cadastrando...";
+                    submitBtn.disabled = true;
+                    
+                    const success = await handleRegister(name, email, password);
+                    
+                    if (success) {
+                        if (errorDiv) errorDiv.classList.add('hidden');
+                        // Muda para a aba de login
+                        document.getElementById('login-tab-btn')?.click();
+                        registerForm.reset();
+                    }
+                    
+                    // Restaura botão
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                });
+            }
+
+            // =======================================================
+            // TABS LOGIN/REGISTER
+            // =======================================================
+            const loginTabBtn = document.getElementById('login-tab-btn');
+            const registerTabBtn = document.getElementById('register-tab-btn');
+            
+            if (loginTabBtn && registerTabBtn) {
+                loginTabBtn.addEventListener('click', () => {
+                    loginTabBtn.classList.add('border-green-600', 'text-green-600');
+                    loginTabBtn.classList.remove('text-gray-500');
+                    registerTabBtn.classList.remove('border-green-600', 'text-green-600');
+                    registerTabBtn.classList.add('text-gray-500');
+                    document.getElementById('login-form')?.classList.remove('hidden');
+                    document.getElementById('register-form')?.classList.add('hidden');
+                });
+
+                registerTabBtn.addEventListener('click', () => {
+                    registerTabBtn.classList.add('border-green-600', 'text-green-600');
+                    registerTabBtn.classList.remove('text-gray-500');
+                    loginTabBtn.classList.remove('border-green-600', 'text-green-600');
+                    loginTabBtn.classList.add('text-gray-500');
+                    document.getElementById('register-form')?.classList.remove('hidden');
+                    document.getElementById('login-form')?.classList.add('hidden');
+                });
+            }
+
+            // =======================================================
+            // FORGOT PASSWORD
+            // =======================================================
+            const forgotLink = document.getElementById('forgot-password-link');
+            if (forgotLink) {
+                forgotLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const email = prompt("Digite seu email para redefinir a senha:");
+                    if (email) {
+                        sendPasswordResetEmail(auth, email)
+                            .then(() => showNotification("Email de redefinição enviado!", "success"))
+                            .catch(() => showNotification("Erro ao enviar email.", "error"));
+                    }
+                });
+            }
+
+            // =======================================================
+            // INICIALIZA COMPONENTES UI
+            // =======================================================
+            
+            // Inicializa componentes
+            if (typeof setupNotes === 'function') setupNotes();
+            if (typeof setupConfirmModal === 'function') setupConfirmModal();
+            setupClosePautaNotes();  // Função local
+            
             // Monitor de autenticação
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
+                    console.log("Usuário autenticado:", user.email);
                     try {
                         const userDocRef = doc(db, "users", user.uid);
                         const userDoc = await getDoc(userDocRef);
@@ -1584,8 +1729,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             window.currentUserName = currentUserName;
 
                             if (userData.status === 'approved') {
+                                console.log("Usuário aprovado, mostrando pautas");
                                 showPautaSelectionScreen(user.uid);
                             } else {
+                                console.log("Usuário pendente");
                                 showScreen('loading');
                                 if (loadingText) {
                                     loadingText.innerHTML = `
@@ -1598,12 +1745,26 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                                     `;
                                 }
                             }
+                        } else {
+                            console.log("Documento do usuário não encontrado");
+                            await signOut(auth);
                         }
                     } catch (error) {
                         console.error("Erro ao verificar usuário:", error);
                     }
+                } else {
+                    console.log("Usuário não autenticado");
+                    showScreen('login');
                 }
             });
+
+            // Esconde loading após 1 segundo (fallback)
+            setTimeout(() => {
+                if (loadingContainer && !loadingContainer.classList.contains('hidden')) {
+                    loadingContainer.classList.add('hidden');
+                    if (loginContainer) loginContainer.classList.remove('hidden');
+                }
+            }, 1000);
         });
 
         // =======================================================
@@ -1616,7 +1777,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
         window.addEventListener('online', () => {
             document.getElementById('offline-indicator')?.classList.add('hidden');
-            showNotification("Conexão restabelecida!", "success");
+            if (typeof showNotification === 'function') {
+                showNotification("Conexão restabelecida!", "success");
+            }
         });
 
         // =======================================================
@@ -1625,7 +1788,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         
         window.sortColaboradores = sortColaboradores;
         window.showConfirmModal = showConfirmModal;
-        window.signOut = signOut;
+        window.showNotification = showNotification;
         
     </script>
 
