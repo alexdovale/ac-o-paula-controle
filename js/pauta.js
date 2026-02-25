@@ -1,99 +1,103 @@
-// js/pauta.js
-import { 
-    collection, 
-    onSnapshot, 
-    doc, 
-    updateDoc, 
-    deleteDoc, 
-    writeBatch, 
-    addDoc 
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { Utils } from './utils.js';
 
-/**
- * Escuta mudanças nos atendimentos em tempo real para uma pauta específica.
- */
-export const setupAttendancesListener = (db, pautaId, callback) => {
-    if (!pautaId) return;
-    const colRef = collection(db, "pautas", pautaId, "attendances");
-    return onSnapshot(colRef, (snapshot) => {
-        const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        callback(data);
-    }, (error) => {
-        console.error("Erro no listener de atendimentos:", error);
-    });
-};
+export const PautaService = {
+    currentListeners: new Map(),
 
-/**
- * Atualiza dados de um atendimento (ex: mudar de pauta para aguardando).
- */
-export const updateAttendanceStatus = async (db, pautaId, assistidoId, newData) => {
-    if (!pautaId || !assistidoId) return;
-    const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
-    return await updateDoc(docRef, {
-        ...newData,
-        lastActionTimestamp: new Date().toISOString()
-    });
-};
+    setupAttendancesListener(db, pautaId, callback) {
+        if (this.currentListeners.has(pautaId)) {
+            this.currentListeners.get(pautaId)();
+        }
 
-/**
- * Exclui um assistido da pauta.
- */
-export const deleteAttendance = async (db, pautaId, assistidoId) => {
-    if (!pautaId || !assistidoId) return;
-    const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
-    return await deleteDoc(docRef);
-};
-
-/**
- * Salva a lista de assistidos vinda da importação de um arquivo CSV.
- */
-export const saveImportedPauta = async (db, pautaId, data, userName) => {
-    if (!pautaId || !data || data.length === 0) return;
-
-    const batch = writeBatch(db);
-    const collectionRef = collection(db, "pautas", pautaId, "attendances");
-
-    data.forEach(item => {
-        const newDocRef = doc(collectionRef);
-        batch.set(newDocRef, {
-            name: item.name,
-            scheduledTime: item.scheduledTime,
-            subject: item.subject,
-            cpf: item.cpf || null,
-            status: 'pauta',
-            type: 'agendamento',
-            createdAt: new Date().toISOString(),
-            lastActionBy: userName || 'Sistema',
-            isConfirmed: false,
-            confirmationDetails: null
+        const attendanceRef = collection(db, "pautas", pautaId, "attendances");
+        const unsubscribe = onSnapshot(attendanceRef, (snapshot) => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            callback(data);
         });
-    });
 
-    return await batch.commit();
-};
+        this.currentListeners.set(pautaId, unsubscribe);
+        return unsubscribe;
+    },
 
-/**
- * Lógica para reordenar a fila manualmente (Setas ou Drag and Drop).
- */
-export const moveInQueueLogic = async (db, pautaId, list, id, direction) => {
-    const currentIndex = list.findIndex(item => item.id === id);
-    if (currentIndex === -1) return;
+    async addAssisted(db, pautaId, data, userName) {
+        const payload = {
+            ...data,
+            lastActionBy: userName,
+            lastActionTimestamp: new Date().toISOString(),
+            createdAt: new Date().toISOString()
+        };
 
-    let newList = [...list];
-    if (direction === 'up' && currentIndex > 0) {
-        [newList[currentIndex - 1], newList[currentIndex]] = [newList[currentIndex], newList[currentIndex - 1]];
-    } else if (direction === 'down' && currentIndex < newList.length - 1) {
-        [newList[currentIndex], newList[currentIndex + 1]] = [newList[currentIndex + 1], newList[currentIndex]];
-    } else if (direction === 'top') {
-        const [movedItem] = newList.splice(currentIndex, 1);
-        newList.unshift(movedItem);
+        const attendanceRef = collection(db, "pautas", pautaId, "attendances");
+        await addDoc(attendanceRef, payload);
+        Utils.showNotification("Assistido adicionado!");
+    },
+
+    async updateStatus(db, pautaId, assistedId, updates, userName) {
+        const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
+        await updateDoc(docRef, {
+            ...updates,
+            lastActionBy: userName,
+            lastActionTimestamp: new Date().toISOString()
+        });
+    },
+
+    async deleteAssisted(db, pautaId, assistedId) {
+        const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
+        await deleteDoc(docRef);
+        Utils.showNotification("Registro apagado.");
+    },
+
+    async reorderQueue(db, pautaId, items) {
+        const batch = writeBatch(db);
+        items.forEach((item, index) => {
+            const docRef = doc(db, "pautas", pautaId, "attendances", item.id);
+            batch.update(docRef, { manualIndex: index });
+        });
+        await batch.commit();
+    },
+
+    async handleCSVUpload(event, app) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        try {
+            const { parsePautaCSV } = await import('./csvHandler.js');
+            const assistidos = await parsePautaCSV(file);
+            
+            for (const assistido of assistidos) {
+                await this.addAssisted(app.db, app.currentPauta.id, assistido, app.currentUser.displayName);
+            }
+            
+            Utils.showNotification(`${assistidos.length} registros importados!`);
+        } catch (error) {
+            Utils.showNotification(error.message, "error");
+        } finally {
+            event.target.value = '';
+        }
+    },
+
+    calculatePriority(assisted) {
+        // Lógica de cálculo de prioridade
+        if (!assisted || assisted.status !== 'aguardando') return 'N/A';
+        if (assisted.priority === 'URGENTE') return 'URGENTE';
+        if (assisted.type === 'avulso') return 'Média';
+        // ... resto da lógica
+    },
+
+    sortAguardando(list, orderType) {
+        // Lógica de ordenação da fila
+        return [...list].sort((a, b) => {
+            if (orderType === 'manual') return (a.manualIndex || 0) - (b.manualIndex || 0);
+            // ... resto da lógica
+        });
+    },
+
+    getPriorityClass(priority) {
+        return {
+            'URGENTE': 'priority-urgente',
+            'Máxima': 'priority-maxima',
+            'Média': 'priority-media',
+            'Mínima': 'priority-minima'
+        }[priority] || '';
     }
-
-    const batch = writeBatch(db);
-    newList.forEach((item, index) => {
-        const ref = doc(db, "pautas", pautaId, "attendances", item.id);
-        batch.update(ref, { manualIndex: index });
-    });
-    
-    return await batch.commit();
 };
