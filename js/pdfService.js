@@ -3,6 +3,9 @@
 /**
  * Utilitários de limpeza e formatação
  */
+
+import { showNotification } from './utils.js';
+
 const cleanString = (str) => String(str || '').replace(/"/g, '');
 
 const getSafeDate = (timeValue) => {
