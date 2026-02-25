@@ -2987,6 +2987,536 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     }
     
     document.addEventListener('DOMContentLoaded', exposeGlobalVariables);
+</script><script type="module">
+    // =======================================================
+    // IMPORTAÇÕES DOS MÓDULOS
+    // =======================================================
+    
+    // Configurações
+    import { firebaseConfig, emailJsConfig } from './js/config.js';
+
+    // Utilitários
+    import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
+
+    // Dados e Lógica de Negócio
+    import { subjectTree, flatSubjects } from './js/assuntos.js';
+    import { getChecklistHTML } from './js/checklist.js';
+    import { parsePautaCSV } from './js/csvHandler.js';
+
+    // Serviços
+    import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
+    import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
+
+    // Admin e Estatísticas
+    import { 
+        logAction as logActionDB, 
+        loadUsersList, 
+        cleanupOldData, 
+        approveUser, 
+        updateUserRole, 
+        deleteUser, 
+        loadAuditLogs, 
+        exportAuditLogsPDF, 
+        loadDashboardData, 
+        populateUserFilter 
+    } from './js/admin.js';
+    import { renderStatisticsModal } from './js/estatisticas.js';
+    import { loadHistoricoStats, exportStatsToCSV } from './js/historicoStats.js';
+
+    // Gerenciamento de Pauta
+    import { 
+        setupAttendancesListener, 
+        updateAttendanceStatus, 
+        deleteAttendance, 
+        moveInQueueLogic, 
+        saveImportedPauta 
+    } from './js/pauta.js';
+
+    // Colaboradores
+    import { 
+        setupCollaboratorsListener,  // <-- ÚNICA DECLARAÇÃO (vinda do módulo)
+        renderColaboradores,
+        resetCollaboratorForm,
+        sortColaboradores,
+        saveCollaboratorData,
+        toggleCollaboratorPresence,
+        deleteCollaborator,
+        clearCollaborators
+    } from './js/colaboradores.js';
+
+    // UI e Modais
+    import { setupDetailsModal, openDetailsModal } from './js/detalhes.js';
+    import { setupNotes, sendNotesOnClose } from './js/notes.js';
+    import { setupConfirmModal, showConfirmModal } from './js/confirmModal.js';
+
+    // Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, where, orderBy, limit, getDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove, setDoc, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
+
+    // =======================================================
+    // INICIALIZAÇÃO DO FIREBASE
+    // =======================================================
+    
+    console.log("🚀 INICIANDO SISTEMA...");
+    
+    try {
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // Expõe as variáveis globalmente
+        window.db = db;
+        window.auth = auth;
+        
+        // Ativa persistência offline
+        try {
+            enableIndexedDbPersistence(db).catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    console.warn('Persistência falhou: Múltiplas abas abertas.');
+                } else if (err.code == 'unimplemented') {
+                    console.warn('Persistência falhou: Navegador não suportado.');
+                }
+            });
+        } catch (e) {
+            console.log("Erro ao ativar persistência:", e);
+        }
+        
+        console.log("✅ Firebase inicializado!");
+        
+    } catch (error) {
+        console.error("❌ ERRO no Firebase:", error);
+    }
+
+    // =======================================================
+    // INICIALIZAÇÃO DO EMAILJS
+    // =======================================================
+    
+    try {
+        emailjs.init(emailJsConfig.publicKey);
+        console.log("✅ EmailJS inicializado!");
+    } catch (error) {
+        console.error("❌ ERRO no EmailJS:", error);
+    }
+
+    // =======================================================
+    // VARIÁVEIS GLOBAIS
+    // =======================================================
+    
+    let allAssisted = [], 
+        currentPautaId = null, 
+        unsubscribeFromAttendances = () => {}, 
+        currentUserName = '', 
+        currentPautaOwnerId = null, 
+        isPautaClosed = false;
+    let currentPautaData = null;
+    let assistedIdToHandle = null;
+    let assistedNameToHandle = null;
+    let customRoomsList = [];
+    let assistedIdForDelegation = null;
+    let assistedNameForDelegation = null;
+    let collaboratorNameForDelegation = null;
+    let colaboradores = [];
+    let editCollaboratorId = null;
+    let unsubscribeFromCollaborators = () => {};
+
+    // Expõe variáveis globalmente
+    window.db = db;
+    window.auth = auth;
+    window.currentUserName = currentUserName;
+    window.currentPautaId = currentPautaId;
+    window.currentPautaData = currentPautaData;
+    window.currentPautaOwnerId = currentPautaOwnerId;
+    window.isPautaClosed = isPautaClosed;
+    window.allAssisted = allAssisted;
+    window.colaboradores = colaboradores;
+
+    // =======================================================
+    // FUNÇÕES DO SISTEMA
+    // =======================================================
+
+    const loadingContainer = document.getElementById('loading-container');
+    const loginContainer = document.getElementById('login-container');
+    const pautaSelectionContainer = document.getElementById('pauta-selection-container');
+    const appContainer = document.getElementById('app-container');
+    const loadingText = document.getElementById('loading-text');
+
+    // Função para mostrar telas
+    const showScreen = (screenName) => {
+        loadingContainer.classList.toggle('hidden', screenName !== 'loading');
+        loginContainer.classList.toggle('hidden', screenName !== 'login');
+        pautaSelectionContainer.classList.toggle('hidden', screenName !== 'pautaSelection');
+        appContainer.classList.toggle('hidden', screenName !== 'app');
+    };
+
+    // Função para atualizar payload
+    const getUpdatePayload = (data) => {
+        return {
+            ...data,
+            lastActionBy: currentUserName,
+            lastActionTimestamp: new Date().toISOString()
+        };
+    };
+
+    // =======================================================
+    // FUNÇÕES DE NAVEGAÇÃO
+    // =======================================================
+
+    const showPautaSelectionScreen = (userId) => {
+        localStorage.removeItem('lastPautaId');
+        localStorage.removeItem('lastPautaType');
+
+        const pautasList = document.getElementById('pautas-list');
+        pautasList.innerHTML = '<p class="col-span-full text-center">Carregando pautas...</p>';
+
+        const q = query(collection(db, "pautas"), where("members", "array-contains", userId));
+
+        onSnapshot(q, (snapshot) => {
+            pautasList.innerHTML = ''; 
+            const fragment = document.createDocumentFragment();
+            const now = new Date();
+            
+            if (snapshot.empty) {
+                pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500">Nenhuma pauta encontrada. Crie uma para começar.</p>';
+                return;
+            }
+
+            snapshot.docs.forEach((docSnap) => {
+                const pauta = docSnap.data();
+                let isExpired = false;
+                if (pauta.createdAt) {
+                    const creationDate = new Date(pauta.createdAt);
+                    const expirationDate = new Date(creationDate);
+                    expirationDate.setDate(creationDate.getDate() + 7);
+                    if (now > expirationDate) {
+                        isExpired = true;
+                    }
+                }
+                const card = createPautaCard(docSnap, isExpired);
+                fragment.appendChild(card);
+            });
+            pautasList.appendChild(fragment);
+
+        }, (error) => {
+            console.error("Erro ao buscar pautas:", error);
+            pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Ocorreu um erro ao carregar as pautas.</p>';
+        });
+
+        showScreen('pautaSelection');
+    };
+
+    // Função para criar card de pauta
+    const createPautaCard = (docSnap, isExpired) => {
+        const pauta = docSnap.data();
+        const card = document.createElement('div');
+        card.className = "relative bg-white p-6 rounded-lg shadow-md flex flex-col justify-between h-full";
+        
+        if (isExpired) {
+            card.classList.add('opacity-60', 'bg-gray-100', 'cursor-not-allowed');
+        } else {
+            card.classList.add('hover:shadow-xl', 'transition-shadow', 'cursor-pointer');
+        }
+
+        const deleteButton = document.createElement('button');
+        deleteButton.className = "absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:text-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500";
+        deleteButton.setAttribute('aria-label', 'Excluir pauta');
+        deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
+
+        deleteButton.addEventListener('click', (event) => {
+            event.stopPropagation(); 
+            if (confirm(`Tem certeza que deseja apagar a pauta "${pauta.name}"?`)) {
+                deletePauta(docSnap.id);
+            }
+        });
+
+        card.appendChild(deleteButton);
+
+        const creationDate = pauta.createdAt ? new Date(pauta.createdAt) : new Date();
+        const expirationDate = new Date(creationDate);
+        expirationDate.setDate(creationDate.getDate() + 7);
+
+        const formattedCreationDate = creationDate.toLocaleDateString('pt-BR');
+        const formattedExpirationDate = expirationDate.toLocaleDateString('pt-BR');
+
+        const contentDiv = document.createElement('div');
+        const title = document.createElement('h3');
+        title.className = "font-bold text-xl mb-2";
+        title.textContent = pauta.name;
+
+        const members = document.createElement('p');
+        members.className = "text-gray-600";
+        members.textContent = `Membros: ${pauta.memberEmails?.length || 1}`;
+
+        contentDiv.appendChild(title);
+        contentDiv.appendChild(members);
+
+        const footerDiv = document.createElement('div');
+        footerDiv.className = "mt-4 pt-2 border-t border-gray-200";
+        const createdP = document.createElement('p');
+        createdP.className = "text-xs text-gray-500";
+        createdP.innerHTML = `Criada em: <strong>${formattedCreationDate}</strong>`;
+
+        const expiresP = document.createElement('p');
+        if (isExpired) {
+            expiresP.className = "text-xs text-gray-500 font-semibold";
+            expiresP.innerHTML = `Prazo de acesso expirou em: <strong>${formattedExpirationDate}</strong>`;
+        } else {
+            expiresP.className = "text-xs text-red-600";
+            expiresP.innerHTML = `Será eliminada em: <strong>${formattedExpirationDate}</strong>`;
+        }
+
+        footerDiv.appendChild(createdP);
+        footerDiv.appendChild(expiresP);
+        card.appendChild(contentDiv);
+        card.appendChild(footerDiv);
+        
+        card.addEventListener('click', (event) => {
+            if (event.target.closest('button')) return;
+
+            if (isExpired) {
+                showNotification("Pauta inacessível pois cumpriu seu prazo.", "error");
+            } else {
+                loadPauta(docSnap.id, pauta.name, pauta.type);
+            }
+        });
+        return card;
+    };
+
+    // Função para deletar pauta
+    const deletePauta = async (pautaId) => {
+        try {
+            await deleteDoc(doc(db, "pautas", pautaId));
+        } catch (error) {
+            console.error("Erro ao excluir a pauta:", error);
+            showNotification("Erro ao excluir a pauta.", "error");
+        }
+    };
+
+    // Função para carregar pauta
+    const loadPauta = async (pautaId, pautaName, pautaType) => {
+        currentPautaId = pautaId;
+        window.currentPautaId = pautaId;
+        document.getElementById('pauta-title').textContent = pautaName;
+
+        localStorage.setItem('lastPautaId', pautaId);
+        localStorage.setItem('lastPautaType', pautaType);
+
+        const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
+        if (pautaDoc.exists()) {
+            const pautaData = pautaDoc.data();
+            currentPautaData = pautaData;
+            window.currentPautaData = pautaData;
+            currentPautaOwnerId = pautaData.owner;
+            window.currentPautaOwnerId = pautaData.owner;
+            isPautaClosed = pautaData.isClosed || false;
+            window.isPautaClosed = isPautaClosed;
+            
+            togglePautaLock(isPautaClosed);
+
+            const emAtendimentoColumn = document.getElementById('em-atendimento-column');
+            const distColumn = document.getElementById('distribuicao-column');
+            const mainContent = document.getElementById('main-content');
+
+            if (pautaData.useDelegationFlow) {
+                emAtendimentoColumn.classList.remove('hidden');
+            } else {
+                emAtendimentoColumn.classList.add('hidden');
+            }
+
+            if (pautaData.useDistributionFlow) {
+                distColumn.classList.remove('hidden');
+            } else {
+                distColumn.classList.add('hidden');
+            }
+
+            mainContent.classList.remove('lg:grid-cols-3', 'lg:grid-cols-4', 'lg:grid-cols-5');
+            let colunas = 3;
+            if (pautaData.useDelegationFlow) colunas++;
+            if (pautaData.useDistributionFlow) colunas++;
+            mainContent.classList.add(`lg:grid-cols-${colunas}`);
+        }
+
+        setupRealtimeListener(pautaId);
+        // Usando a função IMPORTADA do módulo (não redeclarada)
+        setupCollaboratorsListener(db, pautaId, (lista) => {
+            colaboradores = lista;
+            window.colaboradores = lista;
+        });
+        showScreen('app');
+    };
+
+    // Função para configurar listener em tempo real
+    const setupRealtimeListener = (pautaId) => {
+        if (unsubscribeFromAttendances) unsubscribeFromAttendances();
+        const attendanceCollectionRef = collection(db, "pautas", pautaId, "attendances");
+        unsubscribeFromAttendances = onSnapshot(attendanceCollectionRef, (snapshot) => {
+            allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            window.allAssisted = allAssisted;
+            renderAssistedList();
+        }, (error) => console.error("Erro no listener do Firestore: ", error));
+    };
+
+    // Função para alternar tabs
+    const switchTab = (tabName) => {
+        // ... (mantenha sua função switchTab existente)
+    };
+
+    // Função para renderizar lista (simplificada)
+    const renderAssistedList = () => {
+        // ... (mantenha sua função renderAssistedList existente)
+    };
+
+    const togglePautaLock = (isClosed) => {
+        // ... (mantenha sua função togglePautaLock existente)
+    };
+
+    // =======================================================
+    // FUNÇÃO CORRIGIDA: setupClosePautaNotes (estava faltando)
+    // =======================================================
+    
+    function setupClosePautaNotes() {
+        console.log("Configurando close pauta notes...");
+        const closePautaBtn = document.getElementById("close-pauta-btn");
+        const confirmCloseBtn = document.getElementById("confirm-close-pauta-btn");
+        
+        if (!closePautaBtn || !confirmCloseBtn) {
+            console.warn("Botões de fechar pauta não encontrados");
+            return;
+        }
+        
+        let shouldSendNotes = false;
+        
+        closePautaBtn.addEventListener("click", () => {
+            shouldSendNotes = true;
+        });
+        
+        confirmCloseBtn.addEventListener("click", async () => {
+            setTimeout(async () => {
+                if (shouldSendNotes) {
+                    const isPasswordModalHidden = document.getElementById('close-pauta-modal')?.classList.contains('hidden');
+                    
+                    if (isPasswordModalHidden) {
+                        try {
+                            const notes = localStorage.getItem("pauta_notes") || "";
+                            if (notes.trim() !== "") {
+                                await sendNotesByEmail(notes, currentUserName, auth?.currentUser?.email);
+                                showNotification("Anotações enviadas para seu e-mail!", "info");
+                            }
+                        } catch (err) {
+                            console.error("Erro ao enviar notas:", err);
+                        }
+                    }
+                    shouldSendNotes = false;
+                }
+            }, 1000);
+        });
+    }
+
+    // =======================================================
+    // INICIALIZAÇÃO
+    // =======================================================
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log("📄 DOM carregado, inicializando componentes...");
+        
+        // Inicializa componentes
+        setupNotes();
+        setupConfirmModal();
+        setupClosePautaNotes();  // <-- AGORA ESTÁ DEFINIDA!
+        setupDetailsModal({ db, getChecklistHTML, getUpdatePayload, showNotification });
+
+        // Esconde loading e mostra login após 1 segundo
+        setTimeout(() => {
+            const loading = document.getElementById('loading-container');
+            const login = document.getElementById('login-container');
+            if (loading) loading.classList.add('hidden');
+            if (login) login.classList.remove('hidden');
+            console.log("🔓 Tela de login exibida");
+        }, 1000);
+
+        // Inicia auth state
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    const userDocRef = doc(db, "users", user.uid);
+                    const userDoc = await getDoc(userDocRef);
+
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        currentUserName = userData.name || user.email;
+                        window.currentUserName = currentUserName;
+
+                        if (userData.status === 'approved') {
+                            const lastPautaId = localStorage.getItem('lastPautaId');
+                            if (lastPautaId) {
+                                const pautaRef = doc(db, "pautas", lastPautaId);
+                                const pautaSnap = await getDoc(pautaRef);
+                                if (pautaSnap.exists() && pautaSnap.data().members.includes(user.uid)) {
+                                    loadPauta(lastPautaId, pautaSnap.data().name, pautaSnap.data().type);
+                                } else {
+                                    showPautaSelectionScreen(user.uid);
+                                }
+                            } else {
+                                showPautaSelectionScreen(user.uid);
+                            }
+                        } else {
+                            showScreen('loading');
+                            loadingText.innerHTML = `
+                                <div class="text-center">
+                                    <p class="text-xl font-bold text-orange-600">Acesso Pendente</p>
+                                    <p class="mt-2 text-gray-600">Olá, <b>${currentUserName}</b>!</p>
+                                    <p class="text-sm text-gray-500">Sua conta foi criada, mas um administrador precisa aprová-la.</p>
+                                    <button onclick="signOut(auth)" class="mt-6 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Sair</button>
+                                </div>
+                            `;
+                        }
+                    }
+                } catch (error) {
+                    console.error("Erro ao verificar usuário:", error);
+                }
+            }
+        });
+    });
+
+    // =======================================================
+    // MONITORES DE CONEXÃO
+    // =======================================================
+    
+    window.addEventListener('offline', () => {
+        document.getElementById('offline-indicator')?.classList.remove('hidden');
+    });
+
+    window.addEventListener('online', () => {
+        document.getElementById('offline-indicator')?.classList.add('hidden');
+        showNotification("Conexão restabelecida!", "success");
+    });
+
+    // =======================================================
+    // EXPOR FUNÇÕES PARA O ESCOPO GLOBAL
+    // =======================================================
+    
+    window.sortColaboradores = sortColaboradores;
+    window.showConfirmModal = showConfirmModal;
+    
+</script>
+
+<!-- Script Bridge -->
+<script>
+    function exposeGlobalVariables() {
+        const checkInterval = setInterval(() => {
+            if (window.auth && window.currentUserName !== undefined) {
+                window.dispatchEvent(new CustomEvent('userDataReady', {
+                    detail: {
+                        auth: window.auth,
+                        currentUserName: window.currentUserName
+                    }
+                }));
+                clearInterval(checkInterval);
+            }
+        }, 100);
+    }
+    document.addEventListener('DOMContentLoaded', exposeGlobalVariables);
 </script>
 
 </body>
