@@ -8,13 +8,12 @@
  */
 export const escapeHTML = (str) => {
     if (!str) return '';
-    return String(str).replace(/[&<>'"]/g, tag => ({
-        '&': '&amp;', 
-        '<': '&lt;', 
-        '>': '&gt;', 
-        "'": '&#39;', 
-        '"': '&quot;'
-    }[tag]));
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 };
 
 /**
@@ -35,12 +34,16 @@ export const showNotification = (message, type = 'success') => {
     document.body.appendChild(notification);
 
     // Animação de entrada
-    requestAnimationFrame(() => notification.classList.remove('translate-x-full'));
+    setTimeout(() => {
+        notification.classList.remove('translate-x-full');
+    }, 10);
 
     // Auto-remover após 3 segundos
     setTimeout(() => {
         notification.classList.add('translate-x-full');
-        notification.addEventListener('transitionend', () => notification.remove());
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
     }, 3000);
 };
 
@@ -53,7 +56,7 @@ export const formatTime = (timeStamp) => {
     if (!timeStamp) return 'N/A';
     
     let date;
-    if (timeStamp.seconds) {
+    if (timeStamp?.seconds) {
         // É um Timestamp do Firebase
         date = new Date(timeStamp.seconds * 1000);
     } else {
@@ -76,7 +79,7 @@ export const formatTime = (timeStamp) => {
  */
 export const normalizeText = (str) => {
     if (!str) return '';
-    return str.toString()
+    return String(str)
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "") // Remove acentos
         .toLowerCase()
@@ -88,12 +91,14 @@ export const normalizeText = (str) => {
  * @param {string} text - Texto a ser copiado
  * @param {string} successMsg - Mensagem de sucesso
  */
-export const copyToClipboard = (text, successMsg) => {
-    navigator.clipboard.writeText(text).then(() => {
+export const copyToClipboard = async (text, successMsg = 'Copiado!') => {
+    try {
+        await navigator.clipboard.writeText(text);
         showNotification(successMsg, 'info');
-    }).catch(() => {
+    } catch (err) {
+        console.error('Erro ao copiar:', err);
         showNotification('Erro ao copiar', 'error');
-    });
+    }
 };
 
 /**
@@ -103,7 +108,8 @@ export const copyToClipboard = (text, successMsg) => {
  */
 export const formatCPF = (cpf) => {
     if (!cpf) return '';
-    const numeros = cpf.replace(/\D/g, '');
+    const numeros = String(cpf).replace(/\D/g, '');
+    if (numeros.length !== 11) return cpf;
     return numeros.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 };
 
@@ -114,7 +120,7 @@ export const formatCPF = (cpf) => {
  */
 export const isValidEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
+    return re.test(String(email).toLowerCase());
 };
 
 /**
@@ -140,7 +146,7 @@ export const debounce = (func, wait) => {
  * @returns {string} ID único
  */
 export const generateId = () => {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    return Date.now().toString(36) + Math.random().toString(36).substring(2);
 };
 
 /**
@@ -151,8 +157,9 @@ export const generateId = () => {
  */
 export const truncateText = (text, limit = 50) => {
     if (!text) return '';
-    if (text.length <= limit) return text;
-    return text.substring(0, limit) + '...';
+    const str = String(text);
+    if (str.length <= limit) return str;
+    return str.substring(0, limit) + '...';
 };
 
 /**
@@ -178,4 +185,80 @@ export const diffInMinutes = (start, end) => {
     const endDate = new Date(end);
     if (isNaN(startDate) || isNaN(endDate)) return 0;
     return Math.round((endDate - startDate) / (1000 * 60));
+};
+
+/**
+ * Obter cor baseada no status de prioridade
+ * @param {string} priority - Prioridade do atendimento
+ * @returns {string} Classe CSS da prioridade
+ */
+export const getPriorityColor = (priority) => {
+    const colors = {
+        'URGENTE': 'red',
+        'Máxima': 'green',
+        'Média': 'orange',
+        'Mínima': 'gray'
+    };
+    return colors[priority] || 'gray';
+};
+
+/**
+ * Capitalizar primeira letra de cada palavra
+ * @param {string} str - Texto a ser capitalizado
+ * @returns {string} Texto capitalizado
+ */
+export const capitalize = (str) => {
+    if (!str) return '';
+    return String(str).replace(/\b\w/g, l => l.toUpperCase());
+};
+
+/**
+ * Remover caracteres especiais de CPF/CNPJ
+ * @param {string} value - Valor com formatação
+ * @returns {string} Valor sem formatação
+ */
+export const unformat = (value) => {
+    if (!value) return '';
+    return String(value).replace(/[^\d]/g, '');
+};
+
+/**
+ * Verificar se objeto está vazio
+ * @param {Object} obj - Objeto a ser verificado
+ * @returns {boolean} True se estiver vazio
+ */
+export const isEmpty = (obj) => {
+    return obj && Object.keys(obj).length === 0 && obj.constructor === Object;
+};
+
+/**
+ * Agrupar array por chave
+ * @param {Array} array - Array a ser agrupado
+ * @param {string} key - Chave para agrupamento
+ * @returns {Object} Objeto agrupado
+ */
+export const groupBy = (array, key) => {
+    return array.reduce((result, item) => {
+        const groupKey = item[key];
+        if (!result[groupKey]) {
+            result[groupKey] = [];
+        }
+        result[groupKey].push(item);
+        return result;
+    }, {});
+};
+
+/**
+ * Ordenar array por data
+ * @param {Array} array - Array a ser ordenado
+ * @param {string} dateField - Campo de data
+ * @param {boolean} ascending - Ordem crescente?
+ * @returns {Array} Array ordenado
+ */
+export const sortByDate = (array, dateField = 'createdAt', ascending = false) => {
+    return [...array].sort((a, b) => {
+        const dateA = new Date(a[dateField] || 0);
+        const dateB = new Date(b[dateField] || 0);
+        return ascending ? dateA - dateB : dateB - dateA;
+    });
 };
