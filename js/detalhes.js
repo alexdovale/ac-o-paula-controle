@@ -4,7 +4,7 @@
  */
 
 import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { showNotification } from './utils.js';
+import { showNotification } from './utils.js'; // ✅ Importação da função
 
 // --- 1. CONSTANTES DE DOCUMENTAÇÃO (LISTA INTEGRAL) ---
 
@@ -56,7 +56,7 @@ export const documentsData = {
 
 // --- 3. ESTADO GLOBAL E SELETORES ---
 
-let currentAssistedId = null, currentPautaId = null, db = null, showNotification = null, allAssisted = [], currentChecklistAction = null;
+let currentAssistedId = null, currentPautaId = null, db = null, customShowNotification = null, allAssisted = [], currentChecklistAction = null; // 🔸 Renomeado para customShowNotification
 const getEl = (id) => document.getElementById(id);
 
 const normalizeLocal = (str) => str ? str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : '';
@@ -256,7 +256,7 @@ async function handleSave() {
 
     try {
         await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), payload);
-        showNotification("Dados salvos com sucesso!");
+        showNotification("Dados salvos com sucesso!"); // ✅ Usa a função importada
         getEl('documents-modal').classList.add('hidden');
     } catch (e) { console.error(e); }
 }
@@ -380,7 +380,8 @@ function handleBack() {
 // --- 10. EXPORTS ---
 
 export function setupDetailsModal(config) {
-    db = config.db; showNotification = config.showNotification;
+    db = config.db; 
+    customShowNotification = config.showNotification; // 🔸 Usa a variável renomeada
     
     if (getEl('document-action-selection')) {
         getEl('document-action-selection').onclick = async (e) => {
