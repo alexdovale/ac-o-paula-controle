@@ -3,6 +3,7 @@
  * Este arquivo deve ser importado pelo seu script principal.
  * Requer: jspdf, jspdf-autotable, chart.js
  */
+import { showNotification } from './utils.js';
 
 function makeModalInteractive(modal) {
     if (!modal || modal.classList.contains('interactive-modal-init')) {
