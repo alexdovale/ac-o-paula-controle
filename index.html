@@ -1324,10 +1324,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
         // Colaboradores
         import { 
-            setupCollaborators, 
+            setupCollaboratorsListener as setupCollaborators,  // <-- CORRETO! Nome da função no arquivo
             renderColaboradores, 
             resetCollaboratorForm,
-            sortColaboradores 
+            sortColaboradores,
+            saveCollaboratorData,
+            toggleCollaboratorPresence,
+            deleteCollaborator,
+            clearCollaborators
         } from './js/colaboradores.js';
 
         // UI e Modais
