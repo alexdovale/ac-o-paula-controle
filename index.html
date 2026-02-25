@@ -97,7 +97,6 @@
     </style>
 </head>
 <body class="p-4 md:p-8">
-
     <!-- Indicador Offline -->
     <div id="offline-indicator" class="fixed top-0 left-0 w-full bg-red-600 text-white text-center py-1 text-sm font-bold hidden z-[100] transition-all duration-300">
         ⚠️ Sem conexão. Trabalhando em Modo Offline.
@@ -162,8 +161,7 @@
             </a>
         </div>
     </div>
-
-    <!-- ======================================================= -->
+        <!-- ======================================================= -->
     <!-- CONTAINER DE SELEÇÃO DE PAUTAS -->
     <!-- ======================================================= -->
     <div id="pauta-selection-container" class="hidden max-w-4xl mx-auto">
@@ -208,8 +206,7 @@
             <button id="create-pauta-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Criar Nova Pauta</button>
         </div>
     </div>
-
-    <!-- ======================================================= -->
+        <!-- ======================================================= -->
     <!-- CONTAINER PRINCIPAL DO APP (PAUTA ABERTA) -->
     <!-- ======================================================= -->
     <div id="app-container" class="max-w-full mx-auto hidden">
@@ -308,8 +305,7 @@
                 <p>Esta pauta está fechada para novas edições. Apenas o criador pode reabri-la.</p>
             </div>
         </header>
-
-        <!-- ======================================================= -->
+                <!-- ======================================================= -->
         <!-- CONTEÚDO PRINCIPAL (COLUNAS) -->
         <!-- ======================================================= -->
         <div id="app-content" class="w-full">
@@ -481,8 +477,7 @@
             <div class="mt-8 flex justify-center">
                 <button id="toggle-faltosos-btn" class="w-full sm:w-auto bg-purple-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-purple-700">Ver Faltosos</button>
             </div>
-
-            <!-- Rodapé com Explicação da Ordem -->
+                        <!-- Rodapé com Explicação da Ordem -->
             <footer class="mt-12 bg-white p-6 rounded-lg shadow-md">
                 <h3 id="order-explanation-title" class="text-xl font-semibold text-gray-800 mb-2 text-center">Entenda a Ordem de Atendimento</h3>
                 <div id="order-explanation-content">
@@ -569,8 +564,7 @@
             </footer>
         </div>
     </div>
-
-    <!-- ======================================================= -->
+        <!-- ======================================================= -->
     <!-- TODOS OS MODAIS DO SISTEMA -->
     <!-- ======================================================= -->
 
@@ -1275,1800 +1269,86 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
         </div>
     </div>
-
-    <!-- ======================================================= -->
-    <!-- SCRIPTS PRINCIPAIS (ORGANIZADOS EM MÓDULOS) -->
+        <!-- ======================================================= -->
+    <!-- SCRIPT PRINCIPAL - CORRIGIDO E COMPLETO -->
     <!-- ======================================================= -->
 
     <script type="module">
-    // =======================================================
-    // IMPORTAÇÕES DOS MÓDULOS
-    // =======================================================
-    
-    // Configurações
-    import { firebaseConfig, emailJsConfig } from './js/config.js';
-
-    // Utilitários
-    import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
-
-    // Dados e Lógica de Negócio
-    import { subjectTree, flatSubjects } from './js/assuntos.js';
-    import { getChecklistHTML } from './js/checklist.js';
-    import { parsePautaCSV } from './js/csvHandler.js';
-
-    // Serviços
-    import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
-    import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
-
-    // Admin e Estatísticas
-    import { 
-        logAction as logActionDB, 
-        loadUsersList, 
-        cleanupOldData, 
-        approveUser, 
-        updateUserRole, 
-        deleteUser, 
-        loadAuditLogs, 
-        exportAuditLogsPDF, 
-        loadDashboardData, 
-        populateUserFilter 
-    } from './js/admin.js';
-    import { renderStatisticsModal } from './js/estatisticas.js';
-    import { loadHistoricoStats, exportStatsToCSV } from './js/historicoStats.js';
-
-    // Gerenciamento de Pauta
-    import { 
-        setupAttendancesListener, 
-        updateAttendanceStatus, 
-        deleteAttendance, 
-        moveInQueueLogic, 
-        saveImportedPauta 
-    } from './js/pauta.js';
-
-    // Colaboradores
-    import { 
-        setupCollaboratorsListener,
-        renderColaboradores,
-        resetCollaboratorForm,
-        sortColaboradores,
-        saveCollaboratorData,
-        toggleCollaboratorPresence,
-        deleteCollaborator,
-        clearCollaborators
-    } from './js/colaboradores.js';
-
-    // UI e Modais
-    import { setupDetailsModal, openDetailsModal } from './js/detalhes.js';
-    import { setupNotes, sendNotesOnClose } from './js/notes.js';
-    import { setupConfirmModal, showConfirmModal } from './js/confirmModal.js';
-
-    // Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, where, orderBy, limit, getDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove, setDoc, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-    import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
-
-    // =======================================================
-    // INICIALIZAÇÃO DO FIREBASE
-    // =======================================================
-    
-    console.log("Inicializando Firebase...");
-    const app = initializeApp(firebaseConfig);
-    console.log("Firebase inicializado com sucesso!");
-    
-    // Inicializa Auth e Firestore
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    
-    // Tenta ativar persistência offline
-    try {
-        enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code == 'failed-precondition') {
-                console.warn('Persistência falhou: Múltiplas abas abertas.');
-            } else if (err.code == 'unimplemented') {
-                console.warn('Persistência falhou: Navegador não suportado.');
-            }
-        });
-        console.log("Persistência Offline Ativada!");
-    } catch (e) {
-        console.log("Erro ao ativar persistência:", e);
-    }
-
-    // =======================================================
-    // INICIALIZAÇÃO DO EMAILJS
-    // =======================================================
-    
-    console.log("Inicializando EmailJS...");
-    emailjs.init(emailJsConfig.publicKey);
-    console.log("EmailJS inicializado com sucesso!");
-
-    // =======================================================
-    // VARIÁVEIS GLOBAIS
-    // =======================================================
-    
-    let allAssisted = [], 
-        currentPautaId = null, 
-        unsubscribeFromAttendances = () => {}, 
-        currentUserName = '', 
-        currentPautaOwnerId = null, 
-        isPautaClosed = false;
-    let currentPautaData = null;
-    let assistedIdToHandle = null;
-    let assistedNameToHandle = null;
-    let customRoomsList = [];
-    let assistedIdForDelegation = null;
-    let assistedNameForDelegation = null;
-    let collaboratorNameForDelegation = null;
-    let colaboradores = [];
-    let editCollaboratorId = null;
-    let unsubscribeFromCollaborators = () => {};
-
-    // Expõe as variáveis necessárias para outros módulos
-    window.db = db;
-    window.auth = auth;
-    window.currentUserName = currentUserName;
-    window.currentPautaId = currentPautaId;
-    window.currentPautaData = currentPautaData;
-    window.currentPautaOwnerId = currentPautaOwnerId;
-    window.isPautaClosed = isPautaClosed;
-    window.allAssisted = allAssisted;
-    window.colaboradores = colaboradores;
-
-    // =======================================================
-    // FUNÇÕES DO SISTEMA
-    // =======================================================
-
-    const loadingContainer = document.getElementById('loading-container');
-    const loginContainer = document.getElementById('login-container');
-    const pautaSelectionContainer = document.getElementById('pauta-selection-container');
-    const appContainer = document.getElementById('app-container');
-    const loadingText = document.getElementById('loading-text');
-
-    // Função de pesquisa
-    const searchFilter = (assisted, term) => {
-        if (!term) return true;
+        // =======================================================
+        // IMPORTAÇÕES DOS MÓDULOS
+        // =======================================================
         
-        const arrivalTimeFormatted = assisted.arrivalTime ? new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
-        const normalizedTerm = normalizeText(term);
-        const attendantName = (typeof assisted.attendant === 'object' && assisted.attendant !== null) 
-                              ? assisted.attendant.name || assisted.attendant.nome || '' 
-                              : assisted.attendant || '';
+        // Configurações
+        import { firebaseConfig, emailJsConfig } from './js/config.js';
+
+        // Utilitários
+        import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
+
+        // Dados e Lógica de Negócio
+        import { subjectTree, flatSubjects } from './js/assuntos.js';
+        import { getChecklistHTML } from './js/checklist.js';
+        import { parsePautaCSV } from './js/csvHandler.js';
+
+        // Serviços
+        import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
+        import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
+
+        // Admin e Estatísticas
+        import { 
+            logAction as logActionDB, 
+            loadUsersList, 
+            cleanupOldData, 
+            approveUser, 
+            updateUserRole, 
+            deleteUser, 
+            loadAuditLogs, 
+            exportAuditLogsPDF, 
+            loadDashboardData, 
+            populateUserFilter 
+        } from './js/admin.js';
+        import { renderStatisticsModal } from './js/estatisticas.js';
+        import { loadHistoricoStats, exportStatsToCSV } from './js/historicoStats.js';
+
+        // Gerenciamento de Pauta
+        import { 
+            setupAttendancesListener, 
+            updateAttendanceStatus, 
+            deleteAttendance, 
+            moveInQueueLogic, 
+            saveImportedPauta 
+        } from './js/pauta.js';
+
+        // Colaboradores
+        import { 
+            setupCollaboratorsListener,  // ÚNICA DECLARAÇÃO (vem do módulo)
+            renderColaboradores,
+            resetCollaboratorForm,
+            sortColaboradores,
+            saveCollaboratorData,
+            toggleCollaboratorPresence,
+            deleteCollaborator,
+            clearCollaborators
+        } from './js/colaboradores.js';
+
+        // UI e Modais
+        import { setupDetailsModal, openDetailsModal } from './js/detalhes.js';
+        import { setupNotes, sendNotesOnClose } from './js/notes.js';
+        import { setupConfirmModal, showConfirmModal } from './js/confirmModal.js';
+
+        // Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, where, orderBy, limit, getDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove, setDoc, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
+
+        // =======================================================
+        // INICIALIZAÇÃO DO FIREBASE
+        // =======================================================
         
-        return normalizeText(assisted.name).includes(normalizedTerm) ||
-               (assisted.cpf && normalizeText(assisted.cpf).includes(normalizedTerm)) ||
-               normalizeText(assisted.subject).includes(normalizedTerm) ||
-               (assisted.scheduledTime && assisted.scheduledTime.includes(normalizedTerm)) ||
-               (arrivalTimeFormatted && arrivalTimeFormatted.includes(normalizedTerm)) ||
-               (attendantName && normalizeText(attendantName).includes(normalizedTerm)) ||
-               (assisted.assignedCollaborator?.name && normalizeText(assisted.assignedCollaborator.name).includes(normalizedTerm));
-    };
-
-    const getPriorityClass = (priority) => ({
-        'URGENTE': 'priority-urgente',
-        'Máxima': 'priority-maxima',
-        'Média': 'priority-media',
-        'Mínima': 'priority-minima'
-    }[priority] || '');
-
-    const getUpdatePayload = (data) => {
-        return {
-            ...data,
-            lastActionBy: currentUserName,
-            lastActionTimestamp: new Date().toISOString()
-        };
-    };
-
-    // Função para mostrar telas
-    const showScreen = (screenName) => {
-        loadingContainer.classList.toggle('hidden', screenName !== 'loading');
-        loginContainer.classList.toggle('hidden', screenName !== 'login');
-        pautaSelectionContainer.classList.toggle('hidden', screenName !== 'pautaSelection');
-        appContainer.classList.toggle('hidden', screenName !== 'app');
-    };
-
-    // Função para lidar com estado de autenticação
-    const handleAuthState = () => {
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                try {
-                    const userDocRef = doc(db, "users", user.uid);
-                    const userDoc = await getDoc(userDocRef);
-
-                    if (userDoc.exists()) {
-                        const userData = userDoc.data();
-                        currentUserName = userData.name || user.email;
-                        window.currentUserName = currentUserName;
-
-                        // Mostrar botão admin se for admin
-                        const btnAdmin = document.getElementById('admin-panel-btn');
-                        if (btnAdmin) {
-                            const isAdmin = userData.role === 'admin' || userData.role === 'superadmin';
-                            btnAdmin.classList.toggle('hidden', !isAdmin);
-                        }
-
-                        if (userData.status === 'approved') {
-                            const lastPautaId = localStorage.getItem('lastPautaId');
-                            const lastPautaType = localStorage.getItem('lastPautaType');
-
-                            if (lastPautaId && lastPautaType) {
-                                const pautaRef = doc(db, "pautas", lastPautaId);
-                                const pautaSnap = await getDoc(pautaRef);
-                                
-                                if (pautaSnap.exists() && pautaSnap.data().members.includes(user.uid)) {
-                                    loadPauta(lastPautaId, pautaSnap.data().name, lastPautaType);
-                                } else {
-                                    showPautaSelectionScreen(user.uid);
-                                }
-                            } else {
-                                showPautaSelectionScreen(user.uid);
-                            }
-                        } else {
-                            showScreen('loading');
-                            loadingText.innerHTML = `
-                                <div class="text-center">
-                                    <p class="text-xl font-bold text-orange-600">Acesso Pendente</p>
-                                    <p class="mt-2 text-gray-600">Olá, <b>${currentUserName}</b>!</p>
-                                    <p class="text-sm text-gray-500">Sua conta foi criada, mas um administrador precisa aprová-la para você acessar o sistema.</p>
-                                    <button onclick="signOut(auth)" class="mt-6 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Sair / Trocar de Conta</button>
-                                </div>
-                            `;
-                            document.querySelector('.loader').style.display = 'none';
-                        }
-                    } else {
-                        showNotification("Erro ao localizar seu perfil. Tente cadastrar novamente.", "error");
-                        signOut(auth);
-                    }
-                } catch (error) {
-                    console.error("Erro ao verificar estado do usuário:", error);
-                    showNotification("Erro de conexão com o servidor.", "error");
-                }
-            } else {
-                showScreen('login');
-                const btnAdmin1 = document.getElementById('admin-panel-btn');
-                const btnAdmin2 = document.getElementById('admin-btn-main');
-                
-                if (btnAdmin1) btnAdmin1.classList.add('hidden');
-                if (btnAdmin2) btnAdmin2.classList.add('hidden');
-            }
-        });
-    };
-
-    // Função para carregar pauta
-    const loadPauta = async (pautaId, pautaName, pautaType) => {
-        currentPautaId = pautaId;
-        window.currentPautaId = pautaId;
-        document.getElementById('pauta-title').textContent = pautaName;
-
-        localStorage.setItem('lastPautaId', pautaId);
-        localStorage.setItem('lastPautaType', pautaType);
-
-        const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
-        if (pautaDoc.exists()) {
-            const pautaData = pautaDoc.data();
-            currentPautaData = pautaData;
-            window.currentPautaData = pautaData;
-            currentPautaOwnerId = pautaData.owner;
-            window.currentPautaOwnerId = pautaData.owner;
-            isPautaClosed = pautaData.isClosed || false;
-            window.isPautaClosed = isPautaClosed;
-            
-            togglePautaLock(isPautaClosed);
-
-            const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-            const distColumn = document.getElementById('distribuicao-column');
-            const mainContent = document.getElementById('main-content');
-
-            if (pautaData.useDelegationFlow) {
-                emAtendimentoColumn.classList.remove('hidden');
-            } else {
-                emAtendimentoColumn.classList.add('hidden');
-            }
-
-            if (pautaData.useDistributionFlow) {
-                distColumn.classList.remove('hidden');
-            } else {
-                distColumn.classList.add('hidden');
-            }
-
-            mainContent.classList.remove('lg:grid-cols-3', 'lg:grid-cols-4', 'lg:grid-cols-5');
-            let colunas = 3;
-            if (pautaData.useDelegationFlow) colunas++;
-            if (pautaData.useDistributionFlow) colunas++;
-            mainContent.classList.add(`lg:grid-cols-${colunas}`);
-        }
-
-        setupRealtimeListener(pautaId);
-        setupCollaboratorsListener(pautaId);
-        showScreen('app');
-    };
-
-    // Função para mostrar tela de seleção de pautas
-    const showPautaSelectionScreen = (userId) => {
-        localStorage.removeItem('lastPautaId');
-        localStorage.removeItem('lastPautaType');
-
-        const pautasList = document.getElementById('pautas-list');
-        pautasList.innerHTML = '<p class="col-span-full text-center">Carregando pautas...</p>';
-
-        const q = query(collection(db, "pautas"), where("members", "array-contains", userId));
-
-        onSnapshot(q, (snapshot) => {
-            pautasList.innerHTML = ''; 
-            const fragment = document.createDocumentFragment();
-            const now = new Date();
-            
-            if (snapshot.empty) {
-                pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500">Nenhuma pauta encontrada. Crie uma para começar.</p>';
-                return;
-            }
-
-            snapshot.docs.forEach((docSnap) => {
-                const pauta = docSnap.data();
-                let isExpired = false;
-                if (pauta.createdAt) {
-                    const creationDate = new Date(pauta.createdAt);
-                    const expirationDate = new Date(creationDate);
-                    expirationDate.setDate(creationDate.getDate() + 7);
-                    if (now > expirationDate) {
-                        isExpired = true;
-                    }
-                }
-                const card = createPautaCard(docSnap, isExpired);
-                fragment.appendChild(card);
-            });
-            pautasList.appendChild(fragment);
-
-        }, (error) => {
-            console.error("Erro ao buscar pautas:", error);
-            pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Ocorreu um erro ao carregar as pautas.</p>';
-        });
-
-        showScreen('pautaSelection');
-    };
-
-    // Função para criar card de pauta
-    const createPautaCard = (docSnap, isExpired) => {
-        const pauta = docSnap.data();
-        const card = document.createElement('div');
-        card.className = "relative bg-white p-6 rounded-lg shadow-md flex flex-col justify-between h-full";
-        
-        if (isExpired) {
-            card.classList.add('opacity-60', 'bg-gray-100', 'cursor-not-allowed');
-        } else {
-            card.classList.add('hover:shadow-xl', 'transition-shadow', 'cursor-pointer');
-        }
-
-        const deleteButton = document.createElement('button');
-        deleteButton.className = "absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:text-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500";
-        deleteButton.setAttribute('aria-label', 'Excluir pauta');
-        deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
-
-        deleteButton.addEventListener('click', (event) => {
-            event.stopPropagation(); 
-            if (confirm(`Tem certeza que deseja apagar a pauta "${pauta.name}"?`)) {
-                deletePauta(docSnap.id);
-            }
-        });
-
-        card.appendChild(deleteButton);
-
-        const creationDate = pauta.createdAt ? new Date(pauta.createdAt) : new Date();
-        const expirationDate = new Date(creationDate);
-        expirationDate.setDate(creationDate.getDate() + 7);
-
-        const formattedCreationDate = creationDate.toLocaleDateString('pt-BR');
-        const formattedExpirationDate = expirationDate.toLocaleDateString('pt-BR');
-
-        const contentDiv = document.createElement('div');
-        const title = document.createElement('h3');
-        title.className = "font-bold text-xl mb-2";
-        title.textContent = pauta.name;
-
-        const members = document.createElement('p');
-        members.className = "text-gray-600";
-        members.textContent = `Membros: ${pauta.memberEmails?.length || 1}`;
-
-        contentDiv.appendChild(title);
-        contentDiv.appendChild(members);
-
-        const footerDiv = document.createElement('div');
-        footerDiv.className = "mt-4 pt-2 border-t border-gray-200";
-        const createdP = document.createElement('p');
-        createdP.className = "text-xs text-gray-500";
-        createdP.innerHTML = `Criada em: <strong>${formattedCreationDate}</strong>`;
-
-        const expiresP = document.createElement('p');
-        if (isExpired) {
-            expiresP.className = "text-xs text-gray-500 font-semibold";
-            expiresP.innerHTML = `Prazo de acesso expirou em: <strong>${formattedExpirationDate}</strong>`;
-        } else {
-            expiresP.className = "text-xs text-red-600";
-            expiresP.innerHTML = `Será eliminada em: <strong>${formattedExpirationDate}</strong>`;
-        }
-
-        footerDiv.appendChild(createdP);
-        footerDiv.appendChild(expiresP);
-        card.appendChild(contentDiv);
-        card.appendChild(footerDiv);
-        
-        card.addEventListener('click', (event) => {
-            if (event.target.closest('button')) return;
-
-            if (isExpired) {
-                showNotification("Pauta inacessível pois cumpriu seu prazo.", "error");
-            } else {
-                loadPauta(docSnap.id, pauta.name, pauta.type);
-            }
-        });
-        return card;
-    };
-
-    // Função para deletar pauta
-    const deletePauta = async (pautaId) => {
-        try {
-            await deleteDoc(doc(db, "pautas", pautaId));
-        } catch (error) {
-            console.error("Erro ao excluir a pauta:", error);
-            showNotification("Erro ao excluir a pauta.", "error");
-        }
-    };
-
-    // Função para configurar listener em tempo real
-    const setupRealtimeListener = (pautaId) => {
-        if (unsubscribeFromAttendances) unsubscribeFromAttendances();
-        const attendanceCollectionRef = collection(db, "pautas", pautaId, "attendances");
-        unsubscribeFromAttendances = onSnapshot(attendanceCollectionRef, (snapshot) => {
-            allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            window.allAssisted = allAssisted;
-            renderAssistedList();
-        }, (error) => console.error("Erro no listener do Firestore: ", error));
-    };
-
-    // Função para alternar tabs
-    const switchTab = (tabName) => {
-        const tabAgendamento = document.getElementById('tab-agendamento');
-        const tabAvulso = document.getElementById('tab-avulso');
-        const isScheduledContainer = document.getElementById('is-scheduled-container');
-        const formTitle = document.getElementById('form-title');
-        const pautaColumn = document.getElementById('pauta-column');
-        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-        const formContainer = document.getElementById('form-agendamento');
-
-        formContainer.classList.remove('hidden');
-
-        if (tabName === 'agendamento') {
-            tabAgendamento.classList.add('tab-active');
-            tabAvulso.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700');
-            isScheduledContainer.classList.remove('hidden');
-            pautaColumn.classList.remove('hidden');
-            if (currentPautaData?.useDelegationFlow) {
-                emAtendimentoColumn.classList.remove('hidden');
-            } else {
-                emAtendimentoColumn.classList.add('hidden');
-            }
-            formTitle.textContent = "Adicionar Novo Agendamento";
-            document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
-            document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
-            document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-            document.getElementById('arrival-time-wrapper').classList.add('hidden');
-            document.getElementById('manual-room-wrapper').classList.add('hidden');
-        } else {
-            tabAvulso.classList.add('tab-active');
-            tabAgendamento.classList.remove('tab-active');
-            tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700');
-            isScheduledContainer.classList.add('hidden');
-            pautaColumn.classList.add('hidden');
-            if (currentPautaData?.useDelegationFlow) {
-                emAtendimentoColumn.classList.remove('hidden');
-            } else {
-                emAtendimentoColumn.classList.add('hidden');
-            }
-            formTitle.textContent = "Adicionar Atendimento Avulso";
-
-            document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
-            document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
-            document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-            document.getElementById('arrival-time-wrapper').classList.remove('hidden');
-            document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
-
-            const manualRoomWrapper = document.getElementById('manual-room-wrapper');
-            const manualRoomSelect = document.getElementById('manual-room-select');
-            
-            if (currentPautaData?.type === 'multisala' && currentPautaData.rooms) {
-                manualRoomWrapper.classList.remove('hidden');
-                manualRoomSelect.innerHTML = '';
-                currentPautaData.rooms.forEach(room => {
-                    const opt = document.createElement('option');
-                    opt.value = room;
-                    opt.textContent = room;
-                    manualRoomSelect.appendChild(opt);
-                });
-            } else {
-                manualRoomWrapper.classList.add('hidden');
-            }
-        }
-        renderAssistedList();
-    };
-
-    // Função para renderizar lista de assistidos
-    const renderAssistedList = () => {
-        allAssisted.forEach(a => {
-            if (a.status === 'aguardando' && a.priority !== 'URGENTE') {
-                a.priority = getPriorityLevel(a);
-            }
-        });
-
-        const pautaList = document.getElementById('pauta-list');
-        const aguardandoList = document.getElementById('aguardando-list');
-        const emAtendimentoList = document.getElementById('em-atendimento-list');
-        const atendidosList = document.getElementById('atendidos-list');
-        const faltososList = document.getElementById('faltosos-list');
-        const distList = document.getElementById('distribuicao-list');
-
-        [pautaList, aguardandoList, emAtendimentoList, atendidosList, faltososList, distList].forEach(el => {
-            if (el) el.innerHTML = '';
-        });
-
-        const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-
-        const pautaSearchTerm = normalizeText(document.getElementById('pauta-search').value);
-        const aguardandoSearchTerm = normalizeText(document.getElementById('aguardando-search').value);
-        const emAtendimentoSearchTerm = normalizeText(document.getElementById('em-atendimento-search').value);
-        const atendidosSearchTerm = normalizeText(document.getElementById('atendidos-search').value);
-        const faltososSearchTerm = normalizeText(document.getElementById('faltosos-search').value);
-        const distSearchTerm = normalizeText(document.getElementById('distribuicao-search').value);
-
-        const pauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && searchFilter(a, pautaSearchTerm));
-        const aguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && searchFilter(a, aguardandoSearchTerm));
-        const emAtendimento = allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode && searchFilter(a, emAtendimentoSearchTerm));
-        const atendidos = allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && searchFilter(a, atendidosSearchTerm));
-        const faltosos = allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento' && searchFilter(a, faltososSearchTerm));
-        const distribuicao = allAssisted.filter(a => a.status === 'aguardandoDistribuicao' && searchFilter(a, distSearchTerm));
-
-        pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
-        atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
-        faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
-        emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
-        
-        aguardando.sort((a, b) => {
-            const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
-            
-            const obterPesoUrgencia = (item) => {
-                if (item.priority !== 'URGENTE') return 999;
-                const r = item.priorityReason || "";
-                if (r.includes("Idoso (80+)")) return 1;
-                if (r.includes("Urgência Médica")) return 2;
-                if (r.includes("Deficiência") || r.includes("Autismo")) return 3;
-                if (r.includes("Gestante") || r.includes("Criança de Colo")) return 4;
-                if (r.includes("Idoso (60+)")) return 5;
-                return 6;
-            };
-
-            const pesoA = obterPesoUrgencia(a);
-            const pesoB = obterPesoUrgencia(b);
-            if (pesoA !== pesoB) return pesoA - pesoB;
-            
-            if (pesoA < 999 && pesoB < 999) {
-                return (a.checkInOrder || a.createdAt || 0) - (b.checkInOrder || b.createdAt || 0);
-            }
-
-            if (pautaOrder === 'padrao') {
-                const calcularTempoVirtual = (item) => {
-                    if (item.type === 'avulso') return (item.checkInOrder || 0);
-
-                    const agendadoMS = new Date(`1970-01-01T${item.scheduledTime}`).getTime();
-                    const chegadaData = new Date(item.arrivalTime);
-                    const chegadaSoHoraMS = new Date(`1970-01-01T${chegadaData.getHours().toString().padStart(2,'0')}:${chegadaData.getMinutes().toString().padStart(2,'0')}`).getTime();
-                    
-                    const atrasoMinutos = (chegadaSoHoraMS - agendadoMS) / 60000;
-
-                    if (atrasoMinutos > 30) return agendadoMS + (45 * 60 * 1000); 
-                    if (atrasoMinutos > 0) return agendadoMS + (15 * 60 * 1000);
-                    return agendadoMS;
-                };
-
-                const vA = calcularTempoVirtual(a);
-                const vB = calcularTempoVirtual(b);
-                
-                if (vA !== vB) return vA - vB;
-
-                return (a.checkInOrder || a.createdAt || 0) - (b.checkInOrder || b.createdAt || 0);
-            }
-
-            if (pautaOrder === 'manual') return (a.manualIndex || 0) - (b.manualIndex || 0);
-            return (a.checkInOrder || 0) - (b.checkInOrder || 0);
-        });
-
-        document.getElementById('pauta-count').textContent = pauta.length;
-        document.getElementById('aguardando-count').textContent = aguardando.length;
-        document.getElementById('em-atendimento-count').textContent = emAtendimento.length;
-        document.getElementById('faltosos-count').textContent = faltosos.length;
-        document.getElementById('atendidos-count').textContent = atendidos.length;
-        if(document.getElementById('distribuicao-count')) {
-            document.getElementById('distribuicao-count').textContent = distribuicao.length;
-        }
-
-        const render = (el, data, generator) => {
-            if (!el) return;
-            if(data.length === 0) el.innerHTML = `<p class="text-gray-400 text-center p-4 text-xs">Nenhum registro</p>`;
-            else data.forEach((item, index) => el.appendChild(generator(item, index)));
-        };
-
-        // Renderização simplificada - você pode expandir conforme necessário
-        render(pautaList, pauta, a => {
-            const card = document.createElement('div');
-            card.className = 'relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3';
-            card.innerHTML = `
-                <button data-id="${a.id}" class="delete-btn absolute top-3 right-3 text-gray-300 hover:text-red-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                    </svg>
-                </button>
-                <p class="font-bold text-xl text-gray-800 leading-tight pr-6">${escapeHTML(a.name).toUpperCase()}</p>
-                <div class="mt-2 space-y-0.5 text-sm text-gray-700">
-                    <p>Assunto: <span class="font-bold uppercase">${escapeHTML(a.subject)}</span></p>
-                    <p>Agendado: <span class="font-bold">${a.scheduledTime || '--:--'}</span></p>
-                </div>
-                <div class="mt-4 space-y-2">
-                    <div class="grid grid-cols-2 gap-2">
-                        <button data-id="${a.id}" class="check-in-btn bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 rounded-lg text-xs">Marcar Chegada</button>
-                        <button data-id="${a.id}" class="faltou-btn bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2.5 rounded-lg text-xs">Faltou</button>
-                    </div>
-                    <button data-id="${a.id}" class="edit-assisted-btn w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-2.5 rounded-lg text-xs">Editar Dados</button>
-                </div>
-            `;
-            return card;
-        });
-
-        render(aguardandoList, aguardando, a => {
-            const card = document.createElement('div');
-            card.className = `relative bg-white p-4 rounded-lg shadow-sm ${getPriorityClass(a.priority)} mb-2 group transition-all duration-200`;
-            card.setAttribute('data-id', a.id);
-            
-            const arrival = a.type === 'agendamento' && a.scheduledTime 
-                ? `Agendado: ${escapeHTML(a.scheduledTime)} | Chegou: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` 
-                : `Chegada: ${new Date(a.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-
-            card.innerHTML = `
-                <button data-id="${a.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                    </svg>
-                </button>
-                <div class="flex flex-col h-full">
-                    ${a.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(a.priorityReason)}</div>` : ''}
-                    <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(a.name)}</p>
-                    <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(a.subject)}</strong></p>
-                    <div class="flex flex-wrap gap-2 mb-1">
-                        <span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">${arrival}</span>
-                        ${a.room ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(a.room)}</span>` : ''}
-                    </div>
-                    <div class="mt-4 grid grid-cols-2 gap-2">
-                        <button data-id="${a.id}" data-name="${escapeHTML(a.name)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm">Atender</button>
-                        <button data-id="${a.id}" class="priority-btn ${a.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs">${a.priority === 'URGENTE' ? 'Urgente Ativado' : 'Prioridade'}</button>
-                        <button data-id="${a.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-semibold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase">Voltar para Pauta</button>
-                    </div>
-                    <button data-id="${a.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
-                </div>
-            `;
-            return card;
-        });
-
-        togglePautaLock(isPautaClosed);
-        setupManualSort();
-    };
-
-    const getPriorityLevel = (assisted) => {
-        if (!assisted || assisted.status !== 'aguardando') return 'N/A';
-        if (assisted.priority === 'URGENTE') return 'URGENTE';
-
-        if (assisted.type === 'avulso') return 'Média';
-
-        if (!assisted.scheduledTime || !assisted.arrivalTime) return 'Média';
-
-        const scheduled = new Date(`1970-01-01T${assisted.scheduledTime}`);
-        const arrival = new Date(assisted.arrivalTime);
-        const arrivalTime = new Date(`1970-01-01T${arrival.toTimeString().slice(0, 5)}`);
-
-        const diffMinutes = (arrivalTime - scheduled) / (1000 * 60);
-
-        if (diffMinutes <= 0) return 'Máxima';
-        if (diffMinutes <= 20) return 'Média';
-        return 'Mínima';
-    };
-
-    const togglePautaLock = (isClosed) => {
-        const isOwner = auth.currentUser?.uid === currentPautaOwnerId;
-        isPautaClosed = isClosed;
-        window.isPautaClosed = isClosed;
-
-        const buttonsToDisable = [
-            'form-agendamento', 'file-upload', 'add-assisted-btn',
-            'download-pdf-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento'
-        ];
-
-        buttonsToDisable.forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                if (isClosed) {
-                    element.classList.add('pointer-events-none', 'opacity-50');
-                    element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = true);
-                } else {
-                    element.classList.remove('pointer-events-none', 'opacity-50');
-                    element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = false);
-                }
-            }
-        });
-
-        const actionPanelButtons = document.querySelectorAll('#actions-panel button');
-        actionPanelButtons.forEach(btn => {
-            if (btn.id === 'reopen-pauta-btn') {
-                btn.disabled = false;
-            } else {
-                btn.disabled = isClosed; 
-            }
-        });
-        
-        const actionButtons = document.querySelectorAll('.check-in-btn, .delegate-finalization-btn, .attend-directly-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn, .toggle-confirmed-atendido, .toggle-confirmed-faltoso');
-        actionButtons.forEach(btn => {
-            btn.disabled = isClosed;
-        });
-
-        if (isClosed) {
-            document.getElementById('closed-pauta-alert').classList.remove('hidden');
-            document.getElementById('close-pauta-btn').classList.add('hidden');
-            document.getElementById('reopen-pauta-btn').classList.remove('hidden');
-        } else {
-            document.getElementById('closed-pauta-alert').classList.add('hidden');
-            document.getElementById('close-pauta-btn').classList.remove('hidden');
-            document.getElementById('reopen-pauta-btn').classList.add('hidden');
-        }
-
-        if (!isOwner) {
-            document.getElementById('close-pauta-btn').classList.add('hidden');
-            document.getElementById('reopen-pauta-btn').classList.add('hidden');
-        }
-    };
-
-    let sortableAguardando = null;
-    
-    const setupManualSort = () => {
-        const el = document.getElementById('aguardando-list');
-        const pautaOrder = currentPautaData?.ordemAtendimento || 'padrao';
-    
-        if (pautaOrder === 'manual' && !isPautaClosed) {
-            if (sortableAguardando) sortableAguardando.destroy();
-    
-            sortableAguardando = new Sortable(el, {
-                animation: 300,
-                ghostClass: 'opacity-20',
-                chosenClass: 'ring-2',
-                dragClass: 'scale-95',
-                handle: '.relative',
-                filter: 'button, svg, p, span',
-                preventOnFilter: false,
-                
-                onEnd: async function () {
-                    const items = el.querySelectorAll('[data-id]');
-                    const batch = writeBatch(db);
-                    
-                    items.forEach((item, index) => {
-                        const docId = item.getAttribute('data-id');
-                        const docRef = doc(db, "pautas", currentPautaId, "attendances", docId);
-                        batch.update(docRef, { manualIndex: index });
-                    });
-    
-                    try {
-                        await batch.commit();
-                        showNotification("Fila Reordenada!");
-                    } catch (e) {
-                        console.error(e);
-                    }
-                },
-            });
-        } else if (sortableAguardando) {
-            sortableAguardando.destroy();
-            sortableAguardando = null;
-        }
-    };
-
-    // =======================================================
-    // EVENT LISTENERS PRINCIPAIS
-    // =======================================================
-    
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log("DOM carregado, inicializando componentes...");
-        
-        // Inicializa modais
-        setupNotes();
-        setupConfirmModal();
-        setupClosePautaNotes();
-        setupDetailsModal({ db, getChecklistHTML, getUpdatePayload, showNotification });
-
-        // Login/Registro tabs
-        const loginTabBtn = document.getElementById('login-tab-btn');
-        const registerTabBtn = document.getElementById('register-tab-btn');
-        const loginForm = document.getElementById('login-form');
-        const registerForm = document.getElementById('register-form');
-
-        if (loginTabBtn && registerTabBtn) {
-            loginTabBtn.addEventListener('click', () => {
-                loginTabBtn.classList.add('border-green-600', 'text-green-600');
-                loginTabBtn.classList.remove('text-gray-500');
-                registerTabBtn.classList.remove('border-green-600', 'text-green-600');
-                registerTabBtn.classList.add('text-gray-500');
-                loginForm.classList.remove('hidden');
-                registerForm.classList.add('hidden');
-            });
-
-            registerTabBtn.addEventListener('click', () => {
-                registerTabBtn.classList.add('border-green-600', 'text-green-600');
-                registerTabBtn.classList.remove('text-gray-500');
-                loginTabBtn.classList.remove('border-green-600', 'text-green-600');
-                loginTabBtn.classList.add('text-gray-500');
-                registerForm.classList.remove('hidden');
-                loginForm.classList.add('hidden');
-            });
-        }
-
-        // Login form
-        if (loginForm) {
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const email = document.getElementById('login-email').value;
-                const password = document.getElementById('login-password').value;
-                const errorDiv = document.getElementById('auth-error');
-                try {
-                    await signInWithEmailAndPassword(auth, email, password);
-                    errorDiv.classList.add('hidden');
-                } catch (error) {
-                    console.error("Login failed:", error);
-                    errorDiv.textContent = 'Email ou senha inválidos.';
-                    errorDiv.classList.remove('hidden');
-                }
-            });
-        }
-
-        // Register form
-        if (registerForm) {
-            registerForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const name = document.getElementById('register-name').value;
-                const email = document.getElementById('register-email').value;
-                const password = document.getElementById('register-password').value;
-                const errorDiv = document.getElementById('auth-error');
-
-                if (password.length < 6) {
-                    errorDiv.textContent = 'A senha deve ter pelo menos 6 caracteres.';
-                    errorDiv.classList.remove('hidden');
-                    return;
-                }
-
-                try {
-                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                    const user = userCredential.user;
-
-                    await setDoc(doc(db, "users", user.uid), {
-                        name: name,
-                        email: email,
-                        uid: user.uid,
-                        status: 'pending',
-                        role: 'user',
-                        createdAt: new Date().toISOString()
-                    });
-
-                    errorDiv.classList.add('hidden');
-                    showNotification('Conta criada com sucesso! Aguarde aprovação.', 'success');
-                    loginTabBtn.click();
-
-                } catch (error) {
-                    console.error("Registration failed:", error);
-                    errorDiv.textContent = error.code === 'auth/email-already-in-use' ? 'Este email já está em uso.' : 'Ocorreu um erro ao criar a conta.';
-                    errorDiv.classList.remove('hidden');
-                }
-            });
-        }
-
-        // Forgot password
-        const forgotLink = document.getElementById('forgot-password-link');
-        if (forgotLink) {
-            forgotLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                const email = prompt("Por favor, digite seu email para redefinir a senha:");
-                if (email) {
-                    sendPasswordResetEmail(auth, email)
-                        .then(() => showNotification("Email de redefinição de senha enviado!", "success"))
-                        .catch((error) => {
-                            console.error("Password reset error:", error);
-                            showNotification("Erro ao enviar email. Verifique se o email está correto.", "error");
-                        });
-                }
-            });
-        }
-
-        // Tabs de agendamento/avulso
-        const tabAgendamento = document.getElementById('tab-agendamento');
-        const tabAvulso = document.getElementById('tab-avulso');
-        
-        if (tabAgendamento) {
-            tabAgendamento.addEventListener('click', () => switchTab('agendamento'));
-        }
-        if (tabAvulso) {
-            tabAvulso.addEventListener('click', () => switchTab('avulso'));
-        }
-
-        // Logout buttons
-        const logoutMain = document.getElementById('logout-btn-main');
-        const logoutApp = document.getElementById('logout-btn-app');
-        
-        if (logoutMain) {
-            logoutMain.addEventListener('click', () => {
-                signOut(auth).catch(error => {
-                    console.error("Logout error", error);
-                    showNotification("Erro ao tentar sair.", "error");
-                });
-            });
-        }
-        if (logoutApp) {
-            logoutApp.addEventListener('click', () => {
-                signOut(auth).catch(error => {
-                    console.error("Logout error", error);
-                    showNotification("Erro ao tentar sair.", "error");
-                });
-            });
-        }
-
-        // Back to pautas
-        const backBtn = document.getElementById('back-to-pautas-btn');
-        if (backBtn) {
-            backBtn.addEventListener('click', () => {
-                if (unsubscribeFromAttendances) unsubscribeFromAttendances();
-                if (unsubscribeFromCollaborators) unsubscribeFromCollaborators();
-                currentPautaId = null;
-                allAssisted = [];
-                colaboradores = [];
-                showPautaSelectionScreen(auth.currentUser.uid);
-            });
-        }
-
-        // Actions toggle
-        const actionsToggle = document.getElementById('actions-toggle');
-        const actionsPanel = document.getElementById('actions-panel');
-        const actionsArrow = document.getElementById('actions-arrow');
-
-        if (actionsToggle && actionsPanel && actionsArrow) {
-            actionsToggle.addEventListener('click', (event) => {
-                event.stopPropagation();
-                if (actionsPanel.classList.contains('opacity-0')) {
-                    actionsPanel.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
-                    actionsArrow.classList.add('rotate-180');
-                } else {
-                    actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                    actionsArrow.classList.remove('rotate-180');
-                }
-            });
-
-            window.addEventListener('click', (event) => {
-                if (!actionsPanel.contains(event.target) && !actionsToggle.contains(event.target)) {
-                    actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                    actionsArrow.classList.remove('rotate-180');
-                }
-            });
-        }
-
-        // Search inputs
-        ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('input', renderAssistedList);
-            }
-        });
-
-        // File upload
-        const fileUpload = document.getElementById('file-upload');
-        if (fileUpload) {
-            fileUpload.addEventListener('change', async (event) => {
-                const file = event.target.files[0];
-                if (!file) return;
-            
-                try {
-                    const assistidosValidados = await parsePautaCSV(file);
-                    await saveImportedPauta(db, currentPautaId, assistidosValidados, currentUserName);
-                    showNotification(`${assistidosValidados.length} registros importados com sucesso!`);
-                } catch (error) {
-                    showNotification(error, "error");
-                } finally {
-                    event.target.value = '';
-                }
-            });
-        }
-
-        // Toggle faltosos
-        const toggleFaltosos = document.getElementById('toggle-faltosos-btn');
-        if (toggleFaltosos) {
-            toggleFaltosos.addEventListener('click', (e) => {
-                const btn = e.currentTarget;
-                const pautaColumn = document.getElementById('pauta-column');
-                const faltososColumn = document.getElementById('faltosos-column');
-
-                pautaColumn.classList.toggle('hidden');
-                faltososColumn.classList.toggle('hidden');
-
-                if (faltososColumn.classList.contains('hidden')) {
-                    btn.textContent = 'Ver Faltosos';
-                    btn.classList.replace('bg-blue-600', 'bg-purple-600');
-                    btn.classList.replace('hover:bg-blue-700', 'hover:bg-purple-700');
-                } else {
-                    btn.textContent = 'Ver Pauta';
-                    btn.classList.replace('bg-purple-600', 'bg-blue-600');
-                    btn.classList.replace('hover:bg-purple-700', 'hover:bg-blue-700');
-                }
-            });
-        }
-
-        // Radio buttons
-        document.querySelectorAll('input[name="is-scheduled"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                document.getElementById('scheduled-time-wrapper').classList.toggle('hidden', e.target.value === 'no');
-            });
-        });
-
-        document.querySelectorAll('input[name="has-arrived"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                const wrapper = document.getElementById('arrival-time-wrapper');
-                wrapper.classList.toggle('hidden', e.target.value === 'no');
-                if (e.target.value === 'yes') {
-                    document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
-                }
-            });
-        });
-
-        // Subject datalist
-        const datalist = document.getElementById('subjects-list');
-        if (datalist) {
-            flatSubjects.forEach(subject => {
-                const option = document.createElement('option');
-                option.value = subject.value;
-                datalist.appendChild(option);
-            });
-        }
-
-        const subjectInput = document.getElementById('assisted-subject');
-        const descriptionBox = document.getElementById('subject-description');
-        const infoButton = document.getElementById('subject-info-btn');
-
-        if (subjectInput) {
-            subjectInput.addEventListener('change', () => {
-                const originalValue = subjectInput.value;
-                let selectedText = originalValue;
-
-                if (selectedText.includes(' > ')) {
-                    const parts = selectedText.split(' > ');
-                    selectedText = parts[parts.length - 1];
-                }
-
-                subjectInput.value = selectedText;
-
-                const foundSubject = flatSubjects.find(s => s.value === selectedText || s.value.split(' > ').pop() === selectedText);
-                if (foundSubject && foundSubject.description) {
-                    descriptionBox.textContent = foundSubject.description;
-                    descriptionBox.classList.remove('hidden');
-                } else {
-                    descriptionBox.textContent = '';
-                    descriptionBox.classList.add('hidden');
-                }
-            });
-        }
-
-        if (infoButton) {
-            infoButton.addEventListener('click', () => {
-                const currentValue = subjectInput.value;
-                const foundSubject = flatSubjects.find(s => s.value === currentValue || s.value.split(' > ').pop() === currentValue);
-
-                if (foundSubject && foundSubject.description) {
-                    descriptionBox.textContent = foundSubject.description;
-                    descriptionBox.classList.toggle('hidden');
-                } else {
-                    descriptionBox.textContent = 'Por favor, selecione um assunto válido para ver a descrição.';
-                    descriptionBox.classList.remove('hidden');
-                }
-            });
-        }
-
-        // Format help modal
-        const formatHelpLink = document.getElementById('format-help-link');
-        if (formatHelpLink) {
-            formatHelpLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                document.getElementById('format-help-modal').classList.remove('hidden');
-            });
-        }
-
-        // Privacy policy links
-        const privacyLink = document.getElementById('privacy-policy-link');
-        if (privacyLink) {
-            privacyLink.addEventListener('click', e => {
-                e.preventDefault();
-                document.getElementById('privacy-policy-modal').classList.remove('hidden');
-            });
-        }
-
-        const privacyModal = document.getElementById('privacy-policy-modal');
-        if (privacyModal) {
-            const closePolicyModal = () => privacyModal.classList.add('hidden');
-            document.getElementById('close-policy-modal-btn-x')?.addEventListener('click', closePolicyModal);
-            document.getElementById('close-policy-modal-btn')?.addEventListener('click', closePolicyModal);
-        }
-
-        // Manual modal
-        const manualBtn = document.getElementById('manual-btn-footer');
-        if (manualBtn) {
-            manualBtn.addEventListener('click', () => {
-                document.getElementById('manual-modal').classList.remove('hidden');
-            });
-        }
-
-        // Terms modal
-        const termsBtn = document.getElementById('terms-btn-footer');
-        if (termsBtn) {
-            termsBtn.addEventListener('click', () => {
-                document.getElementById('terms-modal').classList.remove('hidden');
-            });
-        }
-
-        // Create pauta button
-        const createPautaBtn = document.getElementById('create-pauta-btn');
-        if (createPautaBtn) {
-            createPautaBtn.addEventListener('click', () => {
-                document.getElementById('pauta-type-modal').classList.remove('hidden');
-            });
-        }
-
-        // Cancel pauta type
-        const cancelPautaType = document.getElementById('cancel-pauta-type-btn');
-        if (cancelPautaType) {
-            cancelPautaType.addEventListener('click', () => {
-                document.getElementById('pauta-type-modal').classList.add('hidden');
-            });
-        }
-
-        // Pauta type buttons
-        document.querySelectorAll('.pauta-type-btn').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const type = e.currentTarget.dataset.type;
-                document.getElementById('pauta-type-modal').classList.add('hidden');
-                
-                const createModal = document.getElementById('create-pauta-modal');
-                createModal.dataset.pautaType = type;
-                
-                const roomConfig = document.getElementById('room-config-container');
-                if (type === 'multisala') {
-                    roomConfig.classList.remove('hidden');
-                    customRoomsList = [];
-                    renderCustomRooms();
-                    document.getElementById('custom-room-input').value = '';
-                } else {
-                    roomConfig.classList.add('hidden');
-                }
-                
-                createModal.classList.remove('hidden');
-            });
-        });
-
-        // Cancel create pauta
-        const cancelCreate = document.getElementById('cancel-create-pauta-btn');
-        if (cancelCreate) {
-            cancelCreate.addEventListener('click', () => {
-                document.getElementById('create-pauta-modal').classList.add('hidden');
-            });
-        }
-
-        // Next to ordem
-        const nextToOrdem = document.getElementById('next-to-ordem-btn');
-        if (nextToOrdem) {
-            nextToOrdem.addEventListener('click', () => {
-                const pautaName = document.getElementById('create-pauta-name-input').value.trim();
-                if (!pautaName) {
-                    showNotification("O nome da pauta não pode ser vazio.", "error");
-                    return;
-                }
-                document.getElementById('create-pauta-modal').classList.add('hidden');
-                document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
-            });
-        }
-
-        // Cancel ordem
-        const cancelOrdem = document.getElementById('cancel-ordem-btn');
-        if (cancelOrdem) {
-            cancelOrdem.addEventListener('click', () => {
-                document.getElementById('ordem-atendimento-modal').classList.add('hidden');
-                document.getElementById('create-pauta-modal').classList.remove('hidden');
-            });
-        }
-
-        // Next to delegation
-        const nextToDelegation = document.getElementById('next-to-delegation-btn');
-        if (nextToDelegation) {
-            nextToDelegation.addEventListener('click', () => {
-                document.getElementById('ordem-atendimento-modal').classList.add('hidden');
-                document.getElementById('delegation-flow-modal').classList.remove('hidden');
-            });
-        }
-
-        // Cancel delegation
-        const cancelDelegation = document.getElementById('cancel-delegation-flow-btn');
-        if (cancelDelegation) {
-            cancelDelegation.addEventListener('click', () => {
-                document.getElementById('delegation-flow-modal').classList.add('hidden');
-                document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
-            });
-        }
-
-        // Confirm create pauta
-        const confirmCreate = document.getElementById('confirm-create-pauta-final-btn');
-        if (confirmCreate) {
-            confirmCreate.addEventListener('click', async () => {
-                const pautaName = document.getElementById('create-pauta-name-input').value.trim();
-                const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
-                const ordemAtendimento = document.querySelector('input[name="ordemAtendimento"]:checked').value;
-                const useDelegationFlow = document.querySelector('input[name="useDelegationFlow"]:checked').value === 'true';
-                const user = auth.currentUser;
-                
-                if (!user) {
-                    showNotification("Você precisa estar logado para criar uma pauta.", "error");
-                    return;
-                }
-                
-                let pautaRooms = [];
-                if (pautaType === 'multisala') {
-                    if (customRoomsList.length === 0) {
-                        showNotification("Por favor, adicione pelo menos um local/sala.", "error");
-                        return;
-                    }
-                    pautaRooms = [...customRoomsList];
-                }
-
-                try {
-                    await addDoc(collection(db, "pautas"), {
-                        name: pautaName,
-                        type: pautaType,
-                        ordemAtendimento: ordemAtendimento,
-                        useDelegationFlow: useDelegationFlow,
-                        useDistributionFlow: document.getElementById('check-use-distribution').checked,
-                        owner: user.uid,
-                        ownerEmail: user.email,
-                        members: [user.uid],
-                        memberEmails: [user.email],
-                        isClosed: false,
-                        createdAt: new Date().toISOString(),
-                        rooms: pautaRooms
-                    });
-                    
-                    showNotification("Pauta criada com sucesso!");
-                    document.getElementById('create-pauta-name-input').value = '';
-                    document.getElementById('delegation-flow-modal').classList.add('hidden');
-                } catch (error) {
-                    console.error("Error creating pauta:", error);
-                    showNotification("Erro ao criar pauta.", "error");
-                }
-            });
-        }
-
-        // Add custom room
-        const addRoomBtn = document.getElementById('add-custom-room-btn');
-        if (addRoomBtn) {
-            addRoomBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const input = document.getElementById('custom-room-input');
-                const name = input.value.trim();
-                if (name) {
-                    if (!customRoomsList.includes(name)) {
-                        customRoomsList.push(name);
-                        renderCustomRooms();
-                        input.value = '';
-                        input.focus();
-                    } else {
-                        showNotification("Este local já foi adicionado.", "error");
-                    }
-                }
-            });
-        }
-
-        // Share modal
-        const shareBtn = document.getElementById('share-pauta-btn');
-        if (shareBtn) {
-            shareBtn.addEventListener('click', () => {
-                if (!currentPautaData) return;
-                
-                const shareModal = document.getElementById('share-modal');
-                shareModal.classList.remove('hidden');
-                
-                const isPublic = currentPautaData.isPublic || false;
-                const maskNames = currentPautaData.maskNames || false;
-                
-                document.getElementById('share-toggle').checked = isPublic;
-                document.getElementById('mask-names-check').checked = maskNames;
-                updateShareUI(isPublic);
-            });
-        }
-
-        // Stats button
-        const statsBtn = document.getElementById('view-stats-btn');
-        if (statsBtn) {
-            statsBtn.addEventListener('click', () => {
-                renderStatisticsModal(
-                    allAssisted,
-                    currentPautaData?.useDelegationFlow,
-                    document.getElementById('pauta-title').textContent
-                );
-            });
-        }
-
-        // Edit pauta name
-        const editPautaBtn = document.getElementById('edit-pauta-name-btn');
-        if (editPautaBtn) {
-            editPautaBtn.addEventListener('click', () => {
-                const currentName = document.getElementById('pauta-title').textContent;
-                document.getElementById('edit-pauta-name-input').value = currentName;
-                document.getElementById('edit-pauta-modal').classList.remove('hidden');
-            });
-        }
-
-        // Manage members
-        const manageMembersBtn = document.getElementById('manage-members-btn');
-        if (manageMembersBtn) {
-            manageMembersBtn.addEventListener('click', showMembersModal);
-        }
-
-        // Manage collaborators
-        const manageCollabBtn = document.getElementById('manage-collaborators-btn');
-        if (manageCollabBtn) {
-            manageCollabBtn.addEventListener('click', () => {
-                setupCollaboratorsListener(currentPautaId);
-                resetCollaboratorForm();
-                document.getElementById('collaborators-modal').classList.remove('hidden');
-            });
-        }
-
-        // Add assisted button
-        const addAssistedBtn = document.getElementById('add-assisted-btn');
-        if (addAssistedBtn) {
-            addAssistedBtn.addEventListener('click', async () => {
-                const name = document.getElementById('assisted-name').value.trim();
-                if (!name) {
-                    showNotification("O nome é obrigatório.", "error");
-                    return;
-                }
-                
-                const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-                let isScheduled, hasArrived, scheduledTimeValue;
-
-                if (currentMode === 'agendamento') {
-                    isScheduled = document.querySelector('input[name="is-scheduled"]:checked').value === 'yes';
-                    hasArrived = document.querySelector('input[name="has-arrived"]:checked').value === 'yes';
-                    scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time').value : null;
-
-                    if (isScheduled && !scheduledTimeValue && !hasArrived) {
-                        showNotification("Por favor, informe o horário agendado.", "error");
-                        return;
-                    }
-                } else { 
-                    isScheduled = false;
-                    hasArrived = true;
-                    scheduledTimeValue = null;
-                }
-
-                let arrivalDate = null;
-                if (hasArrived) {
-                    const timeInput = document.getElementById('arrival-time').value;
-                    const [hours, minutes] = timeInput.split(':');
-                    arrivalDate = new Date();
-                    arrivalDate.setHours(hours, minutes);
-                }
-                
-                let assignedRoom = null;
-                if (currentMode !== 'agendamento' && currentPautaData?.type === 'multisala') {
-                    assignedRoom = document.getElementById('manual-room-select').value;
-                }
-
-                const newAssisted = getUpdatePayload({
-                    name,
-                    cpf: document.getElementById('assisted-cpf').value.trim(),
-                    subject: document.getElementById('assisted-subject').value.trim(),
-                    type: currentMode,
-                    status: hasArrived ? 'aguardando' : 'pauta',
-                    scheduledTime: scheduledTimeValue,
-                    arrivalTime: hasArrived ? arrivalDate.toISOString() : null,
-                    assignedCollaborator: null,
-                    inAttendanceTime: null,
-                    finalizadoPeloColaborador: false,
-                    isConfirmed: false,
-                    confirmationDetails: null,
-                    room: assignedRoom,
-                    indexManual: allAssisted.length,
-                    createdAt: new Date().toISOString()
-                });
-
-                await addDoc(collection(db, "pautas", currentPautaId, "attendances"), newAssisted);
-                showNotification("Assistido adicionado com sucesso!");
-                document.getElementById('form-agendamento').reset();
-                document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-                document.getElementById('arrival-time-wrapper').classList.add('hidden');
-            });
-        }
-
-        // Reset all button
-        const resetAllBtn = document.getElementById('reset-all-btn');
-        if (resetAllBtn) {
-            resetAllBtn.addEventListener('click', () => {
-                document.getElementById('reset-confirm-modal').classList.remove('hidden');
-            });
-        }
-
-        // Close pauta button
-        const closePautaBtn = document.getElementById('close-pauta-btn');
-        if (closePautaBtn) {
-            closePautaBtn.addEventListener('click', () => {
-                document.getElementById('close-modal-title').textContent = 'Fechar Pauta';
-                document.getElementById('close-modal-message').textContent = 'Para fechar esta pauta, confirme sua senha. Nenhum membro poderá fazer alterações até que você a reabra.';
-                document.getElementById('close-pauta-password').value = '';
-                document.getElementById('confirm-close-pauta-btn').textContent = 'Confirmar';
-                document.getElementById('close-pauta-modal').classList.remove('hidden');
-            });
-        }
-
-        // Reopen pauta button
-        const reopenPautaBtn = document.getElementById('reopen-pauta-btn');
-        if (reopenPautaBtn) {
-            reopenPautaBtn.addEventListener('click', () => {
-                document.getElementById('close-modal-title').textContent = 'Reabrir Pauta';
-                document.getElementById('close-modal-message').textContent = 'Para reabrir esta pauta, confirme sua senha.';
-                document.getElementById('close-pauta-password').value = '';
-                document.getElementById('confirm-close-pauta-btn').textContent = 'Reabrir';
-                document.getElementById('close-pauta-modal').classList.remove('hidden');
-            });
-        }
-
-        // Confirm edit pauta
-        const confirmEditPauta = document.getElementById('confirm-edit-pauta-btn');
-        if (confirmEditPauta) {
-            confirmEditPauta.addEventListener('click', async () => {
-                const newName = document.getElementById('edit-pauta-name-input').value.trim();
-                if (newName && currentPautaId) {
-                    await updateDoc(doc(db, "pautas", currentPautaId), { name: newName });
-                    document.getElementById('pauta-title').textContent = newName;
-                    showNotification("Nome da pauta atualizado.");
-                    document.getElementById('edit-pauta-modal').classList.add('hidden');
-                } else {
-                    showNotification("O nome não pode ser vazio.", "error");
-                }
-            });
-        }
-
-        // Cancel buttons for modals
-        document.querySelectorAll('[id^="cancel-"], [id^="close-"]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const modal = btn.closest('.fixed');
-                if (modal) {
-                    modal.classList.add('hidden');
-                }
-            });
-        });
-
-        // PDF buttons
-        const downloadPdfBtn = document.getElementById('download-pdf-btn');
-        if (downloadPdfBtn) {
-            downloadPdfBtn.addEventListener('click', () => {
-                const listaParaExportar = allAssisted.filter(a => a.status === 'atendido');
-                if (listaParaExportar.length === 0) {
-                    showNotification("A lista de 'Atendidos' está vazia.", "info");
-                    return;
-                }
-                const pautaTitle = document.getElementById('pauta-title').textContent || 'Pauta';
-                generateAtendidosPDF(pautaTitle, listaParaExportar);
-            });
-        }
-
-        const downloadFaltososPdf = document.getElementById('download-faltosos-pdf-btn');
-        if (downloadFaltososPdf) {
-            downloadFaltososPdf.addEventListener('click', () => {
-                const faltosos = allAssisted.filter(a => a.status === 'faltoso');
-                if (faltosos.length === 0) {
-                    showNotification("Não há faltosos na lista.", "info");
-                    return;
-                }
-                const pautaTitle = document.getElementById('pauta-title').textContent;
-                generateAtendidosPDF(`${pautaTitle} (FALTOSOS)`, faltosos);
-            });
-        }
-
-        const downloadCollabPdf = document.getElementById('download-collaborators-pdf-modal');
-        if (downloadCollabPdf) {
-            downloadCollabPdf.addEventListener('click', () => {
-                const selectedCols = Array.from(document.querySelectorAll('.pdf-col-check:checked'))
-                                          .map(cb => cb.value);
-                if (selectedCols.length === 0) {
-                    showNotification("Selecione ao menos uma coluna!", "error");
-                    return;
-                }
-                if (colaboradores.length === 0) {
-                    showNotification("Não há colaboradores na lista.", "info");
-                    return;
-                }
-                const pautaTitle = document.getElementById('pauta-title').textContent;
-                generateCollaboratorsPDF(pautaTitle, colaboradores, selectedCols);
-            });
-        }
-
-        // Inicia o handleAuthState
-        handleAuthState();
-
-        // Esconde o loading após 2 segundos (fallback)
-        setTimeout(() => {
-            if (!loginContainer.classList.contains('hidden') || 
-                !pautaSelectionContainer.classList.contains('hidden') || 
-                !appContainer.classList.contains('hidden')) {
-                loadingContainer.classList.add('hidden');
-            }
-        }, 3000);
-    });
-
-    // =======================================================
-    // FUNÇÕES ADICIONAIS
-    // =======================================================
-
-    function updateShareUI(isPublic) {
-        const shareStatusText = document.getElementById('share-status-text');
-        const shareLinkContainer = document.getElementById('share-link-container');
-        const shareLinkInput = document.getElementById('share-link-input');
-        const openExternalBtn = document.getElementById('open-external-btn');
-        
-        if (!shareStatusText || !shareLinkContainer || !shareLinkInput || !openExternalBtn) return;
-        
-        shareStatusText.textContent = isPublic ? "Público" : "Privado";
-        if (isPublic) {
-            shareLinkContainer.classList.remove('hidden');
-            const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-            const link = `${baseUrl}/acompanhamento.html?id=${currentPautaId}`;
-            shareLinkInput.value = link;
-            openExternalBtn.href = link;
-        } else {
-            shareLinkContainer.classList.add('hidden');
-        }
-    }
-
-    function renderCustomRooms() {
-        const list = document.getElementById('custom-rooms-list');
-        const noRoomsMsg = document.getElementById('no-rooms-msg');
-        
-        if (!list || !noRoomsMsg) return;
-        
-        list.innerHTML = '';
-        if (customRoomsList.length === 0) {
-            noRoomsMsg.classList.remove('hidden');
-        } else {
-            noRoomsMsg.classList.add('hidden');
-            customRoomsList.forEach((roomName, index) => {
-                const li = document.createElement('li');
-                li.className = "flex justify-between items-center bg-white border border-gray-200 p-2 rounded shadow-sm";
-                li.innerHTML = `
-                    <span class="font-medium text-gray-700">🏢 ${escapeHTML(roomName)}</span>
-                    <button type="button" class="remove-room-btn text-red-500 hover:text-red-700 text-sm font-bold px-2" data-index="${index}">Remover</button>
-                `;
-                list.appendChild(li);
-            });
-        }
-    }
-
-    async function showMembersModal() {
-        if (!currentPautaId) return;
-        
-        const modal = document.getElementById('members-modal');
-        const status = document.getElementById('invite-status');
-        const listContainer = document.getElementById('members-list-container');
-        
-        if (!modal || !listContainer) return;
-        
-        modal.classList.remove('hidden');
-        if (status) status.textContent = '';
-
-        const pautaRef = doc(db, "pautas", currentPautaId);
-        const pautaSnap = await getDoc(pautaRef);
-        
-        if (pautaSnap.exists()) {
-            const pautaData = pautaSnap.data();
-            currentPautaOwnerId = pautaData.owner;
-            listContainer.innerHTML = '';
-
-            if (pautaData.memberEmails && pautaData.memberEmails.length > 0) {
-                pautaData.memberEmails.forEach(email => {
-                    const isOwner = pautaData.ownerEmail === email;
-                    const memberEl = document.createElement('div');
-                    memberEl.className = 'flex justify-between items-center bg-gray-100 p-2 rounded';
-                    memberEl.innerHTML = `
-                        <span>${email} ${isOwner ? '<span class="text-xs text-yellow-600 font-bold">(dono)</span>' : ''}</span>
-                        ${!isOwner ? `<button data-email="${email}" class="remove-member-btn text-red-500 hover:text-red-700 text-sm font-semibold">Remover</button>` : ''}
-                    `;
-                    listContainer.appendChild(memberEl);
-                });
-            } else {
-                listContainer.innerHTML = '<p class="text-gray-500 text-center">Nenhum membro na pauta. Convide alguém!</p>';
-            }
-        }
-    }
-
-    // =======================================================
-    // MONITORES DE CONEXÃO
-    // =======================================================
-    
-    window.addEventListener('offline', () => {
-        const indicator = document.getElementById('offline-indicator');
-        if(indicator) indicator.classList.remove('hidden');
-    });
-
-    window.addEventListener('online', () => {
-        const indicator = document.getElementById('offline-indicator');
-        if(indicator) indicator.classList.add('hidden');
-        showNotification("Conexão restabelecida! Sincronizando...", "success");
-    });
-
-    // =======================================================
-    // EXPOR FUNÇÕES PARA O ESCOPO GLOBAL
-    // =======================================================
-    
-    window.sortColaboradores = sortColaboradores;
-    window.showConfirmModal = showConfirmModal;
-    window.moveInQueue = (id, direction) => {
-        if (isPautaClosed) {
-            showNotification("A pauta está fechada.", "error");
-            return;
-        }
-        
-        const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-        
-        let list = allAssisted
-            .filter(a => a.status === 'aguardando' && a.type === currentMode)
-            .sort((a, b) => {
-                if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-                if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-                const orderA = a.manualIndex !== undefined ? a.manualIndex : (a.createdAt || 0);
-                const orderB = b.manualIndex !== undefined ? b.manualIndex : (b.createdAt || 0);
-                return orderA - orderB;
-            });
-
-        const currentIndex = list.findIndex(item => item.id === id);
-        if (currentIndex === -1) return;
-
-        let newList = [...list];
-
-        if (direction === 'up' && currentIndex > 0) {
-            [newList[currentIndex - 1], newList[currentIndex]] = [newList[currentIndex], newList[currentIndex - 1]];
-        } else if (direction === 'down' && currentIndex < newList.length - 1) {
-            [newList[currentIndex], newList[currentIndex + 1]] = [newList[currentIndex + 1], newList[currentIndex]];
-        } else if (direction === 'top') {
-            const [movedItem] = newList.splice(currentIndex, 1);
-            newList.unshift(movedItem);
-        }
-
-        const batch = writeBatch(db);
-        newList.forEach((item, index) => {
-            const docRef = doc(db, "pautas", currentPautaId, "attendances", item.id);
-            batch.update(docRef, { 
-                manualIndex: index,
-                lastActionBy: currentUserName,
-                lastActionTimestamp: new Date().toISOString()
-            });
-        });
-
-        try {
-            batch.commit();
-        } catch (error) {
-            console.error("Erro ao reordenar fila:", error);
-            showNotification("Erro ao atualizar ordem.", "error");
-        }
-    };
-    
-</script>
-
-<!-- Script Bridge para variáveis globais -->
-<script>
-    function exposeGlobalVariables() {
-        const checkInterval = setInterval(() => {
-            if (window.auth && window.currentUserName !== undefined) {
-                window.dispatchEvent(new CustomEvent('userDataReady', {
-                    detail: {
-                        auth: window.auth,
-                        currentUserName: window.currentUserName
-                    }
-                }));
-                clearInterval(checkInterval);
-            }
-        }, 100);
-    }
-    
-    document.addEventListener('DOMContentLoaded', exposeGlobalVariables);
-</script><script type="module">
-    // =======================================================
-    // IMPORTAÇÕES DOS MÓDULOS
-    // =======================================================
-    
-    // Configurações
-    import { firebaseConfig, emailJsConfig } from './js/config.js';
-
-    // Utilitários
-    import { escapeHTML, showNotification, formatTime, normalizeText, copyToClipboard } from './js/utils.js';
-
-    // Dados e Lógica de Negócio
-    import { subjectTree, flatSubjects } from './js/assuntos.js';
-    import { getChecklistHTML } from './js/checklist.js';
-    import { parsePautaCSV } from './js/csvHandler.js';
-
-    // Serviços
-    import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
-    import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
-
-    // Admin e Estatísticas
-    import { 
-        logAction as logActionDB, 
-        loadUsersList, 
-        cleanupOldData, 
-        approveUser, 
-        updateUserRole, 
-        deleteUser, 
-        loadAuditLogs, 
-        exportAuditLogsPDF, 
-        loadDashboardData, 
-        populateUserFilter 
-    } from './js/admin.js';
-    import { renderStatisticsModal } from './js/estatisticas.js';
-    import { loadHistoricoStats, exportStatsToCSV } from './js/historicoStats.js';
-
-    // Gerenciamento de Pauta
-    import { 
-        setupAttendancesListener, 
-        updateAttendanceStatus, 
-        deleteAttendance, 
-        moveInQueueLogic, 
-        saveImportedPauta 
-    } from './js/pauta.js';
-
-    // Colaboradores
-    import { 
-        setupCollaboratorsListener,  // <-- ÚNICA DECLARAÇÃO (vinda do módulo)
-        renderColaboradores,
-        resetCollaboratorForm,
-        sortColaboradores,
-        saveCollaboratorData,
-        toggleCollaboratorPresence,
-        deleteCollaborator,
-        clearCollaborators
-    } from './js/colaboradores.js';
-
-    // UI e Modais
-    import { setupDetailsModal, openDetailsModal } from './js/detalhes.js';
-    import { setupNotes, sendNotesOnClose } from './js/notes.js';
-    import { setupConfirmModal, showConfirmModal } from './js/confirmModal.js';
-
-    // Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, where, orderBy, limit, getDoc, serverTimestamp, writeBatch, arrayUnion, arrayRemove, setDoc, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-    import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
-
-    // =======================================================
-    // INICIALIZAÇÃO DO FIREBASE
-    // =======================================================
-    
-    console.log("🚀 INICIANDO SISTEMA...");
-    
-    try {
+        console.log("🚀 Inicializando Firebase...");
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        
-        // Expõe as variáveis globalmente
-        window.db = db;
-        window.auth = auth;
         
         // Ativa persistência offline
         try {
@@ -3082,442 +1362,290 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         } catch (e) {
             console.log("Erro ao ativar persistência:", e);
         }
-        
-        console.log("✅ Firebase inicializado!");
-        
-    } catch (error) {
-        console.error("❌ ERRO no Firebase:", error);
-    }
 
-    // =======================================================
-    // INICIALIZAÇÃO DO EMAILJS
-    // =======================================================
-    
-    try {
+        // =======================================================
+        // INICIALIZAÇÃO DO EMAILJS
+        // =======================================================
+        
         emailjs.init(emailJsConfig.publicKey);
-        console.log("✅ EmailJS inicializado!");
-    } catch (error) {
-        console.error("❌ ERRO no EmailJS:", error);
-    }
 
-    // =======================================================
-    // VARIÁVEIS GLOBAIS
-    // =======================================================
-    
-    let allAssisted = [], 
-        currentPautaId = null, 
-        unsubscribeFromAttendances = () => {}, 
-        currentUserName = '', 
-        currentPautaOwnerId = null, 
-        isPautaClosed = false;
-    let currentPautaData = null;
-    let assistedIdToHandle = null;
-    let assistedNameToHandle = null;
-    let customRoomsList = [];
-    let assistedIdForDelegation = null;
-    let assistedNameForDelegation = null;
-    let collaboratorNameForDelegation = null;
-    let colaboradores = [];
-    let editCollaboratorId = null;
-    let unsubscribeFromCollaborators = () => {};
+        // =======================================================
+        // VARIÁVEIS GLOBAIS
+        // =======================================================
+        
+        let allAssisted = [], 
+            currentPautaId = null, 
+            unsubscribeFromAttendances = () => {}, 
+            currentUserName = '', 
+            currentPautaOwnerId = null, 
+            isPautaClosed = false;
+        let currentPautaData = null;
+        let assistedIdToHandle = null;
+        let assistedNameToHandle = null;
+        let customRoomsList = [];
+        let assistedIdForDelegation = null;
+        let assistedNameForDelegation = null;
+        let collaboratorNameForDelegation = null;
+        let colaboradores = [];
+        let editCollaboratorId = null;
+        let unsubscribeFromCollaborators = () => {};
 
-    // Expõe variáveis globalmente
-    window.db = db;
-    window.auth = auth;
-    window.currentUserName = currentUserName;
-    window.currentPautaId = currentPautaId;
-    window.currentPautaData = currentPautaData;
-    window.currentPautaOwnerId = currentPautaOwnerId;
-    window.isPautaClosed = isPautaClosed;
-    window.allAssisted = allAssisted;
-    window.colaboradores = colaboradores;
+        // Expõe variáveis globalmente
+        window.db = db;
+        window.auth = auth;
+        window.currentUserName = currentUserName;
+        window.currentPautaId = currentPautaId;
+        window.currentPautaData = currentPautaData;
+        window.currentPautaOwnerId = currentPautaOwnerId;
+        window.isPautaClosed = isPautaClosed;
+        window.allAssisted = allAssisted;
+        window.colaboradores = colaboradores;
 
-    // =======================================================
-    // FUNÇÕES DO SISTEMA
-    // =======================================================
+        // =======================================================
+        // ELEMENTOS DO DOM
+        // =======================================================
 
-    const loadingContainer = document.getElementById('loading-container');
-    const loginContainer = document.getElementById('login-container');
-    const pautaSelectionContainer = document.getElementById('pauta-selection-container');
-    const appContainer = document.getElementById('app-container');
-    const loadingText = document.getElementById('loading-text');
+        const loadingContainer = document.getElementById('loading-container');
+        const loginContainer = document.getElementById('login-container');
+        const pautaSelectionContainer = document.getElementById('pauta-selection-container');
+        const appContainer = document.getElementById('app-container');
+        const loadingText = document.getElementById('loading-text');
 
-    // Função para mostrar telas
-    const showScreen = (screenName) => {
-        loadingContainer.classList.toggle('hidden', screenName !== 'loading');
-        loginContainer.classList.toggle('hidden', screenName !== 'login');
-        pautaSelectionContainer.classList.toggle('hidden', screenName !== 'pautaSelection');
-        appContainer.classList.toggle('hidden', screenName !== 'app');
-    };
+        // =======================================================
+        // FUNÇÕES UTILITÁRIAS
+        // =======================================================
 
-    // Função para atualizar payload
-    const getUpdatePayload = (data) => {
-        return {
-            ...data,
-            lastActionBy: currentUserName,
-            lastActionTimestamp: new Date().toISOString()
+        const showScreen = (screenName) => {
+            loadingContainer.classList.toggle('hidden', screenName !== 'loading');
+            loginContainer.classList.toggle('hidden', screenName !== 'login');
+            pautaSelectionContainer.classList.toggle('hidden', screenName !== 'pautaSelection');
+            appContainer.classList.toggle('hidden', screenName !== 'app');
         };
-    };
 
-    // =======================================================
-    // FUNÇÕES DE NAVEGAÇÃO
-    // =======================================================
+        const getUpdatePayload = (data) => {
+            return {
+                ...data,
+                lastActionBy: currentUserName,
+                lastActionTimestamp: new Date().toISOString()
+            };
+        };
 
-    const showPautaSelectionScreen = (userId) => {
-        localStorage.removeItem('lastPautaId');
-        localStorage.removeItem('lastPautaType');
+        const getPriorityClass = (priority) => ({
+            'URGENTE': 'priority-urgente',
+            'Máxima': 'priority-maxima',
+            'Média': 'priority-media',
+            'Mínima': 'priority-minima'
+        }[priority] || '');
 
-        const pautasList = document.getElementById('pautas-list');
-        pautasList.innerHTML = '<p class="col-span-full text-center">Carregando pautas...</p>';
-
-        const q = query(collection(db, "pautas"), where("members", "array-contains", userId));
-
-        onSnapshot(q, (snapshot) => {
-            pautasList.innerHTML = ''; 
-            const fragment = document.createDocumentFragment();
-            const now = new Date();
+        const searchFilter = (assisted, term) => {
+            if (!term) return true;
             
-            if (snapshot.empty) {
-                pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500">Nenhuma pauta encontrada. Crie uma para começar.</p>';
-                return;
-            }
+            const arrivalTimeFormatted = assisted.arrivalTime ? new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+            const normalizedTerm = normalizeText(term);
+            const attendantName = (typeof assisted.attendant === 'object' && assisted.attendant !== null) 
+                                  ? assisted.attendant.name || assisted.attendant.nome || '' 
+                                  : assisted.attendant || '';
+            
+            return normalizeText(assisted.name).includes(normalizedTerm) ||
+                   (assisted.cpf && normalizeText(assisted.cpf).includes(normalizedTerm)) ||
+                   normalizeText(assisted.subject).includes(normalizedTerm) ||
+                   (assisted.scheduledTime && assisted.scheduledTime.includes(normalizedTerm)) ||
+                   (arrivalTimeFormatted && arrivalTimeFormatted.includes(normalizedTerm)) ||
+                   (attendantName && normalizeText(attendantName).includes(normalizedTerm)) ||
+                   (assisted.assignedCollaborator?.name && normalizeText(assisted.assignedCollaborator.name).includes(normalizedTerm));
+        };
 
-            snapshot.docs.forEach((docSnap) => {
-                const pauta = docSnap.data();
-                let isExpired = false;
-                if (pauta.createdAt) {
-                    const creationDate = new Date(pauta.createdAt);
-                    const expirationDate = new Date(creationDate);
-                    expirationDate.setDate(creationDate.getDate() + 7);
-                    if (now > expirationDate) {
-                        isExpired = true;
-                    }
+        // =======================================================
+        // FUNÇÕES DE RENDERIZAÇÃO (SIMPLIFICADAS)
+        // =======================================================
+
+        const renderAssistedList = () => {
+            // Implementação completa será adicionada depois
+            console.log("Renderizando lista...");
+        };
+
+        const togglePautaLock = (isClosed) => {
+            isPautaClosed = isClosed;
+            window.isPautaClosed = isClosed;
+            
+            const closedAlert = document.getElementById('closed-pauta-alert');
+            const closeBtn = document.getElementById('close-pauta-btn');
+            const reopenBtn = document.getElementById('reopen-pauta-btn');
+            
+            if (closedAlert) {
+                if (isClosed) {
+                    closedAlert.classList.remove('hidden');
+                    if (closeBtn) closeBtn.classList.add('hidden');
+                    if (reopenBtn) reopenBtn.classList.remove('hidden');
+                } else {
+                    closedAlert.classList.add('hidden');
+                    if (closeBtn) closeBtn.classList.remove('hidden');
+                    if (reopenBtn) reopenBtn.classList.add('hidden');
                 }
-                const card = createPautaCard(docSnap, isExpired);
-                fragment.appendChild(card);
+            }
+        };
+
+        // =======================================================
+        // FUNÇÃO CORRIGIDA: setupClosePautaNotes (NÃO REMOVER!)
+        // =======================================================
+        
+        function setupClosePautaNotes() {
+            const closePautaBtn = document.getElementById("close-pauta-btn");
+            const confirmCloseBtn = document.getElementById("confirm-close-pauta-btn");
+            
+            if (!closePautaBtn || !confirmCloseBtn) return;
+            
+            let shouldSendNotes = false;
+            
+            closePautaBtn.addEventListener("click", () => {
+                shouldSendNotes = true;
             });
-            pautasList.appendChild(fragment);
-
-        }, (error) => {
-            console.error("Erro ao buscar pautas:", error);
-            pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Ocorreu um erro ao carregar as pautas.</p>';
-        });
-
-        showScreen('pautaSelection');
-    };
-
-    // Função para criar card de pauta
-    const createPautaCard = (docSnap, isExpired) => {
-        const pauta = docSnap.data();
-        const card = document.createElement('div');
-        card.className = "relative bg-white p-6 rounded-lg shadow-md flex flex-col justify-between h-full";
-        
-        if (isExpired) {
-            card.classList.add('opacity-60', 'bg-gray-100', 'cursor-not-allowed');
-        } else {
-            card.classList.add('hover:shadow-xl', 'transition-shadow', 'cursor-pointer');
-        }
-
-        const deleteButton = document.createElement('button');
-        deleteButton.className = "absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:text-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500";
-        deleteButton.setAttribute('aria-label', 'Excluir pauta');
-        deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
-
-        deleteButton.addEventListener('click', (event) => {
-            event.stopPropagation(); 
-            if (confirm(`Tem certeza que deseja apagar a pauta "${pauta.name}"?`)) {
-                deletePauta(docSnap.id);
-            }
-        });
-
-        card.appendChild(deleteButton);
-
-        const creationDate = pauta.createdAt ? new Date(pauta.createdAt) : new Date();
-        const expirationDate = new Date(creationDate);
-        expirationDate.setDate(creationDate.getDate() + 7);
-
-        const formattedCreationDate = creationDate.toLocaleDateString('pt-BR');
-        const formattedExpirationDate = expirationDate.toLocaleDateString('pt-BR');
-
-        const contentDiv = document.createElement('div');
-        const title = document.createElement('h3');
-        title.className = "font-bold text-xl mb-2";
-        title.textContent = pauta.name;
-
-        const members = document.createElement('p');
-        members.className = "text-gray-600";
-        members.textContent = `Membros: ${pauta.memberEmails?.length || 1}`;
-
-        contentDiv.appendChild(title);
-        contentDiv.appendChild(members);
-
-        const footerDiv = document.createElement('div');
-        footerDiv.className = "mt-4 pt-2 border-t border-gray-200";
-        const createdP = document.createElement('p');
-        createdP.className = "text-xs text-gray-500";
-        createdP.innerHTML = `Criada em: <strong>${formattedCreationDate}</strong>`;
-
-        const expiresP = document.createElement('p');
-        if (isExpired) {
-            expiresP.className = "text-xs text-gray-500 font-semibold";
-            expiresP.innerHTML = `Prazo de acesso expirou em: <strong>${formattedExpirationDate}</strong>`;
-        } else {
-            expiresP.className = "text-xs text-red-600";
-            expiresP.innerHTML = `Será eliminada em: <strong>${formattedExpirationDate}</strong>`;
-        }
-
-        footerDiv.appendChild(createdP);
-        footerDiv.appendChild(expiresP);
-        card.appendChild(contentDiv);
-        card.appendChild(footerDiv);
-        
-        card.addEventListener('click', (event) => {
-            if (event.target.closest('button')) return;
-
-            if (isExpired) {
-                showNotification("Pauta inacessível pois cumpriu seu prazo.", "error");
-            } else {
-                loadPauta(docSnap.id, pauta.name, pauta.type);
-            }
-        });
-        return card;
-    };
-
-    // Função para deletar pauta
-    const deletePauta = async (pautaId) => {
-        try {
-            await deleteDoc(doc(db, "pautas", pautaId));
-        } catch (error) {
-            console.error("Erro ao excluir a pauta:", error);
-            showNotification("Erro ao excluir a pauta.", "error");
-        }
-    };
-
-    // Função para carregar pauta
-    const loadPauta = async (pautaId, pautaName, pautaType) => {
-        currentPautaId = pautaId;
-        window.currentPautaId = pautaId;
-        document.getElementById('pauta-title').textContent = pautaName;
-
-        localStorage.setItem('lastPautaId', pautaId);
-        localStorage.setItem('lastPautaType', pautaType);
-
-        const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
-        if (pautaDoc.exists()) {
-            const pautaData = pautaDoc.data();
-            currentPautaData = pautaData;
-            window.currentPautaData = pautaData;
-            currentPautaOwnerId = pautaData.owner;
-            window.currentPautaOwnerId = pautaData.owner;
-            isPautaClosed = pautaData.isClosed || false;
-            window.isPautaClosed = isPautaClosed;
             
-            togglePautaLock(isPautaClosed);
-
-            const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-            const distColumn = document.getElementById('distribuicao-column');
-            const mainContent = document.getElementById('main-content');
-
-            if (pautaData.useDelegationFlow) {
-                emAtendimentoColumn.classList.remove('hidden');
-            } else {
-                emAtendimentoColumn.classList.add('hidden');
-            }
-
-            if (pautaData.useDistributionFlow) {
-                distColumn.classList.remove('hidden');
-            } else {
-                distColumn.classList.add('hidden');
-            }
-
-            mainContent.classList.remove('lg:grid-cols-3', 'lg:grid-cols-4', 'lg:grid-cols-5');
-            let colunas = 3;
-            if (pautaData.useDelegationFlow) colunas++;
-            if (pautaData.useDistributionFlow) colunas++;
-            mainContent.classList.add(`lg:grid-cols-${colunas}`);
-        }
-
-        setupRealtimeListener(pautaId);
-        // Usando a função IMPORTADA do módulo (não redeclarada)
-        setupCollaboratorsListener(db, pautaId, (lista) => {
-            colaboradores = lista;
-            window.colaboradores = lista;
-        });
-        showScreen('app');
-    };
-
-    // Função para configurar listener em tempo real
-    const setupRealtimeListener = (pautaId) => {
-        if (unsubscribeFromAttendances) unsubscribeFromAttendances();
-        const attendanceCollectionRef = collection(db, "pautas", pautaId, "attendances");
-        unsubscribeFromAttendances = onSnapshot(attendanceCollectionRef, (snapshot) => {
-            allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            window.allAssisted = allAssisted;
-            renderAssistedList();
-        }, (error) => console.error("Erro no listener do Firestore: ", error));
-    };
-
-    // Função para alternar tabs
-    const switchTab = (tabName) => {
-        // ... (mantenha sua função switchTab existente)
-    };
-
-    // Função para renderizar lista (simplificada)
-    const renderAssistedList = () => {
-        // ... (mantenha sua função renderAssistedList existente)
-    };
-
-    const togglePautaLock = (isClosed) => {
-        // ... (mantenha sua função togglePautaLock existente)
-    };
-
-    // =======================================================
-    // FUNÇÃO CORRIGIDA: setupClosePautaNotes (estava faltando)
-    // =======================================================
-    
-    function setupClosePautaNotes() {
-        console.log("Configurando close pauta notes...");
-        const closePautaBtn = document.getElementById("close-pauta-btn");
-        const confirmCloseBtn = document.getElementById("confirm-close-pauta-btn");
-        
-        if (!closePautaBtn || !confirmCloseBtn) {
-            console.warn("Botões de fechar pauta não encontrados");
-            return;
-        }
-        
-        let shouldSendNotes = false;
-        
-        closePautaBtn.addEventListener("click", () => {
-            shouldSendNotes = true;
-        });
-        
-        confirmCloseBtn.addEventListener("click", async () => {
-            setTimeout(async () => {
-                if (shouldSendNotes) {
-                    const isPasswordModalHidden = document.getElementById('close-pauta-modal')?.classList.contains('hidden');
-                    
-                    if (isPasswordModalHidden) {
-                        try {
-                            const notes = localStorage.getItem("pauta_notes") || "";
-                            if (notes.trim() !== "") {
-                                await sendNotesByEmail(notes, currentUserName, auth?.currentUser?.email);
-                                showNotification("Anotações enviadas para seu e-mail!", "info");
-                            }
-                        } catch (err) {
-                            console.error("Erro ao enviar notas:", err);
-                        }
-                    }
-                    shouldSendNotes = false;
-                }
-            }, 1000);
-        });
-    }
-
-    // =======================================================
-    // INICIALIZAÇÃO
-    // =======================================================
-    
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log("📄 DOM carregado, inicializando componentes...");
-        
-        // Inicializa componentes
-        setupNotes();
-        setupConfirmModal();
-        setupClosePautaNotes();  // <-- AGORA ESTÁ DEFINIDA!
-        setupDetailsModal({ db, getChecklistHTML, getUpdatePayload, showNotification });
-
-        // Esconde loading e mostra login após 1 segundo
-        setTimeout(() => {
-            const loading = document.getElementById('loading-container');
-            const login = document.getElementById('login-container');
-            if (loading) loading.classList.add('hidden');
-            if (login) login.classList.remove('hidden');
-            console.log("🔓 Tela de login exibida");
-        }, 1000);
-
-        // Inicia auth state
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                try {
-                    const userDocRef = doc(db, "users", user.uid);
-                    const userDoc = await getDoc(userDocRef);
-
-                    if (userDoc.exists()) {
-                        const userData = userDoc.data();
-                        currentUserName = userData.name || user.email;
-                        window.currentUserName = currentUserName;
-
-                        if (userData.status === 'approved') {
-                            const lastPautaId = localStorage.getItem('lastPautaId');
-                            if (lastPautaId) {
-                                const pautaRef = doc(db, "pautas", lastPautaId);
-                                const pautaSnap = await getDoc(pautaRef);
-                                if (pautaSnap.exists() && pautaSnap.data().members.includes(user.uid)) {
-                                    loadPauta(lastPautaId, pautaSnap.data().name, pautaSnap.data().type);
-                                } else {
-                                    showPautaSelectionScreen(user.uid);
+            confirmCloseBtn.addEventListener("click", async () => {
+                setTimeout(async () => {
+                    if (shouldSendNotes) {
+                        const isPasswordModalHidden = document.getElementById('close-pauta-modal')?.classList.contains('hidden');
+                        
+                        if (isPasswordModalHidden) {
+                            try {
+                                const notes = localStorage.getItem("pauta_notes") || "";
+                                if (notes.trim() !== "") {
+                                    await sendNotesByEmail(notes, currentUserName, auth?.currentUser?.email);
+                                    showNotification("Anotações enviadas para seu e-mail!", "info");
                                 }
-                            } else {
-                                showPautaSelectionScreen(user.uid);
+                            } catch (err) {
+                                console.error("Erro ao enviar notas:", err);
                             }
-                        } else {
-                            showScreen('loading');
-                            loadingText.innerHTML = `
-                                <div class="text-center">
-                                    <p class="text-xl font-bold text-orange-600">Acesso Pendente</p>
-                                    <p class="mt-2 text-gray-600">Olá, <b>${currentUserName}</b>!</p>
-                                    <p class="text-sm text-gray-500">Sua conta foi criada, mas um administrador precisa aprová-la.</p>
-                                    <button onclick="signOut(auth)" class="mt-6 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Sair</button>
-                                </div>
-                            `;
                         }
+                        shouldSendNotes = false;
                     }
-                } catch (error) {
-                    console.error("Erro ao verificar usuário:", error);
+                }, 1000);
+            });
+        }
+
+        // =======================================================
+        // FUNÇÕES DE NAVEGAÇÃO
+        // =======================================================
+
+        const showPautaSelectionScreen = (userId) => {
+            localStorage.removeItem('lastPautaId');
+            localStorage.removeItem('lastPautaType');
+            showScreen('pautaSelection');
+        };
+
+        const loadPauta = async (pautaId, pautaName, pautaType) => {
+            currentPautaId = pautaId;
+            window.currentPautaId = pautaId;
+            
+            const titleEl = document.getElementById('pauta-title');
+            if (titleEl) titleEl.textContent = pautaName;
+
+            localStorage.setItem('lastPautaId', pautaId);
+            localStorage.setItem('lastPautaType', pautaType);
+
+            // Usando a função IMPORTADA do módulo (NÃO redeclarada)
+            setupCollaboratorsListener(db, pautaId, (lista) => {
+                colaboradores = lista;
+                window.colaboradores = lista;
+            });
+            
+            showScreen('app');
+        };
+
+        // =======================================================
+        // INICIALIZAÇÃO PRINCIPAL
+        // =======================================================
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("📄 DOM carregado, inicializando componentes...");
+            
+            // Inicializa componentes UI
+            setupNotes();
+            setupConfirmModal();
+            setupClosePautaNotes();  // AGORA ESTÁ DEFINIDA!
+            
+            // Esconde loading e mostra login após 1 segundo
+            setTimeout(() => {
+                if (loadingContainer) loadingContainer.classList.add('hidden');
+                if (loginContainer) loginContainer.classList.remove('hidden');
+                console.log("🔓 Tela de login exibida");
+            }, 1000);
+
+            // Monitor de autenticação
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    try {
+                        const userDocRef = doc(db, "users", user.uid);
+                        const userDoc = await getDoc(userDocRef);
+
+                        if (userDoc.exists()) {
+                            const userData = userDoc.data();
+                            currentUserName = userData.name || user.email;
+                            window.currentUserName = currentUserName;
+
+                            if (userData.status === 'approved') {
+                                showPautaSelectionScreen(user.uid);
+                            } else {
+                                showScreen('loading');
+                                if (loadingText) {
+                                    loadingText.innerHTML = `
+                                        <div class="text-center">
+                                            <p class="text-xl font-bold text-orange-600">Acesso Pendente</p>
+                                            <p class="mt-2 text-gray-600">Olá, <b>${currentUserName}</b>!</p>
+                                            <p class="text-sm text-gray-500">Sua conta foi criada, mas um administrador precisa aprová-la.</p>
+                                            <button onclick="signOut(auth)" class="mt-6 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Sair</button>
+                                        </div>
+                                    `;
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Erro ao verificar usuário:", error);
+                    }
                 }
-            }
+            });
         });
-    });
 
-    // =======================================================
-    // MONITORES DE CONEXÃO
-    // =======================================================
-    
-    window.addEventListener('offline', () => {
-        document.getElementById('offline-indicator')?.classList.remove('hidden');
-    });
+        // =======================================================
+        // MONITORES DE CONEXÃO
+        // =======================================================
+        
+        window.addEventListener('offline', () => {
+            document.getElementById('offline-indicator')?.classList.remove('hidden');
+        });
 
-    window.addEventListener('online', () => {
-        document.getElementById('offline-indicator')?.classList.add('hidden');
-        showNotification("Conexão restabelecida!", "success");
-    });
+        window.addEventListener('online', () => {
+            document.getElementById('offline-indicator')?.classList.add('hidden');
+            showNotification("Conexão restabelecida!", "success");
+        });
 
-    // =======================================================
-    // EXPOR FUNÇÕES PARA O ESCOPO GLOBAL
-    // =======================================================
-    
-    window.sortColaboradores = sortColaboradores;
-    window.showConfirmModal = showConfirmModal;
-    
-</script>
+        // =======================================================
+        // EXPOR FUNÇÕES PARA O ESCOPO GLOBAL
+        // =======================================================
+        
+        window.sortColaboradores = sortColaboradores;
+        window.showConfirmModal = showConfirmModal;
+        window.signOut = signOut;
+        
+    </script>
 
-<!-- Script Bridge -->
-<script>
-    function exposeGlobalVariables() {
-        const checkInterval = setInterval(() => {
-            if (window.auth && window.currentUserName !== undefined) {
-                window.dispatchEvent(new CustomEvent('userDataReady', {
-                    detail: {
-                        auth: window.auth,
-                        currentUserName: window.currentUserName
-                    }
-                }));
-                clearInterval(checkInterval);
-            }
-        }, 100);
-    }
-    document.addEventListener('DOMContentLoaded', exposeGlobalVariables);
-</script>
+    <!-- Script Bridge -->
+    <script>
+        function exposeGlobalVariables() {
+            const checkInterval = setInterval(() => {
+                if (window.auth && window.currentUserName !== undefined) {
+                    window.dispatchEvent(new CustomEvent('userDataReady', {
+                        detail: {
+                            auth: window.auth,
+                            currentUserName: window.currentUserName
+                        }
+                    }));
+                    clearInterval(checkInterval);
+                }
+            }, 100);
+        }
+        document.addEventListener('DOMContentLoaded', exposeGlobalVariables);
+    </script>
 
 </body>
 </html>
