@@ -1,5 +1,6 @@
+// js/emailService.js
 import { emailJsConfig } from './config.js';
-import { Utils } from './utils.js';
+import { showNotification } from './utils.js'; // ✅ Importa apenas a função necessária
 
 export const EmailService = {
     async sendDelegationEmail(to, collaboratorName, assistedName, senderName, pautaId, assistedId) {
@@ -14,11 +15,11 @@ export const EmailService = {
                 sender_name: senderName,
                 link_atendimento: link
             });
-            Utils.showNotification("E-mail enviado!");
+            showNotification("E-mail enviado!"); // ✅ Usa showNotification diretamente
             return true;
         } catch (error) {
             console.error("Erro e-mail:", error);
-            Utils.showNotification("Falha no envio.", "error");
+            showNotification("Falha no envio.", "error"); // ✅ Usa showNotification diretamente
             return false;
         }
     },
@@ -30,9 +31,11 @@ export const EmailService = {
                 user_name: userName,
                 notes: notes
             });
+            showNotification("Anotações enviadas!", "success"); // ✅ Usa showNotification diretamente
             return true;
         } catch (error) {
             console.error("Erro ao enviar notas:", error);
+            showNotification("Erro ao enviar notas.", "error"); // ✅ Usa showNotification diretamente
             return false;
         }
     }
