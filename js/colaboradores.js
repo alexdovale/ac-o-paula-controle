@@ -9,6 +9,7 @@ import {
     getDocs, 
     writeBatch 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { escapeHTML, showNotification } from './utils.js';
 
 // Variável para armazenar a lista atual
 let colaboradores = [];
@@ -55,8 +56,8 @@ export function renderColaboradores(lista) {
                        data-id="${colab.id}" ${colab.presente ? 'checked' : ''}>
             </td>
             <td class="p-3 text-[10px]">
-                <b>${colab.cargo}</b><br>
-                <span class="text-blue-600 font-black uppercase">EQP ${colab.equipe}</span>
+                <b>${escapeHTML(colab.cargo)}</b><br>
+                <span class="text-blue-600 font-black uppercase">EQP ${escapeHTML(colab.equipe)}</span>
             </td>
             <td class="p-3 font-mono text-[10px] text-gray-400">${colab.horario || '--:--'}</td>
             <td class="p-3 text-center flex justify-center gap-3">
@@ -226,15 +227,4 @@ export function sortColaboradores(criterio, lista = colaboradores) {
     
     renderColaboradores(sortedList);
     return sortedList;
-}
-
-// Função auxiliar para escapar HTML
-function escapeHTML(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
 }
