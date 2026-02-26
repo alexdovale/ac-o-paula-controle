@@ -30,108 +30,153 @@ export const PautaService = {
     /**
      * Adiciona um novo assistido
      */
-   async addAssisted(app) {
-    console.log("addAssisted chamado"); // DEBUG
-    
-    const nameInput = document.getElementById('assisted-name');
-    const cpfInput = document.getElementById('assisted-cpf');
-    const subjectInput = document.getElementById('assisted-subject');
-    
-    if (!nameInput) {
-        showNotification("Campo de nome não encontrado", "error");
-        return;
-    }
-    
-    const name = nameInput.value.trim();
-    if (!name) {
-        showNotification("O nome é obrigatório.", "error");
-        return;
-    }
-
-    const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-    console.log("Modo atual:", currentMode); // DEBUG
-    
-    let isScheduled, hasArrived, scheduledTimeValue;
-
-    if (currentMode === 'agendamento') {
-        const scheduledRadio = document.querySelector('input[name="is-scheduled"]:checked');
-        const arrivedRadio = document.querySelector('input[name="has-arrived"]:checked');
+    async addAssisted(app) {
+        console.log("=== addAssisted iniciado ===");
         
-        isScheduled = scheduledRadio?.value === 'yes';
-        hasArrived = arrivedRadio?.value === 'yes';
-        scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time')?.value : null;
-
-        if (isScheduled && !scheduledTimeValue && !hasArrived) {
-            showNotification("Por favor, informe o horário agendado.", "error");
+        // Verificar se app existe
+        if (!app) {
+            console.error("App não definido");
+            showNotification("Erro interno: app não definido", "error");
             return;
         }
-    } else {
-        isScheduled = false;
-        hasArrived = true;
-        scheduledTimeValue = null;
-    }
 
-    let arrivalDate = null;
-    if (hasArrived) {
-        const timeInput = document.getElementById('arrival-time')?.value;
-        if (timeInput) {
-            const [hours, minutes] = timeInput.split(':');
-            arrivalDate = new Date();
-            arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-        }
-    }
-
-    let assignedRoom = null;
-    if (currentMode === 'avulso' && app.currentPautaData?.type === 'multisala') {
-        assignedRoom = document.getElementById('manual-room-select')?.value;
-    }
-
-    const newAssisted = {
-        name: name,
-        cpf: cpfInput?.value.trim() || '',
-        subject: subjectInput?.value.trim() || 'Não informado',
-        type: currentMode,
-        status: hasArrived ? 'aguardando' : 'pauta',
-        scheduledTime: scheduledTimeValue,
-        arrivalTime: hasArrived && arrivalDate ? arrivalDate.toISOString() : null,
-        assignedCollaborator: null,
-        inAttendanceTime: null,
-        finalizadoPeloColaborador: false,
-        isConfirmed: false,
-        confirmationDetails: null,
-        room: assignedRoom,
-        manualIndex: Date.now(),
-        createdAt: new Date().toISOString(),
-        lastActionBy: app.currentUserName || 'Sistema',
-        lastActionTimestamp: new Date().toISOString()
-    };
-
-    console.log("Novo assistido:", newAssisted); // DEBUG
-
-    try {
+        // Verificar se há uma pauta selecionada
         if (!app.currentPauta?.id) {
-            showNotification("Nenhuma pauta selecionada", "error");
+            console.error("Nenhuma pauta selecionada");
+            showNotification("Selecione uma pauta primeiro", "error");
+            return;
+        }
+
+        // Pegar elementos do DOM
+        const nameInput = document.getElementById('assisted-name');
+        const cpfInput = document.getElementById('assisted-cpf');
+        const subjectInput = document.getElementById('assisted-subject');
+        
+        console.log("Elementos encontrados:", {
+            nameInput: !!nameInput,
+            cpfInput: !!cpfInput,
+            subjectInput: !!subjectInput
+        });
+
+        if (!nameInput) {
+            showNotification("Campo de nome não encontrado", "error");
             return;
         }
         
-        const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
-        const docRef = await addDoc(attendanceRef, newAssisted);
-        console.log("Documento criado com ID:", docRef.id); // DEBUG
+        const name = nameInput.value.trim();
+        if (!name) {
+            showNotification("O nome é obrigatório.", "error");
+            return;
+        }
+
+        // Determinar modo atual (agendado ou avulso)
+        const tabAgendamento = document.getElementById('tab-agendamento');
+        const currentMode = tabAgendamento?.classList.contains('tab-active') ? 'agendamento' : 'avulso';
+        console.log("Modo atual:", currentMode);
         
-        showNotification("Assistido adicionado!");
+        let isScheduled, hasArrived, scheduledTimeValue;
+
+        if (currentMode === 'agendamento') {
+            const scheduledRadio = document.querySelector('input[name="is-scheduled"]:checked');
+            const arrivedRadio = document.querySelector('input[name="has-arrived"]:checked');
+            
+            isScheduled = scheduledRadio?.value === 'yes';
+            hasArrived = arrivedRadio?.value === 'yes';
+            scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time')?.value : null;
+
+            if (isScheduled && !scheduledTimeValue && !hasArrived) {
+                showNotification("Por favor, informe o horário agendado.", "error");
+                return;
+            }
+        } else {
+            isScheduled = false;
+            hasArrived = true;
+            scheduledTimeValue = null;
+        }
+
+        let arrivalDate = null;
+        if (hasArrived) {
+            const timeInput = document.getElementById('arrival-time')?.value;
+            if (timeInput) {
+                const [hours, minutes] = timeInput.split(':');
+                arrivalDate = new Date();
+                arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                console.log("Data de chegada:", arrivalDate);
+            }
+        }
+
+        // Determinar sala para atendimentos avulsos em pautas multisala
+        let assignedRoom = null;
+        if (currentMode === 'avulso' && app.currentPautaData?.type === 'multisala') {
+            assignedRoom = document.getElementById('manual-room-select')?.value;
+            console.log("Sala atribuída:", assignedRoom);
+        }
+
+        // Criar objeto do assistido
+        const newAssisted = {
+            name: name,
+            cpf: cpfInput?.value.trim() || '',
+            subject: subjectInput?.value.trim() || 'Não informado',
+            type: currentMode,
+            status: hasArrived ? 'aguardando' : 'pauta',
+            scheduledTime: scheduledTimeValue,
+            arrivalTime: hasArrived && arrivalDate ? arrivalDate.toISOString() : null,
+            assignedCollaborator: null,
+            inAttendanceTime: null,
+            finalizadoPeloColaborador: false,
+            isConfirmed: false,
+            confirmationDetails: null,
+            room: assignedRoom,
+            manualIndex: Date.now(),
+            createdAt: new Date().toISOString(),
+            lastActionBy: app.currentUserName || 'Sistema',
+            lastActionTimestamp: new Date().toISOString()
+        };
+
+        console.log("Novo assistido a ser salvo:", newAssisted);
+
+        try {
+            console.log("Tentando salvar no Firestore...");
+            console.log("Pauta ID:", app.currentPauta.id);
+            
+            const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
+            const docRef = await addDoc(attendanceRef, newAssisted);
+            
+            console.log("Documento criado com sucesso! ID:", docRef.id);
+            showNotification("Assistido adicionado com sucesso!");
+            
+            // Limpar formulário
+            if (nameInput) nameInput.value = '';
+            if (cpfInput) cpfInput.value = '';
+            if (subjectInput) subjectInput.value = '';
+            
+            // Esconder wrappers
+            document.getElementById('scheduled-time-wrapper')?.classList.add('hidden');
+            document.getElementById('arrival-time-wrapper')?.classList.add('hidden');
+            
+            // Focar no campo nome para nova entrada
+            nameInput.focus();
+            
+        } catch (error) {
+            console.error("Erro detalhado ao adicionar:", error);
+            console.error("Código do erro:", error.code);
+            console.error("Mensagem:", error.message);
+            
+            let mensagem = "Erro ao adicionar assistido";
+            if (error.code === 'permission-denied') {
+                mensagem = "Permissão negada. Verifique as regras do Firestore.";
+            } else if (error.code === 'unavailable') {
+                mensagem = "Serviço indisponível. Verifique sua conexão.";
+            } else if (error.message) {
+                mensagem = error.message;
+            }
+            
+            showNotification(mensagem, "error");
+        }
         
-        // Limpar formulário
-        if (nameInput) nameInput.value = '';
-        if (cpfInput) cpfInput.value = '';
-        if (subjectInput) subjectInput.value = '';
-        document.getElementById('scheduled-time-wrapper')?.classList.add('hidden');
-        document.getElementById('arrival-time-wrapper')?.classList.add('hidden');
-        
-    } catch (error) {
-        console.error("Erro ao adicionar:", error);
-        showNotification("Erro ao adicionar assistido: " + error.message, "error");
-    }
-}
+        console.log("=== addAssisted finalizado ===");
+    },
+
     /**
      * Atualiza status de um assistido
      */
@@ -378,7 +423,10 @@ export const PautaService = {
         
         pautasList.innerHTML = '<p class="col-span-full text-center">Carregando pautas...</p>';
 
-        const q = query(collection(app.db, "pautas"), where("members", "array-contains", app.auth.currentUser.uid));
+        const q = query(
+            collection(app.db, "pautas"), 
+            where("members", "array-contains", app.auth.currentUser.uid)
+        );
 
         onSnapshot(q, (snapshot) => {
             pautasList.innerHTML = '';
@@ -484,7 +532,7 @@ export const PautaService = {
 
         // Check-in
         if (button.classList.contains('check-in-btn')) {
-            const { ModalService } = window.app ? window.app : { ModalService: null };
+            const { ModalService } = window;
             if (ModalService?.openArrivalModal) {
                 ModalService.openArrivalModal(id, app);
             }
@@ -558,7 +606,7 @@ export const PautaService = {
                     }, app.currentUserName);
                 }
             } else {
-                const { ModalService } = window.app ? window.app : { ModalService: null };
+                const { ModalService } = window;
                 if (ModalService?.openPriorityModal) {
                     ModalService.openPriorityModal(id);
                 }
@@ -568,7 +616,7 @@ export const PautaService = {
         // Atender (com delegação)
         if (button.classList.contains('select-collaborator-btn')) {
             const assisted = app.allAssisted?.find(a => a.id === id);
-            const { ModalService } = window.app ? window.app : { ModalService: null };
+            const { ModalService } = window;
             if (ModalService?.openSelectCollaboratorModal) {
                 ModalService.openSelectCollaboratorModal(id, assisted?.name || '', app.colaboradores);
             }
@@ -576,7 +624,7 @@ export const PautaService = {
 
         // Atender (direto)
         if (button.classList.contains('attend-directly-from-aguardando-btn')) {
-            const { ModalService } = window.app ? window.app : { ModalService: null };
+            const { ModalService } = window;
             if (ModalService?.openAttendantModal) {
                 ModalService.openAttendantModal(id, app.colaboradores);
             }
@@ -585,7 +633,7 @@ export const PautaService = {
         // Delegar finalização
         if (button.classList.contains('delegate-finalization-btn')) {
             const assisted = app.allAssisted?.find(a => a.id === id);
-            const { ModalService } = window.app ? window.app : { ModalService: null };
+            const { ModalService } = window;
             if (ModalService?.openDelegateEmailModal) {
                 ModalService.openDelegateEmailModal(id, assisted?.name || '', assisted?.assignedCollaborator?.name);
             }
@@ -616,7 +664,7 @@ export const PautaService = {
 
         // Gerenciar demandas
         if (button.classList.contains('manage-demands-btn')) {
-            const { ModalService } = window.app ? window.app : { ModalService: null };
+            const { ModalService } = window;
             if (ModalService?.openDemandsModal) {
                 ModalService.openDemandsModal(id, app.allAssisted);
             }
@@ -624,7 +672,7 @@ export const PautaService = {
 
         // Ver detalhes
         if (button.classList.contains('view-details-btn')) {
-            const { openDetailsModal } = window.app ? window.app : { openDetailsModal: null };
+            const { openDetailsModal } = window;
             if (openDetailsModal) {
                 openDetailsModal({
                     assistedId: id,
