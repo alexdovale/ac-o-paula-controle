@@ -709,180 +709,188 @@
                 });
             }
         setupEventListeners() {
-            // Login
-            document.getElementById('login-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                AuthService.login(this);
-            });
-        
-            document.getElementById('register-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                AuthService.register(this);
-            });
-        
-            document.getElementById('forgot-password-link').addEventListener('click', (e) => {
-                e.preventDefault();
-                AuthService.resetPassword(this.auth);
-            });
-        
-            // Tabs de login/cadastro
-            document.getElementById('login-tab-btn').addEventListener('click', () => {
-                UIService.toggleAuthTabs('login');
-            });
-        
-            document.getElementById('register-tab-btn').addEventListener('click', () => {
-                UIService.toggleAuthTabs('register');
-            });
-        
-            // Logout
-            document.querySelectorAll('#logout-btn-main, #logout-btn-app').forEach(btn => {
-                btn.addEventListener('click', () => AuthService.logout(this.auth));
-            });
-        
-            // Botões principais
-            document.getElementById('create-pauta-btn').addEventListener('click', () => {
-                ModalService.openPautaTypeModal(this);
-            });
-        
-            document.getElementById('back-to-pautas-btn').addEventListener('click', () => {
-                if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
-                if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
-                this.currentPauta = null;
-                this.allAssisted = [];
-                this.colaboradores = [];
-                PautaService.showPautaSelectionScreen(this);
-            });
-        
-            // Tabs de atendimento
-            document.getElementById('tab-agendamento').addEventListener('click', () => {
-                UIService.switchTab('agendamento', this);
-            });
-            
-            document.getElementById('tab-avulso').addEventListener('click', () => {
-                UIService.switchTab('avulso', this);
-            });
-        
-            // Ações
-            document.getElementById('actions-toggle').addEventListener('click', UIService.toggleActionsPanel);
-            
-            document.getElementById('share-pauta-btn').addEventListener('click', () => {
-                ModalService.openShareModal(this);
-            });
-        
-            document.getElementById('view-stats-btn').addEventListener('click', () => {
-                StatisticsService.showModal(this.allAssisted, this.currentPautaData);
-            });
-        
-            document.getElementById('edit-pauta-name-btn').addEventListener('click', () => {
-                ModalService.openEditPautaModal(this);
-            });
-        
-            document.getElementById('manage-members-btn').addEventListener('click', async () => {
-                await ModalService.openMembersModal(this);
-            });
-        
-            document.getElementById('manage-collaborators-btn').addEventListener('click', () => {
-                CollaboratorService.openModal(this);
-            });
-        
-            document.getElementById('close-pauta-btn').addEventListener('click', () => {
-                ModalService.openClosePautaModal(this);
-            });
-        
-            document.getElementById('reopen-pauta-btn').addEventListener('click', () => {
-                ModalService.openReopenPautaModal(this);
-            });
-        
-            document.getElementById('reset-all-btn').addEventListener('click', () => {
-                ModalService.openResetPautaModal(this);
-            });
-        
-            // NOTAS - Configuração do modal de anotações
-            NotesService.setup(); // ✅ ADICIONE ESTA LINHA AQUI
-        
-            // Adicionar assistido
-            document.getElementById('add-assisted-btn').addEventListener('click', () => {
-                PautaService.addAssisted(this);
-            });
-        
-            // Upload CSV
-            document.getElementById('file-upload').addEventListener('change', (e) => {
-                PautaService.handleCSVUpload(e, this);
-            });
-        
-            // Botão alternar faltosos
-            document.getElementById('toggle-faltosos-btn').addEventListener('click', UIService.toggleFaltosos);
-        
-            // Pesquisas
-            ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
-                document.getElementById(id).addEventListener('input', () => {
-                    UIService.renderAssistedLists(this);
-                });
-            });
-        
-            // Botões de PDF
-            document.getElementById('download-pdf-btn').addEventListener('click', () => {
-                PDFService.generateAtendidosPDF(
-                    document.getElementById('pauta-title').textContent,
-                    this.allAssisted.filter(a => a.status === 'atendido')
-                );
-            });
-        
-            document.getElementById('download-faltosos-pdf-btn').addEventListener('click', () => {
-                PDFService.generateAtendidosPDF(
-                    `${document.getElementById('pauta-title').textContent} (FALTOSOS)`,
-                    this.allAssisted.filter(a => a.status === 'faltoso')
-                );
-            });
-        
-            document.getElementById('download-collaborators-pdf-modal').addEventListener('click', () => {
-                const selectedCols = Array.from(document.querySelectorAll('.pdf-col-check:checked'))
-                                          .map(cb => cb.value);
-                PDFService.generateCollaboratorsPDF(
-                    document.getElementById('pauta-title').textContent,
-                    this.colaboradores,
-                    selectedCols
-                );
-            });
-        
-            document.getElementById('clear-collaborators-list-modal').addEventListener('click', () => {
-                CollaboratorService.clearAll(this);
-            });
-        
-            // Links de ajuda
-            document.getElementById('format-help-link').addEventListener('click', (e) => {
-                e.preventDefault();
-                document.getElementById('format-help-modal').classList.remove('hidden');
-            });
-        
-            document.getElementById('privacy-policy-link').addEventListener('click', (e) => {
-                e.preventDefault();
-                document.getElementById('privacy-policy-modal').classList.remove('hidden');
-            });
-        
-            // Botões de modais do rodapé
-            UIService.setupFooterModals();
-        
-            // Assuntos
-            this.setupSubjectsAutocomplete();
-        
-            // Configurar listeners de clique para cards (delegação)
-            document.body.addEventListener('click', (e) => {
-                PautaService.handleCardActions(e, this);
-            });
-        
-            // Configurar botões de cancelar/fechar modais
-            document.querySelectorAll('[id^="cancel-"], [id^="close-"]').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const modal = e.target.closest('.fixed');
-                    if (modal) modal.classList.add('hidden');
-                });
-            });
-        
-            // Configurar painel admin
-            this.setupAdminPanel();
-        }
+    // Login
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        AuthService.login(this);
+    });
 
+    document.getElementById('register-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        AuthService.register(this);
+    });
+
+    document.getElementById('forgot-password-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        AuthService.resetPassword(this.auth);
+    });
+
+    // Tabs de login/cadastro
+    document.getElementById('login-tab-btn').addEventListener('click', () => {
+        UIService.toggleAuthTabs('login');
+    });
+
+    document.getElementById('register-tab-btn').addEventListener('click', () => {
+        UIService.toggleAuthTabs('register');
+    });
+
+    // Logout
+    document.querySelectorAll('#logout-btn-main, #logout-btn-app').forEach(btn => {
+        btn.addEventListener('click', () => AuthService.logout(this.auth));
+    });
+
+    // Botões principais
+    document.getElementById('create-pauta-btn').addEventListener('click', () => {
+        ModalService.openPautaTypeModal(this);
+    });
+
+    document.getElementById('back-to-pautas-btn').addEventListener('click', () => {
+        if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
+        if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
+        this.currentPauta = null;
+        this.allAssisted = [];
+        this.colaboradores = [];
+        PautaService.showPautaSelectionScreen(this);
+    });
+
+    // Tabs de atendimento
+    document.getElementById('tab-agendamento').addEventListener('click', () => {
+        UIService.switchTab('agendamento', this);
+    });
+    
+    document.getElementById('tab-avulso').addEventListener('click', () => {
+        UIService.switchTab('avulso', this);
+    });
+
+    // Ações
+    document.getElementById('actions-toggle').addEventListener('click', UIService.toggleActionsPanel);
+    
+    document.getElementById('share-pauta-btn').addEventListener('click', () => {
+        ModalService.openShareModal(this);
+    });
+
+    document.getElementById('view-stats-btn').addEventListener('click', () => {
+        StatisticsService.showModal(this.allAssisted, this.currentPautaData);
+    });
+
+    // ❌ COMENTE ESTAS LINHAS - não existem no HTML
+    // document.getElementById('edit-pauta-name-btn').addEventListener('click', () => {
+    //     ModalService.openEditPautaModal(this);
+    // });
+
+    // document.getElementById('manage-members-btn').addEventListener('click', async () => {
+    //     await ModalService.openMembersModal(this);
+    // });
+
+    document.getElementById('manage-collaborators-btn').addEventListener('click', () => {
+        CollaboratorService.openModal(this);
+    });
+
+    // ❌ COMENTE ESTAS LINHAS - não existem no HTML
+    // document.getElementById('close-pauta-btn').addEventListener('click', () => {
+    //     ModalService.openClosePautaModal(this);
+    // });
+
+    // document.getElementById('reopen-pauta-btn').addEventListener('click', () => {
+    //     ModalService.openReopenPautaModal(this);
+    // });
+
+    // document.getElementById('reset-all-btn').addEventListener('click', () => {
+    //     ModalService.openResetPautaModal(this);
+    // });
+
+    // NOTAS - Configuração do modal de anotações
+    NotesService.setup();
+
+    // Adicionar assistido
+    document.getElementById('add-assisted-btn').addEventListener('click', () => {
+        PautaService.addAssisted(this);
+    });
+
+    // Upload CSV
+    document.getElementById('file-upload').addEventListener('change', (e) => {
+        PautaService.handleCSVUpload(e, this);
+    });
+
+    // Botão alternar faltosos
+    document.getElementById('toggle-faltosos-btn').addEventListener('click', UIService.toggleFaltosos);
+
+    // Pesquisas
+    ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {  // ✅ Verifica se existe antes de adicionar listener
+            element.addEventListener('input', () => {
+                UIService.renderAssistedLists(this);
+            });
+        }
+    });
+
+    // Botões de PDF
+    document.getElementById('download-pdf-btn').addEventListener('click', () => {
+        PDFService.generateAtendidosPDF(
+            document.getElementById('pauta-title').textContent,
+            this.allAssisted.filter(a => a.status === 'atendido')
+        );
+    });
+
+    document.getElementById('download-faltosos-pdf-btn').addEventListener('click', () => {
+        PDFService.generateAtendidosPDF(
+            `${document.getElementById('pauta-title').textContent} (FALTOSOS)`,
+            this.allAssisted.filter(a => a.status === 'faltoso')
+        );
+    });
+
+    // ❌ COMENTE ESTA LINHA - o modal pode não existir ainda
+    // document.getElementById('download-collaborators-pdf-modal').addEventListener('click', () => {
+    //     const selectedCols = Array.from(document.querySelectorAll('.pdf-col-check:checked'))
+    //                               .map(cb => cb.value);
+    //     PDFService.generateCollaboratorsPDF(
+    //         document.getElementById('pauta-title').textContent,
+    //         this.colaboradores,
+    //         selectedCols
+    //     );
+    // });
+
+    // ❌ COMENTE ESTA LINHA
+    // document.getElementById('clear-collaborators-list-modal').addEventListener('click', () => {
+    //     CollaboratorService.clearAll(this);
+    // });
+
+    // Links de ajuda
+    document.getElementById('format-help-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('format-help-modal').classList.remove('hidden');
+    });
+
+    document.getElementById('privacy-policy-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('privacy-policy-modal').classList.remove('hidden');
+    });
+
+    // Botões de modais do rodapé - ✅ JÁ TEM VERIFICAÇÃO DENTRO
+    UIService.setupFooterModals();
+
+    // Assuntos
+    this.setupSubjectsAutocomplete();
+
+    // Configurar listeners de clique para cards (delegação)
+    document.body.addEventListener('click', (e) => {
+        PautaService.handleCardActions(e, this);
+    });
+
+    // Configurar botões de cancelar/fechar modais
+    document.querySelectorAll('[id^="cancel-"], [id^="close-"]').forEach(btn => {
+        if (btn) {  // ✅ Verifica se existe
+            btn.addEventListener('click', (e) => {
+                const modal = e.target.closest('.fixed');
+                if (modal) modal.classList.add('hidden');
+            });
+        }
+    });
+
+    // Configurar painel admin
+    this.setupAdminPanel();
+}
             setupSubjectsAutocomplete() {
                 const datalist = document.getElementById('subjects-list');
                 flatSubjects.forEach(subject => {
@@ -947,6 +955,19 @@
                         loadUsersList(this.db);
                         populateUserFilter(this.db);
                     };
+                }
+
+                   // ✅ Adicione verificações para todos os botões do admin
+                const maxBtn = document.getElementById('max-admin-btn');
+                if (maxBtn) {
+                    maxBtn.addEventListener('click', () => {
+                        const window = document.getElementById('admin-window');
+                        if (window) {
+                            window.classList.toggle('max-w-4xl');
+                            window.classList.toggle('max-w-none');
+                            window.classList.toggle('rounded-lg');
+                        }
+                    });
                 }
 
                 document.getElementById('max-admin-btn')?.addEventListener('click', () => {
