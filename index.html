@@ -607,29 +607,31 @@
     </footer>
 
     <!-- Script principal - APENAS O MÍNIMO PARA INICIALIZAR -->
-    <script type="module">
-        // Importações dos módulos existentes
-import { firebaseConfig } from './js/config.js';
-import { AuthService } from './js/auth.js';
-import { PautaService } from './js/pauta.js';
-import { UIService } from './js/ui.js';
-import { CollaboratorService } from './js/colaboradores.js';
-import { ModalService } from './js/modal.js';
-import { NotesService } from './js/notes.js';
-import { StatisticsService } from './js/estatisticas.js';
-import { PDFService } from './js/pdfService.js';
-import { EmailService } from './js/emailService.js';  // ✅ Importa o objeto, não funções individuais
-import { escapeHTML, showNotification, normalizeText, copyToClipboard, formatTime } from './js/utils.js';
-import { setupDetailsModal } from './js/detalhes.js';
-import { subjectTree, flatSubjects } from './js/assuntos.js';
-import { showConfirmModal } from './js/confirmModal.js';
-import { renderStatisticsModal } from './js/estatisticas.js';
-import { logAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser, loadAuditLogs, exportAuditLogsPDF, loadDashboardData, populateUserFilter } from './js/admin.js';
-import { generateAtendidosPDF, generateCollaboratorsPDF } from './js/pdfService.js';
-// ❌ REMOVA ESTAS LINHAS:
-// import { sendDelegationEmail, sendNotesByEmail } from './js/emailService.js';
-import { parsePautaCSV } from './js/csvHandler.js';
-import { getChecklistHTML } from './js/checklist.js';
+   // LINHAS 613-637 - VERSÃO CORRIGIDA
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
+    
+    // Importações dos módulos existentes
+    import { firebaseConfig } from './js/config.js';
+    import { AuthService } from './js/auth.js';
+    import { PautaService } from './js/pauta.js';
+    import { UIService } from './js/ui.js';
+    import { CollaboratorService } from './js/colaboradores.js';
+    import { ModalService } from './js/modal.js';
+    import { NotesService } from './js/notes.js';
+    import { StatisticsService } from './js/estatisticas.js';
+    import { PDFService } from './js/pdfService.js';
+    import { EmailService } from './js/emailService.js';
+    import { escapeHTML, showNotification, normalizeText, copyToClipboard, formatTime } from './js/utils.js';
+    import { setupDetailsModal } from './js/detalhes.js';
+    import { subjectTree, flatSubjects } from './js/assuntos.js';
+    import { showConfirmModal } from './js/confirmModal.js';
+    import { logAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser, loadAuditLogs, exportAuditLogsPDF, loadDashboardData, populateUserFilter } from './js/admin.js';
+    import { parsePautaCSV } from './js/csvHandler.js';
+    import { getChecklistHTML } from './js/checklist.js';
 
         class SIGAPApp {
             constructor() {
@@ -651,51 +653,49 @@ import { getChecklistHTML } from './js/checklist.js';
             }
 
             async init() {
-                try {
-                    const app = initializeApp(firebaseConfig);
-                    
-                    initializeAppCheck(app, {
-                        provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
-                        isTokenAutoRefreshEnabled: true
-                    });
+    try {
+        const app = initializeApp(firebaseConfig);
+        
+        initializeAppCheck(app, {
+            provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
+            isTokenAutoRefreshEnabled: true
+        });
 
-                    this.db = getFirestore(app);
-                    this.auth = getAuth(app);
+        this.db = getFirestore(app);
+        this.auth = getAuth(app);
 
-                    await this.setupOfflinePersistence();
-                    this.setupEventListeners();
-                    this.setupAuthListener();
-                    
-                } catch (error) {
-                    console.error("Erro na inicialização:", error);
-                    showNotification("Erro ao iniciar o sistema", "error");
-                }
-            }
+        await this.setupOfflinePersistence();
+        this.setupEventListeners();
+        this.setupAuthListener();
+        
+    } catch (error) {
+        console.error("Erro na inicialização:", error);
+        showNotification("Erro ao iniciar o sistema", "error");
+    }
+}
 
             setupOfflinePersistence() {
-                try {
-                    enableIndexedDbPersistence(this.db).catch((err) => {
-                        if (err.code == 'failed-precondition') {
-                            console.warn('Persistência falhou: Múltiplas abas abertas.');
-                        } else if (err.code == 'unimplemented') {
-                            console.warn('Persistência falhou: Navegador não suportado.');
-                        }
-                    });
-                } catch (e) {
-                    console.log("Erro ao ativar persistência:", e);
-                }
-
-                window.addEventListener('offline', () => {
-                    document.getElementById('offline-indicator').classList.remove('hidden');
-                });
-
-                window.addEventListener('online', () => {
-    document.getElementById('offline-indicator').classList.add('hidden');
-    // ✅ Trocar para showNotification
-    showNotification("Conexão restabelecida!", "success");
-    // OU Utils.showNotification("Conexão restabelecida!", "success");
-});
+    try {
+        enableIndexedDbPersistence(this.db).catch((err) => {
+            if (err.code == 'failed-precondition') {
+                console.warn('Persistência falhou: Múltiplas abas abertas.');
+            } else if (err.code == 'unimplemented') {
+                console.warn('Persistência falhou: Navegador não suportado.');
             }
+        });
+    } catch (e) {
+        console.log("Erro ao ativar persistência:", e);
+    }
+
+    window.addEventListener('offline', () => {
+        document.getElementById('offline-indicator').classList.remove('hidden');
+    });
+
+    window.addEventListener('online', () => {
+        document.getElementById('offline-indicator').classList.add('hidden');
+        showNotification("Conexão restabelecida!", "success");
+    });
+}
 
             setupAuthListener() {
                 onAuthStateChanged(this.auth, async (user) => {
