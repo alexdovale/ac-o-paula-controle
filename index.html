@@ -1437,17 +1437,22 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 // Botões principais
                 document.getElementById('create-pauta-btn')?.addEventListener('click', () => {
-                    ModalService.openPautaTypeModal(this);
+                    document.getElementById('pauta-type-modal').classList.remove('hidden');
                 });
 
-                document.getElementById('back-to-pautas-btn')?.addEventListener('click', () => {
+               document.getElementById('back-to-pautas-btn')?.addEventListener('click', () => {
                     if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
                     if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
                     this.currentPauta = null;
                     this.allAssisted = [];
                     this.colaboradores = [];
-                    PautaService.showPautaSelectionScreen(this);
-                });
+                    UIService.showScreen('pautaSelection');
+                    // Recarrega a lista de pautas
+                    const userId = this.auth?.currentUser?.uid;
+                    if (userId) {
+                        PautaService.showPautaSelectionScreen(this);
+                    }
+                });;
 
                 // Tabs de atendimento
                 document.getElementById('tab-agendamento')?.addEventListener('click', () => {
@@ -1462,7 +1467,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
                 
                 document.getElementById('share-pauta-btn')?.addEventListener('click', () => {
-                    ModalService.openShareModal(this);
+                    document.getElementById('share-modal').classList.remove('hidden');
                 });
 
                 document.getElementById('view-stats-btn')?.addEventListener('click', () => {
