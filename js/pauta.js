@@ -30,85 +30,108 @@ export const PautaService = {
     /**
      * Adiciona um novo assistido
      */
-    async addAssisted(app) {
-        const name = document.getElementById('assisted-name')?.value.trim();
-        if (!name) {
-            showNotification("O nome é obrigatório.", "error");
+   async addAssisted(app) {
+    console.log("addAssisted chamado"); // DEBUG
+    
+    const nameInput = document.getElementById('assisted-name');
+    const cpfInput = document.getElementById('assisted-cpf');
+    const subjectInput = document.getElementById('assisted-subject');
+    
+    if (!nameInput) {
+        showNotification("Campo de nome não encontrado", "error");
+        return;
+    }
+    
+    const name = nameInput.value.trim();
+    if (!name) {
+        showNotification("O nome é obrigatório.", "error");
+        return;
+    }
+
+    const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
+    console.log("Modo atual:", currentMode); // DEBUG
+    
+    let isScheduled, hasArrived, scheduledTimeValue;
+
+    if (currentMode === 'agendamento') {
+        const scheduledRadio = document.querySelector('input[name="is-scheduled"]:checked');
+        const arrivedRadio = document.querySelector('input[name="has-arrived"]:checked');
+        
+        isScheduled = scheduledRadio?.value === 'yes';
+        hasArrived = arrivedRadio?.value === 'yes';
+        scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time')?.value : null;
+
+        if (isScheduled && !scheduledTimeValue && !hasArrived) {
+            showNotification("Por favor, informe o horário agendado.", "error");
             return;
         }
+    } else {
+        isScheduled = false;
+        hasArrived = true;
+        scheduledTimeValue = null;
+    }
 
-        const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-        let isScheduled, hasArrived, scheduledTimeValue;
-
-        if (currentMode === 'agendamento') {
-            isScheduled = document.querySelector('input[name="is-scheduled"]:checked')?.value === 'yes';
-            hasArrived = document.querySelector('input[name="has-arrived"]:checked')?.value === 'yes';
-            scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time')?.value : null;
-
-            if (isScheduled && !scheduledTimeValue && !hasArrived) {
-                showNotification("Por favor, informe o horário agendado.", "error");
-                return;
-            }
-        } else {
-            isScheduled = false;
-            hasArrived = true;
-            scheduledTimeValue = null;
+    let arrivalDate = null;
+    if (hasArrived) {
+        const timeInput = document.getElementById('arrival-time')?.value;
+        if (timeInput) {
+            const [hours, minutes] = timeInput.split(':');
+            arrivalDate = new Date();
+            arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
         }
+    }
 
-        let arrivalDate = null;
-        if (hasArrived) {
-            const timeInput = document.getElementById('arrival-time')?.value;
-            if (timeInput) {
-                const [hours, minutes] = timeInput.split(':');
-                arrivalDate = new Date();
-                arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-            }
+    let assignedRoom = null;
+    if (currentMode === 'avulso' && app.currentPautaData?.type === 'multisala') {
+        assignedRoom = document.getElementById('manual-room-select')?.value;
+    }
+
+    const newAssisted = {
+        name: name,
+        cpf: cpfInput?.value.trim() || '',
+        subject: subjectInput?.value.trim() || 'Não informado',
+        type: currentMode,
+        status: hasArrived ? 'aguardando' : 'pauta',
+        scheduledTime: scheduledTimeValue,
+        arrivalTime: hasArrived && arrivalDate ? arrivalDate.toISOString() : null,
+        assignedCollaborator: null,
+        inAttendanceTime: null,
+        finalizadoPeloColaborador: false,
+        isConfirmed: false,
+        confirmationDetails: null,
+        room: assignedRoom,
+        manualIndex: Date.now(),
+        createdAt: new Date().toISOString(),
+        lastActionBy: app.currentUserName || 'Sistema',
+        lastActionTimestamp: new Date().toISOString()
+    };
+
+    console.log("Novo assistido:", newAssisted); // DEBUG
+
+    try {
+        if (!app.currentPauta?.id) {
+            showNotification("Nenhuma pauta selecionada", "error");
+            return;
         }
-
-        let assignedRoom = null;
-        if (currentMode !== 'agendamento' && app.currentPautaData?.type === 'multisala') {
-            assignedRoom = document.getElementById('manual-room-select')?.value;
-        }
-
-        const newAssisted = {
-            name,
-            cpf: document.getElementById('assisted-cpf')?.value.trim() || '',
-            subject: document.getElementById('assisted-subject')?.value.trim() || 'Não informado',
-            type: currentMode,
-            status: hasArrived ? 'aguardando' : 'pauta',
-            scheduledTime: scheduledTimeValue,
-            arrivalTime: hasArrived && arrivalDate ? arrivalDate.toISOString() : null,
-            assignedCollaborator: null,
-            inAttendanceTime: null,
-            finalizadoPeloColaborador: false,
-            isConfirmed: false,
-            confirmationDetails: null,
-            room: assignedRoom,
-            manualIndex: app.allAssisted?.length || 0,
-            createdAt: new Date().toISOString(),
-            lastActionBy: app.currentUserName || 'Sistema',
-            lastActionTimestamp: new Date().toISOString()
-        };
-
-        try {
-            if (!app.currentPauta?.id) {
-                showNotification("Nenhuma pauta selecionada", "error");
-                return;
-            }
-            const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
-            await addDoc(attendanceRef, newAssisted);
-            showNotification("Assistido adicionado!");
-            
-            // Limpar formulário
-            document.getElementById('form-agendamento')?.reset();
-            document.getElementById('scheduled-time-wrapper')?.classList.add('hidden');
-            document.getElementById('arrival-time-wrapper')?.classList.add('hidden');
-        } catch (error) {
-            console.error("Erro ao adicionar:", error);
-            showNotification("Erro ao adicionar assistido", "error");
-        }
-    },
-
+        
+        const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
+        const docRef = await addDoc(attendanceRef, newAssisted);
+        console.log("Documento criado com ID:", docRef.id); // DEBUG
+        
+        showNotification("Assistido adicionado!");
+        
+        // Limpar formulário
+        if (nameInput) nameInput.value = '';
+        if (cpfInput) cpfInput.value = '';
+        if (subjectInput) subjectInput.value = '';
+        document.getElementById('scheduled-time-wrapper')?.classList.add('hidden');
+        document.getElementById('arrival-time-wrapper')?.classList.add('hidden');
+        
+    } catch (error) {
+        console.error("Erro ao adicionar:", error);
+        showNotification("Erro ao adicionar assistido: " + error.message, "error");
+    }
+}
     /**
      * Atualiza status de um assistido
      */
