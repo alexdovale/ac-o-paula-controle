@@ -589,7 +589,7 @@
         </div>
     </div>
 
-    <!-- Modal de Compartilhamento Externo -->
+   <!-- Modal de Compartilhamento Externo -->
     <div id="share-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4 text-gray-800">Compartilhamento Externo</h2>
@@ -603,7 +603,7 @@
                     <span id="share-status-text" class="ml-3 text-sm font-medium text-gray-900">Privado</span>
                 </label>
             </div>
-
+    
             <div id="share-link-container" class="hidden space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase">Link Público</label>
@@ -612,15 +612,17 @@
                         <button id="copy-share-link-btn" class="bg-blue-600 text-white px-4 rounded-r-lg hover:bg-blue-700 font-bold text-sm">Copiar</button>
                     </div>
                 </div>
+                
                 <div class="flex items-center gap-2">
                     <input type="checkbox" id="mask-names-check" class="h-4 w-4 text-pink-600 border-gray-300 rounded">
                     <label for="mask-names-check" class="text-sm text-gray-700">Ocultar Sobrenomes (Privacidade/LGPD)</label>
                 </div>
+                
                 <a id="open-external-btn" href="#" target="_blank" class="block w-full text-center py-2 border border-pink-600 text-pink-600 rounded-lg hover:bg-pink-50 font-bold mt-2">
                     Abrir Visualização
                 </a>
             </div>
-
+    
             <div class="flex justify-end mt-6">
                 <button id="close-share-modal-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
             </div>
@@ -1619,7 +1621,12 @@ class SIGAPApp {
         });
 
         document.getElementById('view-stats-btn')?.addEventListener('click', () => {
-            StatisticsService.showModal(this.allAssisted, this.currentPautaData?.useDelegationFlow, this.currentPauta?.name);
+            console.log("Botão estatísticas clicado"); // DEBUG
+            if (this.allAssisted && this.currentPauta?.name) {
+                StatisticsService.showModal(this.allAssisted, this.currentPautaData?.useDelegationFlow, this.currentPauta.name);
+            } else {
+                showNotification("Carregue uma pauta primeiro", "info");
+            }
         });
 
         document.getElementById('edit-pauta-name-btn')?.addEventListener('click', () => {
