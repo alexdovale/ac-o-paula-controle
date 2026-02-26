@@ -668,7 +668,7 @@ import { getChecklistHTML } from './js/checklist.js';
                     
                 } catch (error) {
                     console.error("Erro na inicialização:", error);
-                    Utils.showNotification("Erro ao iniciar o sistema", "error");
+                    showNotification("Erro ao iniciar o sistema", "error");
                 }
             }
 
@@ -690,9 +690,11 @@ import { getChecklistHTML } from './js/checklist.js';
                 });
 
                 window.addEventListener('online', () => {
-                    document.getElementById('offline-indicator').classList.add('hidden');
-                    Utils.showNotification("Conexão restabelecida!", "success");
-                });
+    document.getElementById('offline-indicator').classList.add('hidden');
+    // ✅ Trocar para showNotification
+    showNotification("Conexão restabelecida!", "success");
+    // OU Utils.showNotification("Conexão restabelecida!", "success");
+});
             }
 
             setupAuthListener() {
