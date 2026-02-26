@@ -1897,13 +1897,18 @@ class SIGAPApp {
     }
 
     async loadPauta(pautaId, pautaName, pautaType) {
-        this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
-        document.getElementById('pauta-title').textContent = pautaName;
+    console.log("📂 Carregando pauta:", pautaId, pautaName);
+    
+    this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
+    document.getElementById('pauta-title').textContent = pautaName;
 
-        localStorage.setItem('lastPautaId', pautaId);
-        localStorage.setItem('lastPautaType', pautaType);
+    localStorage.setItem('lastPautaId', pautaId);
+    localStorage.setItem('lastPautaType', pautaType);
 
+    try {
         const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
+        console.log("Dados da pauta:", pautaDoc.exists() ? pautaDoc.data() : "não encontrada");
+        
         if (pautaDoc.exists()) {
             this.currentPautaData = pautaDoc.data();
             this.currentPautaOwnerId = this.currentPautaData.owner;
@@ -1930,18 +1935,45 @@ class SIGAPApp {
         this.setupRealtimeListener(pautaId);
         CollaboratorService.setupListener(this, pautaId);
         UIService.showScreen('app');
-    }
-
-    setupRealtimeListener(pautaId) {
-        if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
         
-        const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
-        this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
-            this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            UIService.renderAssistedLists(this);
-        });
+    } catch (error) {
+        console.error("Erro ao carregar pauta:", error);
+        showNotification("Erro ao carregar pauta", "error");
     }
 }
+    setupRealtimeListener(pautaId) {
+        console.log("🔄 Configurando listener para pauta:", pautaId);
+        
+        if (this.unsubscribeFromAttendances) {
+            console.log("Removendo listener anterior");
+            this.unsubscribeFromAttendances();
+        }
+        
+        const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
+        console.log("Referência criada:", attendanceRef);
+        
+        this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
+            console.log("📥 Dados recebidos do Firestore:", snapshot.size, "documentos");
+            
+            this.allAssisted = snapshot.docs.map(doc => {
+                const data = doc.data();
+                console.log("Documento:", doc.id, data);
+                return { id: doc.id, ...data };
+            });
+            
+            console.log("✅ allAssisted atualizado:", this.allAssisted.length, "itens");
+            UIService.renderAssistedLists(this);
+            
+        }, (error) => {
+            console.error("❌ Erro no listener:", error);
+            console.error("Código:", error.code);
+            console.error("Mensagem:", error.message);
+            showNotification("Erro ao carregar dados em tempo real", "error");
+        });
+        
+        console.log("✅ Listener configurado");
+    }
+
 
         // Inicializar a aplicação
         window.app = new SIGAPApp();
