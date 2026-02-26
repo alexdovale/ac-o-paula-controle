@@ -1,10 +1,14 @@
 // js/pauta.js
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML } from './utils.js';
+import { UIService } from './ui.js';
 
 export const PautaService = {
     currentListeners: new Map(),
 
+    /**
+     * Configura listener em tempo real para atendimentos
+     */
     setupAttendancesListener(db, pautaId, callback) {
         if (this.currentListeners.has(pautaId)) {
             this.currentListeners.get(pautaId)();
@@ -14,14 +18,20 @@ export const PautaService = {
         const unsubscribe = onSnapshot(attendanceRef, (snapshot) => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             callback(data);
+        }, (error) => {
+            console.error("Erro no listener:", error);
+            showNotification("Erro ao carregar dados em tempo real", "error");
         });
 
         this.currentListeners.set(pautaId, unsubscribe);
         return unsubscribe;
     },
 
+    /**
+     * Adiciona um novo assistido
+     */
     async addAssisted(app) {
-        const name = document.getElementById('assisted-name').value.trim();
+        const name = document.getElementById('assisted-name')?.value.trim();
         if (!name) {
             showNotification("O nome é obrigatório.", "error");
             return;
@@ -31,9 +41,9 @@ export const PautaService = {
         let isScheduled, hasArrived, scheduledTimeValue;
 
         if (currentMode === 'agendamento') {
-            isScheduled = document.querySelector('input[name="is-scheduled"]:checked').value === 'yes';
-            hasArrived = document.querySelector('input[name="has-arrived"]:checked').value === 'yes';
-            scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time').value : null;
+            isScheduled = document.querySelector('input[name="is-scheduled"]:checked')?.value === 'yes';
+            hasArrived = document.querySelector('input[name="has-arrived"]:checked')?.value === 'yes';
+            scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time')?.value : null;
 
             if (isScheduled && !scheduledTimeValue && !hasArrived) {
                 showNotification("Por favor, informe o horário agendado.", "error");
@@ -47,75 +57,116 @@ export const PautaService = {
 
         let arrivalDate = null;
         if (hasArrived) {
-            const timeInput = document.getElementById('arrival-time').value;
-            const [hours, minutes] = timeInput.split(':');
-            arrivalDate = new Date();
-            arrivalDate.setHours(hours, minutes);
+            const timeInput = document.getElementById('arrival-time')?.value;
+            if (timeInput) {
+                const [hours, minutes] = timeInput.split(':');
+                arrivalDate = new Date();
+                arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            }
         }
 
         let assignedRoom = null;
         if (currentMode !== 'agendamento' && app.currentPautaData?.type === 'multisala') {
-            assignedRoom = document.getElementById('manual-room-select').value;
+            assignedRoom = document.getElementById('manual-room-select')?.value;
         }
 
         const newAssisted = {
             name,
-            cpf: document.getElementById('assisted-cpf').value.trim(),
-            subject: document.getElementById('assisted-subject').value.trim(),
+            cpf: document.getElementById('assisted-cpf')?.value.trim() || '',
+            subject: document.getElementById('assisted-subject')?.value.trim() || 'Não informado',
             type: currentMode,
             status: hasArrived ? 'aguardando' : 'pauta',
             scheduledTime: scheduledTimeValue,
-            arrivalTime: hasArrived ? arrivalDate.toISOString() : null,
+            arrivalTime: hasArrived && arrivalDate ? arrivalDate.toISOString() : null,
             assignedCollaborator: null,
             inAttendanceTime: null,
             finalizadoPeloColaborador: false,
             isConfirmed: false,
             confirmationDetails: null,
             room: assignedRoom,
-            indexManual: app.allAssisted.length,
+            manualIndex: app.allAssisted?.length || 0,
             createdAt: new Date().toISOString(),
-            lastActionBy: app.currentUserName,
+            lastActionBy: app.currentUserName || 'Sistema',
             lastActionTimestamp: new Date().toISOString()
         };
 
         try {
+            if (!app.currentPauta?.id) {
+                showNotification("Nenhuma pauta selecionada", "error");
+                return;
+            }
             const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
             await addDoc(attendanceRef, newAssisted);
             showNotification("Assistido adicionado!");
-            document.getElementById('form-agendamento').reset();
-            document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-            document.getElementById('arrival-time-wrapper').classList.add('hidden');
+            
+            // Limpar formulário
+            document.getElementById('form-agendamento')?.reset();
+            document.getElementById('scheduled-time-wrapper')?.classList.add('hidden');
+            document.getElementById('arrival-time-wrapper')?.classList.add('hidden');
         } catch (error) {
             console.error("Erro ao adicionar:", error);
             showNotification("Erro ao adicionar assistido", "error");
         }
     },
 
+    /**
+     * Atualiza status de um assistido
+     */
     async updateStatus(db, pautaId, assistedId, updates, userName) {
-        const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
-        await updateDoc(docRef, {
-            ...updates,
-            lastActionBy: userName,
-            lastActionTimestamp: new Date().toISOString()
-        });
+        if (!pautaId || !assistedId) return;
+        
+        try {
+            const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
+            await updateDoc(docRef, {
+                ...updates,
+                lastActionBy: userName || 'Sistema',
+                lastActionTimestamp: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error("Erro ao atualizar status:", error);
+            showNotification("Erro ao atualizar", "error");
+        }
     },
 
+    /**
+     * Remove um assistido
+     */
     async deleteAssisted(db, pautaId, assistedId) {
-        const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
-        await deleteDoc(docRef);
-        showNotification("Registro apagado.");
+        if (!pautaId || !assistedId) return;
+        
+        try {
+            const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
+            await deleteDoc(docRef);
+            showNotification("Registro apagado.");
+        } catch (error) {
+            console.error("Erro ao deletar:", error);
+            showNotification("Erro ao deletar", "error");
+        }
     },
 
+    /**
+     * Reordena a fila manualmente
+     */
     async reorderQueue(db, pautaId, items) {
-        const batch = writeBatch(db);
-        items.forEach((item, index) => {
-            const docRef = doc(db, "pautas", pautaId, "attendances", item.id);
-            batch.update(docRef, { manualIndex: index });
-        });
-        await batch.commit();
-        showNotification("Fila reordenada!");
+        if (!pautaId || !items?.length) return;
+        
+        try {
+            const batch = writeBatch(db);
+            items.forEach((item, index) => {
+                const docRef = doc(db, "pautas", pautaId, "attendances", item.id);
+                batch.update(docRef, { manualIndex: index });
+            });
+            await batch.commit();
+            showNotification("Fila reordenada!");
+        } catch (error) {
+            console.error("Erro ao reordenar:", error);
+            showNotification("Erro ao reordenar", "error");
+        }
     },
 
+    /**
+     * Processa upload de arquivo CSV
+     */
     async handleCSVUpload(event, app) {
         const file = event.target.files[0];
         if (!file) return;
@@ -124,21 +175,32 @@ export const PautaService = {
             const { parsePautaCSV } = await import('./csvHandler.js');
             const assistidos = await parsePautaCSV(file);
 
-            for (const assistido of assistidos) {
-                const newAssisted = {
-                    ...assistido,
-                    type: 'agendamento',
-                    status: 'pauta',
-                    createdAt: new Date().toISOString(),
-                    lastActionBy: app.currentUserName,
-                    lastActionTimestamp: new Date().toISOString()
-                };
-                
-                const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
-                await addDoc(attendanceRef, newAssisted);
+            if (!app.currentPauta?.id) {
+                showNotification("Nenhuma pauta selecionada", "error");
+                return;
             }
 
-            showNotification(`${assistidos.length} registros importados!`);
+            let successCount = 0;
+            for (const assistido of assistidos) {
+                try {
+                    const newAssisted = {
+                        ...assistido,
+                        type: 'agendamento',
+                        status: 'pauta',
+                        createdAt: new Date().toISOString(),
+                        lastActionBy: app.currentUserName || 'Sistema',
+                        lastActionTimestamp: new Date().toISOString()
+                    };
+                    
+                    const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
+                    await addDoc(attendanceRef, newAssisted);
+                    successCount++;
+                } catch (e) {
+                    console.error("Erro ao importar item:", e);
+                }
+            }
+
+            showNotification(`${successCount} de ${assistidos.length} registros importados!`);
         } catch (error) {
             showNotification(error.message || "Erro ao importar", "error");
         } finally {
@@ -146,6 +208,9 @@ export const PautaService = {
         }
     },
 
+    /**
+     * Calcula nível de prioridade
+     */
     getPriorityLevel(assisted) {
         if (!assisted || assisted.status !== 'aguardando') return 'N/A';
         if (assisted.priority === 'URGENTE') return 'URGENTE';
@@ -154,18 +219,27 @@ export const PautaService = {
 
         if (!assisted.scheduledTime || !assisted.arrivalTime) return 'Média';
 
-        const scheduled = new Date(`1970-01-01T${assisted.scheduledTime}`);
-        const arrival = new Date(assisted.arrivalTime);
-        const arrivalTime = new Date(`1970-01-01T${arrival.toTimeString().slice(0, 5)}`);
+        try {
+            const scheduled = new Date(`1970-01-01T${assisted.scheduledTime}`);
+            const arrival = new Date(assisted.arrivalTime);
+            const arrivalTime = new Date(`1970-01-01T${arrival.toTimeString().slice(0, 5)}`);
 
-        const diffMinutes = (arrivalTime - scheduled) / (1000 * 60);
+            const diffMinutes = (arrivalTime - scheduled) / (1000 * 60);
 
-        if (diffMinutes <= 0) return 'Máxima';
-        if (diffMinutes <= 20) return 'Média';
-        return 'Mínima';
+            if (diffMinutes <= 0) return 'Máxima';
+            if (diffMinutes <= 20) return 'Média';
+            return 'Mínima';
+        } catch (e) {
+            return 'Média';
+        }
     },
 
+    /**
+     * Ordena lista de aguardando conforme regras
+     */
     sortAguardando(list, orderType) {
+        if (!list?.length) return [];
+        
         if (orderType === 'manual') {
             return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
         }
@@ -185,16 +259,20 @@ export const PautaService = {
                 if (item.type === 'avulso') return item.checkInOrder || 0;
                 if (!item.scheduledTime) return 0;
 
-                const scheduled = new Date(`1970-01-01T${item.scheduledTime}`).getTime();
-                if (!item.arrivalTime) return scheduled;
+                try {
+                    const scheduled = new Date(`1970-01-01T${item.scheduledTime}`).getTime();
+                    if (!item.arrivalTime) return scheduled;
 
-                const arrival = new Date(item.arrivalTime);
-                const arrivalHour = new Date(`1970-01-01T${arrival.getHours()}:${arrival.getMinutes()}`).getTime();
-                const diff = (arrivalHour - scheduled) / 60000;
+                    const arrival = new Date(item.arrivalTime);
+                    const arrivalHour = new Date(`1970-01-01T${arrival.getHours()}:${arrival.getMinutes()}`).getTime();
+                    const diff = (arrivalHour - scheduled) / 60000;
 
-                if (diff > 30) return scheduled + (45 * 60 * 1000);
-                if (diff > 0) return scheduled + (15 * 60 * 1000);
-                return scheduled;
+                    if (diff > 30) return scheduled + (45 * 60 * 1000);
+                    if (diff > 0) return scheduled + (15 * 60 * 1000);
+                    return scheduled;
+                } catch (e) {
+                    return 0;
+                }
             };
 
             const timeA = getVirtualTime(a);
@@ -207,6 +285,9 @@ export const PautaService = {
         });
     },
 
+    /**
+     * Retorna classe CSS para prioridade
+     */
     getPriorityClass(priority) {
         return {
             'URGENTE': 'priority-urgente',
@@ -216,6 +297,9 @@ export const PautaService = {
         }[priority] || '';
     },
 
+    /**
+     * Configura ordenação manual com SortableJS
+     */
     setupManualSort(app) {
         const el = document.getElementById('aguardando-list');
         if (!el) return;
@@ -233,8 +317,9 @@ export const PautaService = {
                 preventOnFilter: false,
                 onEnd: async function () {
                     const items = el.querySelectorAll('[data-id]');
-                    const batch = writeBatch(app.db);
+                    if (!items.length) return;
                     
+                    const batch = writeBatch(app.db);
                     items.forEach((item, index) => {
                         const docId = item.getAttribute('data-id');
                         const docRef = doc(app.db, "pautas", app.currentPauta.id, "attendances", docId);
@@ -245,18 +330,29 @@ export const PautaService = {
                         await batch.commit();
                         showNotification("Fila Reordenada!");
                     } catch (e) {
-                        console.error(e);
+                        console.error("Erro ao reordenar:", e);
+                        showNotification("Erro ao reordenar", "error");
                     }
                 }
             });
         }
     },
 
+    /**
+     * Exibe tela de seleção de pautas
+     */
     showPautaSelectionScreen(app) {
+        if (!app?.auth?.currentUser) {
+            showNotification("Usuário não autenticado", "error");
+            return;
+        }
+
         localStorage.removeItem('lastPautaId');
         localStorage.removeItem('lastPautaType');
 
         const pautasList = document.getElementById('pautas-list');
+        if (!pautasList) return;
+        
         pautasList.innerHTML = '<p class="col-span-full text-center">Carregando pautas...</p>';
 
         const q = query(collection(app.db, "pautas"), where("members", "array-contains", app.auth.currentUser.uid));
@@ -286,12 +382,17 @@ export const PautaService = {
                 fragment.appendChild(card);
             });
             pautasList.appendChild(fragment);
+        }, (error) => {
+            console.error("Erro ao buscar pautas:", error);
+            pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>';
         });
 
-        const { UIService } = require('./ui.js');
         UIService.showScreen('pautaSelection');
     },
 
+    /**
+     * Cria card de pauta
+     */
     createPautaCard(docSnap, isExpired, app) {
         const pauta = docSnap.data();
         const card = document.createElement('div');
@@ -310,8 +411,13 @@ export const PautaService = {
         deleteButton.addEventListener('click', async (event) => {
             event.stopPropagation();
             if (confirm(`Tem certeza que deseja apagar a pauta "${pauta.name}"?`)) {
-                await deleteDoc(doc(app.db, "pautas", docSnap.id));
-                showNotification("Pauta excluída!");
+                try {
+                    await deleteDoc(doc(app.db, "pautas", docSnap.id));
+                    showNotification("Pauta excluída!");
+                } catch (error) {
+                    console.error("Erro ao excluir pauta:", error);
+                    showNotification("Erro ao excluir pauta", "error");
+                }
             }
         });
 
@@ -343,6 +449,9 @@ export const PautaService = {
         return card;
     },
 
+    /**
+     * Manipula ações dos cards (cliques em botões)
+     */
     handleCardActions(e, app) {
         const button = e.target.closest('button');
         if (!button) return;
@@ -352,8 +461,10 @@ export const PautaService = {
 
         // Check-in
         if (button.classList.contains('check-in-btn')) {
-            const { ModalService } = require('./modal.js');
-            ModalService.openArrivalModal(id, app);
+            const { ModalService } = window.app ? window.app : { ModalService: null };
+            if (ModalService?.openArrivalModal) {
+                ModalService.openArrivalModal(id, app);
+            }
         }
 
         // Faltou
@@ -373,6 +484,39 @@ export const PautaService = {
             }, app.currentUserName);
         }
 
+        // Voltar de faltoso para pauta
+        if (button.classList.contains('return-to-pauta-from-faltoso-btn')) {
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'pauta'
+            }, app.currentUserName);
+        }
+
+        // Voltar para aguardando
+        if (button.classList.contains('return-to-aguardando-btn')) {
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'aguardando',
+                attendant: null,
+                attendedTime: null
+            }, app.currentUserName);
+        }
+
+        // Voltar de em atendimento para aguardando
+        if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) {
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'aguardando',
+                assignedCollaborator: null,
+                inAttendanceTime: null
+            }, app.currentUserName);
+        }
+
+        // Voltar de distribuição para aguardando
+        if (button.classList.contains('return-to-aguardando-from-dist-btn')) {
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'aguardando',
+                distributionStatus: null
+            }, app.currentUserName);
+        }
+
         // Deletar
         if (button.classList.contains('delete-btn')) {
             if (confirm("Tem certeza?")) {
@@ -382,7 +526,7 @@ export const PautaService = {
 
         // Prioridade
         if (button.classList.contains('priority-btn')) {
-            const assisted = app.allAssisted.find(a => a.id === id);
+            const assisted = app.allAssisted?.find(a => a.id === id);
             if (assisted?.priority === 'URGENTE') {
                 if (confirm("Remover urgência?")) {
                     this.updateStatus(app.db, app.currentPauta.id, id, {
@@ -391,32 +535,114 @@ export const PautaService = {
                     }, app.currentUserName);
                 }
             } else {
-                const { ModalService } = require('./modal.js');
-                ModalService.openPriorityModal(id);
+                const { ModalService } = window.app ? window.app : { ModalService: null };
+                if (ModalService?.openPriorityModal) {
+                    ModalService.openPriorityModal(id);
+                }
+            }
+        }
+
+        // Atender (com delegação)
+        if (button.classList.contains('select-collaborator-btn')) {
+            const assisted = app.allAssisted?.find(a => a.id === id);
+            const { ModalService } = window.app ? window.app : { ModalService: null };
+            if (ModalService?.openSelectCollaboratorModal) {
+                ModalService.openSelectCollaboratorModal(id, assisted?.name || '', app.colaboradores);
+            }
+        }
+
+        // Atender (direto)
+        if (button.classList.contains('attend-directly-from-aguardando-btn')) {
+            const { ModalService } = window.app ? window.app : { ModalService: null };
+            if (ModalService?.openAttendantModal) {
+                ModalService.openAttendantModal(id, app.colaboradores);
+            }
+        }
+
+        // Delegar finalização
+        if (button.classList.contains('delegate-finalization-btn')) {
+            const assisted = app.allAssisted?.find(a => a.id === id);
+            const { ModalService } = window.app ? window.app : { ModalService: null };
+            if (ModalService?.openDelegateEmailModal) {
+                ModalService.openDelegateEmailModal(id, assisted?.name || '', assisted?.assignedCollaborator?.name);
             }
         }
 
         // Editar assistido
         if (button.classList.contains('edit-assisted-btn')) {
-            const assisted = app.allAssisted.find(a => a.id === id);
+            const assisted = app.allAssisted?.find(a => a.id === id);
             if (assisted) {
-                document.getElementById('edit-assisted-name').value = assisted.name;
+                document.getElementById('edit-assisted-name').value = assisted.name || '';
                 document.getElementById('edit-assisted-cpf').value = assisted.cpf || '';
-                document.getElementById('edit-assisted-subject').value = assisted.subject;
+                document.getElementById('edit-assisted-subject').value = assisted.subject || '';
                 document.getElementById('edit-scheduled-time').value = assisted.scheduledTime || '';
                 window.assistedIdToHandle = id;
-                document.getElementById('edit-assisted-modal').classList.remove('hidden');
+                document.getElementById('edit-assisted-modal')?.classList.remove('hidden');
+            }
+        }
+
+        // Editar atendente
+        if (button.classList.contains('edit-attendant-btn')) {
+            const assisted = app.allAssisted?.find(a => a.id === id);
+            if (assisted) {
+                document.getElementById('edit-attendant-name').value = assisted.attendant || '';
+                window.assistedIdToHandle = id;
+                document.getElementById('edit-attendant-modal')?.classList.remove('hidden');
+            }
+        }
+
+        // Gerenciar demandas
+        if (button.classList.contains('manage-demands-btn')) {
+            const { ModalService } = window.app ? window.app : { ModalService: null };
+            if (ModalService?.openDemandsModal) {
+                ModalService.openDemandsModal(id, app.allAssisted);
             }
         }
 
         // Ver detalhes
         if (button.classList.contains('view-details-btn')) {
-            const { openDetailsModal } = require('./detalhes.js');
-            openDetailsModal({
-                assistedId: id,
-                pautaId: app.currentPauta.id,
-                allAssisted: app.allAssisted
-            });
+            const { openDetailsModal } = window.app ? window.app : { openDetailsModal: null };
+            if (openDetailsModal) {
+                openDetailsModal({
+                    assistedId: id,
+                    pautaId: app.currentPauta?.id,
+                    allAssisted: app.allAssisted
+                });
+            }
+        }
+
+        // Voltar de atendido para em atendimento/aguardando
+        if (button.classList.contains('return-from-atendido-btn')) {
+            const currentAssisted = app.allAssisted?.find(a => a.id === id);
+            let updateData = {
+                status: 'aguardando',
+                attendant: null,
+                attendedTime: null,
+                finalizadoPeloColaborador: false,
+                isConfirmed: false,
+                confirmationDetails: null
+            };
+
+            if (app.currentPautaData?.useDelegationFlow) {
+                updateData.status = 'emAtendimento';
+                updateData.attendant = currentAssisted?.attendant;
+            }
+            
+            this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
+        }
+
+        // Confirmar atendido
+        if (button.classList.contains('toggle-confirmed-atendido') || button.classList.contains('toggle-confirmed-faltoso')) {
+            const currentAssisted = app.allAssisted?.find(a => a.id === id);
+            const newConfirmedState = !(currentAssisted?.isConfirmed || false);
+
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                isConfirmed: newConfirmedState,
+                confirmationDetails: newConfirmedState ? { 
+                    confirmedBy: app.currentUserName, 
+                    confirmedAt: new Date().toISOString() 
+                } : null
+            }, app.currentUserName);
         }
     }
 };
