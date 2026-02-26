@@ -1,8 +1,9 @@
+// js/modal.js
 import { collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { escapeHTML } from './utils.js'; // ✅ Importa apenas a função que precisa
+import { escapeHTML } from './utils.js';
 
 export const ModalService = {
-    openPautaTypeModal(app) {
+    openPautaTypeModal() {
         document.getElementById('pauta-type-modal').classList.remove('hidden');
         
         document.querySelectorAll('.pauta-type-btn').forEach(btn => {
@@ -43,7 +44,7 @@ export const ModalService = {
                 const li = document.createElement('li');
                 li.className = "flex justify-between items-center bg-white border p-2 rounded";
                 li.innerHTML = `
-                    <span>🏢 ${escapeHTML(room)}</span> <!-- ✅ Agora funciona -->
+                    <span>🏢 ${escapeHTML(room)}</span>
                     <button class="remove-room-btn text-red-500" data-index="${index}">Remover</button>
                 `;
                 list.appendChild(li);
@@ -87,7 +88,6 @@ export const ModalService = {
         window.assistedIdToHandle = assistedId;
         document.getElementById('priority-reason-modal').classList.remove('hidden');
         
-        // Reset selected chips
         document.querySelectorAll('.p-chip').forEach(c => c.classList.remove('selected'));
         document.getElementById('priority-reason-input').value = '';
     },
@@ -139,7 +139,6 @@ export const ModalService = {
         const list = document.getElementById('collaborator-selection-list');
         list.innerHTML = '';
 
-        // Opção "Não atribuir"
         const noAssign = document.createElement('label');
         noAssign.className = 'flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50';
         noAssign.innerHTML = `
@@ -183,7 +182,7 @@ export const ModalService = {
                 const li = document.createElement('li');
                 li.className = 'flex justify-between items-center p-2 bg-white rounded-md';
                 li.innerHTML = `
-                    <span>${escapeHTML(demand)}</span> <!-- ✅ Agora funciona -->
+                    <span>${escapeHTML(demand)}</span>
                     <button class="remove-demand-item-btn text-red-500 text-xs">Remover</button>
                 `;
                 container.appendChild(li);
