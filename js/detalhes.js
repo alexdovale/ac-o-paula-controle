@@ -150,19 +150,31 @@ function renderExpenseTable() {
 // --- 7. RENDERIZAÇÃO DO CHECKLIST ---
 
 function renderChecklist(actionKey) {
+    console.log("Renderizando checklist para:", actionKey);
     currentChecklistAction = actionKey;
     const data = documentsData[actionKey];
-    if (!data) return;
+    if (!data) {
+        console.error("Ação não encontrada:", actionKey);
+        return;
+    }
 
     const containerEl = getEl('checklist-container');
-    if (!containerEl) return;
+    if (!containerEl) {
+        console.error("Container checklist-container não encontrado");
+        return;
+    }
 
     const assisted = allAssisted.find(a => a.id === currentAssistedId);
     const saved = assisted?.documentChecklist;
 
-    if (getEl('checklist-title')) getEl('checklist-title').textContent = data.title;
-    if (getEl('document-checklist-view-header')) getEl('document-checklist-view-header').classList.remove('hidden');
-    if (getEl('checklist-search-container')) getEl('checklist-search-container').classList.remove('hidden');
+    const titleEl = getEl('checklist-title');
+    if (titleEl) titleEl.textContent = data.title;
+    
+    const headerEl = getEl('document-checklist-view-header');
+    if (headerEl) headerEl.classList.remove('hidden');
+    
+    const searchEl = getEl('checklist-search-container');
+    if (searchEl) searchEl.classList.remove('hidden');
     
     containerEl.innerHTML = ''; 
 
@@ -380,28 +392,61 @@ function handleBack() {
 // --- 10. EXPORTS ---
 
 export function setupDetailsModal(config) {
+    console.log("setupDetailsModal chamado", config);
     db = config.db; 
     customShowNotification = config.showNotification;
     
-    if (getEl('document-action-selection')) {
-        getEl('document-action-selection').onclick = async (e) => {
+    const actionSelection = getEl('document-action-selection');
+    if (actionSelection) {
+        // IMPORTANTE: Remover listeners antigos para evitar duplicação
+        const newActionSelection = actionSelection.cloneNode(true);
+        actionSelection.parentNode.replaceChild(newActionSelection, actionSelection);
+        
+        newActionSelection.addEventListener('click', async (e) => {
             const btn = e.target.closest('button[data-action]');
             if (!btn) return;
+            
             const key = btn.dataset.action;
+            console.log("Ação selecionada:", key);
+            
             await updateVisualStatus('selected', documentsData[key].title);
             renderChecklist(key);
-            getEl('document-action-selection').classList.add('hidden');
-            if (getEl('document-checklist-view')) getEl('document-checklist-view').classList.remove('hidden');
-        };
+            
+            // Esconder seleção e mostrar checklist
+            const selectionArea = getEl('document-action-selection');
+            const checklistView = getEl('document-checklist-view');
+            
+            if (selectionArea) selectionArea.classList.add('hidden');
+            if (checklistView) {
+                checklistView.classList.remove('hidden');
+                checklistView.classList.add('flex');
+            }
+        });
     }
 
-    if (getEl('back-to-action-selection-btn')) getEl('back-to-action-selection-btn').onclick = handleBack;
-    if (getEl('save-checklist-btn')) getEl('save-checklist-btn').onclick = handleSave;
-    if (getEl('print-checklist-btn')) getEl('print-checklist-btn').onclick = handlePdf;
-    if (getEl('reset-checklist-btn')) getEl('reset-checklist-btn').onclick = handleReset;
+    const backBtn = getEl('back-to-action-selection-btn');
+    if (backBtn) {
+        backBtn.onclick = handleBack;
+    }
+
+    const saveBtn = getEl('save-checklist-btn');
+    if (saveBtn) {
+        saveBtn.onclick = handleSave;
+    }
+
+    const printBtn = getEl('print-checklist-btn');
+    if (printBtn) {
+        printBtn.onclick = handlePdf;
+    }
+
+    const resetBtn = getEl('reset-checklist-btn');
+    if (resetBtn) {
+        resetBtn.onclick = handleReset;
+    }
     
-    if (getEl('checklist-search')) {
-        getEl('checklist-search').oninput = (e) => {
+    const searchInput = getEl('checklist-search');
+    if (searchInput) {
+        searchInput.oninput = (e) => {
             const term = normalizeLocal(e.target.value);
             document.querySelectorAll('label.checklist-row').forEach(row => {
                 const text = normalizeLocal(row.textContent);
@@ -414,9 +459,14 @@ export function setupDetailsModal(config) {
 export function openDetailsModal(config) {
     console.log("openDetailsModal chamado", config);
     
+    if (!config || !config.assistedId || !config.pautaId) {
+        console.error("Configuração inválida para openDetailsModal", config);
+        return;
+    }
+    
     currentAssistedId = config.assistedId; 
     currentPautaId = config.pautaId; 
-    allAssisted = config.allAssisted;
+    allAssisted = config.allAssisted || [];
     
     const assisted = allAssisted.find(a => a.id === currentAssistedId); 
     if (!assisted) {
@@ -424,9 +474,10 @@ export function openDetailsModal(config) {
         return;
     }
     
-    if (getEl('documents-assisted-name')) 
-        getEl('documents-assisted-name').textContent = assisted.name;
+    const nameEl = getEl('documents-assisted-name');
+    if (nameEl) nameEl.textContent = assisted.name;
     
+    // Preparar área de seleção de assunto
     const selectionArea = getEl('document-action-selection');
     if (selectionArea) {
         selectionArea.innerHTML = '<p class="text-gray-500 mb-6 text-sm text-center font-bold uppercase tracking-widest opacity-50">Selecione o Assunto</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 action-grid"></div>';
@@ -442,12 +493,23 @@ export function openDetailsModal(config) {
         }
     }
 
+    // Se já tiver um checklist salvo, carregar direto
     if (assisted.documentChecklist?.action) {
         renderChecklist(assisted.documentChecklist.action);
         if (selectionArea) selectionArea.classList.add('hidden');
-        if (getEl('document-checklist-view')) getEl('document-checklist-view').classList.remove('hidden');
+        const checklistView = getEl('document-checklist-view');
+        if (checklistView) {
+            checklistView.classList.remove('hidden');
+            checklistView.classList.add('flex');
+        }
     } else {
-        handleBack();
+        // Garantir que a view de checklist esteja escondida
+        const checklistView = getEl('document-checklist-view');
+        if (checklistView) {
+            checklistView.classList.add('hidden');
+            checklistView.classList.remove('flex');
+        }
+        if (selectionArea) selectionArea.classList.remove('hidden');
     }
     
     const modal = getEl('documents-modal');
@@ -458,7 +520,6 @@ export function openDetailsModal(config) {
     }
 }
 
-// Tornar a função global
+// Tornar a função global para acesso pelo pauta.js
 window.openDetailsModal = openDetailsModal;
 window.setupDetailsModal = setupDetailsModal;
-
