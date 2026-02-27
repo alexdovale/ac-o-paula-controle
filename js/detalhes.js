@@ -460,3 +460,5 @@ export function openDetailsModal(config) {
 
 // Tornar a função global
 window.openDetailsModal = openDetailsModal;
+window.setupDetailsModal = setupDetailsModal;
+
