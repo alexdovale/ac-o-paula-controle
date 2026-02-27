@@ -1,4 +1,4 @@
-// js/pauta.js - VERSÃO SEM CARACTERES ESPECIAIS
+// js/pauta.js
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML } from './utils.js';
 import { UIService } from './ui.js';
@@ -6,6 +6,9 @@ import { UIService } from './ui.js';
 export const PautaService = {
     currentListeners: new Map(),
 
+    /**
+     * Configura listener em tempo real para atendimentos
+     */
     setupAttendancesListener(db, pautaId, callback) {
         if (this.currentListeners.has(pautaId)) {
             this.currentListeners.get(pautaId)();
@@ -24,6 +27,9 @@ export const PautaService = {
         return unsubscribe;
     },
 
+    /**
+     * Adiciona um novo assistido
+     */
     async addAssisted(app) {
         console.log("=== addAssisted iniciado ===");
         
@@ -149,22 +155,30 @@ export const PautaService = {
         }
     },
 
+    /**
+     * Atualiza status de um assistido
+     */
     async updateStatus(db, pautaId, assistedId, updates, userName) {
         if (!pautaId || !assistedId) return;
         
         try {
+            console.log("Atualizando status:", updates);
             const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
             await updateDoc(docRef, {
                 ...updates,
                 lastActionBy: userName || 'Sistema',
                 lastActionTimestamp: new Date().toISOString()
             });
+            console.log("Status atualizado com sucesso!");
         } catch (error) {
             console.error("Erro ao atualizar status:", error);
             showNotification("Erro ao atualizar", "error");
         }
     },
 
+    /**
+     * Remove um assistido
+     */
     async deleteAssisted(db, pautaId, assistedId) {
         if (!pautaId || !assistedId) return;
         
@@ -178,6 +192,9 @@ export const PautaService = {
         }
     },
 
+    /**
+     * Reordena a fila manualmente
+     */
     async reorderQueue(db, pautaId, items) {
         if (!pautaId || !items?.length) return;
         
@@ -195,6 +212,9 @@ export const PautaService = {
         }
     },
 
+    /**
+     * Processa upload de arquivo CSV
+     */
     async handleCSVUpload(event, app) {
         const file = event.target.files[0];
         if (!file) return;
@@ -236,6 +256,9 @@ export const PautaService = {
         }
     },
 
+    /**
+     * Calcula nível de prioridade
+     */
     getPriorityLevel(assisted) {
         if (!assisted || assisted.status !== 'aguardando') return 'N/A';
         if (assisted.priority === 'URGENTE') return 'URGENTE';
@@ -259,6 +282,9 @@ export const PautaService = {
         }
     },
 
+    /**
+     * Ordena lista de aguardando conforme regras
+     */
     sortAguardando(list, orderType) {
         if (!list?.length) return [];
         
@@ -303,6 +329,9 @@ export const PautaService = {
         });
     },
 
+    /**
+     * Retorna classe CSS para prioridade
+     */
     getPriorityClass(priority) {
         return {
             'URGENTE': 'priority-urgente',
@@ -312,6 +341,9 @@ export const PautaService = {
         }[priority] || '';
     },
 
+    /**
+     * Configura ordenação manual com SortableJS
+     */
     setupManualSort(app) {
         const el = document.getElementById('aguardando-list');
         if (!el) return;
@@ -350,6 +382,9 @@ export const PautaService = {
         }
     },
 
+    /**
+     * Exibe tela de seleção de pautas
+     */
     showPautaSelectionScreen(app) {
         if (!app?.auth?.currentUser) {
             showNotification("Usuário não autenticado", "error");
@@ -402,6 +437,9 @@ export const PautaService = {
         UIService.showScreen('pautaSelection');
     },
 
+    /**
+     * Cria card de pauta
+     */
     createPautaCard(docSnap, isExpired, app) {
         const pauta = docSnap.data();
         const card = document.createElement('div');
@@ -458,6 +496,9 @@ export const PautaService = {
         return card;
     },
 
+    /**
+     * Manipula ações dos cards (cliques em botões)
+     */
     handleCardActions(e, app) {
         const button = e.target.closest('button');
         if (!button) return;
@@ -465,18 +506,28 @@ export const PautaService = {
         const id = button.dataset.id;
         if (!id) return;
 
+        console.log("Botão clicado:", button.className, "ID:", id);
+
+        // Check-in (Marcar Chegada)
         if (button.classList.contains('check-in-btn')) {
-            const { ModalService } = window;
-            if (ModalService?.openArrivalModal) {
-                ModalService.openArrivalModal(id, app);
+            console.log("Abrindo modal de chegada para:", id);
+            window.assistedIdToHandle = id;
+            const modal = document.getElementById('arrival-modal');
+            if (modal) {
+                document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5);
+                modal.classList.remove('hidden');
             }
         }
 
+        // Faltou
         if (button.classList.contains('faltou-btn')) {
+            console.log("Marcando como faltoso:", id);
             this.updateStatus(app.db, app.currentPauta.id, id, { status: 'faltoso' }, app.currentUserName);
         }
 
+        // Voltar para pauta
         if (button.classList.contains('return-to-pauta-btn')) {
+            console.log("Voltando para pauta:", id);
             this.updateStatus(app.db, app.currentPauta.id, id, {
                 status: 'pauta',
                 arrivalTime: null,
@@ -487,13 +538,17 @@ export const PautaService = {
             }, app.currentUserName);
         }
 
+        // Voltar de faltoso para pauta
         if (button.classList.contains('return-to-pauta-from-faltoso-btn')) {
+            console.log("Revertendo faltoso para pauta:", id);
             this.updateStatus(app.db, app.currentPauta.id, id, {
                 status: 'pauta'
             }, app.currentUserName);
         }
 
+        // Voltar para aguardando
         if (button.classList.contains('return-to-aguardando-btn')) {
+            console.log("Voltando para aguardando:", id);
             this.updateStatus(app.db, app.currentPauta.id, id, {
                 status: 'aguardando',
                 attendant: null,
@@ -501,7 +556,9 @@ export const PautaService = {
             }, app.currentUserName);
         }
 
+        // Voltar de em atendimento para aguardando
         if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) {
+            console.log("Voltando de em atendimento para aguardando:", id);
             this.updateStatus(app.db, app.currentPauta.id, id, {
                 status: 'aguardando',
                 assignedCollaborator: null,
@@ -509,20 +566,26 @@ export const PautaService = {
             }, app.currentUserName);
         }
 
+        // Voltar de distribuição para aguardando
         if (button.classList.contains('return-to-aguardando-from-dist-btn')) {
+            console.log("Voltando de distribuição para aguardando:", id);
             this.updateStatus(app.db, app.currentPauta.id, id, {
                 status: 'aguardando',
                 distributionStatus: null
             }, app.currentUserName);
         }
 
+        // Deletar
         if (button.classList.contains('delete-btn')) {
+            console.log("Deletando:", id);
             if (confirm("Tem certeza?")) {
                 this.deleteAssisted(app.db, app.currentPauta.id, id);
             }
         }
 
+        // Prioridade
         if (button.classList.contains('priority-btn')) {
+            console.log("Prioridade:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
             if (assisted?.priority === 'URGENTE') {
                 if (confirm("Remover urgência?")) {
@@ -532,37 +595,42 @@ export const PautaService = {
                     }, app.currentUserName);
                 }
             } else {
-                const { ModalService } = window;
-                if (ModalService?.openPriorityModal) {
-                    ModalService.openPriorityModal(id);
-                }
+                window.assistedIdToHandle = id;
+                document.getElementById('priority-reason-modal')?.classList.remove('hidden');
             }
         }
 
+        // Atender (com delegação)
         if (button.classList.contains('select-collaborator-btn')) {
+            console.log("Selecionando colaborador para:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
-            const { ModalService } = window;
-            if (ModalService?.openSelectCollaboratorModal) {
-                ModalService.openSelectCollaboratorModal(id, assisted?.name || '', app.colaboradores);
-            }
+            window.assistedIdToHandle = id;
+            window.assistedNameToHandle = assisted?.name || '';
+            document.getElementById('assisted-to-attend-name').textContent = assisted?.name || '';
+            document.getElementById('select-collaborator-modal')?.classList.remove('hidden');
         }
 
+        // Atender (direto)
         if (button.classList.contains('attend-directly-from-aguardando-btn')) {
-            const { ModalService } = window;
-            if (ModalService?.openAttendantModal) {
-                ModalService.openAttendantModal(id, app.colaboradores);
-            }
+            console.log("Atendendo diretamente:", id);
+            window.assistedIdToHandle = id;
+            document.getElementById('attendant-modal')?.classList.remove('hidden');
         }
 
+        // Delegar finalização
         if (button.classList.contains('delegate-finalization-btn')) {
+            console.log("Delegando finalização:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
-            const { ModalService } = window;
-            if (ModalService?.openDelegateEmailModal) {
-                ModalService.openDelegateEmailModal(id, assisted?.name || '', assisted?.assignedCollaborator?.name);
-            }
+            window.assistedIdForDelegation = id;
+            window.assistedNameForDelegation = assisted?.name || '';
+            window.collaboratorNameForDelegation = assisted?.assignedCollaborator?.name || '';
+            document.getElementById('delegate-assisted-name').textContent = assisted?.name || '';
+            document.getElementById('delegate-email-modal')?.classList.remove('hidden');
         }
 
+        // Editar assistido
         if (button.classList.contains('edit-assisted-btn')) {
+            console.log("Editando assistido:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
             if (assisted) {
                 document.getElementById('edit-assisted-name').value = assisted.name || '';
@@ -574,7 +642,9 @@ export const PautaService = {
             }
         }
 
+        // Editar atendente
         if (button.classList.contains('edit-attendant-btn')) {
+            console.log("Editando atendente:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
             if (assisted) {
                 document.getElementById('edit-attendant-name').value = assisted.attendant || '';
@@ -583,14 +653,38 @@ export const PautaService = {
             }
         }
 
+        // Gerenciar demandas
         if (button.classList.contains('manage-demands-btn')) {
-            const { ModalService } = window;
-            if (ModalService?.openDemandsModal) {
-                ModalService.openDemandsModal(id, app.allAssisted);
+            console.log("Gerenciando demandas:", id);
+            const assisted = app.allAssisted?.find(a => a.id === id);
+            if (assisted) {
+                window.assistedIdToHandle = id;
+                document.getElementById('demands-assisted-name-modal').textContent = assisted.name || '';
+                const container = document.getElementById('demands-modal-list-container');
+                if (container) {
+                    container.innerHTML = '';
+                    const demands = assisted.demandas?.descricoes || [];
+                    if (demands.length === 0) {
+                        container.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
+                    } else {
+                        demands.forEach(demand => {
+                            const li = document.createElement('li');
+                            li.className = 'flex justify-between items-center p-2 bg-white rounded-md';
+                            li.innerHTML = `
+                                <span>${escapeHTML(demand)}</span>
+                                <button class="remove-demand-item-btn text-red-500 text-xs">Remover</button>
+                            `;
+                            container.appendChild(li);
+                        });
+                    }
+                }
+                document.getElementById('demands-modal')?.classList.remove('hidden');
             }
         }
 
+        // Ver detalhes
         if (button.classList.contains('view-details-btn')) {
+            console.log("Ver detalhes:", id);
             const { openDetailsModal } = window;
             if (openDetailsModal) {
                 openDetailsModal({
@@ -601,7 +695,9 @@ export const PautaService = {
             }
         }
 
+        // Voltar de atendido para em atendimento/aguardando
         if (button.classList.contains('return-from-atendido-btn')) {
+            console.log("Revertendo atendido:", id);
             const currentAssisted = app.allAssisted?.find(a => a.id === id);
             let updateData = {
                 status: 'aguardando',
@@ -620,7 +716,9 @@ export const PautaService = {
             this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
         }
 
+        // Confirmar atendido (botão verde de confirmação)
         if (button.classList.contains('toggle-confirmed-atendido') || button.classList.contains('toggle-confirmed-faltoso')) {
+            console.log("Toggle confirmado:", id);
             const currentAssisted = app.allAssisted?.find(a => a.id === id);
             const newConfirmedState = !(currentAssisted?.isConfirmed || false);
 
@@ -631,6 +729,8 @@ export const PautaService = {
                     confirmedAt: new Date().toISOString() 
                 } : null
             }, app.currentUserName);
+            
+            showNotification(`Status de Marcado Presença no Verde atualizado para ${newConfirmedState ? 'Confirmado' : 'Não Confirmado'}.`, 'info');
         }
     }
 };
