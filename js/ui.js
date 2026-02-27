@@ -401,12 +401,14 @@ export const UIService = {
     renderAguardandoColumn(items, currentPautaData, colaboradores) {
         const container = document.getElementById('aguardando-list');
         if (!container) return;
-
+    
         if (items.length === 0) {
             container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém aguardando</p>';
             return;
         }
-
+    
+        console.log("Renderizando aguardando:", items.length); // Log para debug
+    
         if (currentPautaData?.type === 'multisala' && currentPautaData.rooms?.length > 0) {
             currentPautaData.rooms.forEach(roomName => {
                 const peopleInRoom = items.filter(a => a.room === roomName);
@@ -418,16 +420,17 @@ export const UIService = {
                 container.appendChild(roomHeader);
                 
                 peopleInRoom.forEach((item, index) => {
-                    container.appendChild(this.createAguardandoCard(item, currentPautaData, colaboradores, index));
+                    const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
+                    if (card) container.appendChild(card);
                 });
             });
         } else {
             items.forEach((item, index) => {
-                container.appendChild(this.createAguardandoCard(item, currentPautaData, colaboradores, index));
+                const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
+                if (card) container.appendChild(card);
             });
         }
-    },
-
+    }
     createAguardandoCard(item, currentPautaData, colaboradores, index) {
         const card = document.createElement('div');
         const priorityClass = PautaService.getPriorityClass(item.priority);
