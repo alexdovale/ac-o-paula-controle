@@ -1586,12 +1586,93 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
                 
+                // Botão Compartilhar
                 document.getElementById('share-pauta-btn')?.addEventListener('click', () => {
-                    document.getElementById('share-modal').classList.remove('hidden');
+                    const modal = document.getElementById('share-modal');
+                    if (modal) {
+                        const toggle = document.getElementById('share-toggle');
+                        const maskCheck = document.getElementById('mask-names-check');
+                        
+                        if (this.currentPautaData) {
+                            toggle.checked = this.currentPautaData.isPublic || false;
+                            maskCheck.checked = this.currentPautaData.maskNames || false;
+                            
+                            const statusText = document.getElementById('share-status-text');
+                            const linkContainer = document.getElementById('share-link-container');
+                            
+                            statusText.textContent = toggle.checked ? "Público" : "Privado";
+                            
+                            if (toggle.checked) {
+                                linkContainer.classList.remove('hidden');
+                                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                                const link = `${baseUrl}/acompanhamento.html?id=${this.currentPauta.id}`;
+                                document.getElementById('share-link-input').value = link;
+                                document.getElementById('open-external-btn').href = link;
+                            } else {
+                                linkContainer.classList.add('hidden');
+                            }
+                        }
+                        modal.classList.remove('hidden');
+                    }
                 });
 
+                // Toggle do link público
+                document.getElementById('share-toggle')?.addEventListener('change', async (e) => {
+                    const isPublic = e.target.checked;
+                    const statusText = document.getElementById('share-status-text');
+                    const linkContainer = document.getElementById('share-link-container');
+                    
+                    statusText.textContent = isPublic ? "Público" : "Privado";
+                    
+                    if (isPublic) {
+                        linkContainer.classList.remove('hidden');
+                        const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                        const link = `${baseUrl}/acompanhamento.html?id=${this.currentPauta.id}`;
+                        document.getElementById('share-link-input').value = link;
+                        document.getElementById('open-external-btn').href = link;
+                    } else {
+                        linkContainer.classList.add('hidden');
+                    }
+                    
+                    try {
+                        const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                        await updateDoc(pautaRef, { isPublic: isPublic });
+                        this.currentPautaData.isPublic = isPublic;
+                        showNotification(isPublic ? "Link público ativado." : "Link público desativado.");
+                    } catch (error) {
+                        console.error(error);
+                        showNotification("Erro ao atualizar status.", "error");
+                    }
+                });
+
+                // Copiar link
+                document.getElementById('copy-share-link-btn')?.addEventListener('click', () => {
+                    const input = document.getElementById('share-link-input');
+                    input.select();
+                    navigator.clipboard.writeText(input.value);
+                    showNotification("Link copiado!", "info");
+                });
+
+                // Ocultar sobrenomes
+                document.getElementById('mask-names-check')?.addEventListener('change', async (e) => {
+                    const mask = e.target.checked;
+                    try {
+                        const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                        await updateDoc(pautaRef, { maskNames: mask });
+                        this.currentPautaData.maskNames = mask;
+                        showNotification("Configuração de privacidade atualizada.");
+                    } catch (error) {
+                        showNotification("Erro ao salvar configuração.", "error");
+                    }
+                });
+
+                // Botão Estatísticas
                 document.getElementById('view-stats-btn')?.addEventListener('click', () => {
-                    StatisticsService.showModal(this.allAssisted, this.currentPautaData?.useDelegationFlow, this.currentPauta?.name);
+                    if (this.allAssisted && this.currentPauta?.name) {
+                        StatisticsService.showModal(this.allAssisted, this.currentPautaData?.useDelegationFlow, this.currentPauta.name);
+                    } else {
+                        showNotification("Carregue uma pauta primeiro", "info");
+                    }
                 });
 
                 document.getElementById('edit-pauta-name-btn')?.addEventListener('click', () => {
@@ -1693,6 +1774,75 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             if (modal) modal.classList.add('hidden');
                         });
                     }
+                });
+
+                // Confirmar chegada
+                document.getElementById('confirm-arrival-btn')?.addEventListener('click', async () => {
+                    const time = document.getElementById('arrival-time-input')?.value;
+                    if (!time) {
+                        showNotification("Informe o horário", "error");
+                        return;
+                    }
+
+                    const [hours, minutes] = time.split(':');
+                    const arrivalDate = new Date();
+                    arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+                    const roomSelect = document.getElementById('arrival-room-select');
+                    const room = roomSelect && !roomSelect.classList.contains('hidden') ? roomSelect.value : null;
+
+                    await PautaService.updateStatus(
+                        this.db,
+                        this.currentPauta.id,
+                        window.assistedIdToHandle,
+                        {
+                            status: 'aguardando',
+                            arrivalTime: arrivalDate.toISOString(),
+                            checkInOrder: Date.now(),
+                            room: room
+                        },
+                        this.currentUserName
+                    );
+
+                    document.getElementById('arrival-modal')?.classList.add('hidden');
+                    showNotification("Chegada registrada com sucesso!", "success");
+                });
+
+                // Confirmar edição de assistido
+                document.getElementById('confirm-edit-assisted-btn')?.addEventListener('click', async () => {
+                    const name = document.getElementById('edit-assisted-name')?.value.trim();
+                    if (!name) {
+                        showNotification("O nome não pode ficar em branco.", "error");
+                        return;
+                    }
+                    
+                    const updatedData = {
+                        name: name,
+                        cpf: document.getElementById('edit-assisted-cpf')?.value.trim() || '',
+                        subject: document.getElementById('edit-assisted-subject')?.value.trim() || '',
+                        scheduledTime: document.getElementById('edit-scheduled-time')?.value || null,
+                    };
+                    
+                    await PautaService.updateStatus(
+                        this.db,
+                        this.currentPauta.id,
+                        window.assistedIdToHandle,
+                        updatedData,
+                        this.currentUserName
+                    );
+                    
+                    document.getElementById('edit-assisted-modal')?.classList.add('hidden');
+                    showNotification("Dados atualizados com sucesso!", "success");
+                });
+
+                // Cancelar no modal de chegada
+                document.getElementById('cancel-arrival-btn')?.addEventListener('click', () => {
+                    document.getElementById('arrival-modal')?.classList.add('hidden');
+                });
+
+                // Cancelar no modal de edição
+                document.getElementById('cancel-edit-assisted-btn')?.addEventListener('click', () => {
+                    document.getElementById('edit-assisted-modal')?.classList.add('hidden');
                 });
 
                 this.setupAdminPanel();
@@ -1826,89 +1976,60 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
 
             async loadPauta(pautaId, pautaName, pautaType) {
-                    console.log("📂 Carregando pauta:", pautaId, pautaName);
+                this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
+                document.getElementById('pauta-title').textContent = pautaName;
+
+                localStorage.setItem('lastPautaId', pautaId);
+                localStorage.setItem('lastPautaType', pautaType);
+
+                try {
+                    const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
                     
-                    this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
-                    document.getElementById('pauta-title').textContent = pautaName;
-                
-                    localStorage.setItem('lastPautaId', pautaId);
-                    localStorage.setItem('lastPautaType', pautaType);
-                
-                    try {
-                        const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
-                        console.log("Dados da pauta:", pautaDoc.exists() ? pautaDoc.data() : "não encontrada");
+                    if (pautaDoc.exists()) {
+                        this.currentPautaData = pautaDoc.data();
+                        this.currentPautaOwnerId = this.currentPautaData.owner;
+                        this.isPautaClosed = this.currentPautaData.isClosed || false;
                         
-                        if (pautaDoc.exists()) {
-                            this.currentPautaData = pautaDoc.data();
-                            this.currentPautaOwnerId = this.currentPautaData.owner;
-                            this.isPautaClosed = this.currentPautaData.isClosed || false;
-                            
-                            UIService.togglePautaLock(this);
-                
-                            const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-                            const distColumn = document.getElementById('distribuicao-column');
-                            
-                            if (this.currentPautaData.useDelegationFlow) {
-                                emAtendimentoColumn?.classList.remove('hidden');
-                            } else {
-                                emAtendimentoColumn?.classList.add('hidden');
-                            }
-                
-                            if (this.currentPautaData.useDistributionFlow) {
-                                distColumn?.classList.remove('hidden');
-                            } else {
-                                distColumn?.classList.add('hidden');
-                            }
+                        UIService.togglePautaLock(this);
+
+                        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
+                        const distColumn = document.getElementById('distribuicao-column');
+                        
+                        if (this.currentPautaData.useDelegationFlow) {
+                            emAtendimentoColumn?.classList.remove('hidden');
+                        } else {
+                            emAtendimentoColumn?.classList.add('hidden');
                         }
-                
-                        this.setupRealtimeListener(pautaId);
-                        CollaboratorService.setupListener(this, pautaId);
-                        UIService.showScreen('app');
-                        
-                    } catch (error) {
-                        console.error("Erro ao carregar pauta:", error);
-                        showNotification("Erro ao carregar pauta", "error");
+
+                        if (this.currentPautaData.useDistributionFlow) {
+                            distColumn?.classList.remove('hidden');
+                        } else {
+                            distColumn?.classList.add('hidden');
+                        }
                     }
+
+                    this.setupRealtimeListener(pautaId);
+                    CollaboratorService.setupListener(this, pautaId);
+                    UIService.showScreen('app');
+                    
+                } catch (error) {
+                    console.error("Erro ao carregar pauta:", error);
+                    showNotification("Erro ao carregar pauta", "error");
                 }
+            }
 
             setupRealtimeListener(pautaId) {
-                    console.log("🔄 Configurando listener para pauta:", pautaId);
-                    
-                    if (this.unsubscribeFromAttendances) {
-                        console.log("Removendo listener anterior");
-                        this.unsubscribeFromAttendances();
-                    }
-                    
-                    const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
-                    console.log("Referência criada:", attendanceRef);
-                    
-                    this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
-                        console.log("📥 Dados recebidos do Firestore:", snapshot.size, "documentos");
-                        
-                        this.allAssisted = snapshot.docs.map(doc => {
-                            const data = doc.data();
-                            console.log("Documento:", doc.id, data.name);
-                            return { id: doc.id, ...data };
-                        });
-                        
-                        console.log("✅ allAssisted atualizado:", this.allAssisted.length, "itens");
-                        
-                        // Chama o renderizador
-                        if (this.currentPautaData) {
-                            UIService.renderAssistedLists(this);
-                        } else {
-                            console.warn("currentPautaData não definido ainda");
-                        }
-                        
-                    }, (error) => {
-                        console.error("❌ Erro no listener:", error);
-                        console.error("Código:", error.code);
-                        console.error("Mensagem:", error.message);
-                        showNotification("Erro ao carregar dados em tempo real", "error");
-                    });
-                    
-                    console.log("✅ Listener configurado");
-                }
+                if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
+                
+                const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
+                this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
+                    this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    UIService.renderAssistedLists(this);
+                }, (error) => {
+                    console.error("Erro no listener:", error);
+                    showNotification("Erro ao carregar dados", "error");
+                });
+            }
         }
 
         window.app = new SIGAPApp();
