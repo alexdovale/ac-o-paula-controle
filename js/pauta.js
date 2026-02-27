@@ -622,18 +622,19 @@ export const PautaService = {
             
             // Preencher a lista de colaboradores no datalist
             const datalist = document.getElementById('collaborators-list');
-            if (datalist && app.colaboradores && app.colaboradores.length > 0) {
-                console.log("Preenchendo datalist com", app.colaboradores.length, "colaboradores");
+            if (datalist) {
                 datalist.innerHTML = '';
-                app.colaboradores.forEach(c => {
-                    const option = document.createElement('option');
-                    option.value = c.nome;
-                    datalist.appendChild(option);
-                });
-            } else {
-                console.log("Nenhum colaborador encontrado ou datalist não existe");
-                if (datalist) {
-                    datalist.innerHTML = '';
+                
+                if (app.colaboradores && app.colaboradores.length > 0) {
+                    console.log("Preenchendo datalist com", app.colaboradores.length, "colaboradores");
+                    app.colaboradores.forEach(c => {
+                        const option = document.createElement('option');
+                        option.value = c.nome;
+                        datalist.appendChild(option);
+                    });
+                } else {
+                    console.log("Nenhum colaborador encontrado");
+                    // Adicionar opção padrão
                     const option = document.createElement('option');
                     option.value = "Nenhum colaborador cadastrado";
                     option.disabled = true;
