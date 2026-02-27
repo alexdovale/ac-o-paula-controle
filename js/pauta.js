@@ -383,6 +383,42 @@ export const PautaService = {
     },
 
     /**
+     * Preenche o datalist com os nomes dos colaboradores
+     */
+    preencherDatalistColaboradores(app) {
+        const datalist = document.getElementById('collaborators-list');
+        if (!datalist) {
+            console.error("Datalist não encontrado");
+            return;
+        }
+        
+        // Limpar datalist
+        datalist.innerHTML = '';
+        
+        // Adicionar opção padrão (opcional)
+        const optionPadrao = document.createElement('option');
+        optionPadrao.value = "Não informado";
+        optionPadrao.style.color = "#999";
+        datalist.appendChild(optionPadrao);
+        
+        // Adicionar colaboradores
+        if (app.colaboradores && app.colaboradores.length > 0) {
+            console.log("Preenchendo datalist com", app.colaboradores.length, "colaboradores");
+            app.colaboradores.forEach(c => {
+                const option = document.createElement('option');
+                option.value = c.nome;
+                datalist.appendChild(option);
+            });
+        } else {
+            console.log("Nenhum colaborador encontrado");
+            const option = document.createElement('option');
+            option.value = "Nenhum colaborador cadastrado";
+            option.disabled = true;
+            datalist.appendChild(option);
+        }
+    },
+
+    /**
      * Exibe tela de seleção de pautas
      */
     showPautaSelectionScreen(app) {
@@ -621,26 +657,7 @@ export const PautaService = {
             window.assistedIdToHandle = id;
             
             // Preencher a lista de colaboradores no datalist
-            const datalist = document.getElementById('collaborators-list');
-            if (datalist) {
-                datalist.innerHTML = '';
-                
-                if (app.colaboradores && app.colaboradores.length > 0) {
-                    console.log("Preenchendo datalist com", app.colaboradores.length, "colaboradores");
-                    app.colaboradores.forEach(c => {
-                        const option = document.createElement('option');
-                        option.value = c.nome;
-                        datalist.appendChild(option);
-                    });
-                } else {
-                    console.log("Nenhum colaborador encontrado");
-                    // Adicionar opção padrão
-                    const option = document.createElement('option');
-                    option.value = "Nenhum colaborador cadastrado";
-                    option.disabled = true;
-                    datalist.appendChild(option);
-                }
-            }
+            this.preencherDatalistColaboradores(app);
             
             document.getElementById('attendant-modal')?.classList.remove('hidden');
         }
@@ -681,6 +698,11 @@ export const PautaService = {
                 const datalist = document.getElementById('collaborators-list');
                 if (datalist && app.colaboradores && app.colaboradores.length > 0) {
                     datalist.innerHTML = '';
+                    const optionPadrao = document.createElement('option');
+                    optionPadrao.value = "Não informado";
+                    optionPadrao.style.color = "#999";
+                    datalist.appendChild(optionPadrao);
+                    
                     app.colaboradores.forEach(c => {
                         const option = document.createElement('option');
                         option.value = c.nome;
