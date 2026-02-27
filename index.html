@@ -783,15 +783,17 @@
         </div>
     </div>
 
-    <!-- Modal de Finalização de Atendimento -->
+    <!-- Modal de Finalização de Atendimento (com select) -->
     <div id="attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Finalizar Atendimento</h2>
-            <p class="mb-4 text-gray-600">Insira o nome do profissional que realizou o atendimento (opcional).</p>
-            <input list="collaborators-list" type="text" id="attendant-name" placeholder="Nome do Defensor/Servidor" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
-            <datalist id="collaborators-list">
+            <p class="mb-4 text-gray-600">Selecione o profissional que realizou o atendimento:</p>
+            
+            <select id="attendant-select" class="w-full p-3 border border-gray-300 rounded-lg mb-6 bg-white focus:ring-2 focus:ring-green-500">
+                <option value="">-- Selecione um profissional --</option>
                 <!-- As opções serão preenchidas via JavaScript -->
-            </datalist>
+            </select>
+            
             <div class="flex justify-end space-x-4">
                 <button id="cancel-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
                 <button id="confirm-attendant-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button>
@@ -799,7 +801,7 @@
         </div>
     </div>
 
-    <!-- Modal de Selecionar Colaborador -->
+    <!-- Modal de Selecionar Colaborador (com opção "Não atribuir") -->
     <div id="select-collaborator-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Atender Assistido</h2>
@@ -810,6 +812,24 @@
             <div class="flex justify-end space-x-4">
                 <button id="cancel-select-collaborator-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
                 <button id="confirm-select-collaborator-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Confirmar Seleção</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Editar Atendente -->
+    <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Editar Atendente</h2>
+            <p class="mb-4 text-gray-600">Selecione o profissional que realizou o atendimento:</p>
+            
+            <select id="edit-attendant-select" class="w-full p-3 border border-gray-300 rounded-lg mb-6 bg-white focus:ring-2 focus:ring-green-500">
+                <option value="">-- Selecione um profissional --</option>
+                <!-- As opções serão preenchidas via JavaScript -->
+            </select>
+            
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-edit-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-edit-attendant-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar</button>
             </div>
         </div>
     </div>
@@ -916,20 +936,6 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)
 
 Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .csv.</code></pre>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Editar Atendente -->
-    <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-            <h2 class="text-2xl font-bold mb-4">Editar Atendente</h2>
-            <p class="mb-4 text-gray-600">Insira o nome do profissional que realizou o atendimento (opcional).</p>
-            <input list="collaborators-list" type="text" id="edit-attendant-name" placeholder="Nome do Defensor/Servidor" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
-            <datalist id="collaborators-list"></datalist>
-            <div class="flex justify-end space-x-4">
-                <button id="cancel-edit-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
-                <button id="confirm-edit-attendant-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar</button>
             </div>
         </div>
     </div>
@@ -1271,7 +1277,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
 
-        <!-- Modal de Estatísticas -->
+    <!-- Modal de Estatísticas -->
     <div id="statistics-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <!-- O conteúdo será gerado pelo StatisticsService -->
     </div>
@@ -1443,7 +1449,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 // LISTENERS DOS BOTÕES DE RÁDIO DO FORMULÁRIO
                 // ================================================
                 
-                // Mostrar/esconder campo de horário agendado
                 document.querySelectorAll('input[name="is-scheduled"]').forEach(radio => {
                     radio.addEventListener('change', (e) => {
                         const wrapper = document.getElementById('scheduled-time-wrapper');
@@ -1454,41 +1459,36 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         }
                     });
                 });
-                
-                // Mostrar/esconder campo de horário de chegada
+
                 document.querySelectorAll('input[name="has-arrived"]').forEach(radio => {
                     radio.addEventListener('change', (e) => {
                         const wrapper = document.getElementById('arrival-time-wrapper');
                         if (e.target.value === 'yes') {
                             wrapper.classList.remove('hidden');
-                            // Preencher com horário atual
                             document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
                         } else {
                             wrapper.classList.add('hidden');
                         }
                     });
                 });
-                
-                // Inicializar estado correto ao trocar de aba (agendado/avulso)
+
                 document.getElementById('tab-agendamento')?.addEventListener('click', () => {
-                    // Garantir que o campo de horário agendado comece escondido
                     document.getElementById('scheduled-time-wrapper').classList.add('hidden');
                     document.getElementById('arrival-time-wrapper').classList.add('hidden');
-                    
-                    // Resetar os rádios para o estado padrão
                     document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
                     document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
                 });
-                
+
                 document.getElementById('tab-avulso')?.addEventListener('click', () => {
-                    // No modo avulso, já chegou deve estar marcado
                     document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
                     document.getElementById('arrival-time-wrapper').classList.remove('hidden');
                     document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
-                    
-                    // Esconder campo de horário agendado
                     document.getElementById('scheduled-time-wrapper').classList.add('hidden');
                 });
+
+                // ================================================
+                // BOTÕES PRINCIPAIS
+                // ================================================
 
                 // Botão Criar Pauta
                 document.getElementById('create-pauta-btn')?.addEventListener('click', () => {
@@ -1518,39 +1518,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         
                         createModal.classList.remove('hidden');
                     });
-                });
-                
-                document.body.addEventListener('click', async (e) => {
-                    if (e.target.classList.contains('remove-member-btn')) {
-                        const email = e.target.dataset.email;
-                        if (confirm(`Remover ${email} da pauta?`)) {
-                            try {
-                                const usersRef = collection(this.db, "users");
-                                const q = query(usersRef, where("email", "==", email));
-                                const querySnapshot = await getDocs(q);
-                                
-                                if (!querySnapshot.empty) {
-                                    const userId = querySnapshot.docs[0].id;
-                                    const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
-                                    
-                                    await updateDoc(pautaRef, {
-                                        members: arrayRemove(userId),
-                                        memberEmails: arrayRemove(email)
-                                    });
-                                    
-                                    showNotification(`Membro ${email} removido`);
-                                    
-                                    // Recarregar o modal
-                                    if (typeof ModalService?.openMembersModal === 'function') {
-                                        await ModalService.openMembersModal(this);
-                                    }
-                                }
-                            } catch (error) {
-                                console.error("Erro ao remover membro:", error);
-                                showNotification("Erro ao remover membro", "error");
-                            }
-                        }
-                    }
                 });
 
                 document.getElementById('add-custom-room-btn')?.addEventListener('click', (e) => {
@@ -1761,7 +1728,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('view-stats-btn')?.addEventListener('click', () => {
                     console.log("Botão estatísticas clicado");
                     
-                    // Verificar se o modal existe
                     const modal = document.getElementById('statistics-modal');
                     if (!modal) {
                         console.error("Modal de estatísticas não encontrado");
@@ -1770,7 +1736,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                     
                     if (this.allAssisted && this.currentPauta?.name) {
-                        // Verificar se StatisticsService existe
                         if (typeof StatisticsService?.showModal === 'function') {
                             StatisticsService.showModal(this.allAssisted, this.currentPautaData?.useDelegationFlow, this.currentPauta.name);
                         } else {
@@ -1788,7 +1753,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 });
 
                 document.getElementById('manage-members-btn')?.addEventListener('click', async () => {
-                    await ModalService.openMembersModal(this);
+                    console.log("Botão gerenciar membros clicado");
+                    
+                    if (typeof ModalService?.openMembersModal === 'function') {
+                        await ModalService.openMembersModal(this);
+                    } else {
+                        console.error("ModalService.openMembersModal não é uma função");
+                        showNotification("Erro ao abrir gerenciar membros", "error");
+                    }
                 });
 
                 document.getElementById('manage-collaborators-btn')?.addEventListener('click', () => {
@@ -1884,9 +1856,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 });
 
                 // ================================================
-                // LISTENERS DO MODAL DE PRIORIDADE
+                // LISTENERS DOS MODAIS DE PRIORIDADE
                 // ================================================
-                
+
                 // Selecionar/desselecionar chips de prioridade
                 document.querySelectorAll('.p-chip').forEach(chip => {
                     chip.addEventListener('click', function(e) {
@@ -1895,7 +1867,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         console.log("Chip clicado:", this.dataset.value, "selected:", this.classList.contains('selected'));
                     });
                 });
-                
+
                 // Confirmar prioridade
                 document.getElementById('confirm-priority-reason-btn')?.addEventListener('click', async () => {
                     console.log("Confirmar prioridade clicado");
@@ -1909,19 +1881,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (customReason) {
                         finalReason = finalReason ? `${finalReason} | Obs: ${customReason}` : customReason;
                     }
-                
+
                     console.log("Razão final:", finalReason);
-                
+
                     if (!finalReason) { 
                         showNotification("Selecione uma categoria ou descreva o motivo.", "error"); 
                         return; 
                     }
-                
+
                     if (!window.assistedIdToHandle) {
                         showNotification("ID do assistido não encontrado.", "error");
                         return;
                     }
-                
+
                     await PautaService.updateStatus(
                         this.db,
                         this.currentPauta.id,
@@ -1932,151 +1904,42 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         },
                         this.currentUserName
                     );
-                
+
                     document.querySelectorAll('.p-chip').forEach(c => c.classList.remove('selected'));
                     document.getElementById('priority-reason-input').value = '';
                     document.getElementById('priority-reason-modal')?.classList.add('hidden');
                     showNotification("Prioridade Ativada!");
                 });
-                
+
                 // Cancelar prioridade
                 document.getElementById('cancel-priority-reason-btn')?.addEventListener('click', () => {
                     document.getElementById('priority-reason-modal')?.classList.add('hidden');
                 });
 
                 // ================================================
-                // LISTENERS DO MODAL DE DETALHES (CHECKLIST)
+                // LISTENERS DO MODAL DE ATENDENTE (FINALIZAR)
                 // ================================================
-                
-                // Botão Voltar na seleção de assunto
-                document.getElementById('back-to-action-selection-btn')?.addEventListener('click', () => {
-                    document.getElementById('document-checklist-view').classList.add('hidden');
-                    document.getElementById('document-action-selection').classList.remove('hidden');
-                    document.getElementById('document-checklist-view-header').classList.add('hidden');
-                    document.getElementById('checklist-search-container').classList.add('hidden');
-                });
-                
-                // Botão Salvar Checklist
-                document.getElementById('save-checklist-btn')?.addEventListener('click', async () => {
-                    console.log("Salvar checklist clicado");
-                    
-                    const container = document.getElementById('checklist-container');
-                    const checkedItems = Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => ({
-                        id: cb.id,
-                        text: cb.closest('label').querySelector('span').textContent,
-                        type: document.querySelector(`input[name="type-${cb.id}"]:checked`)?.value || 'Físico'
-                    }));
-                
-                    const checklistData = {
-                        checkedIds: checkedItems.map(item => item.id),
-                        docTypes: checkedItems.reduce((acc, item) => {
-                            acc[item.id] = item.type;
-                            return acc;
-                        }, {}),
-                        reuData: getReuDataFromForm(),
-                        expenseData: getExpenseDataFromForm()
-                    };
-                
-                    try {
-                        await updateDoc(doc(this.db, "pautas", this.currentPauta.id, "attendances", window.assistedIdToHandle), {
-                            documentChecklist: checklistData,
-                            documentState: 'saved'
-                        });
-                        showNotification("Checklist salvo com sucesso!");
-                        document.getElementById('documents-modal').classList.add('hidden');
-                    } catch (error) {
-                        console.error("Erro ao salvar checklist:", error);
-                        showNotification("Erro ao salvar checklist", "error");
-                    }
-                });
-                
-                // Botão PDF
-                document.getElementById('print-checklist-btn')?.addEventListener('click', async () => {
-                    // Implementar geração de PDF
-                    showNotification("Gerando PDF...", "info");
-                });
-                
-                // Botão Mudar (Reset)
-                document.getElementById('reset-checklist-btn')?.addEventListener('click', () => {
-                    if (confirm("Deseja mudar de assunto? Isso apagará o checklist atual.")) {
-                        document.getElementById('document-checklist-view').classList.add('hidden');
-                        document.getElementById('document-action-selection').classList.remove('hidden');
-                        document.getElementById('document-checklist-view-header').classList.add('hidden');
-                        document.getElementById('checklist-search-container').classList.add('hidden');
-                    }
-                });
-                
-                // Funções auxiliares para dados do checklist
-                function getReuDataFromForm() {
-                    return {
-                        nome: document.getElementById('nome-reu')?.value || '',
-                        cpf: document.getElementById('cpf-reu')?.value || '',
-                        telefone: document.getElementById('telefone-reu')?.value || '',
-                        cep: document.getElementById('cep-reu')?.value || '',
-                        rua: document.getElementById('rua-reu')?.value || '',
-                        numero: document.getElementById('numero-reu')?.value || '',
-                        bairro: document.getElementById('bairro-reu')?.value || '',
-                        cidade: document.getElementById('cidade-reu')?.value || '',
-                        uf: document.getElementById('estado-reu')?.value || '',
-                        empresa: document.getElementById('empresa-reu')?.value || '',
-                        enderecoTrabalho: document.getElementById('endereco-trabalho-reu')?.value || ''
-                    };
-                }
-                
-                function getExpenseDataFromForm() {
-                    return {
-                        moradia: document.getElementById('expense-moradia')?.value || '',
-                        alimentacao: document.getElementById('expense-alimentacao')?.value || '',
-                        educacao: document.getElementById('expense-educacao')?.value || '',
-                        saude: document.getElementById('expense-saude')?.value || '',
-                        vestuario: document.getElementById('expense-vestuario')?.value || '',
-                        lazer: document.getElementById('expense-lazer')?.value || '',
-                        outras: document.getElementById('expense-outras')?.value || ''
-                    };
-                }
-                
-                // Busca de CEP
-                document.addEventListener('blur', async (e) => {
-                    if (e.target.id === 'cep-reu') {
-                        const cep = e.target.value.replace(/\D/g, '');
-                        if (cep.length === 8) {
-                            try {
-                                const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-                                const data = await response.json();
-                                if (!data.erro) {
-                                    document.getElementById('rua-reu').value = data.logradouro || '';
-                                    document.getElementById('bairro-reu').value = data.bairro || '';
-                                    document.getElementById('cidade-reu').value = data.localidade || '';
-                                    document.getElementById('estado-reu').value = data.uf || '';
-                                } else {
-                                    showNotification("CEP não encontrado", "error");
-                                }
-                            } catch (error) {
-                                console.error("Erro ao buscar CEP:", error);
-                                showNotification("Erro ao buscar CEP", "error");
-                            }
-                        }
-                    }
-                });
-                
-                // ================================================
-                // LISTENERS DO MODAL DE ATENDENTE
-                // ================================================
-                
+
                 // Confirmar atendimento (finalizar)
                 document.getElementById('confirm-attendant-btn')?.addEventListener('click', async () => {
-                    const attendantName = document.getElementById('attendant-name')?.value.trim();
+                    const select = document.getElementById('attendant-select');
+                    const attendantName = select?.value;
+                    
+                    if (!attendantName) {
+                        showNotification("Selecione um profissional", "error");
+                        return;
+                    }
                     
                     // Verificar se tem distribuição ativa
                     const useDist = this.currentPautaData?.useDistributionFlow === true;
                     const novoStatus = useDist ? 'aguardandoDistribuicao' : 'atendido';
-                
+
                     // Buscar colaborador completo se existir
                     const selectedCollab = this.colaboradores?.find(c => c.nome === attendantName);
                     let attendantData = selectedCollab ? 
                         { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe } : 
                         attendantName;
-                
+
                     await PautaService.updateStatus(
                         this.db,
                         this.currentPauta.id,
@@ -2092,12 +1955,92 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.getElementById('attendant-modal')?.classList.add('hidden');
                     showNotification(novoStatus === 'atendido' ? "Atendimento finalizado!" : "Enviado para Distribuição ⚖️");
                 });
-                
+
                 // Cancelar atendimento
                 document.getElementById('cancel-attendant-btn')?.addEventListener('click', () => {
                     document.getElementById('attendant-modal')?.classList.add('hidden');
                 });
-                
+
+                // ================================================
+                // LISTENERS DO MODAL DE EDIÇÃO DE ATENDENTE
+                // ================================================
+
+                // Confirmar edição de atendente
+                document.getElementById('confirm-edit-attendant-btn')?.addEventListener('click', async () => {
+                    const select = document.getElementById('edit-attendant-select');
+                    const attendantName = select?.value;
+                    
+                    if (!attendantName) {
+                        showNotification("Selecione um profissional", "error");
+                        return;
+                    }
+                    
+                    // Buscar colaborador completo se existir
+                    const selectedCollab = this.colaboradores?.find(c => c.nome === attendantName);
+                    let attendantData = selectedCollab ? 
+                        { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe } : 
+                        attendantName;
+
+                    await PautaService.updateStatus(
+                        this.db,
+                        this.currentPauta.id,
+                        window.assistedIdToHandle,
+                        { attendant: attendantData },
+                        this.currentUserName
+                    );
+                    
+                    document.getElementById('edit-attendant-modal')?.classList.add('hidden');
+                    showNotification("Atendente atualizado com sucesso!");
+                });
+
+                // Cancelar edição de atendente
+                document.getElementById('cancel-edit-attendant-btn')?.addEventListener('click', () => {
+                    document.getElementById('edit-attendant-modal')?.classList.add('hidden');
+                });
+
+                // ================================================
+                // LISTENERS DO MODAL DE SELEÇÃO DE COLABORADOR
+                // ================================================
+
+                // Confirmar seleção de colaborador
+                document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
+                    const selectedRadio = document.querySelector('#collaborator-selection-list input[name="selectedCollaborator"]:checked');
+                    
+                    let collaboratorData = null;
+                    
+                    if (selectedRadio && selectedRadio.value !== 'null') {
+                        const collaboratorId = selectedRadio.value;
+                        const collaboratorName = selectedRadio.dataset.name;
+                        collaboratorData = { id: collaboratorId, name: collaboratorName };
+                        showNotification(`${window.assistedNameToHandle} atribuído a ${collaboratorName}.`);
+                    } else {
+                        showNotification(`${window.assistedNameToHandle} movido para 'Em Atendimento' sem colaborador atribuído.`);
+                    }
+
+                    await PautaService.updateStatus(
+                        this.db,
+                        this.currentPauta.id,
+                        window.assistedIdToHandle,
+                        {
+                            status: 'emAtendimento',
+                            assignedCollaborator: collaboratorData,
+                            inAttendanceTime: new Date().toISOString()
+                        },
+                        this.currentUserName
+                    );
+                    
+                    document.getElementById('select-collaborator-modal')?.classList.add('hidden');
+                });
+
+                // Cancelar seleção de colaborador
+                document.getElementById('cancel-select-collaborator-btn')?.addEventListener('click', () => {
+                    document.getElementById('select-collaborator-modal')?.classList.add('hidden');
+                });
+
+                // ================================================
+                // LISTENERS DOS MODAIS DE CHEGADA
+                // ================================================
+
                 // Confirmar chegada
                 document.getElementById('confirm-arrival-btn')?.addEventListener('click', async () => {
                     const time = document.getElementById('arrival-time-input')?.value;
@@ -2130,6 +2073,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     showNotification("Chegada registrada com sucesso!", "success");
                 });
 
+                // Cancelar chegada
+                document.getElementById('cancel-arrival-btn')?.addEventListener('click', () => {
+                    document.getElementById('arrival-modal')?.classList.add('hidden');
+                });
+
+                // ================================================
+                // LISTENERS DO MODAL DE EDIÇÃO DE ASSISTIDO
+                // ================================================
+
                 // Confirmar edição de assistido
                 document.getElementById('confirm-edit-assisted-btn')?.addEventListener('click', async () => {
                     const name = document.getElementById('edit-assisted-name')?.value.trim();
@@ -2157,16 +2109,279 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     showNotification("Dados atualizados com sucesso!", "success");
                 });
 
-                // Cancelar no modal de chegada
-                document.getElementById('cancel-arrival-btn')?.addEventListener('click', () => {
-                    document.getElementById('arrival-modal')?.classList.add('hidden');
-                });
-
-                // Cancelar no modal de edição
+                // Cancelar edição de assistido
                 document.getElementById('cancel-edit-assisted-btn')?.addEventListener('click', () => {
                     document.getElementById('edit-assisted-modal')?.classList.add('hidden');
                 });
 
+                // ================================================
+                // LISTENERS DO MODAL DE DEMANDAS
+                // ================================================
+
+                // Adicionar demanda
+                document.getElementById('demands-modal-add-demand-btn')?.addEventListener('click', () => {
+                    const input = document.getElementById('demands-modal-new-demand-input');
+                    const text = input?.value.trim();
+                    if (text) {
+                        const container = document.getElementById('demands-modal-list-container');
+                        if (container) {
+                            // Remover mensagem de vazio se existir
+                            if (container.querySelector('p.text-gray-500')) {
+                                container.innerHTML = '';
+                            }
+                            
+                            const li = document.createElement('li');
+                            li.className = 'flex justify-between items-center p-2 bg-white rounded-md';
+                            li.innerHTML = `
+                                <span>${escapeHTML(text)}</span>
+                                <button class="remove-demand-item-btn text-red-500 text-xs">Remover</button>
+                            `;
+                            container.appendChild(li);
+                            input.value = '';
+                        }
+                    }
+                });
+
+                // Remover demanda (delegação)
+                document.getElementById('demands-modal-list-container')?.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('remove-demand-item-btn')) {
+                        const li = e.target.closest('li');
+                        if (li) li.remove();
+                        
+                        const container = document.getElementById('demands-modal-list-container');
+                        if (container && container.children.length === 0) {
+                            container.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
+                        }
+                    }
+                });
+
+                // Salvar demandas
+                document.getElementById('save-demands-btn')?.addEventListener('click', async () => {
+                    const container = document.getElementById('demands-modal-list-container');
+                    const items = container?.querySelectorAll('li') || [];
+                    const descricoes = Array.from(items).map(li => li.querySelector('span')?.textContent || '');
+                    
+                    const demandsData = {
+                        quantidade: descricoes.length,
+                        descricoes: descricoes
+                    };
+                    
+                    await PautaService.updateStatus(
+                        this.db,
+                        this.currentPauta.id,
+                        window.assistedIdToHandle,
+                        { demandas: demandsData },
+                        this.currentUserName
+                    );
+                    
+                    showNotification("Demandas salvas com sucesso!");
+                    document.getElementById('demands-modal')?.classList.add('hidden');
+                });
+
+                // Fechar modal de demandas
+                document.getElementById('cancel-demands-btn')?.addEventListener('click', () => {
+                    document.getElementById('demands-modal')?.classList.add('hidden');
+                });
+
+                document.getElementById('close-demands-modal-btn')?.addEventListener('click', () => {
+                    document.getElementById('demands-modal')?.classList.add('hidden');
+                });
+
+                // ================================================
+                // LISTENERS DO MODAL DE CONFIRMAÇÃO DE RESET
+                // ================================================
+
+                // Confirmar reset
+                document.getElementById('confirm-reset-btn')?.addEventListener('click', async () => {
+                    const attendanceCollectionRef = collection(this.db, "pautas", this.currentPauta.id, "attendances");
+                    const snapshot = await getDocs(attendanceCollectionRef);
+                    
+                    if (snapshot.empty) {
+                        showNotification("A pauta já está vazia.", "info");
+                        document.getElementById('reset-confirm-modal')?.classList.add('hidden');
+                        return;
+                    }
+                    
+                    const batch = writeBatch(this.db);
+                    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                    await batch.commit();
+                    
+                    showNotification("Pauta zerada com sucesso.", "success");
+                    document.getElementById('reset-confirm-modal')?.classList.add('hidden');
+                });
+
+                // Cancelar reset
+                document.getElementById('cancel-reset-btn')?.addEventListener('click', () => {
+                    document.getElementById('reset-confirm-modal')?.classList.add('hidden');
+                });
+
+                // ================================================
+                // LISTENERS DO MODAL DE EDIÇÃO DE NOME DA PAUTA
+                // ================================================
+
+                // Confirmar edição de nome
+                document.getElementById('confirm-edit-pauta-btn')?.addEventListener('click', async () => {
+                    const newName = document.getElementById('edit-pauta-name-input')?.value.trim();
+                    if (newName && this.currentPauta?.id) {
+                        await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { name: newName });
+                        document.getElementById('pauta-title').textContent = newName;
+                        showNotification("Nome da pauta atualizado.");
+                        document.getElementById('edit-pauta-modal')?.classList.add('hidden');
+                    } else {
+                        showNotification("O nome não pode ser vazio.", "error");
+                    }
+                });
+
+                // Cancelar edição de nome
+                document.getElementById('cancel-edit-pauta-btn')?.addEventListener('click', () => {
+                    document.getElementById('edit-pauta-modal')?.classList.add('hidden');
+                });
+
+                // ================================================
+                // LISTENERS DO MODAL DE FECHAR/REABRIR PAUTA
+                // ================================================
+
+                // Confirmar fechar/reabrir pauta
+                document.getElementById('confirm-close-pauta-btn')?.addEventListener('click', async () => {
+                    const password = document.getElementById('close-pauta-password')?.value;
+                    const errorDiv = document.getElementById('close-auth-error');
+                    if (errorDiv) errorDiv.classList.add('hidden');
+
+                    const isReopen = document.getElementById('confirm-close-pauta-btn')?.textContent.includes('Reabrir');
+                    const user = this.auth.currentUser;
+                    
+                    if (!user || user.uid !== this.currentPautaOwnerId) {
+                        showNotification("Você não tem permissão para esta ação.", "error");
+                        document.getElementById('close-pauta-modal')?.classList.add('hidden');
+                        return;
+                    }
+
+                    try {
+                        // Reautenticar
+                        const credential = EmailAuthProvider.credential(user.email, password);
+                        await reauthenticateWithCredential(user, credential);
+                        
+                        const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                        await updateDoc(pautaRef, { isClosed: !isReopen });
+                        
+                        this.isPautaClosed = !isReopen;
+                        UIService.togglePautaLock(this);
+
+                        showNotification(`Pauta ${isReopen ? 'reaberta' : 'fechada'} com sucesso.`);
+                        document.getElementById('close-pauta-modal')?.classList.add('hidden');
+                        
+                    } catch (error) {
+                        console.error("Authentication failed:", error);
+                        if (errorDiv) {
+                            errorDiv.textContent = 'Senha incorreta. Tente novamente.';
+                            errorDiv.classList.remove('hidden');
+                        }
+                    }
+                });
+
+                // Cancelar fechar/reabrir
+                document.getElementById('cancel-close-pauta-btn')?.addEventListener('click', () => {
+                    document.getElementById('close-pauta-modal')?.classList.add('hidden');
+                });
+
+                // ================================================
+                // LISTENERS DO MODAL DE DELEGAÇÃO POR EMAIL
+                // ================================================
+
+                // Enviar email de delegação
+                document.getElementById('send-delegate-email-btn')?.addEventListener('click', async () => {
+                    const emailInput = document.getElementById('collaborator-email-input');
+                    const emailDestino = emailInput?.value.trim();
+                    
+                    if (!emailDestino) {
+                        showNotification("Por favor, insira o e-mail.", "error");
+                        return;
+                    }
+
+                    const btn = document.getElementById('send-delegate-email-btn');
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.textContent = "Enviando...";
+                    }
+
+                    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                    const urlFinal = `${baseUrl}/atendimento_externo.html?pautaId=${this.currentPauta.id}&assistidoId=${window.assistedIdForDelegation}&collaboratorName=${encodeURIComponent(this.currentUserName)}`;
+
+                    let nomeColega = window.collaboratorNameForDelegation;
+                    if (!nomeColega || nomeColega === "Não informado" || nomeColega === "undefined") {
+                        nomeColega = "Colega Colaborador";
+                    }
+
+                    try {
+                        await EmailService.sendDelegationEmail(
+                            emailDestino, 
+                            nomeColega, 
+                            window.assistedNameForDelegation, 
+                            this.currentUserName,
+                            this.currentPauta.id,
+                            window.assistedIdForDelegation
+                        );
+
+                        document.getElementById('delegate-email-modal')?.classList.add('hidden');
+                        if (emailInput) emailInput.value = '';
+                        
+                    } catch (error) {
+                        console.error("Erro ao enviar email:", error);
+                        showNotification("Falha no envio do e-mail.", "error");
+                    } finally {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.textContent = "Enviar Link por E-mail";
+                        }
+                    }
+                });
+
+                // Cancelar delegação
+                document.getElementById('cancel-delegate-email-btn')?.addEventListener('click', () => {
+                    document.getElementById('delegate-email-modal')?.classList.add('hidden');
+                });
+
+                // ================================================
+                // LISTENER GLOBAL PARA REMOVER MEMBROS
+                // ================================================
+                
+                document.body.addEventListener('click', async (e) => {
+                    if (e.target.classList.contains('remove-member-btn')) {
+                        const email = e.target.dataset.email;
+                        if (confirm(`Remover ${email} da pauta?`)) {
+                            try {
+                                const usersRef = collection(this.db, "users");
+                                const q = query(usersRef, where("email", "==", email));
+                                const querySnapshot = await getDocs(q);
+                                
+                                if (!querySnapshot.empty) {
+                                    const userId = querySnapshot.docs[0].id;
+                                    const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                                    
+                                    await updateDoc(pautaRef, {
+                                        members: arrayRemove(userId),
+                                        memberEmails: arrayRemove(email)
+                                    });
+                                    
+                                    showNotification(`Membro ${email} removido`);
+                                    
+                                    // Recarregar o modal
+                                    if (typeof ModalService?.openMembersModal === 'function') {
+                                        await ModalService.openMembersModal(this);
+                                    }
+                                }
+                            } catch (error) {
+                                console.error("Erro ao remover membro:", error);
+                                showNotification("Erro ao remover membro", "error");
+                            }
+                        }
+                    }
+                });
+
+                // ================================================
+                // CONFIGURAÇÃO DO PAINEL ADMIN
+                // ================================================
+                
                 this.setupAdminPanel();
             }
 
@@ -2331,7 +2546,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
 
                     this.setupRealtimeListener(pautaId);
-                    CollaboratorService.setupListener(this, pautaId);
+                    
+                    if (typeof CollaboratorService?.setupListener === 'function') {
+                        CollaboratorService.setupListener(this, pautaId);
+                    }
+                    
                     UIService.showScreen('app');
                     
                 } catch (error) {
@@ -2354,7 +2573,18 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
         }
 
-        window.app = new SIGAPApp();        
+        // Tornar funções globais
+        window.showNotification = showNotification;
+        window.openDetailsModal = openDetailsModal;
+
+        // Inicializar a aplicação
+        window.app = new SIGAPApp();
+    </script>
+
+    <!-- ================================================ -->
+    <!-- EVENTO DE CEP (fora da classe) -->
+    <!-- ================================================ -->
+    <script>
         document.addEventListener('blur', async (e) => {
             if (e.target.id === 'cep-reu') {
                 const cep = e.target.value.replace(/\D/g, '');
