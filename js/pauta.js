@@ -65,7 +65,6 @@ export const PautaService = {
         
         let isScheduled, hasArrived, scheduledTimeValue;
 
-        // Dentro do método addAssisted, esta parte deve estar correta:
         if (currentMode === 'agendamento') {
             const scheduledRadio = document.querySelector('input[name="is-scheduled"]:checked');
             const arrivedRadio = document.querySelector('input[name="has-arrived"]:checked');
@@ -73,7 +72,7 @@ export const PautaService = {
             isScheduled = scheduledRadio?.value === 'yes';
             hasArrived = arrivedRadio?.value === 'yes';
             scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time')?.value : null;
-        
+
             if (isScheduled && !scheduledTimeValue && !hasArrived) {
                 showNotification("Por favor, informe o horário agendado.", "error");
                 return;
@@ -616,7 +615,7 @@ export const PautaService = {
             document.getElementById('select-collaborator-modal')?.classList.remove('hidden');
         }
 
-       // Atender (direto) - Finalizar Atendimento
+        // Atender (direto) - Finalizar Atendimento
         if (button.classList.contains('attend-directly-from-aguardando-btn')) {
             console.log("Atendendo diretamente:", id);
             window.assistedIdToHandle = id;
@@ -633,7 +632,6 @@ export const PautaService = {
                 });
             } else {
                 console.log("Nenhum colaborador encontrado ou datalist não existe");
-                // Se não houver colaboradores, mostrar mensagem
                 if (datalist) {
                     datalist.innerHTML = '';
                     const option = document.createElement('option');
@@ -644,7 +642,7 @@ export const PautaService = {
             }
             
             document.getElementById('attendant-modal')?.classList.remove('hidden');
-}
+        }
 
         // Delegar finalização
         if (button.classList.contains('delegate-finalization-btn')) {
@@ -677,6 +675,18 @@ export const PautaService = {
             const assisted = app.allAssisted?.find(a => a.id === id);
             if (assisted) {
                 document.getElementById('edit-attendant-name').value = assisted.attendant || '';
+                
+                // Preencher datalist também no modal de edição
+                const datalist = document.getElementById('collaborators-list');
+                if (datalist && app.colaboradores && app.colaboradores.length > 0) {
+                    datalist.innerHTML = '';
+                    app.colaboradores.forEach(c => {
+                        const option = document.createElement('option');
+                        option.value = c.nome;
+                        datalist.appendChild(option);
+                    });
+                }
+                
                 window.assistedIdToHandle = id;
                 document.getElementById('edit-attendant-modal')?.classList.remove('hidden');
             }
