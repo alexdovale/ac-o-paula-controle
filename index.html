@@ -789,7 +789,9 @@
             <h2 class="text-2xl font-bold mb-4">Finalizar Atendimento</h2>
             <p class="mb-4 text-gray-600">Insira o nome do profissional que realizou o atendimento (opcional).</p>
             <input list="collaborators-list" type="text" id="attendant-name" placeholder="Nome do Defensor/Servidor" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
-            <datalist id="collaborators-list"></datalist>
+            <datalist id="collaborators-list">
+                <!-- As opções serão preenchidas via JavaScript -->
+            </datalist>
             <div class="flex justify-end space-x-4">
                 <button id="cancel-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
                 <button id="confirm-attendant-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button>
