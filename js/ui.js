@@ -198,9 +198,7 @@ export const UIService = {
         const colaboradores = app.colaboradores || [];
 
         console.log("allAssisted:", allAssisted.length, "itens");
-        console.log("currentPautaData:", currentPautaData);
 
-        // Se não há dados, mostra mensagem
         if (allAssisted.length === 0) {
             console.log("Nenhum assistido encontrado");
             this.clearContainers();
@@ -219,7 +217,6 @@ export const UIService = {
             return;
         }
 
-        // Recalcular prioridades automáticas
         allAssisted.forEach(a => {
             if (a.status === 'aguardando' && a.priority !== 'URGENTE') {
                 a.priority = PautaService.getPriorityLevel(a);
@@ -228,12 +225,8 @@ export const UIService = {
 
         const tabAgendamento = document.getElementById('tab-agendamento');
         const currentMode = tabAgendamento?.classList.contains('tab-active') ? 'agendamento' : 'avulso';
-        console.log("Modo atual:", currentMode);
-
-        // Capturar termos de pesquisa
         const searchTerms = this.getSearchTerms();
 
-        // Filtrar dados por status
         const lists = {
             pauta: allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && this.searchFilter(a, searchTerms.pauta)),
             aguardando: allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && this.searchFilter(a, searchTerms.aguardando)),
@@ -252,7 +245,6 @@ export const UIService = {
             distribuicao: lists.distribuicao.length
         });
 
-        // Ordenar listas
         lists.pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
         lists.atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
         lists.faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
@@ -262,13 +254,9 @@ export const UIService = {
             lists.aguardando = PautaService.sortAguardando(lists.aguardando, currentPautaData.ordemAtendimento);
         }
 
-        // Atualizar contadores
         this.updateCounters(lists);
-
-        // Limpar containers
         this.clearContainers();
 
-        // Renderizar cada coluna
         console.log("Renderizando colunas...");
         this.renderPautaColumn(lists.pauta);
         this.renderAguardandoColumn(lists.aguardando, currentPautaData, colaboradores);
@@ -277,10 +265,7 @@ export const UIService = {
         this.renderFaltososColumn(lists.faltosos);
         this.renderDistribuicaoColumn(lists.distribuicao, app.currentPauta?.id, app.currentUserName);
 
-        // Atualizar estado de bloqueio
         this.togglePautaLock(app);
-        
-        // Iniciar sortable se necessário
         setTimeout(() => PautaService.setupManualSort(app), 100);
         
         console.log("✅ Renderização concluída");
@@ -398,7 +383,7 @@ export const UIService = {
         return card;
     },
 
-        renderAguardandoColumn(items, currentPautaData, colaboradores) {
+    renderAguardandoColumn(items, currentPautaData, colaboradores) {
         const container = document.getElementById('aguardando-list');
         if (!container) return;
 
@@ -408,6 +393,7 @@ export const UIService = {
         }
 
         console.log("Renderizando aguardando:", items.length);
+        container.innerHTML = ''; // Limpar container
 
         if (currentPautaData?.type === 'multisala' && currentPautaData.rooms?.length > 0) {
             currentPautaData.rooms.forEach(roomName => {
@@ -434,12 +420,38 @@ export const UIService = {
 
     createAguardandoCard(item, currentPautaData, colaboradores, index) {
         try {
+            if (!item || !item.id) return null;
+
             const card = document.createElement('div');
             const priorityClass = PautaService.getPriorityClass(item.priority);
             card.className = `relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
             card.setAttribute('data-id', item.id);
 
-            // Tratar valores null/undefined
+            // Tratar valores com fallbacks seguros
+            const nomeSeguro = item.name || 'Nome não informado';
+            const assuntoSeguro = item.subject || 'Assunto não informado';
+            const scheduledTimeSeguro = item.scheduledTime || '--:--';
+            const priorityReasonSeguro = item.priorityReason || '';
+
+            // Tratar arrivalTime
+            let arrivalText = 'Chegada: --:--';
+            if (item.arrivalTime) {
+                try {
+                    const arrivalDate = new Date(item.arrivalTime);
+                    if (!isNaN(arrivalDate)) {
+                        const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
+                            arrivalText = `Agendado: ${escapeHTML(scheduledTimeSeguro)} | Chegou: ${horaChegada}`;
+                        } else {
+                            arrivalText = `Chegada: ${horaChegada}`;
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Erro ao formatar data:", e);
+                }
+            }
+
+            // Status de documentos
             let docStatusHtml = '';
             if (item.selectedAction) {
                 let statusColor = 'bg-gray-100 text-gray-600';
@@ -457,29 +469,14 @@ export const UIService = {
 
                 docStatusHtml = `
                     <div class="mt-2 flex flex-col gap-1">
-                        <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate">📂 ${escapeHTML(item.selectedAction || '')}</span>
+                        <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate">📂 ${escapeHTML(item.selectedAction)}</span>
                         <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80">${statusText}</span>
                     </div>`;
             }
 
-            // Tratar arrivalTime quando é null
-            let arrivalText = 'Chegada: --:--';
-            if (item.arrivalTime) {
-                try {
-                    if (item.type === 'agendamento' && item.scheduledTime) {
-                        arrivalText = `Agendado: ${escapeHTML(item.scheduledTime)} | Chegou: ${new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-                    } else {
-                        arrivalText = `Chegada: ${new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-                    }
-                } catch (e) {
-                    console.warn("Erro ao formatar data:", e);
-                    arrivalText = 'Chegada: --:--';
-                }
-            }
-
             const atenderButton = currentPautaData?.useDelegationFlow
-                ? `<button data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`
-                : `<button data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`;
+                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`
+                : `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`;
 
             card.innerHTML = `
                 <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors">
@@ -488,9 +485,9 @@ export const UIService = {
                     </svg>
                 </button>
                 <div class="flex flex-col h-full">
-                    ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(item.priorityReason || '')}</div>` : ''}
-                    <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(item.name || '')}</p>
-                    <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
+                    ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
+                    <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(nomeSeguro)}</p>
+                    <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
                     <div class="flex flex-wrap gap-2 mb-1">
                         <span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">${arrivalText}</span>
                         ${item.room ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(item.room)}</span>` : ''}
@@ -503,6 +500,7 @@ export const UIService = {
                     </div>
                     <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
                 </div>`;
+            
             return card;
         } catch (error) {
             console.error("Erro ao criar card de aguardando:", error, item);
@@ -520,49 +518,55 @@ export const UIService = {
         }
 
         items.forEach((item, index) => {
-            container.appendChild(this.createEmAtendimentoCard(item, currentPautaData, pautaId, userName, index));
+            const card = this.createEmAtendimentoCard(item, currentPautaData, pautaId, userName, index);
+            if (card) container.appendChild(card);
         });
     },
 
     createEmAtendimentoCard(item, currentPautaData, pautaId, userName, index) {
-        const card = document.createElement('div');
-        card.className = `relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
-        
-        const startTime = item.inAttendanceTime ? 
-            new Date(item.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-        
-        const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-        const linkDireto = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&collaboratorName=${encodeURIComponent(userName)}`;
+        try {
+            const card = document.createElement('div');
+            card.className = `relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
+            
+            const startTime = item.inAttendanceTime ? 
+                new Date(item.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+            
+            const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+            const linkDireto = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&collaboratorName=${encodeURIComponent(userName)}`;
 
-        card.innerHTML = `
-            <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                </svg>
-            </button>
+            card.innerHTML = `
+                <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
+                    </svg>
+                </button>
 
-            <p class="font-bold text-2xl text-gray-800">${index + 1}. ${escapeHTML(item.name || '')}</p>
-            <p class="text-sm mt-1">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
-            <p class="text-sm">Colaborador: ${escapeHTML(item.assignedCollaborator?.name || 'Não atribuído')}</p>
-            <p class="text-sm text-gray-400">Início: ${startTime}</p>
+                <p class="font-bold text-2xl text-gray-800">${index + 1}. ${escapeHTML(item.name || '')}</p>
+                <p class="text-sm mt-1">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
+                <p class="text-sm">Colaborador: ${escapeHTML(item.assignedCollaborator?.name || 'Não atribuído')}</p>
+                <p class="text-sm text-gray-400">Início: ${startTime}</p>
 
-            <div class="mt-4 flex flex-col gap-2">
-                <div class="grid grid-cols-2 gap-2">
-                    <button data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(item.assignedCollaborator?.name || 'Não informado')}" class="delegate-finalization-btn bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95 leading-tight">
-                        Delegar<br>Finalização
-                    </button>
-                    <button onclick="window.open('${linkDireto}', '_blank')" class="bg-green-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95 leading-tight">
-                        Finalizar<br>Diretamente
+                <div class="mt-4 flex flex-col gap-2">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(item.assignedCollaborator?.name || 'Não informado')}" class="delegate-finalization-btn bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95 leading-tight">
+                            Delegar<br>Finalização
+                        </button>
+                        <button onclick="window.open('${linkDireto}', '_blank')" class="bg-green-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95 leading-tight">
+                            Finalizar<br>Diretamente
+                        </button>
+                    </div>
+                    <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95">
+                        Voltar p/ Aguardando
                     </button>
                 </div>
-                <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95">
-                    Voltar p/ Aguardando
-                </button>
-            </div>
 
-            ${item.lastActionBy ? `<p class="text-[10px] text-gray-400 mt-4 text-right uppercase">Última ação por: <b>${escapeHTML(item.lastActionBy)}</b></p>` : ''}
-        `;
-        return card;
+                ${item.lastActionBy ? `<p class="text-[10px] text-gray-400 mt-4 text-right uppercase">Última ação por: <b>${escapeHTML(item.lastActionBy)}</b></p>` : ''}
+            `;
+            return card;
+        } catch (error) {
+            console.error("Erro ao criar card de em atendimento:", error, item);
+            return null;
+        }
     },
 
     renderAtendidosColumn(items) {
@@ -574,80 +578,82 @@ export const UIService = {
             return;
         }
 
-        console.log("Renderizando atendidos:", items.length);
-        
+        container.innerHTML = ''; // Limpar container
         items.forEach(item => {
             if (!item) return;
             const card = this.createAtendidoCard(item);
-            container.appendChild(card);
+            if (card) container.appendChild(card);
         });
     },
 
     createAtendidoCard(item) {
-        const card = document.createElement('div');
-        card.className = 'relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4';
-        
-        const arrivalT = item.arrivalTime ? 
-            new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
-        const attendedT = item.attendedTime ? 
-            new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-        
-        // Tratar attendant quando é null ou undefined
-        let atendenteNome = 'Não informado';
-        
-        if (item.attendant) {
-            if (typeof item.attendant === 'object') {
-                atendenteNome = item.attendant.nome || item.attendant.name || 'Não informado';
-            } else {
-                atendenteNome = item.attendant;
+        try {
+            const card = document.createElement('div');
+            card.className = 'relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4';
+            
+            const arrivalT = item.arrivalTime ? 
+                new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+            const attendedT = item.attendedTime ? 
+                new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+            
+            let atendenteNome = 'Não informado';
+            if (item.attendant) {
+                if (typeof item.attendant === 'object') {
+                    atendenteNome = item.attendant.nome || item.attendant.name || 'Não informado';
+                } else {
+                    atendenteNome = item.attendant;
+                }
             }
-        }
 
-        card.innerHTML = `
-            <div class="flex justify-between items-start">
-                <p class="font-bold text-xl text-gray-800">${escapeHTML(item.name || '')}</p>
-                <button data-id="${item.id}" class="toggle-confirmed-atendido w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center ${item.isConfirmed ? 'bg-green-500 border-green-500 text-white' : 'bg-slate-100 text-slate-300'} shadow-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/>
-                    </svg>
-                </button>
-            </div>
-            
-            <p class="text-sm mt-1 text-gray-700">Assunto Principal: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
-            
-            <div class="grid grid-cols-3 gap-2 text-center border-t border-b py-3 my-3 text-[10px] text-gray-400 uppercase font-bold tracking-wider">
-                <div>Agendado:<br><span class="text-gray-600">${item.scheduledTime || 'N/A'}</span></div>
-                <div>Chegou:<br><span class="text-gray-600">${arrivalT}</span></div>
-                <div>Finalizado:<br><span class="text-gray-600">${attendedT}</span></div>
-            </div>
-
-            <div class="flex justify-between items-center text-xs mb-4">
-                <p class="text-gray-500">Por: <b class="text-gray-800">${escapeHTML(atendenteNome)}</b></p>
-                <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-right">
-                    <button data-id="${item.id}" class="manage-demands-btn text-blue-500 font-bold hover:underline">Demandas</button>
-                    <button data-id="${item.id}" class="edit-assisted-btn text-slate-400 font-bold hover:underline">Dados</button>
-                    <button data-id="${item.id}" class="edit-attendant-btn text-green-600 font-bold hover:underline">Atendente</button>
-                    <button data-id="${item.id}" class="delete-btn text-red-500 font-bold hover:underline">Deletar</button>
-                </div>
-            </div>
-
-            ${item.arquivoPdfConteudo ? `
-                <a href="${item.arquivoPdfConteudo}" download="${item.nomeArquivoPdf || 'protocolo.pdf'}" 
-                   class="mb-4 flex items-center justify-center gap-2 w-full bg-blue-50 text-blue-600 font-bold py-2.5 rounded-xl text-[10px] uppercase border border-blue-100 hover:bg-blue-100 transition">
-                   📄 Baixar Protocolo Anexado
-                </a>
-            ` : ''}
-
-            <div class="pt-3 border-t">
-                <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
-                    <p class="text-[9px] text-gray-400 uppercase italic">Última ação: ${escapeHTML(item.lastActionBy || 'Sistema')}</p>
-                    <button data-id="${item.id}" class="return-from-atendido-btn w-full sm:w-auto bg-orange-500 text-white font-black py-3 px-8 rounded-xl text-[10px] uppercase shadow-md active:scale-95 transition-all">
-                        Voltar p/ Em Atendimento
+            card.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <p class="font-bold text-xl text-gray-800">${escapeHTML(item.name || '')}</p>
+                    <button data-id="${item.id}" class="toggle-confirmed-atendido w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center ${item.isConfirmed ? 'bg-green-500 border-green-500 text-white' : 'bg-slate-100 text-slate-300'} shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/>
+                        </svg>
                     </button>
                 </div>
-            </div>
-        `;
-        return card;
+                
+                <p class="text-sm mt-1 text-gray-700">Assunto Principal: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
+                
+                <div class="grid grid-cols-3 gap-2 text-center border-t border-b py-3 my-3 text-[10px] text-gray-400 uppercase font-bold tracking-wider">
+                    <div>Agendado:<br><span class="text-gray-600">${item.scheduledTime || 'N/A'}</span></div>
+                    <div>Chegou:<br><span class="text-gray-600">${arrivalT}</span></div>
+                    <div>Finalizado:<br><span class="text-gray-600">${attendedT}</span></div>
+                </div>
+
+                <div class="flex justify-between items-center text-xs mb-4">
+                    <p class="text-gray-500">Por: <b class="text-gray-800">${escapeHTML(atendenteNome)}</b></p>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-right">
+                        <button data-id="${item.id}" class="manage-demands-btn text-blue-500 font-bold hover:underline">Demandas</button>
+                        <button data-id="${item.id}" class="edit-assisted-btn text-slate-400 font-bold hover:underline">Dados</button>
+                        <button data-id="${item.id}" class="edit-attendant-btn text-green-600 font-bold hover:underline">Atendente</button>
+                        <button data-id="${item.id}" class="delete-btn text-red-500 font-bold hover:underline">Deletar</button>
+                    </div>
+                </div>
+
+                ${item.arquivoPdfConteudo ? `
+                    <a href="${item.arquivoPdfConteudo}" download="${item.nomeArquivoPdf || 'protocolo.pdf'}" 
+                       class="mb-4 flex items-center justify-center gap-2 w-full bg-blue-50 text-blue-600 font-bold py-2.5 rounded-xl text-[10px] uppercase border border-blue-100 hover:bg-blue-100 transition">
+                       📄 Baixar Protocolo Anexado
+                    </a>
+                ` : ''}
+
+                <div class="pt-3 border-t">
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
+                        <p class="text-[9px] text-gray-400 uppercase italic">Última ação: ${escapeHTML(item.lastActionBy || 'Sistema')}</p>
+                        <button data-id="${item.id}" class="return-from-atendido-btn w-full sm:w-auto bg-orange-500 text-white font-black py-3 px-8 rounded-xl text-[10px] uppercase shadow-md active:scale-95 transition-all">
+                            Voltar p/ Em Atendimento
+                        </button>
+                    </div>
+                </div>
+            `;
+            return card;
+        } catch (error) {
+            console.error("Erro ao criar card de atendido:", error, item);
+            return null;
+        }
     },
 
     renderFaltososColumn(items) {
