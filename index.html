@@ -1826,60 +1826,89 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
 
             async loadPauta(pautaId, pautaName, pautaType) {
-                this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
-                document.getElementById('pauta-title').textContent = pautaName;
-
-                localStorage.setItem('lastPautaId', pautaId);
-                localStorage.setItem('lastPautaType', pautaType);
-
-                try {
-                    const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
+                    console.log("📂 Carregando pauta:", pautaId, pautaName);
                     
-                    if (pautaDoc.exists()) {
-                        this.currentPautaData = pautaDoc.data();
-                        this.currentPautaOwnerId = this.currentPautaData.owner;
-                        this.isPautaClosed = this.currentPautaData.isClosed || false;
+                    this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
+                    document.getElementById('pauta-title').textContent = pautaName;
+                
+                    localStorage.setItem('lastPautaId', pautaId);
+                    localStorage.setItem('lastPautaType', pautaType);
+                
+                    try {
+                        const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
+                        console.log("Dados da pauta:", pautaDoc.exists() ? pautaDoc.data() : "não encontrada");
                         
-                        UIService.togglePautaLock(this);
-
-                        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-                        const distColumn = document.getElementById('distribuicao-column');
+                        if (pautaDoc.exists()) {
+                            this.currentPautaData = pautaDoc.data();
+                            this.currentPautaOwnerId = this.currentPautaData.owner;
+                            this.isPautaClosed = this.currentPautaData.isClosed || false;
+                            
+                            UIService.togglePautaLock(this);
+                
+                            const emAtendimentoColumn = document.getElementById('em-atendimento-column');
+                            const distColumn = document.getElementById('distribuicao-column');
+                            
+                            if (this.currentPautaData.useDelegationFlow) {
+                                emAtendimentoColumn?.classList.remove('hidden');
+                            } else {
+                                emAtendimentoColumn?.classList.add('hidden');
+                            }
+                
+                            if (this.currentPautaData.useDistributionFlow) {
+                                distColumn?.classList.remove('hidden');
+                            } else {
+                                distColumn?.classList.add('hidden');
+                            }
+                        }
+                
+                        this.setupRealtimeListener(pautaId);
+                        CollaboratorService.setupListener(this, pautaId);
+                        UIService.showScreen('app');
                         
-                        if (this.currentPautaData.useDelegationFlow) {
-                            emAtendimentoColumn?.classList.remove('hidden');
-                        } else {
-                            emAtendimentoColumn?.classList.add('hidden');
-                        }
-
-                        if (this.currentPautaData.useDistributionFlow) {
-                            distColumn?.classList.remove('hidden');
-                        } else {
-                            distColumn?.classList.add('hidden');
-                        }
+                    } catch (error) {
+                        console.error("Erro ao carregar pauta:", error);
+                        showNotification("Erro ao carregar pauta", "error");
                     }
-
-                    this.setupRealtimeListener(pautaId);
-                    CollaboratorService.setupListener(this, pautaId);
-                    UIService.showScreen('app');
-                    
-                } catch (error) {
-                    console.error("Erro ao carregar pauta:", error);
-                    showNotification("Erro ao carregar pauta", "error");
                 }
-            }
 
             setupRealtimeListener(pautaId) {
-                if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
-                
-                const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
-                this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
-                    this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    UIService.renderAssistedLists(this);
-                }, (error) => {
-                    console.error("Erro no listener:", error);
-                    showNotification("Erro ao carregar dados", "error");
-                });
-            }
+                    console.log("🔄 Configurando listener para pauta:", pautaId);
+                    
+                    if (this.unsubscribeFromAttendances) {
+                        console.log("Removendo listener anterior");
+                        this.unsubscribeFromAttendances();
+                    }
+                    
+                    const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
+                    console.log("Referência criada:", attendanceRef);
+                    
+                    this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
+                        console.log("📥 Dados recebidos do Firestore:", snapshot.size, "documentos");
+                        
+                        this.allAssisted = snapshot.docs.map(doc => {
+                            const data = doc.data();
+                            console.log("Documento:", doc.id, data.name);
+                            return { id: doc.id, ...data };
+                        });
+                        
+                        console.log("✅ allAssisted atualizado:", this.allAssisted.length, "itens");
+                        
+                        // Chama o renderizador
+                        if (this.currentPautaData) {
+                            UIService.renderAssistedLists(this);
+                        } else {
+                            console.warn("currentPautaData não definido ainda");
+                        }
+                        
+                    }, (error) => {
+                        console.error("❌ Erro no listener:", error);
+                        console.error("Código:", error.code);
+                        console.error("Mensagem:", error.message);
+                        showNotification("Erro ao carregar dados em tempo real", "error");
+                    });
+                    
+                    console.log("✅ Listener configurado");
+                }
         }
 
         window.app = new SIGAPApp();
