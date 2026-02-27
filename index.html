@@ -1846,6 +1846,30 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     PautaService.handleCardActions(e, this);
                 });
 
+                // ================================================
+                // FORMULÁRIO DE COLABORADORES
+                // ================================================
+                
+                document.getElementById('collaborator-form-modal')?.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    const nome = document.getElementById('collaborator-name-modal')?.value.trim();
+                    if (!nome) {
+                        showNotification("Nome obrigatório", "error");
+                        return;
+                    }
+                    
+                    const data = {
+                        nome: nome,
+                        cargo: document.getElementById('collaborator-role-modal')?.value,
+                        equipe: document.getElementById('collaborator-team-modal')?.value,
+                        email: document.getElementById('collaborator-email-modal')?.value || '',
+                        telefone: document.getElementById('collaborator-phone-modal')?.value || '',
+                        transporte: document.querySelector('input[name="transporte-colaborador"]:checked')?.value || 'Meios Próprios'
+                    };
+                    
+                    await CollaboratorService.saveCollaborator(this, data);
+                });
                 document.querySelectorAll('[id^="cancel-"], [id^="close-"]').forEach(btn => {
                     if (btn) {
                         btn.addEventListener('click', (e) => {
