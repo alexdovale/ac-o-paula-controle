@@ -4,7 +4,7 @@
  */
 
 import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { showNotification } from './utils.js'; // ✅ Importação da função
+import { showNotification } from './utils.js';
 
 // --- 1. CONSTANTES DE DOCUMENTAÇÃO (LISTA INTEGRAL) ---
 
@@ -56,7 +56,7 @@ export const documentsData = {
 
 // --- 3. ESTADO GLOBAL E SELETORES ---
 
-let currentAssistedId = null, currentPautaId = null, db = null, customShowNotification = null, allAssisted = [], currentChecklistAction = null; // 🔸 Renomeado para customShowNotification
+let currentAssistedId = null, currentPautaId = null, db = null, customShowNotification = null, allAssisted = [], currentChecklistAction = null;
 const getEl = (id) => document.getElementById(id);
 
 const normalizeLocal = (str) => str ? str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : '';
@@ -256,7 +256,7 @@ async function handleSave() {
 
     try {
         await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), payload);
-        showNotification("Dados salvos com sucesso!"); // ✅ Usa a função importada
+        showNotification("Dados salvos com sucesso!");
         getEl('documents-modal').classList.add('hidden');
     } catch (e) { console.error(e); }
 }
@@ -381,7 +381,7 @@ function handleBack() {
 
 export function setupDetailsModal(config) {
     db = config.db; 
-    customShowNotification = config.showNotification; // 🔸 Usa a variável renomeada
+    customShowNotification = config.showNotification;
     
     if (getEl('document-action-selection')) {
         getEl('document-action-selection').onclick = async (e) => {
@@ -412,21 +412,34 @@ export function setupDetailsModal(config) {
 }
 
 export function openDetailsModal(config) {
-    currentAssistedId = config.assistedId; currentPautaId = config.pautaId; allAssisted = config.allAssisted;
-    const assisted = allAssisted.find(a => a.id === currentAssistedId); if (!assisted) return;
-    if (getEl('documents-assisted-name')) getEl('documents-assisted-name').textContent = assisted.name;
+    console.log("openDetailsModal chamado", config);
+    
+    currentAssistedId = config.assistedId; 
+    currentPautaId = config.pautaId; 
+    allAssisted = config.allAssisted;
+    
+    const assisted = allAssisted.find(a => a.id === currentAssistedId); 
+    if (!assisted) {
+        console.error("Assistido não encontrado:", currentAssistedId);
+        return;
+    }
+    
+    if (getEl('documents-assisted-name')) 
+        getEl('documents-assisted-name').textContent = assisted.name;
     
     const selectionArea = getEl('document-action-selection');
     if (selectionArea) {
         selectionArea.innerHTML = '<p class="text-gray-500 mb-6 text-sm text-center font-bold uppercase tracking-widest opacity-50">Selecione o Assunto</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 action-grid"></div>';
         const grid = selectionArea.querySelector('.action-grid');
-        Object.keys(documentsData).forEach(k => {
-            const btn = document.createElement('button');
-            btn.dataset.action = k;
-            btn.className = "text-left p-4 bg-white border-2 border-gray-100 hover:border-green-500 rounded-xl transition-all shadow-sm group";
-            btn.innerHTML = `<span class="font-bold text-gray-700 uppercase text-xs tracking-tighter">${documentsData[k].title}</span>`;
-            grid.appendChild(btn);
-        });
+        if (grid) {
+            Object.keys(documentsData).forEach(k => {
+                const btn = document.createElement('button');
+                btn.dataset.action = k;
+                btn.className = "text-left p-4 bg-white border-2 border-gray-100 hover:border-green-500 rounded-xl transition-all shadow-sm group";
+                btn.innerHTML = `<span class="font-bold text-gray-700 uppercase text-xs tracking-tighter">${documentsData[k].title}</span>`;
+                grid.appendChild(btn);
+            });
+        }
     }
 
     if (assisted.documentChecklist?.action) {
@@ -436,5 +449,14 @@ export function openDetailsModal(config) {
     } else {
         handleBack();
     }
-    if (getEl('documents-modal')) getEl('documents-modal').classList.remove('hidden');
+    
+    const modal = getEl('documents-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    } else {
+        console.error("Modal de documentos não encontrado");
+    }
 }
+
+// Tornar a função global
+window.openDetailsModal = openDetailsModal;
