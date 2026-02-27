@@ -186,22 +186,37 @@ export const UIService = {
     },
 
     renderAssistedLists(app) {
-        const allAssisted = app.allAssisted;
+        console.log("🎨 renderAssistedLists chamado");
+        console.log("allAssisted:", app.allAssisted);
+        console.log("currentPautaData:", app.currentPautaData);
+        
+        const allAssisted = app.allAssisted || [];
         const currentPautaData = app.currentPautaData;
-        const colaboradores = app.colaboradores;
-
+        const colaboradores = app.colaboradores || [];
+    
+        // Se não há dados, mostra mensagem
+        if (allAssisted.length === 0) {
+            console.log("Nenhum assistido encontrado");
+            this.clearContainers();
+            document.getElementById('pauta-list').innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum agendamento</p>';
+            document.getElementById('aguardando-list').innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém aguardando</p>';
+            document.getElementById('atendidos-list').innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum atendido</p>';
+            return;
+        }
+    
         // Recalcular prioridades automáticas
         allAssisted.forEach(a => {
             if (a.status === 'aguardando' && a.priority !== 'URGENTE') {
                 a.priority = PautaService.getPriorityLevel(a);
             }
         });
-
-        const currentMode = document.getElementById('tab-agendamento').classList.contains('tab-active') ? 'agendamento' : 'avulso';
-
+    
+        const currentMode = document.getElementById('tab-agendamento')?.classList.contains('tab-active') ? 'agendamento' : 'avulso';
+        console.log("Modo atual:", currentMode);
+    
         // Capturar termos de pesquisa
         const searchTerms = this.getSearchTerms();
-
+    
         // Filtrar dados por status
         const lists = {
             pauta: allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && this.searchFilter(a, searchTerms.pauta)),
@@ -211,33 +226,45 @@ export const UIService = {
             faltosos: allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento' && this.searchFilter(a, searchTerms.faltosos)),
             distribuicao: allAssisted.filter(a => a.status === 'aguardandoDistribuicao' && this.searchFilter(a, searchTerms.distribuicao))
         };
-
+    
+        console.log("Listas filtradas:", {
+            pauta: lists.pauta.length,
+            aguardando: lists.aguardando.length,
+            emAtendimento: lists.emAtendimento.length,
+            atendidos: lists.atendidos.length,
+            faltosos: lists.faltosos.length,
+            distribuicao: lists.distribuicao.length
+        });
+    
         // Ordenar listas
         lists.pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
         lists.atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
         lists.faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
         lists.emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
         lists.aguardando = PautaService.sortAguardando(lists.aguardando, currentPautaData?.ordemAtendimento || 'padrao');
-
+    
         // Atualizar contadores
         this.updateCounters(lists);
-
+    
         // Limpar containers
         this.clearContainers();
-
+    
         // Renderizar cada coluna
+        console.log("Renderizando colunas...");
         this.renderPautaColumn(lists.pauta);
         this.renderAguardandoColumn(lists.aguardando, currentPautaData, colaboradores);
         this.renderEmAtendimentoColumn(lists.emAtendimento, currentPautaData, app.currentPauta?.id, app.currentUserName);
         this.renderAtendidosColumn(lists.atendidos);
         this.renderFaltososColumn(lists.faltosos);
         this.renderDistribuicaoColumn(lists.distribuicao, app.currentPauta?.id, app.currentUserName);
-
+    
         // Atualizar estado de bloqueio
         this.togglePautaLock(app);
         
         // Iniciar sortable se necessário
         setTimeout(() => PautaService.setupManualSort(app), 100);
+        
+        console.log("✅ Renderização concluída");
     },
 
     getSearchTerms() {
