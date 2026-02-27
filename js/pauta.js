@@ -65,6 +65,7 @@ export const PautaService = {
         
         let isScheduled, hasArrived, scheduledTimeValue;
 
+        // Dentro do método addAssisted, esta parte deve estar correta:
         if (currentMode === 'agendamento') {
             const scheduledRadio = document.querySelector('input[name="is-scheduled"]:checked');
             const arrivedRadio = document.querySelector('input[name="has-arrived"]:checked');
@@ -72,7 +73,7 @@ export const PautaService = {
             isScheduled = scheduledRadio?.value === 'yes';
             hasArrived = arrivedRadio?.value === 'yes';
             scheduledTimeValue = isScheduled ? document.getElementById('scheduled-time')?.value : null;
-
+        
             if (isScheduled && !scheduledTimeValue && !hasArrived) {
                 showNotification("Por favor, informe o horário agendado.", "error");
                 return;
