@@ -368,10 +368,10 @@ export const UIService = {
                 </svg>
             </button>
 
-            <p class="font-bold text-xl text-gray-800 leading-tight pr-6">${escapeHTML(item.name).toUpperCase()}</p>
+            <p class="font-bold text-xl text-gray-800 leading-tight pr-6">${escapeHTML(item.name || '').toUpperCase()}</p>
             
             <div class="mt-2 space-y-0.5 text-sm text-gray-700">
-                <p>Assunto: <span class="font-bold uppercase">${escapeHTML(item.subject)}</span></p>
+                <p>Assunto: <span class="font-bold uppercase">${escapeHTML(item.subject || 'Não informado')}</span></p>
                 <p>Agendado: <span class="font-bold">${item.scheduledTime || '--:--'}</span></p>
             </div>
 
@@ -401,14 +401,14 @@ export const UIService = {
     renderAguardandoColumn(items, currentPautaData, colaboradores) {
         const container = document.getElementById('aguardando-list');
         if (!container) return;
-    
+
         if (items.length === 0) {
             container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém aguardando</p>';
             return;
         }
-    
-        console.log("Renderizando aguardando:", items.length); // Log para debug
-    
+
+        console.log("Renderizando aguardando:", items.length);
+
         if (currentPautaData?.type === 'multisala' && currentPautaData.rooms?.length > 0) {
             currentPautaData.rooms.forEach(roomName => {
                 const peopleInRoom = items.filter(a => a.room === roomName);
@@ -430,14 +430,15 @@ export const UIService = {
                 if (card) container.appendChild(card);
             });
         }
-    }
+    },
+
     createAguardandoCard(item, currentPautaData, colaboradores, index) {
         const card = document.createElement('div');
         const priorityClass = PautaService.getPriorityClass(item.priority);
         card.className = `relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
         card.setAttribute('data-id', item.id);
-    
-        // ✅ CORREÇÃO: Tratar valores null/undefined
+
+        // Tratar valores null/undefined
         let docStatusHtml = '';
         if (item.selectedAction) {
             let statusColor = 'bg-gray-100 text-gray-600';
@@ -452,15 +453,15 @@ export const UIService = {
                 statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
                 statusText = '📄 PDF Gerado'; 
             }
-    
+
             docStatusHtml = `
                 <div class="mt-2 flex flex-col gap-1">
                     <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate">📂 ${escapeHTML(item.selectedAction || '')}</span>
                     <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80">${statusText}</span>
                 </div>`;
         }
-    
-        // ✅ CORREÇÃO: Tratar arrivalTime quando é null
+
+        // Tratar arrivalTime quando é null
         let arrivalText = 'Chegada: --:--';
         if (item.arrivalTime) {
             try {
@@ -474,11 +475,11 @@ export const UIService = {
                 arrivalText = 'Chegada: --:--';
             }
         }
-    
+
         const atenderButton = currentPautaData?.useDelegationFlow
             ? `<button data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`
             : `<button data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`;
-    
+
         card.innerHTML = `
             <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
@@ -502,7 +503,7 @@ export const UIService = {
                 <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
             </div>`;
         return card;
-    }
+    },
 
     renderEmAtendimentoColumn(items, currentPautaData, pautaId, userName) {
         const container = document.getElementById('em-atendimento-list');
@@ -535,14 +536,14 @@ export const UIService = {
                 </svg>
             </button>
 
-            <p class="font-bold text-2xl text-gray-800">${index + 1}. ${escapeHTML(item.name)}</p>
-            <p class="text-sm mt-1">Assunto: <strong>${escapeHTML(item.subject)}</strong></p>
+            <p class="font-bold text-2xl text-gray-800">${index + 1}. ${escapeHTML(item.name || '')}</p>
+            <p class="text-sm mt-1">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
             <p class="text-sm">Colaborador: ${escapeHTML(item.assignedCollaborator?.name || 'Não atribuído')}</p>
             <p class="text-sm text-gray-400">Início: ${startTime}</p>
 
             <div class="mt-4 flex flex-col gap-2">
                 <div class="grid grid-cols-2 gap-2">
-                    <button data-id="${item.id}" data-name="${escapeHTML(item.name)}" data-collaborator-name="${escapeHTML(item.assignedCollaborator?.name || 'Não informado')}" class="delegate-finalization-btn bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95 leading-tight">
+                    <button data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(item.assignedCollaborator?.name || 'Não informado')}" class="delegate-finalization-btn bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95 leading-tight">
                         Delegar<br>Finalização
                     </button>
                     <button onclick="window.open('${linkDireto}', '_blank')" class="bg-green-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95 leading-tight">
@@ -586,7 +587,7 @@ export const UIService = {
         const attendedT = item.attendedTime ? 
             new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
         
-        // ✅ CORREÇÃO: Tratar attendant quando é null ou undefined
+        // Tratar attendant quando é null ou undefined
         let atendenteNome = 'Não informado';
         
         if (item.attendant) {
@@ -599,7 +600,7 @@ export const UIService = {
 
         card.innerHTML = `
             <div class="flex justify-between items-start">
-                <p class="font-bold text-xl text-gray-800">${escapeHTML(item.name)}</p>
+                <p class="font-bold text-xl text-gray-800">${escapeHTML(item.name || '')}</p>
                 <button data-id="${item.id}" class="toggle-confirmed-atendido w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center ${item.isConfirmed ? 'bg-green-500 border-green-500 text-white' : 'bg-slate-100 text-slate-300'} shadow-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/>
@@ -607,7 +608,7 @@ export const UIService = {
                 </button>
             </div>
             
-            <p class="text-sm mt-1 text-gray-700">Assunto Principal: <b>${escapeHTML(item.subject)}</b></p>
+            <p class="text-sm mt-1 text-gray-700">Assunto Principal: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
             
             <div class="grid grid-cols-3 gap-2 text-center border-t border-b py-3 my-3 text-[10px] text-gray-400 uppercase font-bold tracking-wider">
                 <div>Agendado:<br><span class="text-gray-600">${item.scheduledTime || 'N/A'}</span></div>
@@ -657,7 +658,7 @@ export const UIService = {
             const card = document.createElement('div');
             card.className = 'relative bg-red-50 p-4 rounded-lg shadow-sm border border-red-100 mb-2 opacity-80';
             card.innerHTML = `
-                <p class="font-bold text-gray-700 text-sm">${escapeHTML(item.name)}</p>
+                <p class="font-bold text-gray-700 text-sm">${escapeHTML(item.name || '')}</p>
                 <p class="text-[9px] text-red-400 uppercase font-bold">Faltoso</p>
                 <button data-id="${item.id}" class="return-to-pauta-from-faltoso-btn mt-2 w-full bg-white text-red-500 border border-red-200 py-1 rounded text-[9px] font-bold uppercase hover:bg-red-50 transition">Voltar p/ Pauta</button>
             `;
@@ -681,7 +682,7 @@ export const UIService = {
             const linkExterno = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&collaboratorName=${encodeURIComponent(userName)}`;
 
             card.innerHTML = `
-                <p class="font-bold text-gray-800 text-sm">${escapeHTML(item.name)}</p>
+                <p class="font-bold text-gray-800 text-sm">${escapeHTML(item.name || '')}</p>
                 <p class="text-[10px] text-cyan-700 font-bold uppercase mt-1">⚖️ Aguardando Distribuição</p>
                 <div class="mt-3 space-y-2">
                     <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white text-[10px] font-bold py-2 rounded hover:bg-cyan-700 uppercase shadow-sm">Painel de Protocolo</button>
