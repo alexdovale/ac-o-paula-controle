@@ -596,7 +596,12 @@ export const PautaService = {
                 }
             } else {
                 window.assistedIdToHandle = id;
-                document.getElementById('priority-reason-modal')?.classList.remove('hidden');
+                const modal = document.getElementById('priority-reason-modal');
+                if (modal) {
+                    document.querySelectorAll('.p-chip').forEach(c => c.classList.remove('selected'));
+                    document.getElementById('priority-reason-input').value = '';
+                    modal.classList.remove('hidden');
+                }
             }
         }
 
@@ -610,10 +615,22 @@ export const PautaService = {
             document.getElementById('select-collaborator-modal')?.classList.remove('hidden');
         }
 
-        // Atender (direto)
+        // Atender (direto) - Finalizar Atendimento
         if (button.classList.contains('attend-directly-from-aguardando-btn')) {
             console.log("Atendendo diretamente:", id);
             window.assistedIdToHandle = id;
+            
+            // Preencher a lista de colaboradores no datalist
+            const datalist = document.getElementById('collaborators-list');
+            if (datalist && app.colaboradores) {
+                datalist.innerHTML = '';
+                app.colaboradores.forEach(c => {
+                    const option = document.createElement('option');
+                    option.value = c.nome;
+                    datalist.appendChild(option);
+                });
+            }
+            
             document.getElementById('attendant-modal')?.classList.remove('hidden');
         }
 
@@ -685,13 +702,17 @@ export const PautaService = {
         // Ver detalhes
         if (button.classList.contains('view-details-btn')) {
             console.log("Ver detalhes:", id);
-            const { openDetailsModal } = window;
-            if (openDetailsModal) {
-                openDetailsModal({
+            
+            // Verificar se a função openDetailsModal existe
+            if (window.openDetailsModal) {
+                window.openDetailsModal({
                     assistedId: id,
                     pautaId: app.currentPauta?.id,
                     allAssisted: app.allAssisted
                 });
+            } else {
+                console.error("openDetailsModal não encontrado");
+                showNotification("Erro ao abrir detalhes", "error");
             }
         }
 
