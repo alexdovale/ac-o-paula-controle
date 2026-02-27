@@ -616,24 +616,35 @@ export const PautaService = {
             document.getElementById('select-collaborator-modal')?.classList.remove('hidden');
         }
 
-        // Atender (direto) - Finalizar Atendimento
+       // Atender (direto) - Finalizar Atendimento
         if (button.classList.contains('attend-directly-from-aguardando-btn')) {
             console.log("Atendendo diretamente:", id);
             window.assistedIdToHandle = id;
             
             // Preencher a lista de colaboradores no datalist
             const datalist = document.getElementById('collaborators-list');
-            if (datalist && app.colaboradores) {
+            if (datalist && app.colaboradores && app.colaboradores.length > 0) {
+                console.log("Preenchendo datalist com", app.colaboradores.length, "colaboradores");
                 datalist.innerHTML = '';
                 app.colaboradores.forEach(c => {
                     const option = document.createElement('option');
                     option.value = c.nome;
                     datalist.appendChild(option);
                 });
+            } else {
+                console.log("Nenhum colaborador encontrado ou datalist não existe");
+                // Se não houver colaboradores, mostrar mensagem
+                if (datalist) {
+                    datalist.innerHTML = '';
+                    const option = document.createElement('option');
+                    option.value = "Nenhum colaborador cadastrado";
+                    option.disabled = true;
+                    datalist.appendChild(option);
+                }
             }
             
             document.getElementById('attendant-modal')?.classList.remove('hidden');
-        }
+}
 
         // Delegar finalização
         if (button.classList.contains('delegate-finalization-btn')) {
