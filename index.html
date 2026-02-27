@@ -1461,6 +1461,39 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         createModal.classList.remove('hidden');
                     });
                 });
+                
+                document.body.addEventListener('click', async (e) => {
+                    if (e.target.classList.contains('remove-member-btn')) {
+                        const email = e.target.dataset.email;
+                        if (confirm(`Remover ${email} da pauta?`)) {
+                            try {
+                                const usersRef = collection(this.db, "users");
+                                const q = query(usersRef, where("email", "==", email));
+                                const querySnapshot = await getDocs(q);
+                                
+                                if (!querySnapshot.empty) {
+                                    const userId = querySnapshot.docs[0].id;
+                                    const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                                    
+                                    await updateDoc(pautaRef, {
+                                        members: arrayRemove(userId),
+                                        memberEmails: arrayRemove(email)
+                                    });
+                                    
+                                    showNotification(`Membro ${email} removido`);
+                                    
+                                    // Recarregar o modal
+                                    if (typeof ModalService?.openMembersModal === 'function') {
+                                        await ModalService.openMembersModal(this);
+                                    }
+                                }
+                            } catch (error) {
+                                console.error("Erro ao remover membro:", error);
+                                showNotification("Erro ao remover membro", "error");
+                            }
+                        }
+                    }
+                });
 
                 document.getElementById('add-custom-room-btn')?.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -1968,6 +2001,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 });
                 
+                // ================================================
+                // LISTENERS DO MODAL DE ATENDENTE
+                // ================================================
+                
                 // Confirmar atendimento (finalizar)
                 document.getElementById('confirm-attendant-btn')?.addEventListener('click', async () => {
                     const attendantName = document.getElementById('attendant-name')?.value.trim();
@@ -2259,7 +2296,29 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
         }
 
-        window.app = new SIGAPApp();
+        window.app = new SIGAPApp();        
+        document.addEventListener('blur', async (e) => {
+            if (e.target.id === 'cep-reu') {
+                const cep = e.target.value.replace(/\D/g, '');
+                if (cep.length === 8) {
+                    try {
+                        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                        const data = await response.json();
+                        if (!data.erro) {
+                            document.getElementById('rua-reu').value = data.logradouro || '';
+                            document.getElementById('bairro-reu').value = data.bairro || '';
+                            document.getElementById('cidade-reu').value = data.localidade || '';
+                            document.getElementById('estado-reu').value = data.uf || '';
+                        } else {
+                            showNotification("CEP não encontrado", "error");
+                        }
+                    } catch (error) {
+                        console.error("Erro ao buscar CEP:", error);
+                        showNotification("Erro ao buscar CEP", "error");
+                    }
+                }
+            }
+        }, true);
     </script>
 </body>
 </html>
