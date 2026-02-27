@@ -786,28 +786,22 @@
     <!-- Modal de Finalização de Atendimento (com select) -->
 
 <!-- Modal de Finalização de Atendimento -->
-<div id="attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-        <h2 class="text-2xl font-bold mb-4">Finalizar Atendimento</h2>
-        <p class="mb-4 text-gray-600">Selecione o profissional que realizou o atendimento (opcional):</p>
-        
-        <input list="collaborators-list" 
-               type="text" 
-               id="attendant-name" 
-               placeholder="Digite ou selecione um profissional" 
-               class="w-full p-3 border border-gray-300 rounded-lg mb-6"
-               autocomplete="off">
-        
-        <datalist id="collaborators-list">
-            <!-- Será preenchido via JavaScript -->
-        </datalist>
-        
-        <div class="flex justify-end space-x-4">
-            <button id="cancel-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
-            <button id="confirm-attendant-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button>
+    <div id="attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Finalizar Atendimento</h2>
+            <p class="mb-4 text-gray-600">Selecione o profissional que realizou o atendimento (opcional):</p>
+            
+            <select id="attendant-select" class="w-full p-3 border border-gray-300 rounded-lg mb-6 bg-white">
+                <option value="">-- Selecione um profissional (opcional) --</option>
+                <!-- Opções serão preenchidas via JavaScript -->
+            </select>
+            
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-attendant-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button>
+            </div>
         </div>
     </div>
-</div>
 
     <!-- Modal de Selecionar Colaborador (com opção "Não atribuir") -->
     <div id="select-collaborator-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
@@ -825,22 +819,23 @@
     </div>
 
     <!-- Modal de Editar Atendente -->
-    <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-            <h2 class="text-2xl font-bold mb-4">Editar Atendente</h2>
-            <p class="mb-4 text-gray-600">Selecione o profissional que realizou o atendimento:</p>
-            
-            <select id="edit-attendant-select" class="w-full p-3 border border-gray-300 rounded-lg mb-6 bg-white focus:ring-2 focus:ring-green-500">
-                <option value="">-- Selecione um profissional --</option>
-                <!-- As opções serão preenchidas via JavaScript -->
-            </select>
-            
-            <div class="flex justify-end space-x-4">
-                <button id="cancel-edit-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
-                <button id="confirm-edit-attendant-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar</button>
-            </div>
+    <!-- Modal de Editar Atendente -->
+<div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+        <h2 class="text-2xl font-bold mb-4">Editar Atendente</h2>
+        <p class="mb-4 text-gray-600">Selecione o profissional que realizou o atendimento:</p>
+        
+        <select id="edit-attendant-select" class="w-full p-3 border border-gray-300 rounded-lg mb-6 bg-white">
+            <option value="">-- Selecione um profissional --</option>
+            <!-- Opções serão preenchidas via JavaScript -->
+        </select>
+        
+        <div class="flex justify-end space-x-4">
+            <button id="cancel-edit-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+            <button id="confirm-edit-attendant-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar</button>
         </div>
     </div>
+</div>
 
     <!-- Modal de Delegar Finalização por Email -->
     <div id="delegate-email-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
@@ -1953,20 +1948,21 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 // ================================================
 
                 // Confirmar atendimento (finalizar)
-                // Confirmar atendimento (finalizar)
+    // Confirmar atendimento (finalizar)
 document.getElementById('confirm-attendant-btn')?.addEventListener('click', async () => {
-    const attendantName = document.getElementById('attendant-name')?.value.trim();
+    const select = document.getElementById('attendant-select');
+    const attendantName = select?.value;
     
-    // Se não informou nome, usar "Não informado" ou null
-    const nomeFinal = attendantName || "Não informado";
+    // Se não selecionou, usar null (opcional)
+    const nomeFinal = attendantName || null;
     
     // Verificar se tem distribuição ativa
     const useDist = this.currentPautaData?.useDistributionFlow === true;
     const novoStatus = useDist ? 'aguardandoDistribuicao' : 'atendido';
 
-    // Buscar colaborador completo se existir (ignorar "Não informado")
+    // Buscar colaborador completo se existir
     let attendantData = nomeFinal;
-    if (nomeFinal !== "Não informado") {
+    if (nomeFinal) {
         const selectedCollab = this.colaboradores?.find(c => c.nome === nomeFinal);
         if (selectedCollab) {
             attendantData = { 
