@@ -1668,8 +1668,24 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 // Botão Estatísticas
                 document.getElementById('view-stats-btn')?.addEventListener('click', () => {
+                    console.log("Botão estatísticas clicado");
+                    
+                    // Verificar se o modal existe
+                    const modal = document.getElementById('statistics-modal');
+                    if (!modal) {
+                        console.error("Modal de estatísticas não encontrado");
+                        showNotification("Modal de estatísticas não encontrado", "error");
+                        return;
+                    }
+                    
                     if (this.allAssisted && this.currentPauta?.name) {
-                        StatisticsService.showModal(this.allAssisted, this.currentPautaData?.useDelegationFlow, this.currentPauta.name);
+                        // Verificar se StatisticsService existe
+                        if (typeof StatisticsService?.showModal === 'function') {
+                            StatisticsService.showModal(this.allAssisted, this.currentPautaData?.useDelegationFlow, this.currentPauta.name);
+                        } else {
+                            console.error("StatisticsService.showModal não é uma função");
+                            showNotification("Erro ao carregar estatísticas", "error");
+                        }
                     } else {
                         showNotification("Carregue uma pauta primeiro", "info");
                     }
