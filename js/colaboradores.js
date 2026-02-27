@@ -7,50 +7,49 @@ import {
     updateDoc, 
     deleteDoc, 
     getDocs, 
-    writeBatch 
+    writeBatch,
+    getDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
-// Variável para armazenar a lista atual
-let colaboradores = [];
-let currentListener = null;
-
-// ========================================================
-// COLLABORATOR SERVICE - Objeto com todas as funções
-// ========================================================
-
 export const CollaboratorService = {
+    currentListener: null,
+    editId: null,
+
     /**
-     * Escuta mudanças na lista de colaboradores da pauta em tempo real
+     * Configura listener para colaboradores
      */
     setupListener(app, pautaId) {
-        if (!pautaId) return;
+        if (!pautaId || !app?.db) return;
         
-        if (currentListener) currentListener();
+        console.log("Configurando listener de colaboradores para pauta:", pautaId);
         
-        const collaboratorsCollectionRef = collection(app.db, "pautas", pautaId, "collaborators");
+        if (this.currentListener) {
+            this.currentListener();
+        }
         
-        currentListener = onSnapshot(collaboratorsCollectionRef, (snapshot) => {
-            colaboradores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            // Ordena por nome antes de devolver para a interface
-            colaboradores.sort((a, b) => a.nome.localeCompare(b.nome));
-            this.renderTable(colaboradores);
+        const ref = collection(app.db, "pautas", pautaId, "collaborators");
+        this.currentListener = onSnapshot(ref, (snapshot) => {
+            const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log("Colaboradores carregados:", lista.length);
+            app.colaboradores = lista;
+            this.renderTable(app);
         }, (error) => {
             console.error("Erro no listener de colaboradores:", error);
         });
     },
 
     /**
-     * Renderiza a lista de colaboradores na tabela
+     * Renderiza tabela de colaboradores
      */
-    renderTable(lista) {
-        const tableBody = document.querySelector('#collaborators-list-table-modal tbody');
-        if (!tableBody) return;
-        
-        tableBody.innerHTML = '';
+    renderTable(app) {
+        const tbody = document.querySelector('#collaborators-list-table-modal tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
         let selfT = 0, compT = 0;
 
-        lista.forEach((colab) => {
+        app.colaboradores.forEach(colab => {
             if (colab.transporte === 'Meios Próprios') selfT++; 
             else if (colab.transporte === 'Com a Empresa') compT++;
             
@@ -72,92 +71,48 @@ export const CollaboratorService = {
                     <button class="delete-collaborator-btn text-red-300 text-lg" data-id="${colab.id}" title="Excluir">🗑️</button>
                 </td>
             `;
-            tableBody.appendChild(row);
+            tbody.appendChild(row);
         });
 
-        // Atualiza contadores
-        this.updateCounters(lista.length, selfT, compT);
-        
-        // Adiciona event listeners aos novos botões
-        this.addEventListenersToTable();
+        document.getElementById('total-participants-count').textContent = app.colaboradores.length;
+        document.getElementById('self-transport-count').textContent = selfT;
+        document.getElementById('company-transport-count').textContent = compT;
+
+        this.addEventListenersToTable(app);
     },
 
     /**
-     * Atualiza os contadores de estatísticas
+     * Adiciona event listeners à tabela
      */
-    updateCounters(total, selfT, compT) {
-        const elTotal = document.getElementById('total-participants-count');
-        const elSelf = document.getElementById('self-transport-count');
-        const elComp = document.getElementById('company-transport-count');
-        
-        if (elTotal) elTotal.textContent = total;
-        if (elSelf) elSelf.textContent = selfT;
-        if (elComp) elComp.textContent = compT;
-    },
-
-    /**
-     * Adiciona event listeners aos botões da tabela
-     */
-    addEventListenersToTable() {
-        // Checkboxes de presença
+    addEventListenersToTable(app) {
         document.querySelectorAll('#collaborators-modal .checkin-checkbox').forEach(checkbox => {
-            checkbox.removeEventListener('change', this.handlePresenceChange);
-            checkbox.addEventListener('change', this.handlePresenceChange.bind(this));
+            checkbox.onchange = async (e) => {
+                const docId = e.target.dataset.id;
+                const presente = e.target.checked;
+                const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                await this.togglePresence(app, docId, presente);
+            };
         });
 
-        // Botões de editar
         document.querySelectorAll('#collaborators-modal .edit-collaborator-btn').forEach(btn => {
-            btn.removeEventListener('click', this.handleEdit);
-            btn.addEventListener('click', this.handleEdit.bind(this));
+            btn.onclick = async (e) => {
+                const docId = e.currentTarget.dataset.id;
+                await this.editCollaborator(app, docId);
+            };
         });
 
-        // Botões de deletar
         document.querySelectorAll('#collaborators-modal .delete-collaborator-btn').forEach(btn => {
-            btn.removeEventListener('click', this.handleDelete);
-            btn.addEventListener('click', this.handleDelete.bind(this));
+            btn.onclick = (e) => {
+                const docId = e.currentTarget.dataset.id;
+                if (confirm("Remover este membro?")) {
+                    this.deleteCollaborator(app, docId);
+                }
+            };
         });
     },
 
     /**
-     * Handler para mudança de presença
-     */
-    async handlePresenceChange(e) {
-        const docId = e.target.dataset.id;
-        const presente = e.target.checked;
-        const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-        
-        const app = window.app; // Assume que app está global
-        if (app && app.currentPauta) {
-            await this.togglePresence(app, docId, presente);
-        }
-    },
-
-    /**
-     * Handler para editar colaborador
-     */
-    async handleEdit(e) {
-        const docId = e.currentTarget.dataset.id;
-        const app = window.app;
-        if (app && app.currentPauta) {
-            await this.editCollaborator(app, docId);
-        }
-    },
-
-    /**
-     * Handler para deletar colaborador
-     */
-    handleDelete(e) {
-        const docId = e.currentTarget.dataset.id;
-        if (confirm("Remover este membro?")) {
-            const app = window.app;
-            if (app && app.currentPauta) {
-                this.deleteCollaborator(app, docId);
-            }
-        }
-    },
-
-    /**
-     * Abre o modal de colaboradores
+     * Abre modal de colaboradores
      */
     openModal(app) {
         const modal = document.getElementById('collaborators-modal');
@@ -168,41 +123,36 @@ export const CollaboratorService = {
     },
 
     /**
-     * Reseta o formulário de colaborador
+     * Reseta formulário
      */
     resetForm() {
         const form = document.getElementById('collaborator-form-modal');
         if (form) form.reset();
-        
+        this.editId = null;
         const btn = document.getElementById('add-collaborator-btn-modal');
         if (btn) btn.textContent = "Salvar Membro";
-        
-        this.editId = null;
     },
 
     /**
-     * Salva ou Atualiza um colaborador
+     * Salva colaborador
      */
-    async saveCollaborator(app, data, editId = null) {
-        if (!app.currentPauta) return;
-        
-        const collaboratorsCollectionRef = collection(app.db, "pautas", app.currentPauta.id, "collaborators");
+    async saveCollaborator(app, data) {
+        if (!app.currentPauta?.id) {
+            showNotification("Nenhuma pauta selecionada", "error");
+            return;
+        }
 
         try {
-            if (editId) {
-                // Modo Edição
-                const collaboratorRef = doc(collaboratorsCollectionRef, editId);
-                await updateDoc(collaboratorRef, data);
+            const ref = collection(app.db, "pautas", app.currentPauta.id, "collaborators");
+            
+            if (this.editId) {
+                await updateDoc(doc(ref, this.editId), data);
                 showNotification("Membro atualizado!");
             } else {
-                // Modo Novo Registro
-                await addDoc(collaboratorsCollectionRef, {
-                    ...data,
-                    presente: false,
-                    horario: '--:--'
-                });
+                await addDoc(ref, { ...data, presente: false, horario: '--:--' });
                 showNotification("Membro adicionado!");
             }
+            
             this.resetForm();
         } catch (error) {
             console.error("Erro ao salvar:", error);
@@ -211,37 +161,29 @@ export const CollaboratorService = {
     },
 
     /**
-     * Altera apenas o status de presença de um colaborador
+     * Alterna presença
      */
-    async togglePresence(app, collabId, isPresent) {
-        if (!app.currentPauta) return;
-        
+    async togglePresence(app, id, presente) {
         try {
-            const collaboratorRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", collabId);
-            const horario = isPresent ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-            
-            await updateDoc(collaboratorRef, { 
-                presente: isPresent, 
-                horario: horario 
-            });
+            const ref = doc(app.db, "pautas", app.currentPauta.id, "collaborators", id);
+            const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+            await updateDoc(ref, { presente, horario });
         } catch (error) {
             console.error("Erro ao marcar presença:", error);
         }
     },
 
     /**
-     * Carrega dados de um colaborador para edição
+     * Edita colaborador
      */
-    async editCollaborator(app, collabId) {
-        if (!app.currentPauta) return;
-        
+    async editCollaborator(app, id) {
         try {
-            const collaboratorRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", collabId);
-            const snap = await getDoc(collaboratorRef);
+            const ref = doc(app.db, "pautas", app.currentPauta.id, "collaborators", id);
+            const snap = await getDoc(ref);
             
             if (snap.exists()) {
                 const c = snap.data();
-                this.editId = collabId;
+                this.editId = id;
                 
                 document.getElementById('collaborator-name-modal').value = c.nome || '';
                 document.getElementById('collaborator-role-modal').value = c.cargo || 'Defensor(a)';
@@ -253,161 +195,44 @@ export const CollaboratorService = {
                 if (rTransp) rTransp.checked = true;
 
                 document.getElementById('add-collaborator-btn-modal').textContent = "Atualizar Membro";
-                
-                // Scroll para o formulário
-                document.querySelector('#collaborators-modal .overflow-y-auto')?.scrollTo({ top: 0, behavior: 'smooth' });
             }
         } catch (error) {
-            console.error("Erro ao carregar para edição:", error);
-            showNotification("Erro ao carregar dados", "error");
+            console.error("Erro ao editar:", error);
         }
     },
 
     /**
-     * Exclui um colaborador da lista
+     * Deleta colaborador
      */
-    async deleteCollaborator(app, collabId) {
-        if (!app.currentPauta) return;
-        
+    async deleteCollaborator(app, id) {
         try {
-            const collaboratorRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", collabId);
-            await deleteDoc(collaboratorRef);
+            const ref = doc(app.db, "pautas", app.currentPauta.id, "collaborators", id);
+            await deleteDoc(ref);
             showNotification("Membro removido!");
         } catch (error) {
-            console.error("Erro ao remover:", error);
-            showNotification("Erro ao remover membro", "error");
+            console.error("Erro ao deletar:", error);
         }
     },
 
     /**
-     * Limpa toda a lista de presença de uma pauta (Batch)
+     * Limpa todos os colaboradores
      */
     async clearAll(app) {
-        if (!app.currentPauta) return;
-        
-        if (!confirm("Tem certeza que deseja apagar TODOS os membros da lista?")) return;
+        if (!confirm("Tem certeza que deseja apagar TODOS os membros?")) return;
         
         try {
-            const collaboratorsCollectionRef = collection(app.db, "pautas", app.currentPauta.id, "collaborators");
-            const snapshot = await getDocs(collaboratorsCollectionRef);
+            const ref = collection(app.db, "pautas", app.currentPauta.id, "collaborators");
+            const snapshot = await getDocs(ref);
             
-            if (snapshot.empty) {
-                showNotification("Lista já está vazia", "info");
-                return;
-            }
+            if (snapshot.empty) return;
 
             const batch = writeBatch(app.db);
-            snapshot.docs.forEach(d => {
-                batch.delete(d.ref);
-            });
-            
+            snapshot.docs.forEach(doc => batch.delete(doc.ref));
             await batch.commit();
-            showNotification("Lista limpa com sucesso!");
+            
+            showNotification("Lista limpa!");
         } catch (error) {
             console.error("Erro ao limpar lista:", error);
-            showNotification("Erro ao limpar lista", "error");
         }
-    },
-
-    /**
-     * Ordena colaboradores por critério
-     */
-    sort(criterio, lista = colaboradores) {
-        const pesos = { "Defensor(a)": 1, "Servidor(a)": 2, "CRC": 3, "Residente": 4, "Estagiário(a)": 5 };
-        
-        const sortedList = [...lista].sort((a, b) => {
-            if (criterio === 'nome') {
-                return a.nome.localeCompare(b.nome);
-            }
-            if (criterio === 'equipe') {
-                if (a.equipe !== b.equipe) return a.equipe - b.equipe;
-                const pA = pesos[a.cargo] || 99;
-                const pB = pesos[b.cargo] || 99;
-                return pA !== pB ? pA - pB : a.nome.localeCompare(b.nome);
-            }
-            return 0;
-        });
-        
-        this.renderTable(sortedList);
-        return sortedList;
-    },
-
-    /**
-     * Obtém a lista atual de colaboradores
-     */
-    getList() {
-        return [...colaboradores];
-    }
-};
-
-// ========================================================
-// FUNÇÕES AVULSAS (para compatibilidade com código antigo)
-// ========================================================
-
-/**
- * @deprecated Use CollaboratorService.setupListener() instead
- */
-export function setupCollaboratorsListener(app, pautaId) {
-    return CollaboratorService.setupListener(app, pautaId);
-}
-
-/**
- * @deprecated Use CollaboratorService.renderTable() instead
- */
-export function renderColaboradores(lista) {
-    return CollaboratorService.renderTable(lista);
-}
-
-/**
- * @deprecated Use CollaboratorService.resetForm() instead
- */
-export function resetCollaboratorForm() {
-    return CollaboratorService.resetForm();
-}
-
-/**
- * @deprecated Use CollaboratorService.sort() instead
- */
-export function sortColaboradores(criterio, lista) {
-    return CollaboratorService.sort(criterio, lista);
-}
-
-/**
- * @deprecated Use CollaboratorService.saveCollaborator() instead
- */
-export const saveCollaboratorData = async (db, pautaId, data, editId = null) => {
-    const app = window.app;
-    if (app) {
-        return CollaboratorService.saveCollaborator(app, data, editId);
-    }
-};
-
-/**
- * @deprecated Use CollaboratorService.togglePresence() instead
- */
-export const toggleCollaboratorPresence = async (db, pautaId, collabId, isPresent) => {
-    const app = window.app;
-    if (app) {
-        return CollaboratorService.togglePresence(app, collabId, isPresent);
-    }
-};
-
-/**
- * @deprecated Use CollaboratorService.deleteCollaborator() instead
- */
-export const deleteCollaborator = async (db, pautaId, collabId) => {
-    const app = window.app;
-    if (app) {
-        return CollaboratorService.deleteCollaborator(app, collabId);
-    }
-};
-
-/**
- * @deprecated Use CollaboratorService.clearAll() instead
- */
-export const clearCollaborators = async (db, pautaId) => {
-    const app = window.app;
-    if (app) {
-        return CollaboratorService.clearAll(app);
     }
 };
