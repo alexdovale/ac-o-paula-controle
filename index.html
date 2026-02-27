@@ -1285,6 +1285,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         <!-- O conteúdo será gerado pelo StatisticsService -->
     </div>
 
+    <!-- Modal de Estatísticas -->
+    <div id="statistics-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <!-- O conteúdo será gerado pelo StatisticsService -->
+    </div>
+
     <!-- Rodapé -->
     <footer class="bg-white border-t border-gray-200 mt-8 pt-6 pb-6 text-center">
         <div class="flex justify-center space-x-6 mb-4 text-xs text-gray-500 font-medium">
@@ -1727,7 +1732,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 });
 
-                // Botão Estatísticas
+               // Botão Estatísticas
                 document.getElementById('view-stats-btn')?.addEventListener('click', () => {
                     console.log("Botão estatísticas clicado");
                     
