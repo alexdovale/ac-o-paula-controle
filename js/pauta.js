@@ -383,38 +383,57 @@ export const PautaService = {
     },
 
     /**
-     * Preenche o datalist com os nomes dos colaboradores
+     * Preenche o select com os nomes dos colaboradores
      */
-    preencherDatalistColaboradores(app) {
-        const datalist = document.getElementById('collaborators-list');
-        if (!datalist) {
-            console.error("Datalist não encontrado");
+    preencherSelectColaboradores(app, selectId = 'attendant-select') {
+        const select = document.getElementById(selectId);
+        if (!select) {
+            console.error(`Select ${selectId} não encontrado`);
             return;
         }
         
-        // Limpar datalist
-        datalist.innerHTML = '';
+        // Guardar o valor selecionado anteriormente (se houver)
+        const valorAnterior = select.value;
         
-        // Adicionar opção padrão (opcional)
-        const optionPadrao = document.createElement('option');
-        optionPadrao.value = "Não informado";
-        optionPadrao.style.color = "#999";
-        datalist.appendChild(optionPadrao);
+        // Limpar select (manter apenas a primeira opção)
+        while (select.options.length > 1) {
+            select.remove(1);
+        }
         
         // Adicionar colaboradores
         if (app.colaboradores && app.colaboradores.length > 0) {
-            console.log("Preenchendo datalist com", app.colaboradores.length, "colaboradores");
-            app.colaboradores.forEach(c => {
+            console.log("Preenchendo select com", app.colaboradores.length, "colaboradores");
+            
+            // Ordenar colaboradores por nome
+            const colaboradoresOrdenados = [...app.colaboradores].sort((a, b) => 
+                a.nome.localeCompare(b.nome)
+            );
+            
+            colaboradoresOrdenados.forEach(c => {
                 const option = document.createElement('option');
                 option.value = c.nome;
-                datalist.appendChild(option);
+                option.textContent = c.nome;
+                if (c.cargo) {
+                    option.textContent += ` (${c.cargo})`;
+                }
+                select.appendChild(option);
             });
+            
+            // Restaurar valor anterior se existir
+            if (valorAnterior) {
+                // Verificar se o valor ainda existe nas opções
+                const options = Array.from(select.options).map(opt => opt.value);
+                if (options.includes(valorAnterior)) {
+                    select.value = valorAnterior;
+                }
+            }
         } else {
             console.log("Nenhum colaborador encontrado");
             const option = document.createElement('option');
-            option.value = "Nenhum colaborador cadastrado";
+            option.value = "";
+            option.textContent = "Nenhum colaborador cadastrado";
             option.disabled = true;
-            datalist.appendChild(option);
+            select.appendChild(option);
         }
     },
 
@@ -656,8 +675,8 @@ export const PautaService = {
             console.log("Atendendo diretamente:", id);
             window.assistedIdToHandle = id;
             
-            // Preencher a lista de colaboradores no datalist
-            this.preencherDatalistColaboradores(app);
+            // Preencher o select com os colaboradores
+            this.preencherSelectColaboradores(app, 'attendant-select');
             
             document.getElementById('attendant-modal')?.classList.remove('hidden');
         }
@@ -687,27 +706,30 @@ export const PautaService = {
             }
         }
 
-        // Editar atendente
+        // Editar atendente - VERSÃO CORRIGIDA COM SELECT
         if (button.classList.contains('edit-attendant-btn')) {
             console.log("Editando atendente:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
             if (assisted) {
-                document.getElementById('edit-attendant-name').value = assisted.attendant || '';
+                // Preencher o select de edição com os colaboradores
+                this.preencherSelectColaboradores(app, 'edit-attendant-select');
                 
-                // Preencher datalist também no modal de edição
-                const datalist = document.getElementById('collaborators-list');
-                if (datalist && app.colaboradores && app.colaboradores.length > 0) {
-                    datalist.innerHTML = '';
-                    const optionPadrao = document.createElement('option');
-                    optionPadrao.value = "Não informado";
-                    optionPadrao.style.color = "#999";
-                    datalist.appendChild(optionPadrao);
+                // Selecionar o valor atual no select
+                const select = document.getElementById('edit-attendant-select');
+                if (select && assisted.attendant) {
+                    // Extrair o nome do atendente (pode ser string ou objeto)
+                    let nomeAtendente = '';
+                    if (typeof assisted.attendant === 'object') {
+                        nomeAtendente = assisted.attendant.nome || '';
+                    } else {
+                        nomeAtendente = assisted.attendant;
+                    }
                     
-                    app.colaboradores.forEach(c => {
-                        const option = document.createElement('option');
-                        option.value = c.nome;
-                        datalist.appendChild(option);
-                    });
+                    // Verificar se o nome existe nas opções
+                    const options = Array.from(select.options).map(opt => opt.value);
+                    if (options.includes(nomeAtendente)) {
+                        select.value = nomeAtendente;
+                    }
                 }
                 
                 window.assistedIdToHandle = id;
