@@ -1776,8 +1776,23 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 });
 
+                // ================================================
+                // LISTENERS DO MODAL DE PRIORIDADE
+                // ================================================
+                
+                // Selecionar/desselecionar chips de prioridade
+                document.querySelectorAll('.p-chip').forEach(chip => {
+                    chip.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        this.classList.toggle('selected');
+                        console.log("Chip clicado:", this.dataset.value, "selected:", this.classList.contains('selected'));
+                    });
+                });
+                
                 // Confirmar prioridade
                 document.getElementById('confirm-priority-reason-btn')?.addEventListener('click', async () => {
+                    console.log("Confirmar prioridade clicado");
+                    
                     const selectedChips = Array.from(document.querySelectorAll('.p-chip.selected'))
                                                .map(chip => chip.dataset.value);
                                                
@@ -1788,9 +1803,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         finalReason = finalReason ? `${finalReason} | Obs: ${customReason}` : customReason;
                     }
                 
+                    console.log("Razão final:", finalReason);
+                
                     if (!finalReason) { 
                         showNotification("Selecione uma categoria ou descreva o motivo.", "error"); 
                         return; 
+                    }
+                
+                    if (!window.assistedIdToHandle) {
+                        showNotification("ID do assistido não encontrado.", "error");
+                        return;
                     }
                 
                     await PautaService.updateStatus(
