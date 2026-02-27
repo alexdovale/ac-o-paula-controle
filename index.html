@@ -1437,6 +1437,57 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (btn) btn.addEventListener('click', () => AuthService.logout(this.auth));
                 });
 
+                // ================================================
+                // LISTENERS DOS BOTÕES DE RÁDIO DO FORMULÁRIO
+                // ================================================
+                
+                // Mostrar/esconder campo de horário agendado
+                document.querySelectorAll('input[name="is-scheduled"]').forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        const wrapper = document.getElementById('scheduled-time-wrapper');
+                        if (e.target.value === 'yes') {
+                            wrapper.classList.remove('hidden');
+                        } else {
+                            wrapper.classList.add('hidden');
+                        }
+                    });
+                });
+                
+                // Mostrar/esconder campo de horário de chegada
+                document.querySelectorAll('input[name="has-arrived"]').forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        const wrapper = document.getElementById('arrival-time-wrapper');
+                        if (e.target.value === 'yes') {
+                            wrapper.classList.remove('hidden');
+                            // Preencher com horário atual
+                            document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
+                        } else {
+                            wrapper.classList.add('hidden');
+                        }
+                    });
+                });
+                
+                // Inicializar estado correto ao trocar de aba (agendado/avulso)
+                document.getElementById('tab-agendamento')?.addEventListener('click', () => {
+                    // Garantir que o campo de horário agendado comece escondido
+                    document.getElementById('scheduled-time-wrapper').classList.add('hidden');
+                    document.getElementById('arrival-time-wrapper').classList.add('hidden');
+                    
+                    // Resetar os rádios para o estado padrão
+                    document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
+                    document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
+                });
+                
+                document.getElementById('tab-avulso')?.addEventListener('click', () => {
+                    // No modo avulso, já chegou deve estar marcado
+                    document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
+                    document.getElementById('arrival-time-wrapper').classList.remove('hidden');
+                    document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
+                    
+                    // Esconder campo de horário agendado
+                    document.getElementById('scheduled-time-wrapper').classList.add('hidden');
+                });
+
                 // Botão Criar Pauta
                 document.getElementById('create-pauta-btn')?.addEventListener('click', () => {
                     document.getElementById('pauta-type-modal').classList.remove('hidden');
