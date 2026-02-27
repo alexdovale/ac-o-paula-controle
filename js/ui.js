@@ -553,8 +553,12 @@ export const UIService = {
             return;
         }
 
+        console.log("Renderizando atendidos:", items.length);
+        
         items.forEach(item => {
-            container.appendChild(this.createAtendidoCard(item));
+            if (!item) return;
+            const card = this.createAtendidoCard(item);
+            container.appendChild(card);
         });
     },
 
@@ -566,8 +570,17 @@ export const UIService = {
             new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
         const attendedT = item.attendedTime ? 
             new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-        const atendenteNome = typeof item.attendant === 'object' ? 
-            (item.attendant.nome || item.attendant.name) : (item.attendant || 'Não informado');
+        
+        // ✅ CORREÇÃO: Tratar attendant quando é null ou undefined
+        let atendenteNome = 'Não informado';
+        
+        if (item.attendant) {
+            if (typeof item.attendant === 'object') {
+                atendenteNome = item.attendant.nome || item.attendant.name || 'Não informado';
+            } else {
+                atendenteNome = item.attendant;
+            }
+        }
 
         card.innerHTML = `
             <div class="flex justify-between items-start">
