@@ -150,7 +150,7 @@ function renderExpenseTable() {
 // --- 7. RENDERIZAÇÃO DO CHECKLIST ---
 
 function renderChecklist(actionKey) {
-    console.log("Renderizando checklist para:", actionKey);
+    console.log("📋 Renderizando checklist para:", actionKey);
     currentChecklistAction = actionKey;
     const data = documentsData[actionKey];
     if (!data) {
@@ -389,25 +389,32 @@ function handleBack() {
     if (getEl('address-editor-container')) getEl('address-editor-container').classList.add('hidden');
 }
 
-// --- 10. EXPORTS ---
+// --- 10. EXPORTS CORRIGIDOS ---
 
 export function setupDetailsModal(config) {
-    console.log("setupDetailsModal chamado", config);
+    console.log("⚙️ setupDetailsModal chamado", config);
     db = config.db; 
     customShowNotification = config.showNotification;
     
     const actionSelection = getEl('document-action-selection');
     if (actionSelection) {
-        // IMPORTANTE: Remover listeners antigos para evitar duplicação
-        const newActionSelection = actionSelection.cloneNode(true);
-        actionSelection.parentNode.replaceChild(newActionSelection, actionSelection);
+        // Remover listener anterior se existir (para evitar duplicação)
+        if (actionSelection._listener) {
+            actionSelection.removeEventListener('click', actionSelection._listener);
+        }
         
-        newActionSelection.addEventListener('click', async (e) => {
+        // Criar novo listener
+        const listener = async (e) => {
             const btn = e.target.closest('button[data-action]');
             if (!btn) return;
             
             const key = btn.dataset.action;
-            console.log("Ação selecionada:", key);
+            console.log("🎯 Ação selecionada:", key, documentsData[key]?.title);
+            
+            if (!documentsData[key]) {
+                console.error("Ação não encontrada:", key);
+                return;
+            }
             
             await updateVisualStatus('selected', documentsData[key].title);
             renderChecklist(key);
@@ -421,29 +428,38 @@ export function setupDetailsModal(config) {
                 checklistView.classList.remove('hidden');
                 checklistView.classList.add('flex');
             }
-        });
+        };
+        
+        // Armazenar listener para referência futura
+        actionSelection._listener = listener;
+        actionSelection.addEventListener('click', listener);
     }
 
+    // Botão Voltar
     const backBtn = getEl('back-to-action-selection-btn');
     if (backBtn) {
         backBtn.onclick = handleBack;
     }
 
+    // Botão Salvar
     const saveBtn = getEl('save-checklist-btn');
     if (saveBtn) {
         saveBtn.onclick = handleSave;
     }
 
+    // Botão PDF
     const printBtn = getEl('print-checklist-btn');
     if (printBtn) {
         printBtn.onclick = handlePdf;
     }
 
+    // Botão Reset/Mudar
     const resetBtn = getEl('reset-checklist-btn');
     if (resetBtn) {
         resetBtn.onclick = handleReset;
     }
     
+    // Busca no checklist
     const searchInput = getEl('checklist-search');
     if (searchInput) {
         searchInput.oninput = (e) => {
@@ -457,7 +473,7 @@ export function setupDetailsModal(config) {
 }
 
 export function openDetailsModal(config) {
-    console.log("openDetailsModal chamado", config);
+    console.log("🔓 openDetailsModal chamado", config);
     
     if (!config || !config.assistedId || !config.pautaId) {
         console.error("Configuração inválida para openDetailsModal", config);
@@ -520,6 +536,10 @@ export function openDetailsModal(config) {
     }
 }
 
-// Tornar a função global para acesso pelo pauta.js
+// Tornar as funções globais para acesso pelo pauta.js
 window.openDetailsModal = openDetailsModal;
 window.setupDetailsModal = setupDetailsModal;
+window.documentsData = documentsData; // Útil para debug
+
+console.log("✅ detalhes.js carregado com sucesso!");
+console.log("📋 documentsData keys:", Object.keys(documentsData));
