@@ -1,6 +1,6 @@
 /**
  * detalhes.js - SIGAP
- * Versão COMPLETA com salvamento de status e contagem de itens
+ * Versão COMPLETA com busca de CEP, campos do réu, planilha de gastos e PDF
  */
 
 import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -112,7 +112,38 @@ async function updateDocumentState(state) {
     }
 }
 
-// --- 7. RENDERIZAÇÃO DO CHECKLIST ---
+// --- 7. FUNÇÃO PARA VERIFICAR SE DEVE MOSTRAR O FORMULÁRIO DO RÉU ---
+function checkReuVisibility() {
+    const containerEl = getEl('checklist-container');
+    if (!containerEl) return;
+    
+    const checkedLabels = Array.from(containerEl.querySelectorAll('.doc-checkbox:checked')).map(cb => 
+        cb.closest('label')?.querySelector('span')?.textContent || ''
+    );
+    
+    const needsReu = checkedLabels.some(txt => 
+        txt.includes('Endereço') || 
+        txt.includes('Trabalho') || 
+        txt.includes('Sobre o Réu') || 
+        txt.includes('Sobre o Cônjuge') || 
+        txt.includes('Suposto Pai')
+    );
+    
+    const reuArea = getEl('address-editor-container');
+    if (reuArea) {
+        if (needsReu) {
+            reuArea.classList.remove('hidden');
+            // Se ainda não tiver o formulário renderizado, renderiza
+            if (reuArea.children.length === 0 || reuArea.innerHTML.trim() === '') {
+                renderReuForm('address-editor-container');
+            }
+        } else {
+            reuArea.classList.add('hidden');
+        }
+    }
+}
+
+// --- 8. RENDERIZAÇÃO DO CHECKLIST ---
 function renderChecklist(actionKey) {
     console.log("📋 Renderizando checklist para:", actionKey);
     currentChecklistAction = actionKey;
@@ -181,12 +212,13 @@ function renderChecklist(actionKey) {
         containerEl.appendChild(sectionDiv);
     });
 
+    // Adicionar planilha de gastos se necessário
     if (ACTIONS_ALWAYS_EXPENSES.includes(actionKey)) {
         containerEl.appendChild(renderExpenseTable());
         if (saved?.expenseData) fillExpenseData(saved.expenseData);
     }
 
-    // Adicionar listeners aos checkboxes para atualizar contador e status
+    // Adicionar listeners aos checkboxes para atualizar contador e visibilidade do réu
     containerEl.querySelectorAll('.doc-checkbox').forEach(cb => {
         cb.addEventListener('change', (e) => {
             const t = getEl(`type-${e.target.id}`);
@@ -200,6 +232,9 @@ function renderChecklist(actionKey) {
             // Atualizar contador
             updateSelectedCounter();
             
+            // Verificar se deve mostrar o formulário do réu
+            checkReuVisibility();
+            
             // Se algum checkbox foi marcado, atualizar status para 'filling'
             const anyChecked = containerEl.querySelectorAll('.doc-checkbox:checked').length > 0;
             if (anyChecked) {
@@ -208,88 +243,177 @@ function renderChecklist(actionKey) {
         });
     });
 
+    // Verificar visibilidade do réu após renderizar
+    setTimeout(checkReuVisibility, 100);
+
     // Inicializar contador
     updateSelectedCounter();
+    
+    // Se houver dados salvos do réu, preencher
+    if (saved?.reuData) {
+        setTimeout(() => {
+            fillReuData(saved.reuData);
+        }, 200);
+    }
 }
 
-// --- 8. FORMULÁRIOS DINÂMICOS ---
+// --- 9. FORMULÁRIO DO RÉU (COM CEP) ---
 function renderReuForm(containerId) {
     const container = getEl(containerId);
     if (!container) return;
+    
     const showWork = ACTIONS_WITH_WORK_INFO.includes(currentChecklistAction);
 
     container.innerHTML = `
         <div class="p-4 sm:p-6 bg-blue-50 border-2 border-blue-200 rounded-2xl shadow-sm mt-6">
             <h3 class="text-xs font-black text-blue-600 mb-4 uppercase flex items-center gap-2 tracking-tighter">📍 DADOS DA PARTE CONTRÁRIA (RÉU)</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="col-span-2"><label class="text-[9px] font-black text-gray-400 uppercase">Nome Completo</label><input type="text" id="nome-reu" class="w-full p-2 border rounded-lg bg-white shadow-sm"></div>
-                <div><label class="text-[9px] font-black text-gray-400 uppercase">CPF</label><input type="text" id="cpf-reu" class="w-full p-2 border rounded-lg bg-white shadow-sm"></div>
-                <div><label class="text-[9px] font-black text-gray-400 uppercase">WhatsApp</label><input type="text" id="telefone-reu" class="w-full p-2 border rounded-lg bg-white shadow-sm"></div>
+                <div class="col-span-2">
+                    <label class="text-[9px] font-black text-gray-400 uppercase">Nome Completo</label>
+                    <input type="text" id="nome-reu" class="w-full p-2 border rounded-lg bg-white shadow-sm">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black text-gray-400 uppercase">CPF</label>
+                    <input type="text" id="cpf-reu" class="w-full p-2 border rounded-lg bg-white shadow-sm">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black text-gray-400 uppercase">WhatsApp</label>
+                    <input type="text" id="telefone-reu" class="w-full p-2 border rounded-lg bg-white shadow-sm">
+                </div>
             </div>
+            
             <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
-                <div><label class="text-[9px] font-black text-blue-500 uppercase font-bold">CEP</label><input type="text" id="cep-reu" maxlength="9" placeholder="00000-000" class="w-full p-2 border-2 border-blue-200 rounded-lg bg-white font-bold shadow-sm text-blue-600"></div>
-                <div class="col-span-1 sm:col-span-2"><label class="text-[9px] font-black text-gray-400 uppercase">Rua</label><input type="text" id="rua-reu" class="w-full p-2 border rounded-lg bg-white shadow-sm"></div>
-                <div><label class="text-[9px] font-black text-gray-400 uppercase">Nº</label><input type="text" id="numero-reu" class="w-full p-2 border rounded-lg bg-white shadow-sm"></div>
-                <div class="col-span-1 sm:col-span-2"><label class="text-[9px] font-black text-gray-400 uppercase">Bairro</label><input type="text" id="bairro-reu" class="w-full p-2 border rounded-lg bg-white shadow-sm"></div>
-                <div class="col-span-2"><label class="text-[9px] font-black text-gray-400 uppercase">Cidade</label><input type="text" id="cidade-reu" class="w-full p-2 border rounded-lg bg-white shadow-sm"></div>
-                <div class="col-span-1"><label class="text-[9px] font-black text-gray-400 uppercase">UF</label><input type="text" id="estado-reu" maxlength="2" class="w-full p-2 border rounded-lg bg-white text-center shadow-sm"></div>
+                <div>
+                    <label class="text-[9px] font-black text-blue-500 uppercase font-bold">CEP</label>
+                    <input type="text" id="cep-reu" maxlength="9" placeholder="00000-000" 
+                           class="w-full p-2 border-2 border-blue-200 rounded-lg bg-white font-bold shadow-sm text-blue-600">
+                </div>
+                <div class="col-span-1 sm:col-span-2">
+                    <label class="text-[9px] font-black text-gray-400 uppercase">Rua</label>
+                    <input type="text" id="rua-reu" class="w-full p-2 border rounded-lg bg-white shadow-sm" readonly>
+                </div>
+                <div>
+                    <label class="text-[9px] font-black text-gray-400 uppercase">Nº</label>
+                    <input type="text" id="numero-reu" class="w-full p-2 border rounded-lg bg-white shadow-sm">
+                </div>
+                <div class="col-span-1 sm:col-span-2">
+                    <label class="text-[9px] font-black text-gray-400 uppercase">Bairro</label>
+                    <input type="text" id="bairro-reu" class="w-full p-2 border rounded-lg bg-white shadow-sm" readonly>
+                </div>
+                <div class="col-span-2">
+                    <label class="text-[9px] font-black text-gray-400 uppercase">Cidade</label>
+                    <input type="text" id="cidade-reu" class="w-full p-2 border rounded-lg bg-white shadow-sm" readonly>
+                </div>
+                <div>
+                    <label class="text-[9px] font-black text-gray-400 uppercase">UF</label>
+                    <input type="text" id="estado-reu" maxlength="2" class="w-full p-2 border rounded-lg bg-white text-center shadow-sm" readonly>
+                </div>
             </div>
+            
             ${showWork ? `
                 <div class="mt-4 pt-4 border-t border-blue-100">
-                    <label class="text-[9px] font-black text-blue-400 uppercase">Local de Trabalho / Renda</label>
-                    <input type="text" id="empresa-reu" placeholder="Empresa / Profissão" class="w-full p-2 border rounded-lg bg-white mb-2 shadow-sm">
-                    <input type="text" id="endereco-trabalho-reu" placeholder="Endereço comercial" class="w-full p-2 border rounded-lg bg-white shadow-sm">
-                </div>` : ''}
-        </div>`;
+                    <h4 class="text-[10px] font-black text-blue-600 mb-3 uppercase">DADOS DO TRABALHO</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="col-span-2">
+                            <label class="text-[9px] font-black text-gray-400 uppercase">Empresa / Local de Trabalho</label>
+                            <input type="text" id="empresa-reu" placeholder="Nome da empresa" class="w-full p-2 border rounded-lg bg-white shadow-sm">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="text-[9px] font-black text-gray-400 uppercase">Endereço Comercial</label>
+                            <input type="text" id="endereco-trabalho-reu" placeholder="Endereço do trabalho" class="w-full p-2 border rounded-lg bg-white shadow-sm">
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
 
+    // Busca de CEP
     const cepInp = getEl('cep-reu');
     if (cepInp) {
-        cepInp.onblur = async () => {
+        cepInp.addEventListener('blur', async () => {
             const val = cepInp.value.replace(/\D/g, '');
             if (val.length === 8) {
-                const r = await fetch(`https://viacep.com.br/ws/${val}/json/`).then(res => res.json());
-                if (!r.erro) {
-                    getEl('rua-reu').value = r.logradouro;
-                    getEl('bairro-reu').value = r.bairro;
-                    getEl('cidade-reu').value = r.localidade;
-                    getEl('estado-reu').value = r.uf;
-                    getEl('numero-reu').focus();
+                try {
+                    const response = await fetch(`https://viacep.com.br/ws/${val}/json/`);
+                    const r = await response.json();
+                    if (!r.erro) {
+                        getEl('rua-reu').value = r.logradouro || '';
+                        getEl('bairro-reu').value = r.bairro || '';
+                        getEl('cidade-reu').value = r.localidade || '';
+                        getEl('estado-reu').value = r.uf || '';
+                        getEl('numero-reu').focus();
+                    } else {
+                        showNotification("CEP não encontrado", "error");
+                    }
+                } catch (error) {
+                    console.error("Erro ao buscar CEP:", error);
+                    showNotification("Erro ao buscar CEP", "error");
                 }
             }
-        };
+        });
     }
 }
 
+// --- 10. PLANILHA DE GASTOS ---
 function renderExpenseTable() {
     const div = document.createElement('div');
     div.className = 'mt-6 p-4 bg-green-50 border-2 border-green-100 rounded-xl shadow-sm';
     let rows = '';
+    
     EXPENSE_CATEGORIES.forEach(c => {
         rows += `
             <tr class="border-b border-green-100 last:border-0">
-                <td class="py-3"><p class="text-[10px] font-bold text-green-800 uppercase leading-none">${c.label}</p><p class="text-[9px] text-green-600 italic opacity-75">${c.desc}</p></td>
-                <td class="py-3 pl-2"><input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-white border border-green-200 rounded-lg text-right text-xs shadow-sm outline-none" placeholder="R$ 0,00"></td>
+                <td class="py-3">
+                    <p class="text-[10px] font-bold text-green-800 uppercase leading-none">${c.label}</p>
+                    <p class="text-[9px] text-green-600 italic opacity-75">${c.desc}</p>
+                </td>
+                <td class="py-3 pl-2">
+                    <input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-white border border-green-200 rounded-lg text-right text-xs shadow-sm outline-none" 
+                           placeholder="R$ 0,00" inputmode="numeric">
+                </td>
             </tr>`;
     });
-    div.innerHTML = `<h3 class="text-[10px] font-black text-green-700 mb-3 uppercase text-center font-bold tracking-widest">Planilha de Gastos</h3><table class="w-full border-collapse">${rows}</table><div class="mt-4 flex justify-between font-black text-green-900 border-t border-green-200 pt-3 text-sm"><span>TOTAL MENSAL:</span><span id="expense-total">R$ 0,00</span></div>`;
+    
+    div.innerHTML = `
+        <h3 class="text-[10px] font-black text-green-700 mb-3 uppercase text-center font-bold tracking-widest">Planilha de Gastos Mensais</h3>
+        <table class="w-full border-collapse">
+            ${rows}
+        </table>
+        <div class="mt-4 flex justify-between font-black text-green-900 border-t border-green-200 pt-3 text-sm">
+            <span>TOTAL MENSAL:</span>
+            <span id="expense-total">R$ 0,00</span>
+        </div>
+    `;
     
     div.querySelectorAll('.expense-input').forEach(inp => {
         inp.addEventListener('input', (e) => {
+            // Formatar valor monetário
             let v = e.target.value.replace(/\D/g, '');
-            v = (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            e.target.value = v;
+            if (v) {
+                v = (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                e.target.value = v;
+            } else {
+                e.target.value = '';
+            }
+            
+            // Calcular total
             let total = 0;
-            div.querySelectorAll('.expense-input').forEach(i => total += parseCurrency(i.value));
+            div.querySelectorAll('.expense-input').forEach(i => {
+                total += parseCurrency(i.value);
+            });
             const totalEl = document.getElementById('expense-total');
             if(totalEl) totalEl.textContent = formatCurrency(total);
             
-            // Atualizar status para 'filling' quando preencher gastos
+            // Atualizar status para 'filling'
             updateDocumentState('filling');
         });
     });
+    
     return div;
 }
 
+// --- 11. FUNÇÕES PARA PEGAR DADOS DOS FORMULÁRIOS ---
 function getReuDataFromForm() {
     if (!getEl('nome-reu')) return null;
     return {
@@ -317,18 +441,22 @@ function getExpenseDataFromForm() {
 
 function fillReuData(d) {
     if (!d) return;
-    const s = (id, v) => { const el = getEl(id); if (el) el.value = v || ''; };
-    s('nome-reu', d.nome);
-    s('cpf-reu', d.cpf);
-    s('telefone-reu', d.telefone);
-    s('cep-reu', d.cep);
-    s('rua-reu', d.rua);
-    s('numero-reu', d.numero);
-    s('bairro-reu', d.bairro);
-    s('cidade-reu', d.cidade);
-    s('estado-reu', d.uf);
-    s('empresa-reu', d.empresa);
-    s('endereco-trabalho-reu', d.enderecoTrabalho);
+    const setValue = (id, value) => {
+        const el = getEl(id);
+        if (el) el.value = value || '';
+    };
+    
+    setValue('nome-reu', d.nome);
+    setValue('cpf-reu', d.cpf);
+    setValue('telefone-reu', d.telefone);
+    setValue('cep-reu', d.cep);
+    setValue('rua-reu', d.rua);
+    setValue('numero-reu', d.numero);
+    setValue('bairro-reu', d.bairro);
+    setValue('cidade-reu', d.cidade);
+    setValue('estado-reu', d.uf);
+    setValue('empresa-reu', d.empresa);
+    setValue('endereco-trabalho-reu', d.enderecoTrabalho);
 }
 
 function fillExpenseData(d) {
@@ -336,13 +464,17 @@ function fillExpenseData(d) {
         const el = getEl(`expense-${c.id}`);
         if (el) el.value = d[c.id] || '';
     });
+    
+    // Calcular total
     let total = 0;
-    document.querySelectorAll('.expense-input').forEach(i => total += parseCurrency(i.value));
+    document.querySelectorAll('.expense-input').forEach(i => {
+        total += parseCurrency(i.value);
+    });
     const totalEl = getEl('expense-total');
     if(totalEl) totalEl.textContent = formatCurrency(total);
 }
 
-// --- 9. AÇÕES (SALVAR, PDF, RESET) ---
+// --- 12. AÇÕES (SALVAR, PDF, RESET) ---
 async function handleSave() {
     console.log("💾 handleSave chamado");
     
@@ -367,16 +499,18 @@ async function handleSave() {
     const payload = {
         documentChecklist: {
             action: currentChecklistAction,
-            checkedIds,
-            docTypes,
-            reuData: getReuDataFromForm(),
-            expenseData: getExpenseDataFromForm()
+            checkedIds: checkedIds,
+            docTypes: docTypes,
+            reuData: getReuDataFromForm() || {},
+            expenseData: getExpenseDataFromForm() || {}
         },
         documentState: 'saved',
         selectedAction: currentChecklistAction ? documentsData[currentChecklistAction]?.title : null,
         lastActionBy: window.app?.currentUserName || 'Sistema',
         lastActionTimestamp: new Date().toISOString()
     };
+
+    console.log("💾 Salvando payload:", payload);
 
     try {
         const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
@@ -402,22 +536,27 @@ async function handlePdf() {
         const docPDF = new jsPDF();
         const pageWidth = docPDF.internal.pageSize.getWidth();
         let y = 20;
+        const margin = 15;
 
+        // Cabeçalho
         docPDF.setFontSize(16);
+        docPDF.setTextColor(22, 163, 74);
         docPDF.text("Checklist de Atendimento - SIGAP", pageWidth / 2, y, { align: "center" });
         y += 15;
 
+        // Informações do assistido e ação
         docPDF.setFontSize(12);
-        docPDF.text(`Assistido: ${getEl('documents-assisted-name')?.textContent || ''}`, 15, y);
+        docPDF.setTextColor(0);
+        docPDF.text(`Assistido: ${getEl('documents-assisted-name')?.textContent || ''}`, margin, y);
         y += 7;
-        docPDF.text(`Ação: ${getEl('checklist-title')?.textContent || ''}`, 15, y);
+        docPDF.text(`Ação: ${getEl('checklist-title')?.textContent || ''}`, margin, y);
         y += 15;
 
+        // 1. DOCUMENTAÇÃO
         const checked = document.querySelectorAll('.doc-checkbox:checked');
-        
         if (checked.length > 0) {
             docPDF.setFont("helvetica", "bold");
-            docPDF.text("DOCUMENTAÇÃO ENTREGUE:", 15, y);
+            docPDF.text("DOCUMENTAÇÃO ENTREGUE:", margin, y);
             y += 8;
             docPDF.setFont("helvetica", "normal");
             docPDF.setFontSize(10);
@@ -425,16 +564,102 @@ async function handlePdf() {
             checked.forEach(cb => {
                 const text = cb.closest('label').querySelector('span').textContent;
                 const type = document.querySelector(`input[name="type-${cb.id}"]:checked`)?.value || 'Físico';
-                docPDF.text(`[X] ${text} - [${type.toUpperCase()}]`, 20, y);
+                docPDF.text(`[X] ${text} - [${type.toUpperCase()}]`, margin + 5, y);
                 y += 6;
+                
                 if (y > 280) {
                     docPDF.addPage();
                     y = 20;
                 }
             });
+            y += 5;
         }
 
-        docPDF.save(`Checklist_SIGAP.pdf`);
+        // 2. PLANILHA DE GASTOS
+        const expenses = getExpenseDataFromForm();
+        const hasExpenses = Object.values(expenses).some(v => v && v.trim() !== '');
+        
+        if (hasExpenses) {
+            if (y > 250) {
+                docPDF.addPage();
+                y = 20;
+            }
+            
+            docPDF.setFont("helvetica", "bold");
+            docPDF.text("PLANILHA DE GASTOS MENSAIS:", margin, y);
+            y += 8;
+            docPDF.setFont("helvetica", "normal");
+            
+            EXPENSE_CATEGORIES.forEach(c => {
+                if (expenses[c.id] && expenses[c.id].trim() !== '') {
+                    // Quebrar linha se necessário
+                    const text = `${c.label}: ${expenses[c.id]}`;
+                    if (docPDF.getStringUnitWidth(text) * 10 > pageWidth - 2*margin) {
+                        docPDF.text(c.label + ":", margin + 5, y);
+                        y += 5;
+                        docPDF.text(expenses[c.id], margin + 5, y);
+                    } else {
+                        docPDF.text(text, margin + 5, y);
+                    }
+                    y += 6;
+                }
+            });
+            
+            const total = getEl('expense-total')?.textContent || 'R$ 0,00';
+            docPDF.setFont("helvetica", "bold");
+            docPDF.text(`TOTAL MENSAL: ${total}`, margin + 5, y);
+            y += 10;
+        }
+
+        // 3. DADOS DO RÉU
+        const reu = getReuDataFromForm();
+        if (reu && reu.nome) {
+            if (y > 250) {
+                docPDF.addPage();
+                y = 20;
+            }
+            
+            docPDF.setFont("helvetica", "bold");
+            docPDF.text("DADOS DA PARTE CONTRÁRIA (RÉU):", margin, y);
+            y += 8;
+            docPDF.setFont("helvetica", "normal");
+            
+            docPDF.text(`Nome: ${reu.nome}`, margin + 5, y); y += 6;
+            if (reu.cpf) docPDF.text(`CPF: ${reu.cpf}`, margin + 5, y); y += 6;
+            if (reu.telefone) docPDF.text(`WhatsApp: ${reu.telefone}`, margin + 5, y); y += 6;
+            
+            if (reu.rua || reu.numero || reu.bairro) {
+                const endereco = `${reu.rua || ''}, ${reu.numero || ''} - ${reu.bairro || ''}`.replace(/, ,/g, ',').replace(/,$/, '').trim();
+                if (endereco) {
+                    docPDF.text(`Endereço: ${endereco}`, margin + 5, y); y += 6;
+                }
+            }
+            
+            if (reu.cidade || reu.uf || reu.cep) {
+                const cidadeUf = `${reu.cidade || ''}${reu.uf ? '/'+reu.uf : ''}`.trim();
+                if (cidadeUf || reu.cep) {
+                    docPDF.text(`Cidade/CEP: ${cidadeUf} ${reu.cep ? '- '+reu.cep : ''}`.trim(), margin + 5, y); y += 6;
+                }
+            }
+            
+            if (reu.empresa) {
+                docPDF.text(`Empresa: ${reu.empresa}`, margin + 5, y); y += 6;
+                if (reu.enderecoTrabalho) {
+                    docPDF.text(`End. Comercial: ${reu.enderecoTrabalho}`, margin + 5, y); y += 6;
+                }
+            }
+        }
+
+        // Rodapé com data
+        docPDF.setFontSize(8);
+        docPDF.setTextColor(150);
+        docPDF.text(
+            `Gerado em: ${new Date().toLocaleString('pt-BR')}`,
+            margin,
+            docPDF.internal.pageSize.getHeight() - 10
+        );
+
+        docPDF.save(`Checklist_${getEl('documents-assisted-name')?.textContent?.replace(/\s+/g, '_') || 'SIGAP'}.pdf`);
         showNotification("PDF gerado com sucesso!");
     } catch (err) {
         console.error("Erro PDF:", err);
@@ -467,7 +692,7 @@ function handleBack() {
     getEl('address-editor-container')?.classList.add('hidden');
 }
 
-// --- 10. EXPORTS PRINCIPAIS ---
+// --- 13. EXPORTS PRINCIPAIS ---
 export function setupDetailsModal(config) {
     console.log("⚙️ setupDetailsModal chamado", config);
     db = config.db;
@@ -510,81 +735,136 @@ export function openDetailsModal(config) {
         return;
     }
     
+    console.log("Assistido encontrado:", assisted);
+    console.log("documentChecklist:", assisted.documentChecklist);
+    console.log("documentState:", assisted.documentState);
+    console.log("selectedAction:", assisted.selectedAction);
+    
     getEl('documents-assisted-name').textContent = assisted.name;
     
     // Preparar área de seleção de assunto
     const selectionArea = getEl('document-action-selection');
-    if (selectionArea) {
-        selectionArea.innerHTML = `
-            <div class="p-2 sm:p-4">
-                <div class="mb-4">
-                    <input type="text" 
-                           id="subject-search-input" 
-                           placeholder="🔍 Buscar assunto..." 
-                           class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all">
-                </div>
-                <p class="text-gray-500 mb-4 text-xs sm:text-sm text-center font-bold uppercase tracking-widest opacity-50">Selecione o Assunto</p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 action-grid max-h-[50vh] overflow-y-auto p-1"></div>
-            </div>
-        `;
+    const checklistView = getEl('document-checklist-view');
+    const checklistHeader = getEl('document-checklist-view-header');
+    const searchContainer = getEl('checklist-search-container');
+    const reuContainer = getEl('address-editor-container');
+    
+    // Verificar se já existe um checklist salvo
+    if (assisted.documentChecklist && assisted.documentChecklist.action) {
+        console.log("✅ Checklist encontrado! Carregando:", assisted.documentChecklist.action);
         
-        const grid = selectionArea.querySelector('.action-grid');
-        const searchInput = selectionArea.querySelector('#subject-search-input');
+        // Renderizar o checklist com os dados salvos
+        renderChecklist(assisted.documentChecklist.action);
         
-        const subjectsList = Object.keys(documentsData).map(key => ({
-            key,
-            title: documentsData[key].title
-        }));
+        // Esconder seleção e mostrar checklist
+        if (selectionArea) selectionArea.classList.add('hidden');
+        if (checklistView) {
+            checklistView.classList.remove('hidden');
+            checklistView.classList.add('flex');
+        }
+        if (checklistHeader) checklistHeader.classList.remove('hidden');
+        if (searchContainer) searchContainer.classList.remove('hidden');
         
-        function renderFilteredSubjects(filterText = '') {
-            grid.innerHTML = '';
-            const filtered = subjectsList.filter(s => 
-                normalizeLocal(s.title).includes(normalizeLocal(filterText))
-            );
-            
-            if (filtered.length === 0) {
-                grid.innerHTML = '<p class="text-center text-gray-400 py-8 col-span-2">Nenhum assunto encontrado</p>';
-                return;
-            }
-            
-            filtered.forEach(({key, title}) => {
-                const btn = document.createElement('button');
-                btn.dataset.action = key;
-                btn.className = "text-left p-3 sm:p-4 bg-white border-2 border-gray-100 hover:border-green-500 rounded-xl transition-all shadow-sm group text-sm sm:text-base";
-                btn.innerHTML = `<span class="font-bold text-gray-700 uppercase text-[10px] sm:text-xs tracking-tighter">${title}</span>`;
-                
-                btn.onclick = (e) => {
-                    e.preventDefault();
-                    console.log("🎯 Botão clicado:", key, title);
-                    renderChecklist(key);
-                    selectionArea.classList.add('hidden');
-                    getEl('document-checklist-view').classList.remove('hidden');
-                    getEl('document-checklist-view').classList.add('flex');
-                    
-                    // Atualizar estado para 'selected'
-                    updateDocumentState('selected');
-                };
-                
-                grid.appendChild(btn);
-            });
+        // Atualizar o título com a ação salva
+        const titleEl = getEl('checklist-title');
+        if (titleEl && documentsData[assisted.documentChecklist.action]) {
+            titleEl.textContent = documentsData[assisted.documentChecklist.action].title;
         }
         
-        renderFilteredSubjects();
+        // Se tiver dados do réu, preencher
+        if (assisted.documentChecklist.reuData) {
+            setTimeout(() => {
+                fillReuData(assisted.documentChecklist.reuData);
+                // Verificar se deve mostrar o formulário do réu
+                checkReuVisibility();
+            }, 300);
+        }
         
-        searchInput.addEventListener('input', (e) => {
-            renderFilteredSubjects(e.target.value);
-        });
-    }
-
-    if (assisted.documentChecklist?.action) {
-        renderChecklist(assisted.documentChecklist.action);
-        selectionArea?.classList.add('hidden');
-        getEl('document-checklist-view')?.classList.remove('hidden');
-        getEl('document-checklist-view')?.classList.add('flex');
+        // Se tiver dados de despesas, preencher
+        if (assisted.documentChecklist.expenseData) {
+            setTimeout(() => {
+                fillExpenseData(assisted.documentChecklist.expenseData);
+            }, 300);
+        }
+        
+        // Verificar visibilidade do réu
+        setTimeout(checkReuVisibility, 400);
+        
     } else {
-        getEl('document-checklist-view')?.classList.add('hidden');
-        getEl('document-checklist-view')?.classList.remove('flex');
-        selectionArea?.classList.remove('hidden');
+        console.log("❌ Nenhum checklist encontrado. Mostrando seleção de assuntos.");
+        
+        // Garantir que a view de checklist esteja escondida
+        if (checklistView) {
+            checklistView.classList.add('hidden');
+            checklistView.classList.remove('flex');
+        }
+        if (checklistHeader) checklistHeader.classList.add('hidden');
+        if (searchContainer) searchContainer.classList.add('hidden');
+        if (reuContainer) reuContainer.classList.add('hidden');
+        if (selectionArea) selectionArea.classList.remove('hidden');
+        
+        // Recriar a área de seleção de assunto com busca
+        if (selectionArea) {
+            selectionArea.innerHTML = `
+                <div class="p-2 sm:p-4">
+                    <div class="mb-4">
+                        <input type="text" 
+                               id="subject-search-input" 
+                               placeholder="🔍 Buscar assunto..." 
+                               class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all">
+                    </div>
+                    <p class="text-gray-500 mb-4 text-xs sm:text-sm text-center font-bold uppercase tracking-widest opacity-50">Selecione o Assunto</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 action-grid max-h-[50vh] overflow-y-auto p-1"></div>
+                </div>
+            `;
+            
+            const grid = selectionArea.querySelector('.action-grid');
+            const searchInput = selectionArea.querySelector('#subject-search-input');
+            
+            const subjectsList = Object.keys(documentsData).map(key => ({
+                key,
+                title: documentsData[key].title
+            }));
+            
+            function renderFilteredSubjects(filterText = '') {
+                grid.innerHTML = '';
+                const filtered = subjectsList.filter(s => 
+                    normalizeLocal(s.title).includes(normalizeLocal(filterText))
+                );
+                
+                if (filtered.length === 0) {
+                    grid.innerHTML = '<p class="text-center text-gray-400 py-8 col-span-2">Nenhum assunto encontrado</p>';
+                    return;
+                }
+                
+                filtered.forEach(({key, title}) => {
+                    const btn = document.createElement('button');
+                    btn.dataset.action = key;
+                    btn.className = "text-left p-3 sm:p-4 bg-white border-2 border-gray-100 hover:border-green-500 rounded-xl transition-all shadow-sm group text-sm sm:text-base";
+                    btn.innerHTML = `<span class="font-bold text-gray-700 uppercase text-[10px] sm:text-xs tracking-tighter">${title}</span>`;
+                    
+                    btn.onclick = (e) => {
+                        e.preventDefault();
+                        console.log("🎯 Botão clicado:", key, title);
+                        renderChecklist(key);
+                        selectionArea.classList.add('hidden');
+                        getEl('document-checklist-view').classList.remove('hidden');
+                        getEl('document-checklist-view').classList.add('flex');
+                        
+                        // Atualizar estado para 'selected'
+                        updateDocumentState('selected');
+                    };
+                    
+                    grid.appendChild(btn);
+                });
+            }
+            
+            renderFilteredSubjects();
+            
+            searchInput.addEventListener('input', (e) => {
+                renderFilteredSubjects(e.target.value);
+            });
+        }
     }
     
     getEl('documents-modal')?.classList.remove('hidden');
