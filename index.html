@@ -1948,6 +1948,151 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.getElementById('priority-reason-modal')?.classList.add('hidden');
                 });
 
+
+                // ================================================
+                // LISTENERS DO MODAL DE DETALHES (CHECKLIST)
+                // ================================================
+                
+                // Botão Voltar
+                document.getElementById('back-to-action-selection-btn')?.addEventListener('click', () => {
+                    document.getElementById('document-checklist-view').classList.add('hidden');
+                    document.getElementById('document-action-selection').classList.remove('hidden');
+                    document.getElementById('document-checklist-view-header').classList.add('hidden');
+                    document.getElementById('checklist-search-container').classList.add('hidden');
+                });
+                
+                // Botão Salvar Checklist
+                document.getElementById('save-checklist-btn')?.addEventListener('click', async () => {
+                    console.log("💾 Salvar checklist clicado");
+                    
+                    if (!window.assistedIdToHandle && !window.currentAssistedId) {
+                        showNotification("Erro: assistido não identificado", "error");
+                        return;
+                    }
+                    
+                    const assistedId = window.assistedIdToHandle || window.currentAssistedId;
+                    const container = document.getElementById('checklist-container');
+                    
+                    const checkedItems = Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => ({
+                        id: cb.id,
+                        text: cb.closest('label').querySelector('span').textContent,
+                        type: document.querySelector(`input[name="type-${cb.id}"]:checked`)?.value || 'Físico'
+                    }));
+                
+                    const checklistData = {
+                        checkedIds: checkedItems.map(item => item.id),
+                        docTypes: checkedItems.reduce((acc, item) => {
+                            acc[item.id] = item.type;
+                            return acc;
+                        }, {}),
+                        reuData: getReuDataFromForm(),
+                        expenseData: getExpenseDataFromForm()
+                    };
+                
+                    try {
+                        await updateDoc(doc(this.db, "pautas", this.currentPauta.id, "attendances", assistedId), {
+                            documentChecklist: checklistData,
+                            documentState: 'saved'
+                        });
+                        showNotification("Checklist salvo com sucesso!");
+                        document.getElementById('documents-modal').classList.add('hidden');
+                    } catch (error) {
+                        console.error("Erro ao salvar checklist:", error);
+                        showNotification("Erro ao salvar checklist", "error");
+                    }
+                });
+                
+                // Botão PDF
+                document.getElementById('print-checklist-btn')?.addEventListener('click', async () => {
+                    showNotification("Gerando PDF...", "info");
+                    
+                    try {
+                        const { jsPDF } = window.jspdf;
+                        const docPDF = new jsPDF();
+                        const pageWidth = docPDF.internal.pageSize.getWidth();
+                        let y = 20;
+                
+                        docPDF.setFontSize(16);
+                        docPDF.text("Checklist de Atendimento - SIGAP", pageWidth / 2, y, { align: "center" });
+                        y += 15;
+                
+                        docPDF.setFontSize(12);
+                        docPDF.text(`Assistido: ${document.getElementById('documents-assisted-name')?.textContent || ''}`, 15, y);
+                        y += 7;
+                        docPDF.text(`Ação: ${document.getElementById('checklist-title')?.textContent || ''}`, 15, y);
+                        y += 15;
+                
+                        const checked = document.querySelectorAll('.doc-checkbox:checked');
+                        
+                        if (checked.length > 0) {
+                            docPDF.setFont("helvetica", "bold");
+                            docPDF.text("DOCUMENTAÇÃO ENTREGUE:", 15, y);
+                            y += 8;
+                            docPDF.setFont("helvetica", "normal");
+                            docPDF.setFontSize(10);
+                            
+                            checked.forEach(cb => {
+                                const text = cb.closest('label').querySelector('span').textContent;
+                                const type = document.querySelector(`input[name="type-${cb.id}"]:checked`)?.value || 'Físico';
+                                docPDF.text(`[X] ${text} - [${type.toUpperCase()}]`, 20, y);
+                                y += 6;
+                                if (y > 280) {
+                                    docPDF.addPage();
+                                    y = 20;
+                                }
+                            });
+                        }
+                
+                        docPDF.save(`Checklist_SIGAP.pdf`);
+                        showNotification("PDF gerado com sucesso!");
+                    } catch (err) {
+                        console.error("Erro PDF:", err);
+                        showNotification("Erro ao gerar PDF", "error");
+                    }
+                });
+                
+                // Botão Mudar (Reset)
+                document.getElementById('reset-checklist-btn')?.addEventListener('click', () => {
+                    if (confirm("Deseja mudar de assunto? Isso apagará o checklist atual.")) {
+                        document.getElementById('document-checklist-view').classList.add('hidden');
+                        document.getElementById('document-action-selection').classList.remove('hidden');
+                        document.getElementById('document-checklist-view-header').classList.add('hidden');
+                        document.getElementById('checklist-search-container').classList.add('hidden');
+                    }
+                });
+                
+                // Funções auxiliares para dados do formulário
+                function getReuDataFromForm() {
+                    return {
+                        nome: document.getElementById('nome-reu')?.value || '',
+                        cpf: document.getElementById('cpf-reu')?.value || '',
+                        telefone: document.getElementById('telefone-reu')?.value || '',
+                        cep: document.getElementById('cep-reu')?.value || '',
+                        rua: document.getElementById('rua-reu')?.value || '',
+                        numero: document.getElementById('numero-reu')?.value || '',
+                        bairro: document.getElementById('bairro-reu')?.value || '',
+                        cidade: document.getElementById('cidade-reu')?.value || '',
+                        uf: document.getElementById('estado-reu')?.value || '',
+                        empresa: document.getElementById('empresa-reu')?.value || '',
+                        enderecoTrabalho: document.getElementById('endereco-trabalho-reu')?.value || ''
+                    };
+                }
+                
+                function getExpenseDataFromForm() {
+                    return {
+                        moradia: document.getElementById('expense-moradia')?.value || '',
+                        alimentacao: document.getElementById('expense-alimentacao')?.value || '',
+                        educacao: document.getElementById('expense-educacao')?.value || '',
+                        saude: document.getElementById('expense-saude')?.value || '',
+                        vestuario: document.getElementById('expense-vestuario')?.value || '',
+                        lazer: document.getElementById('expense-lazer')?.value || '',
+                        outras: document.getElementById('expense-outras')?.value || ''
+                    };
+                }
+
+
+
+                
                 // ================================================
                 // LISTENERS DO MODAL DE ATENDENTE (FINALIZAR)
                 // ================================================
