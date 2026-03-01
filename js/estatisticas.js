@@ -188,11 +188,12 @@ export const StatisticsService = {
 
         const buttons = document.createElement('div');
         
-        // Em mobile, só botão de fechar
+        // Criar botão de fechar (usado em ambos os casos)
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '&times;';
+        closeBtn.title = 'Fechar';
+        
         if (isMobile) {
-            const closeBtn = document.createElement('button');
-            closeBtn.innerHTML = '&times;';
-            closeBtn.title = 'Fechar';
             Object.assign(closeBtn.style, {
                 background: 'rgba(255,255,255,0.2)',
                 border: 'none',
@@ -207,7 +208,6 @@ export const StatisticsService = {
                 alignItems: 'center',
                 justifyContent: 'center'
             });
-            closeBtn.onclick = () => modal.style.display = 'none';
             buttons.appendChild(closeBtn);
         } else {
             const minBtn = document.createElement('button');
@@ -216,11 +216,19 @@ export const StatisticsService = {
             const maxBtn = document.createElement('button');
             maxBtn.innerHTML = '&#9723;';
             maxBtn.title = 'Maximizar/Restaurar';
-            const closeBtn = document.createElement('button');
-            closeBtn.innerHTML = '&times;';
-            closeBtn.title = 'Fechar';
+            
+            Object.assign(closeBtn.style, {
+                background: 'none', 
+                border: 'none', 
+                fontSize: '18px',
+                cursor: 'pointer', 
+                marginLeft: '10px', 
+                fontWeight: 'bold',
+                lineHeight: '1', 
+                color: '#555'
+            });
 
-            [minBtn, maxBtn, closeBtn].forEach(btn => {
+            [minBtn, maxBtn].forEach(btn => {
                 Object.assign(btn.style, {
                     background: 'none', 
                     border: 'none', 
@@ -264,8 +272,6 @@ export const StatisticsService = {
                 document.onmousemove = null;
             }
 
-            closeBtn.onclick = () => modal.style.display = 'none';
-
             maxBtn.onclick = () => {
                 if (modal.classList.contains('maximized')) {
                     Object.assign(modal.style, originalState);
@@ -308,7 +314,9 @@ export const StatisticsService = {
             };
         }
 
-        buttons.append(closeBtn);
+        // Listener do botão fechar (comum para ambos)
+        closeBtn.onclick = () => modal.style.display = 'none';
+
         header.append(title, buttons);
 
         const contentDiv = document.getElementById('statistics-content');
