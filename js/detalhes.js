@@ -1,6 +1,6 @@
 /**
  * detalhes.js - SIGAP
- * Versão Integral CORRIGIDA - Checklist, CEP, Planilha de Gastos e PDF Completo
+ * Versão COMPLETA com busca de assuntos e design 100% responsivo para mobile
  */
 
 import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -152,11 +152,28 @@ function renderChecklist(actionKey) {
                     t.querySelector('input[value="Físico"]').checked = true;
                 }
             }
+            // Atualizar status para 'filling' quando qualquer checkbox for alterado
+            updateDocumentState('filling');
         };
     });
 }
 
-// --- 6. FORMULÁRIOS DINÂMICOS ---
+// --- 6. FUNÇÃO PARA ATUALIZAR ESTADO DO DOCUMENTO ---
+async function updateDocumentState(state) {
+    if (!currentAssistedId || !currentPautaId || !db) return;
+    
+    try {
+        const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
+        await updateDoc(docRef, { 
+            documentState: state,
+            selectedAction: currentChecklistAction ? documentsData[currentChecklistAction]?.title : null
+        });
+    } catch (e) {
+        console.error("Erro ao atualizar estado:", e);
+    }
+}
+
+// --- 7. FORMULÁRIOS DINÂMICOS ---
 function renderReuForm(containerId) {
     const container = getEl(containerId);
     if (!container) return;
@@ -283,7 +300,7 @@ function fillExpenseData(d) {
     if(totalEl) totalEl.textContent = formatCurrency(total);
 }
 
-// --- 7. AÇÕES (SALVAR, PDF, RESET) ---
+// --- 8. AÇÕES (SALVAR, PDF, RESET) ---
 async function handleSave() {
     console.log("💾 handleSave chamado");
     
@@ -329,6 +346,12 @@ async function handleSave() {
 
 async function handlePdf() {
     showNotification("Gerando PDF...", "info");
+    
+    // Atualizar estado para PDF
+    if (currentAssistedId && currentPautaId && db) {
+        await updateDocumentState('pdf');
+    }
+    
     try {
         const { jsPDF } = window.jspdf;
         const docPDF = new jsPDF();
@@ -346,6 +369,7 @@ async function handlePdf() {
         y += 15;
 
         const checked = document.querySelectorAll('.doc-checkbox:checked');
+        
         if (checked.length > 0) {
             docPDF.setFont("helvetica", "bold");
             docPDF.text("DOCUMENTAÇÃO ENTREGUE:", 15, y);
@@ -378,7 +402,11 @@ async function handleReset() {
     try {
         if (db && currentPautaId && currentAssistedId) {
             const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
-            await updateDoc(docRef, { documentChecklist: null });
+            await updateDoc(docRef, { 
+                documentChecklist: null,
+                documentState: null,
+                selectedAction: null
+            });
         }
         handleBack();
     } catch (e) {
@@ -394,7 +422,7 @@ function handleBack() {
     getEl('address-editor-container')?.classList.add('hidden');
 }
 
-// --- 8. EXPORTS PRINCIPAIS ---
+// --- 9. EXPORTS PRINCIPAIS ---
 export function setupDetailsModal(config) {
     console.log("⚙️ setupDetailsModal chamado", config);
     db = config.db;
@@ -426,6 +454,7 @@ export function openDetailsModal(config) {
     }
     
     currentAssistedId = config.assistedId;
+    window.currentAssistedId = config.assistedId; // Garantir disponibilidade global
     currentPautaId = config.pautaId;
     allAssisted = config.allAssisted || [];
     
@@ -437,27 +466,71 @@ export function openDetailsModal(config) {
     
     getEl('documents-assisted-name').textContent = assisted.name;
     
+    // === SEÇÃO DE BUSCA DE ASSUNTOS (RESPONSIVA) ===
     const selectionArea = getEl('document-action-selection');
     if (selectionArea) {
-        selectionArea.innerHTML = '<p class="text-gray-500 mb-6 text-sm text-center font-bold uppercase tracking-widest opacity-50">Selecione o Assunto</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 action-grid"></div>';
-        const grid = selectionArea.querySelector('.action-grid');
+        selectionArea.innerHTML = `
+            <div class="p-2 sm:p-4">
+                <div class="mb-4">
+                    <input type="text" 
+                           id="subject-search-input" 
+                           placeholder="🔍 Buscar assunto..." 
+                           class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all">
+                </div>
+                <p class="text-gray-500 mb-4 text-xs sm:text-sm text-center font-bold uppercase tracking-widest opacity-50">Selecione o Assunto</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 action-grid max-h-[50vh] overflow-y-auto p-1"></div>
+            </div>
+        `;
         
-        Object.keys(documentsData).forEach(key => {
-            const btn = document.createElement('button');
-            btn.dataset.action = key;
-            btn.className = "text-left p-4 bg-white border-2 border-gray-100 hover:border-green-500 rounded-xl transition-all shadow-sm group";
-            btn.innerHTML = `<span class="font-bold text-gray-700 uppercase text-xs tracking-tighter">${documentsData[key].title}</span>`;
+        const grid = selectionArea.querySelector('.action-grid');
+        const searchInput = selectionArea.querySelector('#subject-search-input');
+        
+        // Criar array com todos os assuntos para busca
+        const subjectsList = Object.keys(documentsData).map(key => ({
+            key,
+            title: documentsData[key].title
+        }));
+        
+        // Função para renderizar os botões filtrados
+        function renderFilteredSubjects(filterText = '') {
+            grid.innerHTML = '';
+            const filtered = subjectsList.filter(s => 
+                normalizeLocal(s.title).includes(normalizeLocal(filterText))
+            );
             
-            btn.onclick = (e) => {
-                e.preventDefault();
-                console.log("🎯 Botão clicado:", key, documentsData[key].title);
-                renderChecklist(key);
-                selectionArea.classList.add('hidden');
-                getEl('document-checklist-view').classList.remove('hidden');
-                getEl('document-checklist-view').classList.add('flex');
-            };
+            if (filtered.length === 0) {
+                grid.innerHTML = '<p class="text-center text-gray-400 py-8 col-span-2">Nenhum assunto encontrado</p>';
+                return;
+            }
             
-            grid.appendChild(btn);
+            filtered.forEach(({key, title}) => {
+                const btn = document.createElement('button');
+                btn.dataset.action = key;
+                btn.className = "text-left p-3 sm:p-4 bg-white border-2 border-gray-100 hover:border-green-500 rounded-xl transition-all shadow-sm group text-sm sm:text-base";
+                btn.innerHTML = `<span class="font-bold text-gray-700 uppercase text-[10px] sm:text-xs tracking-tighter">${title}</span>`;
+                
+                btn.onclick = (e) => {
+                    e.preventDefault();
+                    console.log("🎯 Botão clicado:", key, title);
+                    renderChecklist(key);
+                    selectionArea.classList.add('hidden');
+                    getEl('document-checklist-view').classList.remove('hidden');
+                    getEl('document-checklist-view').classList.add('flex');
+                    
+                    // Atualizar estado para 'selected'
+                    updateDocumentState('selected');
+                };
+                
+                grid.appendChild(btn);
+            });
+        }
+        
+        // Renderizar todos inicialmente
+        renderFilteredSubjects();
+        
+        // Adicionar listener para busca
+        searchInput.addEventListener('input', (e) => {
+            renderFilteredSubjects(e.target.value);
         });
     }
 
