@@ -8,13 +8,16 @@
 
 export const StatisticsService = {
     /**
-     * Função auxiliar para tornar o modal interativo (arrastável, redimensionável)
+     * Função auxiliar para tornar o modal interativo (arrastável, redimensionável) - Adaptado para mobile
      */
     makeModalInteractive(modal) {
         if (!modal || modal.classList.contains('interactive-modal-init')) {
             return;
         }
         modal.classList.add('interactive-modal-init', 'bg-white');
+
+        // Detectar se é mobile
+        const isMobile = window.innerWidth <= 768;
 
         // Estilos injetados para garantir que o modal e seu conteúdo se adaptem a diferentes tamanhos de tela.
         if (!document.getElementById('statistics-responsive-styles')) {
@@ -47,30 +50,47 @@ export const StatisticsService = {
                         min-height: 0 !important;
                     }
                     #statistics-content-wrapper {
-                        padding: 8px !important;
+                        padding: 12px !important;
                     }
                     #statistics-content .summary-cards {
                         grid-template-columns: repeat(2, minmax(0, 1fr));
+                        gap: 8px;
                     }
                     #statistics-content h3 {
-                        font-size: 1.125rem;
+                        font-size: 1rem;
                     }
                     #statistics-content .text-2xl {
                         font-size: 1.25rem;
                     }
                     #statistics-content .text-xs {
-                        font-size: 0.75rem;
+                        font-size: 0.7rem;
                     }
-                    #statistics-content .max-h-40 { max-height: 12rem !important; }
-                    #statistics-content .max-h-\\[30vh\\] { max-height: 35vh !important; }
-                    #statistics-content .max-h-\\[50vh\\] { max-height: 40vh !important; }
+                    #statistics-content .max-h-40 { 
+                        max-height: 10rem !important; 
+                    }
+                    #statistics-content .max-h-\\[30vh\\] { 
+                        max-height: 30vh !important; 
+                    }
+                    #statistics-content .max-h-\\[50vh\\] { 
+                        max-height: 40vh !important; 
+                    }
+                    #statistics-content table {
+                        font-size: 0.7rem;
+                    }
+                    #statistics-content th, 
+                    #statistics-content td {
+                        padding: 6px 4px !important;
+                    }
                 }
                 @media (max-width: 480px) {
                     #statistics-content .summary-cards {
                         grid-template-columns: repeat(1, minmax(0, 1fr));
                     }
                     #statistics-content-wrapper {
-                        padding: 4px !important;
+                        padding: 8px !important;
+                    }
+                    #statistics-content .text-2xl {
+                        font-size: 1.1rem;
                     }
                 }
             `;
@@ -84,16 +104,50 @@ export const StatisticsService = {
             modal.appendChild(newContent);
         }
 
-        Object.assign(modal.style, {
-            position: 'fixed', top: '50%', left: '50%',
-            transform: 'translate(-50%, -50%)', width: '90vw', height: '90vh',
-            maxWidth: '1400px', maxHeight: '95vh', resize: 'both',
-            overflow: 'hidden', border: '1px solid #ddd',
-            boxShadow: '0 5px 25px rgba(0,0,0,0.2)', borderRadius: '12px',
-            minWidth: '600px', minHeight: '500px', display: 'flex',
-            flexDirection: 'column',
-            padding: '0'
-        });
+        // Em mobile, não permitir redimensionamento/drag
+        if (isMobile) {
+            Object.assign(modal.style, {
+                position: 'fixed', 
+                top: '0', 
+                left: '0',
+                transform: 'none', 
+                width: '100vw', 
+                height: '100vh',
+                maxWidth: '100vw', 
+                maxHeight: '100vh', 
+                resize: 'none',
+                overflow: 'hidden', 
+                border: 'none',
+                boxShadow: 'none', 
+                borderRadius: '0',
+                minWidth: '0', 
+                minHeight: '0', 
+                display: 'flex',
+                flexDirection: 'column',
+                padding: '0'
+            });
+        } else {
+            Object.assign(modal.style, {
+                position: 'fixed', 
+                top: '50%', 
+                left: '50%',
+                transform: 'translate(-50%, -50%)', 
+                width: '90vw', 
+                height: '90vh',
+                maxWidth: '1400px', 
+                maxHeight: '95vh', 
+                resize: 'both',
+                overflow: 'hidden', 
+                border: '1px solid #ddd',
+                boxShadow: '0 5px 25px rgba(0,0,0,0.2)', 
+                borderRadius: '12px',
+                minWidth: '600px', 
+                minHeight: '500px', 
+                display: 'flex',
+                flexDirection: 'column',
+                padding: '0'
+            });
+        }
 
         if (document.getElementById('statistics-modal-header')) {
             return;
@@ -101,38 +155,160 @@ export const StatisticsService = {
 
         const header = document.createElement('div');
         header.id = 'statistics-modal-header';
-        Object.assign(header.style, {
-            backgroundColor: '#f7f7f7', padding: '10px 15px', cursor: 'move',
-            borderBottom: '1px solid #ddd', display: 'flex',
-            justifyContent: 'space-between', alignItems: 'center',
-            borderTopLeftRadius: '12px', borderTopRightRadius: '12px'
-        });
+        
+        // Em mobile, cabeçalho mais simples (sem drag)
+        if (isMobile) {
+            Object.assign(header.style, {
+                backgroundColor: '#16a34a',
+                color: 'white',
+                padding: '16px',
+                borderBottom: '1px solid #15803d',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+            });
+        } else {
+            Object.assign(header.style, {
+                backgroundColor: '#f7f7f7', 
+                padding: '10px 15px', 
+                cursor: 'move',
+                borderBottom: '1px solid #ddd', 
+                display: 'flex',
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                borderTopLeftRadius: '12px', 
+                borderTopRightRadius: '12px'
+            });
+        }
 
         const title = document.createElement('span');
         title.textContent = 'Estatísticas da Pauta';
         title.style.fontWeight = 'bold';
-        title.style.color = '#333';
+        title.style.color = isMobile ? 'white' : '#333';
 
         const buttons = document.createElement('div');
-        const minBtn = document.createElement('button');
-        minBtn.innerHTML = '&#95;';
-        minBtn.title = 'Minimizar';
-        const maxBtn = document.createElement('button');
-        maxBtn.innerHTML = '&#9723;';
-        maxBtn.title = 'Maximizar/Restaurar';
-        const closeBtn = document.createElement('button');
-        closeBtn.innerHTML = '&times;';
-        closeBtn.title = 'Fechar';
-
-        [minBtn, maxBtn, closeBtn].forEach(btn => {
-            Object.assign(btn.style, {
-                background: 'none', border: 'none', fontSize: '18px',
-                cursor: 'pointer', marginLeft: '10px', fontWeight: 'bold',
-                lineHeight: '1', color: '#555'
+        
+        // Em mobile, só botão de fechar
+        if (isMobile) {
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '&times;';
+            closeBtn.title = 'Fechar';
+            Object.assign(closeBtn.style, {
+                background: 'rgba(255,255,255,0.2)',
+                border: 'none',
+                fontSize: '24px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                color: 'white',
+                width: '40px',
+                height: '40px',
+                borderRadius: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
             });
-        });
+            closeBtn.onclick = () => modal.style.display = 'none';
+            buttons.appendChild(closeBtn);
+        } else {
+            const minBtn = document.createElement('button');
+            minBtn.innerHTML = '&#95;';
+            minBtn.title = 'Minimizar';
+            const maxBtn = document.createElement('button');
+            maxBtn.innerHTML = '&#9723;';
+            maxBtn.title = 'Maximizar/Restaurar';
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '&times;';
+            closeBtn.title = 'Fechar';
 
-        buttons.append(minBtn, maxBtn, closeBtn);
+            [minBtn, maxBtn, closeBtn].forEach(btn => {
+                Object.assign(btn.style, {
+                    background: 'none', 
+                    border: 'none', 
+                    fontSize: '18px',
+                    cursor: 'pointer', 
+                    marginLeft: '10px', 
+                    fontWeight: 'bold',
+                    lineHeight: '1', 
+                    color: '#555'
+                });
+            });
+
+            buttons.append(minBtn, maxBtn, closeBtn);
+
+            // Funcionalidades de drag (apenas desktop)
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            let originalState = {};
+
+            header.onmousedown = function (e) {
+                if (e.target.tagName === 'BUTTON') return;
+                e.preventDefault();
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            };
+
+            function elementDrag(e) {
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                modal.style.top = (modal.offsetTop - pos2) + "px";
+                modal.style.left = (modal.offsetLeft - pos1) + "px";
+                modal.style.transform = 'none';
+            }
+
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+
+            closeBtn.onclick = () => modal.style.display = 'none';
+
+            maxBtn.onclick = () => {
+                if (modal.classList.contains('maximized')) {
+                    Object.assign(modal.style, originalState);
+                    modal.classList.remove('maximized');
+                    maxBtn.innerHTML = '&#9723;';
+                } else {
+                    originalState = {
+                        width: modal.style.width, 
+                        height: modal.style.height, 
+                        top: modal.style.top, 
+                        left: modal.style.left, 
+                        transform: modal.style.transform
+                    };
+                    Object.assign(modal.style, {
+                        width: '100vw', 
+                        height: '100vh', 
+                        top: '0px', 
+                        left: '0px', 
+                        transform: 'none', 
+                        borderRadius: '0'
+                    });
+                    modal.classList.add('maximized');
+                    maxBtn.innerHTML = '&#10064;';
+                }
+            };
+
+            minBtn.onclick = () => {
+                const contentDiv = document.getElementById('statistics-content');
+                const isMinimized = modal.classList.toggle('minimized');
+                if (isMinimized) {
+                    originalState.height = modal.style.height;
+                    if(contentDiv) contentDiv.style.display = 'none';
+                    modal.style.height = header.offsetHeight + 'px';
+                    modal.style.resize = 'none';
+                } else {
+                    if(contentDiv) contentDiv.style.display = 'block';
+                    modal.style.height = originalState.height || '90vh';
+                    modal.style.resize = 'both';
+                }
+            };
+        }
+
+        buttons.append(closeBtn);
         header.append(title, buttons);
 
         const contentDiv = document.getElementById('statistics-content');
@@ -144,68 +320,6 @@ export const StatisticsService = {
         }
         
         modal.prepend(header);
-
-        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-        let originalState = {};
-
-        header.onmousedown = function (e) {
-            if (e.target.tagName === 'BUTTON') return;
-            e.preventDefault();
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            document.onmouseup = closeDragElement;
-            document.onmousemove = elementDrag;
-        };
-
-        function elementDrag(e) {
-            e.preventDefault();
-            pos1 = pos3 - e.clientX;
-            pos2 = pos4 - e.clientY;
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            modal.style.top = (modal.offsetTop - pos2) + "px";
-            modal.style.left = (modal.offsetLeft - pos1) + "px";
-            modal.style.transform = 'none';
-        }
-
-        function closeDragElement() {
-            document.onmouseup = null;
-            document.onmousemove = null;
-        }
-
-        closeBtn.onclick = () => modal.style.display = 'none';
-
-        maxBtn.onclick = () => {
-            if (modal.classList.contains('maximized')) {
-                Object.assign(modal.style, originalState);
-                modal.classList.remove('maximized');
-                maxBtn.innerHTML = '&#9723;';
-            } else {
-                originalState = {
-                    width: modal.style.width, height: modal.style.height, top: modal.style.top, left: modal.style.left, transform: modal.style.transform
-                };
-                Object.assign(modal.style, {
-                    width: '100vw', height: '100vh', top: '0px', left: '0px', transform: 'none', borderRadius: '0'
-                });
-                modal.classList.add('maximized');
-                maxBtn.innerHTML = '&#10064;';
-            }
-        };
-
-        minBtn.onclick = () => {
-            const contentDiv = document.getElementById('statistics-content');
-            const isMinimized = modal.classList.toggle('minimized');
-            if (isMinimized) {
-                originalState.height = modal.style.height;
-                if(contentDiv) contentDiv.style.display = 'none';
-                modal.style.height = header.offsetHeight + 'px';
-                modal.style.resize = 'none';
-            } else {
-                if(contentDiv) contentDiv.style.display = 'block';
-                modal.style.height = originalState.height || '90vh';
-                modal.style.resize = 'both';
-            }
-        };
     },
 
     /**
@@ -220,7 +334,7 @@ export const StatisticsService = {
     },
 
     /**
-     * Renderiza o modal de estatísticas
+     * Renderiza o modal de estatísticas (adaptado para mobile)
      */
     showModal(allAssisted, useDelegationFlow, pautaName) {
         const modal = document.getElementById('statistics-modal');
@@ -284,22 +398,23 @@ export const StatisticsService = {
         });
         const sortedFlatCollaborators = Object.entries(statsByCollaboratorFlat).sort(([, a], [, b]) => b - a);
         
+        // Versão responsiva da lista de colaboradores
         const collaboratorsFlatHTML = sortedFlatCollaborators.length > 0 ? `
-            <div class="bg-white p-4 rounded-lg border">
-                <h3 class="text-lg font-semibold text-gray-800 mb-2">Atendimentos por Colaborador (Total)</h3>
+            <div class="bg-white p-3 md:p-4 rounded-lg border">
+                <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-2">Atendimentos por Colaborador</h3>
                 <div class="max-h-[30vh] overflow-y-auto">
-                    <table class="w-full text-sm text-left mb-4">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-200">
+                    <table class="w-full text-xs md:text-sm text-left">
+                        <thead class="text-[10px] md:text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
                             <tr>
-                                <th class="px-4 py-2">Colaborador</th>
-                                <th class="px-4 py-2 text-right">Total</th>
+                                <th class="px-2 md:px-4 py-1 md:py-2">Colaborador</th>
+                                <th class="px-2 md:px-4 py-1 md:py-2 text-right">Total</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${sortedFlatCollaborators.map(([name, count]) => `
                                 <tr class="border-b">
-                                    <td class="px-4 py-2 font-medium">${name}</td>
-                                    <td class="px-4 py-2 text-right">${count}</td>
+                                    <td class="px-2 md:px-4 py-1 md:py-2 font-medium text-xs md:text-sm">${name}</td>
+                                    <td class="px-2 md:px-4 py-1 md:py-2 text-right text-xs md:text-sm">${count}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -366,125 +481,175 @@ export const StatisticsService = {
         const avgTimeDirect = directCount > 0 ? Math.round(totalDirectMinutes / directCount) : 0;
 
         const delegationHTML = useDelegationFlow ? `
-            <div class="bg-indigo-100 p-3 rounded-lg text-center border border-indigo-200">
-                <p class="text-2xl font-bold text-indigo-700">${avgTimeDelegated} min</p>
-                <p class="text-xs text-gray-600 mt-1">Tempo Médio (delegação)</p>
+            <div class="bg-indigo-100 p-2 md:p-3 rounded-lg text-center border border-indigo-200">
+                <p class="text-xl md:text-2xl font-bold text-indigo-700">${avgTimeDelegated} min</p>
+                <p class="text-[8px] md:text-xs text-gray-600 mt-1">Tempo Médio (delegação)</p>
             </div>` : '';
 
         const collaboratorsHTML = Object.entries(statsByGroup).sort(([,a],[,b]) => b.total - a.total).map(([groupName, groupData]) => {
             const collaboratorsRows = Object.entries(groupData.collaborators).sort(([,a],[,b]) => b-a).map(([name, count]) => `
                 <tr class="border-b">
-                    <td class="px-4 py-2 font-medium pl-8">${name}</td>
-                    <td class="px-4 py-2 text-right">${count}</td>
+                    <td class="px-2 md:px-4 py-1 md:py-2 font-medium text-xs md:text-sm pl-2 md:pl-8">${name}</td>
+                    <td class="px-2 md:px-4 py-1 md:py-2 text-right text-xs md:text-sm">${count}</td>
                 </tr>
             `).join('');
 
             return `
-                <table class="w-full text-sm text-left mb-4">
-                    <thead class="text-xs text-gray-700 uppercase bg-gray-200">
-                        <tr>
-                            <th class="px-4 py-2">${groupName}</th>
-                            <th class="px-4 py-2 text-right font-bold">Total: ${groupData.total}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${collaboratorsRows}
-                    </tbody>
-                </table>
+                <div class="mb-3 md:mb-4">
+                    <div class="bg-gray-100 px-2 md:px-4 py-1 md:py-2 rounded-t-lg font-bold text-xs md:text-sm flex justify-between">
+                        <span>${groupName}</span>
+                        <span>Total: ${groupData.total}</span>
+                    </div>
+                    <table class="w-full text-xs md:text-sm text-left border-x border-b rounded-b-lg">
+                        <tbody>
+                            ${collaboratorsRows}
+                        </tbody>
+                    </table>
+                </div>
             `;
         }).join('');
 
+        // Versão responsiva do HTML
         const html = `
-        <div id="statistics-content-wrapper" class="grid grid-cols-1 lg:grid-cols-5 gap-4 h-full p-4 overflow-hidden">
-            <div class="lg:col-span-2 flex flex-col gap-4 overflow-y-auto pr-2">
-                <div class="bg-white p-4 rounded-lg border">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Resumo Geral</h3>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-center summary-cards">
-                        <div class="bg-green-100 p-3 rounded-lg border border-green-200"><p class="text-2xl font-bold text-green-700">${atendidos.length}</p><p class="text-xs text-gray-600 mt-1">Atendidos</p></div>
-                        <div class="bg-red-100 p-3 rounded-lg border border-red-200"><p class="text-2xl font-bold text-red-700">${faltosos.length}</p><p class="text-xs text-gray-600 mt-1">Faltosos</p></div>
-                        <div class="bg-blue-100 p-3 rounded-lg border border-blue-200"><p class="text-2xl font-bold text-blue-700">${avgTimeDirect} min</p><p class="text-xs text-gray-600 mt-1">Tempo Médio (direto)</p></div>
+        <div id="statistics-content-wrapper" class="grid grid-cols-1 lg:grid-cols-5 gap-3 md:gap-4 h-full p-2 md:p-4 overflow-hidden">
+            <div class="lg:col-span-2 flex flex-col gap-3 md:gap-4 overflow-y-auto pr-1 md:pr-2">
+                <div class="bg-white p-3 md:p-4 rounded-lg border">
+                    <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-2 md:mb-3">Resumo Geral</h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3 text-center summary-cards">
+                        <div class="bg-green-100 p-2 md:p-3 rounded-lg border border-green-200">
+                            <p class="text-xl md:text-2xl font-bold text-green-700">${atendidos.length}</p>
+                            <p class="text-[9px] md:text-xs text-gray-600 mt-1">Atendidos</p>
+                        </div>
+                        <div class="bg-red-100 p-2 md:p-3 rounded-lg border border-red-200">
+                            <p class="text-xl md:text-2xl font-bold text-red-700">${faltosos.length}</p>
+                            <p class="text-[9px] md:text-xs text-gray-600 mt-1">Faltosos</p>
+                        </div>
+                        <div class="bg-blue-100 p-2 md:p-3 rounded-lg border border-blue-200">
+                            <p class="text-xl md:text-2xl font-bold text-blue-700">${avgTimeDirect} min</p>
+                            <p class="text-[9px] md:text-xs text-gray-600 mt-1">Tempo Médio</p>
+                        </div>
                         ${delegationHTML}
                     </div>
                 </div>
-                <div class="bg-white p-4 rounded-lg border">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Exportar Relatório</h3>
-                    <div class="space-y-2 text-sm">
-                        <label class="flex items-center"><input type="checkbox" id="export-general" class="mr-2 h-4 w-4 rounded" checked> Resumo</label>
-                        <label class="flex items-center"><input type="checkbox" id="export-collaborators" class="mr-2 h-4 w-4 rounded" checked> Por Colaborador/Equipe</label>
-                        <label class="flex items-center"><input type="checkbox" id="export-subjects" class="mr-2 h-4 w-4 rounded" checked> Por Assunto</label>
-                        <label class="flex items-center"><input type="checkbox" id="export-scheduled-time" class="mr-2 h-4 w-4 rounded" checked> Agendados por Horário</label>
-                        <label class="flex items-center"><input type="checkbox" id="export-times" class="mr-2 h-4 w-4 rounded" checked> Atend. por Horário</label>
-                        <label class="flex items-center"><input type="checkbox" id="export-absentees-time" class="mr-2 h-4 w-4 rounded" checked> Faltosos por Horário</label>
+                
+                <div class="bg-white p-3 md:p-4 rounded-lg border">
+                    <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-2 md:mb-3">Exportar Relatório</h3>
+                    <div class="grid grid-cols-2 gap-2 md:space-y-2 text-xs md:text-sm">
+                        <label class="flex items-center"><input type="checkbox" id="export-general" class="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4 rounded" checked> Resumo</label>
+                        <label class="flex items-center"><input type="checkbox" id="export-collaborators" class="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4 rounded" checked> Colaboradores</label>
+                        <label class="flex items-center"><input type="checkbox" id="export-subjects" class="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4 rounded" checked> Assuntos</label>
+                        <label class="flex items-center"><input type="checkbox" id="export-scheduled-time" class="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4 rounded" checked> Agendados</label>
+                        <label class="flex items-center"><input type="checkbox" id="export-times" class="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4 rounded" checked> Atendimentos</label>
+                        <label class="flex items-center"><input type="checkbox" id="export-absentees-time" class="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4 rounded" checked> Faltosos</label>
                     </div>
-                    <div class="mt-4">
-                        <button id="export-stats-pdf-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm transition-colors">Gerar PDF</button>
+                    <div class="mt-3 md:mt-4">
+                        <button id="export-stats-pdf-btn" class="w-full bg-blue-600 text-white font-bold py-2 md:py-2.5 px-3 md:px-4 rounded-lg hover:bg-blue-700 text-xs md:text-sm transition-colors">
+                            Gerar PDF
+                        </button>
                     </div>
                 </div>
+
                 ${sortedScheduledTimes.length > 0 ? `
-                <div class="bg-white p-4 rounded-lg border">
-                    <h3 class="text-md font-semibold text-gray-800 mb-2">Agendados por Horário</h3>
-                    <div class="max-h-40 overflow-y-auto">
-                        <table class="w-full text-sm text-left">
-                            <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0"><tr><th class="px-4 py-2">Horário</th><th class="px-4 py-2 text-right">Qtd</th></tr></thead>
-                            <tbody>${sortedScheduledTimes.map(time => `<tr class="border-b"><td class="px-4 py-2 font-medium">${time}</td><td class="px-4 py-2 text-right">${statsByScheduledTime[time]}</td></tr>`).join('')}</tbody>
-                            <tfoot><tr class="bg-gray-100"><td class="px-4 py-2 font-bold">Total</td><td class="px-4 py-2 text-right font-bold">${allAssisted.length}</td></tr></tfoot>
+                <div class="bg-white p-3 md:p-4 rounded-lg border">
+                    <h3 class="text-sm md:text-md font-semibold text-gray-800 mb-2">Agendados por Horário</h3>
+                    <div class="max-h-32 md:max-h-40 overflow-y-auto">
+                        <table class="w-full text-xs md:text-sm">
+                            <thead class="text-[9px] md:text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
+                                <tr><th class="px-2 md:px-4 py-1">Horário</th><th class="px-2 md:px-4 py-1 text-right">Qtd</th></tr>
+                            </thead>
+                            <tbody>
+                                ${sortedScheduledTimes.map(time => `
+                                    <tr class="border-b">
+                                        <td class="px-2 md:px-4 py-1">${time}</td>
+                                        <td class="px-2 md:px-4 py-1 text-right">${statsByScheduledTime[time]}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot class="bg-gray-100 font-bold">
+                                <tr><td class="px-2 md:px-4 py-1">Total</td><td class="px-2 md:px-4 py-1 text-right">${allAssisted.length}</td></tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>` : ''}
+
                 ${sortedTimes.length > 0 ? `
-                <div class="bg-white p-4 rounded-lg border">
-                    <h3 class="text-md font-semibold text-gray-800 mb-2">Atendimentos por Horário (Chegada)</h3>
-                    <div class="max-h-40 overflow-y-auto">
-                        <table class="w-full text-sm text-left">
-                            <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0"><tr><th class="px-4 py-2">Horário</th><th class="px-4 py-2 text-right">Qtd</th></tr></thead>
-                            <tbody>${sortedTimes.map(time => `<tr class="border-b"><td class="px-4 py-2 font-medium">${time}</td><td class="px-4 py-2 text-right">${statsByTime[time]}</td></tr>`).join('')}</tbody>
-                            <tfoot><tr class="bg-gray-100"><td class="px-4 py-2 font-bold">Total</td><td class="px-4 py-2 text-right font-bold">${atendidos.length}</td></tr></tfoot>
+                <div class="bg-white p-3 md:p-4 rounded-lg border">
+                    <h3 class="text-sm md:text-md font-semibold text-gray-800 mb-2">Atendimentos (Chegada)</h3>
+                    <div class="max-h-32 md:max-h-40 overflow-y-auto">
+                        <table class="w-full text-xs md:text-sm">
+                            <thead class="text-[9px] md:text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
+                                <tr><th class="px-2 md:px-4 py-1">Horário</th><th class="px-2 md:px-4 py-1 text-right">Qtd</th></tr>
+                            </thead>
+                            <tbody>
+                                ${sortedTimes.map(time => `
+                                    <tr class="border-b">
+                                        <td class="px-2 md:px-4 py-1">${time}</td>
+                                        <td class="px-2 md:px-4 py-1 text-right">${statsByTime[time]}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot class="bg-gray-100 font-bold">
+                                <tr><td class="px-2 md:px-4 py-1">Total</td><td class="px-2 md:px-4 py-1 text-right">${atendidos.length}</td></tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>` : ''}
+
                 ${sortedTimesFaltosos.length > 0 ? `
-                <div class="bg-white p-4 rounded-lg border">
-                    <h3 class="text-md font-semibold text-red-800 mb-2">Faltosos por Horário (Agendado)</h3>
-                    <div class="max-h-40 overflow-y-auto">
-                        <table class="w-full text-sm text-left">
-                            <thead class="text-xs text-red-700 uppercase bg-red-100 sticky top-0"><tr><th class="px-4 py-2">Horário</th><th class="px-4 py-2 text-right">Qtd</th></tr></thead>
-                            <tbody>${sortedTimesFaltosos.map(time => `<tr class="border-b"><td class="px-4 py-2 font-medium">${time}</td><td class="px-4 py-2 text-right">${statsByTimeFaltosos[time]}</td></tr>`).join('')}</tbody>
-                            <tfoot><tr class="bg-red-100"><td class="px-4 py-2 font-bold text-red-800">Total</td><td class="px-4 py-2 text-right font-bold text-red-800">${faltosos.length}</td></tr></tfoot>
+                <div class="bg-white p-3 md:p-4 rounded-lg border">
+                    <h3 class="text-sm md:text-md font-semibold text-red-800 mb-2">Faltosos por Horário</h3>
+                    <div class="max-h-32 md:max-h-40 overflow-y-auto">
+                        <table class="w-full text-xs md:text-sm">
+                            <thead class="text-[9px] md:text-xs text-red-700 uppercase bg-red-100 sticky top-0">
+                                <tr><th class="px-2 md:px-4 py-1">Horário</th><th class="px-2 md:px-4 py-1 text-right">Qtd</th></tr>
+                            </thead>
+                            <tbody>
+                                ${sortedTimesFaltosos.map(time => `
+                                    <tr class="border-b">
+                                        <td class="px-2 md:px-4 py-1">${time}</td>
+                                        <td class="px-2 md:px-4 py-1 text-right">${statsByTimeFaltosos[time]}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot class="bg-red-100 font-bold">
+                                <tr><td class="px-2 md:px-4 py-1">Total</td><td class="px-2 md:px-4 py-1 text-right">${faltosos.length}</td></tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>` : ''}
             </div>
-            <div class="lg:col-span-3 flex flex-col gap-4 overflow-y-auto pr-2">
-                <div class="bg-white p-4 rounded-lg border">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Demandas por Assunto</h3>
-                       <div class="max-h-[50vh] overflow-y-auto">
-                        <table class="w-full text-sm text-left">
-                            <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
+
+            <div class="lg:col-span-3 flex flex-col gap-3 md:gap-4 overflow-y-auto pr-1 md:pr-2">
+                <div class="bg-white p-3 md:p-4 rounded-lg border">
+                    <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-2">Demandas por Assunto</h3>
+                    <div class="max-h-[40vh] md:max-h-[50vh] overflow-y-auto">
+                        <table class="w-full text-xs md:text-sm">
+                            <thead class="text-[9px] md:text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
                                 <tr>
-                                    <th class="px-4 py-2">Assunto/Demanda</th>
-                                    <th class="px-4 py-2 text-center">Total</th>
-                                    <th class="px-4 py-2 text-center text-green-600">Atendidos</th>
-                                    <th class="px-4 py-2 text-center text-red-600">Faltosos</th>
-                                    <th class="px-4 py-2 text-right">%</th>
+                                    <th class="px-1 md:px-4 py-1">Assunto</th>
+                                    <th class="px-1 md:px-4 py-1 text-center">Total</th>
+                                    <th class="px-1 md:px-4 py-1 text-center text-green-600">Atend.</th>
+                                    <th class="px-1 md:px-4 py-1 text-center text-red-600">Falt.</th>
+                                    <th class="px-1 md:px-4 py-1 text-right">%</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${Object.entries(statsBySubject).sort(([,a],[,b]) => b.total - a.total).map(([subject, data]) => `
                                     <tr class="border-b">
-                                        <td class="px-4 py-2 font-medium">${subject}</td>
-                                        <td class="px-4 py-2 text-center font-bold">${data.total}</td>
-                                        <td class="px-4 py-2 text-center text-green-600">${data.atendidos}</td>
-                                        <td class="px-4 py-2 text-center text-red-600">${data.faltosos}</td>
-                                        <td class="px-4 py-2 text-right">${totalDemandasGeral > 0 ? ((data.total / totalDemandasGeral) * 100).toFixed(1) : 0}%</td>
+                                        <td class="px-1 md:px-4 py-1 font-medium text-[10px] md:text-sm">${subject.length > 20 ? subject.substring(0,20)+'...' : subject}</td>
+                                        <td class="px-1 md:px-4 py-1 text-center font-bold">${data.total}</td>
+                                        <td class="px-1 md:px-4 py-1 text-center text-green-600">${data.atendidos}</td>
+                                        <td class="px-1 md:px-4 py-1 text-center text-red-600">${data.faltosos}</td>
+                                        <td class="px-1 md:px-4 py-1 text-right">${totalDemandasGeral > 0 ? ((data.total / totalDemandasGeral) * 100).toFixed(1) : 0}%</td>
                                     </tr>`).join('')}
                             </tbody>
                             <tfoot class="bg-gray-100 font-bold">
-                                <tr class="border-t-2">
-                                    <td class="px-4 py-2">Total</td>
-                                    <td class="px-4 py-2 text-center">${totalDemandasGeral}</td>
-                                    <td class="px-4 py-2 text-center text-green-600">${totalDemandasAtendidos}</td>
-                                    <td class="px-4 py-2 text-center text-red-600">${totalDemandasFaltosos}</td>
-                                    <td class="px-4 py-2 text-right">100%</td>
+                                <tr>
+                                    <td class="px-1 md:px-4 py-1">Total</td>
+                                    <td class="px-1 md:px-4 py-1 text-center">${totalDemandasGeral}</td>
+                                    <td class="px-1 md:px-4 py-1 text-center text-green-600">${totalDemandasAtendidos}</td>
+                                    <td class="px-1 md:px-4 py-1 text-center text-red-600">${totalDemandasFaltosos}</td>
+                                    <td class="px-1 md:px-4 py-1 text-right">100%</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -493,8 +658,8 @@ export const StatisticsService = {
                 
                 ${collaboratorsFlatHTML}
                 
-                <div class="bg-white p-4 rounded-lg border">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Atendimentos por Equipe</h3>
+                <div class="bg-white p-3 md:p-4 rounded-lg border">
+                    <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-2">Atendimentos por Equipe</h3>
                     <div class="max-h-[30vh] overflow-y-auto">
                         ${collaboratorsHTML}
                     </div>
@@ -502,6 +667,7 @@ export const StatisticsService = {
             </div>
         </div>
         `;
+        
         if(content) content.innerHTML = html;
 
         const exportBtn = document.getElementById('export-stats-pdf-btn');
@@ -540,7 +706,7 @@ export const StatisticsService = {
     async exportStatisticsToPDF(pautaName, statsData) {
         const { jsPDF } = window.jspdf;
         
-        // ✅ Verificar checkboxes (se não existirem, considerar marcados)
+        // Verificar checkboxes (se não existirem, considerar marcados)
         const exportGeneral = document.getElementById('export-general')?.checked ?? true;
         const exportCollaborators = document.getElementById('export-collaborators')?.checked ?? true;
         const exportSubjects = document.getElementById('export-subjects')?.checked ?? true;
