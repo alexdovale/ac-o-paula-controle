@@ -393,7 +393,7 @@ export const UIService = {
         }
 
         console.log("Renderizando aguardando:", items.length);
-        container.innerHTML = ''; // Limpar container
+        container.innerHTML = '';
 
         if (currentPautaData?.type === 'multisala' && currentPautaData.rooms?.length > 0) {
             currentPautaData.rooms.forEach(roomName => {
@@ -419,103 +419,112 @@ export const UIService = {
     },
 
     createAguardandoCard(item, currentPautaData, colaboradores, index) {
-    try {
-        if (!item || !item.id) return null;
+        try {
+            if (!item || !item.id) return null;
 
-        const card = document.createElement('div');
-        const priorityClass = PautaService.getPriorityClass(item.priority);
-        card.className = `relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
-        card.setAttribute('data-id', item.id);
+            const card = document.createElement('div');
+            const priorityClass = PautaService.getPriorityClass(item.priority);
+            card.className = `relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
+            card.setAttribute('data-id', item.id);
 
-        // === INDICADORES DE STATUS DO DOCUMENTO ===
-        let docStatusHtml = '';
-        if (item.selectedAction) {
-            let statusColor = 'bg-gray-100 text-gray-600';
-            let statusText = 'Selecionado';
-            let statusIcon = '📋';
-            
-            if (item.documentState === 'filling') { 
-                statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
-                statusText = 'Preenchendo...'; 
-                statusIcon = '✏️';
-            } else if (item.documentState === 'saved') { 
-                statusColor = 'bg-green-100 text-green-700 font-bold'; 
-                statusText = 'Docs Salvos'; 
-                statusIcon = '✅';
-            } else if (item.documentState === 'pdf') { 
-                statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
-                statusText = 'PDF Gerado'; 
-                statusIcon = '📄';
-            }
-
-            docStatusHtml = `
-                <div class="mt-2 flex flex-col gap-1">
-                    <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
-                        <span>📂</span> ${escapeHTML(item.selectedAction)}
-                    </span>
-                    <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
-                        <span>${statusIcon}</span> ${statusText}
-                    </span>
-                </div>`;
-        }
-
-        // Tratar valores com fallbacks seguros
-        const nomeSeguro = item.name || 'Nome não informado';
-        const assuntoSeguro = item.subject || 'Assunto não informado';
-        const scheduledTimeSeguro = item.scheduledTime || '--:--';
-        const priorityReasonSeguro = item.priorityReason || '';
-
-        // Tratar arrivalTime
-        let arrivalText = 'Chegada: --:--';
-        if (item.arrivalTime) {
-            try {
-                const arrivalDate = new Date(item.arrivalTime);
-                if (!isNaN(arrivalDate)) {
-                    const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                    if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
-                        arrivalText = `Agendado: ${escapeHTML(scheduledTimeSeguro)} | Chegou: ${horaChegada}`;
-                    } else {
-                        arrivalText = `Chegada: ${horaChegada}`;
-                    }
+            // === INDICADORES DE STATUS DO DOCUMENTO (RESPONSIVO) ===
+            let docStatusHtml = '';
+            if (item.selectedAction) {
+                let statusColor = 'bg-gray-100 text-gray-600';
+                let statusText = 'Selecionado';
+                let statusIcon = '📋';
+                let mobileText = '';
+                
+                if (item.documentState === 'filling') { 
+                    statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
+                    statusText = 'Preenchendo'; 
+                    statusIcon = '✏️';
+                    mobileText = '✏️';
+                } else if (item.documentState === 'saved') { 
+                    statusColor = 'bg-green-100 text-green-700 font-bold'; 
+                    statusText = 'Salvo'; 
+                    statusIcon = '✅';
+                    mobileText = '✅';
+                } else if (item.documentState === 'pdf') { 
+                    statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
+                    statusText = 'PDF'; 
+                    statusIcon = '📄';
+                    mobileText = '📄';
                 }
-            } catch (e) {
-                console.warn("Erro ao formatar data:", e);
+
+                // Versão desktop (com texto) e mobile (só ícone)
+                docStatusHtml = `
+                    <div class="mt-2 flex flex-col gap-1">
+                        <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
+                            <span>📂</span> 
+                            <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
+                            <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
+                        </span>
+                        <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
+                            <span>${statusIcon}</span>
+                            <span class="hidden xs:inline">${statusText}</span>
+                        </span>
+                    </div>`;
             }
+
+            // Tratar valores com fallbacks seguros
+            const nomeSeguro = item.name || 'Nome não informado';
+            const assuntoSeguro = item.subject || 'Assunto não informado';
+            const scheduledTimeSeguro = item.scheduledTime || '--:--';
+            const priorityReasonSeguro = item.priorityReason || '';
+
+            // Tratar arrivalTime
+            let arrivalText = 'Chegada: --:--';
+            if (item.arrivalTime) {
+                try {
+                    const arrivalDate = new Date(item.arrivalTime);
+                    if (!isNaN(arrivalDate)) {
+                        const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
+                            arrivalText = `Agendado: ${escapeHTML(scheduledTimeSeguro)} | Chegou: ${horaChegada}`;
+                        } else {
+                            arrivalText = `Chegada: ${horaChegada}`;
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Erro ao formatar data:", e);
+                }
+            }
+
+            const atenderButton = currentPautaData?.useDelegationFlow
+                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`
+                : `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`;
+
+            card.innerHTML = `
+                <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
+                    </svg>
+                </button>
+                <div class="flex flex-col h-full">
+                    ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
+                    <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(nomeSeguro)}</p>
+                    <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
+                    <div class="flex flex-wrap gap-2 mb-1">
+                        <span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">${arrivalText}</span>
+                        ${item.room ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(item.room)}</span>` : ''}
+                    </div>
+                    ${docStatusHtml}
+                    <div class="mt-4 grid grid-cols-2 gap-2">
+                        ${atenderButton}
+                        <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs">${item.priority === 'URGENTE' ? 'Urgente' : 'Prioridade'}</button>
+                        <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-semibold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase">Voltar</button>
+                    </div>
+                    <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
+                </div>`;
+            
+            return card;
+        } catch (error) {
+            console.error("Erro ao criar card de aguardando:", error, item);
+            return null;
         }
+    },
 
-        const atenderButton = currentPautaData?.useDelegationFlow
-            ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`
-            : `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`;
-
-        card.innerHTML = `
-            <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                </svg>
-            </button>
-            <div class="flex flex-col h-full">
-                ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
-                <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(nomeSeguro)}</p>
-                <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
-                <div class="flex flex-wrap gap-2 mb-1">
-                    <span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">${arrivalText}</span>
-                    ${item.room ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(item.room)}</span>` : ''}
-                </div>
-                ${docStatusHtml}
-                <div class="mt-4 grid grid-cols-2 gap-2">
-                    ${atenderButton}
-                    <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs">${item.priority === 'URGENTE' ? 'Urgente Ativado' : 'Prioridade'}</button>
-                    <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-semibold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase">Voltar para Pauta</button>
-                </div>
-                <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
-            </div>`;
-        
-        return card;
-    } catch (error) {
-        console.error("Erro ao criar card de aguardando:", error, item);
-        return null;
-    }
-}
     renderEmAtendimentoColumn(items, currentPautaData, pautaId, userName) {
         const container = document.getElementById('em-atendimento-list');
         if (!container) return;
@@ -542,6 +551,7 @@ export const UIService = {
             const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
             const linkDireto = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&collaboratorName=${encodeURIComponent(userName)}`;
 
+            // Versão responsiva do card de em atendimento
             card.innerHTML = `
                 <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
@@ -549,26 +559,26 @@ export const UIService = {
                     </svg>
                 </button>
 
-                <p class="font-bold text-2xl text-gray-800">${index + 1}. ${escapeHTML(item.name || '')}</p>
-                <p class="text-sm mt-1">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
-                <p class="text-sm">Colaborador: ${escapeHTML(item.assignedCollaborator?.name || 'Não atribuído')}</p>
-                <p class="text-sm text-gray-400">Início: ${startTime}</p>
+                <p class="font-bold text-xl md:text-2xl text-gray-800">${index + 1}. ${escapeHTML(item.name || '')}</p>
+                <p class="text-xs md:text-sm mt-1">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
+                <p class="text-xs md:text-sm">Colaborador: ${escapeHTML(item.assignedCollaborator?.name || 'Não atribuído')}</p>
+                <p class="text-xs md:text-sm text-gray-400">Início: ${startTime}</p>
 
                 <div class="mt-4 flex flex-col gap-2">
                     <div class="grid grid-cols-2 gap-2">
-                        <button data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(item.assignedCollaborator?.name || 'Não informado')}" class="delegate-finalization-btn bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95 leading-tight">
-                            Delegar<br>Finalização
+                        <button data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(item.assignedCollaborator?.name || 'Não informado')}" class="delegate-finalization-btn bg-indigo-500 text-white font-bold py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm shadow-md transition active:scale-95">
+                            Delegar
                         </button>
-                        <button onclick="window.open('${linkDireto}', '_blank')" class="bg-green-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95 leading-tight">
-                            Finalizar<br>Diretamente
+                        <button onclick="window.open('${linkDireto}', '_blank')" class="bg-green-500 text-white font-bold py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm shadow-md transition active:scale-95">
+                            Finalizar
                         </button>
                     </div>
-                    <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95">
+                    <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 text-white font-bold py-2 rounded-lg text-xs md:text-sm shadow-md transition active:scale-95">
                         Voltar p/ Aguardando
                     </button>
                 </div>
 
-                ${item.lastActionBy ? `<p class="text-[10px] text-gray-400 mt-4 text-right uppercase">Última ação por: <b>${escapeHTML(item.lastActionBy)}</b></p>` : ''}
+                ${item.lastActionBy ? `<p class="text-[8px] md:text-[10px] text-gray-400 mt-4 text-right uppercase">Última ação: <b>${escapeHTML(item.lastActionBy)}</b></p>` : ''}
             `;
             return card;
         } catch (error) {
@@ -586,7 +596,7 @@ export const UIService = {
             return;
         }
 
-        container.innerHTML = ''; // Limpar container
+        container.innerHTML = '';
         items.forEach(item => {
             if (!item) return;
             const card = this.createAtendidoCard(item);
@@ -613,27 +623,32 @@ export const UIService = {
                 }
             }
 
+            // Indicador de confirmação (responsivo)
+            const confirmButton = item.isConfirmed 
+                ? 'bg-green-500 border-green-500 text-white' 
+                : 'bg-slate-100 text-slate-300';
+
             card.innerHTML = `
                 <div class="flex justify-between items-start">
-                    <p class="font-bold text-xl text-gray-800">${escapeHTML(item.name || '')}</p>
-                    <button data-id="${item.id}" class="toggle-confirmed-atendido w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center ${item.isConfirmed ? 'bg-green-500 border-green-500 text-white' : 'bg-slate-100 text-slate-300'} shadow-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <p class="font-bold text-lg md:text-xl text-gray-800">${escapeHTML(item.name || '')}</p>
+                    <button data-id="${item.id}" class="toggle-confirmed-atendido w-6 h-6 md:w-7 md:h-7 rounded-full border border-gray-200 flex items-center justify-center ${confirmButton} shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" md:w-16 md:h-16 viewBox="0 0 16 16" fill="currentColor">
                             <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/>
                         </svg>
                     </button>
                 </div>
                 
-                <p class="text-sm mt-1 text-gray-700">Assunto Principal: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
+                <p class="text-xs md:text-sm mt-1 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
                 
-                <div class="grid grid-cols-3 gap-2 text-center border-t border-b py-3 my-3 text-[10px] text-gray-400 uppercase font-bold tracking-wider">
+                <div class="grid grid-cols-3 gap-1 md:gap-2 text-center border-t border-b py-2 md:py-3 my-2 md:my-3 text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-wider">
                     <div>Agendado:<br><span class="text-gray-600">${item.scheduledTime || 'N/A'}</span></div>
                     <div>Chegou:<br><span class="text-gray-600">${arrivalT}</span></div>
                     <div>Finalizado:<br><span class="text-gray-600">${attendedT}</span></div>
                 </div>
 
-                <div class="flex justify-between items-center text-xs mb-4">
+                <div class="flex justify-between items-center text-[10px] md:text-xs mb-4">
                     <p class="text-gray-500">Por: <b class="text-gray-800">${escapeHTML(atendenteNome)}</b></p>
-                    <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-right">
+                    <div class="grid grid-cols-2 gap-x-2 md:gap-x-4 gap-y-1 md:gap-y-2 text-right">
                         <button data-id="${item.id}" class="manage-demands-btn text-blue-500 font-bold hover:underline">Demandas</button>
                         <button data-id="${item.id}" class="edit-assisted-btn text-slate-400 font-bold hover:underline">Dados</button>
                         <button data-id="${item.id}" class="edit-attendant-btn text-green-600 font-bold hover:underline">Atendente</button>
@@ -643,16 +658,16 @@ export const UIService = {
 
                 ${item.arquivoPdfConteudo ? `
                     <a href="${item.arquivoPdfConteudo}" download="${item.nomeArquivoPdf || 'protocolo.pdf'}" 
-                       class="mb-4 flex items-center justify-center gap-2 w-full bg-blue-50 text-blue-600 font-bold py-2.5 rounded-xl text-[10px] uppercase border border-blue-100 hover:bg-blue-100 transition">
-                       📄 Baixar Protocolo Anexado
+                       class="mb-4 flex items-center justify-center gap-2 w-full bg-blue-50 text-blue-600 font-bold py-2 rounded-lg md:py-2.5 md:rounded-xl text-[8px] md:text-[10px] uppercase border border-blue-100 hover:bg-blue-100 transition">
+                       📄 Baixar Protocolo
                     </a>
                 ` : ''}
 
                 <div class="pt-3 border-t">
-                    <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
-                        <p class="text-[9px] text-gray-400 uppercase italic">Última ação: ${escapeHTML(item.lastActionBy || 'Sistema')}</p>
-                        <button data-id="${item.id}" class="return-from-atendido-btn w-full sm:w-auto bg-orange-500 text-white font-black py-3 px-8 rounded-xl text-[10px] uppercase shadow-md active:scale-95 transition-all">
-                            Voltar p/ Em Atendimento
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-2 md:gap-3">
+                        <p class="text-[7px] md:text-[9px] text-gray-400 uppercase italic">Última: ${escapeHTML(item.lastActionBy || 'Sistema')}</p>
+                        <button data-id="${item.id}" class="return-from-atendido-btn w-full sm:w-auto bg-orange-500 text-white font-black py-2 md:py-3 px-4 md:px-8 rounded-lg md:rounded-xl text-[8px] md:text-[10px] uppercase shadow-md active:scale-95 transition-all">
+                            Voltar
                         </button>
                     </div>
                 </div>
