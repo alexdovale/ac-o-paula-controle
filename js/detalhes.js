@@ -83,7 +83,6 @@ function updateSelectedCounter() {
         counterEl.textContent = `${checkedCount} itens selecionados`;
     }
     
-    // Atualizar status para 'filling' se houver itens marcados
     if (checkedCount > 0) {
         updateDocumentState('filling');
     }
@@ -95,8 +94,6 @@ async function updateDocumentState(state) {
     
     try {
         const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
-        
-        // Buscar o título da ação atual
         const actionTitle = currentChecklistAction ? documentsData[currentChecklistAction]?.title : null;
         
         await updateDoc(docRef, { 
@@ -133,7 +130,6 @@ function checkReuVisibility() {
     if (reuArea) {
         if (needsReu) {
             reuArea.classList.remove('hidden');
-            // Se ainda não tiver o formulário renderizado, renderiza
             if (reuArea.children.length === 0 || reuArea.innerHTML.trim() === '') {
                 renderReuForm('address-editor-container');
             }
@@ -212,13 +208,11 @@ function renderChecklist(actionKey) {
         containerEl.appendChild(sectionDiv);
     });
 
-    // Adicionar planilha de gastos se necessário
     if (ACTIONS_ALWAYS_EXPENSES.includes(actionKey)) {
         containerEl.appendChild(renderExpenseTable());
         if (saved?.expenseData) fillExpenseData(saved.expenseData);
     }
 
-    // Adicionar listeners aos checkboxes para atualizar contador e visibilidade do réu
     containerEl.querySelectorAll('.doc-checkbox').forEach(cb => {
         cb.addEventListener('change', (e) => {
             const t = getEl(`type-${e.target.id}`);
@@ -229,13 +223,9 @@ function renderChecklist(actionKey) {
                 }
             }
             
-            // Atualizar contador
             updateSelectedCounter();
-            
-            // Verificar se deve mostrar o formulário do réu
             checkReuVisibility();
             
-            // Se algum checkbox foi marcado, atualizar status para 'filling'
             const anyChecked = containerEl.querySelectorAll('.doc-checkbox:checked').length > 0;
             if (anyChecked) {
                 updateDocumentState('filling');
@@ -243,13 +233,9 @@ function renderChecklist(actionKey) {
         });
     });
 
-    // Verificar visibilidade do réu após renderizar
     setTimeout(checkReuVisibility, 100);
-
-    // Inicializar contador
     updateSelectedCounter();
     
-    // Se houver dados salvos do réu, preencher
     if (saved?.reuData) {
         setTimeout(() => {
             fillReuData(saved.reuData);
@@ -328,7 +314,6 @@ function renderReuForm(containerId) {
         </div>
     `;
 
-    // Busca de CEP
     const cepInp = getEl('cep-reu');
     if (cepInp) {
         cepInp.addEventListener('blur', async () => {
@@ -388,7 +373,6 @@ function renderExpenseTable() {
     
     div.querySelectorAll('.expense-input').forEach(inp => {
         inp.addEventListener('input', (e) => {
-            // Formatar valor monetário
             let v = e.target.value.replace(/\D/g, '');
             if (v) {
                 v = (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -397,7 +381,6 @@ function renderExpenseTable() {
                 e.target.value = '';
             }
             
-            // Calcular total
             let total = 0;
             div.querySelectorAll('.expense-input').forEach(i => {
                 total += parseCurrency(i.value);
@@ -405,7 +388,6 @@ function renderExpenseTable() {
             const totalEl = document.getElementById('expense-total');
             if(totalEl) totalEl.textContent = formatCurrency(total);
             
-            // Atualizar status para 'filling'
             updateDocumentState('filling');
         });
     });
@@ -465,7 +447,6 @@ function fillExpenseData(d) {
         if (el) el.value = d[c.id] || '';
     });
     
-    // Calcular total
     let total = 0;
     document.querySelectorAll('.expense-input').forEach(i => {
         total += parseCurrency(i.value);
@@ -526,7 +507,6 @@ async function handleSave() {
 async function handlePdf() {
     showNotification("Gerando PDF...", "info");
     
-    // Atualizar estado para PDF
     if (currentAssistedId && currentPautaId && db) {
         await updateDocumentState('pdf');
     }
@@ -592,15 +572,7 @@ async function handlePdf() {
             
             EXPENSE_CATEGORIES.forEach(c => {
                 if (expenses[c.id] && expenses[c.id].trim() !== '') {
-                    // Quebrar linha se necessário
-                    const text = `${c.label}: ${expenses[c.id]}`;
-                    if (docPDF.getStringUnitWidth(text) * 10 > pageWidth - 2*margin) {
-                        docPDF.text(c.label + ":", margin + 5, y);
-                        y += 5;
-                        docPDF.text(expenses[c.id], margin + 5, y);
-                    } else {
-                        docPDF.text(text, margin + 5, y);
-                    }
+                    docPDF.text(`${c.label}: ${expenses[c.id]}`, margin + 5, y);
                     y += 6;
                 }
             });
@@ -628,17 +600,25 @@ async function handlePdf() {
             if (reu.cpf) docPDF.text(`CPF: ${reu.cpf}`, margin + 5, y); y += 6;
             if (reu.telefone) docPDF.text(`WhatsApp: ${reu.telefone}`, margin + 5, y); y += 6;
             
-            if (reu.rua || reu.numero || reu.bairro) {
-                const endereco = `${reu.rua || ''}, ${reu.numero || ''} - ${reu.bairro || ''}`.replace(/, ,/g, ',').replace(/,$/, '').trim();
-                if (endereco) {
-                    docPDF.text(`Endereço: ${endereco}`, margin + 5, y); y += 6;
-                }
+            const endereco = [];
+            if (reu.rua) endereco.push(reu.rua);
+            if (reu.numero) endereco.push(`nº ${reu.numero}`);
+            if (reu.bairro) endereco.push(reu.bairro);
+            
+            if (endereco.length > 0) {
+                docPDF.text(`Endereço: ${endereco.join(', ')}`, margin + 5, y); y += 6;
             }
             
             if (reu.cidade || reu.uf || reu.cep) {
-                const cidadeUf = `${reu.cidade || ''}${reu.uf ? '/'+reu.uf : ''}`.trim();
-                if (cidadeUf || reu.cep) {
-                    docPDF.text(`Cidade/CEP: ${cidadeUf} ${reu.cep ? '- '+reu.cep : ''}`.trim(), margin + 5, y); y += 6;
+                const cidadeUf = [];
+                if (reu.cidade) cidadeUf.push(reu.cidade);
+                if (reu.uf) cidadeUf.push(reu.uf);
+                const cep = reu.cep ? `CEP: ${reu.cep}` : '';
+                
+                if (cidadeUf.length > 0) {
+                    docPDF.text(`${cidadeUf.join('/')} ${cep}`, margin + 5, y); y += 6;
+                } else if (cep) {
+                    docPDF.text(cep, margin + 5, y); y += 6;
                 }
             }
             
@@ -650,7 +630,7 @@ async function handlePdf() {
             }
         }
 
-        // Rodapé com data
+        // Rodapé
         docPDF.setFontSize(8);
         docPDF.setTextColor(150);
         docPDF.text(
@@ -659,8 +639,10 @@ async function handlePdf() {
             docPDF.internal.pageSize.getHeight() - 10
         );
 
-        docPDF.save(`Checklist_${getEl('documents-assisted-name')?.textContent?.replace(/\s+/g, '_') || 'SIGAP'}.pdf`);
+        const nomeArquivo = `Checklist_${(getEl('documents-assisted-name')?.textContent || 'SIGAP').replace(/\s+/g, '_')}.pdf`;
+        docPDF.save(nomeArquivo);
         showNotification("PDF gerado com sucesso!");
+        
     } catch (err) {
         console.error("Erro PDF:", err);
         showNotification("Erro ao gerar PDF", "error");
@@ -697,7 +679,6 @@ export function setupDetailsModal(config) {
     console.log("⚙️ setupDetailsModal chamado", config);
     db = config.db;
 
-    // Configurar botões
     getEl('back-to-action-selection-btn').onclick = handleBack;
     getEl('save-checklist-btn').onclick = handleSave;
     getEl('print-checklist-btn').onclick = handlePdf;
@@ -737,73 +718,57 @@ export function openDetailsModal(config) {
     
     console.log("Assistido encontrado:", assisted);
     console.log("documentChecklist:", assisted.documentChecklist);
-    console.log("documentState:", assisted.documentState);
-    console.log("selectedAction:", assisted.selectedAction);
     
     getEl('documents-assisted-name').textContent = assisted.name;
     
-    // Preparar área de seleção de assunto
     const selectionArea = getEl('document-action-selection');
     const checklistView = getEl('document-checklist-view');
     const checklistHeader = getEl('document-checklist-view-header');
     const searchContainer = getEl('checklist-search-container');
     const reuContainer = getEl('address-editor-container');
     
-    // Verificar se já existe um checklist salvo
+    // SE TEM CHECKLIST SALVO, MOSTRA DIRETO
     if (assisted.documentChecklist && assisted.documentChecklist.action) {
         console.log("✅ Checklist encontrado! Carregando:", assisted.documentChecklist.action);
         
-        // Renderizar o checklist com os dados salvos
         renderChecklist(assisted.documentChecklist.action);
         
-        // Esconder seleção e mostrar checklist
-        if (selectionArea) selectionArea.classList.add('hidden');
-        if (checklistView) {
-            checklistView.classList.remove('hidden');
-            checklistView.classList.add('flex');
-        }
-        if (checklistHeader) checklistHeader.classList.remove('hidden');
-        if (searchContainer) searchContainer.classList.remove('hidden');
+        selectionArea?.classList.add('hidden');
+        checklistView?.classList.remove('hidden');
+        checklistView?.classList.add('flex');
+        checklistHeader?.classList.remove('hidden');
+        searchContainer?.classList.remove('hidden');
         
-        // Atualizar o título com a ação salva
         const titleEl = getEl('checklist-title');
         if (titleEl && documentsData[assisted.documentChecklist.action]) {
             titleEl.textContent = documentsData[assisted.documentChecklist.action].title;
         }
         
-        // Se tiver dados do réu, preencher
         if (assisted.documentChecklist.reuData) {
             setTimeout(() => {
                 fillReuData(assisted.documentChecklist.reuData);
-                // Verificar se deve mostrar o formulário do réu
                 checkReuVisibility();
             }, 300);
         }
         
-        // Se tiver dados de despesas, preencher
         if (assisted.documentChecklist.expenseData) {
             setTimeout(() => {
                 fillExpenseData(assisted.documentChecklist.expenseData);
             }, 300);
         }
         
-        // Verificar visibilidade do réu
         setTimeout(checkReuVisibility, 400);
         
     } else {
         console.log("❌ Nenhum checklist encontrado. Mostrando seleção de assuntos.");
         
-        // Garantir que a view de checklist esteja escondida
-        if (checklistView) {
-            checklistView.classList.add('hidden');
-            checklistView.classList.remove('flex');
-        }
-        if (checklistHeader) checklistHeader.classList.add('hidden');
-        if (searchContainer) searchContainer.classList.add('hidden');
-        if (reuContainer) reuContainer.classList.add('hidden');
-        if (selectionArea) selectionArea.classList.remove('hidden');
+        checklistView?.classList.add('hidden');
+        checklistView?.classList.remove('flex');
+        checklistHeader?.classList.add('hidden');
+        searchContainer?.classList.add('hidden');
+        reuContainer?.classList.add('hidden');
+        selectionArea?.classList.remove('hidden');
         
-        // Recriar a área de seleção de assunto com busca
         if (selectionArea) {
             selectionArea.innerHTML = `
                 <div class="p-2 sm:p-4">
@@ -851,7 +816,6 @@ export function openDetailsModal(config) {
                         getEl('document-checklist-view').classList.remove('hidden');
                         getEl('document-checklist-view').classList.add('flex');
                         
-                        // Atualizar estado para 'selected'
                         updateDocumentState('selected');
                     };
                     
@@ -860,7 +824,6 @@ export function openDetailsModal(config) {
             }
             
             renderFilteredSubjects();
-            
             searchInput.addEventListener('input', (e) => {
                 renderFilteredSubjects(e.target.value);
             });
