@@ -342,7 +342,7 @@ export const PautaService = {
     },
 
     /**
-     * Configura ordenação manual com SortableJS
+     * Configura ordenação manual com SortableJS (adaptado para mobile)
      */
     setupManualSort(app) {
         const el = document.getElementById('aguardando-list');
@@ -351,14 +351,21 @@ export const PautaService = {
         if (app.currentPautaData?.ordemAtendimento === 'manual' && !app.isPautaClosed) {
             if (window.sortableAguardando) window.sortableAguardando.destroy();
 
+            // Detectar se é mobile para ajustar comportamento
+            const isMobile = window.innerWidth <= 768;
+            
             window.sortableAguardando = new Sortable(el, {
-                animation: 300,
+                animation: isMobile ? 200 : 300,
                 ghostClass: 'opacity-20',
                 chosenClass: 'ring-2',
                 dragClass: 'scale-95',
                 handle: '.relative',
                 filter: 'button, svg, p, span',
                 preventOnFilter: false,
+                // No mobile, permitir arrastar com toque
+                forceFallback: isMobile,
+                fallbackClass: 'sortable-fallback',
+                fallbackOnBody: true,
                 onEnd: async function () {
                     const items = el.querySelectorAll('[data-id]');
                     if (!items.length) return;
@@ -383,7 +390,7 @@ export const PautaService = {
     },
 
     /**
-     * Preenche o select com os nomes dos colaboradores
+     * Preenche o select com os nomes dos colaboradores (responsivo)
      */
     preencherSelectColaboradores(app, selectId = 'attendant-select') {
         const select = document.getElementById(selectId);
@@ -435,10 +442,15 @@ export const PautaService = {
             option.disabled = true;
             select.appendChild(option);
         }
+        
+        // Ajustar altura do select para mobile
+        if (window.innerWidth <= 768) {
+            select.style.fontSize = '16px'; // Evita zoom automático no iOS
+        }
     },
 
     /**
-     * Exibe tela de seleção de pautas
+     * Exibe tela de seleção de pautas (responsiva)
      */
     showPautaSelectionScreen(app) {
         if (!app?.auth?.currentUser) {
@@ -493,12 +505,12 @@ export const PautaService = {
     },
 
     /**
-     * Cria card de pauta
+     * Cria card de pauta (responsivo)
      */
     createPautaCard(docSnap, isExpired, app) {
         const pauta = docSnap.data();
         const card = document.createElement('div');
-        card.className = "relative bg-white p-6 rounded-lg shadow-md flex flex-col justify-between h-full";
+        card.className = "relative bg-white p-4 md:p-6 rounded-lg shadow-md flex flex-col justify-between h-full";
 
         if (isExpired) {
             card.classList.add('opacity-60', 'bg-gray-100', 'cursor-not-allowed');
@@ -507,8 +519,9 @@ export const PautaService = {
         }
 
         const deleteButton = document.createElement('button');
-        deleteButton.className = "absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:text-red-600 transition-colors";
-        deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
+        deleteButton.className = "absolute top-2 right-2 md:top-3 md:right-3 p-1 rounded-full text-gray-400 hover:text-red-600 transition-colors";
+        deleteButton.setAttribute('aria-label', 'Excluir pauta');
+        deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
 
         deleteButton.addEventListener('click', async (event) => {
             event.stopPropagation();
@@ -531,12 +544,12 @@ export const PautaService = {
 
         card.innerHTML += `
             <div>
-                <h3 class="font-bold text-xl mb-2">${escapeHTML(pauta.name)}</h3>
-                <p class="text-gray-600">Membros: ${pauta.memberEmails?.length || 1}</p>
+                <h3 class="font-bold text-lg md:text-xl mb-1 md:mb-2 pr-6">${escapeHTML(pauta.name)}</h3>
+                <p class="text-xs md:text-sm text-gray-600">Membros: ${pauta.memberEmails?.length || 1}</p>
             </div>
-            <div class="mt-4 pt-2 border-t border-gray-200">
-                <p class="text-xs text-gray-500">Criada em: <strong>${creationDate.toLocaleDateString('pt-BR')}</strong></p>
-                <p class="text-xs ${isExpired ? 'text-gray-500' : 'text-red-600'}">
+            <div class="mt-3 md:mt-4 pt-2 border-t border-gray-200">
+                <p class="text-[10px] md:text-xs text-gray-500">Criada em: <strong>${creationDate.toLocaleDateString('pt-BR')}</strong></p>
+                <p class="text-[10px] md:text-xs ${isExpired ? 'text-gray-500' : 'text-red-600'}">
                     ${isExpired ? 'Expirou em:' : 'Será eliminada em:'} <strong>${expirationDate.toLocaleDateString('pt-BR')}</strong>
                 </p>
             </div>
@@ -552,7 +565,7 @@ export const PautaService = {
     },
 
     /**
-     * Manipula ações dos cards (cliques em botões)
+     * Manipula ações dos cards (cliques em botões) - VERSÃO RESPONSIVA
      */
     handleCardActions(e, app) {
         const button = e.target.closest('button');
@@ -563,6 +576,9 @@ export const PautaService = {
 
         console.log("Botão clicado:", button.className, "ID:", id);
 
+        // Detectar se é mobile para ajustar comportamentos
+        const isMobile = window.innerWidth <= 768;
+
         // Check-in (Marcar Chegada)
         if (button.classList.contains('check-in-btn')) {
             console.log("Abrindo modal de chegada para:", id);
@@ -570,6 +586,13 @@ export const PautaService = {
             const modal = document.getElementById('arrival-modal');
             if (modal) {
                 document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5);
+                
+                // No mobile, ajustar o input time para melhor experiência
+                if (isMobile) {
+                    const timeInput = document.getElementById('arrival-time-input');
+                    timeInput.setAttribute('pattern', '[0-9]{2}:[0-9]{2}');
+                }
+                
                 modal.classList.remove('hidden');
             }
         }
@@ -753,10 +776,10 @@ export const PautaService = {
                     } else {
                         demands.forEach(demand => {
                             const li = document.createElement('li');
-                            li.className = 'flex justify-between items-center p-2 bg-white rounded-md';
+                            li.className = 'flex justify-between items-center p-2 bg-white rounded-md text-xs md:text-sm';
                             li.innerHTML = `
                                 <span>${escapeHTML(demand)}</span>
-                                <button class="remove-demand-item-btn text-red-500 text-xs">Remover</button>
+                                <button class="remove-demand-item-btn text-red-500 text-[10px] md:text-xs">Remover</button>
                             `;
                             container.appendChild(li);
                         });
@@ -820,5 +843,12 @@ export const PautaService = {
             
             showNotification(`Status de Marcado Presença no Verde atualizado para ${newConfirmedState ? 'Confirmado' : 'Não Confirmado'}.`, 'info');
         }
+    },
+
+    /**
+     * Utilitário para verificar se é mobile
+     */
+    isMobileDevice() {
+        return window.innerWidth <= 768;
     }
 };
