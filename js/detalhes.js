@@ -494,6 +494,7 @@ export function openDetailsModal(config) {
     if (nameEl) nameEl.textContent = assisted.name;
     
     // Preparar área de seleção de assunto
+    // Preparar área de seleção de assunto
     const selectionArea = getEl('document-action-selection');
     if (selectionArea) {
         selectionArea.innerHTML = '<p class="text-gray-500 mb-6 text-sm text-center font-bold uppercase tracking-widest opacity-50">Selecione o Assunto</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 action-grid"></div>';
@@ -504,6 +505,41 @@ export function openDetailsModal(config) {
                 btn.dataset.action = k;
                 btn.className = "text-left p-4 bg-white border-2 border-gray-100 hover:border-green-500 rounded-xl transition-all shadow-sm group";
                 btn.innerHTML = `<span class="font-bold text-gray-700 uppercase text-xs tracking-tighter">${documentsData[k].title}</span>`;
+                
+                // ADICIONAR EVENTO DIRETAMENTE NO BOTÃO
+                btn.onclick = function(e) {
+                    e.preventDefault();
+                    const key = this.dataset.action;
+                    console.log("🎯 Botão clicado DIRETAMENTE:", key, documentsData[key]?.title);
+                    
+                    // Verificar se a função renderChecklist existe
+                    if (typeof renderChecklist === 'function') {
+                        renderChecklist(key);
+                        
+                        // Esconder seleção e mostrar checklist
+                        selectionArea.classList.add('hidden');
+                        const checklistView = getEl('document-checklist-view');
+                        if (checklistView) {
+                            checklistView.classList.remove('hidden');
+                            checklistView.classList.add('flex');
+                        }
+                        
+                        // Atualizar título
+                        const titleEl = getEl('checklist-title');
+                        if (titleEl) titleEl.textContent = documentsData[key].title;
+                        
+                        // Mostrar cabeçalho
+                        const headerEl = getEl('document-checklist-view-header');
+                        if (headerEl) headerEl.classList.remove('hidden');
+                        
+                        // Mostrar busca
+                        const searchEl = getEl('checklist-search-container');
+                        if (searchEl) searchEl.classList.remove('hidden');
+                    } else {
+                        console.error("Função renderChecklist não encontrada");
+                    }
+                };
+                
                 grid.appendChild(btn);
             });
         }
