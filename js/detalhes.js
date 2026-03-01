@@ -1,6 +1,6 @@
 /**
  * detalhes.js - SIGAP
- * Versão COMPLETA com busca de assuntos e design 100% responsivo para mobile
+ * Versão COMPLETA com salvamento de status e contagem de itens
  */
 
 import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -72,7 +72,47 @@ function parseCurrency(s) {
     return !s ? 0 : parseFloat(s.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
 }
 
-// --- 5. RENDERIZAÇÃO DO CHECKLIST ---
+// --- 5. FUNÇÃO PARA ATUALIZAR CONTADOR DE ITENS SELECIONADOS ---
+function updateSelectedCounter() {
+    const container = getEl('checklist-container');
+    if (!container) return;
+    
+    const checkedCount = container.querySelectorAll('.doc-checkbox:checked').length;
+    const counterEl = getEl('checklist-counter');
+    if (counterEl) {
+        counterEl.textContent = `${checkedCount} itens selecionados`;
+    }
+    
+    // Atualizar status para 'filling' se houver itens marcados
+    if (checkedCount > 0) {
+        updateDocumentState('filling');
+    }
+}
+
+// --- 6. FUNÇÃO PARA ATUALIZAR ESTADO DO DOCUMENTO NO FIRESTORE ---
+async function updateDocumentState(state) {
+    if (!currentAssistedId || !currentPautaId || !db) return;
+    
+    try {
+        const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
+        
+        // Buscar o título da ação atual
+        const actionTitle = currentChecklistAction ? documentsData[currentChecklistAction]?.title : null;
+        
+        await updateDoc(docRef, { 
+            documentState: state,
+            selectedAction: actionTitle,
+            lastActionBy: window.app?.currentUserName || 'Sistema',
+            lastActionTimestamp: new Date().toISOString()
+        });
+        
+        console.log(`📊 Status do documento atualizado para: ${state}`);
+    } catch (e) {
+        console.error("Erro ao atualizar estado:", e);
+    }
+}
+
+// --- 7. RENDERIZAÇÃO DO CHECKLIST ---
 function renderChecklist(actionKey) {
     console.log("📋 Renderizando checklist para:", actionKey);
     currentChecklistAction = actionKey;
@@ -126,8 +166,12 @@ function renderChecklist(actionKey) {
                             <span class="text-sm text-gray-700 font-medium">${docText}</span>
                         </label>
                         <div id="type-${id}" class="ml-10 mt-1 flex gap-4 ${isChecked ? '' : 'hidden'}">
-                            <label class="flex items-center text-[9px] font-black text-gray-400 cursor-pointer"><input type="radio" name="type-${id}" value="Físico" ${savedType === 'Físico' ? 'checked' : ''}> FÍSICO</label>
-                            <label class="flex items-center text-[9px] font-black text-gray-400 cursor-pointer"><input type="radio" name="type-${id}" value="Digital" ${savedType === 'Digital' ? 'checked' : ''}> DIGITAL</label>
+                            <label class="flex items-center text-[9px] font-black text-gray-400 cursor-pointer">
+                                <input type="radio" name="type-${id}" value="Físico" ${savedType === 'Físico' ? 'checked' : ''}> FÍSICO
+                            </label>
+                            <label class="flex items-center text-[9px] font-black text-gray-400 cursor-pointer">
+                                <input type="radio" name="type-${id}" value="Digital" ${savedType === 'Digital' ? 'checked' : ''}> DIGITAL
+                            </label>
                         </div>
                     </div>`;
             }
@@ -142,9 +186,9 @@ function renderChecklist(actionKey) {
         if (saved?.expenseData) fillExpenseData(saved.expenseData);
     }
 
-    // Adicionar listeners aos checkboxes
+    // Adicionar listeners aos checkboxes para atualizar contador e status
     containerEl.querySelectorAll('.doc-checkbox').forEach(cb => {
-        cb.onchange = (e) => {
+        cb.addEventListener('change', (e) => {
             const t = getEl(`type-${e.target.id}`);
             if (t) {
                 t.classList.toggle('hidden', !e.target.checked);
@@ -152,28 +196,23 @@ function renderChecklist(actionKey) {
                     t.querySelector('input[value="Físico"]').checked = true;
                 }
             }
-            // Atualizar status para 'filling' quando qualquer checkbox for alterado
-            updateDocumentState('filling');
-        };
-    });
-}
-
-// --- 6. FUNÇÃO PARA ATUALIZAR ESTADO DO DOCUMENTO ---
-async function updateDocumentState(state) {
-    if (!currentAssistedId || !currentPautaId || !db) return;
-    
-    try {
-        const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
-        await updateDoc(docRef, { 
-            documentState: state,
-            selectedAction: currentChecklistAction ? documentsData[currentChecklistAction]?.title : null
+            
+            // Atualizar contador
+            updateSelectedCounter();
+            
+            // Se algum checkbox foi marcado, atualizar status para 'filling'
+            const anyChecked = containerEl.querySelectorAll('.doc-checkbox:checked').length > 0;
+            if (anyChecked) {
+                updateDocumentState('filling');
+            }
         });
-    } catch (e) {
-        console.error("Erro ao atualizar estado:", e);
-    }
+    });
+
+    // Inicializar contador
+    updateSelectedCounter();
 }
 
-// --- 7. FORMULÁRIOS DINÂMICOS ---
+// --- 8. FORMULÁRIOS DINÂMICOS ---
 function renderReuForm(containerId) {
     const container = getEl(containerId);
     if (!container) return;
@@ -235,7 +274,7 @@ function renderExpenseTable() {
     div.innerHTML = `<h3 class="text-[10px] font-black text-green-700 mb-3 uppercase text-center font-bold tracking-widest">Planilha de Gastos</h3><table class="w-full border-collapse">${rows}</table><div class="mt-4 flex justify-between font-black text-green-900 border-t border-green-200 pt-3 text-sm"><span>TOTAL MENSAL:</span><span id="expense-total">R$ 0,00</span></div>`;
     
     div.querySelectorAll('.expense-input').forEach(inp => {
-        inp.oninput = (e) => {
+        inp.addEventListener('input', (e) => {
             let v = e.target.value.replace(/\D/g, '');
             v = (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             e.target.value = v;
@@ -243,7 +282,10 @@ function renderExpenseTable() {
             div.querySelectorAll('.expense-input').forEach(i => total += parseCurrency(i.value));
             const totalEl = document.getElementById('expense-total');
             if(totalEl) totalEl.textContent = formatCurrency(total);
-        };
+            
+            // Atualizar status para 'filling' quando preencher gastos
+            updateDocumentState('filling');
+        });
     });
     return div;
 }
@@ -300,7 +342,7 @@ function fillExpenseData(d) {
     if(totalEl) totalEl.textContent = formatCurrency(total);
 }
 
-// --- 8. AÇÕES (SALVAR, PDF, RESET) ---
+// --- 9. AÇÕES (SALVAR, PDF, RESET) ---
 async function handleSave() {
     console.log("💾 handleSave chamado");
     
@@ -330,7 +372,10 @@ async function handleSave() {
             reuData: getReuDataFromForm(),
             expenseData: getExpenseDataFromForm()
         },
-        documentState: 'saved'
+        documentState: 'saved',
+        selectedAction: currentChecklistAction ? documentsData[currentChecklistAction]?.title : null,
+        lastActionBy: window.app?.currentUserName || 'Sistema',
+        lastActionTimestamp: new Date().toISOString()
     };
 
     try {
@@ -422,7 +467,7 @@ function handleBack() {
     getEl('address-editor-container')?.classList.add('hidden');
 }
 
-// --- 9. EXPORTS PRINCIPAIS ---
+// --- 10. EXPORTS PRINCIPAIS ---
 export function setupDetailsModal(config) {
     console.log("⚙️ setupDetailsModal chamado", config);
     db = config.db;
@@ -454,7 +499,8 @@ export function openDetailsModal(config) {
     }
     
     currentAssistedId = config.assistedId;
-    window.currentAssistedId = config.assistedId; // Garantir disponibilidade global
+    window.currentAssistedId = config.assistedId;
+    window.assistedIdToHandle = config.assistedId;
     currentPautaId = config.pautaId;
     allAssisted = config.allAssisted || [];
     
@@ -466,7 +512,7 @@ export function openDetailsModal(config) {
     
     getEl('documents-assisted-name').textContent = assisted.name;
     
-    // === SEÇÃO DE BUSCA DE ASSUNTOS (RESPONSIVA) ===
+    // Preparar área de seleção de assunto
     const selectionArea = getEl('document-action-selection');
     if (selectionArea) {
         selectionArea.innerHTML = `
@@ -485,13 +531,11 @@ export function openDetailsModal(config) {
         const grid = selectionArea.querySelector('.action-grid');
         const searchInput = selectionArea.querySelector('#subject-search-input');
         
-        // Criar array com todos os assuntos para busca
         const subjectsList = Object.keys(documentsData).map(key => ({
             key,
             title: documentsData[key].title
         }));
         
-        // Função para renderizar os botões filtrados
         function renderFilteredSubjects(filterText = '') {
             grid.innerHTML = '';
             const filtered = subjectsList.filter(s => 
@@ -525,10 +569,8 @@ export function openDetailsModal(config) {
             });
         }
         
-        // Renderizar todos inicialmente
         renderFilteredSubjects();
         
-        // Adicionar listener para busca
         searchInput.addEventListener('input', (e) => {
             renderFilteredSubjects(e.target.value);
         });
