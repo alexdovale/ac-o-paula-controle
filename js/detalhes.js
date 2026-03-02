@@ -1,10 +1,11 @@
 /**
  * detalhes.js - SIGAP
- * Versão COMPLETA com busca de CEP, campos do réu, planilha de gastos e PDF
+ * Versão COMPLETA com busca de CEP, campos do réu, planilha de gastos e PDF integrado com PDFService
  */
 
 import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification } from './utils.js';
+import { PDFService } from './pdfService.js';
 
 // --- 1. CONSTANTES DE DOCUMENTAÇÃO ---
 const BASE_DOCS = ['Carteira de Identidade (RG) ou Habilitação (CNH)', 'CPF', 'Comprovante de Residência (Atualizado - últimos 3 meses)'];
@@ -72,7 +73,17 @@ function parseCurrency(s) {
     return !s ? 0 : parseFloat(s.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
 }
 
-// --- 5. FUNÇÃO PARA ATUALIZAR CONTADOR DE ITENS SELECIONADOS ---
+// --- 5. FUNÇÃO PARA OBTER TIPOS DE DOCUMENTOS DO FORMULÁRIO ---
+function getDocTypesFromForm() {
+    const docTypes = {};
+    document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
+        const typeRadio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
+        docTypes[cb.id] = typeRadio ? typeRadio.value : 'Físico';
+    });
+    return docTypes;
+}
+
+// --- 6. FUNÇÃO PARA ATUALIZAR CONTADOR DE ITENS SELECIONADOS ---
 function updateSelectedCounter() {
     const container = getEl('checklist-container');
     if (!container) return;
@@ -89,7 +100,7 @@ function updateSelectedCounter() {
     }
 }
 
-// --- 6. FUNÇÃO PARA ATUALIZAR ESTADO DO DOCUMENTO NO FIRESTORE ---
+// --- 7. FUNÇÃO PARA ATUALIZAR ESTADO DO DOCUMENTO NO FIRESTORE ---
 async function updateDocumentState(state) {
     if (!currentAssistedId || !currentPautaId || !db) return;
     
@@ -112,7 +123,7 @@ async function updateDocumentState(state) {
     }
 }
 
-// --- 7. FUNÇÃO PARA VERIFICAR SE DEVE MOSTRAR O FORMULÁRIO DO RÉU ---
+// --- 8. FUNÇÃO PARA VERIFICAR SE DEVE MOSTRAR O FORMULÁRIO DO RÉU ---
 function checkReuVisibility() {
     const containerEl = getEl('checklist-container');
     if (!containerEl) return;
@@ -143,7 +154,7 @@ function checkReuVisibility() {
     }
 }
 
-// --- 8. RENDERIZAÇÃO DO CHECKLIST ---
+// --- 9. RENDERIZAÇÃO DO CHECKLIST ---
 function renderChecklist(actionKey) {
     console.log("📋 Renderizando checklist para:", actionKey);
     currentChecklistAction = actionKey;
@@ -257,7 +268,7 @@ function renderChecklist(actionKey) {
     }
 }
 
-// --- 9. FORMULÁRIO DO RÉU (COM CEP) ---
+// --- 10. FORMULÁRIO DO RÉU (COM CEP) ---
 function renderReuForm(containerId) {
     const container = getEl(containerId);
     if (!container) return;
@@ -355,7 +366,7 @@ function renderReuForm(containerId) {
     }
 }
 
-// --- 10. PLANILHA DE GASTOS ---
+// --- 11. PLANILHA DE GASTOS ---
 function renderExpenseTable() {
     const div = document.createElement('div');
     div.className = 'mt-6 p-4 bg-green-50 border-2 border-green-100 rounded-xl shadow-sm';
@@ -413,7 +424,7 @@ function renderExpenseTable() {
     return div;
 }
 
-// --- 11. FUNÇÕES PARA PEGAR DADOS DOS FORMULÁRIOS ---
+// --- 12. FUNÇÕES PARA PEGAR DADOS DOS FORMULÁRIOS ---
 function getReuDataFromForm() {
     if (!getEl('nome-reu')) return null;
     return {
@@ -474,7 +485,7 @@ function fillExpenseData(d) {
     if(totalEl) totalEl.textContent = formatCurrency(total);
 }
 
-// --- 12. FUNÇÃO PARA GERAR PDF COMPLETO ---
+// --- 13. FUNÇÃO PARA GERAR PDF USANDO PDFSERVICE ---
 async function handlePdf() {
     showNotification("Gerando PDF...", "info");
     
@@ -484,223 +495,37 @@ async function handlePdf() {
     }
     
     try {
-        const { jsPDF } = window.jspdf;
-        const docPDF = new jsPDF();
-        const pageWidth = docPDF.internal.pageSize.getWidth();
-        const pageHeight = docPDF.internal.pageSize.getHeight();
-        let y = 20;
-        const margin = 15;
-        const lineHeight = 5;
-
-        // ================================================
-        // CABEÇALHO
-        // ================================================
-        docPDF.setFontSize(18);
-        docPDF.setTextColor(22, 163, 74);
-        docPDF.setFont("helvetica", "bold");
-        docPDF.text("SIGAP - Checklist de Atendimento", pageWidth / 2, y, { align: "center" });
-        y += 8;
+        // Coletar dados para o PDF
+        const assistedName = getEl('documents-assisted-name')?.textContent || 'Assistido';
+        const actionTitle = getEl('checklist-title')?.textContent || '';
         
-        docPDF.setFontSize(10);
-        docPDF.setTextColor(100, 100, 100);
-        docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, y, { align: "center" });
-        y += 15;
-
-        // ================================================
-        // 1. DADOS DO ASSISTIDO
-        // ================================================
-        docPDF.setFontSize(12);
-        docPDF.setTextColor(0, 0, 0);
-        docPDF.setFont("helvetica", "bold");
-        docPDF.text("1. DADOS DO ASSISTIDO", margin, y);
-        y += 7;
-        docPDF.setFont("helvetica", "normal");
-        docPDF.setFontSize(10);
-        
-        const nomeAssistido = getEl('documents-assisted-name')?.textContent || 'Não informado';
-        const acaoSelecionada = getEl('checklist-title')?.textContent || 'Não selecionada';
-        
-        docPDF.text(`Nome: ${nomeAssistido}`, margin + 5, y); y += 6;
-        docPDF.text(`Ação: ${acaoSelecionada}`, margin + 5, y); y += 10;
-
-        // ================================================
-        // 2. DOCUMENTAÇÃO (CHECKBOXES MARCADOS)
-        // ================================================
-        const checked = document.querySelectorAll('.doc-checkbox:checked');
-        
-        if (checked.length > 0) {
-            docPDF.setFont("helvetica", "bold");
-            docPDF.setFontSize(11);
-            docPDF.text("2. DOCUMENTAÇÃO ENTREGUE:", margin, y);
-            y += 7;
-            docPDF.setFont("helvetica", "normal");
-            docPDF.setFontSize(9);
-            
-            checked.forEach(cb => {
-                // Verificar se precisa de nova página
-                if (y > pageHeight - 30) {
-                    docPDF.addPage();
-                    y = 20;
-                }
-                
-                const label = cb.closest('label');
-                const text = label?.querySelector('span')?.textContent || 'Documento';
-                
-                // Pegar o tipo selecionado (Físico/Digital)
-                const typeRadio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
-                const type = typeRadio ? typeRadio.value : 'Físico';
-                
-                docPDF.text(`✓ ${text} - [${type.toUpperCase()}]`, margin + 5, y);
-                y += 5;
+        // Coletar textos dos documentos marcados
+        const documentosTextos = [];
+        document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
+            const label = cb.closest('label');
+            const text = label?.querySelector('span')?.textContent || 'Documento';
+            documentosTextos.push({
+                id: cb.id,
+                text: text
             });
-            y += 5;
+        });
+        
+        // Preparar dados do checklist
+        const checklistData = {
+            checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
+            docTypes: getDocTypesFromForm(),
+            reuData: getReuDataFromForm() || {},
+            expenseData: getExpenseDataFromForm() || {}
+        };
+        
+        // Usar o PDFService para gerar o PDF
+        const resultado = PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
+        
+        if (resultado) {
+            showNotification("PDF gerado com sucesso!");
         } else {
-            docPDF.text("Nenhum documento selecionado.", margin + 5, y);
-            y += 7;
+            showNotification("Erro ao gerar PDF", "error");
         }
-
-        // ================================================
-        // 3. PLANILHA DE GASTOS (SE HOUVER)
-        // ================================================
-        const expenses = getExpenseDataFromForm();
-        const hasExpenses = Object.values(expenses).some(v => v && v.trim() !== '');
-        
-        if (hasExpenses) {
-            if (y > pageHeight - 60) {
-                docPDF.addPage();
-                y = 20;
-            }
-            
-            docPDF.setFont("helvetica", "bold");
-            docPDF.setFontSize(11);
-            docPDF.text("3. PLANILHA DE GASTOS MENSAIS:", margin, y);
-            y += 7;
-            docPDF.setFont("helvetica", "normal");
-            docPDF.setFontSize(9);
-            
-            // Desenhar linha de cabeçalho
-            docPDF.setFillColor(240, 240, 240);
-            docPDF.rect(margin, y - 4, pageWidth - 2*margin, 6, 'F');
-            docPDF.setFont("helvetica", "bold");
-            docPDF.text("DESCRIÇÃO", margin + 5, y);
-            docPDF.text("VALOR", pageWidth - margin - 30, y, { align: 'right' });
-            y += 6;
-            docPDF.setFont("helvetica", "normal");
-            
-            // Linhas de gastos
-            EXPENSE_CATEGORIES.forEach(c => {
-                if (expenses[c.id] && expenses[c.id].trim() !== '') {
-                    if (y > pageHeight - 20) {
-                        docPDF.addPage();
-                        y = 20;
-                    }
-                    
-                    docPDF.text(c.label, margin + 5, y);
-                    docPDF.text(expenses[c.id], pageWidth - margin - 30, y, { align: 'right' });
-                    y += 5;
-                }
-            });
-            
-            // Linha do total
-            const total = getEl('expense-total')?.textContent || 'R$ 0,00';
-            y += 2;
-            docPDF.setDrawColor(200, 200, 200);
-            docPDF.line(margin, y - 2, pageWidth - margin, y - 2);
-            docPDF.setFont("helvetica", "bold");
-            docPDF.text("TOTAL MENSAL:", margin + 5, y + 2);
-            docPDF.text(total, pageWidth - margin - 30, y + 2, { align: 'right' });
-            y += 10;
-        }
-
-        // ================================================
-        // 4. DADOS DO RÉU
-        // ================================================
-        const reu = getReuDataFromForm();
-        const hasReu = reu && (reu.nome || reu.cpf || reu.telefone || reu.rua || reu.empresa);
-        
-        if (hasReu) {
-            if (y > pageHeight - 80) {
-                docPDF.addPage();
-                y = 20;
-            }
-            
-            docPDF.setFont("helvetica", "bold");
-            docPDF.setFontSize(11);
-            docPDF.text("4. DADOS DA PARTE CONTRÁRIA (RÉU):", margin, y);
-            y += 7;
-            docPDF.setFont("helvetica", "normal");
-            docPDF.setFontSize(9);
-            
-            // Nome
-            if (reu.nome) {
-                docPDF.text(`Nome: ${reu.nome}`, margin + 5, y);
-                y += 5;
-            }
-            
-            // CPF e Telefone
-            if (reu.cpf || reu.telefone) {
-                let linha = '';
-                if (reu.cpf) linha += `CPF: ${formatarCPF(reu.cpf)}`;
-                if (reu.cpf && reu.telefone) linha += ' | ';
-                if (reu.telefone) linha += `WhatsApp: ${reu.telefone}`;
-                docPDF.text(linha, margin + 5, y);
-                y += 5;
-            }
-            
-            // Endereço completo
-            const enderecoParts = [];
-            if (reu.rua) enderecoParts.push(reu.rua);
-            if (reu.numero) enderecoParts.push(`nº ${reu.numero}`);
-            if (reu.bairro) enderecoParts.push(reu.bairro);
-            
-            if (enderecoParts.length > 0) {
-                docPDF.text(`Endereço: ${enderecoParts.join(', ')}`, margin + 5, y);
-                y += 5;
-            }
-            
-            // Cidade, UF e CEP
-            const cidadeUfParts = [];
-            if (reu.cidade) cidadeUfParts.push(reu.cidade);
-            if (reu.uf) cidadeUfParts.push(reu.uf);
-            
-            if (cidadeUfParts.length > 0 || reu.cep) {
-                let linha = '';
-                if (cidadeUfParts.length > 0) linha += cidadeUfParts.join('/');
-                if (reu.cep) linha += ` - CEP: ${formatarCEP(reu.cep)}`;
-                docPDF.text(linha, margin + 5, y);
-                y += 5;
-            }
-            
-            // Dados do trabalho
-            if (reu.empresa) {
-                docPDF.text(`Empresa: ${reu.empresa}`, margin + 5, y);
-                y += 5;
-            }
-            if (reu.enderecoTrabalho) {
-                docPDF.text(`End. Comercial: ${reu.enderecoTrabalho}`, margin + 5, y);
-                y += 5;
-            }
-        }
-
-        // ================================================
-        // RODAPÉ
-        // ================================================
-        const pageCount = docPDF.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            docPDF.setPage(i);
-            docPDF.setFontSize(8);
-            docPDF.setTextColor(150, 150, 150);
-            docPDF.text(
-                `Página ${i} de ${pageCount}`,
-                pageWidth - margin - 20,
-                pageHeight - 10
-            );
-        }
-
-        // Salvar PDF
-        const nomeArquivo = `Checklist_${(getEl('documents-assisted-name')?.textContent || 'SIGAP').replace(/\s+/g, '_')}.pdf`;
-        docPDF.save(nomeArquivo);
-        showNotification("PDF gerado com sucesso!");
         
     } catch (err) {
         console.error("Erro ao gerar PDF:", err);
@@ -708,22 +533,7 @@ async function handlePdf() {
     }
 }
 
-// Funções auxiliares para formatação
-function formatarCPF(cpf) {
-    if (!cpf) return '';
-    const numeros = cpf.replace(/\D/g, '');
-    if (numeros.length !== 11) return cpf;
-    return numeros.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-}
-
-function formatarCEP(cep) {
-    if (!cep) return '';
-    const numeros = cep.replace(/\D/g, '');
-    if (numeros.length !== 8) return cep;
-    return numeros.replace(/(\d{5})(\d{3})/, '$1-$2');
-}
-
-// --- 13. AÇÕES (SALVAR, RESET, VOLTAR) ---
+// --- 14. AÇÕES (SALVAR, RESET, VOLTAR) ---
 async function handleSave() {
     console.log("💾 handleSave chamado");
     
@@ -797,7 +607,7 @@ function handleBack() {
     getEl('address-editor-container')?.classList.add('hidden');
 }
 
-// --- 14. EXPORTS PRINCIPAIS ---
+// --- 15. EXPORTS PRINCIPAIS ---
 export function setupDetailsModal(config) {
     console.log("⚙️ setupDetailsModal chamado", config);
     db = config.db;
