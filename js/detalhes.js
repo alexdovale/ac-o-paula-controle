@@ -83,6 +83,7 @@ function updateSelectedCounter() {
         counterEl.textContent = `${checkedCount} itens selecionados`;
     }
     
+    // Atualizar status para 'filling' se houver itens marcados
     if (checkedCount > 0) {
         updateDocumentState('filling');
     }
@@ -94,6 +95,8 @@ async function updateDocumentState(state) {
     
     try {
         const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
+        
+        // Buscar o título da ação atual
         const actionTitle = currentChecklistAction ? documentsData[currentChecklistAction]?.title : null;
         
         await updateDoc(docRef, { 
@@ -130,6 +133,7 @@ function checkReuVisibility() {
     if (reuArea) {
         if (needsReu) {
             reuArea.classList.remove('hidden');
+            // Se ainda não tiver o formulário renderizado, renderiza
             if (reuArea.children.length === 0 || reuArea.innerHTML.trim() === '') {
                 renderReuForm('address-editor-container');
             }
@@ -208,11 +212,13 @@ function renderChecklist(actionKey) {
         containerEl.appendChild(sectionDiv);
     });
 
+    // Adicionar planilha de gastos se necessário
     if (ACTIONS_ALWAYS_EXPENSES.includes(actionKey)) {
         containerEl.appendChild(renderExpenseTable());
         if (saved?.expenseData) fillExpenseData(saved.expenseData);
     }
 
+    // Adicionar listeners aos checkboxes para atualizar contador e visibilidade do réu
     containerEl.querySelectorAll('.doc-checkbox').forEach(cb => {
         cb.addEventListener('change', (e) => {
             const t = getEl(`type-${e.target.id}`);
@@ -223,9 +229,13 @@ function renderChecklist(actionKey) {
                 }
             }
             
+            // Atualizar contador
             updateSelectedCounter();
+            
+            // Verificar se deve mostrar o formulário do réu
             checkReuVisibility();
             
+            // Se algum checkbox foi marcado, atualizar status para 'filling'
             const anyChecked = containerEl.querySelectorAll('.doc-checkbox:checked').length > 0;
             if (anyChecked) {
                 updateDocumentState('filling');
@@ -233,9 +243,13 @@ function renderChecklist(actionKey) {
         });
     });
 
+    // Verificar visibilidade do réu após renderizar
     setTimeout(checkReuVisibility, 100);
+
+    // Inicializar contador
     updateSelectedCounter();
     
+    // Se houver dados salvos do réu, preencher
     if (saved?.reuData) {
         setTimeout(() => {
             fillReuData(saved.reuData);
@@ -314,6 +328,7 @@ function renderReuForm(containerId) {
         </div>
     `;
 
+    // Busca de CEP
     const cepInp = getEl('cep-reu');
     if (cepInp) {
         cepInp.addEventListener('blur', async () => {
@@ -373,6 +388,7 @@ function renderExpenseTable() {
     
     div.querySelectorAll('.expense-input').forEach(inp => {
         inp.addEventListener('input', (e) => {
+            // Formatar valor monetário
             let v = e.target.value.replace(/\D/g, '');
             if (v) {
                 v = (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -381,6 +397,7 @@ function renderExpenseTable() {
                 e.target.value = '';
             }
             
+            // Calcular total
             let total = 0;
             div.querySelectorAll('.expense-input').forEach(i => {
                 total += parseCurrency(i.value);
@@ -388,6 +405,7 @@ function renderExpenseTable() {
             const totalEl = document.getElementById('expense-total');
             if(totalEl) totalEl.textContent = formatCurrency(total);
             
+            // Atualizar status para 'filling'
             updateDocumentState('filling');
         });
     });
@@ -447,6 +465,7 @@ function fillExpenseData(d) {
         if (el) el.value = d[c.id] || '';
     });
     
+    // Calcular total
     let total = 0;
     document.querySelectorAll('.expense-input').forEach(i => {
         total += parseCurrency(i.value);
@@ -455,7 +474,256 @@ function fillExpenseData(d) {
     if(totalEl) totalEl.textContent = formatCurrency(total);
 }
 
-// --- 12. AÇÕES (SALVAR, PDF, RESET) ---
+// --- 12. FUNÇÃO PARA GERAR PDF COMPLETO ---
+async function handlePdf() {
+    showNotification("Gerando PDF...", "info");
+    
+    // Atualizar estado para PDF
+    if (currentAssistedId && currentPautaId && db) {
+        await updateDocumentState('pdf');
+    }
+    
+    try {
+        const { jsPDF } = window.jspdf;
+        const docPDF = new jsPDF();
+        const pageWidth = docPDF.internal.pageSize.getWidth();
+        const pageHeight = docPDF.internal.pageSize.getHeight();
+        let y = 20;
+        const margin = 15;
+        const lineHeight = 5;
+
+        // ================================================
+        // CABEÇALHO
+        // ================================================
+        docPDF.setFontSize(18);
+        docPDF.setTextColor(22, 163, 74);
+        docPDF.setFont("helvetica", "bold");
+        docPDF.text("SIGAP - Checklist de Atendimento", pageWidth / 2, y, { align: "center" });
+        y += 8;
+        
+        docPDF.setFontSize(10);
+        docPDF.setTextColor(100, 100, 100);
+        docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, y, { align: "center" });
+        y += 15;
+
+        // ================================================
+        // 1. DADOS DO ASSISTIDO
+        // ================================================
+        docPDF.setFontSize(12);
+        docPDF.setTextColor(0, 0, 0);
+        docPDF.setFont("helvetica", "bold");
+        docPDF.text("1. DADOS DO ASSISTIDO", margin, y);
+        y += 7;
+        docPDF.setFont("helvetica", "normal");
+        docPDF.setFontSize(10);
+        
+        const nomeAssistido = getEl('documents-assisted-name')?.textContent || 'Não informado';
+        const acaoSelecionada = getEl('checklist-title')?.textContent || 'Não selecionada';
+        
+        docPDF.text(`Nome: ${nomeAssistido}`, margin + 5, y); y += 6;
+        docPDF.text(`Ação: ${acaoSelecionada}`, margin + 5, y); y += 10;
+
+        // ================================================
+        // 2. DOCUMENTAÇÃO (CHECKBOXES MARCADOS)
+        // ================================================
+        const checked = document.querySelectorAll('.doc-checkbox:checked');
+        
+        if (checked.length > 0) {
+            docPDF.setFont("helvetica", "bold");
+            docPDF.setFontSize(11);
+            docPDF.text("2. DOCUMENTAÇÃO ENTREGUE:", margin, y);
+            y += 7;
+            docPDF.setFont("helvetica", "normal");
+            docPDF.setFontSize(9);
+            
+            checked.forEach(cb => {
+                // Verificar se precisa de nova página
+                if (y > pageHeight - 30) {
+                    docPDF.addPage();
+                    y = 20;
+                }
+                
+                const label = cb.closest('label');
+                const text = label?.querySelector('span')?.textContent || 'Documento';
+                
+                // Pegar o tipo selecionado (Físico/Digital)
+                const typeRadio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
+                const type = typeRadio ? typeRadio.value : 'Físico';
+                
+                docPDF.text(`✓ ${text} - [${type.toUpperCase()}]`, margin + 5, y);
+                y += 5;
+            });
+            y += 5;
+        } else {
+            docPDF.text("Nenhum documento selecionado.", margin + 5, y);
+            y += 7;
+        }
+
+        // ================================================
+        // 3. PLANILHA DE GASTOS (SE HOUVER)
+        // ================================================
+        const expenses = getExpenseDataFromForm();
+        const hasExpenses = Object.values(expenses).some(v => v && v.trim() !== '');
+        
+        if (hasExpenses) {
+            if (y > pageHeight - 60) {
+                docPDF.addPage();
+                y = 20;
+            }
+            
+            docPDF.setFont("helvetica", "bold");
+            docPDF.setFontSize(11);
+            docPDF.text("3. PLANILHA DE GASTOS MENSAIS:", margin, y);
+            y += 7;
+            docPDF.setFont("helvetica", "normal");
+            docPDF.setFontSize(9);
+            
+            // Desenhar linha de cabeçalho
+            docPDF.setFillColor(240, 240, 240);
+            docPDF.rect(margin, y - 4, pageWidth - 2*margin, 6, 'F');
+            docPDF.setFont("helvetica", "bold");
+            docPDF.text("DESCRIÇÃO", margin + 5, y);
+            docPDF.text("VALOR", pageWidth - margin - 30, y, { align: 'right' });
+            y += 6;
+            docPDF.setFont("helvetica", "normal");
+            
+            // Linhas de gastos
+            EXPENSE_CATEGORIES.forEach(c => {
+                if (expenses[c.id] && expenses[c.id].trim() !== '') {
+                    if (y > pageHeight - 20) {
+                        docPDF.addPage();
+                        y = 20;
+                    }
+                    
+                    docPDF.text(c.label, margin + 5, y);
+                    docPDF.text(expenses[c.id], pageWidth - margin - 30, y, { align: 'right' });
+                    y += 5;
+                }
+            });
+            
+            // Linha do total
+            const total = getEl('expense-total')?.textContent || 'R$ 0,00';
+            y += 2;
+            docPDF.setDrawColor(200, 200, 200);
+            docPDF.line(margin, y - 2, pageWidth - margin, y - 2);
+            docPDF.setFont("helvetica", "bold");
+            docPDF.text("TOTAL MENSAL:", margin + 5, y + 2);
+            docPDF.text(total, pageWidth - margin - 30, y + 2, { align: 'right' });
+            y += 10;
+        }
+
+        // ================================================
+        // 4. DADOS DO RÉU
+        // ================================================
+        const reu = getReuDataFromForm();
+        const hasReu = reu && (reu.nome || reu.cpf || reu.telefone || reu.rua || reu.empresa);
+        
+        if (hasReu) {
+            if (y > pageHeight - 80) {
+                docPDF.addPage();
+                y = 20;
+            }
+            
+            docPDF.setFont("helvetica", "bold");
+            docPDF.setFontSize(11);
+            docPDF.text("4. DADOS DA PARTE CONTRÁRIA (RÉU):", margin, y);
+            y += 7;
+            docPDF.setFont("helvetica", "normal");
+            docPDF.setFontSize(9);
+            
+            // Nome
+            if (reu.nome) {
+                docPDF.text(`Nome: ${reu.nome}`, margin + 5, y);
+                y += 5;
+            }
+            
+            // CPF e Telefone
+            if (reu.cpf || reu.telefone) {
+                let linha = '';
+                if (reu.cpf) linha += `CPF: ${formatarCPF(reu.cpf)}`;
+                if (reu.cpf && reu.telefone) linha += ' | ';
+                if (reu.telefone) linha += `WhatsApp: ${reu.telefone}`;
+                docPDF.text(linha, margin + 5, y);
+                y += 5;
+            }
+            
+            // Endereço completo
+            const enderecoParts = [];
+            if (reu.rua) enderecoParts.push(reu.rua);
+            if (reu.numero) enderecoParts.push(`nº ${reu.numero}`);
+            if (reu.bairro) enderecoParts.push(reu.bairro);
+            
+            if (enderecoParts.length > 0) {
+                docPDF.text(`Endereço: ${enderecoParts.join(', ')}`, margin + 5, y);
+                y += 5;
+            }
+            
+            // Cidade, UF e CEP
+            const cidadeUfParts = [];
+            if (reu.cidade) cidadeUfParts.push(reu.cidade);
+            if (reu.uf) cidadeUfParts.push(reu.uf);
+            
+            if (cidadeUfParts.length > 0 || reu.cep) {
+                let linha = '';
+                if (cidadeUfParts.length > 0) linha += cidadeUfParts.join('/');
+                if (reu.cep) linha += ` - CEP: ${formatarCEP(reu.cep)}`;
+                docPDF.text(linha, margin + 5, y);
+                y += 5;
+            }
+            
+            // Dados do trabalho
+            if (reu.empresa) {
+                docPDF.text(`Empresa: ${reu.empresa}`, margin + 5, y);
+                y += 5;
+            }
+            if (reu.enderecoTrabalho) {
+                docPDF.text(`End. Comercial: ${reu.enderecoTrabalho}`, margin + 5, y);
+                y += 5;
+            }
+        }
+
+        // ================================================
+        // RODAPÉ
+        // ================================================
+        const pageCount = docPDF.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            docPDF.setPage(i);
+            docPDF.setFontSize(8);
+            docPDF.setTextColor(150, 150, 150);
+            docPDF.text(
+                `Página ${i} de ${pageCount}`,
+                pageWidth - margin - 20,
+                pageHeight - 10
+            );
+        }
+
+        // Salvar PDF
+        const nomeArquivo = `Checklist_${(getEl('documents-assisted-name')?.textContent || 'SIGAP').replace(/\s+/g, '_')}.pdf`;
+        docPDF.save(nomeArquivo);
+        showNotification("PDF gerado com sucesso!");
+        
+    } catch (err) {
+        console.error("Erro ao gerar PDF:", err);
+        showNotification("Erro ao gerar PDF: " + err.message, "error");
+    }
+}
+
+// Funções auxiliares para formatação
+function formatarCPF(cpf) {
+    if (!cpf) return '';
+    const numeros = cpf.replace(/\D/g, '');
+    if (numeros.length !== 11) return cpf;
+    return numeros.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+}
+
+function formatarCEP(cep) {
+    if (!cep) return '';
+    const numeros = cep.replace(/\D/g, '');
+    if (numeros.length !== 8) return cep;
+    return numeros.replace(/(\d{5})(\d{3})/, '$1-$2');
+}
+
+// --- 13. AÇÕES (SALVAR, RESET, VOLTAR) ---
 async function handleSave() {
     console.log("💾 handleSave chamado");
     
@@ -500,152 +768,7 @@ async function handleSave() {
         getEl('documents-modal').classList.add('hidden');
     } catch (e) {
         console.error("Erro ao salvar:", e);
-        showNotification("Erro ao salvar dados", "error");
-    }
-}
-
-async function handlePdf() {
-    showNotification("Gerando PDF...", "info");
-    
-    if (currentAssistedId && currentPautaId && db) {
-        await updateDocumentState('pdf');
-    }
-    
-    try {
-        const { jsPDF } = window.jspdf;
-        const docPDF = new jsPDF();
-        const pageWidth = docPDF.internal.pageSize.getWidth();
-        let y = 20;
-        const margin = 15;
-
-        // Cabeçalho
-        docPDF.setFontSize(16);
-        docPDF.setTextColor(22, 163, 74);
-        docPDF.text("Checklist de Atendimento - SIGAP", pageWidth / 2, y, { align: "center" });
-        y += 15;
-
-        // Informações do assistido e ação
-        docPDF.setFontSize(12);
-        docPDF.setTextColor(0);
-        docPDF.text(`Assistido: ${getEl('documents-assisted-name')?.textContent || ''}`, margin, y);
-        y += 7;
-        docPDF.text(`Ação: ${getEl('checklist-title')?.textContent || ''}`, margin, y);
-        y += 15;
-
-        // 1. DOCUMENTAÇÃO
-        const checked = document.querySelectorAll('.doc-checkbox:checked');
-        if (checked.length > 0) {
-            docPDF.setFont("helvetica", "bold");
-            docPDF.text("DOCUMENTAÇÃO ENTREGUE:", margin, y);
-            y += 8;
-            docPDF.setFont("helvetica", "normal");
-            docPDF.setFontSize(10);
-            
-            checked.forEach(cb => {
-                const text = cb.closest('label').querySelector('span').textContent;
-                const type = document.querySelector(`input[name="type-${cb.id}"]:checked`)?.value || 'Físico';
-                docPDF.text(`[X] ${text} - [${type.toUpperCase()}]`, margin + 5, y);
-                y += 6;
-                
-                if (y > 280) {
-                    docPDF.addPage();
-                    y = 20;
-                }
-            });
-            y += 5;
-        }
-
-        // 2. PLANILHA DE GASTOS
-        const expenses = getExpenseDataFromForm();
-        const hasExpenses = Object.values(expenses).some(v => v && v.trim() !== '');
-        
-        if (hasExpenses) {
-            if (y > 250) {
-                docPDF.addPage();
-                y = 20;
-            }
-            
-            docPDF.setFont("helvetica", "bold");
-            docPDF.text("PLANILHA DE GASTOS MENSAIS:", margin, y);
-            y += 8;
-            docPDF.setFont("helvetica", "normal");
-            
-            EXPENSE_CATEGORIES.forEach(c => {
-                if (expenses[c.id] && expenses[c.id].trim() !== '') {
-                    docPDF.text(`${c.label}: ${expenses[c.id]}`, margin + 5, y);
-                    y += 6;
-                }
-            });
-            
-            const total = getEl('expense-total')?.textContent || 'R$ 0,00';
-            docPDF.setFont("helvetica", "bold");
-            docPDF.text(`TOTAL MENSAL: ${total}`, margin + 5, y);
-            y += 10;
-        }
-
-        // 3. DADOS DO RÉU
-        const reu = getReuDataFromForm();
-        if (reu && reu.nome) {
-            if (y > 250) {
-                docPDF.addPage();
-                y = 20;
-            }
-            
-            docPDF.setFont("helvetica", "bold");
-            docPDF.text("DADOS DA PARTE CONTRÁRIA (RÉU):", margin, y);
-            y += 8;
-            docPDF.setFont("helvetica", "normal");
-            
-            docPDF.text(`Nome: ${reu.nome}`, margin + 5, y); y += 6;
-            if (reu.cpf) docPDF.text(`CPF: ${reu.cpf}`, margin + 5, y); y += 6;
-            if (reu.telefone) docPDF.text(`WhatsApp: ${reu.telefone}`, margin + 5, y); y += 6;
-            
-            const endereco = [];
-            if (reu.rua) endereco.push(reu.rua);
-            if (reu.numero) endereco.push(`nº ${reu.numero}`);
-            if (reu.bairro) endereco.push(reu.bairro);
-            
-            if (endereco.length > 0) {
-                docPDF.text(`Endereço: ${endereco.join(', ')}`, margin + 5, y); y += 6;
-            }
-            
-            if (reu.cidade || reu.uf || reu.cep) {
-                const cidadeUf = [];
-                if (reu.cidade) cidadeUf.push(reu.cidade);
-                if (reu.uf) cidadeUf.push(reu.uf);
-                const cep = reu.cep ? `CEP: ${reu.cep}` : '';
-                
-                if (cidadeUf.length > 0) {
-                    docPDF.text(`${cidadeUf.join('/')} ${cep}`, margin + 5, y); y += 6;
-                } else if (cep) {
-                    docPDF.text(cep, margin + 5, y); y += 6;
-                }
-            }
-            
-            if (reu.empresa) {
-                docPDF.text(`Empresa: ${reu.empresa}`, margin + 5, y); y += 6;
-                if (reu.enderecoTrabalho) {
-                    docPDF.text(`End. Comercial: ${reu.enderecoTrabalho}`, margin + 5, y); y += 6;
-                }
-            }
-        }
-
-        // Rodapé
-        docPDF.setFontSize(8);
-        docPDF.setTextColor(150);
-        docPDF.text(
-            `Gerado em: ${new Date().toLocaleString('pt-BR')}`,
-            margin,
-            docPDF.internal.pageSize.getHeight() - 10
-        );
-
-        const nomeArquivo = `Checklist_${(getEl('documents-assisted-name')?.textContent || 'SIGAP').replace(/\s+/g, '_')}.pdf`;
-        docPDF.save(nomeArquivo);
-        showNotification("PDF gerado com sucesso!");
-        
-    } catch (err) {
-        console.error("Erro PDF:", err);
-        showNotification("Erro ao gerar PDF", "error");
+        showNotification("Erro ao salvar dados: " + e.message, "error");
     }
 }
 
@@ -674,11 +797,12 @@ function handleBack() {
     getEl('address-editor-container')?.classList.add('hidden');
 }
 
-// --- 13. EXPORTS PRINCIPAIS ---
+// --- 14. EXPORTS PRINCIPAIS ---
 export function setupDetailsModal(config) {
     console.log("⚙️ setupDetailsModal chamado", config);
     db = config.db;
 
+    // Configurar botões
     getEl('back-to-action-selection-btn').onclick = handleBack;
     getEl('save-checklist-btn').onclick = handleSave;
     getEl('print-checklist-btn').onclick = handlePdf;
@@ -721,29 +845,36 @@ export function openDetailsModal(config) {
     
     getEl('documents-assisted-name').textContent = assisted.name;
     
+    // Elementos do DOM
     const selectionArea = getEl('document-action-selection');
     const checklistView = getEl('document-checklist-view');
     const checklistHeader = getEl('document-checklist-view-header');
     const searchContainer = getEl('checklist-search-container');
     const reuContainer = getEl('address-editor-container');
     
-    // SE TEM CHECKLIST SALVO, MOSTRA DIRETO
+    // Se já existe um checklist salvo, carregar diretamente
     if (assisted.documentChecklist && assisted.documentChecklist.action) {
         console.log("✅ Checklist encontrado! Carregando:", assisted.documentChecklist.action);
         
+        // Renderizar o checklist com os dados salvos
         renderChecklist(assisted.documentChecklist.action);
         
-        selectionArea?.classList.add('hidden');
-        checklistView?.classList.remove('hidden');
-        checklistView?.classList.add('flex');
-        checklistHeader?.classList.remove('hidden');
-        searchContainer?.classList.remove('hidden');
+        // Esconder seleção e mostrar checklist
+        if (selectionArea) selectionArea.classList.add('hidden');
+        if (checklistView) {
+            checklistView.classList.remove('hidden');
+            checklistView.classList.add('flex');
+        }
+        if (checklistHeader) checklistHeader.classList.remove('hidden');
+        if (searchContainer) searchContainer.classList.remove('hidden');
         
+        // Atualizar o título com a ação salva
         const titleEl = getEl('checklist-title');
         if (titleEl && documentsData[assisted.documentChecklist.action]) {
             titleEl.textContent = documentsData[assisted.documentChecklist.action].title;
         }
         
+        // Preencher dados do réu se existirem
         if (assisted.documentChecklist.reuData) {
             setTimeout(() => {
                 fillReuData(assisted.documentChecklist.reuData);
@@ -751,24 +882,30 @@ export function openDetailsModal(config) {
             }, 300);
         }
         
+        // Preencher dados de despesas se existirem
         if (assisted.documentChecklist.expenseData) {
             setTimeout(() => {
                 fillExpenseData(assisted.documentChecklist.expenseData);
             }, 300);
         }
         
+        // Verificar visibilidade do réu
         setTimeout(checkReuVisibility, 400);
         
     } else {
         console.log("❌ Nenhum checklist encontrado. Mostrando seleção de assuntos.");
         
-        checklistView?.classList.add('hidden');
-        checklistView?.classList.remove('flex');
-        checklistHeader?.classList.add('hidden');
-        searchContainer?.classList.add('hidden');
-        reuContainer?.classList.add('hidden');
-        selectionArea?.classList.remove('hidden');
+        // Esconder checklist e mostrar seleção
+        if (checklistView) {
+            checklistView.classList.add('hidden');
+            checklistView.classList.remove('flex');
+        }
+        if (checklistHeader) checklistHeader.classList.add('hidden');
+        if (searchContainer) searchContainer.classList.add('hidden');
+        if (reuContainer) reuContainer.classList.add('hidden');
+        if (selectionArea) selectionArea.classList.remove('hidden');
         
+        // Recriar a área de seleção de assunto com busca
         if (selectionArea) {
             selectionArea.innerHTML = `
                 <div class="p-2 sm:p-4">
@@ -816,6 +953,7 @@ export function openDetailsModal(config) {
                         getEl('document-checklist-view').classList.remove('hidden');
                         getEl('document-checklist-view').classList.add('flex');
                         
+                        // Atualizar estado para 'selected'
                         updateDocumentState('selected');
                     };
                     
@@ -824,13 +962,20 @@ export function openDetailsModal(config) {
             }
             
             renderFilteredSubjects();
+            
             searchInput.addEventListener('input', (e) => {
                 renderFilteredSubjects(e.target.value);
             });
         }
     }
     
-    getEl('documents-modal')?.classList.remove('hidden');
+    // Abrir o modal
+    const modal = getEl('documents-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    } else {
+        console.error("Modal de documentos não encontrado");
+    }
 }
 
 // Tornar funções globais
