@@ -502,6 +502,28 @@
     <div id="create-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white p-6 md:p-8 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h2 class="text-xl md:text-2xl font-bold mb-4">Criar Nova Pauta</h2>
+            
+            <!-- Tipo da pauta (herdado do modal anterior) -->
+            <div class="mb-4 p-3 bg-blue-50 rounded-lg">
+                <p class="text-sm font-medium text-blue-800">
+                    Tipo: <span id="selected-pauta-type-display" class="font-bold"></span>
+                </p>
+            </div>
+            
+            <!-- Para pauta multi-sala, permitir escolher agendado/avulso -->
+            <div id="multi-sala-type-selector" class="hidden mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Atendimento:</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center">
+                        <input type="radio" name="multi-sala-type" value="agendado" class="mr-2"> Agendado
+                    </label>
+                    <label class="flex items-center">
+                        <input type="radio" name="multi-sala-type" value="avulso" class="mr-2" checked> Avulso
+                    </label>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Esta configuração definirá o comportamento da pauta multi-sala.</p>
+            </div>
+            
             <label for="create-pauta-name-input" class="block text-sm font-medium text-gray-700 mb-2">Nome da Pauta</label>
             <input type="text" id="create-pauta-name-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
             
@@ -1353,12 +1375,27 @@ João Santos;09:30;Ação de Alimentos;</code></pre>
                         const createModal = document.getElementById('create-pauta-modal');
                         createModal.dataset.pautaType = type;
                         
+                        // Atualizar o texto do tipo selecionado
+                        const typeDisplay = document.getElementById('selected-pauta-type-display');
+                        if (type === 'agendado') typeDisplay.textContent = 'Atendimento Agendado';
+                        else if (type === 'avulso') typeDisplay.textContent = 'Atendimento Avulso';
+                        else if (type === 'multisala') typeDisplay.textContent = 'Multi-Salas';
+                        
+                        // Configurar o seletor de tipo para multi-sala
+                        const multiSalaSelector = document.getElementById('multi-sala-type-selector');
                         const roomConfig = document.getElementById('room-config-container');
+                        
                         if (type === 'multisala') {
+                            multiSalaSelector.classList.remove('hidden');
                             roomConfig.classList.remove('hidden');
                             this.customRoomsList = [];
                             this.renderCustomRooms();
+                            
+                            // Pré-selecionar o tipo de atendimento para multi-sala (padrão: avulso)
+                            const avulsoRadio = document.querySelector('input[name="multi-sala-type"][value="avulso"]');
+                            if (avulsoRadio) avulsoRadio.checked = true;
                         } else {
+                            multiSalaSelector.classList.add('hidden');
                             roomConfig.classList.add('hidden');
                         }
                         
@@ -1400,6 +1437,14 @@ João Santos;09:30;Ação de Alimentos;</code></pre>
                         showNotification("O nome da pauta não pode ser vazio.", "error");
                         return;
                     }
+                    
+                    // Validar se é multi-sala e tem salas
+                    const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
+                    if (pautaType === 'multisala' && this.customRoomsList.length === 0) {
+                        showNotification("Adicione pelo menos uma sala para a pauta multi-sala.", "error");
+                        return;
+                    }
+                    
                     document.getElementById('create-pauta-modal').classList.add('hidden');
                     document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
                 });
@@ -1422,6 +1467,14 @@ João Santos;09:30;Ação de Alimentos;</code></pre>
                 document.getElementById('confirm-create-pauta-final-btn')?.addEventListener('click', async () => {
                     const pautaName = document.getElementById('create-pauta-name-input').value.trim();
                     const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
+                    
+                    // Determinar o tipo efetivo da pauta (para multi-sala, usar o selecionado)
+                    let effectiveType = pautaType;
+                    if (pautaType === 'multisala') {
+                        const selectedType = document.querySelector('input[name="multi-sala-type"]:checked')?.value;
+                        effectiveType = selectedType || 'avulso'; // padrão avulso se nada selecionado
+                    }
+                    
                     const ordemAtendimento = document.querySelector('input[name="ordemAtendimento"]:checked')?.value;
                     const useDelegationFlow = document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true';
                     const useDistributionFlow = document.getElementById('check-use-distribution')?.checked || false;
@@ -1431,16 +1484,13 @@ João Santos;09:30;Ação de Alimentos;</code></pre>
                         showNotification("Você precisa estar logado.", "error");
                         return;
                     }
-                    
-                    if (pautaType === 'multisala' && this.customRoomsList.length === 0) {
-                        showNotification("Adicione pelo menos uma sala.", "error");
-                        return;
-                    }
 
                     try {
-                        await addDoc(collection(this.db, "pautas"), {
+                        // Criar objeto da pauta
+                        const pautaData = {
                             name: pautaName,
-                            type: pautaType,
+                            type: pautaType, // tipo original (agendado, avulso, multisala)
+                            effectiveType: effectiveType, // tipo efetivo de atendimento (agendado/avulso)
                             ordemAtendimento: ordemAtendimento,
                             useDelegationFlow: useDelegationFlow,
                             useDistributionFlow: useDistributionFlow,
@@ -1451,7 +1501,9 @@ João Santos;09:30;Ação de Alimentos;</code></pre>
                             isClosed: false,
                             createdAt: new Date().toISOString(),
                             rooms: pautaType === 'multisala' ? [...this.customRoomsList] : []
-                        });
+                        };
+                        
+                        await addDoc(collection(this.db, "pautas"), pautaData);
                         
                         showNotification("Pauta criada com sucesso!");
                         document.getElementById('create-pauta-name-input').value = '';
@@ -1808,6 +1860,24 @@ João Santos;09:30;Ação de Alimentos;</code></pre>
                             distColumn?.classList.remove('hidden');
                         } else {
                             distColumn?.classList.add('hidden');
+                        }
+                        
+                        // Configurar as abas de acordo com o tipo efetivo da pauta
+                        // Se for pauta de atendimento agendado, mostrar apenas a aba agendamento
+                        // Se for avulso, mostrar apenas a aba avulso
+                        const effectiveType = this.currentPautaData.effectiveType || pautaType;
+                        if (effectiveType === 'agendado') {
+                            UIService.switchTab('agendamento', this);
+                            document.getElementById('tab-avulso')?.classList.add('hidden');
+                            document.getElementById('tab-agendamento')?.classList.remove('hidden');
+                        } else if (effectiveType === 'avulso') {
+                            UIService.switchTab('avulso', this);
+                            document.getElementById('tab-agendamento')?.classList.add('hidden');
+                            document.getElementById('tab-avulso')?.classList.remove('hidden');
+                        } else {
+                            // Para compatibilidade com pautas antigas, mostrar ambas as abas
+                            document.getElementById('tab-agendamento')?.classList.remove('hidden');
+                            document.getElementById('tab-avulso')?.classList.remove('hidden');
                         }
                     }
 
