@@ -21,6 +21,47 @@ const calculateDuration = (totalMinutes) => {
         : `${totalMinutes} min`;
 };
 
+/**
+ * Formata CPF (000.000.000-00)
+ */
+const formatCPF = (cpf) => {
+    if (!cpf) return '';
+    const numeros = String(cpf).replace(/\D/g, '');
+    if (numeros.length !== 11) return cpf;
+    return numeros.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+};
+
+/**
+ * Formata CEP (00000-000)
+ */
+const formatCEP = (cep) => {
+    if (!cep) return '';
+    const numeros = String(cep).replace(/\D/g, '');
+    if (numeros.length !== 8) return cep;
+    return numeros.replace(/(\d{5})(\d{3})/, '$1-$2');
+};
+
+/**
+ * Formata moeda (R$ 0,00)
+ */
+const formatCurrency = (value) => {
+    if (!value) return 'R$ 0,00';
+    // Se já estiver formatado, retorna como está
+    if (typeof value === 'string' && value.includes('R$')) return value;
+    
+    // Tenta converter para número
+    let num = 0;
+    if (typeof value === 'string') {
+        // Remove R$ e espaços, substitui vírgula por ponto
+        const cleanValue = value.replace(/[R$\s]/g, '').replace(',', '.');
+        num = parseFloat(cleanValue) || 0;
+    } else {
+        num = value || 0;
+    }
+    
+    return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+};
+
 // ========================================================
 // PDF SERVICE - Objeto com todas as funções de PDF
 // ========================================================
@@ -98,6 +139,263 @@ export const PDFService = {
         } catch (error) {
             console.error("Erro PDF Atendidos:", error);
             alert("Erro ao baixar o PDF. Verifique se o navegador bloqueou o download.");
+            return false;
+        }
+    },
+
+    /**
+     * GERA PDF DO CHECKLIST COMPLETO (com dados do assistido, checklist, gastos e réu)
+     */
+    generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos = []) {
+        try {
+            const { jsPDF } = window.jspdf;
+            const docPDF = new jsPDF();
+            const pageWidth = docPDF.internal.pageSize.getWidth();
+            const pageHeight = docPDF.internal.pageSize.getHeight();
+            let y = 20;
+            const margin = 15;
+            const lineHeight = 5;
+
+            // ================================================
+            // CABEÇALHO
+            // ================================================
+            docPDF.setFontSize(18);
+            docPDF.setTextColor(22, 163, 74);
+            docPDF.setFont("helvetica", "bold");
+            docPDF.text("SIGAP - Checklist de Atendimento", pageWidth / 2, y, { align: "center" });
+            y += 8;
+            
+            docPDF.setFontSize(10);
+            docPDF.setTextColor(100, 100, 100);
+            docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, y, { align: "center" });
+            y += 15;
+
+            // ================================================
+            // 1. DADOS DO ASSISTIDO
+            // ================================================
+            docPDF.setFontSize(12);
+            docPDF.setTextColor(0, 0, 0);
+            docPDF.setFont("helvetica", "bold");
+            docPDF.text("1. DADOS DO ASSISTIDO", margin, y);
+            y += 7;
+            docPDF.setFont("helvetica", "normal");
+            docPDF.setFontSize(10);
+            
+            docPDF.text(`Nome: ${assistedName || 'Não informado'}`, margin + 5, y);
+            y += 6;
+            docPDF.text(`Ação: ${actionTitle || 'Não selecionada'}`, margin + 5, y);
+            y += 10;
+
+            // ================================================
+            // 2. DOCUMENTAÇÃO (CHECKBOXES MARCADOS)
+            // ================================================
+            if (checklistData && checklistData.checkedIds && checklistData.checkedIds.length > 0) {
+                docPDF.setFont("helvetica", "bold");
+                docPDF.setFontSize(11);
+                docPDF.text("2. DOCUMENTAÇÃO ENTREGUE:", margin, y);
+                y += 7;
+                docPDF.setFont("helvetica", "normal");
+                docPDF.setFontSize(9);
+                
+                // Se temos os textos dos documentos, usar eles
+                if (documentosTextos && documentosTextos.length > 0) {
+                    documentosTextos.forEach((doc, index) => {
+                        if (y > pageHeight - 20) {
+                            docPDF.addPage();
+                            y = 20;
+                        }
+                        
+                        // Verificar se tem tipo (Físico/Digital)
+                        const tipo = checklistData.docTypes && checklistData.docTypes[doc.id] 
+                            ? ` [${checklistData.docTypes[doc.id].toUpperCase()}]` 
+                            : '';
+                        
+                        docPDF.text(`✓ ${doc.text}${tipo}`, margin + 5, y);
+                        y += 5;
+                    });
+                } else {
+                    docPDF.text(`${checklistData.checkedIds.length} documento(s) marcado(s)`, margin + 5, y);
+                    y += 5;
+                }
+                y += 5;
+            } else {
+                docPDF.text("Nenhum documento selecionado.", margin + 5, y);
+                y += 7;
+            }
+
+            // ================================================
+            // 3. PLANILHA DE GASTOS
+            // ================================================
+            if (checklistData && checklistData.expenseData) {
+                const expenses = checklistData.expenseData;
+                const hasExpenses = Object.values(expenses).some(v => v && v.trim() !== '');
+                
+                if (hasExpenses) {
+                    if (y > pageHeight - 60) {
+                        docPDF.addPage();
+                        y = 20;
+                    }
+                    
+                    docPDF.setFont("helvetica", "bold");
+                    docPDF.setFontSize(11);
+                    docPDF.text("3. PLANILHA DE GASTOS MENSAIS:", margin, y);
+                    y += 7;
+                    docPDF.setFont("helvetica", "normal");
+                    docPDF.setFontSize(9);
+                    
+                    // Cabeçalho da tabela
+                    docPDF.setFillColor(240, 240, 240);
+                    docPDF.rect(margin, y - 4, pageWidth - 2*margin, 6, 'F');
+                    docPDF.setFont("helvetica", "bold");
+                    docPDF.text("DESCRIÇÃO", margin + 5, y);
+                    docPDF.text("VALOR", pageWidth - margin - 40, y, { align: 'right' });
+                    y += 6;
+                    docPDF.setFont("helvetica", "normal");
+                    
+                    // Categorias de gastos
+                    const categorias = [
+                        { id: 'moradia', label: '1. MORADIA (Habitação)' },
+                        { id: 'alimentacao', label: '2. ALIMENTAÇÃO' },
+                        { id: 'educacao', label: '3. EDUCAÇÃO' },
+                        { id: 'saude', label: '4. SAÚDE' },
+                        { id: 'vestuario', label: '5. VESTUÁRIO E HIGIENE' },
+                        { id: 'lazer', label: '6. LAZER E TRANSPORTE' },
+                        { id: 'outras', label: '7. OUTRAS DESPESAS' }
+                    ];
+                    
+                    categorias.forEach(cat => {
+                        if (expenses[cat.id] && expenses[cat.id].trim() !== '') {
+                            if (y > pageHeight - 20) {
+                                docPDF.addPage();
+                                y = 20;
+                            }
+                            
+                            docPDF.text(cat.label, margin + 5, y);
+                            docPDF.text(expenses[cat.id], pageWidth - margin - 40, y, { align: 'right' });
+                            y += 5;
+                        }
+                    });
+                    
+                    // Total
+                    if (y > pageHeight - 20) {
+                        docPDF.addPage();
+                        y = 20;
+                    }
+                    
+                    y += 2;
+                    docPDF.setDrawColor(200, 200, 200);
+                    docPDF.line(margin, y - 2, pageWidth - margin, y - 2);
+                    docPDF.setFont("helvetica", "bold");
+                    docPDF.text("TOTAL MENSAL:", margin + 5, y + 2);
+                    
+                    // Calcular total
+                    let total = 0;
+                    categorias.forEach(cat => {
+                        if (expenses[cat.id]) {
+                            const valor = parseFloat(String(expenses[cat.id]).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
+                            total += valor;
+                        }
+                    });
+                    
+                    docPDF.text(formatCurrency(total), pageWidth - margin - 40, y + 2, { align: 'right' });
+                    y += 10;
+                }
+            }
+
+            // ================================================
+            // 4. DADOS DO RÉU
+            // ================================================
+            if (checklistData && checklistData.reuData) {
+                const reu = checklistData.reuData;
+                const hasReu = reu && (reu.nome || reu.cpf || reu.telefone || reu.rua || reu.empresa);
+                
+                if (hasReu) {
+                    if (y > pageHeight - 80) {
+                        docPDF.addPage();
+                        y = 20;
+                    }
+                    
+                    docPDF.setFont("helvetica", "bold");
+                    docPDF.setFontSize(11);
+                    docPDF.text("4. DADOS DA PARTE CONTRÁRIA (RÉU):", margin, y);
+                    y += 7;
+                    docPDF.setFont("helvetica", "normal");
+                    docPDF.setFontSize(9);
+                    
+                    // Nome
+                    if (reu.nome) {
+                        docPDF.text(`Nome: ${reu.nome}`, margin + 5, y);
+                        y += 5;
+                    }
+                    
+                    // CPF e Telefone
+                    if (reu.cpf || reu.telefone) {
+                        let linha = '';
+                        if (reu.cpf) linha += `CPF: ${formatCPF(reu.cpf)}`;
+                        if (reu.cpf && reu.telefone) linha += ' | ';
+                        if (reu.telefone) linha += `WhatsApp: ${reu.telefone}`;
+                        docPDF.text(linha, margin + 5, y);
+                        y += 5;
+                    }
+                    
+                    // Endereço
+                    const enderecoParts = [];
+                    if (reu.rua) enderecoParts.push(reu.rua);
+                    if (reu.numero) enderecoParts.push(`nº ${reu.numero}`);
+                    if (reu.bairro) enderecoParts.push(reu.bairro);
+                    
+                    if (enderecoParts.length > 0) {
+                        docPDF.text(`Endereço: ${enderecoParts.join(', ')}`, margin + 5, y);
+                        y += 5;
+                    }
+                    
+                    // Cidade, UF e CEP
+                    if (reu.cidade || reu.uf || reu.cep) {
+                        let linha = '';
+                        if (reu.cidade) linha += reu.cidade;
+                        if (reu.uf) linha += linha ? `/${reu.uf}` : reu.uf;
+                        if (reu.cep) {
+                            if (linha) linha += ' - ';
+                            linha += `CEP: ${formatCEP(reu.cep)}`;
+                        }
+                        docPDF.text(linha, margin + 5, y);
+                        y += 5;
+                    }
+                    
+                    // Dados do trabalho
+                    if (reu.empresa) {
+                        docPDF.text(`Empresa: ${reu.empresa}`, margin + 5, y);
+                        y += 5;
+                    }
+                    if (reu.enderecoTrabalho) {
+                        docPDF.text(`End. Comercial: ${reu.enderecoTrabalho}`, margin + 5, y);
+                        y += 5;
+                    }
+                }
+            }
+
+            // ================================================
+            // RODAPÉ
+            // ================================================
+            const pageCount = docPDF.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                docPDF.setPage(i);
+                docPDF.setFontSize(8);
+                docPDF.setTextColor(150, 150, 150);
+                docPDF.text(
+                    `Página ${i} de ${pageCount}`,
+                    pageWidth - margin - 20,
+                    pageHeight - 10
+                );
+            }
+
+            // Salvar PDF
+            const nomeArquivo = `Checklist_${assistedName.replace(/\s+/g, '_')}.pdf`;
+            docPDF.save(nomeArquivo);
+            return true;
+            
+        } catch (error) {
+            console.error("Erro PDF Checklist:", error);
             return false;
         }
     },
@@ -198,6 +496,13 @@ export const PDFService = {
  */
 export const generateAtendidosPDF = (pautaName, atendidos) => {
     return PDFService.generateAtendidosPDF(pautaName, atendidos);
+};
+
+/**
+ * @deprecated Use PDFService.generateChecklistPDF() instead
+ */
+export const generateChecklistPDF = (assistedName, actionTitle, checklistData, documentosTextos) => {
+    return PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
 };
 
 /**
