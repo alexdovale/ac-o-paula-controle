@@ -125,6 +125,11 @@
         .animate-pulse-slow {
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
+
+        /* Estilo para modo visualização */
+        .view-mode-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
     </style>
 </head>
 <body class="p-2 md:p-4 lg:p-8">
@@ -220,7 +225,7 @@
     <div id="app-container" class="max-w-full mx-auto hidden">
         <header class="mb-4 md:mb-6 space-y-4">
             <div class="flex justify-between items-center w-full relative">
-                <div class="w-10"></div> <!-- Espaço para centralizar -->
+                <div class="w-10"></div>
                 <h1 class="text-lg md:text-xl font-semibold text-gray-600 text-center flex-1">Sistema de Gerenciamento de Pauta - SIGAP</h1>
                 <button id="logout-btn-app" title="Sair" class="bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
@@ -296,6 +301,12 @@
             <div id="closed-pauta-alert" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4" role="alert">
                 <p class="font-bold">Pauta Fechada</p>
                 <p>Esta pauta está fechada para novas edições. Apenas o criador pode reabri-la.</p>
+            </div>
+
+            <!-- Alerta de modo visualização para links compartilhados -->
+            <div id="view-mode-alert" class="hidden bg-purple-100 border-l-4 border-purple-500 text-purple-700 p-4 mt-4" role="alert">
+                <p class="font-bold">🔗 Modo Visualização</p>
+                <p class="text-sm">Você está visualizando esta pauta através de um link compartilhado. As alterações não estão disponíveis neste modo.</p>
             </div>
         </header>
 
@@ -464,7 +475,7 @@
     </div>
 
     <!-- ======================================================= -->
-    <!-- TODOS OS MODAIS - COMPLETOS E FUNCIONAIS -->
+    <!-- TODOS OS MODAIS -->
     <!-- ======================================================= -->
 
     <!-- Modal de Tipo de Pauta -->
@@ -599,43 +610,43 @@
         </div>
     </div>
 
-  <!-- Modal de Compartilhamento Externo -->
-<div id="share-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-        <h2 class="text-2xl font-bold mb-4 text-gray-800">Compartilhamento Externo</h2>
-        <p class="text-gray-600 mb-6 text-sm">Gere um link público para que assistidos e colaboradores vejam a fila em tempo real (apenas leitura).</p>
-        
-        <div class="flex items-center justify-between mb-6 bg-gray-50 p-4 rounded-lg border">
-            <span class="font-medium text-gray-700">Status do Link:</span>
-            <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="share-toggle" class="sr-only peer">
-                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
-                <span id="share-status-text" class="ml-3 text-sm font-medium text-gray-900">Privado</span>
-            </label>
-        </div>
+    <!-- Modal de Compartilhamento Externo -->
+    <div id="share-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">Compartilhamento Externo</h2>
+            <p class="text-gray-600 mb-6 text-sm">Gere um link público para que assistidos e colaboradores vejam a fila em tempo real (apenas leitura).</p>
+            
+            <div class="flex items-center justify-between mb-6 bg-gray-50 p-4 rounded-lg border">
+                <span class="font-medium text-gray-700">Status do Link:</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="share-toggle" class="sr-only peer">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                    <span id="share-status-text" class="ml-3 text-sm font-medium text-gray-900">Privado</span>
+                </label>
+            </div>
 
-        <div id="share-link-container" class="hidden space-y-4">
-            <div>
-                <label class="block text-xs font-bold text-gray-500 uppercase">Link Público</label>
-                <div class="flex mt-1">
-                    <input type="text" id="share-link-input" readonly class="w-full p-2 border border-gray-300 rounded-l-lg bg-gray-100 text-sm text-gray-600">
-                    <button id="copy-share-link-btn" class="bg-blue-600 text-white px-4 rounded-r-lg hover:bg-blue-700 font-bold text-sm">Copiar</button>
+            <div id="share-link-container" class="hidden space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase">Link Público</label>
+                    <div class="flex mt-1">
+                        <input type="text" id="share-link-input" readonly class="w-full p-2 border border-gray-300 rounded-l-lg bg-gray-100 text-sm text-gray-600">
+                        <button id="copy-share-link-btn" class="bg-blue-600 text-white px-4 rounded-r-lg hover:bg-blue-700 font-bold text-sm">Copiar</button>
+                    </div>
                 </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="mask-names-check" class="h-4 w-4 text-pink-600 border-gray-300 rounded">
+                    <label for="mask-names-check" class="text-sm text-gray-700">Ocultar Sobrenomes (Privacidade/LGPD)</label>
+                </div>
+                <a id="open-external-btn" href="#" target="_blank" class="block w-full text-center py-2 border border-pink-600 text-pink-600 rounded-lg hover:bg-pink-50 font-bold mt-2">
+                    Abrir Visualização
+                </a>
             </div>
-            <div class="flex items-center gap-2">
-                <input type="checkbox" id="mask-names-check" class="h-4 w-4 text-pink-600 border-gray-300 rounded">
-                <label for="mask-names-check" class="text-sm text-gray-700">Ocultar Sobrenomes (Privacidade/LGPD)</label>
-            </div>
-            <a id="open-external-btn" href="#" target="_blank" class="block w-full text-center py-2 border border-pink-600 text-pink-600 rounded-lg hover:bg-pink-50 font-bold mt-2">
-                Abrir Visualização
-            </a>
-        </div>
 
-        <div class="flex justify-end mt-6">
-            <button id="close-share-modal-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
+            <div class="flex justify-end mt-6">
+                <button id="close-share-modal-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
+            </div>
         </div>
     </div>
-</div>
 
     <!-- Modal de Conclusão de Distribuição -->
     <div id="distribution-finish-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1204,6 +1215,12 @@ João Santos;09:30;Ação de Alimentos;</code></pre>
                 this.unsubscribeFromAttendances = null;
                 this.unsubscribeFromCollaborators = null;
                 
+                // Variáveis para compartilhamento
+                this.shareEnabled = false;
+                this.shareToken = null;
+                this.shareMaskNames = false;
+                this.isViewMode = false;
+                
                 this.init();
             }
 
@@ -1223,10 +1240,69 @@ João Santos;09:30;Ação de Alimentos;</code></pre>
                     this.setupEventListeners();
                     this.setupAuthListener();
                     
+                    // Verificar se é uma pauta compartilhada
+                    const isShared = await this.handleSharedPauta();
+                    if (!isShared) {
+                        const lastPautaId = localStorage.getItem('lastPautaId');
+                        if (lastPautaId && this.auth?.currentUser) {
+                            // Carregar última pauta se existir
+                        }
+                    }
+                    
                 } catch (error) {
                     console.error("Erro na inicialização:", error);
                     showNotification("Erro ao iniciar o sistema", "error");
                 }
+            }
+
+            async handleSharedPauta() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const sharedToken = urlParams.get('shared');
+                const pautaId = urlParams.get('pauta');
+                const maskNames = urlParams.get('mask') === '1';
+                
+                if (sharedToken && pautaId) {
+                    try {
+                        // Verificar se o token é válido
+                        const pautaRef = doc(this.db, "pautas", pautaId);
+                        const pautaDoc = await getDoc(pautaRef);
+                        
+                        if (pautaDoc.exists()) {
+                            const pautaData = pautaDoc.data();
+                            
+                            // Verificar se o compartilhamento está ativo e o token corresponde
+                            if (pautaData.shareEnabled && pautaData.shareToken === sharedToken) {
+                                // Carregar modo visualização apenas
+                                this.currentPauta = {
+                                    id: pautaId,
+                                    name: pautaData.name,
+                                    type: pautaData.type
+                                };
+                                this.currentPautaData = pautaData;
+                                this.isViewMode = true;
+                                
+                                // Esconder elementos de edição
+                                document.getElementById('form-agendamento').classList.add('hidden');
+                                document.getElementById('actions-toggle')?.classList.add('hidden');
+                                document.getElementById('manage-collaborators-btn')?.classList.add('hidden');
+                                document.getElementById('add-assisted-btn')?.classList.add('hidden');
+                                
+                                // Mostrar alerta de visualização
+                                document.getElementById('view-mode-alert').classList.remove('hidden');
+                                
+                                // Carregar dados em tempo real
+                                this.setupRealtimeListener(pautaId);
+                                UIService.showScreen('app');
+                                
+                                return true;
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Erro ao carregar pauta compartilhada:", error);
+                        showNotification("Link de compartilhamento inválido ou expirado", "error");
+                    }
+                }
+                return false;
             }
 
             setupOfflinePersistence() {
@@ -1456,6 +1532,7 @@ João Santos;09:30;Ação de Alimentos;</code></pre>
                     this.currentPauta = null;
                     this.allAssisted = [];
                     this.colaboradores = [];
+                    this.isViewMode = false;
                     UIService.showScreen('pautaSelection');
                     if (this.auth?.currentUser) {
                         PautaService.showPautaSelectionScreen(this);
@@ -1479,7 +1556,7 @@ João Santos;09:30;Ação de Alimentos;</code></pre>
                 document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
                 
                 document.getElementById('share-pauta-btn')?.addEventListener('click', () => {
-                    document.getElementById('share-modal').classList.remove('hidden');
+                    this.openShareModal();
                 });
 
                 document.getElementById('view-stats-btn')?.addEventListener('click', () => {
@@ -1629,6 +1706,199 @@ João Santos;09:30;Ação de Alimentos;</code></pre>
                 // CONFIGURAR MODAL DE DETALHES
                 // ================================================
                 setupDetailsModal({ db: this.db, showNotification });
+
+                // ================================================
+                // COMPARTILHAMENTO EXTERNO - EVENTOS DO MODAL
+                // ================================================
+                this.setupShareModalEvents();
+            }
+
+            setupShareModalEvents() {
+                // Toggle de compartilhamento
+                document.getElementById('share-toggle')?.addEventListener('change', async (e) => {
+                    await this.toggleShare(e.target.checked);
+                });
+
+                // Checkbox de mascarar nomes
+                document.getElementById('mask-names-check')?.addEventListener('change', async (e) => {
+                    await this.updateShareMaskNames(e.target.checked);
+                });
+
+                // Botão copiar link
+                document.getElementById('copy-share-link-btn')?.addEventListener('click', () => {
+                    const linkInput = document.getElementById('share-link-input');
+                    if (linkInput && linkInput.value) {
+                        linkInput.select();
+                        navigator.clipboard.writeText(linkInput.value).then(() => {
+                            showNotification("Link copiado para a área de transferência!", "success");
+                        }).catch(() => {
+                            document.execCommand('copy');
+                            showNotification("Link copiado!", "success");
+                        });
+                    }
+                });
+
+                // Botão abrir visualização externa
+                document.getElementById('open-external-btn')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const linkInput = document.getElementById('share-link-input');
+                    if (linkInput && linkInput.value) {
+                        window.open(linkInput.value, '_blank');
+                    }
+                });
+            }
+
+            async openShareModal() {
+                if (!this.currentPauta || !this.currentPauta.id) {
+                    showNotification("Nenhuma pauta selecionada", "error");
+                    return;
+                }
+                
+                const modal = document.getElementById('share-modal');
+                const toggle = document.getElementById('share-toggle');
+                const statusText = document.getElementById('share-status-text');
+                const linkContainer = document.getElementById('share-link-container');
+                const maskCheckbox = document.getElementById('mask-names-check');
+                const linkInput = document.getElementById('share-link-input');
+                
+                try {
+                    // Carregar configurações atuais da pauta
+                    const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                    const pautaDoc = await getDoc(pautaRef);
+                    
+                    if (pautaDoc.exists()) {
+                        const pautaData = pautaDoc.data();
+                        this.shareEnabled = pautaData.shareEnabled || false;
+                        this.shareToken = pautaData.shareToken || null;
+                        this.shareMaskNames = pautaData.shareMaskNames || false;
+                        
+                        // Atualizar UI
+                        toggle.checked = this.shareEnabled;
+                        maskCheckbox.checked = this.shareMaskNames;
+                        statusText.textContent = this.shareEnabled ? 'Público' : 'Privado';
+                        
+                        if (this.shareEnabled && this.shareToken) {
+                            const baseUrl = window.location.origin + window.location.pathname;
+                            const shareUrl = `${baseUrl}?shared=${this.shareToken}&pauta=${this.currentPauta.id}${this.shareMaskNames ? '&mask=1' : ''}`;
+                            linkInput.value = shareUrl;
+                            linkContainer.classList.remove('hidden');
+                        } else {
+                            linkContainer.classList.add('hidden');
+                        }
+                    }
+                } catch (error) {
+                    console.error("Erro ao carregar configurações de compartilhamento:", error);
+                    showNotification("Erro ao carregar configurações", "error");
+                }
+                
+                modal.classList.remove('hidden');
+            }
+
+            async toggleShare(enabled) {
+                if (!this.currentPauta || !this.currentPauta.id) return;
+                
+                const statusText = document.getElementById('share-status-text');
+                const linkContainer = document.getElementById('share-link-container');
+                const linkInput = document.getElementById('share-link-input');
+                const maskCheckbox = document.getElementById('mask-names-check');
+                
+                try {
+                    const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                    
+                    if (enabled && !this.shareToken) {
+                        // Gerar novo token único
+                        this.shareToken = Math.random().toString(36).substring(2, 15) + 
+                                        Math.random().toString(36).substring(2, 15);
+                    }
+                    
+                    this.shareEnabled = enabled;
+                    
+                    // Atualizar no Firestore
+                    await updateDoc(pautaRef, {
+                        shareEnabled: enabled,
+                        shareToken: enabled ? this.shareToken : null,
+                        shareMaskNames: maskCheckbox.checked,
+                        updatedAt: new Date().toISOString()
+                    });
+                    
+                    statusText.textContent = enabled ? 'Público' : 'Privado';
+                    
+                    if (enabled && this.shareToken) {
+                        const baseUrl = window.location.origin + window.location.pathname;
+                        const shareUrl = `${baseUrl}?shared=${this.shareToken}&pauta=${this.currentPauta.id}${maskCheckbox.checked ? '&mask=1' : ''}`;
+                        linkInput.value = shareUrl;
+                        linkContainer.classList.remove('hidden');
+                        
+                        // Registrar ação no log de auditoria
+                        await logAction(this.db, {
+                            userId: this.currentUser?.uid,
+                            userEmail: this.currentUser?.email,
+                            action: 'share_enabled',
+                            details: `Compartilhamento externo ativado para pauta: ${this.currentPauta.name}`,
+                            pautaId: this.currentPauta.id,
+                            timestamp: new Date().toISOString()
+                        });
+                        
+                        showNotification("Link público gerado com sucesso!", "success");
+                    } else {
+                        linkContainer.classList.add('hidden');
+                        this.shareToken = null;
+                        
+                        // Registrar ação no log de auditoria
+                        await logAction(this.db, {
+                            userId: this.currentUser?.uid,
+                            userEmail: this.currentUser?.email,
+                            action: 'share_disabled',
+                            details: `Compartilhamento externo desativado para pauta: ${this.currentPauta.name}`,
+                            pautaId: this.currentPauta.id,
+                            timestamp: new Date().toISOString()
+                        });
+                        
+                        showNotification("Compartilhamento desativado", "info");
+                    }
+                    
+                } catch (error) {
+                    console.error("Erro ao atualizar compartilhamento:", error);
+                    showNotification("Erro ao atualizar configurações", "error");
+                    // Reverter toggle em caso de erro
+                    document.getElementById('share-toggle').checked = !enabled;
+                }
+            }
+
+            async updateShareMaskNames(maskNames) {
+                if (!this.shareEnabled || !this.currentPauta?.id) return;
+                
+                const linkInput = document.getElementById('share-link-input');
+                const statusText = document.getElementById('share-status-text');
+                
+                try {
+                    const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                    
+                    await updateDoc(pautaRef, {
+                        shareMaskNames: maskNames,
+                        updatedAt: new Date().toISOString()
+                    });
+                    
+                    this.shareMaskNames = maskNames;
+                    
+                    // Atualizar o link com a nova configuração
+                    if (this.shareToken) {
+                        const baseUrl = window.location.origin + window.location.pathname;
+                        const shareUrl = `${baseUrl}?shared=${this.shareToken}&pauta=${this.currentPauta.id}${maskNames ? '&mask=1' : ''}`;
+                        linkInput.value = shareUrl;
+                    }
+                    
+                    statusText.textContent = 'Público (configuração atualizada)';
+                    setTimeout(() => {
+                        statusText.textContent = 'Público';
+                    }, 2000);
+                    
+                    showNotification("Configuração de privacidade atualizada", "success");
+                    
+                } catch (error) {
+                    console.error("Erro ao atualizar máscara de nomes:", error);
+                    showNotification("Erro ao atualizar configuração", "error");
+                }
             }
 
             renderCustomRooms() {
