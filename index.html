@@ -161,6 +161,20 @@
             <div id="pending-invitations-list" class="space-y-4"></div>
         </div>
        <div class="mb-6">
+        <!-- BOTÕES DE LAYOUT - COLOCAR ANTES DOS FILTROS -->
+        <div class="flex justify-end gap-2 mb-3">
+            <button id="view-mode-grid" class="view-mode-btn px-3 py-1.5 rounded-md text-sm font-medium bg-green-600 text-white" data-mode="grid">
+                📱 Grid (3x3)
+            </button>
+            <button id="view-mode-list" class="view-mode-btn px-3 py-1.5 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-200" data-mode="list">
+                📋 Lista (1x1)
+            </button>
+            <button id="view-mode-compact" class="view-mode-btn px-3 py-1.5 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-200" data-mode="compact">
+                📊 Compacto (4x4)
+            </button>
+        </div>
+
+           
         <!-- Filtros -->
         <div class="bg-white p-4 rounded-lg shadow-sm mb-4">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
