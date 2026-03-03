@@ -1305,8 +1305,28 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </div>
 
     <!-- Modal de Estatísticas -->
+    <!-- Modal de Estatísticas (CORRIGIDO) -->
     <div id="statistics-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <!-- O conteúdo será gerado pelo StatisticsService -->
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-4xl flex flex-col transition-all duration-300" style="max-height: 95vh;">
+            <!-- Header com controles de janela -->
+            <div class="flex justify-between items-center bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3 rounded-t-lg select-none">
+                <div class="flex items-center gap-2">
+                    <span class="text-white text-sm md:text-base">📊</span>
+                    <h2 class="text-xs md:text-sm font-bold text-white uppercase tracking-wider">Painel de Estatísticas</h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="min-statistics-modal" class="w-8 h-8 flex items-center justify-center rounded hover:bg-white/20 text-white text-sm md:text-base">_</button>
+                    <button id="max-statistics-modal" class="w-8 h-8 flex items-center justify-center rounded hover:bg-white/20 text-white text-sm md:text-base">□</button>
+                    <button id="close-statistics-modal" class="w-8 h-8 flex items-center justify-center rounded hover:bg-red-500 text-white text-sm md:text-base font-bold">×</button>
+                </div>
+            </div>
+    
+            <!-- Conteúdo das estatísticas -->
+            <div id="statistics-content" class="flex-grow overflow-y-auto p-6 space-y-6">
+                <!-- O conteúdo será gerado pelo StatisticsService -->
+                <div class="text-center text-gray-500 py-8">Carregando estatísticas...</div>
+            </div>
+        </div>
     </div>
 
     <!-- Rodapé -->
