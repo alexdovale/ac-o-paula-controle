@@ -44,25 +44,89 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Estilos mantidos IGUAIS -->
     <style>
         * {
             -webkit-tap-highlight-color: transparent;
         }
         
-        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f0f2f5;
+        }
+        
         .priority-urgente { border-left: 5px solid #ef4444; }
         .priority-maxima { border-left: 5px solid #22c55e; }
         .priority-media { border-left: 5px solid #f97316; }
         .priority-minima { border-left: 5px solid #6b7280; }
-        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar, #members-list-container::-webkit-scrollbar, #statistics-content::-webkit-scrollbar { width: 8px; }
-        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track, #statistics-content::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
-        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb, #statistics-content::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
-        input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
-        .tab-active { border-color: #16a34a; background-color: #f0fdf4; color: #16a34a; font-weight: 600; }
-        .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
-        .loader { border: 6px solid #f3f3f3; border-top: 6px solid #16a34a; border-radius: 50%; width: 50px; height: 50px; animation: spin 1.5s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .column-content::-webkit-scrollbar, 
+        .scrollable-content::-webkit-scrollbar, 
+        #policy-content::-webkit-scrollbar, 
+        #checklist-container::-webkit-scrollbar, 
+        #members-list-container::-webkit-scrollbar, 
+        #statistics-content::-webkit-scrollbar { 
+            width: 8px; 
+        }
+        
+        .column-content::-webkit-scrollbar-track,
+        .scrollable-content::-webkit-scrollbar-track,
+        #policy-content::-webkit-scrollbar-track,
+        #checklist-container::-webkit-scrollbar-track,
+        #members-list-container::-webkit-scrollbar-track,
+        #statistics-content::-webkit-scrollbar-track { 
+            background: #e2e8f0; 
+            border-radius: 10px; 
+        }
+        
+        .column-content::-webkit-scrollbar-thumb,
+        .scrollable-content::-webkit-scrollbar-thumb,
+        #policy-content::-webkit-scrollbar-thumb,
+        #checklist-container::-webkit-scrollbar-thumb,
+        #members-list-container::-webkit-scrollbar-thumb,
+        #statistics-content::-webkit-scrollbar-thumb { 
+            background: #94a3b8; 
+            border-radius: 10px; 
+        }
+        
+        input[type="search"]::-webkit-search-cancel-button { 
+            -webkit-appearance: none; 
+            appearance: none; 
+        }
+        
+        .tab-active { 
+            border-color: #16a34a; 
+            background-color: #f0fdf4; 
+            color: #16a34a; 
+            font-weight: 600; 
+        }
+        
+        .loading-container { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(255, 255, 255, 0.9); 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 9999; 
+        }
+        
+        .loader { 
+            border: 6px solid #f3f3f3; 
+            border-top: 6px solid #16a34a; 
+            border-radius: 50%; 
+            width: 50px; 
+            height: 50px; 
+            animation: spin 1.5s linear infinite; 
+        }
+        
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
 
         .confirm-btn-style {
             display: inline-flex;
@@ -76,17 +140,21 @@
             flex-shrink: 0; 
             margin-left: 8px; 
         }
+        
         .confirm-btn-icon {
             width: 18px; 
             height: 18px; 
             color: white; 
         }
+        
         .grid.gap-2 > div {
             padding: 0.5rem; 
         }
+        
         .space-y-2 > * + * {
             margin-top: 0.25rem; 
         }
+        
         .p-chip.selected {
             background-color: #fee2e2;
             border-color: #ef4444;
@@ -163,7 +231,7 @@
         <p id="loading-text" class="mt-4 text-gray-700 font-semibold text-center">Conectando com Segurança...</p>
     </div>
 
-    <!-- ==================== TELA DE LOGIN (COMPLETA) ==================== -->
+    <!-- Tela de Login -->
     <div id="login-container" class="hidden min-h-screen flex items-center justify-center p-4">
         <div class="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
             <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGAP" class="mx-auto h-24 w-auto mb-6">
@@ -193,9 +261,9 @@
         </div>
     </div>
 
-    <!-- ==================== SELEÇÃO DE PAUTAS (COM FILTROS E LAYOUTS) ==================== -->
+    <!-- ==================== SELEÇÃO DE PAUTAS COM FILTROS ==================== -->
     <div id="pauta-selection-container" class="hidden max-w-7xl mx-auto px-4">
-        <!-- Header com ações -->
+        <!-- Header -->
         <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
             <h1 class="text-2xl md:text-3xl font-bold text-gray-800 text-center sm:text-left">Sistema de Gerenciamento de Pauta - SIGAP</h1>
             <div class="flex gap-2">
@@ -219,7 +287,7 @@
             </button>
         </div>
 
-        <!-- ===== NOVOS FILTROS E LAYOUTS ===== -->
+        <!-- FILTROS E VISUALIZAÇÃO NOVOS -->
         <div class="bg-white p-4 rounded-lg shadow-sm mb-6">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                 <h3 class="text-lg font-semibold text-gray-700">Minhas Pautas</h3>
@@ -295,7 +363,7 @@
         </div>
     </div>
 
-    <!-- ==================== CONTAINER PRINCIPAL DA PAUTA (COMPLETO) ==================== -->
+    <!-- ==================== CONTAINER PRINCIPAL DA PAUTA ==================== -->
     <div id="app-container" class="max-w-full mx-auto hidden px-4">
         <header class="mb-6 space-y-4">
             <div class="flex justify-center items-center w-full relative">
@@ -452,7 +520,6 @@
                 </div>
             </form>
             
-            <!-- Colunas mantidas IGUAIS -->
             <main id="main-content" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full">
                 <div id="pauta-column" class="bg-white rounded-lg shadow-md flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
@@ -531,7 +598,6 @@
                 <button id="toggle-faltosos-btn" class="w-full sm:w-auto bg-purple-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-purple-700 active:bg-purple-800 touch-manipulation">Ver Faltosos</button>
             </div>
             
-            <!-- Footer explicativo (mantido) -->
             <footer class="mt-12 bg-white p-6 rounded-lg shadow-md">
                 <h3 id="order-explanation-title" class="text-xl font-semibold text-gray-800 mb-2 text-center">Entenda a Ordem de Atendimento</h3>
                 <div id="order-explanation-content">
@@ -586,8 +652,7 @@
             </footer>
         </div>
     </div>
-
-    <!-- ==================== TODOS OS MODAIS (COMPLETOS) ==================== -->
+        <!-- ==================== MODAIS - PARTE 1 ==================== -->
 
     <!-- Modal de Tipo de Pauta -->
     <div id="pauta-type-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1024,6 +1089,7 @@
             </div>
         </div>
     </div>
+        <!-- ==================== MODAIS - PARTE 2 ==================== -->
 
     <!-- Modal de Ajuda de Formato CSV -->
     <div id="format-help-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1034,13 +1100,15 @@
             </div>
             <div class="flex-grow overflow-y-auto scrollable-content pr-4">
                 <p class="mb-4 text-gray-600">Para importar seus agendamentos de uma vez, crie um arquivo <strong>.csv</strong> (Valores Separados por Vírgula). Você pode criar este arquivo usando o Bloco de Notas, Excel, Google Sheets ou similar.</p>
+                
                 <div class="flex justify-between items-center mb-2">
-                     <p class="font-semibold">O arquivo deve seguir o formato abaixo, com 4 colunas, nesta ordem:</p>
-                     <button id="copy-csv-format-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300 active:bg-gray-400 touch-manipulation">Copiar Formato</button>
+                    <p class="font-semibold">O arquivo deve seguir o formato abaixo, com 4 colunas, nesta ordem:</p>
+                    <button id="copy-csv-format-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300 active:bg-gray-400 touch-manipulation">Copiar Formato</button>
                 </div>
                 <div class="bg-gray-100 p-4 rounded-lg text-sm mb-4">
                     <code id="csv-format-code">Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code>
                 </div>
+                
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="text-lg font-semibold">Exemplo:</h3>
                     <button id="copy-csv-example-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300 active:bg-gray-400 touch-manipulation">Copiar Exemplo</button>
@@ -1048,12 +1116,14 @@
                 <pre class="bg-gray-100 p-4 rounded-lg text-sm" style="white-space: pre-wrap; word-break: break-all;"><code id="csv-example-code">Maria Joaquina de Amaral Pereira;09:00;Divórcio Consensual;111.222.333-44
 João da Silva;09:30;Ação de Alimentos;
 Fulano de Tal;10:00;Curatela;444.555.666-77</code></pre>
+                
                 <ul class="list-disc list-inside mt-4 space-y-2 text-gray-700">
                     <li>A primeira linha (cabeçalho) é <strong>opcional</strong>. O sistema a ignorará se presente.</li>
                     <li>O campo <strong>CPF</strong> é opcional. Se não houver CPF, deixe o espaço em branco (ou não coloque nada após o último ponto e vírgula).</li>
                     <li>O <strong>horário</strong> deve estar no formato <strong>HH:MM</strong> (Ex: 09:00, 14:30).</li>
                     <li>Salve o arquivo com a extensão <strong>.csv</strong>.</li>
                 </ul>
+                
                 <div class="mt-6 pt-4 border-t">
                     <div class="flex justify-between items-center mb-2">
                         <h3 class="text-lg font-semibold">Prompt para IA (Ex: ChatGPT, Gemini):</h3>
@@ -1079,6 +1149,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
             <div class="flex-grow overflow-y-auto pr-2">
                 <p class="mb-4">Assistido: <strong id="demands-assisted-name-modal" class="text-green-600"></strong></p>
+                
                 <div class="space-y-2">
                     <label for="demands-modal-new-demand-input" class="block text-sm font-medium text-gray-700">Adicionar nova demanda:</label>
                     <div class="flex gap-2">
@@ -1086,6 +1157,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         <button id="demands-modal-add-demand-btn" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 active:bg-blue-700 touch-manipulation">Adicionar</button>
                     </div>
                 </div>
+                
                 <div class="mt-4">
                     <h3 class="text-lg font-semibold text-gray-700 mb-2">Demandas Adicionais Registradas:</h3>
                     <div id="demands-modal-list-container" class="space-y-2 max-h-60 overflow-y-auto bg-gray-50 p-3 rounded-lg border">
@@ -1093,6 +1165,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     </div>
                 </div>
             </div>
+            
             <div class="flex justify-end space-x-4 mt-6 flex-shrink-0 border-t pt-4">
                 <button id="cancel-demands-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 active:bg-gray-500 touch-manipulation">Fechar</button>
                 <button id="save-demands-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 active:bg-green-800 touch-manipulation">Salvar Alterações</button>
@@ -1105,10 +1178,22 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg modal-enter">
             <h2 class="text-2xl font-bold mb-6">Editar Dados do Assistido</h2>
             <div class="space-y-4">
-                <div><label for="edit-assisted-name" class="block text-sm font-medium text-gray-700">Nome</label><input type="text" id="edit-assisted-name" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
-                <div><label for="edit-assisted-cpf" class="block text-sm font-medium text-gray-700">CPF</label><input type="text" id="edit-assisted-cpf" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
-                <div><label for="edit-assisted-subject" class="block text-sm font-medium text-gray-700">Assunto</label><input list="subjects-list" type="text" id="edit-assisted-subject" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
-                <div><label for="edit-scheduled-time" class="block text-sm font-medium text-gray-700">Horário Agendado</label><input type="time" id="edit-scheduled-time" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
+                <div>
+                    <label for="edit-assisted-name" class="block text-sm font-medium text-gray-700">Nome</label>
+                    <input type="text" id="edit-assisted-name" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg">
+                </div>
+                <div>
+                    <label for="edit-assisted-cpf" class="block text-sm font-medium text-gray-700">CPF</label>
+                    <input type="text" id="edit-assisted-cpf" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg">
+                </div>
+                <div>
+                    <label for="edit-assisted-subject" class="block text-sm font-medium text-gray-700">Assunto</label>
+                    <input list="subjects-list" type="text" id="edit-assisted-subject" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg">
+                </div>
+                <div>
+                    <label for="edit-scheduled-time" class="block text-sm font-medium text-gray-700">Horário Agendado</label>
+                    <input type="time" id="edit-scheduled-time" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg">
+                </div>
             </div>
             <div class="flex justify-end space-x-4 mt-8">
                 <button id="cancel-edit-assisted-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 active:bg-gray-500 touch-manipulation">Cancelar</button>
@@ -1154,17 +1239,25 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             <div id="policy-content" class="text-gray-700 space-y-4 overflow-y-auto pr-2">
                 <p><strong>1. Natureza do Sistema e Ciclo de Vida dos Dados</strong></p>
                 <p>O Sistema de Gerenciamento de Pauta (SIGAP) é uma interface de controle para a gestão de atendimentos. Ele coleta e armazena os dados pessoais de assistidos, como nome, CPF (opcional), assunto e demanda, por um período de sete dias após a finalização da ação. Após esse prazo, os dados são permanentemente excluídos do SIGAP.</p>
+                
                 <p>Para o armazenamento permanente, todos os dados são enviados e salvos no sistema Verde, que é de responsabilidade da Defensoria Pública do Estado do Rio de Janeiro (DPERJ) e está em total conformidade com a LGPD.</p>
+                
                 <p><strong>2. Dados Coletados pelo SIGAP</strong></p>
                 <p>Para permitir o uso da interface, o SIGAP coleta apenas os dados de autenticação dos usuários (profissionais): e-mail e senha.</p>
+                
                 <p><strong>3. Tratamento e Proteção de Dados (dentro do SIGAP)</strong></p>
                 <p>Os dados de autenticação são utilizados para garantir o acesso restrito e seguro ao sistema. Os dados de assistidos são armazenados por apenas sete dias, tempo necessário para a conclusão da ação, e são protegidos por medidas de segurança para evitar acesso não autorizado.</p>
+                
                 <p><strong>4. Direitos dos Titulares dos Dados</strong></p>
                 <p>Os direitos dos assistidos, como acesso, correção e exclusão de dados, são garantidos e exercidos diretamente por meio do sistema Verde, que é o responsável pelo armazenamento final. Os usuários do SIGAP podem gerenciar a pauta e solicitar alterações no sistema Verde conforme as normas da DPERJ.</p>
+                
                 <p><strong>5. Origem e Transferência de Dados dos Assistidos</strong></p>
                 <p>Os dados dos assistidos gerenciados no SIGAP podem ter duas origens:</p>
+                
                 <p><strong>Importação do Sistema Verde:</strong> A maior parte dos dados (nome, horário, assunto) é transferida manualmente do sistema oficial Verde (DPERJ) através de um processo de exportação e importação. Neste fluxo, o CPF do assistido não é transferido.</p>
+                
                 <p><strong>Cadastro Direto no SIGAP:</strong> Novos atendimentos, como os avulsos, podem ser registrados diretamente na plataforma. Nesses casos, o campo CPF é opcional e pode ser preenchido pelo profissional responsável pelo cadastro (criador ou membro da pauta).</p>
+                
                 <p>O processo de transferência manual consiste na exportação da pauta do sistema Verde, quando houver pauta previamente cadastrada, sua conversão para um formato compatível e a importação do arquivo final no SIGAP. Cabe ao usuário responsável pela transferência garantir a segurança dos dados durante este processo, incluindo a exclusão segura dos arquivos intermediários (como PDFs e CSVs) de seus dispositivos locais após a importação bem-sucedida. O SIGAP não se responsabiliza pelo manuseio dos dados fora de sua plataforma, mas orienta todos os usuários a seguirem as melhores práticas de segurança para proteger a privacidade dos assistidos.</p>
             </div>
             <div class="flex justify-end mt-6 flex-shrink-0">
@@ -1183,13 +1276,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             <div class="text-gray-700 space-y-4 overflow-y-auto pr-2">
                 <p><strong>Bem-vindo ao SIGAP!</strong></p>
                 <p>Este sistema foi desenvolvido para facilitar a gestão de pautas de atendimento jurídico.</p>
+                
                 <ul class="list-disc list-inside space-y-2">
                     <li><strong>Criar Pauta:</strong> Use o botão verde na tela inicial para começar.</li>
                     <li><strong>Importar Dados:</strong> Você pode carregar arquivos CSV para agilizar o preenchimento.</li>
                     <li><strong>Gestão de Status:</strong> Mova os assistidos entre "Pauta", "Aguardando" e "Atendido".</li>
                     <li><strong>Delegação:</strong> Use a coluna "Em Atendimento" para enviar links de finalização por e-mail.</li>
                     <li><strong>Privacidade:</strong> O sistema limpa dados sensíveis periodicamente para sua segurança.</li>
+                    <li><strong>Checklist:</strong> Utilize o modal de documentos para controlar a documentação entregue.</li>
+                    <li><strong>Colaboradores:</strong> Cadastre sua equipe e controle presença.</li>
+                    <li><strong>Estatísticas:</strong> Acompanhe métricas e indicadores da sua pauta.</li>
                 </ul>
+                
+                <p class="mt-4 text-sm text-gray-500">Para mais informações, consulte o suporte técnico.</p>
             </div>
             <div class="flex justify-end mt-6 flex-shrink-0">
                 <button id="close-manual-modal-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 active:bg-green-800 touch-manipulation">Fechar</button>
@@ -1207,10 +1306,18 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             <div class="text-gray-700 space-y-4 overflow-y-auto pr-2">
                 <p><strong>1. Uso do Sistema</strong></p>
                 <p>O SIGAP é uma ferramenta de apoio à gestão. O usuário é responsável pela veracidade dos dados inseridos.</p>
+                
                 <p><strong>2. Segurança</strong></p>
                 <p>O acesso é pessoal e intransferível. Não compartilhe sua senha de acesso.</p>
+                
                 <p><strong>3. Dados Sensíveis</strong></p>
                 <p>O usuário compromete-se a utilizar os dados dos assistidos apenas para fins profissionais, respeitando o sigilo funcional.</p>
+                
+                <p><strong>4. Responsabilidades</strong></p>
+                <p>O SIGAP é uma ferramenta de suporte, não substituindo sistemas oficiais. O usuário é responsável por manter backups quando necessário.</p>
+                
+                <p><strong>5. Alterações</strong></p>
+                <p>Os termos podem ser atualizados a qualquer momento. O uso continuado implica aceitação das novas condições.</p>
             </div>
             <div class="flex justify-end mt-6 flex-shrink-0">
                 <button id="close-terms-modal-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 active:bg-green-800 touch-manipulation">Fechar</button>
@@ -1284,6 +1391,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
         </div>
     </div>
+        <!-- ==================== MODAIS - PARTE 3 ==================== -->
 
     <!-- Modal do Painel Admin -->
     <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
@@ -1301,6 +1409,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             </div>
 
             <div id="admin-content-area" class="flex-grow overflow-y-auto p-4 md:p-6 space-y-8 text-left">
+                <!-- Manutenção LGPD -->
                 <div class="mt-4 border-t pt-4">
                     <h3 class="font-semibold text-red-600 mb-2 uppercase text-sm">Manutenção do Sistema (LGPD)</h3>
                     <p class="text-xs text-gray-500 mb-4">Apaga permanentemente atendimentos com mais de 7 dias de todas as pautas.</p>
@@ -1309,6 +1418,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     </button>
                 </div>
 
+                <!-- Auditoria -->
                 <div class="mb-8">
                     <h3 class="text-lg font-semibold text-gray-700 mb-2 border-l-4 border-purple-500 pl-2">Auditoria e Segurança</h3>
                     <div class="bg-gray-50 p-4 rounded border border-gray-200">
@@ -1340,6 +1450,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     </div>
                 </div>
 
+                <!-- BI / Estatísticas Globais -->
                 <div class="mb-8">
                     <h3 class="text-lg font-semibold text-gray-700 mb-4 border-l-4 border-green-500 pl-2">Análise de Dados (BI)</h3>
                     <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
@@ -1393,6 +1504,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     </div>
                 </div>
 
+                <!-- Usuários -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <h3 class="font-semibold text-gray-700 mb-2">Usuários Pendentes</h3>
@@ -1407,9 +1519,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
 
-    <!-- Modal de Estatísticas (CORRIGIDO com controles) -->
+    <!-- Modal de Estatísticas (CORRIGIDO com controles de janela) -->
     <div id="statistics-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-lg shadow-2xl w-full max-w-4xl flex flex-col transition-all duration-300" style="max-height: 95vh;">
+            <!-- Header com controles de janela -->
             <div class="flex justify-between items-center bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3 rounded-t-lg select-none">
                 <div class="flex items-center gap-2">
                     <span class="text-white text-sm md:text-base">📊</span>
@@ -1421,519 +1534,159 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     <button id="close-statistics-modal" class="w-8 h-8 flex items-center justify-center rounded hover:bg-red-500 text-white text-sm md:text-base font-bold touch-manipulation">×</button>
                 </div>
             </div>
+
+            <!-- Conteúdo das estatísticas -->
             <div id="statistics-content" class="flex-grow overflow-y-auto p-6 space-y-6">
-                <!-- Conteúdo será preenchido pelo StatisticsService -->
+                <!-- O conteúdo será preenchido pelo StatisticsService -->
                 <div class="text-center text-gray-500 py-8">Carregando estatísticas...</div>
             </div>
         </div>
     </div>
-    <!-- Rodapé Global -->
-    <footer class="bg-white border-t mt-6 pt-4 pb-4 text-center">
-        <div class="flex justify-center gap-4 mb-3 text-xs">
-            <button id="manual-btn-footer" class="hover:text-green-600">Manual</button>
-            <button id="privacy-btn-footer" class="hover:text-green-600">Privacidade</button>
-            <button id="terms-btn-footer" class="hover:text-green-600">Termos</button>
+
+    <!-- ==================== RODAPÉ GLOBAL ==================== -->
+    <footer class="bg-white border-t border-gray-200 mt-8 pt-6 pb-6 text-center">
+        <div class="flex justify-center space-x-6 mb-4 text-xs text-gray-500 font-medium">
+            <button id="manual-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none touch-manipulation">
+                Manual do Utilizador
+            </button>
+            <button id="privacy-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none touch-manipulation">Privacidade</button>
+            <button id="terms-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none touch-manipulation">Termos</button>
         </div>
-        <p class="text-xs text-gray-400">© 2026 SIGAP v2.0</p>
+    
+        <div class="flex justify-center items-center gap-4 mb-2 opacity-60">
+            <span class="flex items-center gap-1 text-[10px] text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full" title="Conexão Criptografada">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="green" viewBox="0 0 16 16"><path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/></svg>
+                Ambiente Seguro
+            </span>
+            <span class="flex items-center gap-1 text-[10px] text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full" title="Monitoramento de Erros Ativo">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="blue" viewBox="0 0 16 16"><path d="M8 0c-.69 0-1.843.265-2.928.56-1.11.3-2.229.655-2.887.87a1.54 1.54 0 0 0-1.044 1.262c-.596 4.477.787 7.795 2.465 9.99a11.775 11.775 0 0 0 2.517 2.453c.386.262.794.5 1.218.697.12.056.242.107.366.153l.232.083.232-.083c.124-.046.246-.097.366-.153.424-.197.832-.435 1.218-.697a11.775 11.775 0 0 0 2.517-2.453c1.678-2.195 3.061-5.513 2.465-9.99a1.54 1.54 0 0 0-1.044-1.262 62.456 62.456 0 0 0-2.887-.87C9.843.265 8.69 0 8 0zm0 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg>
+                Sentry Monitored
+            </span>
+            <span class="flex items-center gap-1 text-[10px] text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full" title="Conformidade com Proteção de Dados">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="purple" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                    <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                </svg>
+                LGPD Ready
+            </span>
+        </div>
+    
+        <p class="text-xs text-gray-400">
+            &copy; 2026 SIGAP - Sistema de Gerenciamento de Pauta. Versão 2.0 (Mobile Optimized)
+        </p>
     </footer>
 
-    <!-- Script Principal -->
+    <!-- ==================== SCRIPT PRINCIPAL ==================== -->
     <script type="module">
-        // Importações
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
         
-        // Config (AJUSTE AQUI SUAS CREDENCIAIS)
-        const firebaseConfig = {
-            apiKey: "SUA_API_KEY",
-            authDomain: "SEU_DOMAIN",
-            projectId: "SEU_PROJECT_ID",
-            storageBucket: "SEU_BUCKET",
-            messagingSenderId: "SEU_SENDER_ID",
-            appId: "SEU_APP_ID"
-        };
+        import { firebaseConfig } from './js/config.js';
+        import { AuthService } from './js/auth.js';
+        import { PautaService } from './js/pauta.js';
+        import { UIService } from './js/ui.js';
+        import { CollaboratorService } from './js/colaboradores.js';
+        import { ModalService } from './js/modal.js';
+        import { NotesService } from './js/notes.js';
+        import { StatisticsService } from './js/estatisticas.js';
+        import { PDFService } from './js/pdfService.js';
+        import { EmailService } from './js/emailService.js';
+        import { escapeHTML, showNotification, normalizeText, copyToClipboard, formatTime } from './js/utils.js';
+        import { setupDetailsModal } from './js/detalhes.js';
+        import { subjectTree, flatSubjects } from './js/assuntos.js';
+        import { showConfirmModal } from './js/confirmModal.js';
+        import { logAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser, loadAuditLogs, exportAuditLogsPDF, loadDashboardData, populateUserFilter } from './js/admin.js';
+        import { parsePautaCSV } from './js/csvHandler.js';
+        import { getChecklistHTML } from './js/checklist.js';
 
-        // Inicialização
-        const app = initializeApp(firebaseConfig);
-        
-        initializeAppCheck(app, {
-            provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
-            isTokenAutoRefreshEnabled: true
-        });
-
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-
-        // Persistência offline
-        enableIndexedDbPersistence(db).catch(console.warn);
-
-        // Classe principal
         class SIGAPApp {
-            constructor(db, auth) {
-                this.db = db;
-                this.auth = auth;
+            constructor() {
+                this.db = null;
+                this.auth = null;
                 this.currentUser = null;
                 this.currentPauta = null;
                 this.currentPautaData = null;
-                this.allPautas = [];
                 this.allAssisted = [];
                 this.colaboradores = [];
+                this.currentUserName = '';
+                this.currentPautaOwnerId = null;
+                this.isPautaClosed = false;
+                this.customRoomsList = [];
+                this.allPautas = [];
                 this.unsubscribeFromAttendances = null;
                 this.unsubscribeFromCollaborators = null;
-
+                
                 this.init();
             }
 
             async init() {
-                this.setupEventListeners();
-                this.setupAuthListener();
-                this.setupWindowControls();
-                this.setupMobileOptimizations();
-                
-                // Esconder loading após 2s
-                setTimeout(() => {
-                    document.getElementById('loading-container').style.display = 'none';
-                }, 2000);
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    
+                    initializeAppCheck(app, {
+                        provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
+                        isTokenAutoRefreshEnabled: true
+                    });
+
+                    this.db = getFirestore(app);
+                    this.auth = getAuth(app);
+
+                    await this.setupOfflinePersistence();
+                    this.setupEventListeners();
+                    this.setupAuthListener();
+                    this.setupWindowControls();
+                    this.setupMobileOptimizations();
+                    
+                    // Esconder loading após 2 segundos
+                    setTimeout(() => {
+                        document.getElementById('loading-container').style.display = 'none';
+                    }, 2000);
+                    
+                } catch (error) {
+                    console.error("Erro na inicialização:", error);
+                    showNotification("Erro ao iniciar o sistema", "error");
+                }
+            }
+
+            setupOfflinePersistence() {
+                try {
+                    enableIndexedDbPersistence(this.db).catch((err) => {
+                        if (err.code == 'failed-precondition') {
+                            console.warn('Persistência falhou: Múltiplas abas abertas.');
+                        } else if (err.code == 'unimplemented') {
+                            console.warn('Persistência falhou: Navegador não suportado.');
+                        }
+                    });
+                } catch (e) {
+                    console.log("Erro ao ativar persistência:", e);
+                }
+
+                window.addEventListener('offline', () => {
+                    document.getElementById('offline-indicator').classList.remove('hidden');
+                });
+
+                window.addEventListener('online', () => {
+                    document.getElementById('offline-indicator').classList.add('hidden');
+                    showNotification("Conexão restabelecida!", "success");
+                });
             }
 
             setupAuthListener() {
-                import('./js/auth.js').then(({ AuthService }) => {
-                    AuthService.init(this);
-                });
-            }
-
-            setupEventListeners() {
-                // Login/Register tabs
-                document.getElementById('login-tab-btn')?.addEventListener('click', () => {
-                    document.getElementById('login-form').classList.remove('hidden');
-                    document.getElementById('register-form').classList.add('hidden');
-                    document.getElementById('login-tab-btn').classList.add('border-green-600', 'text-green-600');
-                    document.getElementById('register-tab-btn').classList.remove('border-green-600', 'text-green-600');
-                });
-
-                document.getElementById('register-tab-btn')?.addEventListener('click', () => {
-                    document.getElementById('register-form').classList.remove('hidden');
-                    document.getElementById('login-form').classList.add('hidden');
-                    document.getElementById('register-tab-btn').classList.add('border-green-600', 'text-green-600');
-                    document.getElementById('login-tab-btn').classList.remove('border-green-600', 'text-green-600');
-                });
-
-                // Login form
-                document.getElementById('login-form')?.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const email = document.getElementById('login-email').value;
-                    const password = document.getElementById('login-password').value;
-                    
-                    import('./js/auth.js').then(({ AuthService }) => {
-                        AuthService.login(this, email, password);
-                    });
-                });
-
-                // Register form
-                document.getElementById('register-form')?.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const name = document.getElementById('register-name').value;
-                    const email = document.getElementById('register-email').value;
-                    const password = document.getElementById('register-password').value;
-                    
-                    import('./js/auth.js').then(({ AuthService }) => {
-                        AuthService.register(this, name, email, password);
-                    });
-                });
-
-                // Logout buttons
-                document.querySelectorAll('#logout-btn-main, #logout-btn-app').forEach(btn => {
-                    btn?.addEventListener('click', () => {
-                        import('./js/auth.js').then(({ AuthService }) => {
-                            AuthService.logout(this.auth);
-                        });
-                    });
-                });
-
-                // View mode buttons
-                document.querySelectorAll('.view-mode-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const mode = e.currentTarget.dataset.mode;
-                        document.querySelectorAll('.view-mode-btn').forEach(b => {
-                            b.classList.remove('bg-green-600', 'text-white');
-                            b.classList.add('text-gray-600', 'hover:bg-gray-200');
-                        });
-                        e.currentTarget.classList.add('bg-green-600', 'text-white');
-                        localStorage.setItem('pautaViewMode', mode);
-                        this.renderPautas();
-                    });
-                });
-
-                // Filters
-                ['pauta-search-filter', 'pauta-ownership-filter', 'pauta-status-filter', 'pauta-type-filter'].forEach(id => {
-                    document.getElementById(id)?.addEventListener('input', () => this.renderPautas());
-                    document.getElementById(id)?.addEventListener('change', () => this.renderPautas());
-                });
-
-                // Create pauta button
-                document.getElementById('create-pauta-btn')?.addEventListener('click', () => {
-                    document.getElementById('pauta-type-modal').classList.remove('hidden');
-                });
-
-                document.getElementById('cancel-pauta-type-btn')?.addEventListener('click', () => {
-                    document.getElementById('pauta-type-modal').classList.add('hidden');
-                });
-
-                // Pauta type selection
-                document.querySelectorAll('.pauta-type-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const type = e.currentTarget.dataset.type;
-                        document.getElementById('pauta-type-modal').classList.add('hidden');
-                        
-                        const createModal = document.getElementById('create-pauta-modal');
-                        createModal.dataset.pautaType = type;
-                        
-                        const roomConfig = document.getElementById('room-config-container');
-                        if (type === 'multisala') {
-                            roomConfig.classList.remove('hidden');
-                            this.customRoomsList = [];
-                            this.renderCustomRooms();
-                        } else {
-                            roomConfig.classList.add('hidden');
-                        }
-                        
-                        createModal.classList.remove('hidden');
-                    });
-                });
-
-                // Add custom room
-                document.getElementById('add-custom-room-btn')?.addEventListener('click', () => {
-                    const input = document.getElementById('custom-room-input');
-                    const name = input.value.trim();
-                    if (name) {
-                        if (!this.customRoomsList) this.customRoomsList = [];
-                        if (!this.customRoomsList.includes(name)) {
-                            this.customRoomsList.push(name);
-                            this.renderCustomRooms();
-                            input.value = '';
-                        }
-                    }
-                });
-
-                // Next to ordem
-                document.getElementById('next-to-ordem-btn')?.addEventListener('click', () => {
-                    const name = document.getElementById('create-pauta-name-input').value.trim();
-                    if (!name) {
-                        alert('Nome da pauta é obrigatório');
-                        return;
-                    }
-                    document.getElementById('create-pauta-modal').classList.add('hidden');
-                    document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
-                });
-
-                // Cancel ordem
-                document.getElementById('cancel-ordem-btn')?.addEventListener('click', () => {
-                    document.getElementById('ordem-atendimento-modal').classList.add('hidden');
-                    document.getElementById('create-pauta-modal').classList.remove('hidden');
-                });
-
-                // Next to delegation
-                document.getElementById('next-to-delegation-btn')?.addEventListener('click', () => {
-                    document.getElementById('ordem-atendimento-modal').classList.add('hidden');
-                    document.getElementById('delegation-flow-modal').classList.remove('hidden');
-                });
-
-                // Cancel delegation
-                document.getElementById('cancel-delegation-flow-btn')?.addEventListener('click', () => {
-                    document.getElementById('delegation-flow-modal').classList.add('hidden');
-                    document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
-                });
-
-                // Create pauta final
-                document.getElementById('confirm-create-pauta-final-btn')?.addEventListener('click', async () => {
-                    const name = document.getElementById('create-pauta-name-input').value.trim();
-                    const type = document.getElementById('create-pauta-modal').dataset.pautaType;
-                    const ordem = document.querySelector('input[name="ordemAtendimento"]:checked')?.value;
-                    const useDelegation = document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true';
-                    const useDistribution = document.getElementById('check-use-distribution')?.checked || false;
-
-                    import('./js/pauta.js').then(({ PautaService }) => {
-                        PautaService.create(this, {
-                            name,
-                            type,
-                            ordem,
-                            useDelegation,
-                            useDistribution,
-                            rooms: this.customRoomsList || []
-                        });
-                    });
-
-                    document.getElementById('delegation-flow-modal').classList.add('hidden');
-                });
-
-                // Actions toggle
-                document.getElementById('actions-toggle')?.addEventListener('click', () => {
-                    const panel = document.getElementById('actions-panel');
-                    const arrow = document.getElementById('actions-arrow');
-                    
-                    if (panel.classList.contains('opacity-0')) {
-                        panel.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
-                        panel.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
-                        arrow.style.transform = 'rotate(180deg)';
+                onAuthStateChanged(this.auth, async (user) => {
+                    if (user) {
+                        await AuthService.handleAuthState(this, user);
                     } else {
-                        panel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                        panel.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
-                        arrow.style.transform = 'rotate(0deg)';
+                        UIService.showScreen('login');
+                        document.getElementById('admin-panel-btn')?.classList.add('hidden');
+                        document.getElementById('admin-btn-main')?.classList.add('hidden');
                     }
-                });
-
-                // Close panels when clicking outside
-                document.addEventListener('click', (e) => {
-                    if (!e.target.closest('#actions-toggle') && !e.target.closest('#actions-panel')) {
-                        const panel = document.getElementById('actions-panel');
-                        const arrow = document.getElementById('actions-arrow');
-                        panel?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                        panel?.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
-                        if (arrow) arrow.style.transform = 'rotate(0deg)';
-                    }
-                });
-
-                // Back to pautas
-                document.getElementById('back-to-pautas-btn')?.addEventListener('click', () => {
-                    if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
-                    if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
-                    this.currentPauta = null;
-                    document.getElementById('app-container').classList.add('hidden');
-                    document.getElementById('pauta-selection-container').classList.remove('hidden');
-                    this.renderPautas();
-                });
-
-                // Tabs
-                document.getElementById('tab-agendamento')?.addEventListener('click', () => {
-                    document.getElementById('tab-agendamento').classList.add('tab-active');
-                    document.getElementById('tab-avulso').classList.remove('tab-active');
-                    document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-                    document.getElementById('arrival-time-wrapper').classList.add('hidden');
-                    document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
-                    document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
-                });
-
-                document.getElementById('tab-avulso')?.addEventListener('click', () => {
-                    document.getElementById('tab-avulso').classList.add('tab-active');
-                    document.getElementById('tab-agendamento').classList.remove('tab-active');
-                    document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
-                    document.getElementById('arrival-time-wrapper').classList.remove('hidden');
-                    document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
-                    document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-                });
-
-                // Radio buttons
-                document.querySelectorAll('input[name="is-scheduled"]').forEach(radio => {
-                    radio.addEventListener('change', (e) => {
-                        const wrapper = document.getElementById('scheduled-time-wrapper');
-                        if (e.target.value === 'yes') {
-                            wrapper.classList.remove('hidden');
-                        } else {
-                            wrapper.classList.add('hidden');
-                        }
-                    });
-                });
-
-                document.querySelectorAll('input[name="has-arrived"]').forEach(radio => {
-                    radio.addEventListener('change', (e) => {
-                        const wrapper = document.getElementById('arrival-time-wrapper');
-                        if (e.target.value === 'yes') {
-                            wrapper.classList.remove('hidden');
-                            document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
-                        } else {
-                            wrapper.classList.add('hidden');
-                        }
-                    });
-                });
-
-                // Add assisted
-                document.getElementById('add-assisted-btn')?.addEventListener('click', () => {
-                    import('./js/pauta.js').then(({ PautaService }) => {
-                        PautaService.addAssisted(this);
-                    });
-                });
-
-                // CSV Upload
-                document.getElementById('file-upload')?.addEventListener('change', (e) => {
-                    import('./js/csvHandler.js').then(({ parsePautaCSV }) => {
-                        parsePautaCSV(e.target.files[0], this);
-                    });
-                });
-
-                // Toggle faltosos
-                document.getElementById('toggle-faltosos-btn')?.addEventListener('click', () => {
-                    const column = document.getElementById('faltosos-column');
-                    const btn = document.getElementById('toggle-faltosos-btn');
-                    
-                    if (column.classList.contains('hidden')) {
-                        column.classList.remove('hidden');
-                        btn.textContent = '🙈 Ocultar Faltosos';
-                    } else {
-                        column.classList.add('hidden');
-                        btn.textContent = '👁️ Ver Faltosos';
-                    }
-                });
-
-                // Search inputs
-                ['pauta', 'aguardando', 'em-atendimento', 'distribuicao', 'atendidos', 'faltosos'].forEach(prefix => {
-                    document.getElementById(`${prefix}-search`)?.addEventListener('input', () => {
-                        import('./js/ui.js').then(({ UIService }) => {
-                            UIService.renderAssistedLists(this);
-                        });
-                    });
-                });
-
-                // PDF buttons
-                document.getElementById('download-pdf-btn')?.addEventListener('click', () => {
-                    const atendidos = this.allAssisted.filter(a => a.status === 'atendido');
-                    import('./js/pdfService.js').then(({ PDFService }) => {
-                        PDFService.generateAtendidosPDF(this.currentPauta?.name, atendidos);
-                    });
-                });
-
-                document.getElementById('download-faltosos-pdf-btn')?.addEventListener('click', () => {
-                    const faltosos = this.allAssisted.filter(a => a.status === 'faltoso');
-                    import('./js/pdfService.js').then(({ PDFService }) => {
-                        PDFService.generateAtendidosPDF(`${this.currentPauta?.name} (Faltosos)`, faltosos);
-                    });
-                });
-
-                // Action buttons
-                document.getElementById('share-pauta-btn')?.addEventListener('click', () => {
-                    document.getElementById('share-modal').classList.remove('hidden');
-                    const toggle = document.getElementById('share-toggle');
-                    toggle.checked = this.currentPautaData?.isPublic || false;
-                });
-
-                document.getElementById('share-toggle')?.addEventListener('change', async (e) => {
-                    import('./js/pauta.js').then(({ PautaService }) => {
-                        PautaService.togglePublic(this, e.target.checked);
-                    });
-                });
-
-                document.getElementById('copy-share-link-btn')?.addEventListener('click', () => {
-                    const input = document.getElementById('share-link-input');
-                    input.select();
-                    navigator.clipboard.writeText(input.value);
-                    alert('Link copiado!');
-                });
-
-                document.getElementById('mask-names-check')?.addEventListener('change', async (e) => {
-                    import('./js/pauta.js').then(({ PautaService }) => {
-                        PautaService.toggleMaskNames(this, e.target.checked);
-                    });
-                });
-
-                document.getElementById('view-stats-btn')?.addEventListener('click', () => {
-                    import('./js/estatisticas.js').then(({ StatisticsService }) => {
-                        StatisticsService.showModal(this);
-                    });
-                });
-
-                document.getElementById('edit-pauta-name-btn')?.addEventListener('click', () => {
-                    document.getElementById('edit-pauta-name-input').value = this.currentPauta?.name || '';
-                    document.getElementById('edit-pauta-modal').classList.remove('hidden');
-                });
-
-                document.getElementById('manage-members-btn')?.addEventListener('click', () => {
-                    import('./js/modal.js').then(({ ModalService }) => {
-                        ModalService.openMembersModal(this);
-                    });
-                });
-
-                document.getElementById('manage-collaborators-btn')?.addEventListener('click', () => {
-                    import('./js/colaboradores.js').then(({ CollaboratorService }) => {
-                        CollaboratorService.openModal(this);
-                    });
-                });
-
-                document.getElementById('notes-btn')?.addEventListener('click', () => {
-                    import('./js/notes.js').then(({ NotesService }) => {
-                        NotesService.openModal(this);
-                    });
-                });
-
-                document.getElementById('close-pauta-btn')?.addEventListener('click', () => {
-                    document.getElementById('close-pauta-password').value = '';
-                    document.getElementById('close-pauta-modal').classList.remove('hidden');
-                });
-
-                document.getElementById('reopen-pauta-btn')?.addEventListener('click', () => {
-                    document.getElementById('close-pauta-password').value = '';
-                    document.getElementById('close-pauta-modal').classList.remove('hidden');
-                });
-
-                document.getElementById('reset-all-btn')?.addEventListener('click', () => {
-                    document.getElementById('reset-confirm-modal').classList.remove('hidden');
-                });
-
-                // Modal confirmations
-                document.getElementById('confirm-edit-pauta-btn')?.addEventListener('click', async () => {
-                    const newName = document.getElementById('edit-pauta-name-input').value.trim();
-                    if (newName) {
-                        import('./js/pauta.js').then(({ PautaService }) => {
-                            PautaService.rename(this, newName);
-                        });
-                    }
-                    document.getElementById('edit-pauta-modal').classList.add('hidden');
-                });
-
-                document.getElementById('confirm-close-pauta-btn')?.addEventListener('click', async () => {
-                    const password = document.getElementById('close-pauta-password').value;
-                    import('./js/pauta.js').then(({ PautaService }) => {
-                        PautaService.toggleClosed(this, password);
-                    });
-                });
-
-                document.getElementById('confirm-reset-btn')?.addEventListener('click', async () => {
-                    import('./js/pauta.js').then(({ PautaService }) => {
-                        PautaService.reset(this);
-                    });
-                    document.getElementById('reset-confirm-modal').classList.add('hidden');
-                });
-
-                document.getElementById('save-notes-btn')?.addEventListener('click', () => {
-                    import('./js/notes.js').then(({ NotesService }) => {
-                        NotesService.save(this);
-                    });
-                });
-
-                // Close modal buttons
-                document.querySelectorAll('[id^="cancel-"], [id^="close-"]').forEach(btn => {
-                    btn?.addEventListener('click', (e) => {
-                        const modal = e.target.closest('.fixed');
-                        if (modal) modal.classList.add('hidden');
-                    });
-                });
-
-                // Footer modals
-                document.getElementById('format-help-link')?.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    document.getElementById('format-help-modal').classList.remove('hidden');
-                });
-
-                document.getElementById('privacy-policy-link')?.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    document.getElementById('privacy-policy-modal').classList.remove('hidden');
-                });
-
-                document.getElementById('manual-btn-footer')?.addEventListener('click', () => {
-                    alert('Manual do usuário em desenvolvimento');
-                });
-
-                document.getElementById('privacy-btn-footer')?.addEventListener('click', () => {
-                    document.getElementById('privacy-policy-modal').classList.remove('hidden');
-                });
-
-                document.getElementById('terms-btn-footer')?.addEventListener('click', () => {
-                    alert('Termos de uso em desenvolvimento');
                 });
             }
 
             setupWindowControls() {
-                // Statistics modal controls
+                // Configurar controles da janela de estatísticas
                 const modal = document.getElementById('statistics-modal');
                 const window = modal?.querySelector('.bg-white');
                 
@@ -1946,6 +1699,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     let isMaximized = false;
                     let prevHeight, prevWidth, prevTop, prevLeft;
 
+                    // Minimizar
                     minBtn?.addEventListener('click', () => {
                         if (isMaximized) {
                             this.toggleMaximize(window, false);
@@ -1965,6 +1719,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         }
                     });
 
+                    // Maximizar
                     maxBtn?.addEventListener('click', () => {
                         if (isMinimized) {
                             isMinimized = false;
@@ -1977,11 +1732,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         maxBtn.innerHTML = isMaximized ? '❐' : '□';
                     });
 
+                    // Fechar
                     closeBtn?.addEventListener('click', () => {
                         modal.classList.add('hidden');
                     });
 
-                    // Make draggable
+                    // Tornar arrastável
                     const header = window.querySelector('.bg-gradient-to-r');
                     if (header) {
                         let isDragging = false;
@@ -2044,7 +1800,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
 
             setupMobileOptimizations() {
-                // Fix 100vh on mobile
+                // Ajustar 100vh para mobile (evitar problemas com barras de endereço)
                 const vh = window.innerHeight * 0.01;
                 document.documentElement.style.setProperty('--vh', `${vh}px`);
 
@@ -2053,7 +1809,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.documentElement.style.setProperty('--vh', `${vh}px`);
                 });
 
-                // Prevent zoom on input focus
+                // Prevenir zoom em inputs no mobile
                 document.querySelectorAll('input, select, textarea').forEach(el => {
                     el.addEventListener('focus', () => {
                         document.querySelector('meta[name=viewport]').setAttribute('content', 
@@ -2066,40 +1822,421 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     });
                 });
 
-                // Smooth scrolling
-                document.querySelectorAll('.column-content').forEach(el => {
+                // Scroll suave em elementos com overflow
+                document.querySelectorAll('.column-content, .scrollable-content').forEach(el => {
                     el.style.webkitOverflowScrolling = 'touch';
+                });
+            }
+
+            setupEventListeners() {
+                // Login
+                document.getElementById('login-form')?.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    AuthService.login(this);
+                });
+
+                document.getElementById('register-form')?.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    AuthService.register(this);
+                });
+
+                document.getElementById('forgot-password-link')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    AuthService.resetPassword(this.auth);
+                });
+
+                document.getElementById('login-tab-btn')?.addEventListener('click', () => {
+                    UIService.toggleAuthTabs('login');
+                });
+
+                document.getElementById('register-tab-btn')?.addEventListener('click', () => {
+                    UIService.toggleAuthTabs('register');
+                });
+
+                document.querySelectorAll('#logout-btn-main, #logout-btn-app').forEach(btn => {
+                    if (btn) btn.addEventListener('click', () => AuthService.logout(this.auth));
+                });
+
+                // View mode buttons
+                document.querySelectorAll('.view-mode-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const mode = e.currentTarget.dataset.mode;
+                        document.querySelectorAll('.view-mode-btn').forEach(b => {
+                            b.classList.remove('bg-green-600', 'text-white');
+                            b.classList.add('text-gray-600', 'hover:bg-gray-200');
+                        });
+                        e.currentTarget.classList.add('bg-green-600', 'text-white');
+                        localStorage.setItem('pautaViewMode', mode);
+                        if (this.allPautas.length > 0) {
+                            this.renderPautas();
+                        }
+                    });
+                });
+
+                // Filters
+                ['pauta-search-filter', 'pauta-ownership-filter', 'pauta-status-filter', 'pauta-type-filter'].forEach(id => {
+                    document.getElementById(id)?.addEventListener('input', () => {
+                        if (this.allPautas.length > 0) this.renderPautas();
+                    });
+                    document.getElementById(id)?.addEventListener('change', () => {
+                        if (this.allPautas.length > 0) this.renderPautas();
+                    });
+                });
+
+                // ================================================
+                // BOTÕES DE CRIAÇÃO DE PAUTA
+                // ================================================
+                
+                document.getElementById('create-pauta-btn')?.addEventListener('click', () => {
+                    document.getElementById('pauta-type-modal').classList.remove('hidden');
+                });
+
+                document.getElementById('cancel-pauta-type-btn')?.addEventListener('click', () => {
+                    document.getElementById('pauta-type-modal').classList.add('hidden');
+                });
+
+                document.querySelectorAll('.pauta-type-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const type = e.currentTarget.dataset.type;
+                        document.getElementById('pauta-type-modal').classList.add('hidden');
+                        
+                        const createModal = document.getElementById('create-pauta-modal');
+                        createModal.dataset.pautaType = type;
+                        
+                        const roomConfig = document.getElementById('room-config-container');
+                        if (type === 'multisala') {
+                            roomConfig.classList.remove('hidden');
+                            this.customRoomsList = [];
+                            this.renderCustomRooms();
+                        } else {
+                            roomConfig.classList.add('hidden');
+                        }
+                        
+                        createModal.classList.remove('hidden');
+                    });
+                });
+
+                document.getElementById('add-custom-room-btn')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const input = document.getElementById('custom-room-input');
+                    const name = input.value.trim();
+                    if (name) {
+                        if (!this.customRoomsList.includes(name)) {
+                            this.customRoomsList.push(name);
+                            this.renderCustomRooms();
+                            input.value = '';
+                            input.focus();
+                        } else {
+                            showNotification("Este local já foi adicionado.", "error");
+                        }
+                    }
+                });
+
+                document.getElementById('custom-rooms-list')?.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('remove-room-btn')) {
+                        const index = e.target.dataset.index;
+                        this.customRoomsList.splice(index, 1);
+                        this.renderCustomRooms();
+                    }
+                });
+
+                document.getElementById('cancel-create-pauta-btn')?.addEventListener('click', () => {
+                    document.getElementById('create-pauta-modal').classList.add('hidden');
+                });
+
+                document.getElementById('next-to-ordem-btn')?.addEventListener('click', () => {
+                    const pautaName = document.getElementById('create-pauta-name-input').value.trim();
+                    if (!pautaName) {
+                        showNotification("O nome da pauta não pode ser vazio.", "error");
+                        return;
+                    }
+                    document.getElementById('create-pauta-modal').classList.add('hidden');
+                    document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
+                });
+
+                document.getElementById('cancel-ordem-btn')?.addEventListener('click', () => {
+                    document.getElementById('ordem-atendimento-modal').classList.add('hidden');
+                    document.getElementById('create-pauta-modal').classList.remove('hidden');
+                });
+
+                document.getElementById('next-to-delegation-btn')?.addEventListener('click', () => {
+                    document.getElementById('ordem-atendimento-modal').classList.add('hidden');
+                    document.getElementById('delegation-flow-modal').classList.remove('hidden');
+                });
+
+                document.getElementById('cancel-delegation-flow-btn')?.addEventListener('click', () => {
+                    document.getElementById('delegation-flow-modal').classList.add('hidden');
+                    document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
+                });
+
+                document.getElementById('confirm-create-pauta-final-btn')?.addEventListener('click', async () => {
+                    const pautaName = document.getElementById('create-pauta-name-input').value.trim();
+                    const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
+                    const ordemAtendimento = document.querySelector('input[name="ordemAtendimento"]:checked')?.value;
+                    const useDelegationFlow = document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true';
+                    const useDistributionFlow = document.getElementById('check-use-distribution')?.checked || false;
+                    const user = this.auth.currentUser;
+                    
+                    if (!user) {
+                        showNotification("Você precisa estar logado.", "error");
+                        return;
+                    }
+                    
+                    if (pautaType === 'multisala' && this.customRoomsList.length === 0) {
+                        showNotification("Adicione pelo menos uma sala.", "error");
+                        return;
+                    }
+
+                    try {
+                        await addDoc(collection(this.db, "pautas"), {
+                            name: pautaName,
+                            type: pautaType,
+                            ordemAtendimento: ordemAtendimento,
+                            useDelegationFlow: useDelegationFlow,
+                            useDistributionFlow: useDistributionFlow,
+                            owner: user.uid,
+                            ownerEmail: user.email,
+                            members: [user.uid],
+                            memberEmails: [user.email],
+                            isClosed: false,
+                            createdAt: new Date().toISOString(),
+                            rooms: pautaType === 'multisala' ? [...this.customRoomsList] : []
+                        });
+                        
+                        showNotification("Pauta criada com sucesso!");
+                        
+                        document.getElementById('create-pauta-name-input').value = '';
+                        document.getElementById('delegation-flow-modal').classList.add('hidden');
+                        
+                        if (this.auth.currentUser) {
+                            PautaService.showPautaSelectionScreen(this);
+                        }
+                        
+                    } catch (error) {
+                        console.error("Erro ao criar pauta:", error);
+                        showNotification("Erro ao criar pauta.", "error");
+                    }
+                });
+
+                document.getElementById('back-to-pautas-btn')?.addEventListener('click', () => {
+                    if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
+                    if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
+                    this.currentPauta = null;
+                    this.allAssisted = [];
+                    this.colaboradores = [];
+                    UIService.showScreen('pautaSelection');
+                    if (this.auth?.currentUser) {
+                        PautaService.showPautaSelectionScreen(this);
+                    }
+                });
+
+                // Tabs
+                document.getElementById('tab-agendamento')?.addEventListener('click', () => {
+                    UIService.switchTab('agendamento', this);
+                });
+                
+                document.getElementById('tab-avulso')?.addEventListener('click', () => {
+                    UIService.switchTab('avulso', this);
+                });
+
+                // Actions toggle
+                document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
+                
+                // Botões de ação
+                document.getElementById('share-pauta-btn')?.addEventListener('click', () => {
+                    ModalService.openShareModal(this);
+                });
+
+                document.getElementById('view-stats-btn')?.addEventListener('click', () => {
+                    StatisticsService.showModal(this);
+                });
+
+                document.getElementById('edit-pauta-name-btn')?.addEventListener('click', () => {
+                    document.getElementById('edit-pauta-name-input').value = this.currentPauta?.name || '';
+                    document.getElementById('edit-pauta-modal').classList.remove('hidden');
+                });
+
+                document.getElementById('manage-members-btn')?.addEventListener('click', async () => {
+                    await ModalService.openMembersModal(this);
+                });
+
+                document.getElementById('manage-collaborators-btn')?.addEventListener('click', () => {
+                    CollaboratorService.openModal(this);
+                });
+
+                document.getElementById('notes-btn')?.addEventListener('click', () => {
+                    NotesService.openModal(this);
+                });
+
+                document.getElementById('close-pauta-btn')?.addEventListener('click', () => {
+                    document.getElementById('close-modal-title').textContent = 'Fechar Pauta';
+                    document.getElementById('close-modal-message').textContent = 'Para fechar esta pauta, confirme sua senha.';
+                    document.getElementById('close-pauta-password').value = '';
+                    document.getElementById('confirm-close-pauta-btn').textContent = 'Confirmar';
+                    document.getElementById('close-pauta-modal').classList.remove('hidden');
+                });
+
+                document.getElementById('reopen-pauta-btn')?.addEventListener('click', () => {
+                    document.getElementById('close-modal-title').textContent = 'Reabrir Pauta';
+                    document.getElementById('close-modal-message').textContent = 'Para reabrir esta pauta, confirme sua senha.';
+                    document.getElementById('close-pauta-password').value = '';
+                    document.getElementById('confirm-close-pauta-btn').textContent = 'Reabrir';
+                    document.getElementById('close-pauta-modal').classList.remove('hidden');
+                });
+
+                document.getElementById('reset-all-btn')?.addEventListener('click', () => {
+                    document.getElementById('reset-confirm-modal').classList.remove('hidden');
+                });
+
+                document.getElementById('add-assisted-btn')?.addEventListener('click', () => {
+                    PautaService.addAssisted(this);
+                });
+
+                document.getElementById('file-upload')?.addEventListener('change', (e) => {
+                    PautaService.handleCSVUpload(e, this);
+                });
+
+                document.getElementById('toggle-faltosos-btn')?.addEventListener('click', UIService.toggleFaltosos);
+
+                // Search inputs
+                ['pauta', 'aguardando', 'em-atendimento', 'distribuicao', 'atendidos', 'faltosos'].forEach(prefix => {
+                    const element = document.getElementById(`${prefix}-search`);
+                    if (element) {
+                        element.addEventListener('input', () => {
+                            UIService.renderAssistedLists(this);
+                        });
+                    }
+                });
+
+                // PDF buttons
+                document.getElementById('download-pdf-btn')?.addEventListener('click', () => {
+                    const atendidos = this.allAssisted.filter(a => a.status === 'atendido');
+                    PDFService.generateAtendidosPDF(this.currentPauta?.name || 'Pauta', atendidos);
+                });
+
+                document.getElementById('download-faltosos-pdf-btn')?.addEventListener('click', () => {
+                    const faltosos = this.allAssisted.filter(a => a.status === 'faltoso');
+                    PDFService.generateAtendidosPDF(`${this.currentPauta?.name || 'Pauta'} (FALTOSOS)`, faltosos);
+                });
+
+                document.getElementById('download-collaborators-pdf-modal')?.addEventListener('click', () => {
+                    const selectedCols = Array.from(document.querySelectorAll('.pdf-col-check:checked'))
+                        .map(cb => cb.value);
+                    PDFService.generateCollaboratorsPDF(this.currentPauta?.name || 'Pauta', this.colaboradores, selectedCols);
+                });
+
+                document.getElementById('clear-collaborators-list-modal')?.addEventListener('click', () => {
+                    CollaboratorService.clearAll(this);
+                });
+
+                document.getElementById('format-help-link')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.getElementById('format-help-modal').classList.remove('hidden');
+                });
+
+                document.getElementById('privacy-policy-link')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.getElementById('privacy-policy-modal').classList.remove('hidden');
+                });
+
+                // Footer buttons
+                document.getElementById('manual-btn-footer')?.addEventListener('click', () => {
+                    document.getElementById('manual-modal').classList.remove('hidden');
+                });
+
+                document.getElementById('privacy-btn-footer')?.addEventListener('click', () => {
+                    document.getElementById('privacy-policy-modal').classList.remove('hidden');
+                });
+
+                document.getElementById('terms-btn-footer')?.addEventListener('click', () => {
+                    document.getElementById('terms-modal').classList.remove('hidden');
+                });
+
+                // Close modal buttons
+                document.querySelectorAll('[id^="cancel-"], [id^="close-"]').forEach(btn => {
+                    if (btn) {
+                        btn.addEventListener('click', (e) => {
+                            const modal = e.target.closest('.fixed');
+                            if (modal) modal.classList.add('hidden');
+                        });
+                    }
+                });
+
+                // Card actions delegation
+                document.body.addEventListener('click', (e) => {
+                    PautaService.handleCardActions(e, this);
+                });
+
+                // Priority chips
+                document.querySelectorAll('.p-chip').forEach(chip => {
+                    chip.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        this.classList.toggle('selected');
+                    });
+                });
+
+                document.getElementById('confirm-priority-reason-btn')?.addEventListener('click', async () => {
+                    const selectedChips = Array.from(document.querySelectorAll('.p-chip.selected'))
+                                               .map(chip => chip.dataset.value);
+                                               
+                    const customReason = document.getElementById('priority-reason-input')?.value.trim() || '';
+                    
+                    let finalReason = selectedChips.join(', ');
+                    if (customReason) {
+                        finalReason = finalReason ? `${finalReason} | Obs: ${customReason}` : customReason;
+                    }
+
+                    if (!finalReason) { 
+                        showNotification("Selecione uma categoria ou descreva o motivo.", "error"); 
+                        return; 
+                    }
+
+                    if (!window.assistedIdToHandle) {
+                        showNotification("ID do assistido não encontrado.", "error");
+                        return;
+                    }
+
+                    await PautaService.updateStatus(
+                        this.db,
+                        this.currentPauta.id,
+                        window.assistedIdToHandle,
+                        { 
+                            priority: 'URGENTE', 
+                            priorityReason: finalReason 
+                        },
+                        this.currentUserName
+                    );
+
+                    document.querySelectorAll('.p-chip').forEach(c => c.classList.remove('selected'));
+                    document.getElementById('priority-reason-input').value = '';
+                    document.getElementById('priority-reason-modal')?.classList.add('hidden');
+                    showNotification("Prioridade Ativada!");
+                });
+
+                document.getElementById('cancel-priority-reason-btn')?.addEventListener('click', () => {
+                    document.getElementById('priority-reason-modal')?.classList.add('hidden');
                 });
             }
 
             renderCustomRooms() {
                 const list = document.getElementById('custom-rooms-list');
                 const noRoomsMsg = document.getElementById('no-rooms-msg');
-                
-                if (!list) return;
+                if (!list || !noRoomsMsg) return;
                 
                 list.innerHTML = '';
 
-                if (!this.customRoomsList || this.customRoomsList.length === 0) {
-                    if (noRoomsMsg) noRoomsMsg.classList.remove('hidden');
+                if (this.customRoomsList.length === 0) {
+                    noRoomsMsg.classList.remove('hidden');
                 } else {
-                    if (noRoomsMsg) noRoomsMsg.classList.add('hidden');
+                    noRoomsMsg.classList.add('hidden');
                     this.customRoomsList.forEach((room, index) => {
                         const li = document.createElement('li');
-                        li.className = "flex justify-between items-center bg-white border p-2 rounded text-sm";
+                        li.className = "flex justify-between items-center bg-white border p-2 rounded";
                         li.innerHTML = `
-                            <span>🏢 ${this.escapeHTML(room)}</span>
-                            <button class="remove-room-btn text-red-500 px-2" data-index="${index}">Remover</button>
+                            <span>🏢 ${escapeHTML(room)}</span>
+                            <button class="remove-room-btn text-red-500" data-index="${index}">Remover</button>
                         `;
                         list.appendChild(li);
-                    });
-
-                    list.querySelectorAll('.remove-room-btn').forEach(btn => {
-                        btn.addEventListener('click', (e) => {
-                            const index = e.target.dataset.index;
-                            this.customRoomsList.splice(index, 1);
-                            this.renderCustomRooms();
-                        });
                     });
                 }
             }
@@ -2179,7 +2316,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                                 <div>👤 ${p.ownerEmail || ''}</div>
                             </div>
                             <button onclick="window.app.loadPauta('${p.id}', '${p.name}', '${p.type}')" 
-                                    class="w-full bg-green-600 text-white py-2 rounded-lg text-sm hover:bg-green-700">
+                                    class="w-full bg-green-600 text-white py-2 rounded-lg text-sm hover:bg-green-700 active:bg-green-800 touch-manipulation">
                                 Acessar
                             </button>
                         </div>
@@ -2201,7 +2338,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                                 </div>
                             </div>
                             <button onclick="window.app.loadPauta('${p.id}', '${p.name}', '${p.type}')" 
-                                    class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700">
+                                    class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 active:bg-green-800 touch-manipulation">
                                 Acessar
                             </button>
                         </div>
@@ -2215,7 +2352,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 container.innerHTML = pautas.map(p => `
                     <div onclick="window.app.loadPauta('${p.id}', '${p.name}', '${p.type}')" 
-                         class="bg-white rounded-lg shadow-sm p-3 text-center cursor-pointer border ${p.isClosed ? 'border-red-200' : 'border-green-200'}">
+                         class="bg-white rounded-lg shadow-sm p-3 text-center cursor-pointer border ${p.isClosed ? 'border-red-200' : 'border-green-200'} hover:shadow-md transition-all active:scale-95">
                         <div class="text-2xl mb-1">${p.type === 'agendado' ? '📅' : p.type === 'avulso' ? '⚡' : '🏢'}</div>
                         <h4 class="font-medium text-gray-800 text-xs truncate">${this.escapeHTML(p.name)}</h4>
                         <span class="inline-block w-2 h-2 rounded-full ${p.isClosed ? 'bg-red-500' : 'bg-green-500'} mt-2"></span>
@@ -2227,12 +2364,60 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 this.currentPauta = { id, name, type };
                 document.getElementById('pauta-title').textContent = name;
 
-                import('./js/pauta.js').then(({ PautaService }) => {
-                    PautaService.load(this, id);
-                });
+                localStorage.setItem('lastPautaId', id);
+                localStorage.setItem('lastPautaType', type);
 
-                document.getElementById('pauta-selection-container').classList.add('hidden');
-                document.getElementById('app-container').classList.remove('hidden');
+                try {
+                    const pautaDoc = await getDoc(doc(this.db, "pautas", id));
+                    
+                    if (pautaDoc.exists()) {
+                        this.currentPautaData = pautaDoc.data();
+                        this.currentPautaOwnerId = this.currentPautaData.owner;
+                        this.isPautaClosed = this.currentPautaData.isClosed || false;
+                        
+                        UIService.togglePautaLock(this);
+
+                        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
+                        const distColumn = document.getElementById('distribuicao-column');
+                        
+                        if (this.currentPautaData.useDelegationFlow) {
+                            emAtendimentoColumn?.classList.remove('hidden');
+                        } else {
+                            emAtendimentoColumn?.classList.add('hidden');
+                        }
+
+                        if (this.currentPautaData.useDistributionFlow) {
+                            distColumn?.classList.remove('hidden');
+                        } else {
+                            distColumn?.classList.add('hidden');
+                        }
+                    }
+
+                    this.setupRealtimeListener(id);
+                    
+                    if (typeof CollaboratorService?.setupListener === 'function') {
+                        CollaboratorService.setupListener(this, id);
+                    }
+                    
+                    UIService.showScreen('app');
+                    
+                } catch (error) {
+                    console.error("Erro ao carregar pauta:", error);
+                    showNotification("Erro ao carregar pauta", "error");
+                }
+            }
+
+            setupRealtimeListener(pautaId) {
+                if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
+                
+                const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
+                this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
+                    this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    UIService.renderAssistedLists(this);
+                }, (error) => {
+                    console.error("Erro no listener:", error);
+                    showNotification("Erro ao carregar dados", "error");
+                });
             }
 
             escapeHTML(str) {
@@ -2246,11 +2431,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
         }
 
-        // Initialize app
-        window.app = new SIGAPApp(db, auth);
+        // Tornar funções globais
+        window.showNotification = showNotification;
+        window.openDetailsModal = openDetailsModal;
+
+        // Inicializar a aplicação
+        window.app = new SIGAPApp();
     </script>
 
-    <!-- CEP Autocomplete -->
+    <!-- ================================================ -->
+    <!-- EVENTO DE CEP (fora da classe) -->
+    <!-- ================================================ -->
     <script>
         document.addEventListener('blur', async (e) => {
             if (e.target.id === 'cep-reu') {
@@ -2264,9 +2455,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             document.getElementById('bairro-reu').value = data.bairro || '';
                             document.getElementById('cidade-reu').value = data.localidade || '';
                             document.getElementById('estado-reu').value = data.uf || '';
+                        } else {
+                            showNotification("CEP não encontrado", "error");
                         }
                     } catch (error) {
-                        console.error('Erro CEP:', error);
+                        console.error("Erro ao buscar CEP:", error);
+                        showNotification("Erro ao buscar CEP", "error");
                     }
                 }
             }
@@ -2274,3 +2468,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </script>
 </body>
 </html>
+    
