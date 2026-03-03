@@ -2587,6 +2587,85 @@ document.getElementById('confirm-attendant-btn')?.addEventListener('click', asyn
                 this.setupAdminPanel();
             }
 
+            // ================================================
+            // NOVOS LISTENERS PARA FILTROS E LAYOUTS
+            // ================================================
+            
+            // Listeners para os filtros
+            document.getElementById('pauta-search-filter')?.addEventListener('input', () => {
+                if (this.allPautas?.length > 0) this.renderPautasComFiltros();
+            });
+            
+            document.getElementById('pauta-ownership-filter')?.addEventListener('change', () => {
+                if (this.allPautas?.length > 0) this.renderPautasComFiltros();
+            });
+            
+            document.getElementById('pauta-status-filter')?.addEventListener('change', () => {
+                if (this.allPautas?.length > 0) this.renderPautasComFiltros();
+            });
+            
+            // Listeners para os botões de layout
+            document.querySelectorAll('.view-mode-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const mode = e.currentTarget.dataset.mode;
+                    localStorage.setItem('pautaViewMode', mode);
+                    
+                    // Atualizar aparência dos botões
+                    document.querySelectorAll('.view-mode-btn').forEach(b => {
+                        b.classList.remove('bg-green-600', 'text-white');
+                        b.classList.add('text-gray-600', 'hover:bg-gray-200');
+                    });
+                    e.currentTarget.classList.add('bg-green-600', 'text-white');
+                    
+                    if (this.allPautas?.length > 0) this.renderPautasComFiltros();
+                });
+            });
+            
+            // Controles da janela de estatísticas
+            const statsModal = document.getElementById('statistics-modal');
+            const statsWindow = statsModal?.querySelector('.bg-white');
+            
+            if (statsModal && statsWindow) {
+                const minBtn = document.getElementById('min-statistics-modal');
+                const maxBtn = document.getElementById('max-statistics-modal');
+                const closeBtn = document.getElementById('close-statistics-modal');
+                
+                let isMinimized = false;
+                let isMaximized = false;
+            
+                minBtn?.addEventListener('click', () => {
+                    isMinimized = !isMinimized;
+                    statsWindow.style.height = isMinimized ? '40px' : 'auto';
+                    statsWindow.style.overflow = isMinimized ? 'hidden' : 'visible';
+                    minBtn.innerHTML = isMinimized ? '□' : '_';
+                });
+            
+                maxBtn?.addEventListener('click', () => {
+                    isMaximized = !isMaximized;
+                    if (isMaximized) {
+                        statsWindow.style.width = '100%';
+                        statsWindow.style.height = '100%';
+                        statsWindow.style.position = 'fixed';
+                        statsWindow.style.top = '0';
+                        statsWindow.style.left = '0';
+                        statsWindow.style.maxWidth = 'none';
+                        statsWindow.style.borderRadius = '0';
+                    } else {
+                        statsWindow.style.width = '90%';
+                        statsWindow.style.height = 'auto';
+                        statsWindow.style.position = 'relative';
+                        statsWindow.style.maxWidth = '64rem';
+                        statsWindow.style.borderRadius = '';
+                    }
+                    maxBtn.innerHTML = isMaximized ? '❐' : '□';
+                });
+            
+                closeBtn?.addEventListener('click', () => {
+                    statsModal.classList.add('hidden');
+                });
+            }
+
+            
             renderCustomRooms() {
                 const list = document.getElementById('custom-rooms-list');
                 const noRoomsMsg = document.getElementById('no-rooms-msg');
