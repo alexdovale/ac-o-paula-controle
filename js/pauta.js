@@ -2,6 +2,7 @@
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML } from './utils.js';
 import { UIService } from './ui.js';
+import { logAction } from './admin.js';
 
 export const PautaService = {
     currentListeners: new Map(),
@@ -126,6 +127,18 @@ export const PautaService = {
             const docRef = await addDoc(attendanceRef, newAssisted);
             
             console.log("Documento criado com sucesso! ID:", docRef.id);
+            
+            // Registrar log de auditoria
+            await logAction(
+                app.db,
+                app.auth,
+                app.currentUserName || 'Sistema',
+                app.currentPauta.id,
+                'ADD_ASSISTED',
+                `Adicionou assistido: ${name}`,
+                docRef.id
+            );
+            
             showNotification("Assistido adicionado com sucesso!");
             
             if (nameInput) nameInput.value = '';
@@ -164,11 +177,29 @@ export const PautaService = {
         try {
             console.log("Atualizando status:", updates);
             const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
+            
+            // Buscar dados atuais para o log
+            const docSnap = await getDoc(docRef);
+            const currentData = docSnap.exists() ? docSnap.data() : {};
+            
             await updateDoc(docRef, {
                 ...updates,
                 lastActionBy: userName || 'Sistema',
                 lastActionTimestamp: new Date().toISOString()
             });
+            
+            // Registrar log de auditoria
+            const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados atualizados';
+            await logAction(
+                db,
+                window.app?.auth,
+                userName || 'Sistema',
+                pautaId,
+                'UPDATE_ASSISTED',
+                `${action} - ${currentData.name || 'Assistido'}`,
+                assistedId
+            );
+            
             console.log("Status atualizado com sucesso!");
         } catch (error) {
             console.error("Erro ao atualizar status:", error);
@@ -179,12 +210,28 @@ export const PautaService = {
     /**
      * Remove um assistido
      */
-    async deleteAssisted(db, pautaId, assistedId) {
+    async deleteAssisted(db, pautaId, assistedId, userName) {
         if (!pautaId || !assistedId) return;
         
         try {
+            // Buscar dados para o log
             const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
+            const docSnap = await getDoc(docRef);
+            const assistedData = docSnap.exists() ? docSnap.data() : { name: 'Desconhecido' };
+            
             await deleteDoc(docRef);
+            
+            // Registrar log de auditoria
+            await logAction(
+                db,
+                window.app?.auth,
+                userName || 'Sistema',
+                pautaId,
+                'DELETE_ASSISTED',
+                `Removeu assistido: ${assistedData.name}`,
+                assistedId
+            );
+            
             showNotification("Registro apagado.");
         } catch (error) {
             console.error("Erro ao deletar:", error);
@@ -195,7 +242,7 @@ export const PautaService = {
     /**
      * Reordena a fila manualmente
      */
-    async reorderQueue(db, pautaId, items) {
+    async reorderQueue(db, pautaId, items, userName) {
         if (!pautaId || !items?.length) return;
         
         try {
@@ -205,10 +252,120 @@ export const PautaService = {
                 batch.update(docRef, { manualIndex: index });
             });
             await batch.commit();
+            
+            // Registrar log de auditoria
+            await logAction(
+                db,
+                window.app?.auth,
+                userName || 'Sistema',
+                pautaId,
+                'REORDER_QUEUE',
+                'Fila reordenada manualmente'
+            );
+            
             showNotification("Fila reordenada!");
         } catch (error) {
             console.error("Erro ao reordenar:", error);
             showNotification("Erro ao reordenar", "error");
+        }
+    },
+
+    /**
+     * Apaga uma pauta completa (com todos os subdocumentos)
+     */
+    async deletePauta(db, auth, pautaId, pautaName, userName) {
+        if (!confirm(`Tem certeza que deseja apagar a pauta "${pautaName}"?\n\nEsta ação não pode ser desfeita!`)) {
+            return false;
+        }
+
+        try {
+            // Verificar se o usuário tem permissão (é dono ou admin)
+            const pautaRef = doc(db, "pautas", pautaId);
+            const pautaDoc = await getDoc(pautaRef);
+            
+            if (!pautaDoc.exists()) {
+                showNotification("Pauta não encontrada", "error");
+                return false;
+            }
+
+            const pautaData = pautaDoc.data();
+            const user = auth.currentUser;
+            
+            if (!user) {
+                showNotification("Usuário não autenticado", "error");
+                return false;
+            }
+            
+            // Verificar se é o dono ou admin
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            const userData = userDoc.data();
+            const isAdmin = userData?.role === 'admin' || userData?.role === 'superadmin';
+            
+            if (pautaData.owner !== user.uid && !isAdmin) {
+                showNotification("Você não tem permissão para apagar esta pauta", "error");
+                return false;
+            }
+
+            // APAGAR TODOS OS SUBDOCUMENTOS (attendances)
+            const attendanceRef = collection(db, "pautas", pautaId, "attendances");
+            const attendanceSnapshot = await getDocs(attendanceRef);
+            
+            const batch = writeBatch(db);
+            attendanceSnapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            
+            // Apagar a pauta principal
+            batch.delete(pautaRef);
+            
+            await batch.commit();
+            
+            // Registrar no log de auditoria
+            await logAction(
+                db,
+                auth,
+                userName || user.email,
+                pautaId,
+                'DELETE_PAUTA',
+                `Apagou a pauta "${pautaName}"`,
+                pautaId
+            );
+            
+            showNotification("Pauta apagada com sucesso!");
+            return true;
+            
+        } catch (error) {
+            console.error("Erro ao apagar pauta:", error);
+            showNotification("Erro ao apagar pauta: " + error.message, "error");
+            return false;
+        }
+    },
+
+    /**
+     * Filtra pautas por tipo (para a tela de seleção)
+     */
+    filterPautas(pautas, filterType, currentUserId, currentUserEmail) {
+        if (!pautas || !Array.isArray(pautas)) return [];
+        
+        switch(filterType) {
+            case 'my':
+                return pautas.filter(p => p.owner === currentUserId);
+                
+            case 'shared':
+                return pautas.filter(p => 
+                    p.owner !== currentUserId && 
+                    (p.members?.includes(currentUserId) || p.memberEmails?.includes(currentUserEmail))
+                );
+                
+            case 'active':
+                return pautas.filter(p => !p.isClosed);
+                
+            case 'closed':
+                return pautas.filter(p => p.isClosed);
+                
+            case 'all':
+            default:
+                return pautas;
         }
     },
 
@@ -247,6 +404,16 @@ export const PautaService = {
                     console.error("Erro ao importar item:", e);
                 }
             }
+
+            // Registrar log de auditoria
+            await logAction(
+                app.db,
+                app.auth,
+                app.currentUserName || 'Sistema',
+                app.currentPauta.id,
+                'IMPORT_CSV',
+                `Importou ${successCount} de ${assistidos.length} registros via CSV`
+            );
 
             showNotification(`${successCount} de ${assistidos.length} registros importados!`);
         } catch (error) {
@@ -379,6 +546,17 @@ export const PautaService = {
 
                     try {
                         await batch.commit();
+                        
+                        // Registrar log
+                        await logAction(
+                            app.db,
+                            app.auth,
+                            app.currentUserName || 'Sistema',
+                            app.currentPauta.id,
+                            'REORDER_QUEUE',
+                            'Fila reordenada manualmente via drag & drop'
+                        );
+                        
                         showNotification("Fila Reordenada!");
                     } catch (e) {
                         console.error("Erro ao reordenar:", e);
@@ -450,7 +628,7 @@ export const PautaService = {
     },
 
     /**
-     * Exibe tela de seleção de pautas (responsiva)
+     * Exibe tela de seleção de pautas (responsiva com filtros)
      */
     showPautaSelectionScreen(app) {
         if (!app?.auth?.currentUser) {
@@ -461,51 +639,130 @@ export const PautaService = {
         localStorage.removeItem('lastPautaId');
         localStorage.removeItem('lastPautaType');
 
-        const pautasList = document.getElementById('pautas-list');
-        if (!pautasList) return;
-        
-        pautasList.innerHTML = '<p class="col-span-full text-center">Carregando pautas...</p>';
-
-        const q = query(
-            collection(app.db, "pautas"), 
-            where("members", "array-contains", app.auth.currentUser.uid)
-        );
-
-        onSnapshot(q, (snapshot) => {
-            pautasList.innerHTML = '';
-            const fragment = document.createDocumentFragment();
-            const now = new Date();
-
-            if (snapshot.empty) {
-                pautasList.innerHTML = '<p class="col-span-full text-center text-gray-500">Nenhuma pauta encontrada. Crie uma para começar.</p>';
-                return;
-            }
-
-            snapshot.docs.forEach((docSnap) => {
-                const pauta = docSnap.data();
-                let isExpired = false;
-                if (pauta.createdAt) {
-                    const creationDate = new Date(pauta.createdAt);
-                    const expirationDate = new Date(creationDate);
-                    expirationDate.setDate(creationDate.getDate() + 7);
-                    if (now > expirationDate) {
-                        isExpired = true;
-                    }
-                }
-                const card = this.createPautaCard(docSnap, isExpired, app);
-                fragment.appendChild(card);
-            });
-            pautasList.appendChild(fragment);
-        }, (error) => {
-            console.error("Erro ao buscar pautas:", error);
-            pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>';
+        // Renderizar filtros
+        UIService.renderPautaFilters('filters-container', app.currentPautaFilter || 'all', async (filter) => {
+            app.currentPautaFilter = filter;
+            await this.loadPautasWithFilter(app);
         });
+
+        this.loadPautasWithFilter(app);
 
         UIService.showScreen('pautaSelection');
     },
 
     /**
-     * Cria card de pauta (responsivo)
+     * Carrega pautas com filtro aplicado
+     */
+    async loadPautasWithFilter(app) {
+        const user = app.auth.currentUser;
+        if (!user) return;
+        
+        const pautasList = document.getElementById('pautas-list');
+        if (!pautasList) return;
+        
+        pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas...</p>';
+
+        try {
+            // Buscar todas as pautas que o usuário tem acesso
+            const q = query(
+                collection(app.db, "pautas"),
+                where("members", "array-contains", user.uid)
+            );
+            
+            const snapshot = await getDocs(q);
+            let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            // Aplicar filtro
+            const filteredPautas = this.filterPautas(
+                pautas, 
+                app.currentPautaFilter || 'all', 
+                user.uid, 
+                user.email
+            );
+            
+            // Renderizar cards
+            this.renderPautaCards(filteredPautas, user.uid, user.email, app);
+            
+        } catch (error) {
+            console.error("Erro ao carregar pautas:", error);
+            pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>';
+        }
+    },
+
+    /**
+     * Renderiza cards de pauta na tela de seleção
+     */
+    renderPautaCards(pautas, currentUserId, currentUserEmail, app) {
+        const container = document.getElementById('pautas-list');
+        if (!container) return;
+        
+        if (pautas.length === 0) {
+            container.innerHTML = '<div class="col-span-full text-center py-12 bg-gray-50 rounded-lg"><p class="text-gray-500">Nenhuma pauta encontrada com este filtro.</p></div>';
+            return;
+        }
+        
+        const now = new Date();
+        
+        container.innerHTML = pautas.map(pauta => {
+            const isOwner = pauta.owner === currentUserId;
+            const isMember = pauta.members?.includes(currentUserId) || pauta.memberEmails?.includes(currentUserEmail);
+            const isClosed = pauta.isClosed ? 'bg-gray-100 opacity-75' : '';
+            const closedBadge = pauta.isClosed ? '<span class="absolute top-2 right-2 bg-gray-500 text-white text-[10px] px-2 py-1 rounded-full">Fechada</span>' : '';
+            
+            // Verificar expiração
+            let isExpired = false;
+            if (pauta.createdAt) {
+                const creationDate = new Date(pauta.createdAt);
+                const expirationDate = new Date(creationDate);
+                expirationDate.setDate(creationDate.getDate() + 7);
+                if (now > expirationDate) {
+                    isExpired = true;
+                }
+            }
+            
+            const expiredBadge = isExpired ? '<span class="absolute top-2 left-2 bg-red-500 text-white text-[10px] px-2 py-1 rounded-full">Expirada</span>' : '';
+            
+            return `
+            <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition relative ${isClosed} ${isExpired ? 'opacity-60' : ''}">
+                ${closedBadge}
+                ${expiredBadge}
+                <h3 class="text-xl font-bold text-gray-800 mb-2 truncate pr-12" title="${escapeHTML(pauta.name)}">${escapeHTML(pauta.name)}</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    <span class="inline-block px-2 py-1 bg-gray-100 rounded-full text-xs">
+                        ${pauta.type === 'agendado' ? '📅 Agendado' : pauta.type === 'avulso' ? '⚡ Avulso' : '🏢 Multi-Salas'}
+                    </span>
+                    ${isOwner ? '<span class="ml-2 text-green-600 text-xs">👑 Criador</span>' : ''}
+                </p>
+                <div class="text-xs text-gray-500 mb-4">
+                    <p>Membros: ${pauta.memberEmails?.length || 1}</p>
+                    <p>Criada: ${pauta.createdAt ? new Date(pauta.createdAt).toLocaleDateString('pt-BR') : 'Desconhecida'}</p>
+                </div>
+                <div class="flex justify-between items-center">
+                    <button onclick="window.app.loadPauta('${pauta.id}', '${escapeHTML(pauta.name)}', '${pauta.type}')" 
+                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-semibold flex-1 mr-2 text-center ${isExpired ? 'opacity-50 cursor-not-allowed' : ''}"
+                        ${isExpired ? 'disabled' : ''}>
+                        Acessar
+                    </button>
+                    
+                    ${isOwner ? `
+                    <button onclick="window.app.deletePauta('${pauta.id}', '${escapeHTML(pauta.name)}')" 
+                        class="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition" 
+                        title="Apagar pauta">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                            <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                        </svg>
+                    </button>
+                    ` : ''}
+                </div>
+                ${!isOwner && isMember ? '<p class="text-xs text-gray-400 mt-2">Compartilhado com você</p>' : ''}
+            </div>
+            `;
+        }).join('');
+    },
+
+    /**
+     * Cria card de pauta (legado, manter para compatibilidade)
      */
     createPautaCard(docSnap, isExpired, app) {
         const pauta = docSnap.data();
@@ -528,6 +785,18 @@ export const PautaService = {
             if (confirm(`Tem certeza que deseja apagar a pauta "${pauta.name}"?`)) {
                 try {
                     await deleteDoc(doc(app.db, "pautas", docSnap.id));
+                    
+                    // Registrar log
+                    await logAction(
+                        app.db,
+                        app.auth,
+                        app.currentUserName || 'Sistema',
+                        docSnap.id,
+                        'DELETE_PAUTA',
+                        `Apagou a pauta "${pauta.name}"`,
+                        docSnap.id
+                    );
+                    
                     showNotification("Pauta excluída!");
                 } catch (error) {
                     console.error("Erro ao excluir pauta:", error);
@@ -657,7 +926,7 @@ export const PautaService = {
         if (button.classList.contains('delete-btn')) {
             console.log("Deletando:", id);
             if (confirm("Tem certeza?")) {
-                this.deleteAssisted(app.db, app.currentPauta.id, id);
+                this.deleteAssisted(app.db, app.currentPauta.id, id, app.currentUserName);
             }
         }
 
