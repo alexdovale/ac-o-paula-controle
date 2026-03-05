@@ -1599,9 +1599,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         showNotification("Adicione pelo menos uma sala.", "error");
                         return;
                     }
-
+                
                     try {
-                        await addDoc(collection(this.db, "pautas"), {
+                        // PRIMEIRO: Criar a pauta e guardar a referência
+                        const pautaRef = await addDoc(collection(this.db, "pautas"), {
                             name: pautaName,
                             type: pautaType,
                             ordemAtendimento: ordemAtendimento,
@@ -1615,6 +1616,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             createdAt: new Date().toISOString(),
                             rooms: pautaType === 'multisala' ? [...this.customRoomsList] : []
                         });
+                        
+                        // SEGUNDO: Registrar o log de auditoria (LINHAS ADICIONADAS)
+                        await logAction(
+                            this.db,
+                            this.auth,
+                            this.currentUserName || user.email,
+                            pautaRef.id,
+                            'CREATE_PAUTA',
+                            `Criou a pauta "${pautaName}" do tipo ${pautaType}`,
+                            pautaRef.id
+                        );
                         
                         showNotification("Pauta criada com sucesso!");
                         
