@@ -10,20 +10,28 @@ import { escapeHTML, showNotification } from './utils.js';
  */
 export const logAction = async (db, auth, userName, currentPautaId, actionType, details, targetId = null) => {
     try {
-        if (!auth?.currentUser) return;
+        if (!auth?.currentUser) {
+            console.warn("Tentativa de log sem usuário autenticado");
+            return;
+        }
         
-        await addDoc(collection(db, "audit_logs"), {
-            action: actionType,
-            details: details,
+        const logData = {
+            action: actionType || 'AÇÃO_DESCONHECIDA',
+            details: details || 'Sem detalhes',
             targetId: targetId || null,
             pautaId: currentPautaId || 'N/A',
-            userEmail: auth.currentUser.email,
-            userId: auth.currentUser.uid,
+            userEmail: auth.currentUser.email || 'email@desconhecido',
+            userId: auth.currentUser.uid || 'uid_desconhecido',
             userName: userName || auth.currentUser.email || 'Desconhecido',
             timestamp: new Date().toISOString()
-        });
+        };
+        
+        console.log("📝 Registrando log:", logData);
+        await addDoc(collection(db, "audit_logs"), logData);
+        console.log("✅ Log registrado com sucesso");
+        
     } catch (error) { 
-        console.error("Erro ao registrar log:", error); 
+        console.error("❌ Erro ao registrar log:", error); 
     }
 };
 
@@ -32,57 +40,77 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
  */
 export const loadUsersList = async (db) => {
     try {
+        console.log("Carregando lista de usuários...");
         const snapshot = await getDocs(collection(db, "users"));
         const pendingList = document.getElementById('pending-users-list');
         const approvedList = document.getElementById('approved-users-list');
         
-        if(!pendingList || !approvedList) return;
+        if(!pendingList || !approvedList) {
+            console.error("Elementos da lista de usuários não encontrados");
+            return;
+        }
 
         pendingList.innerHTML = ''; 
         approvedList.innerHTML = '';
 
-        snapshot.forEach((docSnap) => {
-            const user = docSnap.data();
-            const userId = docSnap.id;
-            const row = document.createElement('div');
-            row.className = "flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-white rounded border mb-2 shadow-sm gap-3";
-            
-            const roleSelector = `
-                <select id="role-select-${userId}" class="text-[10px] border rounded p-1 bg-gray-50 focus:ring-1 focus:ring-blue-500 outline-none">
-                    <option value="user" ${user.role === 'user' ? 'selected' : ''}>Usuário</option>
-                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                    <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>Superadmin</option>
-                </select>
-            `;
+        if (snapshot.empty) {
+            pendingList.innerHTML = '<p class="text-gray-400 text-xs text-center py-4">Nenhum usuário encontrado</p>';
+            approvedList.innerHTML = '<p class="text-gray-400 text-xs text-center py-4">Nenhum usuário encontrado</p>';
+            return;
+        }
 
-            if (user.status === 'pending') {
-                row.innerHTML = `
-                    <div class="text-xs">
-                        <p class="font-bold text-orange-600">PENDENTE: ${escapeHTML(user.name || '')}</p>
-                        <p class="text-gray-500">${escapeHTML(user.email || '')}</p>
-                    </div>
-                    <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-                        ${roleSelector}
-                        <button onclick="window.approveUser('${userId}')" class="bg-green-600 text-white px-3 py-1 rounded text-[10px] font-bold hover:bg-green-700 transition">APROVAR</button>
-                        <button onclick="window.deleteUser('${userId}')" class="text-red-500 text-[10px] hover:underline">REJEITAR</button>
-                    </div>`;
-                pendingList.appendChild(row);
-            } else {
-                row.innerHTML = `
-                    <div class="text-xs">
-                        <p class="font-bold text-gray-800">${escapeHTML(user.name || '')}</p>
-                        <p class="text-gray-500">${escapeHTML(user.email || '')}</p>
-                    </div>
-                    <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-                        ${roleSelector}
-                        <button onclick="window.updateUserRole('${userId}')" class="bg-blue-500 text-white px-2 py-1 rounded text-[10px] hover:bg-blue-600 transition" title="Salvar Alteração de Cargo">SALVAR</button>
-                        <button onclick="window.deleteUser('${userId}')" class="bg-gray-100 text-red-500 px-2 py-1 rounded text-[10px] hover:bg-red-50 transition" title="Excluir Usuário">EXCLUIR</button>
-                    </div>`;
-                approvedList.appendChild(row);
+        snapshot.forEach((docSnap) => {
+            try {
+                const user = docSnap.data();
+                const userId = docSnap.id;
+                
+                if (!user.email) return; // Pula usuários sem email
+                
+                const row = document.createElement('div');
+                row.className = "flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-white rounded border mb-2 shadow-sm gap-3";
+                
+                const roleSelector = `
+                    <select id="role-select-${userId}" class="text-[10px] border rounded p-1 bg-gray-50 focus:ring-1 focus:ring-blue-500 outline-none">
+                        <option value="user" ${user.role === 'user' ? 'selected' : ''}>Usuário</option>
+                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                        <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>Superadmin</option>
+                    </select>
+                `;
+
+                if (user.status === 'pending') {
+                    row.innerHTML = `
+                        <div class="text-xs">
+                            <p class="font-bold text-orange-600">PENDENTE: ${escapeHTML(user.name || 'Sem nome')}</p>
+                            <p class="text-gray-500">${escapeHTML(user.email)}</p>
+                        </div>
+                        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                            ${roleSelector}
+                            <button onclick="window.approveUser('${userId}')" class="bg-green-600 text-white px-3 py-1 rounded text-[10px] font-bold hover:bg-green-700 transition whitespace-nowrap">APROVAR</button>
+                            <button onclick="window.deleteUser('${userId}')" class="text-red-500 text-[10px] hover:underline whitespace-nowrap">REJEITAR</button>
+                        </div>`;
+                    pendingList.appendChild(row);
+                } else {
+                    row.innerHTML = `
+                        <div class="text-xs">
+                            <p class="font-bold text-gray-800">${escapeHTML(user.name || 'Sem nome')}</p>
+                            <p class="text-gray-500">${escapeHTML(user.email)}</p>
+                        </div>
+                        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                            ${roleSelector}
+                            <button onclick="window.updateUserRole('${userId}')" class="bg-blue-500 text-white px-2 py-1 rounded text-[10px] hover:bg-blue-600 transition whitespace-nowrap" title="Salvar Alteração de Cargo">SALVAR</button>
+                            <button onclick="window.deleteUser('${userId}')" class="bg-gray-100 text-red-500 px-2 py-1 rounded text-[10px] hover:bg-red-50 transition whitespace-nowrap" title="Excluir Usuário">EXCLUIR</button>
+                        </div>`;
+                    approvedList.appendChild(row);
+                }
+            } catch (rowError) {
+                console.error("Erro ao processar usuário:", rowError);
             }
         });
+        
+        console.log("✅ Lista de usuários carregada");
+        
     } catch (error) {
-        console.error("Erro ao carregar usuários:", error);
+        console.error("❌ Erro ao carregar usuários:", error);
         showNotification("Erro ao carregar lista de usuários", "error");
     }
 };
@@ -103,7 +131,7 @@ export const approveUser = async (db, userId) => {
         showNotification("Usuário aprovado com sucesso!"); 
         loadUsersList(db);
     } catch (e) { 
-        console.error(e);
+        console.error("Erro ao aprovar usuário:", e);
         showNotification("Erro ao aprovar usuário.", "error"); 
     }
 };
@@ -117,7 +145,7 @@ export const updateUserRole = async (db, userId) => {
         showNotification("Cargo atualizado com sucesso!"); 
         loadUsersList(db);
     } catch (e) { 
-        console.error(e);
+        console.error("Erro ao atualizar cargo:", e);
         showNotification("Erro ao atualizar cargo.", "error"); 
     }
 };
@@ -130,15 +158,15 @@ export const deleteUser = async (db, userId) => {
         showNotification("Usuário removido com sucesso."); 
         loadUsersList(db);
     } catch (e) { 
-        console.error(e);
+        console.error("Erro ao remover usuário:", e);
         showNotification("Erro ao remover usuário.", "error"); 
     }
 };
 
 // Tornar funções globais para acesso via onclick
-window.approveUser = (userId) => approveUser(window.app.db, userId);
-window.updateUserRole = (userId) => updateUserRole(window.app.db, userId);
-window.deleteUser = (userId) => deleteUser(window.app.db, userId);
+window.approveUser = (userId) => approveUser(window.app?.db, userId);
+window.updateUserRole = (userId) => updateUserRole(window.app?.db, userId);
+window.deleteUser = (userId) => deleteUser(window.app?.db, userId);
 
 /**
  * ATUALIZA ESTATÍSTICAS DO PAINEL (Resumo de pautas ativas)
@@ -148,7 +176,9 @@ export const updateAdminStats = async (db) => {
         const pautasAtivas = await getDocs(collection(db, "pautas"));
         const statsElement = document.getElementById('stats-total-pautas');
         if(statsElement) statsElement.textContent = pautasAtivas.size;
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+        console.error("Erro ao atualizar estatísticas:", e); 
+    }
 };
 
 /**
@@ -157,46 +187,52 @@ export const updateAdminStats = async (db) => {
 export const cleanupOldData = async (db) => {
     if (!confirm("Isso apagará dados sensíveis de assistidos com mais de 7 dias. Os números de produtividade serão salvos anonimamente. Confirmar?")) return;
 
-    const limitDate = new Date();
-    limitDate.setDate(limitDate.getDate() - 7);
-    const pautas = await getDocs(collection(db, "pautas"));
-    let count = 0;
+    try {
+        const limitDate = new Date();
+        limitDate.setDate(limitDate.getDate() - 7);
+        const pautas = await getDocs(collection(db, "pautas"));
+        let count = 0;
 
-    for (const pautaDoc of pautas.docs) {
-        const pautaData = pautaDoc.data();
-        const attRef = collection(db, "pautas", pautaDoc.id, "attendances");
-        const q = query(attRef, where("createdAt", "<", limitDate.toISOString()));
-        const snapshot = await getDocs(q);
+        for (const pautaDoc of pautas.docs) {
+            const pautaData = pautaDoc.data();
+            const attRef = collection(db, "pautas", pautaDoc.id, "attendances");
+            const q = query(attRef, where("createdAt", "<", limitDate.toISOString()));
+            const snapshot = await getDocs(q);
 
-        if (!snapshot.empty) {
-            // CRIAR RESUMO AGREGADO (Sem nomes ou CPFs)
-            const stats = {
-                pautaName: pautaData.name || 'Sem nome',
-                creatorEmail: pautaData.ownerEmail || 'Desconhecido',
-                dataReferencia: limitDate.toISOString(),
-                total: snapshot.size,
-                atendidos: snapshot.docs.filter(d => d.data().status === 'atendido').length,
-                faltosos: snapshot.docs.filter(d => d.data().status === 'faltoso').length,
-                assuntos: {}
-            };
+            if (!snapshot.empty) {
+                // CRIAR RESUMO AGREGADO (Sem nomes ou CPFs)
+                const stats = {
+                    pautaName: pautaData.name || 'Sem nome',
+                    creatorEmail: pautaData.ownerEmail || 'Desconhecido',
+                    dataReferencia: limitDate.toISOString(),
+                    total: snapshot.size,
+                    atendidos: snapshot.docs.filter(d => d.data().status === 'atendido').length,
+                    faltosos: snapshot.docs.filter(d => d.data().status === 'faltoso').length,
+                    assuntos: {}
+                };
 
-            // Contabiliza assuntos de forma anônima
-            snapshot.docs.forEach(d => {
-                const sub = d.data().subject || 'Não informado';
-                stats.assuntos[sub] = (stats.assuntos[sub] || 0) + 1;
-            });
+                // Contabiliza assuntos de forma anônima
+                snapshot.docs.forEach(d => {
+                    const sub = d.data().subject || 'Não informado';
+                    stats.assuntos[sub] = (stats.assuntos[sub] || 0) + 1;
+                });
 
-            // SALVA NO HISTÓRICO PERMANENTE
-            await addDoc(collection(db, "estatisticas_permanentes"), stats);
+                // SALVA NO HISTÓRICO PERMANENTE
+                await addDoc(collection(db, "estatisticas_permanentes"), stats);
 
-            // APAGA OS REGISTROS ORIGINAIS
-            const batch = writeBatch(db);
-            snapshot.docs.forEach(d => batch.delete(d.ref));
-            await batch.commit();
-            count += snapshot.size;
+                // APAGA OS REGISTROS ORIGINAIS
+                const batch = writeBatch(db);
+                snapshot.docs.forEach(d => batch.delete(d.ref));
+                await batch.commit();
+                count += snapshot.size;
+            }
         }
+        showNotification(`✅ Sucesso! ${count} registros sensíveis limpos e métricas salvas.`);
+        
+    } catch (error) {
+        console.error("Erro na limpeza:", error);
+        showNotification("Erro ao executar limpeza: " + error.message, "error");
     }
-    showNotification(`Sucesso! ${count} registros sensíveis limpos e métricas salvas.`);
 };
 
 /**
@@ -208,12 +244,22 @@ export const loadDashboardData = async (db) => {
     const userFilter = document.getElementById('stats-filter-user')?.value;
     const resultsArea = document.getElementById('dashboard-results');
 
-    if (!resultsArea) return;
+    if (!resultsArea) {
+        console.error("Elemento dashboard-results não encontrado");
+        return;
+    }
+    
     resultsArea.classList.remove('hidden');
     showNotification("Analisando dados históricos...");
 
     try {
         const snapshot = await getDocs(collection(db, "estatisticas_permanentes"));
+        
+        if (snapshot.empty) {
+            resultsArea.innerHTML = '<p class="text-center text-gray-400 py-8">Nenhum dado estatístico encontrado.</p>';
+            return;
+        }
+        
         let filteredData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
         // Filtro de Data
@@ -286,10 +332,12 @@ export const loadDashboardData = async (db) => {
 
         renderRanking('dash-subjects-list', mapAssuntos);
         renderRanking('dash-users-list', mapUsers);
+        
+        showNotification("Dashboard atualizado!");
 
     } catch (error) {
         console.error("Dashboard Error:", error);
-        showNotification("Erro ao processar dados.", "error");
+        showNotification("Erro ao processar dados: " + error.message, "error");
     }
 };
 
@@ -313,6 +361,9 @@ export const populateUserFilter = async (db) => {
                 select.appendChild(option);
             }
         });
+        
+        console.log("✅ Filtro de usuários carregado");
+        
     } catch (e) { 
         console.error("Erro ao carregar filtro de usuários:", e); 
     }
@@ -322,94 +373,153 @@ export const populateUserFilter = async (db) => {
  * BUSCA E EXIBE OS LOGS DE AUDITORIA
  */
 export const loadAuditLogs = async (db) => {
+    console.log("🔍 Iniciando carregamento dos logs de auditoria...");
+    
     const logsContainer = document.getElementById('audit-logs-container');
     const tableBody = document.getElementById('audit-logs-table-body');
     const pdfBtn = document.getElementById('export-audit-pdf-btn');
     
     if (!logsContainer || !tableBody) {
-        console.error("Elementos de log não encontrados");
+        console.error("❌ Elementos de log não encontrados:", {
+            container: !!logsContainer,
+            body: !!tableBody
+        });
+        showNotification("Erro: elementos da interface não encontrados", "error");
         return;
     }
 
-    // Mostra o container e estado de carregamento
+    // Mostra loading
     logsContainer.classList.remove('hidden');
-    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div><p class="text-xs text-gray-400 mt-2">Carregando histórico...</p></td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><div class="loader-small"></div><p class="text-xs text-gray-400 mt-2">Carregando histórico...</p></td></tr>';
     
     if (pdfBtn) pdfBtn.classList.add('hidden');
 
     try {
-        const logsRef = collection(db, "audit_logs");
-        const q = query(logsRef, orderBy("timestamp", "desc"), limit(500));
-        const snapshot = await getDocs(q);
+        // Verificar conexão com Firestore
+        if (!db) {
+            throw new Error("Database não inicializado");
+        }
 
-        if (snapshot.empty) {
+        // Verificar se a coleção existe e pode ser acessada
+        const logsRef = collection(db, "audit_logs");
+        
+        // Testar se consegue acessar a coleção
+        const testSnapshot = await getDocs(logsRef);
+        console.log("📊 Total de logs no Firestore:", testSnapshot.size);
+        
+        if (testSnapshot.size === 0) {
             tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400 text-xs">Nenhum registro de auditoria encontrado.</td></tr>';
             return;
         }
 
+        // Buscar logs ordenados (mais recentes primeiro)
+        const q = query(logsRef, orderBy("timestamp", "desc"), limit(100));
+        const snapshot = await getDocs(q);
+
         tableBody.innerHTML = '';
         if (pdfBtn) pdfBtn.classList.remove('hidden');
 
+        let rowCount = 0;
+
         snapshot.forEach((docSnap) => {
-            const log = docSnap.data();
-            
-            // Formata a data corretamente
-            let formattedDate = 'Data inválida';
             try {
-                if (log.timestamp) {
-                    const date = new Date(log.timestamp);
-                    formattedDate = date.toLocaleString('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit'
-                    });
+                const log = docSnap.data();
+                
+                // Validar dados obrigatórios
+                if (!log.timestamp) {
+                    console.warn("Log sem timestamp ignorado:", docSnap.id);
+                    return;
                 }
-            } catch (e) {
-                console.error("Erro ao formatar data:", e);
+                
+                // Formata a data com segurança
+                let formattedDate = 'Data inválida';
+                try {
+                    const date = new Date(log.timestamp);
+                    if (!isNaN(date.getTime())) {
+                        formattedDate = date.toLocaleString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                        });
+                    }
+                } catch (e) {
+                    console.warn("Erro ao formatar data:", e);
+                }
+                
+                const row = document.createElement('tr');
+                row.className = "border-b hover:bg-gray-50 transition-colors";
+                
+                // Define cor baseada na ação
+                let actionColor = 'bg-purple-100 text-purple-700';
+                const action = (log.action || '').toLowerCase();
+                if (action.includes('delete') || action.includes('apagou') || action.includes('remove')) {
+                    actionColor = 'bg-red-100 text-red-700';
+                } else if (action.includes('create') || action.includes('criou') || action.includes('add')) {
+                    actionColor = 'bg-green-100 text-green-700';
+                } else if (action.includes('update') || action.includes('edit') || action.includes('atualiz')) {
+                    actionColor = 'bg-blue-100 text-blue-700';
+                }
+                
+                // Escapar HTML para segurança
+                const safeUserName = escapeHTML(log.userName || log.userEmail || 'Desconhecido');
+                const safeUserEmail = escapeHTML(log.userEmail || '');
+                const safeAction = escapeHTML(log.action || 'AÇÃO');
+                const safeDetails = escapeHTML(log.details || '-');
+                const safePautaId = log.pautaId && log.pautaId !== 'N/A' ? 
+                    `<div class="text-[8px] text-gray-400 mt-1">Pauta: ${escapeHTML(log.pautaId.substring(0,8))}...</div>` : '';
+                
+                row.innerHTML = `
+                    <td class="px-3 py-2 whitespace-nowrap text-[10px] text-gray-600">${escapeHTML(formattedDate)}</td>
+                    <td class="px-3 py-2">
+                        <p class="font-bold text-gray-800 text-[11px]">${safeUserName}</p>
+                        <p class="text-[9px] text-gray-400">${safeUserEmail}</p>
+                    </td>
+                    <td class="px-3 py-2 text-center">
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold ${actionColor} uppercase">
+                            ${safeAction}
+                        </span>
+                    </td>
+                    <td class="px-3 py-2 text-[10px] text-gray-600">
+                        <div class="max-w-xs truncate" title="${safeDetails}">
+                            ${safeDetails}
+                        </div>
+                        ${safePautaId}
+                    </td>
+                `;
+                tableBody.appendChild(row);
+                rowCount++;
+                
+            } catch (rowError) {
+                console.error("Erro ao processar linha do log:", rowError, docSnap.id);
             }
-            
-            const row = document.createElement('tr');
-            row.className = "border-b hover:bg-gray-50 transition-colors";
-            
-            // Define a cor de fundo baseada no tipo de ação
-            let actionColor = 'bg-purple-100 text-purple-700';
-            if (log.action?.toLowerCase().includes('delete') || log.action?.toLowerCase().includes('excluir')) {
-                actionColor = 'bg-red-100 text-red-700';
-            } else if (log.action?.toLowerCase().includes('create') || log.action?.toLowerCase().includes('criar')) {
-                actionColor = 'bg-green-100 text-green-700';
-            } else if (log.action?.toLowerCase().includes('update') || log.action?.toLowerCase().includes('atualizar')) {
-                actionColor = 'bg-blue-100 text-blue-700';
-            }
-            
-            row.innerHTML = `
-                <td class="px-3 py-2 whitespace-nowrap text-[10px] text-gray-600">${escapeHTML(formattedDate)}</td>
-                <td class="px-3 py-2">
-                    <p class="font-bold text-gray-800 text-[11px]">${escapeHTML(log.userName || log.userEmail || 'Desconhecido')}</p>
-                    <p class="text-[9px] text-gray-400">${escapeHTML(log.userEmail || '')}</p>
-                </td>
-                <td class="px-3 py-2 text-center">
-                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold ${actionColor} uppercase">
-                        ${escapeHTML(log.action || 'AÇÃO')}
-                    </span>
-                </td>
-                <td class="px-3 py-2 text-[10px] text-gray-600">
-                    <div class="max-w-xs truncate" title="${escapeHTML(log.details || '')}">
-                        ${escapeHTML(log.details || '-')}
-                    </div>
-                    ${log.pautaId && log.pautaId !== 'N/A' ? 
-                        `<div class="text-[8px] text-gray-400 mt-1">Pauta: ${escapeHTML(log.pautaId.substring(0,8))}...</div>` : 
-                        ''}
-                </td>
-            `;
-            tableBody.appendChild(row);
         });
+
+        // Se não adicionou nenhuma linha
+        if (rowCount === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400 text-xs">Nenhum log válido encontrado.</td></tr>';
+        } else {
+            console.log(`✅ ${rowCount} logs carregados com sucesso`);
+        }
+
     } catch (error) {
-        console.error("Erro ao carregar logs:", error);
+        console.error("❌ Erro detalhado ao carregar logs:", error);
+        
+        // Mensagem de erro mais específica
+        let errorMessage = "Erro ao carregar registros.";
+        if (error.code === 'permission-denied') {
+            errorMessage = "Permissão negada. Você precisa ser admin.";
+        } else if (error.code === 'not-found') {
+            errorMessage = "Coleção de logs não encontrada.";
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
         tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500 text-xs">
-            Erro ao carregar registros: ${escapeHTML(error.message)}
+            ❌ ${errorMessage}<br>
+            <span class="text-[8px] text-gray-400 mt-2 block">Verifique o console (F12) para mais detalhes</span>
         </td></tr>`;
     }
 };
@@ -421,6 +531,11 @@ export const exportAuditLogsPDF = async (db) => {
     showNotification("Gerando PDF...", "info");
     
     try {
+        // Verificar se jsPDF está disponível
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            throw new Error("Biblioteca jsPDF não carregada");
+        }
+        
         const { jsPDF } = window.jspdf;
         const docPDF = new jsPDF({ orientation: 'landscape' });
 
@@ -445,24 +560,30 @@ export const exportAuditLogsPDF = async (db) => {
 
         // Preparar dados para a tabela
         const head = [['Data/Hora', 'Usuário', 'Ação', 'Detalhes', 'Pauta ID']];
-        const body = snapshot.docs.map(docSnap => {
-            const log = docSnap.data();
-            let dateStr = '';
+        const body = [];
+
+        snapshot.docs.forEach(docSnap => {
             try {
-                if (log.timestamp) {
-                    dateStr = new Date(log.timestamp).toLocaleString('pt-BR');
+                const log = docSnap.data();
+                let dateStr = '';
+                try {
+                    if (log.timestamp) {
+                        dateStr = new Date(log.timestamp).toLocaleString('pt-BR');
+                    }
+                } catch (e) {
+                    dateStr = 'Data inválida';
                 }
+                
+                body.push([
+                    dateStr,
+                    `${log.userName || log.userEmail || 'Desconhecido'}`,
+                    log.action || '-',
+                    log.details || '-',
+                    log.pautaId || 'N/A'
+                ]);
             } catch (e) {
-                dateStr = 'Data inválida';
+                console.warn("Erro ao processar log para PDF:", e);
             }
-            
-            return [
-                dateStr,
-                `${log.userName || log.userEmail || 'Desconhecido'}`,
-                log.action || '-',
-                log.details || '-',
-                log.pautaId || 'N/A'
-            ];
         });
 
         docPDF.autoTable({
@@ -500,7 +621,10 @@ export const exportAuditLogsPDF = async (db) => {
 };
 
 // Tornar funções globais para acesso via onclick
-window.cleanupOldData = () => cleanupOldData(window.app.db);
-window.loadAuditLogs = () => loadAuditLogs(window.app.db);
-window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app.db);
-window.loadDashboardData = () => loadDashboardData(window.app.db);
+window.cleanupOldData = () => cleanupOldData(window.app?.db);
+window.loadAuditLogs = () => loadAuditLogs(window.app?.db);
+window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
+window.loadDashboardData = () => loadDashboardData(window.app?.db);
+window.populateUserFilter = () => populateUserFilter(window.app?.db);
+
+console.log("✅ Módulo admin.js carregado com sucesso");
