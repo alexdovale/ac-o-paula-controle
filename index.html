@@ -2683,8 +2683,26 @@ document.getElementById('confirm-attendant-btn')?.addEventListener('click', asyn
                     cleanupOldData(this.db);
                 });
 
-                document.getElementById('view-audit-logs-btn')?.addEventListener('click', () => {
-                    loadAuditLogs(this.db);
+                // Dentro da classe SIGAPApp, no método setupAdminPanel(), substitua o listener existente por este:
+
+                document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
+                    console.log("Carregando logs de auditoria...");
+                    
+                    // Mostra indicador de carregamento
+                    const btn = document.getElementById('view-audit-logs-btn');
+                    const originalText = btn.textContent;
+                    btn.textContent = "Carregando...";
+                    btn.disabled = true;
+                    
+                    try {
+                        await loadAuditLogs(this.db);
+                    } catch (error) {
+                        console.error("Erro ao carregar logs:", error);
+                        showNotification("Erro ao carregar logs de auditoria", "error");
+                    } finally {
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    }
                 });
 
                 document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
