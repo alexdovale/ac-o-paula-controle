@@ -1582,7 +1582,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
                 });
 
-                // Localize este trecho no seu código (linha ~650-700)
                 document.getElementById('confirm-create-pauta-final-btn')?.addEventListener('click', async () => {
                     const pautaName = document.getElementById('create-pauta-name-input').value.trim();
                     const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
@@ -1600,10 +1599,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         showNotification("Adicione pelo menos uma sala.", "error");
                         return;
                     }
-                
+
                     try {
-                        // Cria a pauta
-                        const pautaRef = await addDoc(collection(this.db, "pautas"), {
+                        await addDoc(collection(this.db, "pautas"), {
                             name: pautaName,
                             type: pautaType,
                             ordemAtendimento: ordemAtendimento,
@@ -1617,32 +1615,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             createdAt: new Date().toISOString(),
                             rooms: pautaType === 'multisala' ? [...this.customRoomsList] : []
                         });
-                        
-                        // 🔥 IMPORTANTE: ADICIONE ESTA LINHA PARA REGISTRAR O LOG
-                        await logAction(
-                            this.db,
-                            this.auth,
-                            this.currentUserName || user.email,
-                            pautaRef.id,
-                            'CREATE_PAUTA',
-                            `Criou a pauta "${pautaName}" do tipo ${pautaType}`,
-                            pautaRef.id
-                        );
-                        
-                        showNotification("Pauta criada com sucesso!");
-                        
-                        document.getElementById('create-pauta-name-input').value = '';
-                        document.getElementById('delegation-flow-modal').classList.add('hidden');
-                        
-                        if (this.auth.currentUser) {
-                            PautaService.showPautaSelectionScreen(this);
-                        }
-                        
-                    } catch (error) {
-                        console.error("Erro ao criar pauta:", error);
-                        showNotification("Erro ao criar pauta.", "error");
-                    }
-                });
                         
                         showNotification("Pauta criada com sucesso!");
                         
