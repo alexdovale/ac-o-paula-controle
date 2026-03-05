@@ -339,7 +339,7 @@ export const loadAuditLogs = async (db) => {
 
     try {
         const logsRef = collection(db, "audit_logs");
-        const q = query(logsRef, orderBy("timestamp", "desc"), limit(100));
+        const q = query(logsRef, orderBy("timestamp", "desc"), limit(500));
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
