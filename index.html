@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -88,6 +87,19 @@
             color: #b91c1c;
             transform: scale(1.05);
         }
+        .filter-btn-active {
+            background-color: #16a34a;
+            color: white;
+        }
+        .loader-small {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #8b5cf6;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -160,6 +172,10 @@
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Convites Pendentes</h2>
             <div id="pending-invitations-list" class="space-y-4"></div>
         </div>
+        
+        <!-- CONTAINER DOS FILTROS -->
+        <div id="filters-container" class="mb-6"></div>
+        
         <div id="pautas-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         <div class="mt-6"><button id="create-pauta-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Criar Nova Pauta</button></div>
     </div>
@@ -785,8 +801,6 @@
     </div>
 
     <!-- Modal de Finalização de Atendimento (com select) -->
-
-<!-- Modal de Finalização de Atendimento -->
     <div id="attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Finalizar Atendimento</h2>
@@ -794,7 +808,6 @@
             
             <select id="attendant-select" class="w-full p-3 border border-gray-300 rounded-lg mb-6 bg-white">
                 <option value="">-- Selecione um profissional (opcional) --</option>
-                <!-- Opções serão preenchidas via JavaScript -->
             </select>
             
             <div class="flex justify-end space-x-4">
@@ -804,7 +817,7 @@
         </div>
     </div>
 
-    <!-- Modal de Selecionar Colaborador (com opção "Não atribuir") -->
+    <!-- Modal de Selecionar Colaborador -->
     <div id="select-collaborator-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Atender Assistido</h2>
@@ -820,23 +833,21 @@
     </div>
 
     <!-- Modal de Editar Atendente -->
-    <!-- Modal de Editar Atendente -->
-<div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-        <h2 class="text-2xl font-bold mb-4">Editar Atendente</h2>
-        <p class="mb-4 text-gray-600">Selecione o profissional que realizou o atendimento:</p>
-        
-        <select id="edit-attendant-select" class="w-full p-3 border border-gray-300 rounded-lg mb-6 bg-white">
-            <option value="">-- Selecione um profissional --</option>
-            <!-- Opções serão preenchidas via JavaScript -->
-        </select>
-        
-        <div class="flex justify-end space-x-4">
-            <button id="cancel-edit-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
-            <button id="confirm-edit-attendant-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar</button>
+    <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Editar Atendente</h2>
+            <p class="mb-4 text-gray-600">Selecione o profissional que realizou o atendimento:</p>
+            
+            <select id="edit-attendant-select" class="w-full p-3 border border-gray-300 rounded-lg mb-6 bg-white">
+                <option value="">-- Selecione um profissional --</option>
+            </select>
+            
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-edit-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-edit-attendant-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar</button>
+            </div>
         </div>
     </div>
-</div>
 
     <!-- Modal de Delegar Finalização por Email -->
     <div id="delegate-email-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
@@ -1286,11 +1297,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         <!-- O conteúdo será gerado pelo StatisticsService -->
     </div>
 
-    <!-- Modal de Estatísticas -->
-    <div id="statistics-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <!-- O conteúdo será gerado pelo StatisticsService -->
-    </div>
-
     <!-- Rodapé -->
     <footer class="bg-white border-t border-gray-200 mt-8 pt-6 pb-6 text-center">
         <div class="flex justify-center space-x-6 mb-4 text-xs text-gray-500 font-medium">
@@ -1327,7 +1333,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     <!-- Script principal -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
         
@@ -1364,6 +1370,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 this.customRoomsList = [];
                 this.unsubscribeFromAttendances = null;
                 this.unsubscribeFromCollaborators = null;
+                this.currentPautaFilter = 'all'; // Estado do filtro
                 
                 this.init();
             }
@@ -1617,7 +1624,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             rooms: pautaType === 'multisala' ? [...this.customRoomsList] : []
                         });
                         
-                        // SEGUNDO: Registrar o log de auditoria (LINHAS ADICIONADAS)
+                        // SEGUNDO: Registrar o log de auditoria
                         await logAction(
                             this.db,
                             this.auth,
@@ -1634,7 +1641,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         document.getElementById('delegation-flow-modal').classList.add('hidden');
                         
                         if (this.auth.currentUser) {
-                            PautaService.showPautaSelectionScreen(this);
+                            this.showPautaSelectionScreen();
                         }
                         
                     } catch (error) {
@@ -1651,7 +1658,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     this.colaboradores = [];
                     UIService.showScreen('pautaSelection');
                     if (this.auth?.currentUser) {
-                        PautaService.showPautaSelectionScreen(this);
+                        this.showPautaSelectionScreen();
                     }
                 });
 
@@ -1891,6 +1898,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     
                     await CollaboratorService.saveCollaborator(this, data);
                 });
+                
                 document.querySelectorAll('[id^="cancel-"], [id^="close-"]').forEach(btn => {
                     if (btn) {
                         btn.addEventListener('click', (e) => {
@@ -1960,7 +1968,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('cancel-priority-reason-btn')?.addEventListener('click', () => {
                     document.getElementById('priority-reason-modal')?.classList.add('hidden');
                 });
-
 
                 // ================================================
                 // LISTENERS DO MODAL DE DETALHES (CHECKLIST)
@@ -2103,54 +2110,50 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     };
                 }
 
-
-
-                
                 // ================================================
                 // LISTENERS DO MODAL DE ATENDENTE (FINALIZAR)
                 // ================================================
 
                 // Confirmar atendimento (finalizar)
-    // Confirmar atendimento (finalizar)
-document.getElementById('confirm-attendant-btn')?.addEventListener('click', async () => {
-    const select = document.getElementById('attendant-select');
-    const attendantName = select?.value;
-    
-    // Se não selecionou, usar null (opcional)
-    const nomeFinal = attendantName || null;
-    
-    // Verificar se tem distribuição ativa
-    const useDist = this.currentPautaData?.useDistributionFlow === true;
-    const novoStatus = useDist ? 'aguardandoDistribuicao' : 'atendido';
+                document.getElementById('confirm-attendant-btn')?.addEventListener('click', async () => {
+                    const select = document.getElementById('attendant-select');
+                    const attendantName = select?.value;
+                    
+                    // Se não selecionou, usar null (opcional)
+                    const nomeFinal = attendantName || null;
+                    
+                    // Verificar se tem distribuição ativa
+                    const useDist = this.currentPautaData?.useDistributionFlow === true;
+                    const novoStatus = useDist ? 'aguardandoDistribuicao' : 'atendido';
 
-    // Buscar colaborador completo se existir
-    let attendantData = nomeFinal;
-    if (nomeFinal) {
-        const selectedCollab = this.colaboradores?.find(c => c.nome === nomeFinal);
-        if (selectedCollab) {
-            attendantData = { 
-                nome: selectedCollab.nome, 
-                cargo: selectedCollab.cargo, 
-                equipe: selectedCollab.equipe 
-            };
-        }
-    }
+                    // Buscar colaborador completo se existir
+                    let attendantData = nomeFinal;
+                    if (nomeFinal) {
+                        const selectedCollab = this.colaboradores?.find(c => c.nome === nomeFinal);
+                        if (selectedCollab) {
+                            attendantData = { 
+                                nome: selectedCollab.nome, 
+                                cargo: selectedCollab.cargo, 
+                                equipe: selectedCollab.equipe 
+                            };
+                        }
+                    }
 
-    await PautaService.updateStatus(
-        this.db,
-        this.currentPauta.id,
-        window.assistedIdToHandle,
-        { 
-            status: novoStatus, 
-            attendant: attendantData, 
-            attendedTime: new Date().toISOString() 
-        },
-        this.currentUserName
-    );
-    
-    document.getElementById('attendant-modal')?.classList.add('hidden');
-    showNotification(novoStatus === 'atendido' ? "Atendimento finalizado!" : "Enviado para Distribuição ⚖️");
-});
+                    await PautaService.updateStatus(
+                        this.db,
+                        this.currentPauta.id,
+                        window.assistedIdToHandle,
+                        { 
+                            status: novoStatus, 
+                            attendant: attendantData, 
+                            attendedTime: new Date().toISOString() 
+                        },
+                        this.currentUserName
+                    );
+                    
+                    document.getElementById('attendant-modal')?.classList.add('hidden');
+                    showNotification(novoStatus === 'atendido' ? "Atendimento finalizado!" : "Enviado para Distribuição ⚖️");
+                });
 
                 // Cancelar atendimento
                 document.getElementById('cancel-attendant-btn')?.addEventListener('click', () => {
@@ -2695,8 +2698,6 @@ document.getElementById('confirm-attendant-btn')?.addEventListener('click', asyn
                     cleanupOldData(this.db);
                 });
 
-                // Dentro da classe SIGAPApp, no método setupAdminPanel(), substitua o listener existente por este:
-
                 document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
                     console.log("Carregando logs de auditoria...");
                     
@@ -2773,6 +2774,76 @@ document.getElementById('confirm-attendant-btn')?.addEventListener('click', asyn
                 }
             }
 
+            // ===== NOVOS MÉTODOS PARA FILTROS E LIXEIRA =====
+            async showPautaSelectionScreen() {
+                UIService.showScreen('pautaSelection');
+                
+                // Estado do filtro (persistir na classe)
+                this.currentPautaFilter = this.currentPautaFilter || 'all';
+                
+                // Renderizar os filtros
+                UIService.renderPautaFilters('filters-container', this.currentPautaFilter, async (filter) => {
+                    this.currentPautaFilter = filter;
+                    await this.loadPautasWithFilter();
+                });
+                
+                await this.loadPautasWithFilter();
+            }
+
+            async loadPautasWithFilter() {
+                const user = this.auth.currentUser;
+                if (!user) return;
+                
+                try {
+                    // Buscar todas as pautas que o usuário tem acesso
+                    const q = query(
+                        collection(this.db, "pautas"),
+                        where("members", "array-contains", user.uid)
+                    );
+                    
+                    const snapshot = await getDocs(q);
+                    let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    
+                    // Aplicar filtro usando o PautaService
+                    const filteredPautas = PautaService.filterPautas(
+                        pautas, 
+                        this.currentPautaFilter, 
+                        user.uid, 
+                        user.email
+                    );
+                    
+                    // Renderizar cards usando o UIService
+                    UIService.renderPautaCards(
+                        filteredPautas, 
+                        user.uid, 
+                        user.email,
+                        this.db,
+                        this.auth,
+                        this.currentUserName
+                    );
+                    
+                } catch (error) {
+                    console.error("Erro ao carregar pautas:", error);
+                    showNotification("Erro ao carregar pautas", "error");
+                }
+            }
+
+            // Método deletePauta para ser chamado pelos botões
+            async deletePauta(pautaId, pautaName) {
+                const success = await PautaService.deletePauta(
+                    this.db, 
+                    this.auth, 
+                    pautaId, 
+                    pautaName, 
+                    this.currentUserName
+                );
+                
+                if (success) {
+                    // Recarregar a lista de pautas
+                    await this.loadPautasWithFilter();
+                }
+            }
+
             setupRealtimeListener(pautaId) {
                 if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
                 
@@ -2791,8 +2862,9 @@ document.getElementById('confirm-attendant-btn')?.addEventListener('click', asyn
         window.showNotification = showNotification;
         window.openDetailsModal = openDetailsModal;
 
-        // Inicializar a aplicação
+        // Tornar o método deletePauta acessível globalmente
         window.app = new SIGAPApp();
+        window.app.deletePauta = (pautaId, pautaName) => window.app.deletePauta(pautaId, pautaName);
     </script>
 
     <!-- ================================================ -->
