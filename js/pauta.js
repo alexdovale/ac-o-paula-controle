@@ -692,6 +692,9 @@ export const PautaService = {
     /**
      * Renderiza cards de pauta na tela de seleção (VERSÃO ANTIGA - IGUAL DA IMAGEM)
      */
+    /**
+     * Renderiza cards de pauta na tela de seleção (VERSÃO ANTIGA - IGUAL DA IMAGEM)
+     */
     renderPautaCards(pautas, currentUserId, currentUserEmail, app) {
         const container = document.getElementById('pautas-list');
         if (!container) return;
@@ -700,7 +703,7 @@ export const PautaService = {
             container.innerHTML = '<div class="col-span-full text-center py-12 bg-gray-50 rounded-lg"><p class="text-gray-500">Nenhuma pauta encontrada com este filtro.</p></div>';
             return;
         }
-
+    
         const now = new Date();
         
         container.innerHTML = pautas.map(pauta => {
@@ -731,8 +734,9 @@ export const PautaService = {
             const expiredClass = isExpired ? 'opacity-60 bg-gray-100' : '';
             
             return `
-            <div class="relative bg-white p-6 rounded-lg shadow-md flex flex-col justify-between h-full ${expiredClass} ${!isExpired ? 'hover:shadow-xl transition-shadow cursor-pointer' : ''}" 
-                 ${!isExpired ? `onclick="window.app.loadPauta('${pauta.id}', '${escapeHTML(pauta.name)}', '${pauta.type}')"` : ''}>
+            <div class="relative bg-white p-6 rounded-lg shadow-md flex flex-col justify-between h-full ${expiredClass} ${!isExpired ? 'hover:shadow-xl transition-shadow cursor-pointer' : 'cursor-not-allowed'}" 
+                 ${!isExpired ? `onclick="window.app.loadPauta('${pauta.id}', '${escapeHTML(pauta.name)}', '${pauta.type}')"` 
+                              : `onclick="showNotification('🔒 Esta pauta expirou e não pode ser acessada', 'error')"`}>
                 
                 <!-- Botão de lixeira (só para o criador) -->
                 ${isOwner ? `
@@ -755,10 +759,6 @@ export const PautaService = {
                     Membros: <span class="font-semibold">${pauta.memberEmails?.length || 1}</span>
                 </p>
                 
-                <!-- Mensagem de pauta expirada (se for o caso) -->
-
-                ${!isExpired ? `onclick="window.app.loadPauta('${pauta.id}', '${escapeHTML(pauta.name)}', '${pauta.type}')"` 
-                : `onclick="showNotification('🔒 Esta pauta expirou e não pode ser acessada', 'error')"`}
                 <!-- Datas de criação e expiração -->
                 <div class="mt-4 pt-2 border-t border-gray-200">
                     <p class="text-xs text-gray-500">
@@ -774,7 +774,7 @@ export const PautaService = {
             </div>
             `;
         }).join('');
-    },
+    }
 
     /**
      * Cria card de pauta (legado, manter para compatibilidade)
