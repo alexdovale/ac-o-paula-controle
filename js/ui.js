@@ -511,24 +511,24 @@ export const UIService = {
             card.className = `relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
             card.setAttribute('data-id', item.id);
 
-            // === INDICADORES DE STATUS DO DOCUMENTO ===
+            // === INDICADORES DE STATUS DO DOCUMENTO COM TEXTO ===
             let docStatusHtml = '';
             if (item.selectedAction) {
                 let statusColor = 'bg-gray-100 text-gray-600';
-                let statusText = 'Selecionado';
+                let statusText = '📋 Selecionado';
                 let statusIcon = '📋';
                 
                 if (item.documentState === 'filling') { 
                     statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
-                    statusText = 'Preenchendo'; 
+                    statusText = '✏️ Preenchendo'; 
                     statusIcon = '✏️';
                 } else if (item.documentState === 'saved') { 
                     statusColor = 'bg-green-100 text-green-700 font-bold'; 
-                    statusText = 'Salvo'; 
+                    statusText = '✅ Salvo'; 
                     statusIcon = '✅';
                 } else if (item.documentState === 'pdf') { 
                     statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
-                    statusText = 'PDF Gerado'; 
+                    statusText = '📄 PDF Emitido'; 
                     statusIcon = '📄';
                 }
 
