@@ -690,7 +690,7 @@ export const PautaService = {
     },
 
     /**
-     * Renderiza cards de pauta na tela de seleção
+     * Renderiza cards de pauta na tela de seleção (VERSÃO ANTIGA - IGUAL DA IMAGEM)
      */
     renderPautaCards(pautas, currentUserId, currentUserEmail, app) {
         const container = document.getElementById('pautas-list');
@@ -700,62 +700,73 @@ export const PautaService = {
             container.innerHTML = '<div class="col-span-full text-center py-12 bg-gray-50 rounded-lg"><p class="text-gray-500">Nenhuma pauta encontrada com este filtro.</p></div>';
             return;
         }
-        
+
         const now = new Date();
         
         container.innerHTML = pautas.map(pauta => {
             const isOwner = pauta.owner === currentUserId;
-            const isMember = pauta.members?.includes(currentUserId) || pauta.memberEmails?.includes(currentUserEmail);
-            const isClosed = pauta.isClosed ? 'bg-gray-100 opacity-75' : '';
-            const closedBadge = pauta.isClosed ? '<span class="absolute top-2 right-2 bg-gray-500 text-white text-[10px] px-2 py-1 rounded-full">Fechada</span>' : '';
             
             // Verificar expiração
             let isExpired = false;
+            let dataCriacao = 'Desconhecida';
+            let dataExpiracao = 'Desconhecida';
+            
             if (pauta.createdAt) {
                 const creationDate = new Date(pauta.createdAt);
+                dataCriacao = creationDate.toLocaleDateString('pt-BR');
+                
                 const expirationDate = new Date(creationDate);
                 expirationDate.setDate(creationDate.getDate() + 7);
+                dataExpiracao = expirationDate.toLocaleDateString('pt-BR');
+                
                 if (now > expirationDate) {
                     isExpired = true;
                 }
             }
             
-            const expiredBadge = isExpired ? '<span class="absolute top-2 left-2 bg-red-500 text-white text-[10px] px-2 py-1 rounded-full">Expirada</span>' : '';
+            // Texto de expiração
+            const expiracaoTexto = isExpired ? 'Expirou em:' : 'Será eliminada em:';
+            
+            // Classe de opacidade se expirado
+            const expiredClass = isExpired ? 'opacity-60 bg-gray-100' : '';
             
             return `
-            <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition relative ${isClosed} ${isExpired ? 'opacity-60' : ''}">
-                ${closedBadge}
-                ${expiredBadge}
-                <h3 class="text-xl font-bold text-gray-800 mb-2 truncate pr-12" title="${escapeHTML(pauta.name)}">${escapeHTML(pauta.name)}</h3>
+            <div class="relative bg-white p-6 rounded-lg shadow-md flex flex-col justify-between h-full ${expiredClass} ${!isExpired ? 'hover:shadow-xl transition-shadow cursor-pointer' : ''}" 
+                 ${!isExpired ? `onclick="window.app.loadPauta('${pauta.id}', '${escapeHTML(pauta.name)}', '${pauta.type}')"` : ''}>
+                
+                <!-- Botão de lixeira (só para o criador) -->
+                ${isOwner ? `
+                <button onclick="event.stopPropagation(); window.app.deletePauta('${pauta.id}', '${escapeHTML(pauta.name)}')" 
+                        class="absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:text-red-600 transition-colors"
+                        title="Excluir pauta">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </button>
+                ` : ''}
+                
+                <!-- Título da pauta -->
+                <h3 class="font-bold text-xl text-gray-800 mb-2 pr-8" title="${escapeHTML(pauta.name)}">
+                    ${escapeHTML(pauta.name)}
+                </h3>
+                
+                <!-- Membros -->
                 <p class="text-sm text-gray-600 mb-4">
-                    <span class="inline-block px-2 py-1 bg-gray-100 rounded-full text-xs">
-                        ${pauta.type === 'agendado' ? '📅 Agendado' : pauta.type === 'avulso' ? '⚡ Avulso' : '🏢 Multi-Salas'}
-                    </span>
-                    ${isOwner ? '<span class="ml-2 text-green-600 text-xs">👑 Criador</span>' : ''}
+                    Membros: <span class="font-semibold">${pauta.memberEmails?.length || 1}</span>
                 </p>
-                <div class="text-xs text-gray-500 mb-4">
-                    <p>Membros: ${pauta.memberEmails?.length || 1}</p>
-                    <p>Criada: ${pauta.createdAt ? new Date(pauta.createdAt).toLocaleDateString('pt-BR') : 'Desconhecida'}</p>
+                
+                <!-- Datas de criação e expiração -->
+                <div class="mt-4 pt-2 border-t border-gray-200">
+                    <p class="text-xs text-gray-500">
+                        Criada em: <span class="font-bold">${dataCriacao}</span>
+                    </p>
+                    <p class="text-xs ${isExpired ? 'text-gray-500' : 'text-red-600'}">
+                        ${expiracaoTexto} <span class="font-bold">${dataExpiracao}</span>
+                    </p>
                 </div>
-                <div class="flex justify-between items-center">
-                    <button onclick="window.app.loadPauta('${pauta.id}', '${escapeHTML(pauta.name)}', '${pauta.type}')" 
-                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-semibold flex-1 mr-2 text-center ${isExpired ? 'opacity-50 cursor-not-allowed' : ''}"
-                        ${isExpired ? 'disabled' : ''}>
-                        Acessar
-                    </button>
-                    
-                    ${isOwner ? `
-                    <button onclick="window.app.deletePauta('${pauta.id}', '${escapeHTML(pauta.name)}')" 
-                        class="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition" 
-                        title="Apagar pauta">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-                            <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-                        </svg>
-                    </button>
-                    ` : ''}
-                </div>
-                ${!isOwner && isMember ? '<p class="text-xs text-gray-400 mt-2">Compartilhado com você</p>' : ''}
+                
+                <!-- Badge de proprietário (opcional) -->
+                ${isOwner ? '<span class="absolute bottom-3 left-3 text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Criador</span>' : ''}
             </div>
             `;
         }).join('');
