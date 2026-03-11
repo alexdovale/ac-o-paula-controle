@@ -495,76 +495,107 @@ function fillExpenseData(d) {
 }
 
 // --- 13. FUNÇÃO PARA GERAR PDF USANDO PDFSERVICE ---
-async function handlePdf() {
-    showNotification("Gerando PDF...", "info");
-    
-    try {
-        // Coletar dados para o PDF
-        const assistedName = getEl('documents-assisted-name')?.textContent || 'Assistido';
-        const actionTitle = getEl('checklist-title')?.textContent || '';
+    // --- 13. FUNÇÃO PARA GERAR PDF USANDO PDFSERVICE ---
+    async function handlePdf() {
+        showNotification("Gerando PDF...", "info");
         
-        // COLETAR TEXTOS DOS DOCUMENTOS MARCADOS CORRETAMENTE
-        const documentosTextos = [];
-        document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
-            // Encontrar o span com o texto do documento
-            const label = cb.closest('label');
-            const span = label?.querySelector('span');
-            const text = span?.textContent || cb.id || 'Documento';
+        try {
+            // Coletar dados para o PDF
+            const assistedName = getEl('documents-assisted-name')?.textContent || 'Assistido';
+            const actionTitle = getEl('checklist-title')?.textContent || '';
             
-            documentosTextos.push({
-                id: cb.id,
-                text: text.trim()
+            // COLETAR TEXTOS DOS DOCUMENTOS MARCADOS CORRETAMENTE
+            const documentosTextos = [];
+            document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
+                // ENCONTRAR O TEXTO DO DOCUMENTO - VERSÃO CORRIGIDA
+                let text = '';
+                
+                // Tentativa 1: Procurar o span dentro do label
+                const label = cb.closest('label');
+                if (label) {
+                    const span = label.querySelector('span:not(.sr-only)');
+                    if (span) {
+                        text = span.textContent;
+                    }
+                }
+                
+                // Tentativa 2: Procurar em qualquer lugar próximo
+                if (!text) {
+                    const parentDiv = cb.closest('div');
+                    if (parentDiv) {
+                        const possibleSpan = parentDiv.querySelector('span');
+                        if (possibleSpan) text = possibleSpan.textContent;
+                    }
+                }
+                
+                // Tentativa 3: Usar o ID como fallback
+                if (!text || text.trim() === '') {
+                    text = cb.id || 'Documento';
+                }
+                
+                documentosTextos.push({
+                    id: cb.id,
+                    text: text.trim()
+                });
+                
+                console.log("📄 Documento marcado:", text.trim());
             });
             
-            console.log("📄 Documento marcado:", text.trim());
-        });
-        
-        // COLETAR DADOS DO RÉU
-        const reuData = getReuDataFromForm();
-        console.log("👤 Dados do réu:", reuData);
-        
-        // COLETAR DADOS DA PLANILHA DE GASTOS
-        const expenseData = getExpenseDataFromForm();
-        console.log("💰 Dados de gastos:", expenseData);
-        
-        // Preparar dados do checklist
-        const checklistData = {
-            checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
-            docTypes: getDocTypesFromForm(),
-            reuData: reuData || {},
-            expenseData: expenseData || {}
-        };
-        
-        console.log("📦 Dados completos para PDF:", checklistData);
-        
-        // Usar o PDFService para gerar o PDF
-        const resultado = PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
-        
-        if (resultado) {
-            showNotification("PDF gerado com sucesso!");
+            // COLETAR DADOS DO RÉU
+            const reuData = getReuDataFromForm();
+            console.log("👤 Dados do réu:", reuData);
             
-            // SALVAR O CHECKLIST ANTES DE MARCAR COMO PDF
-            await handleSave(false); // false = não fechar o modal
+            // COLETAR DADOS DA PLANILHA DE GASTOS
+            const expenseData = getExpenseDataFromForm();
+            console.log("💰 Dados de gastos:", expenseData);
             
-            // ATUALIZAR O ESTADO PARA 'pdf' NO FIRESTORE
-            if (currentAssistedId && currentPautaId && db) {
-                await updateDocumentState('pdf');
+            // Verificar se há dados de gastos
+            const hasExpenses = expenseData && Object.values(expenseData).some(v => v && v.trim() !== '');
+            console.log("📊 Tem gastos?", hasExpenses);
+            
+            // Verificar se há dados do réu
+            const hasReu = reuData && Object.values(reuData).some(v => v && v.trim() !== '');
+            console.log("👥 Tem réu?", hasReu);
+            
+            // Preparar dados do checklist
+            const checklistData = {
+                checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
+                docTypes: getDocTypesFromForm(),
+                reuData: reuData || {},
+                expenseData: expenseData || {}
+            };
+            
+            console.log("📦 Dados completos para PDF:", checklistData);
+            console.log("📦 Documentos para PDF:", documentosTextos);
+            
+            // Usar o PDFService para gerar o PDF
+            const resultado = PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
+            
+            if (resultado) {
+                showNotification("PDF gerado com sucesso!");
+                
+                // SALVAR O CHECKLIST ANTES DE MARCAR COMO PDF
+                await handleSave(false); // false = não fechar o modal
+                
+                // ATUALIZAR O ESTADO PARA 'pdf' NO FIRESTORE
+                if (currentAssistedId && currentPautaId && db) {
+                    await updateDocumentState('pdf');
+                }
+                
+                // Atualizar a lista de assistidos no app principal
+                if (window.app && typeof window.app.refreshAssistedList === 'function') {
+                    window.app.refreshAssistedList();
+                }
+                
+            } else {
+                showNotification("Erro ao gerar PDF", "error");
             }
             
-            // Atualizar a lista de assistidos no app principal
-            if (window.app && typeof window.app.refreshAssistedList === 'function') {
-                window.app.refreshAssistedList();
-            }
-            
-        } else {
-            showNotification("Erro ao gerar PDF", "error");
+        } catch (err) {
+            console.error("Erro ao gerar PDF:", err);
+            showNotification("Erro ao gerar PDF: " + err.message, "error");
         }
-        
-    } catch (err) {
-        console.error("Erro ao gerar PDF:", err);
-        showNotification("Erro ao gerar PDF: " + err.message, "error");
     }
-}
 
 // --- 14. AÇÕES (SALVAR, RESET, VOLTAR) ---
 async function handleSave(closeModal = true) {
