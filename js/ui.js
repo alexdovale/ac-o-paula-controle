@@ -26,10 +26,10 @@ export const UIService = {
                     📋 Todas
                 </button>
                 <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'active' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="active">
-                    ✅ Ativas
+                    ✅ Pautas com prazo
                 </button>
                 <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'closed' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="closed">
-                    🔒 Fechadas
+                    🔒 Pautas expiradas
                 </button>
                 <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'my' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="my">
                     👑 Criadas por mim
