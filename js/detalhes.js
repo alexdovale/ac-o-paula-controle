@@ -426,9 +426,12 @@ function renderExpenseTable() {
 
 // --- 12. FUNÇÕES PARA PEGAR DADOS DOS FORMULÁRIOS ---
 function getReuDataFromForm() {
-    if (!getEl('nome-reu')) return null;
+    // Verificar se os elementos existem
+    const nomeEl = getEl('nome-reu');
+    if (!nomeEl) return null; // Formulário não está renderizado
+    
     return {
-        nome: getEl('nome-reu')?.value || '',
+        nome: nomeEl?.value || '',
         cpf: getEl('cpf-reu')?.value || '',
         telefone: getEl('telefone-reu')?.value || '',
         cep: getEl('cep-reu')?.value || '',
@@ -444,8 +447,14 @@ function getReuDataFromForm() {
 
 function getExpenseDataFromForm() {
     const d = {};
+    // Verificar se os elementos existem
     EXPENSE_CATEGORIES.forEach(c => {
-        d[c.id] = getEl(`expense-${c.id}`)?.value || '';
+        const el = getEl(`expense-${c.id}`);
+        if (el) {
+            d[c.id] = el.value || '';
+        } else {
+            d[c.id] = '';
+        }
     });
     return d;
 }
@@ -486,7 +495,6 @@ function fillExpenseData(d) {
 }
 
 // --- 13. FUNÇÃO PARA GERAR PDF USANDO PDFSERVICE ---
-// --- 13. FUNÇÃO PARA GERAR PDF USANDO PDFSERVICE ---
 async function handlePdf() {
     showNotification("Gerando PDF...", "info");
     
@@ -495,24 +503,39 @@ async function handlePdf() {
         const assistedName = getEl('documents-assisted-name')?.textContent || 'Assistido';
         const actionTitle = getEl('checklist-title')?.textContent || '';
         
-        // Coletar textos dos documentos marcados
+        // COLETAR TEXTOS DOS DOCUMENTOS MARCADOS CORRETAMENTE
         const documentosTextos = [];
         document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
+            // Encontrar o span com o texto do documento
             const label = cb.closest('label');
-            const text = label?.querySelector('span')?.textContent || 'Documento';
+            const span = label?.querySelector('span');
+            const text = span?.textContent || cb.id || 'Documento';
+            
             documentosTextos.push({
                 id: cb.id,
-                text: text
+                text: text.trim()
             });
+            
+            console.log("📄 Documento marcado:", text.trim());
         });
+        
+        // COLETAR DADOS DO RÉU
+        const reuData = getReuDataFromForm();
+        console.log("👤 Dados do réu:", reuData);
+        
+        // COLETAR DADOS DA PLANILHA DE GASTOS
+        const expenseData = getExpenseDataFromForm();
+        console.log("💰 Dados de gastos:", expenseData);
         
         // Preparar dados do checklist
         const checklistData = {
             checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
             docTypes: getDocTypesFromForm(),
-            reuData: getReuDataFromForm() || {},
-            expenseData: getExpenseDataFromForm() || {}
+            reuData: reuData || {},
+            expenseData: expenseData || {}
         };
+        
+        console.log("📦 Dados completos para PDF:", checklistData);
         
         // Usar o PDFService para gerar o PDF
         const resultado = PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
@@ -520,12 +543,12 @@ async function handlePdf() {
         if (resultado) {
             showNotification("PDF gerado com sucesso!");
             
+            // SALVAR O CHECKLIST ANTES DE MARCAR COMO PDF
+            await handleSave(false); // false = não fechar o modal
+            
             // ATUALIZAR O ESTADO PARA 'pdf' NO FIRESTORE
             if (currentAssistedId && currentPautaId && db) {
                 await updateDocumentState('pdf');
-                
-                // Também salvar o checklist atual antes de marcar como PDF
-                await handleSave(false); // false = não fechar o modal
             }
             
             // Atualizar a lista de assistidos no app principal
@@ -559,22 +582,38 @@ async function handleSave(closeModal = true) {
     }
     
     const container = getEl('checklist-container');
+    if (!container) {
+        console.error("Container checklist não encontrado");
+        return;
+    }
+    
     const checkedIds = Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id);
     const docTypes = {};
     checkedIds.forEach(id => {
-        docTypes[id] = document.querySelector(`input[name="type-${id}"]:checked`)?.value || 'Físico';
+        const radio = document.querySelector(`input[name="type-${id}"]:checked`);
+        docTypes[id] = radio ? radio.value : 'Físico';
     });
+
+    // Coletar dados do réu e gastos
+    const reuData = getReuDataFromForm() || {};
+    const expenseData = getExpenseDataFromForm() || {};
+    
+    // OBTER O TÍTULO DA AÇÃO CORRETAMENTE
+    const actionKey = currentChecklistAction;
+    const actionTitle = actionKey && documentsData[actionKey] ? documentsData[actionKey].title : null;
+    
+    console.log("📌 Salvando ação:", { actionKey, actionTitle });
 
     const payload = {
         documentChecklist: {
-            action: currentChecklistAction,
+            action: actionKey,
             checkedIds: checkedIds,
             docTypes: docTypes,
-            reuData: getReuDataFromForm() || {},
-            expenseData: getExpenseDataFromForm() || {}
+            reuData: reuData,
+            expenseData: expenseData
         },
         documentState: 'saved',
-        selectedAction: currentChecklistAction ? documentsData[currentChecklistAction]?.title : null,
+        selectedAction: actionTitle, // IMPORTANTE: salvar o título da ação
         lastActionBy: window.app?.currentUserName || 'Sistema',
         lastActionTimestamp: new Date().toISOString()
     };
@@ -584,6 +623,8 @@ async function handleSave(closeModal = true) {
     try {
         const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
         await updateDoc(docRef, payload);
+        
+        console.log("✅ Dados salvos com sucesso!");
         
         // Mostrar notificação apenas se for salvar normal (não durante PDF)
         if (closeModal) {
@@ -597,7 +638,7 @@ async function handleSave(closeModal = true) {
         }
         
     } catch (e) {
-        console.error("Erro ao salvar:", e);
+        console.error("❌ Erro ao salvar:", e);
         showNotification("Erro ao salvar dados: " + e.message, "error");
     }
 }
@@ -713,6 +754,9 @@ export async function openDetailsModal(config) {
     // Se já existe um checklist salvo, carregar diretamente
     if (assisted.documentChecklist && assisted.documentChecklist.action) {
         console.log("✅ Checklist encontrado! Carregando:", assisted.documentChecklist.action);
+        
+        // IMPORTANTE: Setar a ação atual
+        currentChecklistAction = assisted.documentChecklist.action;
         
         // Renderizar o checklist com os dados salvos
         renderChecklist(assisted.documentChecklist.action);
@@ -835,7 +879,6 @@ export async function openDetailsModal(config) {
         console.error("Modal de documentos não encontrado");
     }
 }
-
 
 // Tornar funções globais
 window.openDetailsModal = openDetailsModal;
