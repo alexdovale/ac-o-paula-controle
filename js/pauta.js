@@ -344,80 +344,78 @@ export const PautaService = {
     /**
      * Filtra pautas por tipo (para a tela de seleção)
      */
-    /**
- * Filtra pautas por tipo (para a tela de seleção)
- */
-filterPautas(pautas, filterType, currentUserId, currentUserEmail, filtrosAdicionais = {}) {
-    if (!pautas || !Array.isArray(pautas)) return [];
-    
-    const now = new Date();
-    let pautasFiltradas = [...pautas];
-    
-    // Aplicar filtro principal
-    switch(filterType) {
-        case 'my':
-            pautasFiltradas = pautasFiltradas.filter(p => p.owner === currentUserId);
-            break;
-            
-        case 'shared':
-            pautasFiltradas = pautasFiltradas.filter(p => 
-                p.owner !== currentUserId && 
-                (p.members?.includes(currentUserId) || p.memberEmails?.includes(currentUserEmail))
-            );
-            break;
-            
-        case 'active': // Pautas com prazo (não expiradas)
-            pautasFiltradas = pautasFiltradas.filter(p => {
-                if (!p.createdAt) return true;
-                const creationDate = new Date(p.createdAt);
-                const expirationDate = new Date(creationDate);
-                expirationDate.setDate(creationDate.getDate() + 7);
-                return now <= expirationDate;
-            });
-            break;
-            
-        case 'expired': // Pautas expiradas
-            pautasFiltradas = pautasFiltradas.filter(p => {
-                if (!p.createdAt) return false;
-                const creationDate = new Date(p.createdAt);
-                const expirationDate = new Date(creationDate);
-                expirationDate.setDate(creationDate.getDate() + 7);
-                return now > expirationDate;
-            });
-            break;
-            
-        case 'periodo':
-            // Aplica filtros de período e tipo
-            if (filtrosAdicionais.dataInicial) {
-                const dataInicial = new Date(filtrosAdicionais.dataInicial);
+    filterPautas(pautas, filterType, currentUserId, currentUserEmail, filtrosAdicionais = {}) {
+        if (!pautas || !Array.isArray(pautas)) return [];
+        
+        const now = new Date();
+        let pautasFiltradas = [...pautas];
+        
+        // Aplicar filtro principal
+        switch(filterType) {
+            case 'my':
+                pautasFiltradas = pautasFiltradas.filter(p => p.owner === currentUserId);
+                break;
+                
+            case 'shared':
+                pautasFiltradas = pautasFiltradas.filter(p => 
+                    p.owner !== currentUserId && 
+                    (p.members?.includes(currentUserId) || p.memberEmails?.includes(currentUserEmail))
+                );
+                break;
+                
+            case 'active': // Pautas com prazo (não expiradas)
                 pautasFiltradas = pautasFiltradas.filter(p => {
                     if (!p.createdAt) return true;
-                    return new Date(p.createdAt) >= dataInicial;
+                    const creationDate = new Date(p.createdAt);
+                    const expirationDate = new Date(creationDate);
+                    expirationDate.setDate(creationDate.getDate() + 7);
+                    return now <= expirationDate;
                 });
-            }
-            
-            if (filtrosAdicionais.dataFinal) {
-                const dataFinal = new Date(filtrosAdicionais.dataFinal);
-                dataFinal.setHours(23, 59, 59, 999); // Final do dia
+                break;
+                
+            case 'expired': // Pautas expiradas
                 pautasFiltradas = pautasFiltradas.filter(p => {
-                    if (!p.createdAt) return true;
-                    return new Date(p.createdAt) <= dataFinal;
+                    if (!p.createdAt) return false;
+                    const creationDate = new Date(p.createdAt);
+                    const expirationDate = new Date(creationDate);
+                    expirationDate.setDate(creationDate.getDate() + 7);
+                    return now > expirationDate;
                 });
-            }
-            
-            if (filtrosAdicionais.tipo && filtrosAdicionais.tipo !== 'todos') {
-                pautasFiltradas = pautasFiltradas.filter(p => p.type === filtrosAdicionais.tipo);
-            }
-            break;
-            
-        case 'all':
-        default:
-            // Mantém todas
-            break;
-    }
-    
-    return pautasFiltradas;
-}
+                break;
+                
+            case 'periodo':
+                // Aplica filtros de período e tipo
+                if (filtrosAdicionais.dataInicial) {
+                    const dataInicial = new Date(filtrosAdicionais.dataInicial);
+                    pautasFiltradas = pautasFiltradas.filter(p => {
+                        if (!p.createdAt) return true;
+                        return new Date(p.createdAt) >= dataInicial;
+                    });
+                }
+                
+                if (filtrosAdicionais.dataFinal) {
+                    const dataFinal = new Date(filtrosAdicionais.dataFinal);
+                    dataFinal.setHours(23, 59, 59, 999); // Final do dia
+                    pautasFiltradas = pautasFiltradas.filter(p => {
+                        if (!p.createdAt) return true;
+                        return new Date(p.createdAt) <= dataFinal;
+                    });
+                }
+                
+                if (filtrosAdicionais.tipo && filtrosAdicionais.tipo !== 'todos') {
+                    pautasFiltradas = pautasFiltradas.filter(p => p.type === filtrosAdicionais.tipo);
+                }
+                break;
+                
+            case 'all':
+            default:
+                // Mantém todas
+                break;
+        }
+        
+        return pautasFiltradas;
+    },
+
     /**
      * Processa upload de arquivo CSV
      */
@@ -692,7 +690,7 @@ filterPautas(pautas, filterType, currentUserId, currentUserEmail, filtrosAdicion
         UIService.renderPautaFilters('filters-container', app.currentPautaFilter || 'all', async (filter) => {
             app.currentPautaFilter = filter;
             await this.loadPautasWithFilter(app);
-        });
+        }, app);
 
         this.loadPautasWithFilter(app);
 
@@ -721,12 +719,22 @@ filterPautas(pautas, filterType, currentUserId, currentUserEmail, filtrosAdicion
             const snapshot = await getDocs(q);
             let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
+            // Preparar filtros adicionais para período
+            const filtrosAdicionais = {};
+            
+            if (app.currentPautaFilter === 'periodo') {
+                filtrosAdicionais.dataInicial = document.getElementById('filter-data-inicial')?.value;
+                filtrosAdicionais.dataFinal = document.getElementById('filter-data-final')?.value;
+                filtrosAdicionais.tipo = document.getElementById('filter-tipo-pauta')?.value;
+            }
+            
             // Aplicar filtro
             const filteredPautas = this.filterPautas(
                 pautas, 
                 app.currentPautaFilter || 'all', 
                 user.uid, 
-                user.email
+                user.email,
+                filtrosAdicionais
             );
             
             // Renderizar cards
