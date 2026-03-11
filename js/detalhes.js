@@ -3,7 +3,7 @@
  * Versão COMPLETA com busca de CEP, campos do réu, planilha de gastos e PDF integrado com PDFService
  */
 
-import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification } from './utils.js';
 import { PDFService } from './pdfService.js';
 
@@ -630,7 +630,7 @@ export function setupDetailsModal(config) {
     }
 }
 
-export function openDetailsModal(config) {
+export async function openDetailsModal(config) {
     console.log("🔓 openDetailsModal chamado", config);
     
     if (!config || !config.assistedId || !config.pautaId) {
@@ -643,6 +643,28 @@ export function openDetailsModal(config) {
     window.assistedIdToHandle = config.assistedId;
     currentPautaId = config.pautaId;
     allAssisted = config.allAssisted || [];
+    db = config.db || window.app?.db;
+    
+    // Buscar dados atualizados do Firestore
+    try {
+        if (db && currentPautaId && currentAssistedId) {
+            const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                // Atualizar allAssisted com os dados mais recentes
+                const index = allAssisted.findIndex(a => a.id === currentAssistedId);
+                if (index !== -1) {
+                    allAssisted[index] = { id: currentAssistedId, ...data };
+                } else {
+                    allAssisted.push({ id: currentAssistedId, ...data });
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Erro ao buscar dados atualizados:", error);
+    }
     
     const assisted = allAssisted.find(a => a.id === currentAssistedId);
     if (!assisted) {
