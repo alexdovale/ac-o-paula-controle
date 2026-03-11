@@ -756,12 +756,9 @@ export const PautaService = {
                 </p>
                 
                 <!-- Mensagem de pauta expirada (se for o caso) -->
-                ${isExpired ? `
-                <div class="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20">
-                    🔒 INACESSÍVEL
-                </div>
-                ` : ''}
-                
+
+                ${!isExpired ? `onclick="window.app.loadPauta('${pauta.id}', '${escapeHTML(pauta.name)}', '${pauta.type}')"` 
+                : `onclick="showNotification('🔒 Esta pauta expirou e não pode ser acessada', 'error')"`}
                 <!-- Datas de criação e expiração -->
                 <div class="mt-4 pt-2 border-t border-gray-200">
                     <p class="text-xs text-gray-500">
