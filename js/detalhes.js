@@ -486,13 +486,9 @@ function fillExpenseData(d) {
 }
 
 // --- 13. FUNÇÃO PARA GERAR PDF USANDO PDFSERVICE ---
+// --- 13. FUNÇÃO PARA GERAR PDF USANDO PDFSERVICE ---
 async function handlePdf() {
     showNotification("Gerando PDF...", "info");
-    
-    // Atualizar estado para PDF
-    if (currentAssistedId && currentPautaId && db) {
-        await updateDocumentState('pdf');
-    }
     
     try {
         // Coletar dados para o PDF
@@ -523,6 +519,20 @@ async function handlePdf() {
         
         if (resultado) {
             showNotification("PDF gerado com sucesso!");
+            
+            // ATUALIZAR O ESTADO PARA 'pdf' NO FIRESTORE
+            if (currentAssistedId && currentPautaId && db) {
+                await updateDocumentState('pdf');
+                
+                // Também salvar o checklist atual antes de marcar como PDF
+                await handleSave(false); // false = não fechar o modal
+            }
+            
+            // Atualizar a lista de assistidos no app principal
+            if (window.app && typeof window.app.refreshAssistedList === 'function') {
+                window.app.refreshAssistedList();
+            }
+            
         } else {
             showNotification("Erro ao gerar PDF", "error");
         }
