@@ -2824,7 +2824,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
                 
                 pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas...</p>';
-
+            
                 try {
                     // Buscar todas as pautas que o usuário tem acesso
                     const q = query(
@@ -2835,12 +2835,22 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const snapshot = await getDocs(q);
                     let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     
+                    // Preparar filtros adicionais para período
+                    const filtrosAdicionais = {};
+                    
+                    if (this.currentPautaFilter === 'periodo') {
+                        filtrosAdicionais.dataInicial = document.getElementById('filter-data-inicial')?.value;
+                        filtrosAdicionais.dataFinal = document.getElementById('filter-data-final')?.value;
+                        filtrosAdicionais.tipo = document.getElementById('filter-tipo-pauta')?.value;
+                    }
+                    
                     // Aplicar filtro usando o PautaService
                     const filteredPautas = PautaService.filterPautas(
                         pautas, 
                         this.currentPautaFilter, 
                         user.uid, 
-                        user.email
+                        user.email,
+                        filtrosAdicionais
                     );
                     
                     // Renderizar cards usando o PautaService
