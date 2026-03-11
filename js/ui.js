@@ -13,22 +13,53 @@ export const UIService = {
     /**
      * Renderiza os botões de filtro na tela de seleção de pautas
      */
-    renderPautaFilters(containerId, activeFilter, onFilterChange) {
+    renderPautaFilters(containerId, activeFilter, onFilterChange, app) {
         const container = document.getElementById(containerId);
         if (!container) {
             console.error(`Container ${containerId} não encontrado`);
             return;
         }
         
+        // Verificar se os elementos de filtro de data já existem
+        let dateFiltersHTML = '';
+        if (activeFilter === 'periodo') {
+            dateFiltersHTML = `
+                <div class="flex flex-wrap gap-4 mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Data Inicial</label>
+                        <input type="date" id="filter-data-inicial" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Data Final</label>
+                        <input type="date" id="filter-data-final" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Pauta</label>
+                        <select id="filter-tipo-pauta" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                            <option value="todos">Todos os tipos</option>
+                            <option value="agendado">Agendado</option>
+                            <option value="avulso">Avulso</option>
+                            <option value="multisala">Multi-Salas</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button id="aplicar-filtro-periodo" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700 transition shadow-md">
+                            Aplicar Filtros
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
         container.innerHTML = `
-            <div class="flex flex-wrap gap-2 mb-6 justify-center">
+            <div class="flex flex-wrap gap-2 mb-4 justify-center">
                 <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'all' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="all">
                     📋 Todas
                 </button>
                 <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'active' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="active">
                     ✅ Pautas com prazo
                 </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'closed' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="closed">
+                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'expired' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="expired">
                     🔒 Pautas expiradas
                 </button>
                 <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'my' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="my">
@@ -37,7 +68,11 @@ export const UIService = {
                 <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'shared' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="shared">
                     🤝 Compartilhadas
                 </button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'periodo' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="periodo">
+                    📅 Período
+                </button>
             </div>
+            ${dateFiltersHTML}
         `;
         
         // Adicionar eventos aos botões
@@ -47,6 +82,16 @@ export const UIService = {
                 onFilterChange(filter);
             });
         });
+        
+        // Adicionar evento ao botão de aplicar filtro de período
+        const btnAplicar = document.getElementById('aplicar-filtro-periodo');
+        if (btnAplicar) {
+            btnAplicar.addEventListener('click', () => {
+                if (app && typeof app.loadPautasWithFilter === 'function') {
+                    app.loadPautasWithFilter();
+                }
+            });
+        }
     },
 
     toggleAuthTabs(tab) {
