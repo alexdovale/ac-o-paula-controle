@@ -511,7 +511,7 @@ export const UIService = {
             card.className = `relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
             card.setAttribute('data-id', item.id);
 
-            // === INDICADORES DE STATUS DO DOCUMENTO (RESPONSIVO) ===
+           // === INDICADORES DE STATUS DO DOCUMENTO ===
             let docStatusHtml = '';
             if (item.selectedAction) {
                 let statusColor = 'bg-gray-100 text-gray-600';
@@ -528,10 +528,10 @@ export const UIService = {
                     statusIcon = '✅';
                 } else if (item.documentState === 'pdf') { 
                     statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
-                    statusText = 'PDF'; 
+                    statusText = 'PDF Gerado'; 
                     statusIcon = '📄';
                 }
-
+            
                 docStatusHtml = `
                     <div class="mt-2 flex flex-col gap-1">
                         <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
