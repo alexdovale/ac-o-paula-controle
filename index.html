@@ -2853,27 +2853,28 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
 
             // Método deletePauta para ser chamado pelos botões
-            async deletePauta(pautaId, pautaName) {
-                console.log("🗑️ Tentando deletar pauta:", pautaId, pautaName);
-                
-                try {
-                    const success = await PautaService.deletePauta(
-                        this.db, 
-                        this.auth, 
-                        pautaId, 
-                        pautaName, 
-                        this.currentUserName
-                    );
-                    
-                    if (success) {
-                        // Recarregar a lista de pautas
-                        await this.loadPautasWithFilter();
-                    }
-                } catch (error) {
-                    console.error("Erro ao deletar pauta:", error);
-                    showNotification("Erro ao deletar pauta: " + error.message, "error");
-                }
+            // Método deletePauta para ser chamado pelos botões
+    async deletePauta(pautaId, pautaName) {
+        console.log("🗑️ Tentando deletar pauta:", pautaId, pautaName);
+        
+        try {
+            const success = await PautaService.deletePauta(
+                this.db, 
+                this.auth, 
+                pautaId, 
+                pautaName, 
+                this.currentUserName
+            );
+            
+            if (success) {
+                // Recarregar a lista de pautas
+                await this.loadPautasWithFilter();
             }
+        } catch (error) {
+            console.error("Erro ao deletar pauta:", error);
+            showNotification("Erro ao deletar pauta: " + error.message, "error");
+        }
+    }
 
             setupRealtimeListener(pautaId) {
                 if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
