@@ -692,101 +692,99 @@ export const PautaService = {
     /**
      * Renderiza cards de pauta na tela de seleção (VERSÃO ANTIGA - IGUAL DA IMAGEM)
      */
-  /**
- * Renderiza cards de pauta na tela de seleção (VERSÃO ANTIGA - IGUAL DA IMAGEM)
- */
-renderPautaCards(pautas, currentUserId, currentUserEmail, app) {
-    const container = document.getElementById('pautas-list');
-    if (!container) return;
-    
-    if (pautas.length === 0) {
-        container.innerHTML = '<div class="col-span-full text-center py-12 bg-gray-50 rounded-lg"><p class="text-gray-500">Nenhuma pauta encontrada com este filtro.</p></div>';
-        return;
-    }
-
-    const now = new Date();
-    
-    container.innerHTML = pautas.map(pauta => {
-        const isOwner = pauta.owner === currentUserId;
+    renderPautaCards(pautas, currentUserId, currentUserEmail, app) {
+        const container = document.getElementById('pautas-list');
+        if (!container) return;
         
-        // Verificar expiração
-        let isExpired = false;
-        let dataCriacao = 'Desconhecida';
-        let dataExpiracao = 'Desconhecida';
-        
-        if (pauta.createdAt) {
-            const creationDate = new Date(pauta.createdAt);
-            dataCriacao = creationDate.toLocaleDateString('pt-BR');
-            
-            const expirationDate = new Date(creationDate);
-            expirationDate.setDate(creationDate.getDate() + 7);
-            dataExpiracao = expirationDate.toLocaleDateString('pt-BR');
-            
-            if (now > expirationDate) {
-                isExpired = true;
-            }
+        if (pautas.length === 0) {
+            container.innerHTML = '<div class="col-span-full text-center py-12 bg-gray-50 rounded-lg"><p class="text-gray-500">Nenhuma pauta encontrada com este filtro.</p></div>';
+            return;
         }
+
+        const now = new Date();
         
-        // Texto de expiração
-        const expiracaoTexto = isExpired ? 'Expirou em:' : 'Será eliminada em:';
-        
-        // Classe de opacidade se expirado
-        const expiredClass = isExpired ? 'opacity-60 bg-gray-100 cursor-not-allowed' : '';
-        
-        // Tooltip para pauta inacessível
-        const titleAttr = isExpired ? 'title="Pauta inacessível - período de 7 dias expirado"' : '';
-        
-        return `
-        <div class="relative bg-white p-6 rounded-lg shadow-md flex flex-col justify-between h-full ${expiredClass}" 
-             ${titleAttr}
-             ${!isExpired ? `onclick="window.app.loadPauta('${pauta.id}', '${escapeHTML(pauta.name)}', '${pauta.type}')"` : ''}>
+        container.innerHTML = pautas.map(pauta => {
+            const isOwner = pauta.owner === currentUserId;
             
-            <!-- Botão de lixeira (só para o criador) - CORRIGIDO -->
-            ${isOwner ? `
-            <button onclick="event.stopPropagation(); if(window.app && window.app.deletePauta) { window.app.deletePauta('${pauta.id}', '${escapeHTML(pauta.name)}'); } else { alert('Erro: função não disponível'); }" 
-                    class="absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:text-red-600 transition-colors z-10"
-                    title="Excluir pauta">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-            </button>
-            ` : ''}
+            // Verificar expiração
+            let isExpired = false;
+            let dataCriacao = 'Desconhecida';
+            let dataExpiracao = 'Desconhecida';
             
-            <!-- Título da pauta -->
-            <h3 class="font-bold text-xl text-gray-800 mb-2 pr-8" title="${escapeHTML(pauta.name)}">
-                ${escapeHTML(pauta.name)}
-            </h3>
+            if (pauta.createdAt) {
+                const creationDate = new Date(pauta.createdAt);
+                dataCriacao = creationDate.toLocaleDateString('pt-BR');
+                
+                const expirationDate = new Date(creationDate);
+                expirationDate.setDate(creationDate.getDate() + 7);
+                dataExpiracao = expirationDate.toLocaleDateString('pt-BR');
+                
+                if (now > expirationDate) {
+                    isExpired = true;
+                }
+            }
             
-            <!-- Membros -->
-            <p class="text-sm text-gray-600 mb-4">
-                Membros: <span class="font-semibold">${pauta.memberEmails?.length || 1}</span>
-            </p>
+            // Texto de expiração
+            const expiracaoTexto = isExpired ? 'Expirou em:' : 'Será eliminada em:';
             
-            <!-- Mensagem de pauta inacessível (se expirada) -->
-            ${isExpired ? `
-            <div class="absolute inset-0 bg-gray-500 bg-opacity-10 flex items-center justify-center rounded-lg pointer-events-none">
-                <span class="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg transform -rotate-12">
-                    🔒 INACESSÍVEL
-                </span>
-            </div>
-            ` : ''}
+            // Classe de opacidade se expirado
+            const expiredClass = isExpired ? 'opacity-60 bg-gray-100 cursor-not-allowed' : '';
             
-            <!-- Datas de criação e expiração -->
-            <div class="mt-4 pt-2 border-t border-gray-200">
-                <p class="text-xs text-gray-500">
-                    Criada em: <span class="font-bold">${dataCriacao}</span>
+            // Tooltip para pauta inacessível
+            const titleAttr = isExpired ? 'title="Pauta inacessível - período de 7 dias expirado"' : '';
+            
+            return `
+            <div class="relative bg-white p-6 rounded-lg shadow-md flex flex-col justify-between h-full ${expiredClass}" 
+                 ${titleAttr}
+                 ${!isExpired ? `onclick="window.app.loadPauta('${pauta.id}', '${escapeHTML(pauta.name)}', '${pauta.type}')"` : ''}>
+                
+                <!-- Botão de lixeira (só para o criador) -->
+                ${isOwner ? `
+                <button onclick="event.stopPropagation(); if(window.app && window.app.deletePauta) { window.app.deletePauta('${pauta.id}', '${escapeHTML(pauta.name)}'); } else { alert('Erro: função não disponível'); }" 
+                        class="absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:text-red-600 transition-colors z-10"
+                        title="Excluir pauta">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </button>
+                ` : ''}
+                
+                <!-- Título da pauta -->
+                <h3 class="font-bold text-xl text-gray-800 mb-2 pr-8" title="${escapeHTML(pauta.name)}">
+                    ${escapeHTML(pauta.name)}
+                </h3>
+                
+                <!-- Membros -->
+                <p class="text-sm text-gray-600 mb-4">
+                    Membros: <span class="font-semibold">${pauta.memberEmails?.length || 1}</span>
                 </p>
-                <p class="text-xs ${isExpired ? 'text-gray-500' : 'text-red-600'}">
-                    ${expiracaoTexto} <span class="font-bold">${dataExpiracao}</span>
-                </p>
+                
+                <!-- Mensagem de pauta inacessível (se expirada) -->
+                ${isExpired ? `
+                <div class="absolute inset-0 bg-gray-500 bg-opacity-10 flex items-center justify-center rounded-lg pointer-events-none">
+                    <span class="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg transform -rotate-12">
+                        🔒 INACESSÍVEL
+                    </span>
+                </div>
+                ` : ''}
+                
+                <!-- Datas de criação e expiração -->
+                <div class="mt-4 pt-2 border-t border-gray-200">
+                    <p class="text-xs text-gray-500">
+                        Criada em: <span class="font-bold">${dataCriacao}</span>
+                    </p>
+                    <p class="text-xs ${isExpired ? 'text-gray-500' : 'text-red-600'}">
+                        ${expiracaoTexto} <span class="font-bold">${dataExpiracao}</span>
+                    </p>
+                </div>
+                
+                <!-- Badge de proprietário (opcional) -->
+                ${isOwner ? '<span class="absolute bottom-3 left-3 text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Criador</span>' : ''}
             </div>
-            
-            <!-- Badge de proprietário (opcional) -->
-            ${isOwner ? '<span class="absolute bottom-3 left-3 text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Criador</span>' : ''}
-        </div>
-        `;
-    }).join('');
-}
+            `;
+        }).join('');
+    },
+
     /**
      * Cria card de pauta (legado, manter para compatibilidade)
      */
