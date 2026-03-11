@@ -728,19 +728,15 @@ export const PautaService = {
             const expiracaoTexto = isExpired ? 'Expirou em:' : 'Será eliminada em:';
             
             // Classe de opacidade se expirado
-            const expiredClass = isExpired ? 'opacity-60 bg-gray-100 cursor-not-allowed' : '';
-            
-            // Tooltip para pauta inacessível
-            const titleAttr = isExpired ? 'title="Pauta inacessível - período de 7 dias expirado"' : '';
+            const expiredClass = isExpired ? 'opacity-60 bg-gray-100' : '';
             
             return `
-            <div class="relative bg-white p-6 rounded-lg shadow-md flex flex-col justify-between h-full ${expiredClass}" 
-                 ${titleAttr}
+            <div class="relative bg-white p-6 rounded-lg shadow-md flex flex-col justify-between h-full ${expiredClass} ${!isExpired ? 'hover:shadow-xl transition-shadow cursor-pointer' : ''}" 
                  ${!isExpired ? `onclick="window.app.loadPauta('${pauta.id}', '${escapeHTML(pauta.name)}', '${pauta.type}')"` : ''}>
                 
                 <!-- Botão de lixeira (só para o criador) -->
                 ${isOwner ? `
-                <button onclick="event.stopPropagation(); if(window.app && window.app.deletePauta) { window.app.deletePauta('${pauta.id}', '${escapeHTML(pauta.name)}'); } else { alert('Erro: função não disponível'); }" 
+                <button onclick="event.stopPropagation(); window.app.deletePauta('${pauta.id}', '${escapeHTML(pauta.name)}')" 
                         class="absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:text-red-600 transition-colors z-10"
                         title="Excluir pauta">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -759,12 +755,10 @@ export const PautaService = {
                     Membros: <span class="font-semibold">${pauta.memberEmails?.length || 1}</span>
                 </p>
                 
-                <!-- Mensagem de pauta inacessível (se expirada) -->
+                <!-- Mensagem de pauta expirada (se for o caso) -->
                 ${isExpired ? `
-                <div class="absolute inset-0 bg-gray-500 bg-opacity-10 flex items-center justify-center rounded-lg pointer-events-none">
-                    <span class="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg transform -rotate-12">
-                        🔒 INACESSÍVEL
-                    </span>
+                <div class="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-20">
+                    🔒 INACESSÍVEL
                 </div>
                 ` : ''}
                 
