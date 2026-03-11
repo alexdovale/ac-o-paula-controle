@@ -544,7 +544,7 @@ async function handlePdf() {
 }
 
 // --- 14. AÇÕES (SALVAR, RESET, VOLTAR) ---
-async function handleSave() {
+async function handleSave(closeModal = true) {
     console.log("💾 handleSave chamado");
     
     if (!currentAssistedId || !currentPautaId) {
@@ -584,8 +584,18 @@ async function handleSave() {
     try {
         const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
         await updateDoc(docRef, payload);
-        showNotification("Dados salvos com sucesso!");
-        getEl('documents-modal').classList.add('hidden');
+        
+        // Mostrar notificação apenas se for salvar normal (não durante PDF)
+        if (closeModal) {
+            showNotification("Dados salvos com sucesso!");
+            getEl('documents-modal').classList.add('hidden');
+        }
+        
+        // Atualizar a lista de assistidos no app principal
+        if (window.app && typeof window.app.refreshAssistedList === 'function') {
+            window.app.refreshAssistedList();
+        }
+        
     } catch (e) {
         console.error("Erro ao salvar:", e);
         showNotification("Erro ao salvar dados: " + e.message, "error");
