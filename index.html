@@ -800,7 +800,7 @@
         </div>
     </div>
 
-    <!-- Modal de Finalização de Atendimento (com select) -->
+    <!-- Modal de Finalização de Atendimento -->
     <div id="attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Finalizar Atendimento</h2>
@@ -2817,6 +2817,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const user = this.auth.currentUser;
                 if (!user) return;
                 
+                const pautasList = document.getElementById('pautas-list');
+                if (!pautasList) {
+                    console.error("Elemento pautas-list não encontrado");
+                    return;
+                }
+                
+                pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas...</p>';
+
                 try {
                     // Buscar todas as pautas que o usuário tem acesso
                     const q = query(
@@ -2845,7 +2853,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     
                 } catch (error) {
                     console.error("Erro ao carregar pautas:", error);
-                    const pautasList = document.getElementById('pautas-list');
                     if (pautasList) {
                         pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>';
                     }
@@ -2853,28 +2860,33 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
 
             // Método deletePauta para ser chamado pelos botões
-            // Método deletePauta para ser chamado pelos botões
-    async deletePauta(pautaId, pautaName) {
-        console.log("🗑️ Tentando deletar pauta:", pautaId, pautaName);
-        
-        try {
-            const success = await PautaService.deletePauta(
-                this.db, 
-                this.auth, 
-                pautaId, 
-                pautaName, 
-                this.currentUserName
-            );
-            
-            if (success) {
-                // Recarregar a lista de pautas
-                await this.loadPautasWithFilter();
+            async deletePauta(pautaId, pautaName) {
+                console.log("🗑️ Tentando deletar pauta:", pautaId, pautaName);
+                
+                if (!this.db || !this.auth) {
+                    console.error("Database ou Auth não inicializados");
+                    showNotification("Erro: sistema não inicializado", "error");
+                    return;
+                }
+                
+                try {
+                    const success = await PautaService.deletePauta(
+                        this.db, 
+                        this.auth, 
+                        pautaId, 
+                        pautaName, 
+                        this.currentUserName || 'Sistema'
+                    );
+                    
+                    if (success) {
+                        // Recarregar a lista de pautas
+                        await this.loadPautasWithFilter();
+                    }
+                } catch (error) {
+                    console.error("Erro ao deletar pauta:", error);
+                    showNotification("Erro ao deletar pauta: " + error.message, "error");
+                }
             }
-        } catch (error) {
-            console.error("Erro ao deletar pauta:", error);
-            showNotification("Erro ao deletar pauta: " + error.message, "error");
-        }
-    }
 
             setupRealtimeListener(pautaId) {
                 if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
@@ -2897,15 +2909,25 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         // Inicializar a aplicação
         window.app = new SIGAPApp();
 
-        // Tornar o método deletePauta acessível globalmente
-        window.app.deletePauta = (pautaId, pautaName) => {
-            if (window.app) {
-                return window.app.deletePauta(pautaId, pautaName);
+        // Garantir que o método deletePauta está disponível globalmente APÓS a inicialização
+        setTimeout(() => {
+            if (window.app && typeof window.app.deletePauta === 'function') {
+                console.log("✅ Método deletePauta disponível globalmente");
+                // Garantir que o método está vinculado ao objeto app
+                window.app.deletePauta = window.app.deletePauta.bind(window.app);
+            } else if (window.app) {
+                console.log("⚠️ Recriando método deletePauta");
+                window.app.deletePauta = window.app.deletePauta.bind(window.app);
             } else {
-                console.error("App não inicializado");
-                showNotification("Erro: aplicação não inicializada", "error");
+                console.error("❌ App não inicializado");
             }
-        };
+        }, 500);
+
+        // Debug - verificar se o método existe
+        console.log("🔍 Verificando métodos:", {
+            deletePauta: typeof window.app?.deletePauta,
+            loadPauta: typeof window.app?.loadPauta
+        });
     </script>
 
     <!-- ================================================ -->
