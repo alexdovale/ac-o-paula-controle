@@ -660,6 +660,12 @@ export async function openDetailsModal(config) {
                 } else {
                     allAssisted.push({ id: currentAssistedId, ...data });
                 }
+                
+                console.log("📊 Dados carregados do Firestore:", {
+                    selectedAction: data.selectedAction,
+                    documentState: data.documentState,
+                    documentChecklist: data.documentChecklist
+                });
             }
         }
     } catch (error) {
@@ -809,6 +815,7 @@ export async function openDetailsModal(config) {
         console.error("Modal de documentos não encontrado");
     }
 }
+
 
 // Tornar funções globais
 window.openDetailsModal = openDetailsModal;
