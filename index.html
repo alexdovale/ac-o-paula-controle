@@ -2898,6 +2898,39 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             }
 
+            // ================================================
+            // NOVOS MÉTODOS PARA REFRESH DA LISTA
+            // ================================================
+            
+            /**
+             * Método para dar refresh na lista de assistidos
+             */
+            refreshAssistedList() {
+                if (this.unsubscribeFromAttendances) {
+                    // O listener já vai atualizar automaticamente
+                    console.log("🔄 Lista será atualizada pelo listener");
+                } else {
+                    // Recarregar manualmente
+                    this.loadAssistedList();
+                }
+            }
+            
+            /**
+             * Carrega a lista de assistidos manualmente
+             */
+            async loadAssistedList() {
+                if (!this.currentPauta?.id) return;
+                
+                try {
+                    const attendanceRef = collection(this.db, "pautas", this.currentPauta.id, "attendances");
+                    const snapshot = await getDocs(attendanceRef);
+                    this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    UIService.renderAssistedLists(this);
+                } catch (error) {
+                    console.error("Erro ao carregar lista:", error);
+                }
+            }
+
             setupRealtimeListener(pautaId) {
                 if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
                 
