@@ -1188,5 +1188,42 @@ export const PautaService = {
      */
     isMobileDevice() {
         return window.innerWidth <= 768;
-    }
+    },
+
+    // ================================================
+    // NOVOS MÉTODOS PARA REFRESH DA LISTA
+    // ================================================
+    
+    /**
+     * Atualiza a lista de assistidos (para refresh após salvar/gerar PDF)
+     */
+    refreshAssistedList(app) {
+        if (!app || !app.currentPauta?.id) return;
+        
+        // Forçar recarregamento dos dados
+        if (app.unsubscribeFromAttendances) {
+            // Se já existe um listener, ele vai atualizar automaticamente
+            console.log("🔄 Lista de assistidos será atualizada pelo listener");
+        } else {
+            // Recarregar manualmente
+            this.loadAssistedList(app);
+        }
+    },
+    
+    /**
+     * Carrega a lista de assistidos manualmente
+     */
+    async loadAssistedList(app) {
+        if (!app || !app.currentPauta?.id) return;
+        
+        try {
+            const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
+            const snapshot = await getDocs(attendanceRef);
+            app.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            UIService.renderAssistedLists(app);
+            console.log("✅ Lista de assistidos atualizada manualmente");
+        } catch (error) {
+            console.error("Erro ao carregar lista:", error);
+        }
+    },
 };
