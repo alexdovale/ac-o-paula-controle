@@ -10,6 +10,45 @@ export const UIService = {
         document.getElementById('app-container').classList.toggle('hidden', screenName !== 'app');
     },
 
+    /**
+     * Renderiza os botões de filtro na tela de seleção de pautas
+     */
+    renderPautaFilters(containerId, activeFilter, onFilterChange) {
+        const container = document.getElementById(containerId);
+        if (!container) {
+            console.error(`Container ${containerId} não encontrado`);
+            return;
+        }
+        
+        container.innerHTML = `
+            <div class="flex flex-wrap gap-2 mb-6 justify-center">
+                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'all' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="all">
+                    📋 Todas
+                </button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'active' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="active">
+                    ✅ Ativas
+                </button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'closed' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="closed">
+                    🔒 Fechadas
+                </button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'my' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="my">
+                    👑 Criadas por mim
+                </button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'shared' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="shared">
+                    🤝 Compartilhadas
+                </button>
+            </div>
+        `;
+        
+        // Adicionar eventos aos botões
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const filter = btn.dataset.filter;
+                onFilterChange(filter);
+            });
+        });
+    },
+
     toggleAuthTabs(tab) {
         const loginTab = document.getElementById('login-tab-btn');
         const registerTab = document.getElementById('register-tab-btn');
@@ -70,7 +109,7 @@ export const UIService = {
             formTitle.textContent = "Adicionar Atendimento Avulso";
             this.showAvulsoForm(app);
         }
-        app.renderLists();
+        this.renderAssistedLists(app);
     },
 
     showAgendamentoForm() {
@@ -433,26 +472,21 @@ export const UIService = {
                 let statusColor = 'bg-gray-100 text-gray-600';
                 let statusText = 'Selecionado';
                 let statusIcon = '📋';
-                let mobileText = '';
                 
                 if (item.documentState === 'filling') { 
                     statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
                     statusText = 'Preenchendo'; 
                     statusIcon = '✏️';
-                    mobileText = '✏️';
                 } else if (item.documentState === 'saved') { 
                     statusColor = 'bg-green-100 text-green-700 font-bold'; 
                     statusText = 'Salvo'; 
                     statusIcon = '✅';
-                    mobileText = '✅';
                 } else if (item.documentState === 'pdf') { 
                     statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
                     statusText = 'PDF'; 
                     statusIcon = '📄';
-                    mobileText = '📄';
                 }
 
-                // Versão desktop (com texto) e mobile (só ícone)
                 docStatusHtml = `
                     <div class="mt-2 flex flex-col gap-1">
                         <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
@@ -551,7 +585,6 @@ export const UIService = {
             const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
             const linkDireto = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&collaboratorName=${encodeURIComponent(userName)}`;
 
-            // Versão responsiva do card de em atendimento
             card.innerHTML = `
                 <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
@@ -632,7 +665,7 @@ export const UIService = {
                 <div class="flex justify-between items-start">
                     <p class="font-bold text-lg md:text-xl text-gray-800">${escapeHTML(item.name || '')}</p>
                     <button data-id="${item.id}" class="toggle-confirmed-atendido w-6 h-6 md:w-7 md:h-7 rounded-full border border-gray-200 flex items-center justify-center ${confirmButton} shadow-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" md:w-16 md:h-16 viewBox="0 0 16 16" fill="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/>
                         </svg>
                     </button>
