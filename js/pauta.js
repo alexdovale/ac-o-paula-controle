@@ -692,9 +692,6 @@ export const PautaService = {
     /**
      * Renderiza cards de pauta na tela de seleção (VERSÃO ANTIGA - IGUAL DA IMAGEM)
      */
-    /**
-     * Renderiza cards de pauta na tela de seleção (VERSÃO ANTIGA - IGUAL DA IMAGEM)
-     */
     renderPautaCards(pautas, currentUserId, currentUserEmail, app) {
         const container = document.getElementById('pautas-list');
         if (!container) return;
@@ -703,7 +700,7 @@ export const PautaService = {
             container.innerHTML = '<div class="col-span-full text-center py-12 bg-gray-50 rounded-lg"><p class="text-gray-500">Nenhuma pauta encontrada com este filtro.</p></div>';
             return;
         }
-    
+
         const now = new Date();
         
         container.innerHTML = pautas.map(pauta => {
@@ -774,7 +771,7 @@ export const PautaService = {
             </div>
             `;
         }).join('');
-    }
+    },
 
     /**
      * Cria card de pauta (legado, manter para compatibilidade)
