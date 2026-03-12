@@ -30,10 +30,6 @@ export const StatisticsService = {
                         display: flex;
                         flex-direction: column;
                     }
-                    #statistics-content-wrapper > .lg\\:col-span-2,
-                    #statistics-content-wrapper > .lg\\:col-span-3 {
-                        overflow-y: visible !important;
-                    }
                 }
                 @media (max-width: 768px) {
                     #statistics-modal {
@@ -49,49 +45,6 @@ export const StatisticsService = {
                         min-width: 0 !important;
                         min-height: 0 !important;
                     }
-                    #statistics-content-wrapper {
-                        padding: 12px !important;
-                    }
-                    #statistics-content .summary-cards {
-                        grid-template-columns: repeat(2, minmax(0, 1fr));
-                        gap: 8px;
-                    }
-                    #statistics-content h3 {
-                        font-size: 1rem;
-                    }
-                    #statistics-content .text-2xl {
-                        font-size: 1.25rem;
-                    }
-                    #statistics-content .text-xs {
-                        font-size: 0.7rem;
-                    }
-                    #statistics-content .max-h-40 { 
-                        max-height: 10rem !important; 
-                    }
-                    #statistics-content .max-h-\\[30vh\\] { 
-                        max-height: 30vh !important; 
-                    }
-                    #statistics-content .max-h-\\[50vh\\] { 
-                        max-height: 40vh !important; 
-                    }
-                    #statistics-content table {
-                        font-size: 0.7rem;
-                    }
-                    #statistics-content th, 
-                    #statistics-content td {
-                        padding: 6px 4px !important;
-                    }
-                }
-                @media (max-width: 480px) {
-                    #statistics-content .summary-cards {
-                        grid-template-columns: repeat(1, minmax(0, 1fr));
-                    }
-                    #statistics-content-wrapper {
-                        padding: 8px !important;
-                    }
-                    #statistics-content .text-2xl {
-                        font-size: 1.1rem;
-                    }
                 }
             `;
             document.head.appendChild(styleSheet);
@@ -101,10 +54,11 @@ export const StatisticsService = {
         if (!content) {
             const newContent = document.createElement('div');
             newContent.id = 'statistics-content';
+            newContent.className = 'flex-grow overflow-auto p-4';
             modal.appendChild(newContent);
         }
 
-        // Em mobile, não permitir redimensionamento/drag
+        // Configurar estilos base do modal
         if (isMobile) {
             Object.assign(modal.style, {
                 position: 'fixed', 
@@ -124,7 +78,8 @@ export const StatisticsService = {
                 minHeight: '0', 
                 display: 'flex',
                 flexDirection: 'column',
-                padding: '0'
+                padding: '0',
+                zIndex: '1000'
             });
         } else {
             Object.assign(modal.style, {
@@ -145,189 +100,214 @@ export const StatisticsService = {
                 minHeight: '500px', 
                 display: 'flex',
                 flexDirection: 'column',
-                padding: '0'
+                padding: '0',
+                zIndex: '1000'
             });
         }
 
-        if (document.getElementById('statistics-modal-header')) {
-            return;
-        }
-
-        const header = document.createElement('div');
-        header.id = 'statistics-modal-header';
+        // Verificar se já existe um cabeçalho
+        let header = modal.querySelector('#statistics-modal-header');
         
-        // Em mobile, cabeçalho mais simples (sem drag)
-        if (isMobile) {
+        if (!header) {
+            header = document.createElement('div');
+            header.id = 'statistics-modal-header';
+            
+            // Estilo do cabeçalho
             Object.assign(header.style, {
-                backgroundColor: '#16a34a',
-                color: 'white',
-                padding: '16px',
-                borderBottom: '1px solid #15803d',
+                backgroundColor: isMobile ? '#16a34a' : '#f7f7f7',
+                color: isMobile ? 'white' : '#333',
+                padding: isMobile ? '16px' : '10px 15px',
+                borderBottom: '1px solid #ddd',
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center'
-            });
-        } else {
-            Object.assign(header.style, {
-                backgroundColor: '#f7f7f7', 
-                padding: '10px 15px', 
-                cursor: 'move',
-                borderBottom: '1px solid #ddd', 
-                display: 'flex',
-                justifyContent: 'space-between', 
                 alignItems: 'center',
-                borderTopLeftRadius: '12px', 
-                borderTopRightRadius: '12px'
+                cursor: isMobile ? 'default' : 'move',
+                borderTopLeftRadius: isMobile ? '0' : '12px',
+                borderTopRightRadius: isMobile ? '0' : '12px',
+                flexShrink: '0'
             });
-        }
 
-        const title = document.createElement('span');
-        title.textContent = 'Estatísticas da Pauta';
-        title.style.fontWeight = 'bold';
-        title.style.color = isMobile ? 'white' : '#333';
+            const title = document.createElement('span');
+            title.textContent = 'Estatísticas da Pauta';
+            title.style.fontWeight = 'bold';
+            title.style.fontSize = isMobile ? '18px' : '16px';
+            title.style.color = isMobile ? 'white' : '#333';
 
-        const buttons = document.createElement('div');
-        
-        // Criar botão de fechar (usado em ambos os casos)
-        const closeBtn = document.createElement('button');
-        closeBtn.innerHTML = '&times;';
-        closeBtn.title = 'Fechar';
-        
-        if (isMobile) {
-            Object.assign(closeBtn.style, {
-                background: 'rgba(255,255,255,0.2)',
-                border: 'none',
-                fontSize: '24px',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                color: 'white',
-                width: '40px',
-                height: '40px',
-                borderRadius: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-            });
-            buttons.appendChild(closeBtn);
-        } else {
-            const minBtn = document.createElement('button');
-            minBtn.innerHTML = '&#95;';
-            minBtn.title = 'Minimizar';
-            const maxBtn = document.createElement('button');
-            maxBtn.innerHTML = '&#9723;';
-            maxBtn.title = 'Maximizar/Restaurar';
+            const buttons = document.createElement('div');
+            buttons.style.display = 'flex';
+            buttons.style.alignItems = 'center';
+            buttons.style.gap = '5px';
             
-            Object.assign(closeBtn.style, {
-                background: 'none', 
-                border: 'none', 
-                fontSize: '18px',
-                cursor: 'pointer', 
-                marginLeft: '10px', 
-                fontWeight: 'bold',
-                lineHeight: '1', 
-                color: '#555'
-            });
-
-            [minBtn, maxBtn].forEach(btn => {
-                Object.assign(btn.style, {
-                    background: 'none', 
-                    border: 'none', 
-                    fontSize: '18px',
-                    cursor: 'pointer', 
-                    marginLeft: '10px', 
+            if (isMobile) {
+                // Apenas botão de fechar no mobile
+                const closeBtn = document.createElement('button');
+                closeBtn.innerHTML = '&times;';
+                closeBtn.title = 'Fechar';
+                Object.assign(closeBtn.style, {
+                    background: 'rgba(255,255,255,0.2)',
+                    border: 'none',
+                    fontSize: '28px',
+                    cursor: 'pointer',
                     fontWeight: 'bold',
-                    lineHeight: '1', 
-                    color: '#555'
+                    color: 'white',
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '22px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: '1',
+                    transition: 'background-color 0.2s'
                 });
-            });
-
-            buttons.append(minBtn, maxBtn, closeBtn);
-
-            // Funcionalidades de drag (apenas desktop)
-            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            let originalState = {};
-
-            header.onmousedown = function (e) {
-                if (e.target.tagName === 'BUTTON') return;
-                e.preventDefault();
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                document.onmouseup = closeDragElement;
-                document.onmousemove = elementDrag;
-            };
-
-            function elementDrag(e) {
-                e.preventDefault();
-                pos1 = pos3 - e.clientX;
-                pos2 = pos4 - e.clientY;
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                modal.style.top = (modal.offsetTop - pos2) + "px";
-                modal.style.left = (modal.offsetLeft - pos1) + "px";
-                modal.style.transform = 'none';
-            }
-
-            function closeDragElement() {
-                document.onmouseup = null;
-                document.onmousemove = null;
-            }
-
-            maxBtn.onclick = () => {
-                if (modal.classList.contains('maximized')) {
-                    Object.assign(modal.style, originalState);
-                    modal.classList.remove('maximized');
-                    maxBtn.innerHTML = '&#9723;';
-                } else {
-                    originalState = {
-                        width: modal.style.width, 
-                        height: modal.style.height, 
-                        top: modal.style.top, 
-                        left: modal.style.left, 
-                        transform: modal.style.transform
-                    };
-                    Object.assign(modal.style, {
-                        width: '100vw', 
-                        height: '100vh', 
-                        top: '0px', 
-                        left: '0px', 
-                        transform: 'none', 
-                        borderRadius: '0'
+                closeBtn.onmouseover = () => closeBtn.style.backgroundColor = 'rgba(255,255,255,0.3)';
+                closeBtn.onmouseout = () => closeBtn.style.backgroundColor = 'rgba(255,255,255,0.2)';
+                closeBtn.onclick = () => modal.classList.add('hidden');
+                buttons.appendChild(closeBtn);
+            } else {
+                // Botões de controle no desktop
+                const minBtn = document.createElement('button');
+                minBtn.innerHTML = '&#95;'; // caractere de subtraço
+                minBtn.title = 'Minimizar';
+                
+                const maxBtn = document.createElement('button');
+                maxBtn.innerHTML = '&#9723;'; // quadrado vazio
+                maxBtn.title = 'Maximizar/Restaurar';
+                
+                const closeBtn = document.createElement('button');
+                closeBtn.innerHTML = '&times;';
+                closeBtn.title = 'Fechar';
+                
+                [minBtn, maxBtn, closeBtn].forEach(btn => {
+                    Object.assign(btn.style, {
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '20px',
+                        cursor: 'pointer',
+                        marginLeft: '8px',
+                        fontWeight: 'bold',
+                        lineHeight: '1',
+                        color: '#555',
+                        width: '32px',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '4px',
+                        transition: 'background-color 0.2s, color 0.2s'
                     });
-                    modal.classList.add('maximized');
-                    maxBtn.innerHTML = '&#10064;';
-                }
-            };
+                    btn.onmouseover = () => {
+                        btn.style.backgroundColor = '#e0e0e0';
+                        btn.style.color = '#000';
+                    };
+                    btn.onmouseout = () => {
+                        btn.style.backgroundColor = 'transparent';
+                        btn.style.color = '#555';
+                    };
+                });
 
-            minBtn.onclick = () => {
-                const contentDiv = document.getElementById('statistics-content');
-                const isMinimized = modal.classList.toggle('minimized');
-                if (isMinimized) {
-                    originalState.height = modal.style.height;
-                    if(contentDiv) contentDiv.style.display = 'none';
-                    modal.style.height = header.offsetHeight + 'px';
-                    modal.style.resize = 'none';
-                } else {
-                    if(contentDiv) contentDiv.style.display = 'block';
-                    modal.style.height = originalState.height || '90vh';
-                    modal.style.resize = 'both';
+                // Funcionalidade de arrastar (drag)
+                let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+                let originalState = {};
+
+                header.onmousedown = function (e) {
+                    if (e.target.tagName === 'BUTTON') return;
+                    e.preventDefault();
+                    pos3 = e.clientX;
+                    pos4 = e.clientY;
+                    document.onmouseup = closeDragElement;
+                    document.onmousemove = elementDrag;
+                };
+
+                function elementDrag(e) {
+                    e.preventDefault();
+                    pos1 = pos3 - e.clientX;
+                    pos2 = pos4 - e.clientY;
+                    pos3 = e.clientX;
+                    pos4 = e.clientY;
+                    modal.style.top = (modal.offsetTop - pos2) + "px";
+                    modal.style.left = (modal.offsetLeft - pos1) + "px";
+                    modal.style.transform = 'none';
                 }
-            };
+
+                function closeDragElement() {
+                    document.onmouseup = null;
+                    document.onmousemove = null;
+                }
+
+                // Funcionalidade de maximizar
+                maxBtn.onclick = () => {
+                    if (modal.classList.contains('maximized')) {
+                        Object.assign(modal.style, originalState);
+                        modal.classList.remove('maximized');
+                        maxBtn.innerHTML = '&#9723;';
+                        maxBtn.title = 'Maximizar';
+                    } else {
+                        originalState = {
+                            width: modal.style.width, 
+                            height: modal.style.height, 
+                            top: modal.style.top, 
+                            left: modal.style.left, 
+                            transform: modal.style.transform
+                        };
+                        Object.assign(modal.style, {
+                            width: '100vw', 
+                            height: '100vh', 
+                            top: '0px', 
+                            left: '0px', 
+                            transform: 'none', 
+                            borderRadius: '0'
+                        });
+                        modal.classList.add('maximized');
+                        maxBtn.innerHTML = '&#10064;'; // quadrado preenchido
+                        maxBtn.title = 'Restaurar';
+                    }
+                };
+
+                // Funcionalidade de minimizar
+                minBtn.onclick = () => {
+                    const contentDiv = document.getElementById('statistics-content');
+                    const isMinimized = modal.classList.toggle('minimized');
+                    if (isMinimized) {
+                        if (!originalState.height) {
+                            originalState.height = modal.style.height;
+                        }
+                        if(contentDiv) contentDiv.style.display = 'none';
+                        modal.style.height = header.offsetHeight + 'px';
+                        modal.style.resize = 'none';
+                        minBtn.innerHTML = '&#9650;'; // seta para cima
+                        minBtn.title = 'Restaurar';
+                    } else {
+                        if(contentDiv) contentDiv.style.display = 'block';
+                        modal.style.height = originalState.height || '90vh';
+                        modal.style.resize = 'both';
+                        minBtn.innerHTML = '&#95;'; // subtraço
+                        minBtn.title = 'Minimizar';
+                    }
+                };
+
+                // Fechar
+                closeBtn.onclick = () => modal.classList.add('hidden');
+
+                buttons.append(minBtn, maxBtn, closeBtn);
+            }
+
+            header.append(title, buttons);
+            
+            // Inserir cabeçalho no início do modal
+            if (modal.firstChild) {
+                modal.insertBefore(header, modal.firstChild);
+            } else {
+                modal.appendChild(header);
+            }
         }
-
-        // Listener do botão fechar (comum para ambos)
-        closeBtn.onclick = () => modal.style.display = 'none';
-
-        header.append(title, buttons);
 
         const contentDiv = document.getElementById('statistics-content');
         if (contentDiv) {
             contentDiv.style.flexGrow = '1';
-            contentDiv.style.overflow = 'hidden';
-            contentDiv.style.padding = '0';
+            contentDiv.style.overflow = 'auto';
+            contentDiv.style.padding = isMobile ? '12px' : '16px';
             contentDiv.classList.add('bg-gray-50');
         }
-        
-        modal.prepend(header);
     },
 
     /**
