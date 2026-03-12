@@ -1,10 +1,11 @@
 /**
  * detalhes.js - SIGAP
- * Versão COMPLETA com busca de CEP, campos do réu, planilha de gastos e PDF
+ * Versão COMPLETA com busca de CEP, campos do réu, planilha de gastos e PDF integrado com PDFService
  */
 
-import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification } from './utils.js';
+import { PDFService } from './pdfService.js';
 
 // --- 1. CONSTANTES DE DOCUMENTAÇÃO ---
 const BASE_DOCS = ['Carteira de Identidade (RG) ou Habilitação (CNH)', 'CPF', 'Comprovante de Residência (Atualizado - últimos 3 meses)'];
@@ -72,7 +73,17 @@ function parseCurrency(s) {
     return !s ? 0 : parseFloat(s.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
 }
 
-// --- 5. FUNÇÃO PARA ATUALIZAR CONTADOR DE ITENS SELECIONADOS ---
+// --- 5. FUNÇÃO PARA OBTER TIPOS DE DOCUMENTOS DO FORMULÁRIO ---
+function getDocTypesFromForm() {
+    const docTypes = {};
+    document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
+        const typeRadio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
+        docTypes[cb.id] = typeRadio ? typeRadio.value : 'Físico';
+    });
+    return docTypes;
+}
+
+// --- 6. FUNÇÃO PARA ATUALIZAR CONTADOR DE ITENS SELECIONADOS ---
 function updateSelectedCounter() {
     const container = getEl('checklist-container');
     if (!container) return;
@@ -89,7 +100,7 @@ function updateSelectedCounter() {
     }
 }
 
-// --- 6. FUNÇÃO PARA ATUALIZAR ESTADO DO DOCUMENTO NO FIRESTORE ---
+// --- 7. FUNÇÃO PARA ATUALIZAR ESTADO DO DOCUMENTO NO FIRESTORE ---
 async function updateDocumentState(state) {
     if (!currentAssistedId || !currentPautaId || !db) return;
     
@@ -112,7 +123,7 @@ async function updateDocumentState(state) {
     }
 }
 
-// --- 7. FUNÇÃO PARA VERIFICAR SE DEVE MOSTRAR O FORMULÁRIO DO RÉU ---
+// --- 8. FUNÇÃO PARA VERIFICAR SE DEVE MOSTRAR O FORMULÁRIO DO RÉU ---
 function checkReuVisibility() {
     const containerEl = getEl('checklist-container');
     if (!containerEl) return;
@@ -143,7 +154,7 @@ function checkReuVisibility() {
     }
 }
 
-// --- 8. RENDERIZAÇÃO DO CHECKLIST ---
+// --- 9. RENDERIZAÇÃO DO CHECKLIST ---
 function renderChecklist(actionKey) {
     console.log("📋 Renderizando checklist para:", actionKey);
     currentChecklistAction = actionKey;
@@ -214,8 +225,12 @@ function renderChecklist(actionKey) {
 
     // Adicionar planilha de gastos se necessário
     if (ACTIONS_ALWAYS_EXPENSES.includes(actionKey)) {
+        console.log("💰 Adicionando planilha de gastos para ação:", actionKey);
         containerEl.appendChild(renderExpenseTable());
-        if (saved?.expenseData) fillExpenseData(saved.expenseData);
+        if (saved?.expenseData) {
+            console.log("📊 Preenchendo dados de gastos salvos:", saved.expenseData);
+            fillExpenseData(saved.expenseData);
+        }
     }
 
     // Adicionar listeners aos checkboxes para atualizar contador e visibilidade do réu
@@ -257,7 +272,7 @@ function renderChecklist(actionKey) {
     }
 }
 
-// --- 9. FORMULÁRIO DO RÉU (COM CEP) ---
+// --- 10. FORMULÁRIO DO RÉU (COM CEP) ---
 function renderReuForm(containerId) {
     const container = getEl(containerId);
     if (!container) return;
@@ -355,7 +370,7 @@ function renderReuForm(containerId) {
     }
 }
 
-// --- 10. PLANILHA DE GASTOS ---
+// --- 11. PLANILHA DE GASTOS ---
 function renderExpenseTable() {
     const div = document.createElement('div');
     div.className = 'mt-6 p-4 bg-green-50 border-2 border-green-100 rounded-xl shadow-sm';
@@ -413,11 +428,14 @@ function renderExpenseTable() {
     return div;
 }
 
-// --- 11. FUNÇÕES PARA PEGAR DADOS DOS FORMULÁRIOS ---
+// --- 12. FUNÇÕES PARA PEGAR DADOS DOS FORMULÁRIOS ---
 function getReuDataFromForm() {
-    if (!getEl('nome-reu')) return null;
+    // Verificar se os elementos existem
+    const nomeEl = getEl('nome-reu');
+    if (!nomeEl) return null; // Formulário não está renderizado
+    
     return {
-        nome: getEl('nome-reu')?.value || '',
+        nome: nomeEl?.value || '',
         cpf: getEl('cpf-reu')?.value || '',
         telefone: getEl('telefone-reu')?.value || '',
         cep: getEl('cep-reu')?.value || '',
@@ -431,12 +449,45 @@ function getReuDataFromForm() {
     };
 }
 
+// FUNÇÃO CORRIGIDA PARA COLETAR GASTOS
 function getExpenseDataFromForm() {
     const d = {};
-    EXPENSE_CATEGORIES.forEach(c => {
-        d[c.id] = getEl(`expense-${c.id}`)?.value || '';
+    
+    // Lista de IDs dos campos de gasto
+    const expenseIds = [
+        'expense-moradia',
+        'expense-alimentacao', 
+        'expense-educacao',
+        'expense-saude',
+        'expense-vestuario',
+        'expense-lazer',
+        'expense-outras'
+    ];
+    
+    // Verificar cada campo
+    expenseIds.forEach(id => {
+        const el = getEl(id);
+        if (el) {
+            d[id.replace('expense-', '')] = el.value || '';
+            console.log(`💰 Campo ${id}:`, el.value);
+        } else {
+            console.log(`⚠️ Campo ${id} não encontrado`);
+            d[id.replace('expense-', '')] = '';
+        }
     });
+    
+    console.log("📊 Dados de gastos coletados:", d);
     return d;
+}
+
+// Função para verificar se a planilha de gastos existe
+function checkExpenseTableExists() {
+    const container = getEl('checklist-container');
+    if (!container) return false;
+    
+    // Verificar se há elementos de gasto
+    const expenseInput = container.querySelector('.expense-input');
+    return expenseInput !== null;
 }
 
 function fillReuData(d) {
@@ -460,9 +511,13 @@ function fillReuData(d) {
 }
 
 function fillExpenseData(d) {
+    if (!d) return;
+    
     EXPENSE_CATEGORIES.forEach(c => {
         const el = getEl(`expense-${c.id}`);
-        if (el) el.value = d[c.id] || '';
+        if (el && d[c.id]) {
+            el.value = d[c.id] || '';
+        }
     });
     
     // Calcular total
@@ -474,233 +529,109 @@ function fillExpenseData(d) {
     if(totalEl) totalEl.textContent = formatCurrency(total);
 }
 
-// --- 12. FUNÇÃO PARA GERAR PDF COMPLETO ---
+// --- 13. FUNÇÃO PARA GERAR PDF USANDO PDFSERVICE ---
 async function handlePdf() {
     showNotification("Gerando PDF...", "info");
     
-    // Atualizar estado para PDF
-    if (currentAssistedId && currentPautaId && db) {
-        await updateDocumentState('pdf');
-    }
-    
     try {
-        const { jsPDF } = window.jspdf;
-        const docPDF = new jsPDF();
-        const pageWidth = docPDF.internal.pageSize.getWidth();
-        const pageHeight = docPDF.internal.pageSize.getHeight();
-        let y = 20;
-        const margin = 15;
-        const lineHeight = 5;
-
-        // ================================================
-        // CABEÇALHO
-        // ================================================
-        docPDF.setFontSize(18);
-        docPDF.setTextColor(22, 163, 74);
-        docPDF.setFont("helvetica", "bold");
-        docPDF.text("SIGAP - Checklist de Atendimento", pageWidth / 2, y, { align: "center" });
-        y += 8;
+        // Coletar dados para o PDF
+        const assistedName = getEl('documents-assisted-name')?.textContent || 'Assistido';
+        const actionTitle = getEl('checklist-title')?.textContent || '';
         
-        docPDF.setFontSize(10);
-        docPDF.setTextColor(100, 100, 100);
-        docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, y, { align: "center" });
-        y += 15;
-
-        // ================================================
-        // 1. DADOS DO ASSISTIDO
-        // ================================================
-        docPDF.setFontSize(12);
-        docPDF.setTextColor(0, 0, 0);
-        docPDF.setFont("helvetica", "bold");
-        docPDF.text("1. DADOS DO ASSISTIDO", margin, y);
-        y += 7;
-        docPDF.setFont("helvetica", "normal");
-        docPDF.setFontSize(10);
+        // VERIFICAR SE A PLANILHA DE GASTOS EXISTE
+        const hasExpenseTable = checkExpenseTableExists();
+        console.log("📋 Planilha de gastos existe?", hasExpenseTable);
         
-        const nomeAssistido = getEl('documents-assisted-name')?.textContent || 'Não informado';
-        const acaoSelecionada = getEl('checklist-title')?.textContent || 'Não selecionada';
-        
-        docPDF.text(`Nome: ${nomeAssistido}`, margin + 5, y); y += 6;
-        docPDF.text(`Ação: ${acaoSelecionada}`, margin + 5, y); y += 10;
-
-        // ================================================
-        // 2. DOCUMENTAÇÃO (CHECKBOXES MARCADOS)
-        // ================================================
-        const checked = document.querySelectorAll('.doc-checkbox:checked');
-        
-        if (checked.length > 0) {
-            docPDF.setFont("helvetica", "bold");
-            docPDF.setFontSize(11);
-            docPDF.text("2. DOCUMENTAÇÃO ENTREGUE:", margin, y);
-            y += 7;
-            docPDF.setFont("helvetica", "normal");
-            docPDF.setFontSize(9);
+        // COLETAR TEXTOS DOS DOCUMENTOS MARCADOS CORRETAMENTE
+        const documentosTextos = [];
+        document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
+            // ENCONTRAR O TEXTO DO DOCUMENTO
+            let text = '';
             
-            checked.forEach(cb => {
-                // Verificar se precisa de nova página
-                if (y > pageHeight - 30) {
-                    docPDF.addPage();
-                    y = 20;
+            // Tentativa 1: Procurar o span dentro do label
+            const label = cb.closest('label');
+            if (label) {
+                const span = label.querySelector('span:not(.sr-only)');
+                if (span) {
+                    text = span.textContent;
                 }
-                
-                const label = cb.closest('label');
-                const text = label?.querySelector('span')?.textContent || 'Documento';
-                
-                // Pegar o tipo selecionado (Físico/Digital)
-                const typeRadio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
-                const type = typeRadio ? typeRadio.value : 'Físico';
-                
-                docPDF.text(`✓ ${text} - [${type.toUpperCase()}]`, margin + 5, y);
-                y += 5;
+            }
+            
+            // Tentativa 2: Procurar em qualquer lugar próximo
+            if (!text) {
+                const parentDiv = cb.closest('div');
+                if (parentDiv) {
+                    const possibleSpan = parentDiv.querySelector('span');
+                    if (possibleSpan) text = possibleSpan.textContent;
+                }
+            }
+            
+            // Tentativa 3: Usar o ID como fallback
+            if (!text || text.trim() === '') {
+                text = cb.id || 'Documento';
+            }
+            
+            documentosTextos.push({
+                id: cb.id,
+                text: text.trim()
             });
-            y += 5;
+            
+            console.log("📄 Documento marcado:", text.trim());
+        });
+        
+        // COLETAR DADOS DO RÉU
+        const reuData = getReuDataFromForm();
+        console.log("👤 Dados do réu:", reuData);
+        
+        // COLETAR DADOS DA PLANILHA DE GASTOS - VERSÃO CORRIGIDA
+        const expenseData = getExpenseDataFromForm();
+        console.log("💰 Dados de gastos coletados:", expenseData);
+        
+        // Verificar se há dados de gastos (ignorando campos vazios)
+        const hasExpenses = expenseData && Object.values(expenseData).some(v => v && v.trim() !== '');
+        console.log("📊 Tem gastos preenchidos?", hasExpenses);
+        
+        // Se tem planilha mas não tem dados, avisar
+        if (hasExpenseTable && !hasExpenses) {
+            console.warn("⚠️ Planilha de gastos existe mas está vazia");
+        }
+        
+        // Verificar se há dados do réu
+        const hasReu = reuData && Object.values(reuData).some(v => v && v.trim() !== '');
+        console.log("👥 Tem réu?", hasReu);
+        
+        // Preparar dados do checklist
+        const checklistData = {
+            checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
+            docTypes: getDocTypesFromForm(),
+            reuData: reuData || {},
+            expenseData: expenseData || {}
+        };
+        
+        console.log("📦 Dados completos para PDF:", checklistData);
+        
+        // Usar o PDFService para gerar o PDF
+        const resultado = PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
+        
+        if (resultado) {
+            showNotification("PDF gerado com sucesso!");
+            
+            // SALVAR O CHECKLIST ANTES DE MARCAR COMO PDF
+            await handleSave(false); // false = não fechar o modal
+            
+            // ATUALIZAR O ESTADO PARA 'pdf' NO FIRESTORE
+            if (currentAssistedId && currentPautaId && db) {
+                await updateDocumentState('pdf');
+            }
+            
+            // Atualizar a lista de assistidos no app principal
+            if (window.app && typeof window.app.refreshAssistedList === 'function') {
+                window.app.refreshAssistedList();
+            }
+            
         } else {
-            docPDF.text("Nenhum documento selecionado.", margin + 5, y);
-            y += 7;
+            showNotification("Erro ao gerar PDF", "error");
         }
-
-        // ================================================
-        // 3. PLANILHA DE GASTOS (SE HOUVER)
-        // ================================================
-        const expenses = getExpenseDataFromForm();
-        const hasExpenses = Object.values(expenses).some(v => v && v.trim() !== '');
-        
-        if (hasExpenses) {
-            if (y > pageHeight - 60) {
-                docPDF.addPage();
-                y = 20;
-            }
-            
-            docPDF.setFont("helvetica", "bold");
-            docPDF.setFontSize(11);
-            docPDF.text("3. PLANILHA DE GASTOS MENSAIS:", margin, y);
-            y += 7;
-            docPDF.setFont("helvetica", "normal");
-            docPDF.setFontSize(9);
-            
-            // Desenhar linha de cabeçalho
-            docPDF.setFillColor(240, 240, 240);
-            docPDF.rect(margin, y - 4, pageWidth - 2*margin, 6, 'F');
-            docPDF.setFont("helvetica", "bold");
-            docPDF.text("DESCRIÇÃO", margin + 5, y);
-            docPDF.text("VALOR", pageWidth - margin - 30, y, { align: 'right' });
-            y += 6;
-            docPDF.setFont("helvetica", "normal");
-            
-            // Linhas de gastos
-            EXPENSE_CATEGORIES.forEach(c => {
-                if (expenses[c.id] && expenses[c.id].trim() !== '') {
-                    if (y > pageHeight - 20) {
-                        docPDF.addPage();
-                        y = 20;
-                    }
-                    
-                    docPDF.text(c.label, margin + 5, y);
-                    docPDF.text(expenses[c.id], pageWidth - margin - 30, y, { align: 'right' });
-                    y += 5;
-                }
-            });
-            
-            // Linha do total
-            const total = getEl('expense-total')?.textContent || 'R$ 0,00';
-            y += 2;
-            docPDF.setDrawColor(200, 200, 200);
-            docPDF.line(margin, y - 2, pageWidth - margin, y - 2);
-            docPDF.setFont("helvetica", "bold");
-            docPDF.text("TOTAL MENSAL:", margin + 5, y + 2);
-            docPDF.text(total, pageWidth - margin - 30, y + 2, { align: 'right' });
-            y += 10;
-        }
-
-        // ================================================
-        // 4. DADOS DO RÉU
-        // ================================================
-        const reu = getReuDataFromForm();
-        const hasReu = reu && (reu.nome || reu.cpf || reu.telefone || reu.rua || reu.empresa);
-        
-        if (hasReu) {
-            if (y > pageHeight - 80) {
-                docPDF.addPage();
-                y = 20;
-            }
-            
-            docPDF.setFont("helvetica", "bold");
-            docPDF.setFontSize(11);
-            docPDF.text("4. DADOS DA PARTE CONTRÁRIA (RÉU):", margin, y);
-            y += 7;
-            docPDF.setFont("helvetica", "normal");
-            docPDF.setFontSize(9);
-            
-            // Nome
-            if (reu.nome) {
-                docPDF.text(`Nome: ${reu.nome}`, margin + 5, y);
-                y += 5;
-            }
-            
-            // CPF e Telefone
-            if (reu.cpf || reu.telefone) {
-                let linha = '';
-                if (reu.cpf) linha += `CPF: ${formatarCPF(reu.cpf)}`;
-                if (reu.cpf && reu.telefone) linha += ' | ';
-                if (reu.telefone) linha += `WhatsApp: ${reu.telefone}`;
-                docPDF.text(linha, margin + 5, y);
-                y += 5;
-            }
-            
-            // Endereço completo
-            const enderecoParts = [];
-            if (reu.rua) enderecoParts.push(reu.rua);
-            if (reu.numero) enderecoParts.push(`nº ${reu.numero}`);
-            if (reu.bairro) enderecoParts.push(reu.bairro);
-            
-            if (enderecoParts.length > 0) {
-                docPDF.text(`Endereço: ${enderecoParts.join(', ')}`, margin + 5, y);
-                y += 5;
-            }
-            
-            // Cidade, UF e CEP
-            const cidadeUfParts = [];
-            if (reu.cidade) cidadeUfParts.push(reu.cidade);
-            if (reu.uf) cidadeUfParts.push(reu.uf);
-            
-            if (cidadeUfParts.length > 0 || reu.cep) {
-                let linha = '';
-                if (cidadeUfParts.length > 0) linha += cidadeUfParts.join('/');
-                if (reu.cep) linha += ` - CEP: ${formatarCEP(reu.cep)}`;
-                docPDF.text(linha, margin + 5, y);
-                y += 5;
-            }
-            
-            // Dados do trabalho
-            if (reu.empresa) {
-                docPDF.text(`Empresa: ${reu.empresa}`, margin + 5, y);
-                y += 5;
-            }
-            if (reu.enderecoTrabalho) {
-                docPDF.text(`End. Comercial: ${reu.enderecoTrabalho}`, margin + 5, y);
-                y += 5;
-            }
-        }
-
-        // ================================================
-        // RODAPÉ
-        // ================================================
-        const pageCount = docPDF.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            docPDF.setPage(i);
-            docPDF.setFontSize(8);
-            docPDF.setTextColor(150, 150, 150);
-            docPDF.text(
-                `Página ${i} de ${pageCount}`,
-                pageWidth - margin - 20,
-                pageHeight - 10
-            );
-        }
-
-        // Salvar PDF
-        const nomeArquivo = `Checklist_${(getEl('documents-assisted-name')?.textContent || 'SIGAP').replace(/\s+/g, '_')}.pdf`;
-        docPDF.save(nomeArquivo);
-        showNotification("PDF gerado com sucesso!");
         
     } catch (err) {
         console.error("Erro ao gerar PDF:", err);
@@ -708,23 +639,8 @@ async function handlePdf() {
     }
 }
 
-// Funções auxiliares para formatação
-function formatarCPF(cpf) {
-    if (!cpf) return '';
-    const numeros = cpf.replace(/\D/g, '');
-    if (numeros.length !== 11) return cpf;
-    return numeros.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-}
-
-function formatarCEP(cep) {
-    if (!cep) return '';
-    const numeros = cep.replace(/\D/g, '');
-    if (numeros.length !== 8) return cep;
-    return numeros.replace(/(\d{5})(\d{3})/, '$1-$2');
-}
-
-// --- 13. AÇÕES (SALVAR, RESET, VOLTAR) ---
-async function handleSave() {
+// --- 14. AÇÕES (SALVAR, RESET, VOLTAR) ---
+async function handleSave(closeModal = true) {
     console.log("💾 handleSave chamado");
     
     if (!currentAssistedId || !currentPautaId) {
@@ -739,22 +655,38 @@ async function handleSave() {
     }
     
     const container = getEl('checklist-container');
+    if (!container) {
+        console.error("Container checklist não encontrado");
+        return;
+    }
+    
     const checkedIds = Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id);
     const docTypes = {};
     checkedIds.forEach(id => {
-        docTypes[id] = document.querySelector(`input[name="type-${id}"]:checked`)?.value || 'Físico';
+        const radio = document.querySelector(`input[name="type-${id}"]:checked`);
+        docTypes[id] = radio ? radio.value : 'Físico';
     });
+
+    // Coletar dados do réu e gastos
+    const reuData = getReuDataFromForm() || {};
+    const expenseData = getExpenseDataFromForm() || {};
+    
+    // OBTER O TÍTULO DA AÇÃO CORRETAMENTE
+    const actionKey = currentChecklistAction;
+    const actionTitle = actionKey && documentsData[actionKey] ? documentsData[actionKey].title : null;
+    
+    console.log("📌 Salvando ação:", { actionKey, actionTitle });
 
     const payload = {
         documentChecklist: {
-            action: currentChecklistAction,
+            action: actionKey,
             checkedIds: checkedIds,
             docTypes: docTypes,
-            reuData: getReuDataFromForm() || {},
-            expenseData: getExpenseDataFromForm() || {}
+            reuData: reuData,
+            expenseData: expenseData
         },
         documentState: 'saved',
-        selectedAction: currentChecklistAction ? documentsData[currentChecklistAction]?.title : null,
+        selectedAction: actionTitle,
         lastActionBy: window.app?.currentUserName || 'Sistema',
         lastActionTimestamp: new Date().toISOString()
     };
@@ -764,10 +696,20 @@ async function handleSave() {
     try {
         const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
         await updateDoc(docRef, payload);
-        showNotification("Dados salvos com sucesso!");
-        getEl('documents-modal').classList.add('hidden');
+        
+        console.log("✅ Dados salvos com sucesso!");
+        
+        if (closeModal) {
+            showNotification("Dados salvos com sucesso!");
+            getEl('documents-modal').classList.add('hidden');
+        }
+        
+        if (window.app && typeof window.app.refreshAssistedList === 'function') {
+            window.app.refreshAssistedList();
+        }
+        
     } catch (e) {
-        console.error("Erro ao salvar:", e);
+        console.error("❌ Erro ao salvar:", e);
         showNotification("Erro ao salvar dados: " + e.message, "error");
     }
 }
@@ -797,7 +739,7 @@ function handleBack() {
     getEl('address-editor-container')?.classList.add('hidden');
 }
 
-// --- 14. EXPORTS PRINCIPAIS ---
+// --- 15. EXPORTS PRINCIPAIS ---
 export function setupDetailsModal(config) {
     console.log("⚙️ setupDetailsModal chamado", config);
     db = config.db;
@@ -820,7 +762,7 @@ export function setupDetailsModal(config) {
     }
 }
 
-export function openDetailsModal(config) {
+export async function openDetailsModal(config) {
     console.log("🔓 openDetailsModal chamado", config);
     
     if (!config || !config.assistedId || !config.pautaId) {
@@ -833,6 +775,33 @@ export function openDetailsModal(config) {
     window.assistedIdToHandle = config.assistedId;
     currentPautaId = config.pautaId;
     allAssisted = config.allAssisted || [];
+    db = config.db || window.app?.db;
+    
+    // Buscar dados atualizados do Firestore
+    try {
+        if (db && currentPautaId && currentAssistedId) {
+            const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                const index = allAssisted.findIndex(a => a.id === currentAssistedId);
+                if (index !== -1) {
+                    allAssisted[index] = { id: currentAssistedId, ...data };
+                } else {
+                    allAssisted.push({ id: currentAssistedId, ...data });
+                }
+                
+                console.log("📊 Dados carregados do Firestore:", {
+                    selectedAction: data.selectedAction,
+                    documentState: data.documentState,
+                    documentChecklist: data.documentChecklist
+                });
+            }
+        }
+    } catch (error) {
+        console.error("Erro ao buscar dados atualizados:", error);
+    }
     
     const assisted = allAssisted.find(a => a.id === currentAssistedId);
     if (!assisted) {
@@ -845,21 +814,18 @@ export function openDetailsModal(config) {
     
     getEl('documents-assisted-name').textContent = assisted.name;
     
-    // Elementos do DOM
     const selectionArea = getEl('document-action-selection');
     const checklistView = getEl('document-checklist-view');
     const checklistHeader = getEl('document-checklist-view-header');
     const searchContainer = getEl('checklist-search-container');
     const reuContainer = getEl('address-editor-container');
     
-    // Se já existe um checklist salvo, carregar diretamente
     if (assisted.documentChecklist && assisted.documentChecklist.action) {
         console.log("✅ Checklist encontrado! Carregando:", assisted.documentChecklist.action);
         
-        // Renderizar o checklist com os dados salvos
+        currentChecklistAction = assisted.documentChecklist.action;
         renderChecklist(assisted.documentChecklist.action);
         
-        // Esconder seleção e mostrar checklist
         if (selectionArea) selectionArea.classList.add('hidden');
         if (checklistView) {
             checklistView.classList.remove('hidden');
@@ -868,13 +834,11 @@ export function openDetailsModal(config) {
         if (checklistHeader) checklistHeader.classList.remove('hidden');
         if (searchContainer) searchContainer.classList.remove('hidden');
         
-        // Atualizar o título com a ação salva
         const titleEl = getEl('checklist-title');
         if (titleEl && documentsData[assisted.documentChecklist.action]) {
             titleEl.textContent = documentsData[assisted.documentChecklist.action].title;
         }
         
-        // Preencher dados do réu se existirem
         if (assisted.documentChecklist.reuData) {
             setTimeout(() => {
                 fillReuData(assisted.documentChecklist.reuData);
@@ -882,20 +846,18 @@ export function openDetailsModal(config) {
             }, 300);
         }
         
-        // Preencher dados de despesas se existirem
         if (assisted.documentChecklist.expenseData) {
+            console.log("📊 Carregando dados de gastos salvos:", assisted.documentChecklist.expenseData);
             setTimeout(() => {
                 fillExpenseData(assisted.documentChecklist.expenseData);
             }, 300);
         }
         
-        // Verificar visibilidade do réu
         setTimeout(checkReuVisibility, 400);
         
     } else {
         console.log("❌ Nenhum checklist encontrado. Mostrando seleção de assuntos.");
         
-        // Esconder checklist e mostrar seleção
         if (checklistView) {
             checklistView.classList.add('hidden');
             checklistView.classList.remove('flex');
@@ -905,7 +867,6 @@ export function openDetailsModal(config) {
         if (reuContainer) reuContainer.classList.add('hidden');
         if (selectionArea) selectionArea.classList.remove('hidden');
         
-        // Recriar a área de seleção de assunto com busca
         if (selectionArea) {
             selectionArea.innerHTML = `
                 <div class="p-2 sm:p-4">
@@ -953,7 +914,6 @@ export function openDetailsModal(config) {
                         getEl('document-checklist-view').classList.remove('hidden');
                         getEl('document-checklist-view').classList.add('flex');
                         
-                        // Atualizar estado para 'selected'
                         updateDocumentState('selected');
                     };
                     
@@ -969,7 +929,6 @@ export function openDetailsModal(config) {
         }
     }
     
-    // Abrir o modal
     const modal = getEl('documents-modal');
     if (modal) {
         modal.classList.remove('hidden');
@@ -982,6 +941,24 @@ export function openDetailsModal(config) {
 window.openDetailsModal = openDetailsModal;
 window.setupDetailsModal = setupDetailsModal;
 window.documentsData = documentsData;
+
+// Função de teste para verificar a coleta de gastos
+window.testarGastos = function() {
+    console.log("=== TESTE DE COLETA DE GASTOS ===");
+    const expenseData = getExpenseDataFromForm();
+    console.log("Dados coletados:", expenseData);
+    
+    const hasData = Object.values(expenseData).some(v => v && v.trim() !== '');
+    console.log("Tem dados preenchidos?", hasData);
+    
+    Object.entries(expenseData).forEach(([key, value]) => {
+        if (value && value.trim() !== '') {
+            console.log(`✅ ${key}: ${value}`);
+        }
+    });
+    
+    return expenseData;
+};
 
 console.log("✅ detalhes.js carregado com sucesso!");
 console.log("📋 documentsData keys:", Object.keys(documentsData));
