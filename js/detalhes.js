@@ -94,7 +94,6 @@ function updateSelectedCounter() {
         counterEl.textContent = `${checkedCount} itens selecionados`;
     }
     
-    // Atualizar status para 'filling' se houver itens marcados
     if (checkedCount > 0) {
         updateDocumentState('filling');
     }
@@ -106,8 +105,6 @@ async function updateDocumentState(state) {
     
     try {
         const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
-        
-        // Buscar o título da ação atual
         const actionTitle = currentChecklistAction ? documentsData[currentChecklistAction]?.title : null;
         
         await updateDoc(docRef, { 
@@ -125,28 +122,39 @@ async function updateDocumentState(state) {
 
 // --- 8. FUNÇÃO PARA VERIFICAR SE DEVE MOSTRAR O FORMULÁRIO DO RÉU ---
 function checkReuVisibility() {
-    const containerEl = getEl('checklist-container');
-    if (!containerEl) return;
-    
-    const checkedLabels = Array.from(containerEl.querySelectorAll('.doc-checkbox:checked')).map(cb => 
-        cb.closest('label')?.querySelector('span')?.textContent || ''
-    );
-    
-    const needsReu = checkedLabels.some(txt => 
-        txt.includes('Endereço') || 
-        txt.includes('Trabalho') || 
-        txt.includes('Sobre o Réu') || 
-        txt.includes('Sobre o Cônjuge') || 
-        txt.includes('Suposto Pai')
-    );
-    
     const reuArea = getEl('address-editor-container');
-    if (reuArea) {
-        if (needsReu) {
-            reuArea.classList.remove('hidden');
-            // Se ainda não tiver o formulário renderizado, renderiza
-            if (reuArea.children.length === 0 || reuArea.innerHTML.trim() === '') {
-                renderReuForm('address-editor-container');
+    if (!reuArea) return;
+    
+    const actionRequiresReu = ACTIONS_WITH_WORK_INFO.includes(currentChecklistAction);
+    
+    if (actionRequiresReu) {
+        console.log("👤 Ação requer dados do réu, mostrando formulário");
+        reuArea.classList.remove('hidden');
+        if (reuArea.children.length === 0 || reuArea.innerHTML.trim() === '') {
+            renderReuForm('address-editor-container');
+        }
+    } else {
+        const containerEl = getEl('checklist-container');
+        if (containerEl) {
+            const checkedLabels = Array.from(containerEl.querySelectorAll('.doc-checkbox:checked')).map(cb => 
+                cb.closest('label')?.querySelector('span')?.textContent || ''
+            );
+            
+            const needsReu = checkedLabels.some(txt => 
+                txt.includes('Endereço') || 
+                txt.includes('Trabalho') || 
+                txt.includes('Sobre o Réu') || 
+                txt.includes('Sobre o Cônjuge') || 
+                txt.includes('Suposto Pai')
+            );
+            
+            if (needsReu) {
+                reuArea.classList.remove('hidden');
+                if (reuArea.children.length === 0 || reuArea.innerHTML.trim() === '') {
+                    renderReuForm('address-editor-container');
+                }
+            } else {
+                reuArea.classList.add('hidden');
             }
         } else {
             reuArea.classList.add('hidden');
@@ -223,17 +231,70 @@ function renderChecklist(actionKey) {
         containerEl.appendChild(sectionDiv);
     });
 
-    // Adicionar planilha de gastos se necessário
+    // SEMPRE adicionar a planilha de gastos se a ação exigir
     if (ACTIONS_ALWAYS_EXPENSES.includes(actionKey)) {
-        console.log("💰 Adicionando planilha de gastos para ação:", actionKey);
-        containerEl.appendChild(renderExpenseTable());
+        console.log("💰 Ação requer planilha de gastos, adicionando...");
+        
+        let expenseContainer = document.getElementById('expense-table-container');
+        if (!expenseContainer) {
+            expenseContainer = document.createElement('div');
+            expenseContainer.id = 'expense-table-container';
+            expenseContainer.className = 'mt-4';
+            containerEl.appendChild(expenseContainer);
+        }
+        
+        expenseContainer.innerHTML = '';
+        expenseContainer.appendChild(renderExpenseTable());
+        
         if (saved?.expenseData) {
             console.log("📊 Preenchendo dados de gastos salvos:", saved.expenseData);
             fillExpenseData(saved.expenseData);
         }
+    } else {
+        // Botão opcional para adicionar planilha de gastos
+        const expenseButton = document.createElement('div');
+        expenseButton.className = 'mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-center';
+        expenseButton.id = 'expense-button-container';
+        expenseButton.innerHTML = `
+            <button id="btn-abrir-gastos" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700">
+                + Adicionar Planilha de Gastos
+            </button>
+        `;
+        containerEl.appendChild(expenseButton);
+        
+        if (saved?.expenseData && Object.values(saved.expenseData).some(v => v)) {
+            expenseButton.style.display = 'none';
+            let expenseContainer = document.getElementById('expense-table-container');
+            if (!expenseContainer) {
+                expenseContainer = document.createElement('div');
+                expenseContainer.id = 'expense-table-container';
+                expenseContainer.className = 'mt-4';
+                containerEl.appendChild(expenseContainer);
+            }
+            expenseContainer.innerHTML = '';
+            expenseContainer.appendChild(renderExpenseTable());
+            fillExpenseData(saved.expenseData);
+        }
     }
 
-    // Adicionar listeners aos checkboxes para atualizar contador e visibilidade do réu
+    // Evento do botão de abrir gastos
+    setTimeout(() => {
+        document.getElementById('btn-abrir-gastos')?.addEventListener('click', () => {
+            const expenseButton = document.getElementById('expense-button-container');
+            if (expenseButton) expenseButton.style.display = 'none';
+            
+            let expenseContainer = document.getElementById('expense-table-container');
+            if (!expenseContainer) {
+                expenseContainer = document.createElement('div');
+                expenseContainer.id = 'expense-table-container';
+                expenseContainer.className = 'mt-4';
+                containerEl.appendChild(expenseContainer);
+            }
+            expenseContainer.innerHTML = '';
+            expenseContainer.appendChild(renderExpenseTable());
+        });
+    }, 100);
+
     containerEl.querySelectorAll('.doc-checkbox').forEach(cb => {
         cb.addEventListener('change', (e) => {
             const t = getEl(`type-${e.target.id}`);
@@ -244,13 +305,9 @@ function renderChecklist(actionKey) {
                 }
             }
             
-            // Atualizar contador
             updateSelectedCounter();
-            
-            // Verificar se deve mostrar o formulário do réu
             checkReuVisibility();
             
-            // Se algum checkbox foi marcado, atualizar status para 'filling'
             const anyChecked = containerEl.querySelectorAll('.doc-checkbox:checked').length > 0;
             if (anyChecked) {
                 updateDocumentState('filling');
@@ -258,13 +315,9 @@ function renderChecklist(actionKey) {
         });
     });
 
-    // Verificar visibilidade do réu após renderizar
     setTimeout(checkReuVisibility, 100);
-
-    // Inicializar contador
     updateSelectedCounter();
     
-    // Se houver dados salvos do réu, preencher
     if (saved?.reuData) {
         setTimeout(() => {
             fillReuData(saved.reuData);
@@ -343,7 +396,6 @@ function renderReuForm(containerId) {
         </div>
     `;
 
-    // Busca de CEP
     const cepInp = getEl('cep-reu');
     if (cepInp) {
         cepInp.addEventListener('blur', async () => {
@@ -374,6 +426,7 @@ function renderReuForm(containerId) {
 function renderExpenseTable() {
     const div = document.createElement('div');
     div.className = 'mt-6 p-4 bg-green-50 border-2 border-green-100 rounded-xl shadow-sm';
+    div.id = 'expense-table';
     let rows = '';
     
     EXPENSE_CATEGORIES.forEach(c => {
@@ -399,11 +452,13 @@ function renderExpenseTable() {
             <span>TOTAL MENSAL:</span>
             <span id="expense-total">R$ 0,00</span>
         </div>
+        <div class="mt-2 text-right">
+            <button id="fechar-gastos" class="text-[10px] text-gray-500 hover:text-gray-700 underline">Fechar planilha</button>
+        </div>
     `;
     
     div.querySelectorAll('.expense-input').forEach(inp => {
         inp.addEventListener('input', (e) => {
-            // Formatar valor monetário
             let v = e.target.value.replace(/\D/g, '');
             if (v) {
                 v = (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -412,7 +467,6 @@ function renderExpenseTable() {
                 e.target.value = '';
             }
             
-            // Calcular total
             let total = 0;
             div.querySelectorAll('.expense-input').forEach(i => {
                 total += parseCurrency(i.value);
@@ -420,22 +474,28 @@ function renderExpenseTable() {
             const totalEl = document.getElementById('expense-total');
             if(totalEl) totalEl.textContent = formatCurrency(total);
             
-            // Atualizar status para 'filling'
             updateDocumentState('filling');
         });
     });
+    
+    setTimeout(() => {
+        document.getElementById('fechar-gastos')?.addEventListener('click', () => {
+            const container = document.getElementById('expense-table-container');
+            if (container) {
+                container.innerHTML = '';
+            }
+            const expenseButton = document.getElementById('expense-button-container');
+            if (expenseButton) expenseButton.style.display = 'block';
+        });
+    }, 100);
     
     return div;
 }
 
 // --- 12. FUNÇÕES PARA PEGAR DADOS DOS FORMULÁRIOS ---
 function getReuDataFromForm() {
-    // Verificar se os elementos existem
-    const nomeEl = getEl('nome-reu');
-    if (!nomeEl) return null; // Formulário não está renderizado
-    
     return {
-        nome: nomeEl?.value || '',
+        nome: getEl('nome-reu')?.value || '',
         cpf: getEl('cpf-reu')?.value || '',
         telefone: getEl('telefone-reu')?.value || '',
         cep: getEl('cep-reu')?.value || '',
@@ -449,49 +509,18 @@ function getReuDataFromForm() {
     };
 }
 
-// FUNÇÃO CORRIGIDA PARA COLETAR GASTOS
 function getExpenseDataFromForm() {
     const d = {};
-    
-    // Lista de IDs dos campos de gasto
-    const expenseIds = [
-        'expense-moradia',
-        'expense-alimentacao', 
-        'expense-educacao',
-        'expense-saude',
-        'expense-vestuario',
-        'expense-lazer',
-        'expense-outras'
-    ];
-    
-    // Verificar cada campo
-    expenseIds.forEach(id => {
-        const el = getEl(id);
-        if (el) {
-            d[id.replace('expense-', '')] = el.value || '';
-            console.log(`💰 Campo ${id}:`, el.value);
-        } else {
-            console.log(`⚠️ Campo ${id} não encontrado`);
-            d[id.replace('expense-', '')] = '';
-        }
+    EXPENSE_CATEGORIES.forEach(cat => {
+        const el = getEl(`expense-${cat.id}`);
+        d[cat.id] = el ? el.value || '' : '';
     });
-    
-    console.log("📊 Dados de gastos coletados:", d);
     return d;
-}
-
-// Função para verificar se a planilha de gastos existe
-function checkExpenseTableExists() {
-    const container = getEl('checklist-container');
-    if (!container) return false;
-    
-    // Verificar se há elementos de gasto
-    const expenseInput = container.querySelector('.expense-input');
-    return expenseInput !== null;
 }
 
 function fillReuData(d) {
     if (!d) return;
+    
     const setValue = (id, value) => {
         const el = getEl(id);
         if (el) el.value = value || '';
@@ -513,14 +542,13 @@ function fillReuData(d) {
 function fillExpenseData(d) {
     if (!d) return;
     
-    EXPENSE_CATEGORIES.forEach(c => {
-        const el = getEl(`expense-${c.id}`);
-        if (el && d[c.id]) {
-            el.value = d[c.id] || '';
+    EXPENSE_CATEGORIES.forEach(cat => {
+        const el = getEl(`expense-${cat.id}`);
+        if (el && d[cat.id]) {
+            el.value = d[cat.id];
         }
     });
     
-    // Calcular total
     let total = 0;
     document.querySelectorAll('.expense-input').forEach(i => {
         total += parseCurrency(i.value);
@@ -529,35 +557,31 @@ function fillExpenseData(d) {
     if(totalEl) totalEl.textContent = formatCurrency(total);
 }
 
-// --- 13. FUNÇÃO PARA GERAR PDF USANDO PDFSERVICE ---
+// --- 13. FUNÇÃO PARA GERAR PDF (CORRIGIDA - INCLUI TODOS OS DADOS) ---
 async function handlePdf() {
     showNotification("Gerando PDF...", "info");
     
     try {
-        // Coletar dados para o PDF
+        console.log("=".repeat(50));
+        console.log("🚀 INICIANDO GERAÇÃO DE PDF");
+        console.log("=".repeat(50));
+        
+        // 1. Dados básicos
         const assistedName = getEl('documents-assisted-name')?.textContent || 'Assistido';
         const actionTitle = getEl('checklist-title')?.textContent || '';
         
-        // VERIFICAR SE A PLANILHA DE GASTOS EXISTE
-        const hasExpenseTable = checkExpenseTableExists();
-        console.log("📋 Planilha de gastos existe?", hasExpenseTable);
+        console.log("👤 Assistido:", assistedName);
+        console.log("📋 Ação:", actionTitle);
         
-        // COLETAR TEXTOS DOS DOCUMENTOS MARCADOS CORRETAMENTE
+        // 2. Coletar documentos marcados
         const documentosTextos = [];
         document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
-            // ENCONTRAR O TEXTO DO DOCUMENTO
             let text = '';
-            
-            // Tentativa 1: Procurar o span dentro do label
             const label = cb.closest('label');
             if (label) {
                 const span = label.querySelector('span:not(.sr-only)');
-                if (span) {
-                    text = span.textContent;
-                }
+                if (span) text = span.textContent;
             }
-            
-            // Tentativa 2: Procurar em qualquer lugar próximo
             if (!text) {
                 const parentDiv = cb.closest('div');
                 if (parentDiv) {
@@ -565,8 +589,6 @@ async function handlePdf() {
                     if (possibleSpan) text = possibleSpan.textContent;
                 }
             }
-            
-            // Tentativa 3: Usar o ID como fallback
             if (!text || text.trim() === '') {
                 text = cb.id || 'Documento';
             }
@@ -575,66 +597,69 @@ async function handlePdf() {
                 id: cb.id,
                 text: text.trim()
             });
-            
-            console.log("📄 Documento marcado:", text.trim());
         });
         
-        // COLETAR DADOS DO RÉU
-        const reuData = getReuDataFromForm();
-        console.log("👤 Dados do réu:", reuData);
+        console.log("📄 Documentos marcados:", documentosTextos.length);
         
-        // COLETAR DADOS DA PLANILHA DE GASTOS - VERSÃO CORRIGIDA
+        // 3. COLETAR DADOS DO RÉU (IMPORTANTE)
+        const reuData = getReuDataFromForm();
+        console.log("👤 Dados do réu coletados:", reuData);
+        
+        // 4. COLETAR DADOS DA PLANILHA DE GASTOS (IMPORTANTE)
         const expenseData = getExpenseDataFromForm();
         console.log("💰 Dados de gastos coletados:", expenseData);
         
-        // Verificar se há dados de gastos (ignorando campos vazios)
-        const hasExpenses = expenseData && Object.values(expenseData).some(v => v && v.trim() !== '');
-        console.log("📊 Tem gastos preenchidos?", hasExpenses);
+        // 5. Verificar se há dados
+        const hasReu = Object.values(reuData).some(v => v && v.trim() !== '');
+        const hasExpenses = Object.values(expenseData).some(v => v && v.trim() !== '');
         
-        // Se tem planilha mas não tem dados, avisar
-        if (hasExpenseTable && !hasExpenses) {
-            console.warn("⚠️ Planilha de gastos existe mas está vazia");
-        }
+        console.log("📊 Tem dados do réu?", hasReu);
+        console.log("📊 Tem dados de gastos?", hasExpenses);
         
-        // Verificar se há dados do réu
-        const hasReu = reuData && Object.values(reuData).some(v => v && v.trim() !== '');
-        console.log("👥 Tem réu?", hasReu);
-        
-        // Preparar dados do checklist
+        // 6. Preparar dados completos do checklist
         const checklistData = {
             checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
             docTypes: getDocTypesFromForm(),
-            reuData: reuData || {},
-            expenseData: expenseData || {}
+            reuData: reuData,
+            expenseData: expenseData
         };
         
-        console.log("📦 Dados completos para PDF:", checklistData);
+        console.log("📦 Dados completos enviados para o PDFService:", {
+            checkedIds: checklistData.checkedIds.length,
+            reuData: checklistData.reuData,
+            expenseData: checklistData.expenseData
+        });
         
-        // Usar o PDFService para gerar o PDF
-        const resultado = PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
+        // 7. Gerar PDF com TODOS os dados
+        const resultado = PDFService.generateChecklistPDF(
+            assistedName, 
+            actionTitle, 
+            checklistData, 
+            documentosTextos
+        );
         
         if (resultado) {
+            console.log("✅ PDF gerado com sucesso!");
             showNotification("PDF gerado com sucesso!");
             
-            // SALVAR O CHECKLIST ANTES DE MARCAR COMO PDF
-            await handleSave(false); // false = não fechar o modal
+            // Salvar dados e atualizar estado
+            await handleSave(false);
             
-            // ATUALIZAR O ESTADO PARA 'pdf' NO FIRESTORE
             if (currentAssistedId && currentPautaId && db) {
                 await updateDocumentState('pdf');
             }
             
-            // Atualizar a lista de assistidos no app principal
             if (window.app && typeof window.app.refreshAssistedList === 'function') {
                 window.app.refreshAssistedList();
             }
             
         } else {
+            console.error("❌ Erro ao gerar PDF");
             showNotification("Erro ao gerar PDF", "error");
         }
         
     } catch (err) {
-        console.error("Erro ao gerar PDF:", err);
+        console.error("❌ Erro ao gerar PDF:", err);
         showNotification("Erro ao gerar PDF: " + err.message, "error");
     }
 }
@@ -667,15 +692,11 @@ async function handleSave(closeModal = true) {
         docTypes[id] = radio ? radio.value : 'Físico';
     });
 
-    // Coletar dados do réu e gastos
-    const reuData = getReuDataFromForm() || {};
-    const expenseData = getExpenseDataFromForm() || {};
+    const reuData = getReuDataFromForm();
+    const expenseData = getExpenseDataFromForm();
     
-    // OBTER O TÍTULO DA AÇÃO CORRETAMENTE
     const actionKey = currentChecklistAction;
     const actionTitle = actionKey && documentsData[actionKey] ? documentsData[actionKey].title : null;
-    
-    console.log("📌 Salvando ação:", { actionKey, actionTitle });
 
     const payload = {
         documentChecklist: {
@@ -744,7 +765,6 @@ export function setupDetailsModal(config) {
     console.log("⚙️ setupDetailsModal chamado", config);
     db = config.db;
 
-    // Configurar botões
     getEl('back-to-action-selection-btn').onclick = handleBack;
     getEl('save-checklist-btn').onclick = handleSave;
     getEl('print-checklist-btn').onclick = handlePdf;
@@ -777,7 +797,6 @@ export async function openDetailsModal(config) {
     allAssisted = config.allAssisted || [];
     db = config.db || window.app?.db;
     
-    // Buscar dados atualizados do Firestore
     try {
         if (db && currentPautaId && currentAssistedId) {
             const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
@@ -791,12 +810,6 @@ export async function openDetailsModal(config) {
                 } else {
                     allAssisted.push({ id: currentAssistedId, ...data });
                 }
-                
-                console.log("📊 Dados carregados do Firestore:", {
-                    selectedAction: data.selectedAction,
-                    documentState: data.documentState,
-                    documentChecklist: data.documentChecklist
-                });
             }
         }
     } catch (error) {
@@ -808,9 +821,6 @@ export async function openDetailsModal(config) {
         console.error("Assistido não encontrado");
         return;
     }
-    
-    console.log("Assistido encontrado:", assisted);
-    console.log("documentChecklist:", assisted.documentChecklist);
     
     getEl('documents-assisted-name').textContent = assisted.name;
     
@@ -847,7 +857,6 @@ export async function openDetailsModal(config) {
         }
         
         if (assisted.documentChecklist.expenseData) {
-            console.log("📊 Carregando dados de gastos salvos:", assisted.documentChecklist.expenseData);
             setTimeout(() => {
                 fillExpenseData(assisted.documentChecklist.expenseData);
             }, 300);
@@ -908,12 +917,10 @@ export async function openDetailsModal(config) {
                     
                     btn.onclick = (e) => {
                         e.preventDefault();
-                        console.log("🎯 Botão clicado:", key, title);
                         renderChecklist(key);
                         selectionArea.classList.add('hidden');
                         getEl('document-checklist-view').classList.remove('hidden');
                         getEl('document-checklist-view').classList.add('flex');
-                        
                         updateDocumentState('selected');
                     };
                     
@@ -922,43 +929,41 @@ export async function openDetailsModal(config) {
             }
             
             renderFilteredSubjects();
-            
-            searchInput.addEventListener('input', (e) => {
-                renderFilteredSubjects(e.target.value);
-            });
+            searchInput.addEventListener('input', (e) => renderFilteredSubjects(e.target.value));
         }
     }
     
     const modal = getEl('documents-modal');
-    if (modal) {
-        modal.classList.remove('hidden');
-    } else {
-        console.error("Modal de documentos não encontrado");
-    }
+    if (modal) modal.classList.remove('hidden');
 }
 
 // Tornar funções globais
 window.openDetailsModal = openDetailsModal;
 window.setupDetailsModal = setupDetailsModal;
 window.documentsData = documentsData;
+window.getReuDataFromForm = getReuDataFromForm;
+window.getExpenseDataFromForm = getExpenseDataFromForm;
 
-// Função de teste para verificar a coleta de gastos
-window.testarGastos = function() {
-    console.log("=== TESTE DE COLETA DE GASTOS ===");
-    const expenseData = getExpenseDataFromForm();
-    console.log("Dados coletados:", expenseData);
+// Função de diagnóstico
+window.diagnosticarPDF = function() {
+    console.log("=".repeat(50));
+    console.log("🔍 DIAGNÓSTICO DO PDF");
+    console.log("=".repeat(50));
     
-    const hasData = Object.values(expenseData).some(v => v && v.trim() !== '');
-    console.log("Tem dados preenchidos?", hasData);
+    console.log("\n1. DADOS DO RÉU:");
+    const reu = getReuDataFromForm();
+    console.log(reu);
     
-    Object.entries(expenseData).forEach(([key, value]) => {
-        if (value && value.trim() !== '') {
-            console.log(`✅ ${key}: ${value}`);
-        }
+    console.log("\n2. DADOS DE GASTOS:");
+    const gastos = getExpenseDataFromForm();
+    console.log(gastos);
+    
+    console.log("\n3. DOCUMENTOS MARCADOS:");
+    document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
+        console.log("-", cb.id);
     });
     
-    return expenseData;
+    return { reu, gastos };
 };
 
 console.log("✅ detalhes.js carregado com sucesso!");
-console.log("📋 documentsData keys:", Object.keys(documentsData));
