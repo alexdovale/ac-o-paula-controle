@@ -1,5 +1,5 @@
 /**
- * estatisticas.js - Versão Módulo Corrigida, com PDF Melhorado, Responsiva e Agendados por Horário
+ * estatisticas.js - Versão Simplificada com modal padrão
  */
 
 // ========================================================
@@ -7,309 +7,6 @@
 // ========================================================
 
 export const StatisticsService = {
-    /**
-     * Função auxiliar para tornar o modal interativo (arrastável, redimensionável) - Adaptado para mobile
-     */
-    makeModalInteractive(modal) {
-        if (!modal || modal.classList.contains('interactive-modal-init')) {
-            return;
-        }
-        modal.classList.add('interactive-modal-init', 'bg-white');
-
-        // Detectar se é mobile
-        const isMobile = window.innerWidth <= 768;
-
-        // Estilos injetados para garantir que o modal e seu conteúdo se adaptem a diferentes tamanhos de tela.
-        if (!document.getElementById('statistics-responsive-styles')) {
-            const styleSheet = document.createElement("style");
-            styleSheet.id = 'statistics-responsive-styles';
-            styleSheet.innerHTML = `
-                @media (max-width: 1024px) {
-                    #statistics-content-wrapper {
-                        overflow-y: auto !important;
-                        display: flex;
-                        flex-direction: column;
-                    }
-                }
-                @media (max-width: 768px) {
-                    #statistics-modal {
-                        width: 100vw !important;
-                        height: 100vh !important;
-                        max-width: 100vw !important;
-                        max-height: 100vh !important;
-                        top: 0 !important;
-                        left: 0 !important;
-                        transform: none !important;
-                        border-radius: 0 !important;
-                        resize: none !important;
-                        min-width: 0 !important;
-                        min-height: 0 !important;
-                    }
-                }
-            `;
-            document.head.appendChild(styleSheet);
-        }
-
-        const content = document.getElementById('statistics-content');
-        if (!content) {
-            const newContent = document.createElement('div');
-            newContent.id = 'statistics-content';
-            newContent.className = 'flex-grow overflow-auto p-4';
-            modal.appendChild(newContent);
-        }
-
-        // Configurar estilos base do modal
-        if (isMobile) {
-            Object.assign(modal.style, {
-                position: 'fixed', 
-                top: '0', 
-                left: '0',
-                transform: 'none', 
-                width: '100vw', 
-                height: '100vh',
-                maxWidth: '100vw', 
-                maxHeight: '100vh', 
-                resize: 'none',
-                overflow: 'hidden', 
-                border: 'none',
-                boxShadow: 'none', 
-                borderRadius: '0',
-                minWidth: '0', 
-                minHeight: '0', 
-                display: 'flex',
-                flexDirection: 'column',
-                padding: '0',
-                zIndex: '1000'
-            });
-        } else {
-            Object.assign(modal.style, {
-                position: 'fixed', 
-                top: '50%', 
-                left: '50%',
-                transform: 'translate(-50%, -50%)', 
-                width: '90vw', 
-                height: '90vh',
-                maxWidth: '1400px', 
-                maxHeight: '95vh', 
-                resize: 'both',
-                overflow: 'hidden', 
-                border: '1px solid #ddd',
-                boxShadow: '0 5px 25px rgba(0,0,0,0.2)', 
-                borderRadius: '12px',
-                minWidth: '600px', 
-                minHeight: '500px', 
-                display: 'flex',
-                flexDirection: 'column',
-                padding: '0',
-                zIndex: '1000'
-            });
-        }
-
-        // Verificar se já existe um cabeçalho
-        let header = modal.querySelector('#statistics-modal-header');
-        
-        if (!header) {
-            header = document.createElement('div');
-            header.id = 'statistics-modal-header';
-            
-            // Estilo do cabeçalho
-            Object.assign(header.style, {
-                backgroundColor: isMobile ? '#16a34a' : '#f7f7f7',
-                color: isMobile ? 'white' : '#333',
-                padding: isMobile ? '16px' : '10px 15px',
-                borderBottom: '1px solid #ddd',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                cursor: isMobile ? 'default' : 'move',
-                borderTopLeftRadius: isMobile ? '0' : '12px',
-                borderTopRightRadius: isMobile ? '0' : '12px',
-                flexShrink: '0'
-            });
-
-            const title = document.createElement('span');
-            title.textContent = 'Estatísticas da Pauta';
-            title.style.fontWeight = 'bold';
-            title.style.fontSize = isMobile ? '18px' : '16px';
-            title.style.color = isMobile ? 'white' : '#333';
-
-            const buttons = document.createElement('div');
-            buttons.style.display = 'flex';
-            buttons.style.alignItems = 'center';
-            buttons.style.gap = '5px';
-            
-            if (isMobile) {
-                // Apenas botão de fechar no mobile
-                const closeBtn = document.createElement('button');
-                closeBtn.innerHTML = '&times;';
-                closeBtn.title = 'Fechar';
-                Object.assign(closeBtn.style, {
-                    background: 'rgba(255,255,255,0.2)',
-                    border: 'none',
-                    fontSize: '28px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    color: 'white',
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '22px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    lineHeight: '1',
-                    transition: 'background-color 0.2s'
-                });
-                closeBtn.onmouseover = () => closeBtn.style.backgroundColor = 'rgba(255,255,255,0.3)';
-                closeBtn.onmouseout = () => closeBtn.style.backgroundColor = 'rgba(255,255,255,0.2)';
-                closeBtn.onclick = () => modal.classList.add('hidden');
-                buttons.appendChild(closeBtn);
-            } else {
-                // Botões de controle no desktop
-                const minBtn = document.createElement('button');
-                minBtn.innerHTML = '&#95;'; // caractere de subtraço
-                minBtn.title = 'Minimizar';
-                
-                const maxBtn = document.createElement('button');
-                maxBtn.innerHTML = '&#9723;'; // quadrado vazio
-                maxBtn.title = 'Maximizar/Restaurar';
-                
-                const closeBtn = document.createElement('button');
-                closeBtn.innerHTML = '&times;';
-                closeBtn.title = 'Fechar';
-                
-                [minBtn, maxBtn, closeBtn].forEach(btn => {
-                    Object.assign(btn.style, {
-                        background: 'none',
-                        border: 'none',
-                        fontSize: '20px',
-                        cursor: 'pointer',
-                        marginLeft: '8px',
-                        fontWeight: 'bold',
-                        lineHeight: '1',
-                        color: '#555',
-                        width: '32px',
-                        height: '32px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: '4px',
-                        transition: 'background-color 0.2s, color 0.2s'
-                    });
-                    btn.onmouseover = () => {
-                        btn.style.backgroundColor = '#e0e0e0';
-                        btn.style.color = '#000';
-                    };
-                    btn.onmouseout = () => {
-                        btn.style.backgroundColor = 'transparent';
-                        btn.style.color = '#555';
-                    };
-                });
-
-                // Funcionalidade de arrastar (drag)
-                let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-                let originalState = {};
-
-                header.onmousedown = function (e) {
-                    if (e.target.tagName === 'BUTTON') return;
-                    e.preventDefault();
-                    pos3 = e.clientX;
-                    pos4 = e.clientY;
-                    document.onmouseup = closeDragElement;
-                    document.onmousemove = elementDrag;
-                };
-
-                function elementDrag(e) {
-                    e.preventDefault();
-                    pos1 = pos3 - e.clientX;
-                    pos2 = pos4 - e.clientY;
-                    pos3 = e.clientX;
-                    pos4 = e.clientY;
-                    modal.style.top = (modal.offsetTop - pos2) + "px";
-                    modal.style.left = (modal.offsetLeft - pos1) + "px";
-                    modal.style.transform = 'none';
-                }
-
-                function closeDragElement() {
-                    document.onmouseup = null;
-                    document.onmousemove = null;
-                }
-
-                // Funcionalidade de maximizar
-                maxBtn.onclick = () => {
-                    if (modal.classList.contains('maximized')) {
-                        Object.assign(modal.style, originalState);
-                        modal.classList.remove('maximized');
-                        maxBtn.innerHTML = '&#9723;';
-                        maxBtn.title = 'Maximizar';
-                    } else {
-                        originalState = {
-                            width: modal.style.width, 
-                            height: modal.style.height, 
-                            top: modal.style.top, 
-                            left: modal.style.left, 
-                            transform: modal.style.transform
-                        };
-                        Object.assign(modal.style, {
-                            width: '100vw', 
-                            height: '100vh', 
-                            top: '0px', 
-                            left: '0px', 
-                            transform: 'none', 
-                            borderRadius: '0'
-                        });
-                        modal.classList.add('maximized');
-                        maxBtn.innerHTML = '&#10064;'; // quadrado preenchido
-                        maxBtn.title = 'Restaurar';
-                    }
-                };
-
-                // Funcionalidade de minimizar
-                minBtn.onclick = () => {
-                    const contentDiv = document.getElementById('statistics-content');
-                    const isMinimized = modal.classList.toggle('minimized');
-                    if (isMinimized) {
-                        if (!originalState.height) {
-                            originalState.height = modal.style.height;
-                        }
-                        if(contentDiv) contentDiv.style.display = 'none';
-                        modal.style.height = header.offsetHeight + 'px';
-                        modal.style.resize = 'none';
-                        minBtn.innerHTML = '&#9650;'; // seta para cima
-                        minBtn.title = 'Restaurar';
-                    } else {
-                        if(contentDiv) contentDiv.style.display = 'block';
-                        modal.style.height = originalState.height || '90vh';
-                        modal.style.resize = 'both';
-                        minBtn.innerHTML = '&#95;'; // subtraço
-                        minBtn.title = 'Minimizar';
-                    }
-                };
-
-                // Fechar
-                closeBtn.onclick = () => modal.classList.add('hidden');
-
-                buttons.append(minBtn, maxBtn, closeBtn);
-            }
-
-            header.append(title, buttons);
-            
-            // Inserir cabeçalho no início do modal
-            if (modal.firstChild) {
-                modal.insertBefore(header, modal.firstChild);
-            } else {
-                modal.appendChild(header);
-            }
-        }
-
-        const contentDiv = document.getElementById('statistics-content');
-        if (contentDiv) {
-            contentDiv.style.flexGrow = '1';
-            contentDiv.style.overflow = 'auto';
-            contentDiv.style.padding = isMobile ? '12px' : '16px';
-            contentDiv.classList.add('bg-gray-50');
-        }
-    },
-
     /**
      * Calcula diferença em minutos entre duas datas
      */
@@ -322,7 +19,7 @@ export const StatisticsService = {
     },
 
     /**
-     * Renderiza o modal de estatísticas (adaptado para mobile)
+     * Renderiza o modal de estatísticas (versão simplificada)
      */
     showModal(allAssisted, useDelegationFlow, pautaName) {
         const modal = document.getElementById('statistics-modal');
@@ -332,35 +29,35 @@ export const StatisticsService = {
             return;
         }
         
-        let content = document.getElementById('statistics-content');
-        
-        this.makeModalInteractive(modal);
-        
-        if (!content) {
-            content = document.getElementById('statistics-content');
-        }
-
-        if (modal.classList.contains('minimized')) {
-            modal.classList.remove('minimized');
-            modal.style.resize = 'both';
-        }
-        if (content) {
-            content.style.display = 'block'; 
-        }
-
-        const modalTitle = modal.querySelector('#statistics-modal-header span');
-        if (modalTitle) modalTitle.textContent = `Estatísticas - ${pautaName}`;
-
-        if (content) {
-            content.innerHTML = `<div class="flex items-center justify-center h-full"><p class="text-gray-600">Calculando estatísticas...</p></div>`;
-        }
-        
-        modal.style.display = 'flex';
+        // Mostrar modal
         modal.classList.remove('hidden');
+        
+        // Configurar botão de fechar
+        const closeBtn = document.getElementById('close-statistics-modal-btn');
+        if (closeBtn) {
+            closeBtn.onclick = () => modal.classList.add('hidden');
+        }
 
+        // Atualizar título
+        const titleEl = modal.querySelector('h2');
+        if (titleEl) {
+            titleEl.innerHTML = `<span class="text-green-600">📊</span> Estatísticas - ${pautaName}`;
+        }
+
+        const content = document.getElementById('statistics-content');
+        if (!content) {
+            console.error("Elemento statistics-content não encontrado");
+            return;
+        }
+
+        // Mostrar loading
+        content.innerHTML = `<div class="flex items-center justify-center h-full"><p class="text-gray-600">Calculando estatísticas...</p></div>`;
+
+        // Filtrar dados
         const atendidos = allAssisted.filter(a => a.status === 'atendido');
         const faltosos = allAssisted.filter(a => a.status === 'faltoso');
 
+        // Estatísticas por grupo/colaborador
         const statsByGroup = atendidos.reduce((acc, a) => {
             const attendantIsObject = typeof a.attendant === 'object' && a.attendant !== null;
             const attendantName = attendantIsObject ? a.attendant.nome : (a.attendant || 'Não informado');
@@ -378,6 +75,7 @@ export const StatisticsService = {
             return acc;
         }, {});
         
+        // Colaboradores flat (sem agrupamento)
         const statsByCollaboratorFlat = {};
         Object.values(statsByGroup).forEach(groupData => {
             Object.entries(groupData.collaborators).forEach(([name, count]) => {
@@ -386,7 +84,7 @@ export const StatisticsService = {
         });
         const sortedFlatCollaborators = Object.entries(statsByCollaboratorFlat).sort(([, a], [, b]) => b - a);
         
-        // Versão responsiva da lista de colaboradores
+        // HTML da lista de colaboradores
         const collaboratorsFlatHTML = sortedFlatCollaborators.length > 0 ? `
             <div class="bg-white p-3 md:p-4 rounded-lg border">
                 <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-2">Atendimentos por Colaborador</h3>
@@ -411,6 +109,7 @@ export const StatisticsService = {
             </div>
         ` : '';
         
+        // Estatísticas por assunto
         const statsBySubject = allAssisted.reduce((acc, a) => {
             const demandasDoAssistido = (a.subject ? [a.subject] : []).concat(a.demandas?.descricoes || []);
             demandasDoAssistido.forEach(demanda => {
@@ -431,6 +130,7 @@ export const StatisticsService = {
         const totalDemandasAtendidos = Object.values(statsBySubject).reduce((sum, data) => sum + data.atendidos, 0);
         const totalDemandasFaltosos = Object.values(statsBySubject).reduce((sum, data) => sum + data.faltosos, 0);
 
+        // Estatísticas por horário
         const statsByTime = atendidos.filter(a => a.scheduledTime).reduce((acc, a) => {
             acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
             return acc;
@@ -449,6 +149,7 @@ export const StatisticsService = {
         }, {});
         const sortedScheduledTimes = Object.keys(statsByScheduledTime).sort();
 
+        // Cálculo de tempos médios
         let totalDelegatedMinutes = 0, delegatedCount = 0;
         let totalDirectMinutes = 0, directCount = 0;
 
@@ -474,6 +175,7 @@ export const StatisticsService = {
                 <p class="text-[8px] md:text-xs text-gray-600 mt-1">Tempo Médio (delegação)</p>
             </div>` : '';
 
+        // HTML por equipe
         const collaboratorsHTML = Object.entries(statsByGroup).sort(([,a],[,b]) => b.total - a.total).map(([groupName, groupData]) => {
             const collaboratorsRows = Object.entries(groupData.collaborators).sort(([,a],[,b]) => b-a).map(([name, count]) => `
                 <tr class="border-b">
@@ -497,7 +199,7 @@ export const StatisticsService = {
             `;
         }).join('');
 
-        // Versão responsiva do HTML
+        // HTML completo do conteúdo
         const html = `
         <div id="statistics-content-wrapper" class="grid grid-cols-1 lg:grid-cols-5 gap-3 md:gap-4 h-full p-2 md:p-4 overflow-hidden">
             <div class="lg:col-span-2 flex flex-col gap-3 md:gap-4 overflow-y-auto pr-1 md:pr-2">
@@ -656,8 +358,9 @@ export const StatisticsService = {
         </div>
         `;
         
-        if(content) content.innerHTML = html;
+        content.innerHTML = html;
 
+        // Configurar botão de exportar PDF
         const exportBtn = document.getElementById('export-stats-pdf-btn');
         if (exportBtn) {
             // Remover listener anterior para evitar duplicação
