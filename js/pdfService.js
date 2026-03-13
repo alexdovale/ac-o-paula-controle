@@ -154,7 +154,6 @@ export const PDFService = {
             const pageHeight = docPDF.internal.pageSize.getHeight();
             let y = 20;
             const margin = 15;
-            const lineHeight = 5;
 
             // ================================================
             // CABEÇALHO
@@ -197,7 +196,6 @@ export const PDFService = {
                 docPDF.setFont("helvetica", "normal");
                 docPDF.setFontSize(9);
                 
-                // Se temos os textos dos documentos, usar eles
                 if (documentosTextos && documentosTextos.length > 0) {
                     documentosTextos.forEach((doc, index) => {
                         if (y > pageHeight - 20) {
@@ -205,7 +203,6 @@ export const PDFService = {
                             y = 20;
                         }
                         
-                        // Verificar se tem tipo (Físico/Digital)
                         const tipo = checklistData.docTypes && checklistData.docTypes[doc.id] 
                             ? ` [${checklistData.docTypes[doc.id].toUpperCase()}]` 
                             : '';
@@ -228,7 +225,8 @@ export const PDFService = {
             // ================================================
             if (checklistData && checklistData.expenseData) {
                 const expenses = checklistData.expenseData;
-                const hasExpenses = Object.values(expenses).some(v => v && v.trim() !== '');
+                // Verifica se há alguma despesa preenchida e diferente de "R$ 0,00"
+                const hasExpenses = Object.values(expenses).some(v => v && String(v).trim() !== '' && v !== 'R$ 0,00');
                 
                 if (hasExpenses) {
                     if (y > pageHeight - 60) {
@@ -252,7 +250,6 @@ export const PDFService = {
                     y += 6;
                     docPDF.setFont("helvetica", "normal");
                     
-                    // Categorias de gastos
                     const categorias = [
                         { id: 'moradia', label: '1. MORADIA (Habitação)' },
                         { id: 'alimentacao', label: '2. ALIMENTAÇÃO' },
@@ -263,16 +260,23 @@ export const PDFService = {
                         { id: 'outras', label: '7. OUTRAS DESPESAS' }
                     ];
                     
+                    let total = 0;
                     categorias.forEach(cat => {
-                        if (expenses[cat.id] && expenses[cat.id].trim() !== '') {
+                        const valor = expenses[cat.id];
+                        // Só imprime se não estiver vazio e não for zero
+                        if (valor && String(valor).trim() !== '' && valor !== 'R$ 0,00') {
                             if (y > pageHeight - 20) {
                                 docPDF.addPage();
                                 y = 20;
                             }
                             
                             docPDF.text(cat.label, margin + 5, y);
-                            docPDF.text(expenses[cat.id], pageWidth - margin - 40, y, { align: 'right' });
+                            docPDF.text(valor, pageWidth - margin - 40, y, { align: 'right' });
                             y += 5;
+                            
+                            // Soma no total
+                            const numValor = parseFloat(String(valor).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
+                            total += numValor;
                         }
                     });
                     
@@ -287,16 +291,6 @@ export const PDFService = {
                     docPDF.line(margin, y - 2, pageWidth - margin, y - 2);
                     docPDF.setFont("helvetica", "bold");
                     docPDF.text("TOTAL MENSAL:", margin + 5, y + 2);
-                    
-                    // Calcular total
-                    let total = 0;
-                    categorias.forEach(cat => {
-                        if (expenses[cat.id]) {
-                            const valor = parseFloat(String(expenses[cat.id]).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
-                            total += valor;
-                        }
-                    });
-                    
                     docPDF.text(formatCurrency(total), pageWidth - margin - 40, y + 2, { align: 'right' });
                     y += 10;
                 }
@@ -307,7 +301,8 @@ export const PDFService = {
             // ================================================
             if (checklistData && checklistData.reuData) {
                 const reu = checklistData.reuData;
-                const hasReu = reu && (reu.nome || reu.cpf || reu.telefone || reu.rua || reu.empresa);
+                // Verifica se QUALQUER campo do réu foi preenchido
+                const hasReu = reu && Object.values(reu).some(v => v && String(v).trim() !== '');
                 
                 if (hasReu) {
                     if (y > pageHeight - 80) {
@@ -322,13 +317,11 @@ export const PDFService = {
                     docPDF.setFont("helvetica", "normal");
                     docPDF.setFontSize(9);
                     
-                    // Nome
                     if (reu.nome) {
                         docPDF.text(`Nome: ${reu.nome}`, margin + 5, y);
                         y += 5;
                     }
                     
-                    // CPF e Telefone
                     if (reu.cpf || reu.telefone) {
                         let linha = '';
                         if (reu.cpf) linha += `CPF: ${formatCPF(reu.cpf)}`;
@@ -338,38 +331,35 @@ export const PDFService = {
                         y += 5;
                     }
                     
-                    // Endereço
-                    const enderecoParts = [];
-                    if (reu.rua) enderecoParts.push(reu.rua);
-                    if (reu.numero) enderecoParts.push(`nº ${reu.numero}`);
-                    if (reu.bairro) enderecoParts.push(reu.bairro);
+                    // Formata Endereço de forma robusta e com quebra de linha se for muito grande
+                    const partesEndereco = [];
+                    if (reu.rua) partesEndereco.push(reu.rua);
+                    if (reu.numero) partesEndereco.push(`nº ${reu.numero}`);
+                    else if (reu.rua) partesEndereco.push('S/N');
+                    if (reu.bairro) partesEndereco.push(`Bairro ${reu.bairro}`);
                     
-                    if (enderecoParts.length > 0) {
-                        docPDF.text(`Endereço: ${enderecoParts.join(', ')}`, margin + 5, y);
-                        y += 5;
+                    let linhaCidade = '';
+                    if (reu.cidade) linhaCidade += reu.cidade;
+                    if (reu.uf) linhaCidade += linhaCidade ? `/${reu.uf}` : reu.uf;
+                    if (linhaCidade) partesEndereco.push(linhaCidade);
+                    if (reu.cep) partesEndereco.push(`CEP: ${formatCEP(reu.cep)}`);
+
+                    if (partesEndereco.length > 0) {
+                        const enderecoTexto = `Endereço: ${partesEndereco.join(', ')}`;
+                        // Quebra o texto se for maior que a largura da página
+                        const splitAddress = docPDF.splitTextToSize(enderecoTexto, pageWidth - (margin * 2) - 10);
+                        docPDF.text(splitAddress, margin + 5, y);
+                        y += (5 * splitAddress.length);
                     }
                     
-                    // Cidade, UF e CEP
-                    if (reu.cidade || reu.uf || reu.cep) {
-                        let linha = '';
-                        if (reu.cidade) linha += reu.cidade;
-                        if (reu.uf) linha += linha ? `/${reu.uf}` : reu.uf;
-                        if (reu.cep) {
-                            if (linha) linha += ' - ';
-                            linha += `CEP: ${formatCEP(reu.cep)}`;
-                        }
-                        docPDF.text(linha, margin + 5, y);
-                        y += 5;
-                    }
-                    
-                    // Dados do trabalho
                     if (reu.empresa) {
-                        docPDF.text(`Empresa: ${reu.empresa}`, margin + 5, y);
+                        docPDF.text(`Empresa/Local de Trabalho: ${reu.empresa}`, margin + 5, y);
                         y += 5;
                     }
                     if (reu.enderecoTrabalho) {
-                        docPDF.text(`End. Comercial: ${reu.enderecoTrabalho}`, margin + 5, y);
-                        y += 5;
+                        const splitWork = docPDF.splitTextToSize(`End. Comercial: ${reu.enderecoTrabalho}`, pageWidth - (margin * 2) - 10);
+                        docPDF.text(splitWork, margin + 5, y);
+                        y += (5 * splitWork.length);
                     }
                 }
             }
@@ -390,7 +380,7 @@ export const PDFService = {
             }
 
             // Salvar PDF
-            const nomeArquivo = `Checklist_${assistedName.replace(/\s+/g, '_')}.pdf`;
+            const nomeArquivo = `Checklist_${(assistedName || 'Assistido').replace(/\s+/g, '_')}.pdf`;
             docPDF.save(nomeArquivo);
             return true;
             
