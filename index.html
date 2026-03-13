@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Sistema de Gerenciamento de Pauta - SIGAP</title>
 
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
@@ -100,6 +100,48 @@
             animation: spin 1s linear infinite;
             margin: 0 auto;
         }
+
+        /* Melhorias para mobile */
+        @media (max-width: 768px) {
+            .fixed.inset-0 {
+                padding: 0 !important;
+            }
+            
+            .fixed.inset-0 > div {
+                width: 100% !important;
+                max-width: 100% !important;
+                height: 100% !important;
+                max-height: 100% !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+            }
+            
+            #actions-panel {
+                width: 90vw !important;
+                right: 5vw !important;
+            }
+            
+            .p-4.md\:p-8 {
+                padding: 0.5rem !important;
+            }
+            
+            .grid-cols-1.md\:grid-cols-2.lg\:grid-cols-3 {
+                gap: 0.5rem !important;
+            }
+            
+            .text-3xl {
+                font-size: 1.5rem !important;
+            }
+            
+            button, .btn, [role="button"] {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            
+            input, select, textarea {
+                font-size: 16px !important; /* Evita zoom automático no iOS */
+            }
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -114,7 +156,7 @@
     </div>
 
     <!-- Tela de Login -->
-    <div id="login-container" class="hidden min-h-screen flex items-center justify-center">
+    <div id="login-container" class="hidden min-h-screen flex items-center justify-center p-4">
         <div class="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
             <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGAP" class="mx-auto h-24 w-auto mb-6">
             <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Sistema de Gerenciamento de Pauta</h2>
@@ -216,6 +258,10 @@
                             <button id="edit-pauta-name-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-slate-500"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                 <span>Editar Nome</span>
+                            </button>
+                            <button id="edit-pauta-type-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors whitespace-nowrap">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-blue-500"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                                <span>Editar Tipo</span>
                             </button>
                             <button id="manage-members-btn" class="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-slate-500"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -475,7 +521,7 @@
     <!-- ======================================================= -->
 
     <!-- Modal de Tipo de Pauta -->
-    <div id="pauta-type-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div id="pauta-type-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4 text-center">Tipo de Pauta</h2>
             <p class="text-gray-600 text-center mb-6">Selecione o tipo de atendimento para sua nova pauta:</p>
@@ -506,7 +552,7 @@
     </div>
 
     <!-- Modal de Criar Pauta -->
-    <div id="create-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div id="create-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Criar Nova Pauta</h2>
             <label for="create-pauta-name-input" class="block text-sm font-medium text-gray-700 mb-2">Nome da Pauta</label>
@@ -531,8 +577,39 @@
         </div>
     </div>
 
+    <!-- Modal de Editar Tipo de Pauta -->
+    <div id="edit-pauta-type-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4 text-center">Editar Tipo de Pauta</h2>
+            <p class="text-gray-600 text-center mb-6">Selecione o novo tipo de atendimento:</p>
+            <div class="space-y-4">
+                <button data-type="agendado" class="edit-pauta-type-option w-full flex items-center justify-center gap-2 p-4 bg-green-100 text-green-700 font-semibold rounded-lg hover:bg-green-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h8m-11 0h11a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
+                    </svg>
+                    Pauta de Atendimento Agendado
+                </button>
+                <button data-type="avulso" class="edit-pauta-type-option w-full flex items-center justify-center gap-2 p-4 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Pauta de Atendimento Avulso
+                </button>
+                <button data-type="multisala" class="edit-pauta-type-option w-full flex items-center justify-center gap-2 p-4 bg-blue-100 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    Pauta Multi-Salas
+                </button>
+            </div>
+            <div class="flex justify-end mt-6">
+                <button id="cancel-edit-pauta-type-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal de Ordem de Atendimento -->
-    <div id="ordem-atendimento-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div id="ordem-atendimento-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Ordem de Atendimento</h2>
             <p class="text-gray-600 mb-6">Como a fila de "Aguardando Atendimento" será organizada?</p>
@@ -567,7 +644,7 @@
     </div>
 
     <!-- Modal de Fluxo de Delegação -->
-    <div id="delegation-flow-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div id="delegation-flow-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Fluxo de Atendimento</h2>
             <p class="text-gray-600 mb-6">Deseja utilizar a coluna "Em Atendimento" para delegar a finalização a um colaborador?</p>
@@ -607,7 +684,7 @@
     </div>
 
     <!-- Modal de Compartilhamento Externo -->
-    <div id="share-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div id="share-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4 text-gray-800">Compartilhamento Externo</h2>
             <p class="text-gray-600 mb-6 text-sm">Gere um link público para que assistidos e colaboradores vejam a fila em tempo real (apenas leitura).</p>
@@ -645,7 +722,7 @@
     </div>
 
     <!-- Modal de Conclusão de Distribuição -->
-    <div id="distribution-finish-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div id="distribution-finish-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4 text-cyan-800">Concluir Distribuição</h2>
             <p class="mb-4 text-gray-600">O processo foi distribuído. Por favor, insira o número (opcional).</p>
@@ -663,7 +740,7 @@
     </div>
 
     <!-- Modal de Membros -->
-    <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
                 <h2 class="text-2xl font-bold text-gray-800">Gerenciar Membros da Pauta</h2>
@@ -687,7 +764,7 @@
     </div>
 
     <!-- Modal de Colaboradores -->
-    <div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-0 sm:p-4">
+    <div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-0 sm:p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white w-full max-w-4xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;">
             <div class="flex justify-between items-center p-4 border-b bg-gray-50 sm:rounded-t-xl shrink-0">
                 <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -782,7 +859,7 @@
     </div>
 
     <!-- Modal de Chegada -->
-    <div id="arrival-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div id="arrival-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Confirmar Horário de Chegada</h2>
             <p class="mb-4 text-gray-600">Por favor, informe o horário de chegada do assistido.</p>
@@ -801,7 +878,7 @@
     </div>
 
     <!-- Modal de Finalização de Atendimento -->
-    <div id="attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div id="attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Finalizar Atendimento</h2>
             <p class="mb-4 text-gray-600">Selecione o profissional que realizou o atendimento (opcional):</p>
@@ -818,7 +895,7 @@
     </div>
 
     <!-- Modal de Selecionar Colaborador -->
-    <div id="select-collaborator-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div id="select-collaborator-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Atender Assistido</h2>
             <p class="mb-4 text-gray-600">Selecione o colaborador que irá atender <strong id="assisted-to-attend-name"></strong> (opcional):</p>
@@ -833,7 +910,7 @@
     </div>
 
     <!-- Modal de Editar Atendente -->
-    <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Editar Atendente</h2>
             <p class="mb-4 text-gray-600">Selecione o profissional que realizou o atendimento:</p>
@@ -850,7 +927,7 @@
     </div>
 
     <!-- Modal de Delegar Finalização por Email -->
-    <div id="delegate-email-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div id="delegate-email-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Delegar Finalização de Atendimento</h2>
             <p class="mb-4 text-gray-600">Enviar link de finalização para <strong id="delegate-assisted-name"></strong>.</p>
@@ -867,7 +944,7 @@
     </div>
 
     <!-- Modal de Zerar Pauta -->
-    <div id="reset-confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div id="reset-confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg space-y-4">
             <h2 class="text-2xl font-bold text-gray-800">Zerar Pauta</h2>
             <p class="text-gray-600">Tem certeza de que deseja apagar permanentemente todos os dados desta pauta?</p>
@@ -884,7 +961,7 @@
     </div>
 
     <!-- Modal de Editar Nome da Pauta -->
-    <div id="edit-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div id="edit-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Editar Nome da Pauta</h2>
             <label for="edit-pauta-name-input" class="block text-sm font-medium text-gray-700 mb-2">Novo nome</label>
@@ -897,7 +974,7 @@
     </div>
 
     <!-- Modal de Fechar/Reabrir Pauta -->
-    <div id="close-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div id="close-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4" id="close-modal-title">Fechar Pauta</h2>
             <p class="mb-4 text-gray-600" id="close-modal-message">Para fechar esta pauta, confirme sua senha. Nenhum membro poderá fazer alterações até que você a reabra.</p>
@@ -911,7 +988,7 @@
     </div>
 
     <!-- Modal de Ajuda de Formato CSV -->
-    <div id="format-help-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div id="format-help-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl relative flex flex-col" style="max-height: 90vh;">
             <div class="flex-shrink-0">
                 <button id="close-format-help-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
@@ -956,7 +1033,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </div>
 
     <!-- Modal de Demandas -->
-    <div id="demands-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div id="demands-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg flex flex-col" style="max-height: 90vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
                 <h2 class="text-2xl font-bold text-gray-800">Gerenciar Demandas Adicionais</h2>
@@ -986,7 +1063,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </div>
 
     <!-- Modal de Editar Assistido -->
-    <div id="edit-assisted-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div id="edit-assisted-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
             <h2 class="text-2xl font-bold mb-6">Editar Dados do Assistido</h2>
             <div class="space-y-4">
@@ -1003,7 +1080,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </div>
 
     <!-- Modal de Atendimento Prioritário -->
-    <div id="priority-reason-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div id="priority-reason-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border-t-8 border-red-600">
             <h2 class="text-2xl font-bold mb-2 text-gray-800">Atendimento Prioritário</h2>
             <p class="mb-6 text-sm text-gray-500">Selecione uma ou mais categorias de prioridade legal:</p>
@@ -1030,7 +1107,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </div>
 
     <!-- Modal de Política de Privacidade -->
-    <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 80vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
                 <h2 class="text-2xl font-bold text-gray-800">Política de Privacidade</h2>
@@ -1059,7 +1136,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </div>
 
     <!-- Modal: Manual do Utilizador -->
-    <div id="manual-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div id="manual-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 80vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
                 <h2 class="text-2xl font-bold text-gray-800">Manual do Utilizador</h2>
@@ -1083,7 +1160,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </div>
     
     <!-- Modal: Termos de Uso -->
-    <div id="terms-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div id="terms-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 80vh;">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
                 <h2 class="text-2xl font-bold text-gray-800">Termos de Uso</h2>
@@ -1104,7 +1181,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </div>
 
     <!-- Modal de Detalhes -->
-    <div id="documents-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-0 sm:p-4">
+    <div id="documents-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-0 sm:p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white shadow-2xl w-full max-w-4xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;">
             <div class="flex justify-between items-center p-3 sm:p-4 border-b bg-gray-50 shrink-0 sm:rounded-t-xl">
                 <h2 class="text-xs sm:text-lg font-bold text-gray-800 truncate pr-2">
@@ -1147,7 +1224,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </div>
 
     <!-- Modal de Anotações -->
-    <div id="notes-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
+    <div id="notes-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white rounded-xl p-6 w-96 shadow-lg">
             <h2 class="text-lg font-semibold text-gray-700 mb-3">Minhas Anotações</h2>
             <textarea id="notes-text" class="w-full h-40 border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500"></textarea>
@@ -1159,7 +1236,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </div>
 
     <!-- Modal de Confirmação -->
-    <div id="confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div id="confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Confirmação</h2>
             <p id="modal-text" class="mb-6 text-gray-600">Tem certeza que deseja realizar esta ação?</p>
@@ -1171,7 +1248,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </div>
 
     <!-- Modal do Painel Admin -->
-    <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
+    <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div id="admin-window" class="bg-white rounded-lg shadow-2xl w-full max-w-4xl flex flex-col transition-all duration-300" style="max-height: 90vh;">
             <div class="flex justify-between items-center bg-gray-100 px-4 py-2 rounded-t-lg border-b select-none">
                 <div class="flex items-center gap-2">
@@ -1293,7 +1370,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </div>
 
     <!-- Modal de Estatísticas - Versão Simplificada -->
-    <div id="statistics-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[9999] p-4" style="display: none;">
+    <div id="statistics-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[9999] p-4" onclick="if(event.target === this) this.classList.add('hidden')">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-6xl flex flex-col" style="max-height: 90vh;">
             <div id="statistics-modal-header" class="flex justify-between items-center p-4 bg-green-600 text-white rounded-t-lg">
                 <h2 class="text-xl font-bold">Estatísticas da Pauta</h2>
@@ -1356,7 +1433,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { PDFService } from './js/pdfService.js';
         import { EmailService } from './js/emailService.js';
         import { escapeHTML, showNotification, normalizeText, copyToClipboard, formatTime } from './js/utils.js';
-        import { setupDetailsModal } from './js/detalhes.js';
+        import { setupDetailsModal, openDetailsModal } from './js/detalhes.js';
         import { subjectTree, flatSubjects } from './js/assuntos.js';
         import { showConfirmModal } from './js/confirmModal.js';
         import { logAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser, loadAuditLogs, exportAuditLogsPDF, loadDashboardData, populateUserFilter } from './js/admin.js';
@@ -1788,6 +1865,37 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.getElementById('edit-pauta-modal').classList.remove('hidden');
                 });
 
+                // Botão Editar Tipo de Pauta
+                document.getElementById('edit-pauta-type-btn')?.addEventListener('click', () => {
+                    document.getElementById('edit-pauta-type-modal').classList.remove('hidden');
+                });
+
+                // Opções de edição de tipo
+                document.querySelectorAll('.edit-pauta-type-option').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const newType = e.currentTarget.dataset.type;
+                        
+                        try {
+                            const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                            await updateDoc(pautaRef, { type: newType });
+                            
+                            this.currentPautaData.type = newType;
+                            this.currentPauta.type = newType;
+                            
+                            showNotification(`Tipo de pauta atualizado para ${newType}`);
+                            document.getElementById('edit-pauta-type-modal').classList.add('hidden');
+                            
+                        } catch (error) {
+                            console.error("Erro ao atualizar tipo:", error);
+                            showNotification("Erro ao atualizar tipo", "error");
+                        }
+                    });
+                });
+
+                document.getElementById('cancel-edit-pauta-type-btn')?.addEventListener('click', () => {
+                    document.getElementById('edit-pauta-type-modal').classList.add('hidden');
+                });
+
                 document.getElementById('manage-members-btn')?.addEventListener('click', async () => {
                     console.log("Botão gerenciar membros clicado");
                     
@@ -2127,14 +2235,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const select = document.getElementById('attendant-select');
                     const attendantName = select?.value;
                     
-                    // Se não selecionou, usar null (opcional)
                     const nomeFinal = attendantName || null;
                     
-                    // Verificar se tem distribuição ativa
                     const useDist = this.currentPautaData?.useDistributionFlow === true;
                     const novoStatus = useDist ? 'aguardandoDistribuicao' : 'atendido';
 
-                    // Buscar colaborador completo se existir
                     let attendantData = nomeFinal;
                     if (nomeFinal) {
                         const selectedCollab = this.colaboradores?.find(c => c.nome === nomeFinal);
@@ -2182,7 +2287,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         return;
                     }
                     
-                    // Buscar colaborador completo se existir
                     const selectedCollab = this.colaboradores?.find(c => c.nome === attendantName);
                     let attendantData = selectedCollab ? 
                         { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe } : 
@@ -2332,7 +2436,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (text) {
                         const container = document.getElementById('demands-modal-list-container');
                         if (container) {
-                            // Remover mensagem de vazio se existir
                             if (container.querySelector('p.text-gray-500')) {
                                 container.innerHTML = '';
                             }
@@ -2349,7 +2452,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 });
 
-                // Remover demanda (delegação)
                 document.getElementById('demands-modal-list-container')?.addEventListener('click', (e) => {
                     if (e.target.classList.contains('remove-demand-item-btn')) {
                         const li = e.target.closest('li');
@@ -2362,7 +2464,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 });
 
-                // Salvar demandas
                 document.getElementById('save-demands-btn')?.addEventListener('click', async () => {
                     const container = document.getElementById('demands-modal-list-container');
                     const items = container?.querySelectorAll('li') || [];
@@ -2385,7 +2486,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.getElementById('demands-modal')?.classList.add('hidden');
                 });
 
-                // Fechar modal de demandas
                 document.getElementById('cancel-demands-btn')?.addEventListener('click', () => {
                     document.getElementById('demands-modal')?.classList.add('hidden');
                 });
@@ -2398,7 +2498,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 // LISTENERS DO MODAL DE CONFIRMAÇÃO DE RESET
                 // ================================================
 
-                // Confirmar reset
                 document.getElementById('confirm-reset-btn')?.addEventListener('click', async () => {
                     const attendanceCollectionRef = collection(this.db, "pautas", this.currentPauta.id, "attendances");
                     const snapshot = await getDocs(attendanceCollectionRef);
@@ -2417,7 +2516,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.getElementById('reset-confirm-modal')?.classList.add('hidden');
                 });
 
-                // Cancelar reset
                 document.getElementById('cancel-reset-btn')?.addEventListener('click', () => {
                     document.getElementById('reset-confirm-modal')?.classList.add('hidden');
                 });
@@ -2426,7 +2524,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 // LISTENERS DO MODAL DE EDIÇÃO DE NOME DA PAUTA
                 // ================================================
 
-                // Confirmar edição de nome
                 document.getElementById('confirm-edit-pauta-btn')?.addEventListener('click', async () => {
                     const newName = document.getElementById('edit-pauta-name-input')?.value.trim();
                     if (newName && this.currentPauta?.id) {
@@ -2439,7 +2536,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 });
 
-                // Cancelar edição de nome
                 document.getElementById('cancel-edit-pauta-btn')?.addEventListener('click', () => {
                     document.getElementById('edit-pauta-modal')?.classList.add('hidden');
                 });
@@ -2448,7 +2544,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 // LISTENERS DO MODAL DE FECHAR/REABRIR PAUTA
                 // ================================================
 
-                // Confirmar fechar/reabrir pauta
                 document.getElementById('confirm-close-pauta-btn')?.addEventListener('click', async () => {
                     const password = document.getElementById('close-pauta-password')?.value;
                     const errorDiv = document.getElementById('close-auth-error');
@@ -2464,7 +2559,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
 
                     try {
-                        // Reautenticar
                         const credential = EmailAuthProvider.credential(user.email, password);
                         await reauthenticateWithCredential(user, credential);
                         
@@ -2486,7 +2580,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 });
 
-                // Cancelar fechar/reabrir
                 document.getElementById('cancel-close-pauta-btn')?.addEventListener('click', () => {
                     document.getElementById('close-pauta-modal')?.classList.add('hidden');
                 });
@@ -2495,7 +2588,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 // LISTENERS DO MODAL DE DELEGAÇÃO POR EMAIL
                 // ================================================
 
-                // Enviar email de delegação
                 document.getElementById('send-delegate-email-btn')?.addEventListener('click', async () => {
                     const emailInput = document.getElementById('collaborator-email-input');
                     const emailDestino = emailInput?.value.trim();
@@ -2543,7 +2635,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 });
 
-                // Cancelar delegação
                 document.getElementById('cancel-delegate-email-btn')?.addEventListener('click', () => {
                     document.getElementById('delegate-email-modal')?.classList.add('hidden');
                 });
@@ -2572,7 +2663,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                                     
                                     showNotification(`Membro ${email} removido`);
                                     
-                                    // Recarregar o modal
                                     if (typeof ModalService?.openMembersModal === 'function') {
                                         await ModalService.openMembersModal(this);
                                     }
@@ -2709,7 +2799,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
                     console.log("Carregando logs de auditoria...");
                     
-                    // Mostra indicador de carregamento
                     const btn = document.getElementById('view-audit-logs-btn');
                     const originalText = btn.textContent;
                     btn.textContent = "Carregando...";
@@ -2736,14 +2825,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
 
             async loadPauta(pautaId, pautaName, pautaType) {
-                // Verificar se a pauta não está expirada
                 try {
                     const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
                     
                     if (pautaDoc.exists()) {
                         const pautaData = pautaDoc.data();
                         
-                        // Verificar expiração (7 dias)
                         if (pautaData.createdAt) {
                             const creationDate = new Date(pautaData.createdAt);
                             const expirationDate = new Date(creationDate);
@@ -2805,18 +2892,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             }
 
-            // ===== NOVOS MÉTODOS PARA FILTROS E LIXEIRA =====
             async showPautaSelectionScreen() {
                 UIService.showScreen('pautaSelection');
                 
-                // Estado do filtro (persistir na classe)
                 this.currentPautaFilter = this.currentPautaFilter || 'all';
                 
-                // Renderizar os filtros
                 UIService.renderPautaFilters('filters-container', this.currentPautaFilter, async (filter) => {
                     this.currentPautaFilter = filter;
                     await this.loadPautasWithFilter();
-                });
+                }, this);
                 
                 await this.loadPautasWithFilter();
             }
@@ -2834,7 +2918,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas...</p>';
             
                 try {
-                    // Buscar todas as pautas que o usuário tem acesso
                     const q = query(
                         collection(this.db, "pautas"),
                         where("members", "array-contains", user.uid)
@@ -2843,7 +2926,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const snapshot = await getDocs(q);
                     let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     
-                    // Preparar filtros adicionais para período
                     const filtrosAdicionais = {};
                     
                     if (this.currentPautaFilter === 'periodo') {
@@ -2852,7 +2934,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         filtrosAdicionais.tipo = document.getElementById('filter-tipo-pauta')?.value;
                     }
                     
-                    // Aplicar filtro usando o PautaService
                     const filteredPautas = PautaService.filterPautas(
                         pautas, 
                         this.currentPautaFilter, 
@@ -2861,7 +2942,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         filtrosAdicionais
                     );
                     
-                    // Renderizar cards usando o PautaService
                     PautaService.renderPautaCards(
                         filteredPautas, 
                         user.uid, 
@@ -2877,7 +2957,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             }
 
-            // Método deletePauta para ser chamado pelos botões
             async deletePauta(pautaId, pautaName) {
                 console.log("🗑️ Tentando deletar pauta:", pautaId, pautaName);
                 
@@ -2897,7 +2976,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     );
                     
                     if (success) {
-                        // Recarregar a lista de pautas
                         await this.loadPautasWithFilter();
                     }
                 } catch (error) {
@@ -2906,26 +2984,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             }
 
-            // ================================================
-            // NOVOS MÉTODOS PARA REFRESH DA LISTA
-            // ================================================
-            
-            /**
-             * Método para dar refresh na lista de assistidos
-             */
             refreshAssistedList() {
                 if (this.unsubscribeFromAttendances) {
-                    // O listener já vai atualizar automaticamente
                     console.log("🔄 Lista será atualizada pelo listener");
                 } else {
-                    // Recarregar manualmente
                     this.loadAssistedList();
                 }
             }
             
-            /**
-             * Carrega a lista de assistidos manualmente
-             */
             async loadAssistedList() {
                 if (!this.currentPauta?.id) return;
                 
@@ -2953,18 +3019,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
         }
 
-        // Tornar funções globais
         window.showNotification = showNotification;
         window.openDetailsModal = openDetailsModal;
 
-        // Inicializar a aplicação
         window.app = new SIGAPApp();
 
-        // Garantir que o método deletePauta está disponível globalmente APÓS a inicialização
         setTimeout(() => {
             if (window.app && typeof window.app.deletePauta === 'function') {
                 console.log("✅ Método deletePauta disponível globalmente");
-                // Garantir que o método está vinculado ao objeto app
                 window.app.deletePauta = window.app.deletePauta.bind(window.app);
             } else if (window.app) {
                 console.log("⚠️ Recriando método deletePauta");
@@ -2974,7 +3036,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
         }, 500);
 
-        // Debug - verificar se o método existe
         console.log("🔍 Verificando métodos:", {
             deletePauta: typeof window.app?.deletePauta,
             loadPauta: typeof window.app?.loadPauta
