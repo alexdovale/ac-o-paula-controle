@@ -1,6 +1,6 @@
 /**
  * detalhes.js - SIGAP
- * Versão COMPLETA com busca de CEP, campos do réu, planilha de gastos e PDF integrado com PDFService
+ * Versão COMPLETA e CORRIGIDA com busca de CEP, campos do réu, planilha de gastos e PDF integrado com PDFService
  */
 
 import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -262,7 +262,7 @@ function renderChecklist(actionKey) {
         `;
         containerEl.appendChild(expenseButton);
         
-        if (saved?.expenseData && Object.values(saved.expenseData).some(v => v)) {
+        if (saved?.expenseData && Object.values(saved.expenseData).some(v => v && v !== 'R$ 0,00')) {
             expenseButton.style.display = 'none';
             let expenseContainer = document.getElementById('expense-table-container');
             if (!expenseContainer) {
@@ -492,7 +492,7 @@ function renderExpenseTable() {
     return div;
 }
 
-// --- 12. FUNÇÕES PARA PEGAR DADOS DOS FORMULÁRIOS ---
+// --- 12. FUNÇÕES CORRIGIDAS PARA PEGAR DADOS DOS FORMULÁRIOS ---
 function getReuDataFromForm() {
     return {
         nome: getEl('nome-reu')?.value || '',
@@ -513,7 +513,14 @@ function getExpenseDataFromForm() {
     const d = {};
     EXPENSE_CATEGORIES.forEach(cat => {
         const el = getEl(`expense-${cat.id}`);
-        d[cat.id] = el ? el.value || '' : '';
+        let valor = el ? el.value || '' : '';
+        
+        // Garantir que nunca retorne undefined
+        if (!valor || valor.trim() === '') {
+            valor = 'R$ 0,00';
+        }
+        
+        d[cat.id] = valor;
     });
     return d;
 }
@@ -557,7 +564,7 @@ function fillExpenseData(d) {
     if(totalEl) totalEl.textContent = formatCurrency(total);
 }
 
-// --- 13. FUNÇÃO PARA GERAR PDF (CORRIGIDA - INCLUI TODOS OS DADOS) ---
+// --- 13. FUNÇÃO CORRIGIDA PARA GERAR PDF ---
 async function handlePdf() {
     showNotification("Gerando PDF...", "info");
     
@@ -601,17 +608,17 @@ async function handlePdf() {
         
         console.log("📄 Documentos marcados:", documentosTextos.length);
         
-        // 3. COLETAR DADOS DO RÉU (IMPORTANTE)
+        // 3. COLETAR DADOS DO RÉU (CORRIGIDO)
         const reuData = getReuDataFromForm();
         console.log("👤 Dados do réu coletados:", reuData);
         
-        // 4. COLETAR DADOS DA PLANILHA DE GASTOS (IMPORTANTE)
+        // 4. COLETAR DADOS DA PLANILHA DE GASTOS (CORRIGIDO)
         const expenseData = getExpenseDataFromForm();
         console.log("💰 Dados de gastos coletados:", expenseData);
         
         // 5. Verificar se há dados
         const hasReu = Object.values(reuData).some(v => v && v.trim() !== '');
-        const hasExpenses = Object.values(expenseData).some(v => v && v.trim() !== '');
+        const hasExpenses = Object.values(expenseData).some(v => v && v !== 'R$ 0,00');
         
         console.log("📊 Tem dados do réu?", hasReu);
         console.log("📊 Tem dados de gastos?", hasExpenses);
@@ -664,7 +671,7 @@ async function handlePdf() {
     }
 }
 
-// --- 14. AÇÕES (SALVAR, RESET, VOLTAR) ---
+// --- 14. FUNÇÃO CORRIGIDA PARA SALVAR ---
 async function handleSave(closeModal = true) {
     console.log("💾 handleSave chamado");
     
@@ -692,6 +699,7 @@ async function handleSave(closeModal = true) {
         docTypes[id] = radio ? radio.value : 'Físico';
     });
 
+    // Usar as funções corrigidas
     const reuData = getReuDataFromForm();
     const expenseData = getExpenseDataFromForm();
     
@@ -760,7 +768,32 @@ function handleBack() {
     getEl('address-editor-container')?.classList.add('hidden');
 }
 
-// --- 15. EXPORTS PRINCIPAIS ---
+// --- 15. FUNÇÃO DE DIAGNÓSTICO ---
+window.diagnosticarPDF = function() {
+    console.log("=".repeat(60));
+    console.log("🔍 DIAGNÓSTICO COMPLETO DO PDF");
+    console.log("=".repeat(60));
+    
+    console.log("\n1. DADOS DO RÉU:");
+    const reu = getReuDataFromForm();
+    console.table(reu);
+    
+    console.log("\n2. DADOS DE GASTOS:");
+    const gastos = getExpenseDataFromForm();
+    console.table(gastos);
+    
+    console.log("\n3. DOCUMENTOS MARCADOS:");
+    const docs = [];
+    document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
+        docs.push(cb.id);
+    });
+    console.log(docs);
+    
+    console.log("\n✅ Diagnóstico concluído!");
+    return { reu, gastos, docs };
+};
+
+// --- 16. EXPORTS PRINCIPAIS ---
 export function setupDetailsModal(config) {
     console.log("⚙️ setupDetailsModal chamado", config);
     db = config.db;
@@ -943,27 +976,5 @@ window.setupDetailsModal = setupDetailsModal;
 window.documentsData = documentsData;
 window.getReuDataFromForm = getReuDataFromForm;
 window.getExpenseDataFromForm = getExpenseDataFromForm;
-
-// Função de diagnóstico
-window.diagnosticarPDF = function() {
-    console.log("=".repeat(50));
-    console.log("🔍 DIAGNÓSTICO DO PDF");
-    console.log("=".repeat(50));
-    
-    console.log("\n1. DADOS DO RÉU:");
-    const reu = getReuDataFromForm();
-    console.log(reu);
-    
-    console.log("\n2. DADOS DE GASTOS:");
-    const gastos = getExpenseDataFromForm();
-    console.log(gastos);
-    
-    console.log("\n3. DOCUMENTOS MARCADOS:");
-    document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
-        console.log("-", cb.id);
-    });
-    
-    return { reu, gastos };
-};
 
 console.log("✅ detalhes.js carregado com sucesso!");
