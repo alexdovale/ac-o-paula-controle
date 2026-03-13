@@ -199,7 +199,7 @@ export const updateAdminStats = async (db) => {
 };
 
 /**
- * LIMPEZA LGPD COM SALVAMENTO DE BI (Observatório)
+ * LIMPEZA LGPD COM SALVAMENTO DE BI (Observatório) - VERSÃO CORRIGIDA
  */
 export const cleanupOldData = async (db) => {
     if (!confirm("Isso apagará dados sensíveis de assistidos com mais de 7 dias. Os números de produtividade serão salvos anonimamente. Confirmar?")) return;
@@ -207,8 +207,11 @@ export const cleanupOldData = async (db) => {
     try {
         const limitDate = new Date();
         limitDate.setDate(limitDate.getDate() - 7);
+        console.log("🗑️ Apagando dados anteriores a:", limitDate.toISOString());
+        
         const pautas = await getDocs(collection(db, "pautas"));
         let count = 0;
+        let statsCount = 0;
 
         for (const pautaDoc of pautas.docs) {
             const pautaData = pautaDoc.data();
@@ -217,25 +220,38 @@ export const cleanupOldData = async (db) => {
             const snapshot = await getDocs(q);
 
             if (!snapshot.empty) {
+                console.log(`📊 Processando pauta ${pautaData.name}: ${snapshot.size} registros`);
+                
                 // CRIAR RESUMO AGREGADO (Sem nomes ou CPFs)
                 const stats = {
                     pautaName: pautaData.name || 'Sem nome',
                     creatorEmail: pautaData.ownerEmail || 'Desconhecido',
+                    creatorId: pautaData.owner || 'desconhecido',
                     dataReferencia: limitDate.toISOString(),
+                    dataProcessamento: new Date().toISOString(),
                     total: snapshot.size,
                     atendidos: snapshot.docs.filter(d => d.data().status === 'atendido').length,
                     faltosos: snapshot.docs.filter(d => d.data().status === 'faltoso').length,
-                    assuntos: {}
+                    aguardando: snapshot.docs.filter(d => d.data().status === 'aguardando').length,
+                    assuntos: {},
+                    horarios: {}
                 };
 
                 // Contabiliza assuntos de forma anônima
                 snapshot.docs.forEach(d => {
-                    const sub = d.data().subject || 'Não informado';
+                    const data = d.data();
+                    const sub = data.subject || 'Não informado';
                     stats.assuntos[sub] = (stats.assuntos[sub] || 0) + 1;
+                    
+                    // Contabiliza por horário
+                    if (data.scheduledTime) {
+                        stats.horarios[data.scheduledTime] = (stats.horarios[data.scheduledTime] || 0) + 1;
+                    }
                 });
 
                 // SALVA NO HISTÓRICO PERMANENTE
                 await addDoc(collection(db, "estatisticas_permanentes"), stats);
+                statsCount++;
 
                 // APAGA OS REGISTROS ORIGINAIS
                 const batch = writeBatch(db);
@@ -244,11 +260,98 @@ export const cleanupOldData = async (db) => {
                 count += snapshot.size;
             }
         }
-        showNotification(`✅ Sucesso! ${count} registros sensíveis limpos e métricas salvas.`);
+        
+        if (count > 0) {
+            showNotification(`✅ Sucesso! ${count} registros limpos e ${statsCount} estatísticas salvas.`);
+        } else {
+            showNotification("Nenhum registro antigo encontrado para limpeza.", "info");
+        }
         
     } catch (error) {
         console.error("Erro na limpeza:", error);
         showNotification("Erro ao executar limpeza: " + error.message, "error");
+    }
+};
+
+/**
+ * GERA DADOS DE TESTE PARA O BI (apenas para testes)
+ */
+export const generateTestData = async (db) => {
+    if (!confirm("Gerar dados de teste para o BI? Isso criará estatísticas falsas para teste.")) return;
+    
+    try {
+        const testData = [
+            {
+                pautaName: "Pauta Teste 1",
+                creatorEmail: "teste1@email.com",
+                dataReferencia: new Date(Date.now() - 10*24*60*60*1000).toISOString(), // 10 dias atrás
+                dataProcessamento: new Date().toISOString(),
+                total: 15,
+                atendidos: 10,
+                faltosos: 5,
+                aguardando: 0,
+                assuntos: {
+                    "Alimentos": 8,
+                    "Divórcio": 4,
+                    "Guarda": 3
+                },
+                horarios: {
+                    "09:00": 5,
+                    "10:00": 4,
+                    "11:00": 6
+                }
+            },
+            {
+                pautaName: "Pauta Teste 2",
+                creatorEmail: "teste2@email.com",
+                dataReferencia: new Date(Date.now() - 15*24*60*60*1000).toISOString(), // 15 dias atrás
+                dataProcessamento: new Date().toISOString(),
+                total: 20,
+                atendidos: 15,
+                faltosos: 5,
+                aguardando: 0,
+                assuntos: {
+                    "Alimentos": 10,
+                    "Investigação": 6,
+                    "Curatela": 4
+                },
+                horarios: {
+                    "08:00": 7,
+                    "09:00": 8,
+                    "10:00": 5
+                }
+            },
+            {
+                pautaName: "Pauta Teste 3",
+                creatorEmail: "teste3@email.com",
+                dataReferencia: new Date(Date.now() - 20*24*60*60*1000).toISOString(), // 20 dias atrás
+                dataProcessamento: new Date().toISOString(),
+                total: 8,
+                atendidos: 6,
+                faltosos: 2,
+                aguardando: 0,
+                assuntos: {
+                    "Alimentos": 3,
+                    "Divórcio": 3,
+                    "Curatela": 2
+                },
+                horarios: {
+                    "14:00": 4,
+                    "15:00": 4
+                }
+            }
+        ];
+        
+        for (const data of testData) {
+            await addDoc(collection(db, "estatisticas_permanentes"), data);
+        }
+        
+        showNotification("✅ Dados de teste gerados com sucesso!");
+        loadDashboardData(db);
+        
+    } catch (error) {
+        console.error("Erro ao gerar dados de teste:", error);
+        showNotification("Erro ao gerar dados de teste", "error");
     }
 };
 
@@ -305,6 +408,7 @@ export const loadAuditLogs = async (db) => {
     const logsContainer = document.getElementById('audit-logs-container');
     const tableBody = document.getElementById('audit-logs-table-body');
     const pdfBtn = document.getElementById('export-audit-pdf-btn');
+    const filterSection = document.getElementById('audit-filters-section');
     
     if (!logsContainer || !tableBody) {
         console.error("❌ Elementos de log não encontrados:", {
@@ -313,6 +417,11 @@ export const loadAuditLogs = async (db) => {
         });
         showNotification("Erro: elementos da interface não encontrados", "error");
         return;
+    }
+
+    // Mostrar seção de filtros se existir
+    if (filterSection) {
+        filterSection.classList.remove('hidden');
     }
 
     // Mostra loading
@@ -356,6 +465,13 @@ export const loadAuditLogs = async (db) => {
         if (endDate) {
             constraints.push(where("timestamp", "<=", endDate + "T23:59:59"));
         }
+        
+        console.log("📊 Filtros aplicados:", {
+            user: userFilter,
+            action: actionFilter,
+            start: startDate,
+            end: endDate
+        });
         
         // Montar query
         let q;
@@ -621,7 +737,7 @@ export const exportAuditLogsPDF = async (db) => {
 };
 
 /**
- * CARREGA O DASHBOARD DE BI (OBSERVATÓRIO) - CORRIGIDO
+ * CARREGA O DASHBOARD DE BI (OBSERVATÓRIO) - VERSÃO CORRIGIDA
  */
 export const loadDashboardData = async (db) => {
     const start = document.getElementById('stats-filter-start')?.value;
@@ -635,17 +751,36 @@ export const loadDashboardData = async (db) => {
     }
     
     resultsArea.classList.remove('hidden');
-    showNotification("Analisando dados históricos...");
+    resultsArea.innerHTML = '<div class="text-center py-8"><div class="loader-small mx-auto"></div><p class="text-gray-600 mt-2">Carregando dados...</p></div>';
 
     try {
+        // Buscar dados
         const snapshot = await getDocs(collection(db, "estatisticas_permanentes"));
         
+        console.log("📊 Total de documentos na coleção:", snapshot.size);
+        
         if (snapshot.empty) {
-            resultsArea.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">Nenhum dado estatístico encontrado.</p><p class="text-xs text-gray-500 mt-2">Execute a limpeza de 7 dias para gerar dados.</p></div>';
+            resultsArea.innerHTML = `
+                <div class="text-center py-12">
+                    <p class="text-gray-500 mb-2">Nenhum dado estatístico encontrado.</p>
+                    <p class="text-xs text-gray-400 mb-4">Execute a limpeza de 7 dias para gerar dados ou use o botão abaixo para gerar dados de teste.</p>
+                    <button id="generate-test-data-btn" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-purple-700">
+                        Gerar Dados de Teste
+                    </button>
+                </div>
+            `;
+            
+            // Adicionar evento ao botão de teste
+            document.getElementById('generate-test-data-btn')?.addEventListener('click', () => {
+                generateTestData(db);
+            });
+            
             return;
         }
         
         let filteredData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        
+        console.log("📊 Dados brutos:", filteredData);
 
         // Filtro de Data
         if (start) {
@@ -659,6 +794,8 @@ export const loadDashboardData = async (db) => {
         if (userFilter && userFilter !== 'all') {
             filteredData = filteredData.filter(d => d.creatorEmail === userFilter);
         }
+
+        console.log("📊 Dados após filtros:", filteredData);
 
         if (filteredData.length === 0) {
             resultsArea.innerHTML = '<div class="text-center py-8 text-gray-400">Nenhum dado encontrado com os filtros selecionados.</div>';
@@ -682,11 +819,22 @@ export const loadDashboardData = async (db) => {
                 for (let [key, val] of Object.entries(d.assuntos)) {
                     mapAssuntos[key] = (mapAssuntos[key] || 0) + val;
                 }
+            } else {
+                // Se não tiver assuntos, adiciona um genérico
+                mapAssuntos['Não especificado'] = (mapAssuntos['Não especificado'] || 0) + (d.total || 0);
             }
 
             // Soma produtividade por usuário
             const userKey = d.creatorEmail || 'Desconhecido';
             mapUsers[userKey] = (mapUsers[userKey] || 0) + (d.atendidos || 0);
+        });
+
+        console.log("📊 Dados consolidados:", {
+            totalGeral,
+            totalAtendidos,
+            totalFaltosos,
+            mapAssuntos,
+            mapUsers
         });
 
         // Atualização da Interface (Cards Superiores)
@@ -727,7 +875,7 @@ export const loadDashboardData = async (db) => {
 
     } catch (error) {
         console.error("Dashboard Error:", error);
-        showNotification("Erro ao processar dados: " + error.message, "error");
+        resultsArea.innerHTML = `<div class="text-center py-8 text-red-500">Erro ao carregar dados: ${error.message}</div>`;
     }
 };
 
@@ -766,5 +914,6 @@ window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
 window.loadDashboardData = () => loadDashboardData(window.app?.db);
 window.populateUserFilter = () => populateUserFilter(window.app?.db);
 window.loadLogFilters = () => loadLogFilters(window.app?.db);
+window.generateTestData = () => generateTestData(window.app?.db);
 
 console.log("✅ Módulo admin.js carregado com sucesso");
