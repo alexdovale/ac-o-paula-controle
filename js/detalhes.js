@@ -1,6 +1,6 @@
 /**
  * detalhes.js - SIGAP
- * Versão COMPLETA e CORRIGIDA com busca de CEP, campos do réu, planilha de gastos e PDF integrado com PDFService
+ * Versão COMPLETA com gastos e réu como itens do checklist
  */
 
 import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -492,7 +492,7 @@ function renderExpenseTable() {
     return div;
 }
 
-// --- 12. FUNÇÕES CORRIGIDAS PARA PEGAR DADOS DOS FORMULÁRIOS ---
+// --- 12. FUNÇÕES PARA PEGAR DADOS DOS FORMULÁRIOS ---
 function getReuDataFromForm() {
     return {
         nome: getEl('nome-reu')?.value || '',
@@ -509,34 +509,12 @@ function getReuDataFromForm() {
     };
 }
 
-// ===== FUNÇÃO CORRIGIDA URGENTE =====
 function getExpenseDataFromForm() {
-    console.log("🔍 Coletando dados de gastos...");
     const d = {};
-    
-    // Lista de categorias que você quer capturar
-    const categorias = ['moradia', 'alimentacao', 'educacao', 'saude', 'vestuario', 'lazer', 'outras'];
-    
-    categorias.forEach(cat => {
-        // Tenta encontrar o elemento de várias formas
-        let el = document.getElementById(`expense-${cat}`); // Formato que seu código espera
-        
-        // Se não encontrar, tenta outros formatos comuns
-        if (!el) el = document.getElementById(`gasto-${cat}`);
-        if (!el) el = document.getElementById(`expense_${cat}`);
-        if (!el) el = document.querySelector(`[id*="${cat}"]`); // Qualquer ID que contenha a categoria
-        
-        // Se encontrou o elemento, pega o valor
-        if (el) {
-            d[cat] = el.value || '';
-            console.log(`  ✅ ${cat}: "${d[cat]}"`);
-        } else {
-            console.log(`  ❌ Elemento para ${cat} não encontrado`);
-            d[cat] = ''; // Valor vazio em vez de undefined
-        }
+    EXPENSE_CATEGORIES.forEach(cat => {
+        const el = getEl(`expense-${cat.id}`);
+        d[cat.id] = el ? el.value || '' : '';
     });
-    
-    console.log("📊 Dados coletados:", d);
     return d;
 }
 
@@ -579,7 +557,7 @@ function fillExpenseData(d) {
     if(totalEl) totalEl.textContent = formatCurrency(total);
 }
 
-// --- 13. FUNÇÃO CORRIGIDA PARA GERAR PDF ---
+// --- 13. FUNÇÃO PRINCIPAL PARA GERAR PDF (GASTOS E RÉU COMO ITENS) ---
 async function handlePdf() {
     showNotification("Gerando PDF...", "info");
     
@@ -595,7 +573,7 @@ async function handlePdf() {
         console.log("👤 Assistido:", assistedName);
         console.log("📋 Ação:", actionTitle);
         
-        // 2. Coletar documentos marcados
+        // 2. Coletar documentos marcados no checklist original
         const documentosTextos = [];
         document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
             let text = '';
@@ -621,38 +599,135 @@ async function handlePdf() {
             });
         });
         
-        console.log("📄 Documentos marcados:", documentosTextos.length);
+        // ===== 3. VERIFICAR DADOS DO RÉU =====
+        const reu = getReuDataFromForm();
         
-        // 3. COLETAR DADOS DO RÉU (CORRIGIDO)
-        const reuData = getReuDataFromForm();
-        console.log("👤 Dados do réu coletados:", reuData);
+        // Verificar se TEM dados do réu preenchidos
+        const temReu = Object.values(reu).some(v => v && v.trim() !== '');
         
-        // 4. COLETAR DADOS DA PLANILHA DE GASTOS (CORRIGIDO)
-        const expenseData = getExpenseDataFromForm();
-        console.log("💰 Dados de gastos coletados:", expenseData);
+        if (temReu) {
+            console.log("👤 DADOS DA PARTE CONTRÁRIA encontrados!");
+            
+            // Criar linhas para cada campo preenchido do réu
+            const linhasReu = [];
+            
+            // Nome (sempre importante)
+            if (reu.nome && reu.nome.trim() !== '') {
+                linhasReu.push(`👤 Nome do Réu: ${reu.nome}`);
+            }
+            
+            // CPF e Telefone
+            if (reu.cpf && reu.cpf.trim() !== '') {
+                linhasReu.push(`📄 CPF do Réu: ${reu.cpf}`);
+            }
+            
+            if (reu.telefone && reu.telefone.trim() !== '') {
+                linhasReu.push(`📞 Telefone do Réu: ${reu.telefone}`);
+            }
+            
+            // ENDEREÇO COMPLETO
+            if (reu.cep && reu.cep.trim() !== '') {
+                linhasReu.push(`📍 CEP do Réu: ${reu.cep}`);
+            }
+            
+            if (reu.rua && reu.rua.trim() !== '') {
+                let enderecoCompleto = `🏠 Endereço do Réu: ${reu.rua}`;
+                if (reu.numero && reu.numero.trim() !== '') {
+                    enderecoCompleto += `, nº ${reu.numero}`;
+                }
+                linhasReu.push(enderecoCompleto);
+            }
+            
+            if (reu.bairro && reu.bairro.trim() !== '') {
+                linhasReu.push(`🏘️ Bairro do Réu: ${reu.bairro}`);
+            }
+            
+            if (reu.cidade && reu.cidade.trim() !== '') {
+                let cidadeLinha = `🌆 Cidade do Réu: ${reu.cidade}`;
+                if (reu.uf && reu.uf.trim() !== '') {
+                    cidadeLinha += ` - ${reu.uf}`;
+                }
+                linhasReu.push(cidadeLinha);
+            }
+            
+            // Dados do trabalho
+            if (reu.empresa && reu.empresa.trim() !== '') {
+                linhasReu.push(`💼 Empresa do Réu: ${reu.empresa}`);
+            }
+            
+            if (reu.enderecoTrabalho && reu.enderecoTrabalho.trim() !== '') {
+                linhasReu.push(`🏢 Endereço Comercial do Réu: ${reu.enderecoTrabalho}`);
+            }
+            
+            // Adicionar CADA linha como um item separado no checklist
+            linhasReu.forEach((linha, index) => {
+                documentosTextos.push({
+                    id: `reu-item-${index}`,
+                    text: linha
+                });
+            });
+        }
         
-        // 5. Verificar se há dados
-        const hasReu = Object.values(reuData).some(v => v && v.trim() !== '');
-        const hasExpenses = Object.values(expenseData).some(v => v && v !== 'R$ 0,00');
+        // ===== 4. VERIFICAR GASTOS =====
+        const gastos = getExpenseDataFromForm();
+        const categorias = ['moradia', 'alimentacao', 'educacao', 'saude', 'vestuario', 'lazer', 'outras'];
+        const nomesCategorias = {
+            moradia: 'Moradia',
+            alimentacao: 'Alimentação',
+            educacao: 'Educação',
+            saude: 'Saúde',
+            vestuario: 'Vestuário',
+            lazer: 'Lazer',
+            outras: 'Outras'
+        };
         
-        console.log("📊 Tem dados do réu?", hasReu);
-        console.log("📊 Tem dados de gastos?", hasExpenses);
+        // Verificar se TEM gastos preenchidos
+        const temGastos = Object.values(gastos).some(v => v && v !== 'R$ 0,00' && v.trim() !== '');
         
-        // 6. Preparar dados completos do checklist
+        if (temGastos) {
+            console.log("💰 GASTOS MENSAIS encontrados!");
+            
+            // Adicionar título da seção de gastos
+            documentosTextos.push({
+                id: 'gastos-titulo',
+                text: '💰 PLANILHA DE GASTOS MENSAIS:'
+            });
+            
+            // Adicionar CADA gasto como um item separado
+            categorias.forEach(cat => {
+                const valor = gastos[cat];
+                if (valor && valor !== 'R$ 0,00' && valor.trim() !== '') {
+                    documentosTextos.push({
+                        id: `gasto-${cat}`,
+                        text: `   • ${nomesCategorias[cat]}: ${valor}`
+                    });
+                }
+            });
+        }
+        
+        console.log("📄 TOTAL DE ITENS PARA O PDF:", documentosTextos.length);
+        console.log("📄 ITENS:", documentosTextos.map(d => d.text));
+        
+        // 5. Preparar checklistData
         const checklistData = {
             checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
             docTypes: getDocTypesFromForm(),
-            reuData: reuData,
-            expenseData: expenseData
+            reuData: reu,
+            expenseData: gastos
         };
         
-        console.log("📦 Dados completos enviados para o PDFService:", {
-            checkedIds: checklistData.checkedIds.length,
-            reuData: checklistData.reuData,
-            expenseData: checklistData.expenseData
+        // Adicionar os IDs dos novos itens ao checkedIds
+        documentosTextos.forEach(item => {
+            if (item.id.startsWith('reu-item-') || item.id.startsWith('gasto-') || item.id === 'gastos-titulo') {
+                checklistData.checkedIds.push(item.id);
+                if (!checklistData.docTypes) checklistData.docTypes = {};
+                checklistData.docTypes[item.id] = 'Digital';
+            }
         });
         
-        // 7. Gerar PDF com TODOS os dados
+        console.log("📦 Dados completos enviados:", checklistData);
+        
+        // 6. Gerar PDF
         const resultado = PDFService.generateChecklistPDF(
             assistedName, 
             actionTitle, 
@@ -663,30 +738,19 @@ async function handlePdf() {
         if (resultado) {
             console.log("✅ PDF gerado com sucesso!");
             showNotification("PDF gerado com sucesso!");
-            
-            // Salvar dados e atualizar estado
             await handleSave(false);
-            
-            if (currentAssistedId && currentPautaId && db) {
-                await updateDocumentState('pdf');
-            }
-            
-            if (window.app && typeof window.app.refreshAssistedList === 'function') {
-                window.app.refreshAssistedList();
-            }
-            
         } else {
             console.error("❌ Erro ao gerar PDF");
             showNotification("Erro ao gerar PDF", "error");
         }
         
     } catch (err) {
-        console.error("❌ Erro ao gerar PDF:", err);
+        console.error("❌ Erro:", err);
         showNotification("Erro ao gerar PDF: " + err.message, "error");
     }
 }
 
-// --- 14. FUNÇÃO CORRIGIDA PARA SALVAR ---
+// --- 14. FUNÇÃO PARA SALVAR ---
 async function handleSave(closeModal = true) {
     console.log("💾 handleSave chamado");
     
@@ -714,7 +778,6 @@ async function handleSave(closeModal = true) {
         docTypes[id] = radio ? radio.value : 'Físico';
     });
 
-    // Usar as funções corrigidas
     const reuData = getReuDataFromForm();
     const expenseData = getExpenseDataFromForm();
     
