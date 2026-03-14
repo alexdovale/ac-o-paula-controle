@@ -1,10 +1,11 @@
 /**
- * estatisticas.js - Versão Completa com Atendidos por Equipe e Colaboradores
+ * estatisticas.js - Versão Completa com Controle de Visualização
  * Funcionalidades:
  * - Atendidos por equipe (quantidade)
- * - Atendidos por colaborador (quantidade individual)
+ * - Atendidos por colaborador (quantidade individual) - OPCIONAL
  * - Total por grupo
  * - Detalhado (lista de assistidos atendidos por cada grupo)
+ * - BOTÃO PARA ALTERNAR ENTRE VISÃO RESUMIDA E DETALHADA
  */
 
 // ========================================================
@@ -24,7 +25,7 @@ export const StatisticsService = {
     },
 
     /**
-     * Renderiza o modal de estatísticas (versão completa)
+     * Renderiza o modal de estatísticas (versão completa com controle de visualização)
      */
     showModal(allAssisted, useDelegationFlow, pautaName) {
         const modal = document.getElementById('statistics-modal');
@@ -62,7 +63,7 @@ export const StatisticsService = {
         const atendidos = allAssisted.filter(a => a.status === 'atendido');
         const faltosos = allAssisted.filter(a => a.status === 'faltoso');
 
-        // ===== NOVAS ESTRUTURAS PARA ATENDIDOS POR EQUIPE/COLABORADOR =====
+        // ===== ESTRUTURAS PARA ATENDIDOS POR EQUIPE/COLABORADOR =====
         
         // 1. Estatísticas por equipe (agrupado)
         const statsByGroup = atendidos.reduce((acc, a) => {
@@ -188,7 +189,7 @@ export const StatisticsService = {
                 <p class="text-[8px] md:text-xs text-gray-600 mt-1">Tempo Médio (delegação)</p>
             </div>` : '';
 
-        // ===== NOVO HTML PARA COLABORADORES FLAT =====
+        // ===== HTML PARA COLABORADORES FLAT =====
         const collaboratorsFlatHTML = sortedFlatCollaborators.length > 0 ? `
             <div class="bg-white p-3 md:p-4 rounded-lg border">
                 <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-2">Atendimentos por Colaborador</h3>
@@ -219,22 +220,30 @@ export const StatisticsService = {
             </div>
         ` : '';
 
-        // ===== NOVO HTML PARA EQUIPES (AGRUPADO) =====
-        const groupsHTML = sortedGroups.map(({groupName, total, collaborators}) => {
+        // ===== HTML PARA EQUIPES COM CONTROLE DE VISUALIZAÇÃO =====
+        // Estado inicial: mostrar detalhes (true) ou só totais (false)
+        // Vamos criar um atributo data para controlar
+        
+        const groupsHTML = sortedGroups.map(({groupName, total, collaborators}, index) => {
             const collaboratorsRows = collaborators.map(({name, count}) => `
-                <tr class="border-b hover:bg-gray-50">
+                <tr class="border-b collaborator-row group-${index}">
                     <td class="px-2 md:px-4 py-1 md:py-2 font-medium text-xs md:text-sm pl-2 md:pl-8">${name}</td>
                     <td class="px-2 md:px-4 py-1 md:py-2 text-right text-xs md:text-sm font-bold text-green-600">${count}</td>
                 </tr>
             `).join('');
 
             return `
-                <div class="mb-3 md:mb-4 border rounded-lg overflow-hidden">
+                <div class="mb-3 md:mb-4 border rounded-lg overflow-hidden group-container" data-group-index="${index}">
                     <div class="bg-gray-100 px-2 md:px-4 py-2 font-bold text-xs md:text-sm flex justify-between items-center">
-                        <span>👥 ${groupName}</span>
-                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-[10px] md:text-xs">Total: ${total}</span>
+                        <div class="flex items-center gap-2">
+                            <span>👥 ${groupName}</span>
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-[10px] md:text-xs">Total: ${total}</span>
+                        </div>
+                        <button class="toggle-details-btn text-xs bg-white px-2 py-1 rounded border hover:bg-gray-50" data-group-index="${index}">
+                            🔽 Ocultar detalhes
+                        </button>
                     </div>
-                    <table class="w-full text-xs md:text-sm text-left">
+                    <table class="w-full text-xs md:text-sm text-left collaborators-table" data-group-index="${index}">
                         <tbody>
                             ${collaboratorsRows}
                         </tbody>
@@ -243,7 +252,7 @@ export const StatisticsService = {
             `;
         }).join('');
 
-        // ===== HTML DO BOTÃO PARA PDF DETALHADO =====
+        // ===== HTML DOS BOTÕES DE EXPORTAÇÃO =====
         const botoesExportacaoHTML = `
             <div class="bg-white p-3 md:p-4 rounded-lg border mt-4">
                 <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-3">Exportar Relatórios</h3>
@@ -401,8 +410,13 @@ export const StatisticsService = {
                 ${collaboratorsFlatHTML}
                 
                 <div class="bg-white p-3 md:p-4 rounded-lg border">
-                    <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-2">Atendimentos por Equipe</h3>
-                    <div class="max-h-[40vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-base md:text-lg font-semibold text-gray-800">Atendimentos por Equipe</h3>
+                        <button id="toggle-all-groups-btn" class="text-xs bg-gray-200 px-3 py-1 rounded-full hover:bg-gray-300">
+                            🔽 Ocultar todos os detalhes
+                        </button>
+                    </div>
+                    <div class="max-h-[40vh] overflow-y-auto" id="groups-container">
                         ${groupsHTML}
                     </div>
                 </div>
@@ -411,6 +425,53 @@ export const StatisticsService = {
         `;
         
         content.innerHTML = html;
+
+        // ===== ADICIONAR FUNCIONALIDADE DE OCULTAR/MOSTRAR DETALHES =====
+        
+        // Botão para ocultar/mostrar todos
+        const toggleAllBtn = document.getElementById('toggle-all-groups-btn');
+        if (toggleAllBtn) {
+            toggleAllBtn.addEventListener('click', () => {
+                const isShowing = toggleAllBtn.textContent.includes('Ocultar');
+                
+                document.querySelectorAll('.collaborators-table').forEach(table => {
+                    if (isShowing) {
+                        table.style.display = 'none';
+                    } else {
+                        table.style.display = 'table';
+                    }
+                });
+                
+                document.querySelectorAll('.toggle-details-btn').forEach(btn => {
+                    if (isShowing) {
+                        btn.textContent = '🔽 Mostrar detalhes';
+                    } else {
+                        btn.textContent = '🔽 Ocultar detalhes';
+                    }
+                });
+                
+                toggleAllBtn.textContent = isShowing ? '🔽 Mostrar todos os detalhes' : '🔽 Ocultar todos os detalhes';
+            });
+        }
+        
+        // Botões individuais por equipe
+        document.querySelectorAll('.toggle-details-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const groupIndex = btn.dataset.groupIndex;
+                const table = document.querySelector(`.collaborators-table[data-group-index="${groupIndex}"]`);
+                
+                if (table) {
+                    if (table.style.display === 'none') {
+                        table.style.display = 'table';
+                        btn.textContent = '🔽 Ocultar detalhes';
+                    } else {
+                        table.style.display = 'none';
+                        btn.textContent = '🔽 Mostrar detalhes';
+                    }
+                }
+            });
+        });
 
         // Configurar botões de exportar PDF
         const exportBtn = document.getElementById('export-stats-pdf-btn');
