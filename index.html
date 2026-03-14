@@ -920,20 +920,31 @@
         </div>
     </div>
 
-    <!-- Modal de Selecionar Colaborador -->
-    <div id="select-collaborator-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-            <h2 class="text-2xl font-bold mb-4">Atender Assistido</h2>
-            <p class="mb-4 text-gray-600">Selecione o colaborador que irá atender <strong id="assisted-to-attend-name"></strong> (opcional):</p>
-            <div id="collaborator-selection-list" class="space-y-3 mb-6 max-h-60 overflow-y-auto">
-                <p class="text-gray-500 text-center">Carregando colaboradores...</p>
-            </div>
-            <div class="flex justify-end space-x-4">
-                <button id="cancel-select-collaborator-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
-                <button id="confirm-select-collaborator-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Confirmar Seleção</button>
-            </div>
+    <!-- Modal de Selecionar Colaborador com Busca -->
+<div id="select-collaborator-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md max-h-[80vh] overflow-y-auto">
+        <h2 class="text-2xl font-bold mb-4">Atender Assistido</h2>
+        <p class="mb-4 text-gray-600">Selecione o colaborador que irá atender <strong id="assisted-to-attend-name"></strong>:</p>
+        
+        <!-- Campo de busca -->
+        <div class="mb-4">
+            <input type="text" 
+                   id="collaborator-search-input" 
+                   placeholder="🔍 Digite para pesquisar colaborador..." 
+                   class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+        </div>
+        
+        <!-- Lista de colaboradores (será preenchida dinamicamente) -->
+        <div id="collaborator-selection-list" class="space-y-2 mb-6 max-h-60 overflow-y-auto border rounded-lg p-2 bg-gray-50">
+            <!-- Será preenchido pela função preencherListaColaboradoresModal -->
+        </div>
+        
+        <div class="flex justify-end space-x-4">
+            <button id="cancel-select-collaborator-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+            <button id="confirm-select-collaborator-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Confirmar Seleção</button>
         </div>
     </div>
+</div>
 
     <!-- Modal de Editar Atendente -->
     <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
