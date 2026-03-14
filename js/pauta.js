@@ -675,16 +675,21 @@ export const PautaService = {
     },
 
     /**
-     * NOVA FUNÇÃO: Preenche a lista de colaboradores no modal de seleção
+     * NOVA FUNÇÃO: Preenche a lista de colaboradores no modal de seleção com busca
      */
     preencherListaColaboradoresModal(app) {
         const container = document.getElementById('collaborator-selection-list');
+        const searchInput = document.getElementById('collaborator-search-input');
+        
         if (!container) {
             console.error("Container collaborator-selection-list não encontrado");
             return;
         }
         
-        container.innerHTML = '';
+        // Limpar busca anterior
+        if (searchInput) {
+            searchInput.value = '';
+        }
         
         if (!app.colaboradores || app.colaboradores.length === 0) {
             container.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhum colaborador cadastrado.</p>';
@@ -696,42 +701,108 @@ export const PautaService = {
             a.nome.localeCompare(b.nome)
         );
         
-        // Adicionar opção "Não atribuir"
-        const optionNaoAtribuir = document.createElement('div');
-        optionNaoAtribuir.className = "p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer transition-all";
-        optionNaoAtribuir.innerHTML = `
-            <label class="flex items-center gap-3 cursor-pointer">
-                <input type="radio" name="selectedCollaborator" value="null" class="h-4 w-4 text-blue-600" checked>
-                <div>
-                    <p class="font-bold text-gray-700">🚫 Não atribuir</p>
-                    <p class="text-xs text-gray-500">Atender sem atribuir a nenhum colaborador</p>
-                </div>
-            </label>
-        `;
-        container.appendChild(optionNaoAtribuir);
-        
-        // Adicionar cada colaborador
-        colaboradoresOrdenados.forEach(collab => {
-            const div = document.createElement('div');
-            div.className = "p-3 border rounded-lg hover:bg-blue-50 cursor-pointer transition-all";
-            div.innerHTML = `
-                <label class="flex items-center gap-3 cursor-pointer">
-                    <input type="radio" name="selectedCollaborator" value="${collab.id || collab.nome}" data-name="${escapeHTML(collab.nome)}" class="h-4 w-4 text-blue-600">
-                    <div>
-                        <p class="font-bold text-gray-800">${escapeHTML(collab.nome)}</p>
-                        <p class="text-xs text-gray-500">${escapeHTML(collab.cargo || 'Cargo não informado')} | Equipe ${collab.equipe || 'N/A'}</p>
+        // Função para renderizar a lista filtrada
+        const renderLista = (filtro = '') => {
+            container.innerHTML = '';
+            
+            const filtroLower = filtro.toLowerCase().trim();
+            
+            // Filtrar colaboradores
+            const colaboradoresFiltrados = filtro 
+                ? colaboradoresOrdenados.filter(c => 
+                    c.nome.toLowerCase().includes(filtroLower) ||
+                    (c.cargo && c.cargo.toLowerCase().includes(filtroLower)) ||
+                    (c.equipe && c.equipe.toLowerCase().includes(filtroLower))
+                  )
+                : colaboradoresOrdenados;
+            
+            // Adicionar opção "Não atribuir" apenas se não houver filtro
+            if (!filtro) {
+                const optionNaoAtribuir = document.createElement('div');
+                optionNaoAtribuir.className = "p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer transition-all mb-2";
+                optionNaoAtribuir.setAttribute('data-colaborador-id', 'null');
+                optionNaoAtribuir.setAttribute('data-colaborador-nome', '');
+                optionNaoAtribuir.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-5 h-5 rounded-full bg-gray-400 flex items-center justify-center text-white text-xs">🚫</div>
+                        <div>
+                            <p class="font-bold text-gray-700">Não atribuir</p>
+                            <p class="text-xs text-gray-500">Atender sem atribuir a nenhum colaborador</p>
+                        </div>
                     </div>
-                </label>
-            `;
+                `;
+                
+                optionNaoAtribuir.addEventListener('click', () => {
+                    // Remover seleção anterior
+                    document.querySelectorAll('#collaborator-selection-list > div').forEach(div => {
+                        div.classList.remove('bg-blue-100', 'border-blue-500');
+                    });
+                    optionNaoAtribuir.classList.add('bg-blue-100', 'border-blue-500', 'border-2');
+                    
+                    // Guardar o ID do colaborador selecionado
+                    window.selectedCollaboratorId = 'null';
+                    window.selectedCollaboratorName = null;
+                });
+                
+                container.appendChild(optionNaoAtribuir);
+            }
             
-            // Adicionar evento de clique no div inteiro
-            div.addEventListener('click', () => {
-                const radio = div.querySelector('input[type="radio"]');
-                if (radio) radio.checked = true;
+            if (colaboradoresFiltrados.length === 0) {
+                const msg = document.createElement('p');
+                msg.className = "text-gray-500 text-center py-4 text-sm";
+                msg.textContent = "Nenhum colaborador encontrado com este filtro.";
+                container.appendChild(msg);
+                return;
+            }
+            
+            // Adicionar cada colaborador filtrado
+            colaboradoresFiltrados.forEach(collab => {
+                const div = document.createElement('div');
+                div.className = "p-3 border rounded-lg hover:bg-blue-50 cursor-pointer transition-all mb-2";
+                div.setAttribute('data-colaborador-id', collab.id || collab.nome);
+                div.setAttribute('data-colaborador-nome', collab.nome);
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
+                            ${collab.nome.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <p class="font-bold text-gray-800">${escapeHTML(collab.nome)}</p>
+                            <p class="text-xs text-gray-500">${escapeHTML(collab.cargo || 'Cargo não informado')} | Equipe ${collab.equipe || 'N/A'}</p>
+                        </div>
+                    </div>
+                `;
+                
+                // Adicionar evento de clique
+                div.addEventListener('click', () => {
+                    // Remover seleção anterior
+                    document.querySelectorAll('#collaborator-selection-list > div').forEach(div => {
+                        div.classList.remove('bg-blue-100', 'border-blue-500');
+                    });
+                    div.classList.add('bg-blue-100', 'border-blue-500', 'border-2');
+                    
+                    // Guardar o ID do colaborador selecionado
+                    window.selectedCollaboratorId = collab.id || collab.nome;
+                    window.selectedCollaboratorName = collab.nome;
+                });
+                
+                container.appendChild(div);
             });
+        };
+        
+        // Renderizar lista inicial
+        renderLista();
+        
+        // Adicionar evento de busca
+        if (searchInput) {
+            // Remover listener anterior para evitar duplicação
+            const novoSearchInput = searchInput.cloneNode(true);
+            searchInput.parentNode.replaceChild(novoSearchInput, searchInput);
             
-            container.appendChild(div);
-        });
+            novoSearchInput.addEventListener('input', (e) => {
+                renderLista(e.target.value);
+            });
+        }
     },
 
     /**
@@ -1081,7 +1152,7 @@ export const PautaService = {
             }
         }
 
-        // Atender (com delegação) - VERSÃO CORRIGIDA
+        // Atender (com delegação) - VERSÃO CORRIGIDA COM BUSCA
         if (button.classList.contains('select-collaborator-btn')) {
             console.log("Selecionando colaborador para:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
@@ -1089,7 +1160,7 @@ export const PautaService = {
             window.assistedNameToHandle = assisted?.name || '';
             document.getElementById('assisted-to-attend-name').textContent = assisted?.name || '';
             
-            // PREENCHER A LISTA DE COLABORADORES NO MODAL
+            // PREENCHER A LISTA DE COLABORADORES NO MODAL COM BUSCA
             this.preencherListaColaboradoresModal(app);
             
             document.getElementById('select-collaborator-modal')?.classList.remove('hidden');
