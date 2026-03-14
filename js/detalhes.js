@@ -509,19 +509,34 @@ function getReuDataFromForm() {
     };
 }
 
+// ===== FUNÇÃO CORRIGIDA URGENTE =====
 function getExpenseDataFromForm() {
+    console.log("🔍 Coletando dados de gastos...");
     const d = {};
-    EXPENSE_CATEGORIES.forEach(cat => {
-        const el = getEl(`expense-${cat.id}`);
-        let valor = el ? el.value || '' : '';
+    
+    // Lista de categorias que você quer capturar
+    const categorias = ['moradia', 'alimentacao', 'educacao', 'saude', 'vestuario', 'lazer', 'outras'];
+    
+    categorias.forEach(cat => {
+        // Tenta encontrar o elemento de várias formas
+        let el = document.getElementById(`expense-${cat}`); // Formato que seu código espera
         
-        // Garantir que nunca retorne undefined
-        if (!valor || valor.trim() === '') {
-            valor = 'R$ 0,00';
+        // Se não encontrar, tenta outros formatos comuns
+        if (!el) el = document.getElementById(`gasto-${cat}`);
+        if (!el) el = document.getElementById(`expense_${cat}`);
+        if (!el) el = document.querySelector(`[id*="${cat}"]`); // Qualquer ID que contenha a categoria
+        
+        // Se encontrou o elemento, pega o valor
+        if (el) {
+            d[cat] = el.value || '';
+            console.log(`  ✅ ${cat}: "${d[cat]}"`);
+        } else {
+            console.log(`  ❌ Elemento para ${cat} não encontrado`);
+            d[cat] = ''; // Valor vazio em vez de undefined
         }
-        
-        d[cat.id] = valor;
     });
+    
+    console.log("📊 Dados coletados:", d);
     return d;
 }
 
