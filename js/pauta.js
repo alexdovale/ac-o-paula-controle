@@ -675,6 +675,66 @@ export const PautaService = {
     },
 
     /**
+     * NOVA FUNÇÃO: Preenche a lista de colaboradores no modal de seleção
+     */
+    preencherListaColaboradoresModal(app) {
+        const container = document.getElementById('collaborator-selection-list');
+        if (!container) {
+            console.error("Container collaborator-selection-list não encontrado");
+            return;
+        }
+        
+        container.innerHTML = '';
+        
+        if (!app.colaboradores || app.colaboradores.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhum colaborador cadastrado.</p>';
+            return;
+        }
+        
+        // Ordenar colaboradores por nome
+        const colaboradoresOrdenados = [...app.colaboradores].sort((a, b) => 
+            a.nome.localeCompare(b.nome)
+        );
+        
+        // Adicionar opção "Não atribuir"
+        const optionNaoAtribuir = document.createElement('div');
+        optionNaoAtribuir.className = "p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer transition-all";
+        optionNaoAtribuir.innerHTML = `
+            <label class="flex items-center gap-3 cursor-pointer">
+                <input type="radio" name="selectedCollaborator" value="null" class="h-4 w-4 text-blue-600" checked>
+                <div>
+                    <p class="font-bold text-gray-700">🚫 Não atribuir</p>
+                    <p class="text-xs text-gray-500">Atender sem atribuir a nenhum colaborador</p>
+                </div>
+            </label>
+        `;
+        container.appendChild(optionNaoAtribuir);
+        
+        // Adicionar cada colaborador
+        colaboradoresOrdenados.forEach(collab => {
+            const div = document.createElement('div');
+            div.className = "p-3 border rounded-lg hover:bg-blue-50 cursor-pointer transition-all";
+            div.innerHTML = `
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="radio" name="selectedCollaborator" value="${collab.id || collab.nome}" data-name="${escapeHTML(collab.nome)}" class="h-4 w-4 text-blue-600">
+                    <div>
+                        <p class="font-bold text-gray-800">${escapeHTML(collab.nome)}</p>
+                        <p class="text-xs text-gray-500">${escapeHTML(collab.cargo || 'Cargo não informado')} | Equipe ${collab.equipe || 'N/A'}</p>
+                    </div>
+                </label>
+            `;
+            
+            // Adicionar evento de clique no div inteiro
+            div.addEventListener('click', () => {
+                const radio = div.querySelector('input[type="radio"]');
+                if (radio) radio.checked = true;
+            });
+            
+            container.appendChild(div);
+        });
+    },
+
+    /**
      * Exibe tela de seleção de pautas (responsiva com filtros)
      */
     showPautaSelectionScreen(app) {
@@ -1021,13 +1081,17 @@ export const PautaService = {
             }
         }
 
-        // Atender (com delegação)
+        // Atender (com delegação) - VERSÃO CORRIGIDA
         if (button.classList.contains('select-collaborator-btn')) {
             console.log("Selecionando colaborador para:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
             window.assistedIdToHandle = id;
             window.assistedNameToHandle = assisted?.name || '';
             document.getElementById('assisted-to-attend-name').textContent = assisted?.name || '';
+            
+            // PREENCHER A LISTA DE COLABORADORES NO MODAL
+            this.preencherListaColaboradoresModal(app);
+            
             document.getElementById('select-collaborator-modal')?.classList.remove('hidden');
         }
 
