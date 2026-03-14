@@ -3171,5 +3171,27 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
         }, true);
     </script>
+    // No final do arquivo index.html, depois do último </script> e antes do </body>
+
+<!-- Script para o toggle da explicação da ordem de atendimento -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleBtn = document.getElementById('toggle-logic-btn-padrao');
+        const content = document.getElementById('logic-explanation-padrao-content');
+        
+        if (toggleBtn && content) {
+            toggleBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                content.classList.toggle('hidden');
+                
+                if (content.classList.contains('hidden')) {
+                    toggleBtn.textContent = 'Por que esta ordem é a mais justa? (Clique para expandir)';
+                } else {
+                    toggleBtn.textContent = 'Por que esta ordem é a mais justa? (Clique para recolher)';
+                }
+            });
+        }
+    });
+</script>
 </body>
 </html>
