@@ -1,11 +1,11 @@
 /**
- * estatisticas.js - Versão Completa com Controle de Visualização
+ * estatisticas.js - Versão Completa com PDF Resumo Simples
  * Funcionalidades:
- * - Atendidos por equipe (quantidade)
- * - Atendidos por colaborador (quantidade individual) - OPCIONAL
- * - Total por grupo
- * - Detalhado (lista de assistidos atendidos por cada grupo)
- * - BOTÃO PARA ALTERNAR ENTRE VISÃO RESUMIDA E DETALHADA
+ * - Atendidos por equipe (todas as equipes)
+ * - Atendidos por colaborador (quantidade individual)
+ * - Total por equipe
+ * - PDF simples sem formatação complexa
+ * - Lista de assistidos por equipe (detalhado)
  */
 
 // ========================================================
@@ -25,7 +25,7 @@ export const StatisticsService = {
     },
 
     /**
-     * Renderiza o modal de estatísticas (versão completa com controle de visualização)
+     * Renderiza o modal de estatísticas
      */
     showModal(allAssisted, useDelegationFlow, pautaName) {
         const modal = document.getElementById('statistics-modal');
@@ -65,41 +65,67 @@ export const StatisticsService = {
 
         // ===== ESTRUTURAS PARA ATENDIDOS POR EQUIPE/COLABORADOR =====
         
-        // 1. Estatísticas por equipe (agrupado)
-        const statsByGroup = atendidos.reduce((acc, a) => {
+        // Primeiro, vamos coletar TODAS as equipes existentes
+        const todasEquipes = new Set();
+        const todosColaboradores = new Set();
+        
+        allAssisted.forEach(a => {
+            const attendantIsObject = typeof a.attendant === 'object' && a.attendant !== null;
+            const groupName = attendantIsObject && a.attendant.equipe ? `Equipe ${a.attendant.equipe}` : 'Equipe Não Definida';
+            todasEquipes.add(groupName);
+            
+            if (attendantIsObject && a.attendant.nome) {
+                todosColaboradores.add(a.attendant.nome);
+            } else if (a.attendant && typeof a.attendant === 'string') {
+                todosColaboradores.add(a.attendant);
+            }
+        });
+        
+        // Estatísticas por equipe (agrupado)
+        const statsByGroup = {};
+        
+        // Inicializar TODAS as equipes com zero
+        todasEquipes.forEach(equipe => {
+            statsByGroup[equipe] = { 
+                collaborators: {}, 
+                total: 0,
+                atendimentos: []
+            };
+        });
+        
+        // Preencher com dados reais
+        atendidos.forEach(a => {
             const attendantIsObject = typeof a.attendant === 'object' && a.attendant !== null;
             const attendantName = attendantIsObject ? a.attendant.nome : (a.attendant || 'Não informado');
             
             const groupName = attendantIsObject && a.attendant.equipe ? `Equipe ${a.attendant.equipe}` : 'Equipe Não Definida';
 
-            if (!acc[groupName]) {
-                acc[groupName] = { 
+            if (!statsByGroup[groupName]) {
+                statsByGroup[groupName] = { 
                     collaborators: {}, 
                     total: 0,
-                    atendimentos: [] // Para o detalhado
+                    atendimentos: []
                 };
             }
 
             const safeAttendantName = attendantName || 'Não informado';
-            acc[groupName].collaborators[safeAttendantName] = (acc[groupName].collaborators[safeAttendantName] || 0) + 1;
-            acc[groupName].total++;
+            statsByGroup[groupName].collaborators[safeAttendantName] = (statsByGroup[groupName].collaborators[safeAttendantName] || 0) + 1;
+            statsByGroup[groupName].total++;
             
             // Adicionar atendimento para lista detalhada
-            acc[groupName].atendimentos.push({
+            statsByGroup[groupName].atendimentos.push({
                 nome: a.name || 'Não informado',
                 assunto: a.subject || 'Sem assunto',
                 atendente: safeAttendantName,
                 horario: a.attendedTime ? new Date(a.attendedTime.seconds * 1000).toLocaleString('pt-BR') : 'Não finalizado'
             });
-            
-            return acc;
-        }, {});
+        });
         
-        // 2. Colaboradores flat (sem agrupamento) - para tabela simples
+        // 2. Colaboradores flat (sem agrupamento)
         const statsByCollaboratorFlat = {};
         Object.values(statsByGroup).forEach(groupData => {
             Object.entries(groupData.collaborators).forEach(([name, count]) => {
-                statsByCollaboratorFlat[name] = count;
+                statsByCollaboratorFlat[name] = (statsByCollaboratorFlat[name] || 0) + count;
             });
         });
         
@@ -108,22 +134,22 @@ export const StatisticsService = {
             .sort(([, a], [, b]) => b - a)
             .map(([name, count]) => ({ name, count }));
         
-        // 3. Equipes ordenadas por total
-        const sortedGroups = Object.entries(statsByGroup)
-            .sort(([, a], [, b]) => b.total - a.total)
-            .map(([groupName, groupData]) => ({
+        // 3. Equipes ordenadas por nome
+        const sortedGroups = Object.keys(statsByGroup)
+            .sort()
+            .map(groupName => ({
                 groupName,
-                total: groupData.total,
-                collaborators: Object.entries(groupData.collaborators)
+                total: statsByGroup[groupName].total,
+                collaborators: Object.entries(statsByGroup[groupName].collaborators)
                     .sort(([, a], [, b]) => b - a)
                     .map(([name, count]) => ({ name, count })),
-                atendimentos: groupData.atendimentos
+                atendimentos: statsByGroup[groupName].atendimentos
             }));
         
         // 4. Total geral
         const totalGeral = atendidos.length;
         
-        // Estatísticas por assunto (já existente)
+        // Estatísticas por assunto
         const statsBySubject = allAssisted.reduce((acc, a) => {
             const demandasDoAssistido = (a.subject ? [a.subject] : []).concat(a.demandas?.descricoes || []);
             demandasDoAssistido.forEach(demanda => {
@@ -141,10 +167,8 @@ export const StatisticsService = {
         }, {});
 
         const totalDemandasGeral = Object.values(statsBySubject).reduce((sum, data) => sum + data.total, 0);
-        const totalDemandasAtendidos = Object.values(statsBySubject).reduce((sum, data) => sum + data.atendidos, 0);
-        const totalDemandasFaltosos = Object.values(statsBySubject).reduce((sum, data) => sum + data.faltosos, 0);
 
-        // Estatísticas por horário (já existente)
+        // Estatísticas por horário (mantido para compatibilidade)
         const statsByTime = atendidos.filter(a => a.scheduledTime).reduce((acc, a) => {
             acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
             return acc;
@@ -163,7 +187,7 @@ export const StatisticsService = {
         }, {});
         const sortedScheduledTimes = Object.keys(statsByScheduledTime).sort();
 
-        // Cálculo de tempos médios (já existente)
+        // Cálculo de tempos médios
         let totalDelegatedMinutes = 0, delegatedCount = 0;
         let totalDirectMinutes = 0, directCount = 0;
 
@@ -189,7 +213,7 @@ export const StatisticsService = {
                 <p class="text-[8px] md:text-xs text-gray-600 mt-1">Tempo Médio (delegação)</p>
             </div>` : '';
 
-        // ===== HTML PARA COLABORADORES FLAT =====
+        // HTML para colaboradores flat
         const collaboratorsFlatHTML = sortedFlatCollaborators.length > 0 ? `
             <div class="bg-white p-3 md:p-4 rounded-lg border">
                 <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-2">Atendimentos por Colaborador</h3>
@@ -220,10 +244,7 @@ export const StatisticsService = {
             </div>
         ` : '';
 
-        // ===== HTML PARA EQUIPES COM CONTROLE DE VISUALIZAÇÃO =====
-        // Estado inicial: mostrar detalhes (true) ou só totais (false)
-        // Vamos criar um atributo data para controlar
-        
+        // HTML para equipes com controle de visualização
         const groupsHTML = sortedGroups.map(({groupName, total, collaborators}, index) => {
             const collaboratorsRows = collaborators.map(({name, count}) => `
                 <tr class="border-b collaborator-row group-${index}">
@@ -252,7 +273,7 @@ export const StatisticsService = {
             `;
         }).join('');
 
-        // ===== HTML DOS BOTÕES DE EXPORTAÇÃO =====
+        // HTML dos botões de exportação
         const botoesExportacaoHTML = `
             <div class="bg-white p-3 md:p-4 rounded-lg border mt-4">
                 <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-3">Exportar Relatórios</h3>
@@ -426,28 +447,18 @@ export const StatisticsService = {
         
         content.innerHTML = html;
 
-        // ===== ADICIONAR FUNCIONALIDADE DE OCULTAR/MOSTRAR DETALHES =====
-        
-        // Botão para ocultar/mostrar todos
+        // Adicionar funcionalidade de ocultar/mostrar detalhes
         const toggleAllBtn = document.getElementById('toggle-all-groups-btn');
         if (toggleAllBtn) {
             toggleAllBtn.addEventListener('click', () => {
                 const isShowing = toggleAllBtn.textContent.includes('Ocultar');
                 
                 document.querySelectorAll('.collaborators-table').forEach(table => {
-                    if (isShowing) {
-                        table.style.display = 'none';
-                    } else {
-                        table.style.display = 'table';
-                    }
+                    table.style.display = isShowing ? 'none' : 'table';
                 });
                 
                 document.querySelectorAll('.toggle-details-btn').forEach(btn => {
-                    if (isShowing) {
-                        btn.textContent = '🔽 Mostrar detalhes';
-                    } else {
-                        btn.textContent = '🔽 Ocultar detalhes';
-                    }
+                    btn.textContent = isShowing ? '🔽 Mostrar detalhes' : '🔽 Ocultar detalhes';
                 });
                 
                 toggleAllBtn.textContent = isShowing ? '🔽 Mostrar todos os detalhes' : '🔽 Ocultar todos os detalhes';
@@ -528,80 +539,81 @@ export const StatisticsService = {
      */
     async exportDetailedStatisticsPDF(pautaName, detalhesData) {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+        const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 40;
-        let yPos = margin + 30;
+        const margin = 15;
+        let y = 20;
 
         // Título
-        doc.setFontSize(18);
-        doc.setTextColor(22, 163, 74);
+        doc.setFontSize(16);
         doc.setFont("helvetica", "bold");
-        doc.text(`RELATÓRIO DETALHADO - ${pautaName}`, margin, yPos);
-        yPos += 20;
+        doc.text(`LISTA DE ASSISTIDOS POR EQUIPE - ${pautaName}`, margin, y);
+        y += 10;
         
         doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
-        yPos += 20;
+        doc.setFont("helvetica", "normal");
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, y);
+        y += 15;
         
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
-        doc.text(`Total de Atendimentos: ${detalhesData.totalGeral}`, margin, yPos);
-        yPos += 25;
+        doc.text(`Total de Atendimentos: ${detalhesData.totalGeral}`, margin, y);
+        y += 15;
 
         // Listar cada equipe com seus assistidos
         detalhesData.sortedGroups.forEach(({groupName, total, atendimentos}) => {
-            if (yPos > pageHeight - 100) {
+            if (y > pageHeight - 40) {
                 doc.addPage();
-                yPos = margin + 30;
+                y = 20;
             }
 
             // Título da equipe
-            doc.setFontSize(14);
-            doc.setTextColor(0, 102, 204);
+            doc.setFontSize(12);
             doc.setFont("helvetica", "bold");
-            doc.text(`👥 ${groupName} (${total} atendimentos)`, margin, yPos);
-            yPos += 15;
+            doc.text(`${groupName} - ${total} atendimento(s)`, margin, y);
+            y += 7;
 
             // Listar assistidos
             doc.setFontSize(9);
-            doc.setTextColor(60, 60, 60);
             doc.setFont("helvetica", "normal");
 
-            atendimentos.forEach((att, index) => {
-                if (yPos > pageHeight - 40) {
-                    doc.addPage();
-                    yPos = margin + 30;
+            if (atendimentos.length > 0) {
+                atendimentos.forEach((att, index) => {
+                    if (y > pageHeight - 20) {
+                        doc.addPage();
+                        y = 20;
+                        
+                        // Repetir título da equipe na nova página
+                        doc.setFontSize(11);
+                        doc.setFont("helvetica", "bold");
+                        doc.text(`${groupName} (continuação)`, margin, y);
+                        y += 7;
+                        doc.setFontSize(9);
+                    }
+
+                    doc.text(`${index + 1}. ${att.nome}`, margin + 5, y);
+                    y += 5;
                     
-                    // Repetir título da equipe na nova página
-                    doc.setFontSize(12);
-                    doc.setTextColor(0, 102, 204);
-                    doc.setFont("helvetica", "bold");
-                    doc.text(`👥 ${groupName} (continuação)`, margin, yPos);
-                    yPos += 15;
-                    doc.setFontSize(9);
-                }
+                    doc.text(`   Assunto: ${att.assunto}`, margin + 10, y);
+                    y += 5;
+                    
+                    doc.text(`   Atendente: ${att.atendente}`, margin + 10, y);
+                    y += 5;
+                    
+                    if (att.horario !== 'Não finalizado') {
+                        doc.text(`   Horário: ${att.horario}`, margin + 10, y);
+                        y += 5;
+                    }
+                    
+                    y += 3;
+                });
+            } else {
+                doc.text(`   Nenhum atendimento registrado para esta equipe.`, margin + 5, y);
+                y += 7;
+            }
 
-                doc.text(`${index + 1}. ${att.nome}`, margin + 5, yPos);
-                yPos += 12;
-                
-                doc.text(`   Assunto: ${att.assunto}`, margin + 10, yPos);
-                yPos += 12;
-                
-                doc.text(`   Atendente: ${att.atendente}`, margin + 10, yPos);
-                yPos += 12;
-                
-                if (att.horario !== 'Não finalizado') {
-                    doc.text(`   Horário: ${att.horario}`, margin + 10, yPos);
-                    yPos += 12;
-                }
-                
-                yPos += 5; // Espaço entre atendimentos
-            });
-
-            yPos += 15; // Espaço entre equipes
+            y += 5;
         });
 
         // Rodapé
@@ -609,248 +621,255 @@ export const StatisticsService = {
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
             doc.setFontSize(8);
-            doc.setTextColor(150);
+            doc.setTextColor(100);
             doc.text(
                 `Página ${i} de ${pageCount}`,
-                pageWidth - margin - 50,
-                pageHeight - 20
+                pageWidth - margin - 20,
+                pageHeight - 10
             );
         }
 
-        doc.save(`detalhado_${pautaName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+        doc.save(`detalhado_${pautaName.replace(/\s+/g, '_')}.pdf`);
     },
 
     /**
-     * Exporta estatísticas para PDF (versão resumida)
+     * Exporta estatísticas para PDF - VERSÃO SIMPLES (sem formatação complexa)
      */
     async exportStatisticsToPDF(pautaName, statsData) {
         const { jsPDF } = window.jspdf;
-        
-        // Verificar checkboxes
-        const exportGeneral = document.getElementById('export-general')?.checked ?? true;
-        const exportCollaborators = document.getElementById('export-collaborators')?.checked ?? true;
-        const exportSubjects = document.getElementById('export-subjects')?.checked ?? true;
-        const exportScheduledTime = document.getElementById('export-scheduled-time')?.checked ?? true;
-        const exportTimes = document.getElementById('export-times')?.checked ?? true;
-        const exportAbsenteesTime = document.getElementById('export-absentees-time')?.checked ?? true;
-        
-        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+        const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 40;
-        let yPos = margin + 30;
+        const margin = 15;
+        let y = 20;
 
-        const addSectionTitle = (title) => {
-            if (yPos > pageHeight - 100) { 
+        // TÍTULO PRINCIPAL
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text(`RELATÓRIO DE ATENDIMENTOS - ${pautaName}`, margin, y);
+        y += 10;
+        
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, y);
+        y += 15;
+
+        // ===== 1. LISTA DE EQUIPES E COLABORADORES =====
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text("EQUIPES E COLABORADORES", margin, y);
+        y += 10;
+
+        // Verificar se temos dados de equipes
+        if (statsData.statsByGroup && Object.keys(statsData.statsByGroup).length > 0) {
+            
+            // Ordenar equipes por nome
+            const equipesOrdenadas = Object.keys(statsData.statsByGroup).sort();
+            
+            equipesOrdenadas.forEach((nomeEquipe) => {
+                const equipe = statsData.statsByGroup[nomeEquipe];
+                
+                // Verificar espaço na página
+                if (y > pageHeight - 50) {
+                    doc.addPage();
+                    y = 20;
+                }
+                
+                // Nome da equipe e total
+                doc.setFontSize(12);
+                doc.setFont("helvetica", "bold");
+                doc.text(`${nomeEquipe} - TOTAL: ${equipe.total || 0} atendimentos`, margin, y);
+                y += 7;
+                
+                // Lista de colaboradores da equipe
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "normal");
+                
+                if (equipe.collaborators && Object.keys(equipe.collaborators).length > 0) {
+                    // Ordenar colaboradores por nome
+                    const colaboradores = Object.keys(equipe.collaborators).sort();
+                    
+                    colaboradores.forEach((colab) => {
+                        const quantidade = equipe.collaborators[colab];
+                        doc.text(`   • ${colab}: ${quantidade} atendimento(s)`, margin + 5, y);
+                        y += 5;
+                    });
+                } else {
+                    doc.text(`   • Nenhum atendimento registrado para esta equipe`, margin + 5, y);
+                    y += 5;
+                }
+                
+                y += 5; // Espaço entre equipes
+            });
+            
+        } else {
+            doc.text("Nenhum dado de equipe encontrado.", margin + 5, y);
+            y += 10;
+        }
+
+        // ===== 2. RESUMO GERAL =====
+        if (y > pageHeight - 40) {
+            doc.addPage();
+            y = 20;
+        }
+        
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text("RESUMO GERAL", margin, y);
+        y += 10;
+        
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Total de Atendimentos: ${statsData.atendidosCount || 0}`, margin + 5, y);
+        y += 7;
+        doc.text(`Total de Faltosos: ${statsData.faltososCount || 0}`, margin + 5, y);
+        y += 7;
+        doc.text(`Total de Agendamentos: ${statsData.agendadosCount || 0}`, margin + 5, y);
+        y += 7;
+        doc.text(`Total de Equipes: ${Object.keys(statsData.statsByGroup || {}).length}`, margin + 5, y);
+        y += 7;
+        
+        // Total de colaboradores
+        let totalColaboradores = 0;
+        if (statsData.statsByGroup) {
+            Object.values(statsData.statsByGroup).forEach(equipe => {
+                totalColaboradores += Object.keys(equipe.collaborators || {}).length;
+            });
+        }
+        doc.text(`Total de Colaboradores: ${totalColaboradores}`, margin + 5, y);
+        y += 7;
+        
+        // Tempo médio (se disponível)
+        if (statsData.avgTimeDirect) {
+            doc.text(`Tempo Médio de Atendimento: ${statsData.avgTimeDirect} minutos`, margin + 5, y);
+            y += 7;
+        }
+
+        // ===== 3. ASSUNTOS (DEMANDAS) =====
+        if (statsData.statsBySubject && Object.keys(statsData.statsBySubject).length > 0) {
+            if (y > pageHeight - 40) {
                 doc.addPage();
-                yPos = margin + 30;
+                y = 20;
             }
-            doc.setFont("helvetica", "bold");
+            
             doc.setFontSize(14);
-            doc.setTextColor(43, 58, 85);
-            doc.text(title, margin, yPos);
-            yPos += 25;
-        };
-
-        // ===== 1. RESUMO GERAL =====
-        if (exportGeneral) {
-            addSectionTitle("Resumo Geral");
-            
-            const colWidth = (pageWidth - margin * 2) / 3;
-            let startX = margin;
-            
-            // Atendidos
-            doc.setFillColor(220, 255, 220);
-            doc.roundedRect(startX, yPos - 15, colWidth - 10, 60, 5, 5, 'F');
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(24);
-            doc.setTextColor(39, 174, 96);
-            doc.text(String(statsData.atendidosCount || 0), startX + (colWidth - 10)/2, yPos + 15, { align: 'center' });
-            doc.setFontSize(10);
-            doc.setTextColor(0);
-            doc.text("Atendidos", startX + (colWidth - 10)/2, yPos + 35, { align: 'center' });
+            doc.text("ASSUNTOS ATENDIDOS", margin, y);
+            y += 10;
             
-            // Faltosos
-            startX += colWidth;
-            doc.setFillColor(255, 220, 220);
-            doc.roundedRect(startX, yPos - 15, colWidth - 10, 60, 5, 5, 'F');
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            
+            // Ordenar assuntos por quantidade (decrescente)
+            const assuntos = Object.entries(statsData.statsBySubject)
+                .sort(([,a], [,b]) => b.total - a.total);
+            
+            assuntos.forEach(([assunto, dados]) => {
+                if (y > pageHeight - 20) {
+                    doc.addPage();
+                    y = 20;
+                }
+                doc.text(`• ${assunto}: ${dados.total} (${dados.atendidos} atendidos, ${dados.faltosos} faltosos)`, margin + 5, y);
+                y += 5;
+            });
+        }
+
+        // ===== 4. AGENDADOS POR HORÁRIO (se selecionado) =====
+        if (document.getElementById('export-scheduled-time')?.checked && 
+            statsData.statsByScheduledTime && statsData.statsByScheduledTime.length > 0) {
+            
+            if (y > pageHeight - 40) {
+                doc.addPage();
+                y = 20;
+            }
+            
+            doc.setFontSize(14);
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(24);
-            doc.setTextColor(192, 57, 43);
-            doc.text(String(statsData.faltososCount || 0), startX + (colWidth - 10)/2, yPos + 15, { align: 'center' });
-            doc.setFontSize(10);
-            doc.setTextColor(0);
-            doc.text("Faltosos", startX + (colWidth - 10)/2, yPos + 35, { align: 'center' });
+            doc.text("AGENDADOS POR HORÁRIO", margin, y);
+            y += 10;
             
-            // Tempo Médio
-            startX += colWidth;
-            doc.setFillColor(220, 235, 255);
-            doc.roundedRect(startX, yPos - 15, colWidth - 10, 60, 5, 5, 'F');
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            
+            statsData.statsByScheduledTime.forEach(item => {
+                if (y > pageHeight - 20) {
+                    doc.addPage();
+                    y = 20;
+                }
+                doc.text(`• ${item.time}: ${item.count} agendamento(s)`, margin + 5, y);
+                y += 5;
+            });
+        }
+
+        // ===== 5. ATENDIMENTOS POR HORÁRIO (se selecionado) =====
+        if (document.getElementById('export-times')?.checked && 
+            statsData.statsByTime && statsData.statsByTime.length > 0) {
+            
+            if (y > pageHeight - 40) {
+                doc.addPage();
+                y = 20;
+            }
+            
+            doc.setFontSize(14);
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(24);
-            doc.setTextColor(41, 128, 185);
-            const tempoMedio = statsData.avgTimeDirect || 0;
-            doc.text(tempoMedio + ' min', startX + (colWidth - 10)/2, yPos + 15, { align: 'center' });
+            doc.text("ATENDIMENTOS POR HORÁRIO", margin, y);
+            y += 10;
+            
             doc.setFontSize(10);
-            doc.setTextColor(0);
-            doc.text("Tempo Médio", startX + (colWidth - 10)/2, yPos + 35, { align: 'center' });
+            doc.setFont("helvetica", "normal");
             
-            yPos += 70;
-        }
-
-        // ===== 2. ATENDIMENTOS POR COLABORADOR =====
-        if (exportCollaborators && statsData.statsByGroup) {
-            addSectionTitle("Atendimentos por Colaborador");
-            
-            const colaboradores = [];
-            Object.entries(statsData.statsByGroup).forEach(([grupo, data]) => {
-                Object.entries(data.collaborators || {}).forEach(([nome, count]) => {
-                    colaboradores.push([nome, count]);
-                });
-            });
-            
-            colaboradores.sort((a, b) => b[1] - a[1]);
-            
-            doc.autoTable({
-                startY: yPos,
-                head: [['Colaborador', 'Total']],
-                body: colaboradores,
-                theme: 'grid',
-                headStyles: { fillColor: [75, 85, 99], textColor: '#FFFFFF' },
-                styles: { fontSize: 9 },
-                margin: { left: margin, right: margin }
-            });
-            
-            yPos = doc.lastAutoTable.finalY + 20;
-        }
-
-        // ===== 3. ATENDIMENTOS POR EQUIPE =====
-        if (exportCollaborators && statsData.statsByGroup) {
-            if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
-            addSectionTitle("Atendimentos por Equipe");
-            
-            const equipes = Object.entries(statsData.statsByGroup).map(([nome, data]) => [nome, data.total]);
-            equipes.sort((a, b) => b[1] - a[1]);
-            
-            doc.autoTable({
-                startY: yPos,
-                head: [['Equipe', 'Total']],
-                body: equipes,
-                theme: 'grid',
-                headStyles: { fillColor: [22, 163, 74], textColor: '#FFFFFF' },
-                styles: { fontSize: 9 },
-                margin: { left: margin, right: margin }
-            });
-            
-            yPos = doc.lastAutoTable.finalY + 20;
-        }
-
-        // ===== 4. AGENDADOS POR HORÁRIO =====
-        if (exportScheduledTime && statsData.statsByScheduledTime && statsData.statsByScheduledTime.length > 0) {
-            if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
-            addSectionTitle("Agendados por Horário");
-            
-            doc.autoTable({
-                startY: yPos,
-                head: [['Horário', 'Quantidade']],
-                body: statsData.statsByScheduledTime.map(item => [item.time, item.count]),
-                foot: [['Total', statsData.agendadosCount || 0]],
-                theme: 'grid',
-                headStyles: { fillColor: [22, 163, 74], textColor: '#FFFFFF' },
-                footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
-                styles: { fontSize: 9 },
-                margin: { left: margin, right: margin }
-            });
-            
-            yPos = doc.lastAutoTable.finalY + 20;
-        }
-
-        // ===== 5. ATENDIMENTOS POR HORÁRIO =====
-        if (exportTimes && statsData.statsByTime && statsData.statsByTime.length > 0) {
-            if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
-            addSectionTitle("Atendimentos por Horário (Chegada)");
-            
-            doc.autoTable({
-                startY: yPos,
-                head: [['Horário', 'Quantidade']],
-                body: statsData.statsByTime.map(item => [item.time, item.count]),
-                foot: [['Total', statsData.atendidosCount || 0]],
-                theme: 'grid',
-                headStyles: { fillColor: [22, 163, 74], textColor: '#FFFFFF' },
-                footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
-                styles: { fontSize: 9 },
-                margin: { left: margin, right: margin }
-            });
-            
-            yPos = doc.lastAutoTable.finalY + 20;
-        }
-
-        // ===== 6. FALTOSOS POR HORÁRIO =====
-        if (exportAbsenteesTime && statsData.statsByTimeFaltosos && statsData.statsByTimeFaltosos.length > 0) {
-            if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
-            addSectionTitle("Faltosos por Horário");
-            
-            doc.autoTable({
-                startY: yPos,
-                head: [['Horário', 'Quantidade']],
-                body: statsData.statsByTimeFaltosos.map(item => [item.time, item.count]),
-                foot: [['Total', statsData.faltososCount || 0]],
-                theme: 'grid',
-                headStyles: { fillColor: [220, 38, 38], textColor: '#FFFFFF' },
-                footStyles: { fillColor: [255, 240, 240], fontStyle: 'bold' },
-                styles: { fontSize: 9 },
-                margin: { left: margin, right: margin }
-            });
-            
-            yPos = doc.lastAutoTable.finalY + 20;
-        }
-
-        // ===== 7. DEMANDAS POR ASSUNTO =====
-        if (exportSubjects && statsData.statsBySubject && Object.keys(statsData.statsBySubject).length > 0) {
-            if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
-            addSectionTitle("Demandas por Assunto");
-            
-            const subjects = Object.entries(statsData.statsBySubject)
-                .sort(([,a], [,b]) => b.total - a.total)
-                .map(([name, data]) => [
-                    name.length > 30 ? name.substring(0, 27) + '...' : name,
-                    data.total || 0,
-                    data.atendidos || 0,
-                    data.faltosos || 0
-                ]);
-            
-            const totalGeral = subjects.reduce((acc, row) => acc + row[1], 0);
-            const totalAtendidos = subjects.reduce((acc, row) => acc + row[2], 0);
-            const totalFaltosos = subjects.reduce((acc, row) => acc + row[3], 0);
-            
-            doc.autoTable({
-                startY: yPos,
-                head: [['Assunto', 'Total', 'Atendidos', 'Faltosos']],
-                body: subjects,
-                foot: [['TOTAL GERAL', totalGeral, totalAtendidos, totalFaltosos]],
-                theme: 'grid',
-                headStyles: { fillColor: [75, 85, 99], textColor: '#FFFFFF' },
-                footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
-                styles: { fontSize: 8 },
-                columnStyles: { 0: { cellWidth: 180 } },
-                margin: { left: margin, right: margin }
+            statsData.statsByTime.forEach(item => {
+                if (y > pageHeight - 20) {
+                    doc.addPage();
+                    y = 20;
+                }
+                doc.text(`• ${item.time}: ${item.count} atendimento(s)`, margin + 5, y);
+                y += 5;
             });
         }
 
-        // Rodapé
+        // ===== 6. FALTOSOS POR HORÁRIO (se selecionado) =====
+        if (document.getElementById('export-absentees-time')?.checked && 
+            statsData.statsByTimeFaltosos && statsData.statsByTimeFaltosos.length > 0) {
+            
+            if (y > pageHeight - 40) {
+                doc.addPage();
+                y = 20;
+            }
+            
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.text("FALTOSOS POR HORÁRIO", margin, y);
+            y += 10;
+            
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            
+            statsData.statsByTimeFaltosos.forEach(item => {
+                if (y > pageHeight - 20) {
+                    doc.addPage();
+                    y = 20;
+                }
+                doc.text(`• ${item.time}: ${item.count} faltoso(s)`, margin + 5, y);
+                y += 5;
+            });
+        }
+
+        // RODAPÉ
         const pageCount = doc.internal.getNumberOfPages();
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
             doc.setFontSize(8);
-            doc.setTextColor(150);
+            doc.setTextColor(100);
             doc.text(
-                `Gerado em: ${new Date().toLocaleString('pt-BR')} - Página ${i} de ${pageCount}`,
-                margin,
-                pageHeight - 20
+                `Página ${i} de ${pageCount}`,
+                pageWidth - margin - 20,
+                pageHeight - 10
             );
         }
 
-        doc.save(`estatisticas_${pautaName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+        // Salvar PDF
+        doc.save(`resumo_equipes_${pautaName.replace(/\s+/g, '_')}.pdf`);
     }
 };
 
