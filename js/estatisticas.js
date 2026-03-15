@@ -1,11 +1,10 @@
 /**
- * estatisticas.js - Versão Completa e Corrigida
+ * estatisticas.js - Versão Completa com PDF no visual original
  * Funcionalidades:
- * - Atendidos por equipe (todas as equipes)
- * - Atendidos por colaborador (quantidade individual)
- * - Total por equipe
- * - PDF simples sem formatação complexa
- * - Lista de assistidos por equipe (detalhado)
+ * - PDF com visual original (tabelas, cores, formatação)
+ * - Botão para emitir por equipe (mostra todas as equipes)
+ * - Mostra equipe completa (mesmo sem atendimentos)
+ * - Quantidade atendida por equipe e por colaborador
  */
 
 // ========================================================
@@ -277,16 +276,19 @@ export const StatisticsService = {
             `;
         }).join('');
 
-        // HTML dos botões de exportação
+        // HTML dos botões de exportação - AGORA COM 3 BOTÕES
         const botoesExportacaoHTML = `
             <div class="bg-white p-3 md:p-4 rounded-lg border mt-4">
                 <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-3">Exportar Relatórios</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <button id="export-stats-pdf-btn" class="bg-blue-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-700 text-xs md:text-sm transition-colors">
-                        📊 PDF Resumo (Equipes/Colaboradores)
+                        📊 PDF Resumo
+                    </button>
+                    <button id="export-equipes-pdf-btn" class="bg-purple-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-purple-700 text-xs md:text-sm transition-colors">
+                        👥 PDF por Equipe
                     </button>
                     <button id="export-stats-detalhado-btn" class="bg-green-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-green-700 text-xs md:text-sm transition-colors">
-                        📋 PDF Detalhado (Lista de Assistidos)
+                        📋 PDF Detalhado
                     </button>
                 </div>
                 <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
@@ -515,8 +517,29 @@ export const StatisticsService = {
                     statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
                     statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
                 }).finally(() => {
-                    newExportBtn.textContent = '📊 PDF Resumo (Equipes/Colaboradores)';
+                    newExportBtn.textContent = '📊 PDF Resumo';
                     newExportBtn.disabled = false;
+                });
+            });
+        }
+
+        // Botão para PDF por Equipe (NOVO)
+        const exportEquipesBtn = document.getElementById('export-equipes-pdf-btn');
+        if (exportEquipesBtn) {
+            const newEquipesBtn = exportEquipesBtn.cloneNode(true);
+            exportEquipesBtn.parentNode.replaceChild(newEquipesBtn, exportEquipesBtn);
+            
+            newEquipesBtn.addEventListener('click', () => {
+                newEquipesBtn.textContent = 'Gerando PDF por Equipe...';
+                newEquipesBtn.disabled = true;
+
+                this.exportEquipesPDF(pautaName, {
+                    statsByGroup,
+                    sortedGroups,
+                    totalGeral
+                }).finally(() => {
+                    newEquipesBtn.textContent = '👥 PDF por Equipe';
+                    newEquipesBtn.disabled = false;
                 });
             });
         }
@@ -535,7 +558,7 @@ export const StatisticsService = {
                     totalGeral,
                     sortedGroups
                 }).finally(() => {
-                    newDetalhadoBtn.textContent = '📋 PDF Detalhado (Lista de Assistidos)';
+                    newDetalhadoBtn.textContent = '📋 PDF Detalhado';
                     newDetalhadoBtn.disabled = false;
                 });
             });
@@ -543,85 +566,67 @@ export const StatisticsService = {
     },
 
     /**
-     * Exporta estatísticas detalhadas (lista de assistidos por equipe)
+     * Exporta PDF por Equipe (NOVO) - Mostra todas as equipes com seus totais
      */
-    async exportDetailedStatisticsPDF(pautaName, detalhesData) {
+    async exportEquipesPDF(pautaName, dados) {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 15;
-        let y = 20;
+        const margin = 40;
+        let yPos = margin + 30;
 
         // Título
-        doc.setFontSize(16);
+        doc.setFontSize(18);
+        doc.setTextColor(22, 163, 74);
         doc.setFont("helvetica", "bold");
-        doc.text(`LISTA DE ASSISTIDOS POR EQUIPE - ${pautaName}`, margin, y);
-        y += 10;
+        doc.text(`RELATÓRIO POR EQUIPE - ${pautaName}`, margin, yPos);
+        yPos += 20;
         
         doc.setFontSize(10);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, y);
-        y += 15;
+        doc.setTextColor(100);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
+        yPos += 20;
         
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
-        doc.text(`Total de Atendimentos: ${detalhesData.totalGeral}`, margin, y);
-        y += 15;
+        doc.text(`Total de Atendimentos: ${dados.totalGeral}`, margin, yPos);
+        yPos += 25;
 
-        // Listar cada equipe com seus assistidos
-        detalhesData.sortedGroups.forEach(({groupName, total, atendimentos}) => {
-            if (y > pageHeight - 40) {
+        // Listar todas as equipes
+        dados.sortedGroups.forEach(({groupName, total, collaborators}) => {
+            if (yPos > pageHeight - 100) {
                 doc.addPage();
-                y = 20;
+                yPos = margin + 30;
             }
 
             // Título da equipe
-            doc.setFontSize(12);
+            doc.setFontSize(14);
+            doc.setTextColor(0, 102, 204);
             doc.setFont("helvetica", "bold");
-            doc.text(`${groupName} - ${total} atendimento(s)`, margin, y);
-            y += 7;
+            doc.text(`${groupName} - TOTAL: ${total} atendimentos`, margin, yPos);
+            yPos += 20;
 
-            // Listar assistidos
-            doc.setFontSize(9);
+            // Lista de colaboradores
+            doc.setFontSize(10);
+            doc.setTextColor(60, 60, 60);
             doc.setFont("helvetica", "normal");
 
-            if (atendimentos && atendimentos.length > 0) {
-                atendimentos.forEach((att, index) => {
-                    if (y > pageHeight - 20) {
+            if (collaborators && collaborators.length > 0) {
+                collaborators.forEach(({name, count}) => {
+                    if (yPos > pageHeight - 40) {
                         doc.addPage();
-                        y = 20;
-                        
-                        // Repetir título da equipe na nova página
-                        doc.setFontSize(11);
-                        doc.setFont("helvetica", "bold");
-                        doc.text(`${groupName} (continuação)`, margin, y);
-                        y += 7;
-                        doc.setFontSize(9);
+                        yPos = margin + 30;
                     }
-
-                    doc.text(`${index + 1}. ${att.nome}`, margin + 5, y);
-                    y += 5;
-                    
-                    doc.text(`   Assunto: ${att.assunto}`, margin + 10, y);
-                    y += 5;
-                    
-                    doc.text(`   Atendente: ${att.atendente}`, margin + 10, y);
-                    y += 5;
-                    
-                    if (att.horario && att.horario !== 'Não finalizado') {
-                        doc.text(`   Horário: ${att.horario}`, margin + 10, y);
-                        y += 5;
-                    }
-                    
-                    y += 3;
+                    doc.text(`• ${name}: ${count} atendimento(s)`, margin + 10, yPos);
+                    yPos += 15;
                 });
             } else {
-                doc.text(`   Nenhum atendimento registrado para esta equipe.`, margin + 5, y);
-                y += 7;
+                doc.text(`• Nenhum atendimento registrado para esta equipe`, margin + 10, yPos);
+                yPos += 15;
             }
 
-            y += 5;
+            yPos += 10;
         });
 
         // Rodapé
@@ -629,11 +634,113 @@ export const StatisticsService = {
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
             doc.setFontSize(8);
-            doc.setTextColor(100);
+            doc.setTextColor(150);
             doc.text(
                 `Página ${i} de ${pageCount}`,
-                pageWidth - margin - 20,
-                pageHeight - 10
+                pageWidth - margin - 50,
+                pageHeight - 20
+            );
+        }
+
+        doc.save(`por_equipe_${pautaName.replace(/\s+/g, '_')}.pdf`);
+    },
+
+    /**
+     * Exporta estatísticas detalhadas (lista de assistidos por equipe)
+     */
+    async exportDetailedStatisticsPDF(pautaName, detalhesData) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 40;
+        let yPos = margin + 30;
+
+        // Título
+        doc.setFontSize(18);
+        doc.setTextColor(22, 163, 74);
+        doc.setFont("helvetica", "bold");
+        doc.text(`LISTA DE ASSISTIDOS POR EQUIPE - ${pautaName}`, margin, yPos);
+        yPos += 20;
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
+        yPos += 20;
+        
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Total de Atendimentos: ${detalhesData.totalGeral}`, margin, yPos);
+        yPos += 25;
+
+        // Listar cada equipe com seus assistidos
+        detalhesData.sortedGroups.forEach(({groupName, total, atendimentos}) => {
+            if (yPos > pageHeight - 100) {
+                doc.addPage();
+                yPos = margin + 30;
+            }
+
+            // Título da equipe
+            doc.setFontSize(14);
+            doc.setTextColor(0, 102, 204);
+            doc.setFont("helvetica", "bold");
+            doc.text(`${groupName} (${total} atendimentos)`, margin, yPos);
+            yPos += 20;
+
+            // Listar assistidos
+            doc.setFontSize(9);
+            doc.setTextColor(60, 60, 60);
+            doc.setFont("helvetica", "normal");
+
+            if (atendimentos && atendimentos.length > 0) {
+                atendimentos.forEach((att, index) => {
+                    if (yPos > pageHeight - 60) {
+                        doc.addPage();
+                        yPos = margin + 30;
+                        
+                        // Repetir título da equipe na nova página
+                        doc.setFontSize(12);
+                        doc.setTextColor(0, 102, 204);
+                        doc.setFont("helvetica", "bold");
+                        doc.text(`${groupName} (continuação)`, margin, yPos);
+                        yPos += 20;
+                        doc.setFontSize(9);
+                    }
+
+                    doc.text(`${index + 1}. ${att.nome}`, margin + 10, yPos);
+                    yPos += 12;
+                    
+                    doc.text(`   Assunto: ${att.assunto}`, margin + 15, yPos);
+                    yPos += 12;
+                    
+                    doc.text(`   Atendente: ${att.atendente}`, margin + 15, yPos);
+                    yPos += 12;
+                    
+                    if (att.horario && att.horario !== 'Não finalizado') {
+                        doc.text(`   Horário: ${att.horario}`, margin + 15, yPos);
+                        yPos += 12;
+                    }
+                    
+                    yPos += 5;
+                });
+            } else {
+                doc.text(`   Nenhum atendimento registrado para esta equipe.`, margin + 10, yPos);
+                yPos += 20;
+            }
+
+            yPos += 10;
+        });
+
+        // Rodapé
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(
+                `Página ${i} de ${pageCount}`,
+                pageWidth - margin - 50,
+                pageHeight - 20
             );
         }
 
@@ -641,224 +748,219 @@ export const StatisticsService = {
     },
 
     /**
-     * Exporta estatísticas para PDF - VERSÃO SIMPLES
+     * Exporta estatísticas para PDF - VERSÃO ORIGINAL (com tabelas e cores)
      */
     async exportStatisticsToPDF(pautaName, statsData) {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        
+        // Verificar checkboxes
+        const exportGeneral = document.getElementById('export-general')?.checked ?? true;
+        const exportCollaborators = document.getElementById('export-collaborators')?.checked ?? true;
+        const exportSubjects = document.getElementById('export-subjects')?.checked ?? true;
+        const exportScheduledTime = document.getElementById('export-scheduled-time')?.checked ?? true;
+        const exportTimes = document.getElementById('export-times')?.checked ?? true;
+        const exportAbsenteesTime = document.getElementById('export-absentees-time')?.checked ?? true;
+        
+        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 15;
-        let y = 20;
+        const margin = 40;
+        let yPos = margin + 30;
 
-        // TÍTULO PRINCIPAL
-        doc.setFontSize(16);
-        doc.setFont("helvetica", "bold");
-        doc.text(`RELATÓRIO DE ATENDIMENTOS - ${pautaName}`, margin, y);
-        y += 10;
-        
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, y);
-        y += 15;
-
-        // ===== 1. LISTA DE EQUIPES E COLABORADORES =====
-        doc.setFontSize(14);
-        doc.setFont("helvetica", "bold");
-        doc.text("EQUIPES E COLABORADORES", margin, y);
-        y += 10;
-
-        // Verificar se temos dados de equipes
-        if (statsData.statsByGroup && Object.keys(statsData.statsByGroup).length > 0) {
-            
-            // Ordenar equipes por nome
-            const equipesOrdenadas = Object.keys(statsData.statsByGroup).sort();
-            
-            equipesOrdenadas.forEach((nomeEquipe) => {
-                const equipe = statsData.statsByGroup[nomeEquipe];
-                
-                // Verificar espaço na página
-                if (y > pageHeight - 50) {
-                    doc.addPage();
-                    y = 20;
-                }
-                
-                // Nome da equipe e total
-                doc.setFontSize(12);
-                doc.setFont("helvetica", "bold");
-                doc.text(`${nomeEquipe} - TOTAL: ${equipe.total || 0} atendimentos`, margin, y);
-                y += 7;
-                
-                // Lista de colaboradores da equipe
-                doc.setFontSize(10);
-                doc.setFont("helvetica", "normal");
-                
-                if (equipe.collaborators && Object.keys(equipe.collaborators).length > 0) {
-                    // Ordenar colaboradores por nome
-                    const colaboradores = Object.keys(equipe.collaborators).sort();
-                    
-                    colaboradores.forEach((colab) => {
-                        const quantidade = equipe.collaborators[colab];
-                        doc.text(`   • ${colab}: ${quantidade} atendimento(s)`, margin + 5, y);
-                        y += 5;
-                    });
-                } else {
-                    doc.text(`   • Nenhum atendimento registrado para esta equipe`, margin + 5, y);
-                    y += 5;
-                }
-                
-                y += 5; // Espaço entre equipes
-            });
-            
-        } else {
-            doc.text("Nenhum dado de equipe encontrado.", margin + 5, y);
-            y += 10;
-        }
-
-        // ===== 2. RESUMO GERAL =====
-        if (y > pageHeight - 40) {
-            doc.addPage();
-            y = 20;
-        }
-        
-        doc.setFontSize(14);
-        doc.setFont("helvetica", "bold");
-        doc.text("RESUMO GERAL", margin, y);
-        y += 10;
-        
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Total de Atendimentos: ${statsData.atendidosCount || 0}`, margin + 5, y);
-        y += 7;
-        doc.text(`Total de Faltosos: ${statsData.faltososCount || 0}`, margin + 5, y);
-        y += 7;
-        doc.text(`Total de Agendamentos: ${statsData.agendadosCount || 0}`, margin + 5, y);
-        y += 7;
-        doc.text(`Total de Equipes: ${Object.keys(statsData.statsByGroup || {}).length}`, margin + 5, y);
-        y += 7;
-        
-        // Total de colaboradores
-        let totalColaboradores = 0;
-        if (statsData.statsByGroup) {
-            Object.values(statsData.statsByGroup).forEach(equipe => {
-                totalColaboradores += Object.keys(equipe.collaborators || {}).length;
-            });
-        }
-        doc.text(`Total de Colaboradores: ${totalColaboradores}`, margin + 5, y);
-        y += 7;
-        
-        // Tempo médio
-        if (statsData.avgTimeDirect) {
-            doc.text(`Tempo Médio de Atendimento: ${statsData.avgTimeDirect} minutos`, margin + 5, y);
-            y += 7;
-        }
-
-        // ===== 3. ASSUNTOS =====
-        if (statsData.statsBySubject && Object.keys(statsData.statsBySubject).length > 0) {
-            if (y > pageHeight - 40) {
+        const addSectionTitle = (title) => {
+            if (yPos > pageHeight - 100) { 
                 doc.addPage();
-                y = 20;
+                yPos = margin + 30;
             }
-            
-            doc.setFontSize(14);
             doc.setFont("helvetica", "bold");
-            doc.text("ASSUNTOS ATENDIDOS", margin, y);
-            y += 10;
+            doc.setFontSize(14);
+            doc.setTextColor(43, 58, 85);
+            doc.text(title, margin, yPos);
+            yPos += 25;
+        };
+
+        // ===== 1. RESUMO GERAL =====
+        if (exportGeneral) {
+            addSectionTitle("Resumo Geral");
             
+            const colWidth = (pageWidth - margin * 2) / 3;
+            let startX = margin;
+            
+            // Atendidos
+            doc.setFillColor(220, 255, 220);
+            doc.roundedRect(startX, yPos - 15, colWidth - 10, 60, 5, 5, 'F');
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(24);
+            doc.setTextColor(39, 174, 96);
+            doc.text(String(statsData.atendidosCount || 0), startX + (colWidth - 10)/2, yPos + 15, { align: 'center' });
             doc.setFontSize(10);
-            doc.setFont("helvetica", "normal");
+            doc.setTextColor(0);
+            doc.text("Atendidos", startX + (colWidth - 10)/2, yPos + 35, { align: 'center' });
             
-            const assuntos = Object.entries(statsData.statsBySubject)
-                .sort(([,a], [,b]) => b.total - a.total);
+            // Faltosos
+            startX += colWidth;
+            doc.setFillColor(255, 220, 220);
+            doc.roundedRect(startX, yPos - 15, colWidth - 10, 60, 5, 5, 'F');
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(24);
+            doc.setTextColor(192, 57, 43);
+            doc.text(String(statsData.faltososCount || 0), startX + (colWidth - 10)/2, yPos + 15, { align: 'center' });
+            doc.setFontSize(10);
+            doc.setTextColor(0);
+            doc.text("Faltosos", startX + (colWidth - 10)/2, yPos + 35, { align: 'center' });
             
-            assuntos.forEach(([assunto, dados]) => {
-                if (y > pageHeight - 20) {
-                    doc.addPage();
-                    y = 20;
-                }
-                doc.text(`• ${assunto}: ${dados.total} (${dados.atendidos} atendidos, ${dados.faltosos} faltosos)`, margin + 5, y);
-                y += 5;
+            // Tempo Médio
+            startX += colWidth;
+            doc.setFillColor(220, 235, 255);
+            doc.roundedRect(startX, yPos - 15, colWidth - 10, 60, 5, 5, 'F');
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(24);
+            doc.setTextColor(41, 128, 185);
+            const tempoMedio = statsData.avgTimeDirect || 0;
+            doc.text(tempoMedio + ' min', startX + (colWidth - 10)/2, yPos + 15, { align: 'center' });
+            doc.setFontSize(10);
+            doc.setTextColor(0);
+            doc.text("Tempo Médio", startX + (colWidth - 10)/2, yPos + 35, { align: 'center' });
+            
+            yPos += 70;
+        }
+
+        // ===== 2. ATENDIMENTOS POR COLABORADOR =====
+        if (exportCollaborators && statsData.statsByGroup) {
+            addSectionTitle("Atendimentos por Colaborador");
+            
+            const colaboradores = [];
+            Object.entries(statsData.statsByGroup).forEach(([grupo, data]) => {
+                Object.entries(data.collaborators || {}).forEach(([nome, count]) => {
+                    colaboradores.push([nome, count]);
+                });
             });
+            
+            colaboradores.sort((a, b) => b[1] - a[1]);
+            
+            doc.autoTable({
+                startY: yPos,
+                head: [['Colaborador', 'Total']],
+                body: colaboradores,
+                theme: 'grid',
+                headStyles: { fillColor: [75, 85, 99], textColor: '#FFFFFF' },
+                styles: { fontSize: 9 },
+                margin: { left: margin, right: margin }
+            });
+            
+            yPos = doc.lastAutoTable.finalY + 20;
+        }
+
+        // ===== 3. ATENDIMENTOS POR EQUIPE =====
+        if (exportCollaborators && statsData.statsByGroup) {
+            if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
+            addSectionTitle("Atendimentos por Equipe");
+            
+            const equipes = Object.entries(statsData.statsByGroup).map(([nome, data]) => [nome, data.total]);
+            equipes.sort((a, b) => b[1] - a[1]);
+            
+            doc.autoTable({
+                startY: yPos,
+                head: [['Equipe', 'Total']],
+                body: equipes,
+                theme: 'grid',
+                headStyles: { fillColor: [22, 163, 74], textColor: '#FFFFFF' },
+                styles: { fontSize: 9 },
+                margin: { left: margin, right: margin }
+            });
+            
+            yPos = doc.lastAutoTable.finalY + 20;
         }
 
         // ===== 4. AGENDADOS POR HORÁRIO =====
-        const exportScheduledTime = document.getElementById('export-scheduled-time')?.checked;
         if (exportScheduledTime && statsData.statsByScheduledTime && statsData.statsByScheduledTime.length > 0) {
+            if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
+            addSectionTitle("Agendados por Horário");
             
-            if (y > pageHeight - 40) {
-                doc.addPage();
-                y = 20;
-            }
-            
-            doc.setFontSize(14);
-            doc.setFont("helvetica", "bold");
-            doc.text("AGENDADOS POR HORÁRIO", margin, y);
-            y += 10;
-            
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "normal");
-            
-            statsData.statsByScheduledTime.forEach(item => {
-                if (y > pageHeight - 20) {
-                    doc.addPage();
-                    y = 20;
-                }
-                doc.text(`• ${item.time}: ${item.count} agendamento(s)`, margin + 5, y);
-                y += 5;
+            doc.autoTable({
+                startY: yPos,
+                head: [['Horário', 'Quantidade']],
+                body: statsData.statsByScheduledTime.map(item => [item.time, item.count]),
+                foot: [['Total', statsData.agendadosCount || 0]],
+                theme: 'grid',
+                headStyles: { fillColor: [22, 163, 74], textColor: '#FFFFFF' },
+                footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
+                styles: { fontSize: 9 },
+                margin: { left: margin, right: margin }
             });
+            
+            yPos = doc.lastAutoTable.finalY + 20;
         }
 
         // ===== 5. ATENDIMENTOS POR HORÁRIO =====
-        const exportTimes = document.getElementById('export-times')?.checked;
         if (exportTimes && statsData.statsByTime && statsData.statsByTime.length > 0) {
+            if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
+            addSectionTitle("Atendimentos por Horário (Chegada)");
             
-            if (y > pageHeight - 40) {
-                doc.addPage();
-                y = 20;
-            }
-            
-            doc.setFontSize(14);
-            doc.setFont("helvetica", "bold");
-            doc.text("ATENDIMENTOS POR HORÁRIO", margin, y);
-            y += 10;
-            
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "normal");
-            
-            statsData.statsByTime.forEach(item => {
-                if (y > pageHeight - 20) {
-                    doc.addPage();
-                    y = 20;
-                }
-                doc.text(`• ${item.time}: ${item.count} atendimento(s)`, margin + 5, y);
-                y += 5;
+            doc.autoTable({
+                startY: yPos,
+                head: [['Horário', 'Quantidade']],
+                body: statsData.statsByTime.map(item => [item.time, item.count]),
+                foot: [['Total', statsData.atendidosCount || 0]],
+                theme: 'grid',
+                headStyles: { fillColor: [22, 163, 74], textColor: '#FFFFFF' },
+                footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
+                styles: { fontSize: 9 },
+                margin: { left: margin, right: margin }
             });
+            
+            yPos = doc.lastAutoTable.finalY + 20;
         }
 
         // ===== 6. FALTOSOS POR HORÁRIO =====
-        const exportAbsenteesTime = document.getElementById('export-absentees-time')?.checked;
         if (exportAbsenteesTime && statsData.statsByTimeFaltosos && statsData.statsByTimeFaltosos.length > 0) {
+            if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
+            addSectionTitle("Faltosos por Horário");
             
-            if (y > pageHeight - 40) {
-                doc.addPage();
-                y = 20;
-            }
+            doc.autoTable({
+                startY: yPos,
+                head: [['Horário', 'Quantidade']],
+                body: statsData.statsByTimeFaltosos.map(item => [item.time, item.count]),
+                foot: [['Total', statsData.faltososCount || 0]],
+                theme: 'grid',
+                headStyles: { fillColor: [220, 38, 38], textColor: '#FFFFFF' },
+                footStyles: { fillColor: [255, 240, 240], fontStyle: 'bold' },
+                styles: { fontSize: 9 },
+                margin: { left: margin, right: margin }
+            });
             
-            doc.setFontSize(14);
-            doc.setFont("helvetica", "bold");
-            doc.text("FALTOSOS POR HORÁRIO", margin, y);
-            y += 10;
+            yPos = doc.lastAutoTable.finalY + 20;
+        }
+
+        // ===== 7. DEMANDAS POR ASSUNTO =====
+        if (exportSubjects && statsData.statsBySubject && Object.keys(statsData.statsBySubject).length > 0) {
+            if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
+            addSectionTitle("Demandas por Assunto");
             
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "normal");
+            const subjects = Object.entries(statsData.statsBySubject)
+                .sort(([,a], [,b]) => b.total - a.total)
+                .map(([name, data]) => [
+                    name.length > 30 ? name.substring(0, 27) + '...' : name,
+                    data.total || 0,
+                    data.atendidos || 0,
+                    data.faltosos || 0
+                ]);
             
-            statsData.statsByTimeFaltosos.forEach(item => {
-                if (y > pageHeight - 20) {
-                    doc.addPage();
-                    y = 20;
-                }
-                doc.text(`• ${item.time}: ${item.count} faltoso(s)`, margin + 5, y);
-                y += 5;
+            const totalGeral = subjects.reduce((acc, row) => acc + row[1], 0);
+            const totalAtendidos = subjects.reduce((acc, row) => acc + row[2], 0);
+            const totalFaltosos = subjects.reduce((acc, row) => acc + row[3], 0);
+            
+            doc.autoTable({
+                startY: yPos,
+                head: [['Assunto', 'Total', 'Atendidos', 'Faltosos']],
+                body: subjects,
+                foot: [['TOTAL GERAL', totalGeral, totalAtendidos, totalFaltosos]],
+                theme: 'grid',
+                headStyles: { fillColor: [75, 85, 99], textColor: '#FFFFFF' },
+                footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
+                styles: { fontSize: 8 },
+                columnStyles: { 0: { cellWidth: 180 } },
+                margin: { left: margin, right: margin }
             });
         }
 
@@ -867,16 +969,15 @@ export const StatisticsService = {
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
             doc.setFontSize(8);
-            doc.setTextColor(100);
+            doc.setTextColor(150);
             doc.text(
-                `Página ${i} de ${pageCount}`,
-                pageWidth - margin - 20,
-                pageHeight - 10
+                `Gerado em: ${new Date().toLocaleString('pt-BR')} - Página ${i} de ${pageCount}`,
+                margin,
+                pageHeight - 20
             );
         }
 
-        // Salvar PDF
-        doc.save(`resumo_equipes_${pautaName.replace(/\s+/g, '_')}.pdf`);
+        doc.save(`resumo_${pautaName.replace(/\s+/g, '_')}.pdf`);
     }
 };
 
