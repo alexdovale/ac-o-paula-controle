@@ -1,5 +1,5 @@
 /**
- * estatisticas.js - Versão Completa com PDF Resumo Simples
+ * estatisticas.js - Versão Completa e Corrigida
  * Funcionalidades:
  * - Atendidos por equipe (todas as equipes)
  * - Atendidos por colaborador (quantidade individual)
@@ -67,18 +67,11 @@ export const StatisticsService = {
         
         // Primeiro, vamos coletar TODAS as equipes existentes
         const todasEquipes = new Set();
-        const todosColaboradores = new Set();
         
         allAssisted.forEach(a => {
             const attendantIsObject = typeof a.attendant === 'object' && a.attendant !== null;
             const groupName = attendantIsObject && a.attendant.equipe ? `Equipe ${a.attendant.equipe}` : 'Equipe Não Definida';
             todasEquipes.add(groupName);
-            
-            if (attendantIsObject && a.attendant.nome) {
-                todosColaboradores.add(a.attendant.nome);
-            } else if (a.attendant && typeof a.attendant === 'string') {
-                todosColaboradores.add(a.attendant);
-            }
         });
         
         // Estatísticas por equipe (agrupado)
@@ -135,15 +128,16 @@ export const StatisticsService = {
             .map(([name, count]) => ({ name, count }));
         
         // 3. Equipes ordenadas por nome
-        const sortedGroups = Object.keys(statsByGroup)
+        const sortedGroups = Array.from(todasEquipes)
             .sort()
             .map(groupName => ({
                 groupName,
-                total: statsByGroup[groupName].total,
-                collaborators: Object.entries(statsByGroup[groupName].collaborators)
-                    .sort(([, a], [, b]) => b - a)
-                    .map(([name, count]) => ({ name, count })),
-                atendimentos: statsByGroup[groupName].atendimentos
+                total: statsByGroup[groupName]?.total || 0,
+                collaborators: statsByGroup[groupName]?.collaborators ? 
+                    Object.entries(statsByGroup[groupName].collaborators)
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([name, count]) => ({ name, count })) : [],
+                atendimentos: statsByGroup[groupName]?.atendimentos || []
             }));
         
         // 4. Total geral
@@ -167,8 +161,10 @@ export const StatisticsService = {
         }, {});
 
         const totalDemandasGeral = Object.values(statsBySubject).reduce((sum, data) => sum + data.total, 0);
+        const totalDemandasAtendidos = Object.values(statsBySubject).reduce((sum, data) => sum + data.atendidos, 0);
+        const totalDemandasFaltosos = Object.values(statsBySubject).reduce((sum, data) => sum + data.faltosos, 0);
 
-        // Estatísticas por horário (mantido para compatibilidade)
+        // Estatísticas por horário
         const statsByTime = atendidos.filter(a => a.scheduledTime).reduce((acc, a) => {
             acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
             return acc;
@@ -253,6 +249,8 @@ export const StatisticsService = {
                 </tr>
             `).join('');
 
+            const hasCollaborators = collaborators.length > 0;
+
             return `
                 <div class="mb-3 md:mb-4 border rounded-lg overflow-hidden group-container" data-group-index="${index}">
                     <div class="bg-gray-100 px-2 md:px-4 py-2 font-bold text-xs md:text-sm flex justify-between items-center">
@@ -260,15 +258,21 @@ export const StatisticsService = {
                             <span>👥 ${groupName}</span>
                             <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-[10px] md:text-xs">Total: ${total}</span>
                         </div>
-                        <button class="toggle-details-btn text-xs bg-white px-2 py-1 rounded border hover:bg-gray-50" data-group-index="${index}">
-                            🔽 Ocultar detalhes
-                        </button>
+                        ${hasCollaborators ? `
+                            <button class="toggle-details-btn text-xs bg-white px-2 py-1 rounded border hover:bg-gray-50" data-group-index="${index}">
+                                🔽 Ocultar detalhes
+                            </button>
+                        ` : ''}
                     </div>
-                    <table class="w-full text-xs md:text-sm text-left collaborators-table" data-group-index="${index}">
-                        <tbody>
-                            ${collaboratorsRows}
-                        </tbody>
-                    </table>
+                    ${hasCollaborators ? `
+                        <table class="w-full text-xs md:text-sm text-left collaborators-table" data-group-index="${index}">
+                            <tbody>
+                                ${collaboratorsRows}
+                            </tbody>
+                        </table>
+                    ` : `
+                        <div class="p-2 text-xs text-gray-500 italic">Nenhum atendimento registrado para esta equipe</div>
+                    `}
                 </div>
             `;
         }).join('');
@@ -454,11 +458,15 @@ export const StatisticsService = {
                 const isShowing = toggleAllBtn.textContent.includes('Ocultar');
                 
                 document.querySelectorAll('.collaborators-table').forEach(table => {
-                    table.style.display = isShowing ? 'none' : 'table';
+                    if (table) {
+                        table.style.display = isShowing ? 'none' : 'table';
+                    }
                 });
                 
                 document.querySelectorAll('.toggle-details-btn').forEach(btn => {
-                    btn.textContent = isShowing ? '🔽 Mostrar detalhes' : '🔽 Ocultar detalhes';
+                    if (btn) {
+                        btn.textContent = isShowing ? '🔽 Mostrar detalhes' : '🔽 Ocultar detalhes';
+                    }
                 });
                 
                 toggleAllBtn.textContent = isShowing ? '🔽 Mostrar todos os detalhes' : '🔽 Ocultar todos os detalhes';
@@ -578,7 +586,7 @@ export const StatisticsService = {
             doc.setFontSize(9);
             doc.setFont("helvetica", "normal");
 
-            if (atendimentos.length > 0) {
+            if (atendimentos && atendimentos.length > 0) {
                 atendimentos.forEach((att, index) => {
                     if (y > pageHeight - 20) {
                         doc.addPage();
@@ -601,7 +609,7 @@ export const StatisticsService = {
                     doc.text(`   Atendente: ${att.atendente}`, margin + 10, y);
                     y += 5;
                     
-                    if (att.horario !== 'Não finalizado') {
+                    if (att.horario && att.horario !== 'Não finalizado') {
                         doc.text(`   Horário: ${att.horario}`, margin + 10, y);
                         y += 5;
                     }
@@ -633,7 +641,7 @@ export const StatisticsService = {
     },
 
     /**
-     * Exporta estatísticas para PDF - VERSÃO SIMPLES (sem formatação complexa)
+     * Exporta estatísticas para PDF - VERSÃO SIMPLES
      */
     async exportStatisticsToPDF(pautaName, statsData) {
         const { jsPDF } = window.jspdf;
@@ -739,13 +747,13 @@ export const StatisticsService = {
         doc.text(`Total de Colaboradores: ${totalColaboradores}`, margin + 5, y);
         y += 7;
         
-        // Tempo médio (se disponível)
+        // Tempo médio
         if (statsData.avgTimeDirect) {
             doc.text(`Tempo Médio de Atendimento: ${statsData.avgTimeDirect} minutos`, margin + 5, y);
             y += 7;
         }
 
-        // ===== 3. ASSUNTOS (DEMANDAS) =====
+        // ===== 3. ASSUNTOS =====
         if (statsData.statsBySubject && Object.keys(statsData.statsBySubject).length > 0) {
             if (y > pageHeight - 40) {
                 doc.addPage();
@@ -760,7 +768,6 @@ export const StatisticsService = {
             doc.setFontSize(10);
             doc.setFont("helvetica", "normal");
             
-            // Ordenar assuntos por quantidade (decrescente)
             const assuntos = Object.entries(statsData.statsBySubject)
                 .sort(([,a], [,b]) => b.total - a.total);
             
@@ -774,9 +781,9 @@ export const StatisticsService = {
             });
         }
 
-        // ===== 4. AGENDADOS POR HORÁRIO (se selecionado) =====
-        if (document.getElementById('export-scheduled-time')?.checked && 
-            statsData.statsByScheduledTime && statsData.statsByScheduledTime.length > 0) {
+        // ===== 4. AGENDADOS POR HORÁRIO =====
+        const exportScheduledTime = document.getElementById('export-scheduled-time')?.checked;
+        if (exportScheduledTime && statsData.statsByScheduledTime && statsData.statsByScheduledTime.length > 0) {
             
             if (y > pageHeight - 40) {
                 doc.addPage();
@@ -801,9 +808,9 @@ export const StatisticsService = {
             });
         }
 
-        // ===== 5. ATENDIMENTOS POR HORÁRIO (se selecionado) =====
-        if (document.getElementById('export-times')?.checked && 
-            statsData.statsByTime && statsData.statsByTime.length > 0) {
+        // ===== 5. ATENDIMENTOS POR HORÁRIO =====
+        const exportTimes = document.getElementById('export-times')?.checked;
+        if (exportTimes && statsData.statsByTime && statsData.statsByTime.length > 0) {
             
             if (y > pageHeight - 40) {
                 doc.addPage();
@@ -828,9 +835,9 @@ export const StatisticsService = {
             });
         }
 
-        // ===== 6. FALTOSOS POR HORÁRIO (se selecionado) =====
-        if (document.getElementById('export-absentees-time')?.checked && 
-            statsData.statsByTimeFaltosos && statsData.statsByTimeFaltosos.length > 0) {
+        // ===== 6. FALTOSOS POR HORÁRIO =====
+        const exportAbsenteesTime = document.getElementById('export-absentees-time')?.checked;
+        if (exportAbsenteesTime && statsData.statsByTimeFaltosos && statsData.statsByTimeFaltosos.length > 0) {
             
             if (y > pageHeight - 40) {
                 doc.addPage();
@@ -855,7 +862,7 @@ export const StatisticsService = {
             });
         }
 
-        // RODAPÉ
+        // Rodapé
         const pageCount = doc.internal.getNumberOfPages();
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
@@ -874,19 +881,13 @@ export const StatisticsService = {
 };
 
 // ========================================================
-// FUNÇÕES AVULSAS (para compatibilidade com código antigo)
+// FUNÇÕES AVULSAS
 // ========================================================
 
-/**
- * @deprecated Use StatisticsService.showModal() instead
- */
 export const renderStatisticsModal = (allAssisted, useDelegationFlow, pautaName) => {
     return StatisticsService.showModal(allAssisted, useDelegationFlow, pautaName);
 };
 
-/**
- * @deprecated Use StatisticsService.exportStatisticsToPDF() instead
- */
 export const exportStatisticsToPDF = (pautaName, statsData) => {
     return StatisticsService.exportStatisticsToPDF(pautaName, statsData);
 };
