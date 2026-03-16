@@ -1,6 +1,6 @@
 /**
  * detalhes.js - SIGAP
- * Versão COMPLETA com formulário de réu atualizado (endereço para citação)
+ * Versão COMPLETA com checkboxes expansíveis para réu e planilha de gastos para alimentos
  */
 
 import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -18,14 +18,15 @@ const INCOME_DOCS_STRUCTURED = [
 ];
 const COMMON_DOCS_FULL = [...BASE_DOCS, ...INCOME_DOCS_STRUCTURED];
 
+// Planilha de gastos específica para ações de alimentos
 const EXPENSE_CATEGORIES = [
-    { id: 'moradia', label: '1. MORADIA (Habitação)', desc: 'Aluguel, luz, água, gás (divida pelo nº de moradores).' },
-    { id: 'alimentacao', label: '2. ALIMENTAÇÃO', desc: 'Mercado, feira, açougue, lanches, leites especiais.' },
-    { id: 'educacao', label: '3. EDUCAÇÃO', desc: 'Mensalidade, transporte escolar, material, uniforme, cursos.' },
-    { id: 'saude', label: '4. SAÚDE', desc: 'Plano de saúde, farmácia, tratamentos (dentista, psicólogo).' },
-    { id: 'vestuario', label: '5. VESTUÁRIO E HIGIENE', desc: 'Roupas, calçados, fraldas, itens de higiene.' },
-    { id: 'lazer', label: '6. LAZER E TRANSPORTE', desc: 'Passeios, festas, transporte para atividades.' },
-    { id: 'outras', label: '7. OUTRAS DESPESAS', desc: 'Babá, pet, cursos livres, etc.' }
+    { id: 'moradia', label: '1. MORADIA (Habitação)', desc: 'Aluguel, condomínio, IPTU, luz, água, gás.' },
+    { id: 'alimentacao', label: '2. ALIMENTAÇÃO', desc: 'Supermercado, feira, açougue, lanches, leites especiais.' },
+    { id: 'educacao', label: '3. EDUCAÇÃO', desc: 'Mensalidade escolar, material, uniforme, transporte escolar, cursos.' },
+    { id: 'saude', label: '4. SAÚDE', desc: 'Plano de saúde, medicamentos, consultas, tratamentos (dentista, psicólogo, fisioterapia).' },
+    { id: 'vestuario', label: '5. VESTUÁRIO E HIGIENE', desc: 'Roupas, calçados, fraldas, produtos de higiene pessoal.' },
+    { id: 'lazer', label: '6. LAZER E TRANSPORTE', desc: 'Passeios, festas, cinema, transporte público, combustível.' },
+    { id: 'outras', label: '7. OUTRAS DESPESAS', desc: 'Babá, pets, atividades extracurriculares, celular, internet.' }
 ];
 
 const ACTIONS_ALWAYS_EXPENSES = ['alimentos_fixacao_majoracao_oferta', 'alimentos_gravidicos', 'alimentos_avoengos', 'investigacao_paternidade', 'guarda'];
@@ -325,7 +326,7 @@ function renderChecklist(actionKey) {
     }
 }
 
-// --- 10. FORMULÁRIO DO RÉU (VERSÃO COMPLETA COM ENDEREÇO PARA CITAÇÃO) ---
+// --- 10. FORMULÁRIO DO RÉU (VERSÃO COM CHECKBOXES EXPANSÍVEIS) ---
 function renderReuForm(containerId) {
     const container = getEl(containerId);
     if (!container) return;
@@ -357,213 +358,242 @@ function renderReuForm(containerId) {
                 </div>
             </div>
 
-            <!-- SEÇÃO 1: IDENTIFICAÇÃO BÁSICA -->
+            <!-- SEÇÃO 1: IDENTIFICAÇÃO DO RÉU (COM CHECKBOX) -->
             <div class="bg-white p-3 rounded-lg border border-gray-200 mb-4">
-                <h4 class="text-[10px] font-black text-gray-500 uppercase mb-3">1. IDENTIFICAÇÃO DO RÉU</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div class="md:col-span-2">
-                        <label class="text-[9px] font-black text-gray-400 uppercase">Nome Completo</label>
-                        <input type="text" id="nome-reu" placeholder="Nome completo do réu" 
-                               class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
-                    </div>
-                    <div>
-                        <label class="text-[9px] font-black text-gray-400 uppercase">CPF</label>
-                        <input type="text" id="cpf-reu" placeholder="000.000.000-00" maxlength="14"
-                               class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
-                    </div>
-                    <div>
-                        <label class="text-[9px] font-black text-gray-400 uppercase">Telefone / WhatsApp</label>
-                        <input type="text" id="telefone-reu" placeholder="(21) 99999-9999" maxlength="15"
-                               class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
-                    </div>
+                <div class="flex items-center gap-3 mb-3">
+                    <input type="checkbox" id="check-reu-identificacao" class="h-5 w-5 text-red-600 rounded border-gray-300 focus:ring-red-500" checked>
+                    <label for="check-reu-identificacao" class="text-sm font-bold text-gray-700 cursor-pointer">
+                        1. IDENTIFICAÇÃO DO RÉU
+                    </label>
                 </div>
-            </div>
-
-            <!-- SEÇÃO 2: ENDEREÇO RESIDENCIAL (PRINCIPAL) -->
-            <div class="bg-red-50 p-3 rounded-lg border border-red-200 mb-4">
-                <h4 class="text-[10px] font-black text-red-600 uppercase mb-3 flex items-center gap-1">
-                    2. ENDEREÇO PARA CITAÇÃO (RESIDENCIAL)
-                    <span class="text-[8px] font-normal text-red-500 ml-1">(Mais importante)</span>
-                </h4>
                 
-                <!-- Linha: CEP com botão de busca -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
-                    <div class="md:col-span-1">
-                        <label class="text-[9px] font-black text-gray-400 uppercase">CEP</label>
-                        <div class="flex">
-                            <input type="text" id="cep-reu" maxlength="9" placeholder="00000-000" 
-                                   class="w-full p-2 border-2 border-red-200 rounded-l-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
-                            <button type="button" id="buscar-cep-reu-btn" 
-                                    class="bg-red-600 text-white px-3 rounded-r-lg hover:bg-red-700 text-xs font-bold">
-                                Buscar
-                            </button>
+                <div id="content-reu-identificacao" class="space-y-3">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div class="md:col-span-2">
+                            <label class="text-[9px] font-black text-gray-400 uppercase">Nome Completo</label>
+                            <input type="text" id="nome-reu" placeholder="Nome completo do réu" 
+                                   class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-black text-gray-400 uppercase">CPF</label>
+                            <input type="text" id="cpf-reu" placeholder="000.000.000-00" maxlength="14"
+                                   class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-black text-gray-400 uppercase">Telefone / WhatsApp</label>
+                            <input type="text" id="telefone-reu" placeholder="(21) 99999-9999" maxlength="15"
+                                   class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
                         </div>
                     </div>
-                    <div class="md:col-span-2">
-                        <label class="text-[9px] font-black text-gray-400 uppercase">Logradouro (Rua, Avenida, etc.)</label>
-                        <input type="text" id="rua-reu" placeholder="Ex: Rua das Flores, Avenida Brasil..." 
-                               class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
-                    </div>
-                </div>
-                
-                <!-- Linha: Número e Complemento -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
-                    <div>
-                        <label class="text-[9px] font-black text-gray-400 uppercase">Número</label>
-                        <input type="text" id="numero-reu" placeholder="123" 
-                               class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="text-[9px] font-black text-gray-400 uppercase">Complemento</label>
-                        <input type="text" id="complemento-reu" placeholder="Apto 201, Bloco B, Casa 5..." 
-                               class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
-                    </div>
-                </div>
-                
-                <!-- Linha: Bairro -->
-                <div class="mb-3">
-                    <label class="text-[9px] font-black text-gray-400 uppercase">Bairro</label>
-                    <input type="text" id="bairro-reu" placeholder="Centro, Copacabana, Tijuca..." 
-                           class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
-                </div>
-                
-                <!-- Linha: Cidade e Estado -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
-                    <div class="md:col-span-2">
-                        <label class="text-[9px] font-black text-gray-400 uppercase">Cidade</label>
-                        <input type="text" id="cidade-reu" placeholder="Rio de Janeiro" 
-                               class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
-                    </div>
-                    <div>
-                        <label class="text-[9px] font-black text-gray-400 uppercase">Estado</label>
-                        <select id="estado-reu" class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
-                            <option value="">Selecione...</option>
-                            <option value="AC">Acre (AC)</option>
-                            <option value="AL">Alagoas (AL)</option>
-                            <option value="AP">Amapá (AP)</option>
-                            <option value="AM">Amazonas (AM)</option>
-                            <option value="BA">Bahia (BA)</option>
-                            <option value="CE">Ceará (CE)</option>
-                            <option value="DF">Distrito Federal (DF)</option>
-                            <option value="ES">Espírito Santo (ES)</option>
-                            <option value="GO">Goiás (GO)</option>
-                            <option value="MA">Maranhão (MA)</option>
-                            <option value="MT">Mato Grosso (MT)</option>
-                            <option value="MS">Mato Grosso do Sul (MS)</option>
-                            <option value="MG">Minas Gerais (MG)</option>
-                            <option value="PA">Pará (PA)</option>
-                            <option value="PB">Paraíba (PB)</option>
-                            <option value="PR">Paraná (PR)</option>
-                            <option value="PE">Pernambuco (PE)</option>
-                            <option value="PI">Piauí (PI)</option>
-                            <option value="RJ" selected>Rio de Janeiro (RJ)</option>
-                            <option value="RN">Rio Grande do Norte (RN)</option>
-                            <option value="RS">Rio Grande do Sul (RS)</option>
-                            <option value="RO">Rondônia (RO)</option>
-                            <option value="RR">Roraima (RR)</option>
-                            <option value="SC">Santa Catarina (SC)</option>
-                            <option value="SP">São Paulo (SP)</option>
-                            <option value="SE">Sergipe (SE)</option>
-                            <option value="TO">Tocantins (TO)</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <!-- Linha: Ponto de Referência -->
-                <div>
-                    <label class="text-[9px] font-black text-gray-400 uppercase">Ponto de Referência</label>
-                    <input type="text" id="referencia-reu" placeholder="Ex: Próximo à padaria X, Em frente ao posto de saúde Y" 
-                           class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
-                    <p class="text-[8px] text-gray-500 mt-1">Informação importante para localização</p>
                 </div>
             </div>
 
-            <!-- SEÇÃO 3: ENDEREÇO COMERCIAL/TRABALHO (ALTERNATIVO) -->
+            <!-- SEÇÃO 2: ENDEREÇO RESIDENCIAL (COM CHECKBOX) -->
+            <div class="bg-red-50 p-3 rounded-lg border border-red-200 mb-4">
+                <div class="flex items-center gap-3 mb-3">
+                    <input type="checkbox" id="check-reu-residencial" class="h-5 w-5 text-red-600 rounded border-gray-300 focus:ring-red-500" checked>
+                    <label for="check-reu-residencial" class="text-sm font-bold text-red-700 cursor-pointer">
+                        2. ENDEREÇO PARA CITAÇÃO (RESIDENCIAL)
+                        <span class="text-[8px] font-normal text-red-500 ml-2">(Mais importante)</span>
+                    </label>
+                </div>
+                
+                <div id="content-reu-residencial" class="space-y-3">
+                    <!-- Linha: CEP com botão de busca -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div class="md:col-span-1">
+                            <label class="text-[9px] font-black text-gray-400 uppercase">CEP</label>
+                            <div class="flex">
+                                <input type="text" id="cep-reu" maxlength="9" placeholder="00000-000" 
+                                       class="w-full p-2 border-2 border-red-200 rounded-l-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
+                                <button type="button" id="buscar-cep-reu-btn" 
+                                        class="bg-red-600 text-white px-3 rounded-r-lg hover:bg-red-700 text-xs font-bold">
+                                    Buscar
+                                </button>
+                            </div>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="text-[9px] font-black text-gray-400 uppercase">Logradouro (Rua, Avenida, etc.)</label>
+                            <input type="text" id="rua-reu" placeholder="Ex: Rua das Flores, Avenida Brasil..." 
+                                   class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
+                        </div>
+                    </div>
+                    
+                    <!-- Linha: Número e Complemento -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div>
+                            <label class="text-[9px] font-black text-gray-400 uppercase">Número</label>
+                            <input type="text" id="numero-reu" placeholder="123" 
+                                   class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="text-[9px] font-black text-gray-400 uppercase">Complemento</label>
+                            <input type="text" id="complemento-reu" placeholder="Apto 201, Bloco B, Casa 5..." 
+                                   class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
+                        </div>
+                    </div>
+                    
+                    <!-- Linha: Bairro -->
+                    <div>
+                        <label class="text-[9px] font-black text-gray-400 uppercase">Bairro</label>
+                        <input type="text" id="bairro-reu" placeholder="Centro, Copacabana, Tijuca..." 
+                               class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
+                    </div>
+                    
+                    <!-- Linha: Cidade e Estado -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div class="md:col-span-2">
+                            <label class="text-[9px] font-black text-gray-400 uppercase">Cidade</label>
+                            <input type="text" id="cidade-reu" placeholder="Rio de Janeiro" 
+                                   class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-black text-gray-400 uppercase">Estado</label>
+                            <select id="estado-reu" class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
+                                <option value="">Selecione...</option>
+                                <option value="AC">Acre (AC)</option>
+                                <option value="AL">Alagoas (AL)</option>
+                                <option value="AP">Amapá (AP)</option>
+                                <option value="AM">Amazonas (AM)</option>
+                                <option value="BA">Bahia (BA)</option>
+                                <option value="CE">Ceará (CE)</option>
+                                <option value="DF">Distrito Federal (DF)</option>
+                                <option value="ES">Espírito Santo (ES)</option>
+                                <option value="GO">Goiás (GO)</option>
+                                <option value="MA">Maranhão (MA)</option>
+                                <option value="MT">Mato Grosso (MT)</option>
+                                <option value="MS">Mato Grosso do Sul (MS)</option>
+                                <option value="MG">Minas Gerais (MG)</option>
+                                <option value="PA">Pará (PA)</option>
+                                <option value="PB">Paraíba (PB)</option>
+                                <option value="PR">Paraná (PR)</option>
+                                <option value="PE">Pernambuco (PE)</option>
+                                <option value="PI">Piauí (PI)</option>
+                                <option value="RJ" selected>Rio de Janeiro (RJ)</option>
+                                <option value="RN">Rio Grande do Norte (RN)</option>
+                                <option value="RS">Rio Grande do Sul (RS)</option>
+                                <option value="RO">Rondônia (RO)</option>
+                                <option value="RR">Roraima (RR)</option>
+                                <option value="SC">Santa Catarina (SC)</option>
+                                <option value="SP">São Paulo (SP)</option>
+                                <option value="SE">Sergipe (SE)</option>
+                                <option value="TO">Tocantins (TO)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Linha: Ponto de Referência -->
+                    <div>
+                        <label class="text-[9px] font-black text-gray-400 uppercase">Ponto de Referência</label>
+                        <input type="text" id="referencia-reu" placeholder="Ex: Próximo à padaria X, Em frente ao posto de saúde Y" 
+                               class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-red-500">
+                        <p class="text-[8px] text-gray-500 mt-1">Informação importante para localização</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEÇÃO 3: ENDEREÇO COMERCIAL (COM CHECKBOX) -->
             <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <h4 class="text-[10px] font-black text-gray-500 uppercase mb-3">
-                    3. ENDEREÇO PARA CITAÇÃO (COMERCIAL/TRABALHO - Alternativo)
-                    <span class="text-[8px] font-normal text-gray-400 ml-1">(Preencha apenas se o residencial for incerto)</span>
-                </h4>
-                
-                <!-- Nome da Empresa -->
-                <div class="mb-3">
-                    <label class="text-[9px] font-black text-gray-400 uppercase">Nome da Empresa/Local de Trabalho</label>
-                    <input type="text" id="empresa-reu" placeholder="Razão social ou nome fantasia" 
-                           class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-gray-500">
+                <div class="flex items-center gap-3 mb-3">
+                    <input type="checkbox" id="check-reu-comercial" class="h-5 w-5 text-gray-600 rounded border-gray-300 focus:ring-gray-500">
+                    <label for="check-reu-comercial" class="text-sm font-bold text-gray-700 cursor-pointer">
+                        3. ENDEREÇO PARA CITAÇÃO (COMERCIAL/TRABALHO - Alternativo)
+                        <span class="text-[8px] font-normal text-gray-500 ml-2">(Preencha apenas se o residencial for incerto)</span>
+                    </label>
                 </div>
                 
-                <!-- Logradouro Comercial -->
-                <div class="mb-3">
-                    <label class="text-[9px] font-black text-gray-400 uppercase">Logradouro</label>
-                    <input type="text" id="rua-comercial-reu" placeholder="Ex: Avenida Rio Branco" 
-                           class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-gray-500">
-                </div>
-                
-                <!-- Número e Complemento Comercial -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
+                <div id="content-reu-comercial" class="hidden space-y-3">
+                    <!-- Nome da Empresa -->
                     <div>
-                        <label class="text-[9px] font-black text-gray-400 uppercase">Número</label>
-                        <input type="text" id="numero-comercial-reu" placeholder="123" 
+                        <label class="text-[9px] font-black text-gray-400 uppercase">Nome da Empresa/Local de Trabalho</label>
+                        <input type="text" id="empresa-reu" placeholder="Razão social ou nome fantasia" 
                                class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-gray-500">
                     </div>
-                    <div class="md:col-span-2">
-                        <label class="text-[9px] font-black text-gray-400 uppercase">Complemento</label>
-                        <input type="text" id="complemento-comercial-reu" placeholder="Sala 1001, Andar 5..." 
-                               class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-gray-500">
-                    </div>
-                </div>
-                
-                <!-- Bairro Comercial -->
-                <div class="mb-3">
-                    <label class="text-[9px] font-black text-gray-400 uppercase">Bairro</label>
-                    <input type="text" id="bairro-comercial-reu" placeholder="Centro" 
-                           class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-gray-500">
-                </div>
-                
-                <!-- Cidade, Estado e CEP Comercial -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
-                    <div class="md:col-span-2">
-                        <label class="text-[9px] font-black text-gray-400 uppercase">Cidade</label>
-                        <input type="text" id="cidade-comercial-reu" placeholder="Rio de Janeiro" 
-                               class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-gray-500">
-                    </div>
+                    
+                    <!-- Logradouro Comercial -->
                     <div>
-                        <label class="text-[9px] font-black text-gray-400 uppercase">Estado</label>
-                        <select id="estado-comercial-reu" class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-gray-500">
-                            <option value="">UF</option>
-                            <option value="AC">AC</option>
-                            <option value="AL">AL</option>
-                            <option value="AP">AP</option>
-                            <option value="AM">AM</option>
-                            <option value="BA">BA</option>
-                            <option value="CE">CE</option>
-                            <option value="DF">DF</option>
-                            <option value="ES">ES</option>
-                            <option value="GO">GO</option>
-                            <option value="MA">MA</option>
-                            <option value="MT">MT</option>
-                            <option value="MS">MS</option>
-                            <option value="MG">MG</option>
-                            <option value="PA">PA</option>
-                            <option value="PB">PB</option>
-                            <option value="PR">PR</option>
-                            <option value="PE">PE</option>
-                            <option value="PI">PI</option>
-                            <option value="RJ" selected>RJ</option>
-                            <option value="RN">RN</option>
-                            <option value="RS">RS</option>
-                            <option value="RO">RO</option>
-                            <option value="RR">RR</option>
-                            <option value="SC">SC</option>
-                            <option value="SP">SP</option>
-                            <option value="SE">SE</option>
-                            <option value="TO">TO</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-[9px] font-black text-gray-400 uppercase">CEP</label>
-                        <input type="text" id="cep-comercial-reu" placeholder="00000-000" maxlength="9"
+                        <label class="text-[9px] font-black text-gray-400 uppercase">Logradouro</label>
+                        <input type="text" id="rua-comercial-reu" placeholder="Ex: Avenida Rio Branco" 
                                class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-gray-500">
+                    </div>
+                    
+                    <!-- Número e Complemento Comercial -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div>
+                            <label class="text-[9px] font-black text-gray-400 uppercase">Número</label>
+                            <input type="text" id="numero-comercial-reu" placeholder="123" 
+                                   class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-gray-500">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="text-[9px] font-black text-gray-400 uppercase">Complemento</label>
+                            <input type="text" id="complemento-comercial-reu" placeholder="Sala 1001, Andar 5..." 
+                                   class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-gray-500">
+                        </div>
+                    </div>
+                    
+                    <!-- Bairro Comercial -->
+                    <div>
+                        <label class="text-[9px] font-black text-gray-400 uppercase">Bairro</label>
+                        <input type="text" id="bairro-comercial-reu" placeholder="Centro" 
+                               class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-gray-500">
+                    </div>
+                    
+                    <!-- Cidade, Estado e CEP Comercial -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                        <div class="md:col-span-2">
+                            <label class="text-[9px] font-black text-gray-400 uppercase">Cidade</label>
+                            <input type="text" id="cidade-comercial-reu" placeholder="Rio de Janeiro" 
+                                   class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-gray-500">
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-black text-gray-400 uppercase">Estado</label>
+                            <select id="estado-comercial-reu" class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-gray-500">
+                                <option value="">UF</option>
+                                <option value="AC">AC</option>
+                                <option value="AL">AL</option>
+                                <option value="AP">AP</option>
+                                <option value="AM">AM</option>
+                                <option value="BA">BA</option>
+                                <option value="CE">CE</option>
+                                <option value="DF">DF</option>
+                                <option value="ES">ES</option>
+                                <option value="GO">GO</option>
+                                <option value="MA">MA</option>
+                                <option value="MT">MT</option>
+                                <option value="MS">MS</option>
+                                <option value="MG">MG</option>
+                                <option value="PA">PA</option>
+                                <option value="PB">PB</option>
+                                <option value="PR">PR</option>
+                                <option value="PE">PE</option>
+                                <option value="PI">PI</option>
+                                <option value="RJ" selected>RJ</option>
+                                <option value="RN">RN</option>
+                                <option value="RS">RS</option>
+                                <option value="RO">RO</option>
+                                <option value="RR">RR</option>
+                                <option value="SC">SC</option>
+                                <option value="SP">SP</option>
+                                <option value="SE">SE</option>
+                                <option value="TO">TO</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-black text-gray-400 uppercase">CEP</label>
+                            <input type="text" id="cep-comercial-reu" placeholder="00000-000" maxlength="9"
+                                   class="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-gray-500">
+                        </div>
+                    </div>
+                    
+                    <!-- Botão buscar CEP comercial -->
+                    <div class="flex justify-end">
+                        <button type="button" id="buscar-cep-comercial-reu-btn" 
+                                class="bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 text-xs font-bold flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            Buscar CEP Comercial
+                        </button>
                     </div>
                 </div>
             </div>
@@ -577,6 +607,48 @@ function renderReuForm(containerId) {
             </div>
         </div>
     `;
+
+    // ===== FUNCIONALIDADE DOS CHECKBOXES =====
+    
+    // Checkbox da seção 1 - Identificação
+    const checkIdentificacao = document.getElementById('check-reu-identificacao');
+    const contentIdentificacao = document.getElementById('content-reu-identificacao');
+    if (checkIdentificacao && contentIdentificacao) {
+        checkIdentificacao.addEventListener('change', function() {
+            if (this.checked) {
+                contentIdentificacao.style.display = 'block';
+            } else {
+                contentIdentificacao.style.display = 'none';
+            }
+        });
+    }
+
+    // Checkbox da seção 2 - Residencial
+    const checkResidencial = document.getElementById('check-reu-residencial');
+    const contentResidencial = document.getElementById('content-reu-residencial');
+    if (checkResidencial && contentResidencial) {
+        checkResidencial.addEventListener('change', function() {
+            if (this.checked) {
+                contentResidencial.style.display = 'block';
+            } else {
+                contentResidencial.style.display = 'none';
+            }
+        });
+    }
+
+    // Checkbox da seção 3 - Comercial
+    const checkComercial = document.getElementById('check-reu-comercial');
+    const contentComercial = document.getElementById('content-reu-comercial');
+    if (checkComercial && contentComercial) {
+        checkComercial.addEventListener('change', function() {
+            if (this.checked) {
+                contentComercial.classList.remove('hidden');
+                contentComercial.style.display = 'block';
+            } else {
+                contentComercial.classList.add('hidden');
+            }
+        });
+    }
 
     // ===== FUNCIONALIDADE DE BUSCA DE CEP =====
     const cepInp = getEl('cep-reu');
@@ -612,7 +684,7 @@ function renderReuForm(containerId) {
         }
     }
 
-    // Evento para o botão de busca
+    // Evento para o botão de busca residencial
     if (buscarBtn) {
         buscarBtn.addEventListener('click', () => {
             buscarCEP(cepInp.value, 'residencial');
@@ -627,7 +699,15 @@ function renderReuForm(containerId) {
     }
 
     // Busca de CEP comercial
+    const buscarComercialBtn = document.getElementById('buscar-cep-comercial-reu-btn');
     const cepComercial = getEl('cep-comercial-reu');
+    
+    if (buscarComercialBtn && cepComercial) {
+        buscarComercialBtn.addEventListener('click', () => {
+            buscarCEP(cepComercial.value, 'comercial');
+        });
+    }
+
     if (cepComercial) {
         cepComercial.addEventListener('blur', () => {
             buscarCEP(cepComercial.value, 'comercial');
@@ -645,41 +725,60 @@ function renderReuForm(containerId) {
     }
 }
 
-// --- 11. PLANILHA DE GASTOS ---
+// --- 11. PLANILHA DE GASTOS (COM CHECKBOX EXPANSÍVEL) ---
 function renderExpenseTable() {
     const div = document.createElement('div');
     div.className = 'mt-6 p-4 bg-green-50 border-2 border-green-100 rounded-xl shadow-sm';
     div.id = 'expense-table';
-    let rows = '';
-    
-    EXPENSE_CATEGORIES.forEach(c => {
-        rows += `
-            <tr class="border-b border-green-100 last:border-0">
-                <td class="py-3">
-                    <p class="text-[10px] font-bold text-green-800 uppercase leading-none">${c.label}</p>
-                    <p class="text-[9px] text-green-600 italic opacity-75">${c.desc}</p>
-                </td>
-                <td class="py-3 pl-2">
-                    <input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-white border border-green-200 rounded-lg text-right text-xs shadow-sm outline-none" 
-                           placeholder="R$ 0,00" inputmode="numeric">
-                </td>
-            </tr>`;
-    });
     
     div.innerHTML = `
-        <h3 class="text-[10px] font-black text-green-700 mb-3 uppercase text-center font-bold tracking-widest">Planilha de Gastos Mensais</h3>
-        <table class="w-full border-collapse">
-            ${rows}
-        </table>
-        <div class="mt-4 flex justify-between font-black text-green-900 border-t border-green-200 pt-3 text-sm">
-            <span>TOTAL MENSAL:</span>
-            <span id="expense-total">R$ 0,00</span>
+        <div class="flex items-center gap-3 mb-3">
+            <input type="checkbox" id="check-exibir-gastos" class="h-5 w-5 text-green-600 rounded border-gray-300 focus:ring-green-500" checked>
+            <label for="check-exibir-gastos" class="text-sm font-bold text-green-700 cursor-pointer">
+                💰 PLANILHA DE GASTOS MENSAIS (Ações de Alimentos)
+            </label>
         </div>
-        <div class="mt-2 text-right">
-            <button id="fechar-gastos" class="text-[10px] text-gray-500 hover:text-gray-700 underline">Fechar planilha</button>
+        
+        <div id="content-planilha-gastos">
+            <table class="w-full border-collapse">
+                ${EXPENSE_CATEGORIES.map(c => `
+                    <tr class="border-b border-green-100 last:border-0">
+                        <td class="py-3">
+                            <p class="text-[10px] font-bold text-green-800 uppercase leading-none">${c.label}</p>
+                            <p class="text-[9px] text-green-600 italic opacity-75">${c.desc}</p>
+                        </td>
+                        <td class="py-3 pl-2">
+                            <input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-white border border-green-200 rounded-lg text-right text-xs shadow-sm outline-none" 
+                                   placeholder="R$ 0,00" inputmode="numeric">
+                        </td>
+                    </tr>
+                `).join('')}
+            </table>
+            <div class="mt-4 flex justify-between font-black text-green-900 border-t border-green-200 pt-3 text-sm">
+                <span>TOTAL MENSAL:</span>
+                <span id="expense-total">R$ 0,00</span>
+            </div>
+            <div class="mt-2 text-right">
+                <button id="fechar-gastos" class="text-[10px] text-gray-500 hover:text-gray-700 underline">Fechar planilha</button>
+            </div>
         </div>
     `;
+
+    // Funcionalidade do checkbox
+    const checkGastos = div.querySelector('#check-exibir-gastos');
+    const contentGastos = div.querySelector('#content-planilha-gastos');
     
+    if (checkGastos && contentGastos) {
+        checkGastos.addEventListener('change', function() {
+            if (this.checked) {
+                contentGastos.style.display = 'block';
+            } else {
+                contentGastos.style.display = 'none';
+            }
+        });
+    }
+
+    // Eventos dos inputs
     div.querySelectorAll('.expense-input').forEach(inp => {
         inp.addEventListener('input', (e) => {
             let v = e.target.value.replace(/\D/g, '');
@@ -694,7 +793,7 @@ function renderExpenseTable() {
             div.querySelectorAll('.expense-input').forEach(i => {
                 total += parseCurrency(i.value);
             });
-            const totalEl = document.getElementById('expense-total');
+            const totalEl = div.querySelector('#expense-total');
             if(totalEl) totalEl.textContent = formatCurrency(total);
             
             updateDocumentState('filling');
@@ -702,7 +801,7 @@ function renderExpenseTable() {
     });
     
     setTimeout(() => {
-        document.getElementById('fechar-gastos')?.addEventListener('click', () => {
+        div.querySelector('#fechar-gastos')?.addEventListener('click', () => {
             const container = document.getElementById('expense-table-container');
             if (container) {
                 container.innerHTML = '';
@@ -717,7 +816,12 @@ function renderExpenseTable() {
 
 // --- 12. FUNÇÕES PARA PEGAR DADOS DOS FORMULÁRIOS ---
 function getReuDataFromForm() {
-    return {
+    const dados = {
+        // Checkboxes
+        checkIdentificacao: getEl('check-reu-identificacao')?.checked || false,
+        checkResidencial: getEl('check-reu-residencial')?.checked || false,
+        checkComercial: getEl('check-reu-comercial')?.checked || false,
+        
         // Identificação
         nome: getEl('nome-reu')?.value || '',
         cpf: getEl('cpf-reu')?.value || '',
@@ -743,6 +847,8 @@ function getReuDataFromForm() {
         uf_comercial: getEl('estado-comercial-reu')?.value || '',
         cep_comercial: getEl('cep-comercial-reu')?.value || ''
     };
+    
+    return dados;
 }
 
 function getExpenseDataFromForm() {
@@ -758,6 +864,10 @@ function getExpenseDataFromForm() {
         
         d[cat.id] = valor;
     });
+    
+    // Adicionar estado do checkbox
+    d.checkExibirGastos = getEl('check-exibir-gastos')?.checked || false;
+    
     return d;
 }
 
@@ -768,6 +878,16 @@ function fillReuData(d) {
         const el = getEl(id);
         if (el) el.value = value || '';
     };
+    
+    const setChecked = (id, value) => {
+        const el = getEl(id);
+        if (el) el.checked = value || false;
+    };
+    
+    // Checkboxes
+    setChecked('check-reu-identificacao', d.checkIdentificacao);
+    setChecked('check-reu-residencial', d.checkResidencial);
+    setChecked('check-reu-comercial', d.checkComercial);
     
     // Identificação
     setValue('nome-reu', d.nome);
@@ -793,6 +913,28 @@ function fillReuData(d) {
     setValue('cidade-comercial-reu', d.cidade_comercial);
     setValue('estado-comercial-reu', d.uf_comercial);
     setValue('cep-comercial-reu', d.cep_comercial);
+    
+    // Atualizar visibilidade das seções
+    setTimeout(() => {
+        const contentIdentificacao = document.getElementById('content-reu-identificacao');
+        const contentResidencial = document.getElementById('content-reu-residencial');
+        const contentComercial = document.getElementById('content-reu-comercial');
+        
+        if (contentIdentificacao) {
+            contentIdentificacao.style.display = d.checkIdentificacao ? 'block' : 'none';
+        }
+        if (contentResidencial) {
+            contentResidencial.style.display = d.checkResidencial ? 'block' : 'none';
+        }
+        if (contentComercial) {
+            if (d.checkComercial) {
+                contentComercial.classList.remove('hidden');
+                contentComercial.style.display = 'block';
+            } else {
+                contentComercial.classList.add('hidden');
+            }
+        }
+    }, 100);
 }
 
 function fillExpenseData(d) {
@@ -804,6 +946,18 @@ function fillExpenseData(d) {
             el.value = d[cat.id];
         }
     });
+    
+    // Checkbox da planilha
+    const checkGastos = getEl('check-exibir-gastos');
+    if (checkGastos && d.checkExibirGastos !== undefined) {
+        checkGastos.checked = d.checkExibirGastos;
+        
+        // Atualizar visibilidade
+        const contentGastos = document.getElementById('content-planilha-gastos');
+        if (contentGastos) {
+            contentGastos.style.display = d.checkExibirGastos ? 'block' : 'none';
+        }
+    }
     
     let total = 0;
     document.querySelectorAll('.expense-input').forEach(i => {
@@ -858,8 +1012,10 @@ async function handlePdf() {
         // ===== 3. VERIFICAR DADOS DO RÉU =====
         const reu = getReuDataFromForm();
         
-        // Verificar se TEM dados do réu preenchidos
-        const temReu = Object.values(reu).some(v => v && v.trim() !== '');
+        // Verificar se TEM dados do réu preenchidos (considerando apenas campos preenchidos)
+        const temReu = reu.nome || reu.cpf || reu.telefone || 
+                       reu.rua || reu.numero || reu.bairro || reu.cidade || 
+                       reu.empresa || reu.rua_comercial;
         
         if (temReu) {
             console.log("👤 DADOS DA PARTE CONTRÁRIA encontrados!");
@@ -867,12 +1023,11 @@ async function handlePdf() {
             // Criar linhas para cada campo preenchido do réu
             const linhasReu = [];
             
-            // Nome
+            // Identificação
             if (reu.nome && reu.nome.trim() !== '') {
                 linhasReu.push(`👤 Nome do Réu: ${reu.nome}`);
             }
             
-            // CPF e Telefone
             if (reu.cpf && reu.cpf.trim() !== '') {
                 linhasReu.push(`📄 CPF do Réu: ${reu.cpf}`);
             }
@@ -976,7 +1131,7 @@ async function handlePdf() {
             // Adicionar título da seção de gastos
             documentosTextos.push({
                 id: 'gastos-titulo',
-                text: '💰 PLANILHA DE GASTOS MENSAIS:'
+                text: '💰 PLANILHA DE GASTOS MENSAIS (Ação de Alimentos):'
             });
             
             // Adicionar CADA gasto como um item separado
