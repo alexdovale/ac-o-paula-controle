@@ -1,10 +1,9 @@
 /**
- * estatisticas.js - Versão Completa com PDF por Equipe mostrando apenas nomes
+ * estatisticas.js - Versão Completa com PDF por Equipe baseado no cadastro
  * Funcionalidades:
- * - Atendidos por equipe (quantidade total)
- * - Atendidos por colaborador (quantidade individual) - OPCIONAL
- * - PDF por Equipe mostra TODOS os colaboradores (apenas nomes)
- * - PDF Detalhado com lista de assistidos
+ * - PDF por Equipe mostra TODOS os colaboradores da equipe (cadastro)
+ * - Inclui quem não atendeu (mostra 0 atendimentos)
+ * - Baseado nos dados de colaboradores da gestão
  */
 
 // ========================================================
@@ -295,8 +294,8 @@ export const StatisticsService = {
                 });
             });
             
-            // Ordenar por nome
-            colaboradoresCompletos.sort((a, b) => a.nome.localeCompare(b.nome));
+            // Ordenar por quantidade de atendimentos (decrescente)
+            colaboradoresCompletos.sort((a, b) => b.atendimentos - a.atendimentos);
             
             const collaboratorsRows = colaboradoresCompletos.map(({nome, atendimentos, cargo}) => `
                 <tr class="border-b collaborator-row group-${index}">
@@ -351,7 +350,7 @@ export const StatisticsService = {
                         📊 PDF Resumo
                     </button>
                     <button id="export-equipes-pdf-btn" class="bg-purple-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-purple-700 text-xs md:text-sm transition-colors">
-                        👥 PDF por Equipe (Apenas Nomes)
+                        👥 PDF por Equipe (Completo)
                     </button>
                     <button id="export-stats-detalhado-btn" class="bg-green-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-green-700 text-xs md:text-sm transition-colors">
                         📋 PDF Detalhado
@@ -589,7 +588,7 @@ export const StatisticsService = {
             });
         }
 
-        // Botão para PDF por Equipe (NOVO - com apenas nomes)
+        // Botão para PDF por Equipe (NOVO - com todos os colaboradores)
         const exportEquipesBtn = document.getElementById('export-equipes-pdf-btn');
         if (exportEquipesBtn) {
             const newEquipesBtn = exportEquipesBtn.cloneNode(true);
@@ -604,7 +603,7 @@ export const StatisticsService = {
                     sortedGroups,
                     totalGeral
                 }).finally(() => {
-                    newEquipesBtn.textContent = '👥 PDF por Equipe (Apenas Nomes)';
+                    newEquipesBtn.textContent = '👥 PDF por Equipe (Completo)';
                     newEquipesBtn.disabled = false;
                 });
             });
@@ -633,7 +632,6 @@ export const StatisticsService = {
 
     /**
      * Exporta PDF por Equipe - MOSTRA TODOS OS COLABORADORES DO CADASTRO
-     * AGORA: Puxa direto do cadastro de colaboradores e mostra apenas nomes
      */
     async exportEquipesPDF(pautaName, dados) {
         const { jsPDF } = window.jspdf;
@@ -643,84 +641,11 @@ export const StatisticsService = {
         const margin = 40;
         let yPos = margin + 30;
 
-        // ===== CARREGAR COLABORADORES DIRETO DO CADASTRO =====
-        let colaboradoresCadastro = [];
-        
-        // Tenta carregar do window.app (se existir)
-        if (window.app && window.app.colaboradores) {
-            colaboradoresCadastro = window.app.colaboradores;
-            console.log("📋 PDF Equipe: Colaboradores carregados do window.app:", colaboradoresCadastro.length);
-        } 
-        // Tenta carregar do localStorage
-        else {
-            const stored = localStorage.getItem('sigap_colaboradores');
-            if (stored) {
-                try {
-                    colaboradoresCadastro = JSON.parse(stored);
-                    console.log("📋 PDF Equipe: Colaboradores carregados do localStorage:", colaboradoresCadastro.length);
-                } catch (e) {
-                    console.error("Erro ao carregar colaboradores:", e);
-                }
-            }
-        }
-
-        // Se não encontrou nenhum colaborador, mostrar mensagem
-        if (colaboradoresCadastro.length === 0) {
-            doc.setFontSize(14);
-            doc.setTextColor(255, 0, 0);
-            doc.text("NENHUM COLABORADOR CADASTRADO!", pageWidth / 2, yPos, { align: "center" });
-            doc.save(`equipes_${pautaName.replace(/\s+/g, '_')}.pdf`);
-            return;
-        }
-
-        // ===== ORGANIZAR COLABORADORES POR EQUIPE =====
-        const equipesMap = {};
-        
-        colaboradoresCadastro.forEach(col => {
-            // Determinar o nome da equipe
-            let nomeEquipe = 'Equipe Não Definida';
-            if (col.equipe) {
-                // Se equipe for número, adicionar "Equipe " na frente
-                if (!isNaN(col.equipe)) {
-                    nomeEquipe = `Equipe ${col.equipe}`;
-                } else {
-                    nomeEquipe = col.equipe;
-                }
-            }
-            
-            if (!equipesMap[nomeEquipe]) {
-                equipesMap[nomeEquipe] = {
-                    nome: nomeEquipe,
-                    colaboradores: []
-                };
-            }
-            
-            equipesMap[nomeEquipe].colaboradores.push({
-                nome: col.nome || 'Nome não informado',
-                cargo: col.cargo || 'Sem cargo'
-            });
-        });
-
-        // ===== CALCULAR ATENDIMENTOS POR COLABORADOR =====
-        // Mapear atendimentos por nome
-        const atendimentosPorColaborador = {};
-        
-        if (dados && dados.statsByGroup) {
-            Object.entries(dados.statsByGroup).forEach(([grupo, data]) => {
-                Object.entries(data.collaborators || {}).forEach(([nome, count]) => {
-                    atendimentosPorColaborador[nome] = count;
-                });
-            });
-        }
-
-        // ===== ORDENAR EQUIPES POR NOME =====
-        const equipesOrdenadas = Object.values(equipesMap).sort((a, b) => a.nome.localeCompare(b.nome));
-
-        // ===== TÍTULO =====
+        // Título
         doc.setFontSize(18);
         doc.setTextColor(22, 163, 74);
         doc.setFont("helvetica", "bold");
-        doc.text(`RELATÓRIO DE EQUIPES - ${pautaName}`, pageWidth / 2, yPos, { align: "center" });
+        doc.text(`RELATÓRIO COMPLETO POR EQUIPE - ${pautaName}`, margin, yPos);
         yPos += 20;
         
         doc.setFontSize(10);
@@ -728,97 +653,85 @@ export const StatisticsService = {
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
         yPos += 20;
         
-        // ===== TOTAL GERAL DE ATENDIMENTOS =====
-        const totalGeral = dados?.totalGeral || dados?.atendidosCount || 0;
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
-        doc.text(`Total de Atendimentos: ${totalGeral}`, margin, yPos);
-        yPos += 20;
+        doc.text(`Total de Atendimentos: ${dados.totalGeral}`, margin, yPos);
+        yPos += 25;
 
-        // ===== LISTAR CADA EQUIPE =====
-        equipesOrdenadas.forEach((equipe, index) => {
-            // Calcular total de atendimentos da equipe
-            let totalEquipe = 0;
-            equipe.colaboradores.forEach(col => {
-                totalEquipe += atendimentosPorColaborador[col.nome] || 0;
-            });
-
-            // Verificar espaço na página
+        // Listar todas as equipes com TODOS os colaboradores
+        dados.sortedGroups.forEach(({groupName, total, todosColaboradores, collaborators}) => {
             if (yPos > pageHeight - 150) {
                 doc.addPage();
                 yPos = margin + 30;
             }
 
-            // Título da equipe com fundo cinza
-            doc.setFillColor(240, 240, 240);
-            doc.rect(margin, yPos - 12, pageWidth - (margin * 2), 30, 'F');
-            
-            doc.setFontSize(16);
+            // Título da equipe
+            doc.setFontSize(14);
             doc.setTextColor(0, 102, 204);
             doc.setFont("helvetica", "bold");
-            doc.text(`${equipe.nome}`, margin + 10, yPos);
-            yPos += 15;
-            
-            doc.setFontSize(14);
-            doc.setTextColor(22, 163, 74);
-            doc.text(`Total de Atendimentos: ${totalEquipe}`, margin + 10, yPos);
+            doc.text(`${groupName} - TOTAL: ${total} atendimentos | Membros: ${todosColaboradores.length}`, margin, yPos);
             yPos += 20;
 
-            // Lista de Membros (APENAS NOMES)
-            doc.setFontSize(11);
-            doc.setTextColor(60, 60, 60);
-            doc.setFont("helvetica", "bold");
-            doc.text("Membros da Equipe:", margin + 10, yPos);
-            yPos += 15;
+            // Cabeçalho da tabela
+            doc.setFillColor(240, 240, 240);
+            doc.rect(margin, yPos - 12, pageWidth - (margin * 2), 20, 'F');
             
-            doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(60, 60, 60);
+            doc.text("Colaborador", margin + 10, yPos);
+            doc.text("Cargo", margin + 200, yPos);
+            doc.text("Atendimentos", pageWidth - margin - 80, yPos);
+            yPos += 15;
 
-            if (equipe.colaboradores.length > 0) {
-                // Ordenar colaboradores por nome
-                const colaboradoresOrdenados = [...equipe.colaboradores].sort((a, b) => a.nome.localeCompare(b.nome));
+            // Lista de colaboradores
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(60, 60, 60);
+
+            if (todosColaboradores && todosColaboradores.length > 0) {
+                // Ordenar por nome
+                const colaboradoresOrdenados = [...todosColaboradores].sort((a, b) => a.nome.localeCompare(b.nome));
                 
-                // Listar em até 2 colunas para melhor legibilidade
-                const col1X = margin + 20;
-                const col2X = margin + 250;
-                
-                colaboradoresOrdenados.forEach((col, index) => {
+                colaboradoresOrdenados.forEach((col) => {
                     if (yPos > pageHeight - 40) {
                         doc.addPage();
                         yPos = margin + 30;
                         
                         // Repetir título na nova página
-                        doc.setFontSize(14);
+                        doc.setFontSize(12);
                         doc.setTextColor(0, 102, 204);
                         doc.setFont("helvetica", "bold");
-                        doc.text(`${equipe.nome} (continuação)`, margin, yPos);
-                        yPos += 15;
+                        doc.text(`${groupName} (continuação)`, margin, yPos);
+                        yPos += 20;
                         
-                        doc.setFontSize(10);
-                        doc.setFont("helvetica", "normal");
+                        doc.setFontSize(9);
                     }
                     
-                    // Distribuir em 2 colunas
-                    if (index % 2 === 0) {
-                        doc.text(`• ${col.nome}`, col1X, yPos);
-                        // Se for o último e estiver na coluna 1, não pula linha ainda
-                        if (index === colaboradoresOrdenados.length - 1) {
-                            yPos += 15;
-                        }
-                    } else {
-                        doc.text(`• ${col.nome}`, col2X, yPos);
-                        yPos += 15; // Pula linha após a segunda coluna
-                    }
+                    // Verificar quantos atendimentos este colaborador fez
+                    const atendimentos = collaborators.find(c => c.name === col.nome)?.count || 0;
+                    
+                    doc.text(col.nome, margin + 10, yPos);
+                    doc.text(col.cargo || '-', margin + 200, yPos);
+                    
+                    doc.setFont("helvetica", "bold");
+                    doc.setTextColor(atendimentos > 0 ? 22 : 150, atendimentos > 0 ? 163 : 150, atendimentos > 0 ? 74 : 150);
+                    doc.text(atendimentos.toString(), pageWidth - margin - 50, yPos);
+                    
+                    doc.setFont("helvetica", "normal");
+                    doc.setTextColor(60, 60, 60);
+                    
+                    yPos += 15;
                 });
             } else {
-                doc.text("Nenhum colaborador cadastrado nesta equipe", margin + 20, yPos);
+                doc.text("Nenhum colaborador cadastrado nesta equipe", margin + 10, yPos);
                 yPos += 15;
             }
 
-            yPos += 15; // Espaço extra entre equipes
+            yPos += 15;
         });
 
-        // ===== RODAPÉ =====
+        // Rodapé
         const pageCount = doc.internal.getNumberOfPages();
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
@@ -831,7 +744,7 @@ export const StatisticsService = {
             );
         }
 
-        doc.save(`equipes_${pautaName.replace(/\s+/g, '_')}.pdf`);
+        doc.save(`equipe_completa_${pautaName.replace(/\s+/g, '_')}.pdf`);
     },
 
     /**
