@@ -56,7 +56,7 @@ const CARGO_ORDER = {
 // Valor padrão para cargos não mapeados
 const DEFAULT_CARGO_ORDER = 99;
 
-export const CollaboratorService = {
+const CollaboratorService = {
     currentListener: null,
     editId: null,
     
@@ -661,11 +661,8 @@ export const CollaboratorService = {
 // EXPORTAÇÕES
 // ========================================================
 
-// Exportar como named export
+// Exportar como objeto completo (para usar com import * as)
 export { CollaboratorService };
-
-// Também exportar como default para compatibilidade
-export default CollaboratorService;
 
 // Tornar global para acesso no console e outros módulos
 window.CollaboratorService = CollaboratorService;
