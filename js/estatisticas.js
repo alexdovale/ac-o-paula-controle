@@ -1,221 +1,197 @@
 /**
- * estatisticas.js - VERSÃO DEBUG
- * 
- * Esta versão mostra logs detalhados para identificar o problema
+ * estatisticas.js - VERSÃO INTEGRADA COMPLETA
+ * Integração total com o cadastro de colaboradores.
  */
 
 export const StatisticsService = {
-    
     /**
-     * Carrega colaboradores e mostra DEBUG
+     * Calcula diferença em minutos entre duas datas
      */
-    carregarColaboradores() {
-        console.log("🔍 DEBUG - Iniciando carregamento de colaboradores");
-        
-        let colaboradores = [];
-        
-        // 1. Tentar do localStorage
-        try {
-            const stored = localStorage.getItem('sigap_colaboradores');
-            console.log("🔍 localStorage.getItem('sigap_colaboradores'):", stored);
-            
-            if (stored) {
-                colaboradores = JSON.parse(stored);
-                console.log(`✅ Encontrados ${colaboradores.length} colaboradores no localStorage`);
-                console.log("📋 Primeiro colaborador:", colaboradores[0]);
-            }
-        } catch (e) {
-            console.error("❌ Erro ao ler localStorage:", e);
-        }
-        
-        // 2. Se não encontrou, tentar do window.app
-        if (colaboradores.length === 0 && window.app && window.app.colaboradores) {
-            colaboradores = window.app.colaboradores;
-            console.log(`✅ Encontrados ${colaboradores.length} colaboradores no window.app`);
-        }
-        
-        // 3. Se ainda não tem, criar dados de exemplo
-        if (colaboradores.length === 0) {
-            console.log("⚠️ Nenhum colaborador encontrado, criando dados de exemplo");
-            colaboradores = [
-                { nome: "João Silva", cargo: "Defensor", equipe: "1" },
-                { nome: "Maria Santos", cargo: "Servidor", equipe: "1" },
-                { nome: "Pedro Souza", cargo: "CRC", equipe: "CRC" },
-                { nome: "Ana Oliveira", cargo: "Residente", equipe: "2" },
-                { nome: "Carlos Lima", cargo: "Estagiário", equipe: "2" }
-            ];
-        }
-        
-        // 4. Mostrar todos os colaboradores
-        console.log("📋 TODOS OS COLABORADORES CARREGADOS:");
-        colaboradores.forEach((col, i) => {
-            console.log(`   ${i+1}. Nome: "${col.nome}", Cargo: "${col.cargo}", Equipe: "${col.equipe}"`);
-        });
-        
-        return colaboradores;
+    getTimeDifferenceInMinutes(startTimeISO, endTimeISO) {
+        if (!startTimeISO || !endTimeISO) return null;
+        const start = new Date(startTimeISO);
+        const end = new Date(endTimeISO);
+        if (isNaN(start) || isNaN(end)) return null;
+        return Math.round((end - start) / 60000);
     },
 
     /**
-     * Renderiza o modal
+     * Busca a lista oficial de colaboradores cadastrados
+     */
+    getRegisteredCollaborators() {
+        let lista = [];
+        // Tenta buscar do estado global do app
+        if (window.app && window.app.colaboradores) {
+            lista = window.app.colaboradores;
+        } 
+        // Backup: busca do localStorage (onde o CollaboratorService salva)
+        else {
+            const stored = localStorage.getItem('sigap_colaboradores');
+            if (stored) {
+                try { lista = JSON.parse(stored); } catch (e) { console.error(e); }
+            }
+        }
+        return lista;
+    },
+
+    /**
+     * Renderiza o modal de estatísticas cruzando com colaboradores
      */
     showModal(allAssisted, useDelegationFlow, pautaName) {
-        console.log("🔍 showModal chamado");
-        console.log("allAssisted:", allAssisted);
-        
         const modal = document.getElementById('statistics-modal');
-        if (!modal) {
-            console.error("❌ Modal não encontrado");
-            return;
-        }
-
+        if (!modal) return;
+        
         modal.classList.remove('hidden');
-        
-        const closeBtn = document.getElementById('close-statistics-modal-btn');
-        if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
-
-        const titleEl = modal.querySelector('h2');
-        if (titleEl) titleEl.innerHTML = `<span class="text-green-600">📊</span> Estatísticas - ${pautaName}`;
-
         const content = document.getElementById('statistics-content');
-        if (!content) return;
+        
+        // 1. Obter colaboradores cadastrados
+        const colaboradoresCadastrados = this.getRegisteredCollaborators();
+        
+        // 2. Processar Atendimentos
+        const atendidos = allAssisted.filter(a => a.status === 'atendido');
+        const faltosos = allAssisted.filter(a => a.status === 'faltoso');
 
-        // Carregar colaboradores
-        const colaboradores = this.carregarColaboradores();
-        
-        // Contar atendimentos
-        const atendidos = allAssisted.filter(a => a.status === 'atendido') || [];
-        console.log(`📊 Atendidos: ${atendidos.length}`);
-        
-        // Mapear atendimentos por nome
-        const atendimentosPorNome = {};
-        atendidos.forEach(a => {
-            let nome = 'Não informado';
-            if (a.attendant) {
-                if (typeof a.attendant === 'object') {
-                    nome = a.attendant.nome || a.attendant.name || 'Não informado';
-                } else {
-                    nome = String(a.attendant);
-                }
-            }
-            atendimentosPorNome[nome] = (atendimentosPorNome[nome] || 0) + 1;
-        });
-        console.log("📊 Atendimentos por nome:", atendimentosPorNome);
+        // 3. Agrupar por Equipe baseando-se no CADASTRO
+        const statsByGroup = {};
 
-        // Agrupar por equipe
-        const equipes = {};
-        
-        colaboradores.forEach(col => {
-            // Log de cada colaborador
-            console.log(`Processando: ${col.nome} | cargo: ${col.cargo} | equipe: ${col.equipe}`);
-            
-            // Determinar nome da equipe
-            let nomeEquipe = 'Equipe Não Definida';
-            if (col.equipe) {
-                if (col.equipe === 'CRC') {
-                    nomeEquipe = 'CRC';
-                } else if (!isNaN(col.equipe)) {
-                    nomeEquipe = `Equipe ${col.equipe}`;
-                } else {
-                    nomeEquipe = col.equipe;
-                }
+        // Inicializa com todos do cadastro para garantir que quem não atendeu apareça
+        colaboradoresCadastrados.forEach(col => {
+            const equipe = col.equipe || 'Sem Equipe';
+            if (!statsByGroup[equipe]) {
+                statsByGroup[equipe] = { colaboradores: {}, total: 0 };
             }
-            
-            if (!equipes[nomeEquipe]) {
-                equipes[nomeEquipe] = {
-                    nome: nomeEquipe,
-                    total: 0,
-                    membros: []
+            if (!statsByGroup[equipe].colaboradores[col.nome]) {
+                statsByGroup[equipe].colaboradores[col.nome] = {
+                    nome: col.nome,
+                    cargo: col.cargo,
+                    atendimentos: 0,
+                    tempoTotal: 0
                 };
             }
-            
-            const atendimentos = atendimentosPorNome[col.nome] || 0;
-            equipes[nomeEquipe].membros.push({
-                nome: col.nome,
-                cargo: col.cargo || 'Sem cargo',
-                atendimentos: atendimentos
-            });
-            equipes[nomeEquipe].total += atendimentos;
         });
 
-        // Mostrar resultado
-        console.log("📊 Equipes formadas:", equipes);
-
-        // Gerar HTML
-        let htmlEquipes = '';
-        let totalEquipes = 0;
-        
-        Object.keys(equipes).sort().forEach(nomeEquipe => {
-            const equipe = equipes[nomeEquipe];
-            totalEquipes++;
+        // Adiciona os dados dos atendimentos realizados
+        atendidos.forEach(a => {
+            const nomeColab = a.colaboradorResponsavel || 'Não Identificado';
+            const equipeColab = a.equipeResponsavel || 'Sem Equipe';
             
-            htmlEquipes += `
-                <div class="mb-4 border rounded-lg overflow-hidden">
-                    <div class="bg-gray-100 px-3 py-2 font-bold flex justify-between items-center">
-                        <span>${equipe.nome}</span>
-                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-                            Total: ${equipe.total}
-                        </span>
-                    </div>
-                    <div class="p-2">
-                        <p class="text-xs text-gray-500 mb-1">Membros (${equipe.membros.length}):</p>
-                        <div class="space-y-1">
-                            ${equipe.membros.map(m => `
-                                <div class="text-xs flex justify-between items-center border-b py-1">
-                                    <span>• ${m.nome} (${m.cargo})</span>
-                                    <span class="${m.atendimentos > 0 ? 'text-green-600 font-bold' : 'text-gray-400'}">
-                                        ${m.atendimentos}
-                                    </span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-            `;
+            if (!statsByGroup[equipeColab]) {
+                statsByGroup[equipeColab] = { colaboradores: {}, total: 0 };
+            }
+
+            if (!statsByGroup[equipeColab].colaboradores[nomeColab]) {
+                statsByGroup[equipeColab].colaboradores[nomeColab] = {
+                    nome: nomeColab,
+                    cargo: 'Não Cadastrado',
+                    atendimentos: 0,
+                    tempoTotal: 0
+                };
+            }
+
+            const colabStats = statsByGroup[equipeColab].colaboradores[nomeColab];
+            colabStats.atendimentos++;
+            statsByGroup[equipeColab].total++;
+
+            const duracao = this.getTimeDifferenceInMinutes(a.horaInicioAtendimento, a.horaFimAtendimento);
+            if (duracao) colabStats.tempoTotal += duracao;
         });
 
-        // Se não encontrou equipes, mostrar mensagem
-        if (totalEquipes === 0) {
-            htmlEquipes = `
-                <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-center">
-                    <p class="text-yellow-700">⚠️ Nenhuma equipe encontrada</p>
-                    <p class="text-xs text-gray-500 mt-2">Colaboradores carregados: ${colaboradores.length}</p>
+        // 4. Gerar HTML da Tabela
+        let html = `
+            <div class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 shadow-sm">
+                    <p class="text-blue-800 text-sm font-semibold uppercase">Total Geral</p>
+                    <p class="text-3xl font-bold text-blue-900">${allAssisted.length}</p>
                 </div>
-            `;
-        }
-
-        // Montar tela
-        content.innerHTML = `
-            <div class="p-4">
-                <div class="bg-white p-3 rounded-lg border mb-4">
-                    <h3 class="text-sm font-bold mb-2">Resumo</h3>
-                    <div class="grid grid-cols-3 gap-2 text-center">
-                        <div class="bg-green-100 p-2 rounded">
-                            <p class="text-xl font-bold text-green-700">${atendidos.length}</p>
-                            <p class="text-xs">Atendidos</p>
-                        </div>
-                        <div class="bg-red-100 p-2 rounded">
-                            <p class="text-xl font-bold text-red-700">${allAssisted.filter(a => a.status === 'faltoso').length}</p>
-                            <p class="text-xs">Faltosos</p>
-                        </div>
-                        <div class="bg-blue-100 p-2 rounded">
-                            <p class="text-xl font-bold text-blue-700">${colaboradores.length}</p>
-                            <p class="text-xs">Cadastrados</p>
-                        </div>
-                    </div>
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200 shadow-sm">
+                    <p class="text-green-800 text-sm font-semibold uppercase">Atendidos</p>
+                    <p class="text-3xl font-bold text-green-900">${atendidos.length}</p>
                 </div>
-
-                <div class="bg-white p-3 rounded-lg border">
-                    <h3 class="text-sm font-bold mb-2">Equipes</h3>
-                    ${htmlEquipes}
+                <div class="bg-red-50 p-4 rounded-lg border border-red-200 shadow-sm">
+                    <p class="text-red-800 text-sm font-semibold uppercase">Faltosos</p>
+                    <p class="text-3xl font-bold text-red-900">${faltosos.length}</p>
                 </div>
             </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-200">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Equipe / Colaborador</th>
+                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Cargo</th>
+                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Atendimentos</th>
+                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Média Tempo</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
         `;
+
+        Object.keys(statsByGroup).sort().forEach(equipe => {
+            html += `<tr class="bg-gray-50"><td colspan="4" class="px-4 py-2 font-bold text-gray-700">${equipe}</td></tr>`;
+            
+            const colaboradores = Object.values(statsByGroup[equipe].colaboradores);
+            colaboradores.forEach(c => {
+                const media = c.atendimentos > 0 ? Math.round(c.tempoTotal / c.atendimentos) + ' min' : '-';
+                html += `
+                    <tr>
+                        <td class="px-6 py-2 text-sm text-gray-600">${c.nome}</td>
+                        <td class="px-4 py-2 text-sm text-center text-gray-500">${c.cargo}</td>
+                        <td class="px-4 py-2 text-sm text-center font-semibold ${c.atendimentos === 0 ? 'text-gray-300' : 'text-gray-700'}">${c.atendimentos}</td>
+                        <td class="px-4 py-2 text-sm text-center text-gray-500">${media}</td>
+                    </tr>
+                `;
+            });
+        });
+
+        html += `</tbody></table></div>`;
+        content.innerHTML = html;
+
+        // Botão PDF
+        const pdfBtn = document.getElementById('export-pdf-btn');
+        if (pdfBtn) {
+            pdfBtn.onclick = () => this.exportStatisticsToPDF(pautaName, statsByGroup, atendidos.length, faltosos.length);
+        }
+    },
+
+    /**
+     * Exportação para PDF (Requer jsPDF e autoTable)
+     */
+    exportStatisticsToPDF(pautaName, statsData, totalAtendidos, totalFaltosos) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        doc.setFontSize(18);
+        doc.text(`Relatório de Produtividade - ${pautaName}`, 14, 20);
+        
+        const tableBody = [];
+        Object.keys(statsData).forEach(equipe => {
+            tableBody.push([{ content: equipe, colSpan: 3, styles: { fillColor: [240, 240, 240], fontStyle: 'bold' } }]);
+            
+            Object.values(statsData[equipe].colaboradores).forEach(c => {
+                tableBody.push([
+                    c.nome,
+                    c.cargo,
+                    c.atendimentos.toString()
+                ]);
+            });
+        });
+
+        doc.autoTable({
+            startY: 30,
+            head: [['Colaborador', 'Cargo', 'Atendimentos']],
+            body: tableBody,
+            theme: 'grid'
+        });
+
+        doc.save(`Estatisticas_${pautaName}.pdf`);
     }
 };
 
-// Exportações
-export default StatisticsService;
-export { StatisticsService };
-window.StatisticsService = StatisticsService;
+// Exportações para manter compatibilidade com o restante do sistema
+export const renderStatisticsModal = (allAssisted, useDelegationFlow, pautaName) => {
+    return StatisticsService.showModal(allAssisted, useDelegationFlow, pautaName);
+};
 
-console.log("✅ estatisticas.js - VERSÃO DEBUG CARREGADA");
+export const exportStatisticsToPDF = (pautaName, statsData) => {
+    return StatisticsService.exportStatisticsToPDF(pautaName, statsData);
+};
