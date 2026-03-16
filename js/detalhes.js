@@ -2,13 +2,13 @@
  * ========================================================
  * DETALHES.JS - SIGAP
  * Módulo de Checklist e Documentos
- * Versão: 3.0 (Padronizada)
+ * Versão: 4.0 (Completa e Organizada)
  * ========================================================
  * 
  * Este módulo gerencia:
  * ✅ Checklist de documentos por ação
  * ✅ Planilha de gastos para ações de alimentos
- * ✅ Dados do réu (endereço para citação)
+ * ✅ Dados do réu (endereço para citação) com checkboxes
  * ✅ Integração com PDFService
  * ✅ Salvamento no Firestore
  * 
@@ -18,6 +18,10 @@
 import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification } from './utils.js';
 import { PDFService } from './pdfService.js';
+
+
+
+
 
 /* ========================================================
    1. CONSTANTES E CONFIGURAÇÕES
@@ -125,6 +129,10 @@ const ACTIONS_WITH_WORK_INFO = [
     'uniao_estavel_reconhecimento_dissolucao',
     'investigacao_paternidade'
 ];
+
+
+
+
 
 /* ========================================================
    2. BASE DE DADOS DE AÇÕES
@@ -266,6 +274,10 @@ export const documentsData = {
     }
 };
 
+
+
+
+
 /* ========================================================
    3. ESTADO GLOBAL
    ======================================================== */
@@ -275,6 +287,10 @@ let currentPautaId = null;         // ID da pauta atual
 let db = null;                     // Instância do Firestore
 let allAssisted = [];              // Lista de todos os assistidos
 let currentChecklistAction = null; // Ação atual do checklist
+
+
+
+
 
 /* ========================================================
    4. FUNÇÕES AUXILIARES
@@ -317,6 +333,10 @@ function parseCurrency(s) {
     if (!s) return 0;
     return parseFloat(s.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
 }
+
+
+
+
 
 /* ========================================================
    5. FUNÇÕES DO CHECKLIST
@@ -640,8 +660,12 @@ function setupCheckboxEvents(containerEl) {
     }, 100);
 }
 
+
+
+
+
 /* ========================================================
-   6. FORMULÁRIO DO RÉU
+   6. FORMULÁRIO DO RÉU (VERSÃO COMPLETA COM CHECKBOXES)
    ======================================================== */
 
 /**
@@ -1073,6 +1097,10 @@ function initReuSaveButton() {
     }
 }
 
+
+
+
+
 /* ========================================================
    7. PLANILHA DE GASTOS
    ======================================================== */
@@ -1169,6 +1197,10 @@ function initExpenseTableEvents(div) {
         });
     }, 100);
 }
+
+
+
+
 
 /* ========================================================
    8. FUNÇÕES DE DADOS (GET/SET)
@@ -1330,6 +1362,10 @@ function fillExpenseData(d) {
     
     updateSelectedCounter();
 }
+
+
+
+
 
 /* ========================================================
    9. FUNÇÕES DE AÇÃO (PDF, SALVAR, RESET)
@@ -1627,6 +1663,10 @@ function handleBack() {
     getEl('address-editor-container')?.classList.add('hidden');
 }
 
+
+
+
+
 /* ========================================================
    10. FUNÇÃO DE DIAGNÓSTICO
    ======================================================== */
@@ -1652,6 +1692,10 @@ window.diagnosticarPDF = function() {
     
     console.log("\n✅ Diagnóstico concluído!");
 };
+
+
+
+
 
 /* ========================================================
    11. EXPORTS E INICIALIZAÇÃO
@@ -1843,9 +1887,13 @@ function renderSubjectSelection(selectionArea) {
     searchInput.addEventListener('input', (e) => renderFilteredSubjects(e.target.value));
 }
 
-// ========================================================
-// EXPORTS ADICIONAIS E GLOBAIS
-// ========================================================
+
+
+
+
+/* ========================================================
+   12. EXPORTS ADICIONAIS E GLOBAIS
+   ======================================================== */
 
 // Torna funções globais para acesso no console
 window.openDetailsModal = openDetailsModal;
