@@ -30,9 +30,6 @@ const CARGO_ORDER = {
     'Servidor(a)': 4,
     'Servidor': 4,
     
-    // CRC
-    'CRC': 4.5, // Posicionar CRC entre Servidores e Técnicos
-    
     // Técnicos
     'Técnico(a) de TI': 5,
     'Técnico de TI': 5,
@@ -56,7 +53,7 @@ const CARGO_ORDER = {
 // Valor padrão para cargos não mapeados
 const DEFAULT_CARGO_ORDER = 99;
 
-const CollaboratorService = {
+export const CollaboratorService = {
     currentListener: null,
     editId: null,
     
@@ -169,7 +166,6 @@ const CollaboratorService = {
             'Defensor(a)',
             'Residente',
             'Servidor(a)',
-            'CRC',
             'Técnico(a) de TI',
             'Assessor(a)',
             'Estagiário(a)',
@@ -262,41 +258,10 @@ const CollaboratorService = {
             
             console.log("Colaboradores carregados e ordenados:", lista.length);
             app.colaboradores = lista;
-            
-            // IMPORTANTE: Salvar no localStorage para outros módulos (estatísticas)
-            this.salvarNoLocalStorage(app);
-            
             this.renderTable(app);
         }, (error) => {
             console.error("Erro no listener de colaboradores:", error);
         });
-    },
-
-    /**
-     * Salva colaboradores no localStorage para acesso pelas estatísticas
-     */
-    salvarNoLocalStorage(app) {
-        try {
-            if (app && app.colaboradores) {
-                localStorage.setItem('sigap_colaboradores', JSON.stringify(app.colaboradores));
-                console.log("📋 Colaboradores salvos no localStorage:", app.colaboradores.length);
-            }
-        } catch (e) {
-            console.error("Erro ao salvar no localStorage:", e);
-        }
-    },
-
-    /**
-     * Carrega colaboradores do localStorage (para uso em estatísticas)
-     */
-    carregarDoLocalStorage() {
-        try {
-            const stored = localStorage.getItem('sigap_colaboradores');
-            return stored ? JSON.parse(stored) : [];
-        } catch (e) {
-            console.error("Erro ao carregar do localStorage:", e);
-            return [];
-        }
     },
 
     /**
@@ -432,13 +397,12 @@ const CollaboratorService = {
         if (select) {
             select.innerHTML = this.renderTeamSelect(selectedValue);
             
-            // Remover evento antigo e adicionar novo
-            select.onchange = null;
-            select.addEventListener('change', (e) => {
+            // Adicionar evento para criar nova equipe
+            select.onchange = (e) => {
                 if (e.target.value === '__new__') {
                     this.promptNewTeam();
                 }
-            });
+            };
         }
     },
 
@@ -628,43 +592,5 @@ const CollaboratorService = {
                 showNotification("Comando não reconhecido", "error");
             }
         }
-    },
-
-    /**
-     * Obtém colaborador por nome (para uso em estatísticas)
-     */
-    getColaboradorByNome(nome) {
-        const colaboradores = this.carregarDoLocalStorage();
-        return colaboradores.find(c => c.nome === nome) || null;
-    },
-
-    /**
-     * Obtém todos os colaboradores agrupados por equipe (para estatísticas)
-     */
-    getColaboradoresPorEquipe() {
-        const colaboradores = this.carregarDoLocalStorage();
-        const porEquipe = {};
-        
-        colaboradores.forEach(col => {
-            const equipe = col.equipe || 'Equipe Não Definida';
-            if (!porEquipe[equipe]) {
-                porEquipe[equipe] = [];
-            }
-            porEquipe[equipe].push(col);
-        });
-        
-        return porEquipe;
     }
 };
-
-// ========================================================
-// EXPORTAÇÕES
-// ========================================================
-
-// Exportar como objeto completo (para usar com import * as)
-export { CollaboratorService };
-
-// Tornar global para acesso no console e outros módulos
-window.CollaboratorService = CollaboratorService;
-
-console.log("✅ colaboradores.js carregado com sucesso!");
