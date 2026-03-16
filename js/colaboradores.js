@@ -37,7 +37,7 @@ const CARGO_ORDER = {
 const DEFAULT_CARGO_ORDER = 99;
 
 // ========================================================
-// COLLABORATOR SERVICE - Objeto principal
+// COLLABORATOR SERVICE
 // ========================================================
 
 const CollaboratorService = {
@@ -46,7 +46,7 @@ const CollaboratorService = {
     customTeams: [],
 
     /**
-     * INICIALIZAÇÃO
+     * Inicializa o serviço
      */
     init() {
         this.loadCustomTeams();
@@ -54,7 +54,7 @@ const CollaboratorService = {
     },
 
     /**
-     * Carrega equipes personalizadas
+     * Carrega equipes personalizadas do localStorage
      */
     loadCustomTeams() {
         try {
@@ -70,6 +70,9 @@ const CollaboratorService = {
         }
     },
 
+    /**
+     * Salva equipes personalizadas
+     */
     saveCustomTeams() {
         try {
             localStorage.setItem('sigap_custom_teams', JSON.stringify(this.customTeams));
@@ -79,22 +82,15 @@ const CollaboratorService = {
     },
 
     /**
-     * ABRE O MODAL - Esta é a função que está dando erro!
+     * Abre o modal de colaboradores
      */
     openModal(app) {
-        console.log("📋 openModal chamado", app?.currentPauta?.name);
+        console.log("📋 Abrindo modal de colaboradores");
         
         const modal = document.getElementById('collaborators-modal');
         if (!modal) {
-            console.error("Modal de colaboradores não encontrado!");
+            console.error("Modal de colaboradores não encontrado");
             showNotification("Erro: Modal não encontrado", "error");
-            return;
-        }
-
-        // Verificar se app existe
-        if (!app) {
-            console.error("App não fornecido");
-            showNotification("Erro: App não disponível", "error");
             return;
         }
 
@@ -103,14 +99,14 @@ const CollaboratorService = {
         this.updateTeamSelect();
         this.updateCargoSelect();
         
-        // Carregar colaboradores se houver pauta
-        if (app.currentPauta?.id) {
+        // Configurar listener se houver pauta
+        if (app && app.currentPauta && app.currentPauta.id) {
             this.setupListener(app, app.currentPauta.id);
         }
     },
 
     /**
-     * FECHA O MODAL
+     * Fecha o modal
      */
     closeModal() {
         const modal = document.getElementById('collaborators-modal');
@@ -118,7 +114,7 @@ const CollaboratorService = {
     },
 
     /**
-     * CONFIGURA LISTENER
+     * Configura listener em tempo real
      */
     setupListener(app, pautaId) {
         if (!pautaId || !app?.db) return;
@@ -133,7 +129,7 @@ const CollaboratorService = {
         this.currentListener = onSnapshot(ref, (snapshot) => {
             const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
-            // Ordenar
+            // Ordenar lista
             lista.sort((a, b) => {
                 const teamA = a.equipe || '0';
                 const teamB = b.equipe || '0';
@@ -164,12 +160,13 @@ const CollaboratorService = {
     },
 
     /**
-     * SALVA NO LOCALSTORAGE
+     * Salva colaboradores no localStorage
      */
     salvarNoLocalStorage(app) {
         try {
             if (app && app.colaboradores) {
                 localStorage.setItem('sigap_colaboradores', JSON.stringify(app.colaboradores));
+                console.log("📋 Colaboradores salvos no localStorage:", app.colaboradores.length);
             }
         } catch (e) {
             console.error("Erro ao salvar no localStorage:", e);
@@ -177,7 +174,7 @@ const CollaboratorService = {
     },
 
     /**
-     * RENDERIZA TABELA
+     * Renderiza tabela de colaboradores
      */
     renderTable(app) {
         const tbody = document.querySelector('#collaborators-list-table-modal tbody');
@@ -234,14 +231,21 @@ const CollaboratorService = {
             tbody.appendChild(row);
         });
 
-        document.getElementById('total-participants-count').textContent = app.colaboradores?.length || 0;
-        document.getElementById('self-transport-count').textContent = selfT;
-        document.getElementById('company-transport-count').textContent = compT;
+        const totalEl = document.getElementById('total-participants-count');
+        const selfEl = document.getElementById('self-transport-count');
+        const compEl = document.getElementById('company-transport-count');
+        
+        if (totalEl) totalEl.textContent = app.colaboradores?.length || 0;
+        if (selfEl) selfEl.textContent = selfT;
+        if (compEl) compEl.textContent = compT;
 
-        this.addEventListenersToTable(app);
+        this.addEventListeners(app);
     },
 
-    addEventListenersToTable(app) {
+    /**
+     * Adiciona eventos à tabela
+     */
+    addEventListeners(app) {
         document.querySelectorAll('#collaborators-modal .checkin-checkbox').forEach(checkbox => {
             checkbox.onchange = async (e) => {
                 const docId = e.target.dataset.id;
@@ -268,7 +272,20 @@ const CollaboratorService = {
     },
 
     /**
-     * SALVAR COLABORADOR
+     * Alterna presença
+     */
+    async togglePresence(app, id, presente) {
+        try {
+            const ref = doc(app.db, "pautas", app.currentPauta.id, "collaborators", id);
+            const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+            await updateDoc(ref, { presente, horario });
+        } catch (error) {
+            console.error("Erro ao marcar presença:", error);
+        }
+    },
+
+    /**
+     * Salva colaborador
      */
     async saveCollaborator(app, data) {
         if (!app.currentPauta?.id) {
@@ -294,16 +311,9 @@ const CollaboratorService = {
         }
     },
 
-    async togglePresence(app, id, presente) {
-        try {
-            const ref = doc(app.db, "pautas", app.currentPauta.id, "collaborators", id);
-            const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-            await updateDoc(ref, { presente, horario });
-        } catch (error) {
-            console.error("Erro ao marcar presença:", error);
-        }
-    },
-
+    /**
+     * Edita colaborador
+     */
     async editCollaborator(app, id) {
         try {
             const ref = doc(app.db, "pautas", app.currentPauta.id, "collaborators", id);
@@ -329,6 +339,9 @@ const CollaboratorService = {
         }
     },
 
+    /**
+     * Deleta colaborador
+     */
     async deleteCollaborator(app, id) {
         try {
             const ref = doc(app.db, "pautas", app.currentPauta.id, "collaborators", id);
@@ -339,6 +352,9 @@ const CollaboratorService = {
         }
     },
 
+    /**
+     * Limpa todos os colaboradores
+     */
     async clearAll(app) {
         if (!confirm("Tem certeza que deseja apagar TODOS os membros?")) return;
         
@@ -359,7 +375,7 @@ const CollaboratorService = {
     },
 
     /**
-     * MÉTODOS DE FORMULÁRIO
+     * Reseta formulário
      */
     resetForm() {
         const form = document.getElementById('collaborator-form-modal');
@@ -375,6 +391,9 @@ const CollaboratorService = {
         if (transpDefault) transpDefault.checked = true;
     },
 
+    /**
+     * Obtém opções de equipe
+     */
     getTeamOptions() {
         const numericTeams = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
         const specialTeams = ['CRC'];
@@ -391,14 +410,27 @@ const CollaboratorService = {
         return allTeams;
     },
 
+    /**
+     * Obtém opções de cargo
+     */
     getCargoOptions() {
         return [
-            'Coordenador(a)', 'Defensor(a)', 'Residente', 'Servidor(a)',
-            'CRC', 'Técnico(a) de TI', 'Assessor(a)', 'Estagiário(a)',
-            'Voluntário(a)', 'Outro'
+            'Coordenador(a)',
+            'Defensor(a)',
+            'Residente',
+            'Servidor(a)',
+            'CRC',
+            'Técnico(a) de TI',
+            'Assessor(a)',
+            'Estagiário(a)',
+            'Voluntário(a)',
+            'Outro'
         ];
     },
 
+    /**
+     * Renderiza select de cargo
+     */
     renderCargoSelect(selectedValue = 'Defensor(a)') {
         const cargos = this.getCargoOptions();
         let html = '';
@@ -409,6 +441,9 @@ const CollaboratorService = {
         return html;
     },
 
+    /**
+     * Renderiza select de equipe
+     */
     renderTeamSelect(selectedValue = '1') {
         const options = this.getTeamOptions();
         let html = '';
@@ -421,22 +456,35 @@ const CollaboratorService = {
         return html;
     },
 
+    /**
+     * Atualiza select de cargo
+     */
     updateCargoSelect(selectedValue = 'Defensor(a)') {
         const select = document.getElementById('collaborator-role-modal');
-        if (select) select.innerHTML = this.renderCargoSelect(selectedValue);
+        if (select) {
+            select.innerHTML = this.renderCargoSelect(selectedValue);
+        }
     },
 
+    /**
+     * Atualiza select de equipe
+     */
     updateTeamSelect(selectedValue = '1') {
         const select = document.getElementById('collaborator-team-modal');
         if (select) {
             select.innerHTML = this.renderTeamSelect(selectedValue);
             select.onchange = null;
             select.addEventListener('change', (e) => {
-                if (e.target.value === '__new__') this.promptNewTeam();
+                if (e.target.value === '__new__') {
+                    this.promptNewTeam();
+                }
             });
         }
     },
 
+    /**
+     * Solicita nova equipe
+     */
     promptNewTeam() {
         const teamName = prompt("Digite o nome da nova equipe:");
         if (teamName && teamName.trim() !== '') {
@@ -450,34 +498,37 @@ const CollaboratorService = {
     },
 
     /**
-     * MÉTODOS PARA ESTATÍSTICAS
+     * Adiciona equipe personalizada
      */
-    getColaboradorByNome(nome) {
-        try {
-            const stored = localStorage.getItem('sigap_colaboradores');
-            const colaboradores = stored ? JSON.parse(stored) : [];
-            return colaboradores.find(c => c.nome === nome) || null;
-        } catch (e) {
-            return null;
-        }
+    addCustomTeam(teamName) {
+        if (!teamName || teamName.trim() === '') return false;
+        const cleanName = teamName.trim();
+        if (this.customTeams.some(t => t.toLowerCase() === cleanName.toLowerCase())) return false;
+        this.customTeams.push(cleanName);
+        this.saveCustomTeams();
+        return true;
     },
 
-    getColaboradoresPorEquipe() {
-        try {
-            const stored = localStorage.getItem('sigap_colaboradores');
-            const colaboradores = stored ? JSON.parse(stored) : [];
-            const porEquipe = {};
-            colaboradores.forEach(col => {
-                const equipe = col.equipe || 'Equipe Não Definida';
-                if (!porEquipe[equipe]) porEquipe[equipe] = [];
-                porEquipe[equipe].push(col);
-            });
-            return porEquipe;
-        } catch (e) {
-            return {};
+    /**
+     * Remove equipe personalizada
+     */
+    removeCustomTeam(teamName) {
+        if (teamName === 'CRC') {
+            showNotification("A equipe CRC não pode ser removida!", "error");
+            return false;
         }
+        const index = this.customTeams.findIndex(t => t.toLowerCase() === teamName.toLowerCase());
+        if (index !== -1) {
+            this.customTeams.splice(index, 1);
+            this.saveCustomTeams();
+            return true;
+        }
+        return false;
     },
 
+    /**
+     * Gerencia equipes
+     */
     manageTeams() {
         const teams = this.customTeams.filter(t => t !== 'CRC');
         let message = "EQUIPES DISPONÍVEIS:\n\n";
@@ -521,27 +572,36 @@ const CollaboratorService = {
         }
     },
 
-    addCustomTeam(teamName) {
-        if (!teamName || teamName.trim() === '') return false;
-        const cleanName = teamName.trim();
-        if (this.customTeams.some(t => t.toLowerCase() === cleanName.toLowerCase())) return false;
-        this.customTeams.push(cleanName);
-        this.saveCustomTeams();
-        return true;
+    /**
+     * Obtém colaborador por nome (para estatísticas)
+     */
+    getColaboradorByNome(nome) {
+        try {
+            const stored = localStorage.getItem('sigap_colaboradores');
+            const colaboradores = stored ? JSON.parse(stored) : [];
+            return colaboradores.find(c => c.nome === nome) || null;
+        } catch (e) {
+            return null;
+        }
     },
 
-    removeCustomTeam(teamName) {
-        if (teamName === 'CRC') {
-            showNotification("A equipe CRC não pode ser removida!", "error");
-            return false;
+    /**
+     * Obtém colaboradores agrupados por equipe (para estatísticas)
+     */
+    getColaboradoresPorEquipe() {
+        try {
+            const stored = localStorage.getItem('sigap_colaboradores');
+            const colaboradores = stored ? JSON.parse(stored) : [];
+            const porEquipe = {};
+            colaboradores.forEach(col => {
+                const equipe = col.equipe || 'Equipe Não Definida';
+                if (!porEquipe[equipe]) porEquipe[equipe] = [];
+                porEquipe[equipe].push(col);
+            });
+            return porEquipe;
+        } catch (e) {
+            return {};
         }
-        const index = this.customTeams.findIndex(t => t.toLowerCase() === teamName.toLowerCase());
-        if (index !== -1) {
-            this.customTeams.splice(index, 1);
-            this.saveCustomTeams();
-            return true;
-        }
-        return false;
     }
 };
 
@@ -552,10 +612,8 @@ CollaboratorService.init();
 // EXPORTAÇÕES
 // ========================================================
 
-// Exportar o objeto completo
 export { CollaboratorService };
-
-// Tornar global
+export default CollaboratorService;
 window.CollaboratorService = CollaboratorService;
 
 console.log("✅ colaboradores.js carregado com sucesso!");
