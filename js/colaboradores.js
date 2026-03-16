@@ -661,7 +661,7 @@ export const StatisticsService = {
         yPos += 25;
 
         // Listar todas as equipes com TODOS os colaboradores
-        dados.sortedGroups.forEach(({groupName, total, todosColaboradores, collaborators}) => {
+        dados.sortedGroups.forEach(({groupName, total, todosColaboradores}) => {
             if (yPos > pageHeight - 150) {
                 doc.addPage();
                 yPos = margin + 30;
