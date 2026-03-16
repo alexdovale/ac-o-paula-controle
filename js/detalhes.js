@@ -2,13 +2,13 @@
  * ========================================================
  * DETALHES.JS - SIGAP
  * Módulo de Checklist e Documentos
- * Versão: 4.0 (Completa e Organizada)
+ * Versão: 5.0 (Réu como Único Item)
  * ========================================================
  * 
  * Este módulo gerencia:
  * ✅ Checklist de documentos por ação
  * ✅ Planilha de gastos para ações de alimentos
- * ✅ Dados do réu (endereço para citação) com checkboxes
+ * ✅ Dados do réu como UM ÚNICO ITEM no checklist
  * ✅ Integração com PDFService
  * ✅ Salvamento no Firestore
  * 
@@ -357,7 +357,7 @@ function getDocTypesFromForm() {
 
 /**
  * 5.2 Atualiza contador de itens selecionados
- * Conta: documentos + checkboxes do réu + planilha de gastos
+ * Conta: documentos + checkbox único do réu + planilha de gastos
  */
 function updateSelectedCounter() {
     const container = getEl('checklist-container');
@@ -366,22 +366,14 @@ function updateSelectedCounter() {
     // Documentos normais do checklist
     const checkedDocs = container.querySelectorAll('.doc-checkbox:checked').length;
     
-    // Checkboxes do réu
-    const reuCheckPrincipal = document.getElementById('check-reu-principal')?.checked ? 1 : 0;
-    const reuCheckIdentificacao = document.getElementById('check-reu-identificacao')?.checked ? 1 : 0;
-    const reuCheckResidencial = document.getElementById('check-reu-residencial')?.checked ? 1 : 0;
-    const reuCheckComercial = document.getElementById('check-reu-comercial')?.checked ? 1 : 0;
+    // Checkbox único do réu
+    const reuCheck = document.getElementById('check-reu-unico')?.checked ? 1 : 0;
     
     // Checkbox da planilha de gastos
     const gastosCheck = document.getElementById('check-exibir-gastos')?.checked ? 1 : 0;
     
     // Total geral
-    const totalChecked = checkedDocs + 
-                        reuCheckPrincipal + 
-                        reuCheckIdentificacao + 
-                        reuCheckResidencial + 
-                        reuCheckComercial + 
-                        gastosCheck;
+    const totalChecked = checkedDocs + reuCheck + gastosCheck;
     
     const counterEl = getEl('checklist-counter');
     if (counterEl) {
@@ -665,7 +657,7 @@ function setupCheckboxEvents(containerEl) {
 
 
 /* ========================================================
-   6. FORMULÁRIO DO RÉU (VERSÃO COMPLETA COM CHECKBOXES)
+   6. FORMULÁRIO DO RÉU (VERSÃO COM UM ÚNICO ITEM NO CHECKLIST)
    ======================================================== */
 
 /**
@@ -688,7 +680,7 @@ function renderReuForm(containerId) {
                 </h3>
             </div>
             
-            <!-- Aviso de Importância -->
+            <!-- AVISO DE IMPORTÂNCIA -->
             <div class="bg-yellow-100 border-l-4 border-yellow-400 p-3 mb-4 rounded">
                 <div class="flex">
                     <div class="flex-shrink-0">
@@ -704,11 +696,21 @@ function renderReuForm(containerId) {
                 </div>
             </div>
 
-            <!-- CHECKBOX PRINCIPAL "SOBRE O RÉU" -->
-            ${renderReuPrincipalCheckbox()}
+            <!-- CHECKBOX ÚNICO QUE CONTROLA TUDO -->
+            <div class="bg-white p-4 rounded-lg border border-gray-200 mb-4">
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" id="check-reu-unico" class="h-5 w-5 text-red-600 rounded border-gray-300 focus:ring-red-500" checked>
+                    <label for="check-reu-unico" class="text-sm font-bold text-gray-700 cursor-pointer">
+                        📋 DADOS DO RÉU (Endereço completo e Dados de trabalho)
+                    </label>
+                </div>
+                <p class="text-[9px] text-gray-500 mt-1 ml-8">
+                    Marque esta opção para incluir todos os dados do réu no processo
+                </p>
+            </div>
 
-            <!-- Conteúdo do Réu (visível apenas se principal marcado) -->
-            <div id="content-reu-principal">
+            <!-- TODO O CONTEÚDO DO RÉU (aparece/desaparece com o checkbox) -->
+            <div id="content-reu-completo">
                 ${renderReuIdentificacao()}
                 ${renderReuResidencial()}
                 ${renderReuComercial()}
@@ -720,7 +722,7 @@ function renderReuForm(containerId) {
     `;
 
     // Inicializa eventos
-    initReuCheckboxes();
+    initReuUnicoCheckbox();
     initCepSearch();
     initReuSaveButton();
     
@@ -728,40 +730,18 @@ function renderReuForm(containerId) {
 }
 
 /**
- * 6.2 Renderiza checkbox principal do réu
- * @returns {string}
- */
-function renderReuPrincipalCheckbox() {
-    return `
-        <div class="bg-white p-3 rounded-lg border border-gray-200 mb-4">
-            <div class="flex items-center gap-3">
-                <input type="checkbox" id="check-reu-principal" class="check-reu-global h-5 w-5 text-red-600 rounded border-gray-300 focus:ring-red-500" checked>
-                <label for="check-reu-principal" class="text-sm font-bold text-gray-700 cursor-pointer">
-                    📋 SOBRE O RÉU (Informações para citação)
-                </label>
-            </div>
-            <p class="text-[9px] text-gray-500 mt-1 ml-8">
-                Marque esta opção para incluir dados do réu no processo
-            </p>
-        </div>
-    `;
-}
-
-/**
- * 6.3 Renderiza seção de identificação do réu
+ * 6.2 Renderiza seção de identificação do réu
  * @returns {string}
  */
 function renderReuIdentificacao() {
     return `
         <div class="bg-white p-3 rounded-lg border border-gray-200 mb-4">
-            <div class="flex items-center gap-3 mb-3">
-                <input type="checkbox" id="check-reu-identificacao" class="check-reu-secundario h-5 w-5 text-red-600 rounded border-gray-300 focus:ring-red-500" checked>
-                <label for="check-reu-identificacao" class="text-sm font-bold text-gray-700 cursor-pointer">
-                    1. IDENTIFICAÇÃO DO RÉU
-                </label>
-            </div>
+            <h4 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                <span class="w-1 h-4 bg-red-600 rounded"></span>
+                1. IDENTIFICAÇÃO DO RÉU
+            </h4>
             
-            <div id="content-reu-identificacao" class="space-y-3">
+            <div class="space-y-3">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div class="md:col-span-2">
                         <label class="text-[9px] font-black text-gray-400 uppercase">Nome Completo</label>
@@ -785,21 +765,19 @@ function renderReuIdentificacao() {
 }
 
 /**
- * 6.4 Renderiza seção de endereço residencial
+ * 6.3 Renderiza seção de endereço residencial
  * @returns {string}
  */
 function renderReuResidencial() {
     return `
         <div class="bg-red-50 p-3 rounded-lg border border-red-200 mb-4">
-            <div class="flex items-center gap-3 mb-3">
-                <input type="checkbox" id="check-reu-residencial" class="check-reu-secundario h-5 w-5 text-red-600 rounded border-gray-300 focus:ring-red-500" checked>
-                <label for="check-reu-residencial" class="text-sm font-bold text-red-700 cursor-pointer">
-                    2. ENDEREÇO PARA CITAÇÃO (RESIDENCIAL)
-                    <span class="text-[8px] font-normal text-red-500 ml-2">(Mais importante)</span>
-                </label>
-            </div>
+            <h4 class="text-sm font-bold text-red-700 mb-3 flex items-center gap-2">
+                <span class="w-1 h-4 bg-red-600 rounded"></span>
+                2. ENDEREÇO PARA CITAÇÃO (RESIDENCIAL)
+                <span class="text-[8px] font-normal text-red-500 ml-2">(Mais importante)</span>
+            </h4>
             
-            <div id="content-reu-residencial" class="space-y-3">
+            <div class="space-y-3">
                 <!-- CEP -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <div class="md:col-span-1">
@@ -869,21 +847,19 @@ function renderReuResidencial() {
 }
 
 /**
- * 6.5 Renderiza seção de endereço comercial
+ * 6.4 Renderiza seção de endereço comercial
  * @returns {string}
  */
 function renderReuComercial() {
     return `
         <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <div class="flex items-center gap-3 mb-3">
-                <input type="checkbox" id="check-reu-comercial" class="check-reu-secundario h-5 w-5 text-gray-600 rounded border-gray-300 focus:ring-gray-500">
-                <label for="check-reu-comercial" class="text-sm font-bold text-gray-700 cursor-pointer">
-                    3. ENDEREÇO COMERCIAL/TRABALHO (Alternativo)
-                    <span class="text-[8px] font-normal text-gray-500 ml-2">(Se residencial for incerto)</span>
-                </label>
-            </div>
+            <h4 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                <span class="w-1 h-4 bg-gray-600 rounded"></span>
+                3. DADOS DE TRABALHO (Endereço Comercial - Alternativo)
+                <span class="text-[8px] font-normal text-gray-500 ml-2">(Se residencial for incerto)</span>
+            </h4>
             
-            <div id="content-reu-comercial" class="hidden space-y-3">
+            <div class="space-y-3">
                 <!-- Empresa -->
                 <div>
                     <label class="text-[9px] font-black text-gray-400 uppercase">Empresa/Local de Trabalho</label>
@@ -956,7 +932,7 @@ function renderReuComercial() {
 }
 
 /**
- * 6.6 Renderiza opções de UF para select
+ * 6.5 Renderiza opções de UF para select
  * @returns {string}
  */
 function renderUfOptions() {
@@ -965,7 +941,7 @@ function renderUfOptions() {
 }
 
 /**
- * 6.7 Renderiza botão salvar
+ * 6.6 Renderiza botão salvar
  * @returns {string}
  */
 function renderReuSaveButton() {
@@ -980,52 +956,18 @@ function renderReuSaveButton() {
 }
 
 /**
- * 6.8 Inicializa eventos dos checkboxes do réu
+ * 6.7 Inicializa checkbox único do réu
  */
-function initReuCheckboxes() {
-    const checkPrincipal = document.getElementById('check-reu-principal');
-    const contentPrincipal = document.getElementById('content-reu-principal');
+function initReuUnicoCheckbox() {
+    const checkUnico = document.getElementById('check-reu-unico');
+    const contentCompleto = document.getElementById('content-reu-completo');
     
-    if (checkPrincipal && contentPrincipal) {
-        checkPrincipal.addEventListener('change', function() {
-            contentPrincipal.style.display = this.checked ? 'block' : 'none';
-            if (!this.checked) {
-                document.querySelectorAll('.check-reu-secundario').forEach(cb => cb.checked = false);
-            }
-            updateSelectedCounter();
-        });
-    }
-
-    // Checkbox identificação
-    const checkIdentificacao = document.getElementById('check-reu-identificacao');
-    const contentIdentificacao = document.getElementById('content-reu-identificacao');
-    if (checkIdentificacao && contentIdentificacao) {
-        checkIdentificacao.addEventListener('change', function() {
-            contentIdentificacao.style.display = this.checked ? 'block' : 'none';
-            updateSelectedCounter();
-        });
-    }
-
-    // Checkbox residencial
-    const checkResidencial = document.getElementById('check-reu-residencial');
-    const contentResidencial = document.getElementById('content-reu-residencial');
-    if (checkResidencial && contentResidencial) {
-        checkResidencial.addEventListener('change', function() {
-            contentResidencial.style.display = this.checked ? 'block' : 'none';
-            updateSelectedCounter();
-        });
-    }
-
-    // Checkbox comercial
-    const checkComercial = document.getElementById('check-reu-comercial');
-    const contentComercial = document.getElementById('content-reu-comercial');
-    if (checkComercial && contentComercial) {
-        checkComercial.addEventListener('change', function() {
+    if (checkUnico && contentCompleto) {
+        checkUnico.addEventListener('change', function() {
             if (this.checked) {
-                contentComercial.classList.remove('hidden');
-                contentComercial.style.display = 'block';
+                contentCompleto.style.display = 'block';
             } else {
-                contentComercial.classList.add('hidden');
+                contentCompleto.style.display = 'none';
             }
             updateSelectedCounter();
         });
@@ -1033,7 +975,7 @@ function initReuCheckboxes() {
 }
 
 /**
- * 6.9 Inicializa busca de CEP
+ * 6.8 Inicializa busca de CEP
  */
 function initCepSearch() {
     const cepInp = getEl('cep-reu');
@@ -1084,7 +1026,7 @@ function initCepSearch() {
 }
 
 /**
- * 6.10 Inicializa botão salvar do réu
+ * 6.9 Inicializa botão salvar do réu
  */
 function initReuSaveButton() {
     const salvarBtn = document.getElementById('salvar-reu-btn');
@@ -1212,11 +1154,8 @@ function initExpenseTableEvents(div) {
  */
 function getReuDataFromForm() {
     return {
-        // Checkboxes
-        checkPrincipal: getEl('check-reu-principal')?.checked || false,
-        checkIdentificacao: getEl('check-reu-identificacao')?.checked || false,
-        checkResidencial: getEl('check-reu-residencial')?.checked || false,
-        checkComercial: getEl('check-reu-comercial')?.checked || false,
+        // Checkbox único
+        checkReuUnico: getEl('check-reu-unico')?.checked || false,
         
         // Identificação
         nome: getEl('nome-reu')?.value || '',
@@ -1277,11 +1216,8 @@ function fillReuData(d) {
         if (el) el.checked = value || false;
     };
     
-    // Checkboxes
-    setChecked('check-reu-principal', d.checkPrincipal);
-    setChecked('check-reu-identificacao', d.checkIdentificacao);
-    setChecked('check-reu-residencial', d.checkResidencial);
-    setChecked('check-reu-comercial', d.checkComercial);
+    // Checkbox único
+    setChecked('check-reu-unico', d.checkReuUnico);
     
     // Identificação
     setValue('nome-reu', d.nome);
@@ -1317,22 +1253,12 @@ function fillReuData(d) {
  * @param {Object} d - Dados do réu
  */
 function updateReuVisibility(d) {
-    const contentPrincipal = document.getElementById('content-reu-principal');
-    const contentIdentificacao = document.getElementById('content-reu-identificacao');
-    const contentResidencial = document.getElementById('content-reu-residencial');
-    const contentComercial = document.getElementById('content-reu-comercial');
+    const contentCompleto = document.getElementById('content-reu-completo');
     
-    if (contentPrincipal) contentPrincipal.style.display = d.checkPrincipal ? 'block' : 'none';
-    if (contentIdentificacao) contentIdentificacao.style.display = d.checkIdentificacao ? 'block' : 'none';
-    if (contentResidencial) contentResidencial.style.display = d.checkResidencial ? 'block' : 'none';
-    if (contentComercial) {
-        if (d.checkComercial) {
-            contentComercial.classList.remove('hidden');
-            contentComercial.style.display = 'block';
-        } else {
-            contentComercial.classList.add('hidden');
-        }
+    if (contentCompleto) {
+        contentCompleto.style.display = d.checkReuUnico ? 'block' : 'none';
     }
+    
     updateSelectedCounter();
 }
 
@@ -1393,8 +1319,10 @@ async function handlePdf() {
         const reu = getReuDataFromForm();
         const gastos = getExpenseDataFromForm();
         
-        // Adiciona dados do réu ao PDF
-        addReuToPdfData(documentosTextos, reu);
+        // Adiciona dados do réu ao PDF (apenas se o checkbox único estiver marcado)
+        if (reu.checkReuUnico) {
+            addReuToPdfData(documentosTextos, reu);
+        }
         
         // Adiciona dados de gastos ao PDF
         addExpensesToPdfData(documentosTextos, gastos);
@@ -1470,59 +1398,49 @@ function collectCheckedDocuments() {
  * @param {Object} reu - Dados do réu
  */
 function addReuToPdfData(documentosTextos, reu) {
-    const temReu = reu.checkPrincipal && (reu.checkIdentificacao || reu.checkResidencial || reu.checkComercial);
-    
-    if (!temReu) return;
-    
     documentosTextos.push({
         id: 'reu-titulo',
-        text: '👤 SOBRE O RÉU (Dados para citação):'
+        text: '👤 DADOS DO RÉU (Endereço para citação):'
     });
     
     const linhas = [];
     
     // Identificação
-    if (reu.checkIdentificacao) {
-        if (reu.nome) linhas.push(`   • Nome do Réu: ${reu.nome}`);
-        if (reu.cpf) linhas.push(`   • CPF do Réu: ${reu.cpf}`);
-        if (reu.telefone) linhas.push(`   • Telefone do Réu: ${reu.telefone}`);
-    }
+    if (reu.nome) linhas.push(`   • Nome do Réu: ${reu.nome}`);
+    if (reu.cpf) linhas.push(`   • CPF do Réu: ${reu.cpf}`);
+    if (reu.telefone) linhas.push(`   • Telefone do Réu: ${reu.telefone}`);
     
     // Residencial
-    if (reu.checkResidencial) {
-        if (reu.cep) linhas.push(`   • CEP Residencial: ${reu.cep}`);
-        if (reu.rua) {
-            let end = `   • Endereço Residencial: ${reu.rua}`;
-            if (reu.numero) end += `, nº ${reu.numero}`;
-            if (reu.complemento) end += ` - ${reu.complemento}`;
-            linhas.push(end);
-        }
-        if (reu.bairro) linhas.push(`   • Bairro: ${reu.bairro}`);
-        if (reu.cidade) {
-            let cidade = `   • Cidade: ${reu.cidade}`;
-            if (reu.uf) cidade += ` - ${reu.uf}`;
-            linhas.push(cidade);
-        }
-        if (reu.referencia) linhas.push(`   • Ponto de Referência: ${reu.referencia}`);
+    if (reu.cep) linhas.push(`   • CEP Residencial: ${reu.cep}`);
+    if (reu.rua) {
+        let end = `   • Endereço Residencial: ${reu.rua}`;
+        if (reu.numero) end += `, nº ${reu.numero}`;
+        if (reu.complemento) end += ` - ${reu.complemento}`;
+        linhas.push(end);
     }
+    if (reu.bairro) linhas.push(`   • Bairro: ${reu.bairro}`);
+    if (reu.cidade) {
+        let cidade = `   • Cidade: ${reu.cidade}`;
+        if (reu.uf) cidade += ` - ${reu.uf}`;
+        linhas.push(cidade);
+    }
+    if (reu.referencia) linhas.push(`   • Ponto de Referência: ${reu.referencia}`);
     
     // Comercial
-    if (reu.checkComercial) {
-        if (reu.empresa) linhas.push(`   • Empresa: ${reu.empresa}`);
-        if (reu.rua_comercial) {
-            let end = `   • Endereço Comercial: ${reu.rua_comercial}`;
-            if (reu.numero_comercial) end += `, nº ${reu.numero_comercial}`;
-            if (reu.complemento_comercial) end += ` - ${reu.complemento_comercial}`;
-            linhas.push(end);
-        }
-        if (reu.bairro_comercial) linhas.push(`   • Bairro Comercial: ${reu.bairro_comercial}`);
-        if (reu.cidade_comercial) {
-            let cidade = `   • Cidade Comercial: ${reu.cidade_comercial}`;
-            if (reu.uf_comercial) cidade += ` - ${reu.uf_comercial}`;
-            linhas.push(cidade);
-        }
-        if (reu.cep_comercial) linhas.push(`   • CEP Comercial: ${reu.cep_comercial}`);
+    if (reu.empresa) linhas.push(`   • Empresa: ${reu.empresa}`);
+    if (reu.rua_comercial) {
+        let end = `   • Endereço Comercial: ${reu.rua_comercial}`;
+        if (reu.numero_comercial) end += `, nº ${reu.numero_comercial}`;
+        if (reu.complemento_comercial) end += ` - ${reu.complemento_comercial}`;
+        linhas.push(end);
     }
+    if (reu.bairro_comercial) linhas.push(`   • Bairro Comercial: ${reu.bairro_comercial}`);
+    if (reu.cidade_comercial) {
+        let cidade = `   • Cidade Comercial: ${reu.cidade_comercial}`;
+        if (reu.uf_comercial) cidade += ` - ${reu.uf_comercial}`;
+        linhas.push(cidade);
+    }
+    if (reu.cep_comercial) linhas.push(`   • CEP Comercial: ${reu.cep_comercial}`);
     
     linhas.forEach((linha, i) => {
         documentosTextos.push({ id: `reu-item-${i}`, text: linha });
