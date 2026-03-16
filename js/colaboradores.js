@@ -14,44 +14,51 @@ import { escapeHTML, showNotification } from './utils.js';
 
 // Ordem hierárquica dos cargos (quanto menor o número, maior a prioridade)
 const CARGO_ORDER = {
+    // Coordenação (prioridade máxima)
     'Coordenador(a)': 1,
     'Coordenador': 1,
+    
+    // Defensores
     'Defensor(a)': 2,
     'Defensor': 2,
+    
+    // Residentes
     'Residente': 3,
     'Residente (Direito)': 3,
+    
+    // Servidores
     'Servidor(a)': 4,
     'Servidor': 4,
-    'CRC': 4.5,
+    
+    // Técnicos
     'Técnico(a) de TI': 5,
     'Técnico de TI': 5,
+    
+    // Assessores
     'Assessor(a)': 6,
     'Assessor': 6,
+    
+    // Estagiários
     'Estagiário(a)': 7,
     'Estagiário': 7,
+    
+    // Voluntários
     'Voluntário(a)': 8,
     'Voluntário': 8,
+    
+    // Outros
     'Outro': 9
 };
 
+// Valor padrão para cargos não mapeados
 const DEFAULT_CARGO_ORDER = 99;
 
-// ========================================================
-// COLLABORATOR SERVICE
-// ========================================================
-
-const CollaboratorService = {
+export const CollaboratorService = {
     currentListener: null,
     editId: null,
+    
+    // Cache de equipes personalizadas
     customTeams: [],
-
-    /**
-     * Inicializa o serviço
-     */
-    init() {
-        this.loadCustomTeams();
-        console.log("✅ CollaboratorService inicializado");
-    },
 
     /**
      * Carrega equipes personalizadas do localStorage
@@ -60,18 +67,20 @@ const CollaboratorService = {
         try {
             const saved = localStorage.getItem('sigap_custom_teams');
             this.customTeams = saved ? JSON.parse(saved) : [];
+            
+            // Garantir que CRC esteja sempre na lista
             if (!this.customTeams.includes('CRC')) {
-                this.customTeams.unshift('CRC');
+                this.customTeams.unshift('CRC'); // Adiciona no início
                 this.saveCustomTeams();
             }
         } catch (e) {
             console.error("Erro ao carregar equipes:", e);
-            this.customTeams = ['CRC'];
+            this.customTeams = ['CRC']; // Fallback com CRC
         }
     },
 
     /**
-     * Salva equipes personalizadas
+     * Salva equipes personalizadas no localStorage
      */
     saveCustomTeams() {
         try {
@@ -82,65 +91,160 @@ const CollaboratorService = {
     },
 
     /**
-     * Abre o modal de colaboradores
+     * Adiciona nova equipe personalizada
      */
-    openModal(app) {
-        console.log("📋 Abrindo modal de colaboradores");
+    addCustomTeam(teamName) {
+        if (!teamName || teamName.trim() === '') return false;
         
-        const modal = document.getElementById('collaborators-modal');
-        if (!modal) {
-            console.error("Modal de colaboradores não encontrado");
-            showNotification("Erro: Modal não encontrado", "error");
-            return;
-        }
-
-        modal.classList.remove('hidden');
-        this.resetForm();
-        this.updateTeamSelect();
-        this.updateCargoSelect();
+        const cleanName = teamName.trim();
         
-        // Configurar listener se houver pauta
-        if (app && app.currentPauta && app.currentPauta.id) {
-            this.setupListener(app, app.currentPauta.id);
-        }
+        // Verificar se já existe
+        const exists = this.customTeams.some(t => t.toLowerCase() === cleanName.toLowerCase());
+        if (exists) return false;
+        
+        this.customTeams.push(cleanName);
+        this.saveCustomTeams();
+        return true;
     },
 
     /**
-     * Fecha o modal
+     * Remove equipe personalizada (não permite remover CRC)
      */
-    closeModal() {
-        const modal = document.getElementById('collaborators-modal');
-        if (modal) modal.classList.add('hidden');
+    removeCustomTeam(teamName) {
+        // Proteger equipe CRC
+        if (teamName === 'CRC') {
+            showNotification("A equipe CRC não pode ser removida!", "error");
+            return false;
+        }
+        
+        const index = this.customTeams.findIndex(t => t.toLowerCase() === teamName.toLowerCase());
+        if (index !== -1) {
+            this.customTeams.splice(index, 1);
+            this.saveCustomTeams();
+            return true;
+        }
+        return false;
     },
 
     /**
-     * Configura listener em tempo real
+     * Obtém lista completa de opções de equipe
+     */
+    getTeamOptions() {
+        // Equipes numéricas padrão (1-10)
+        const numericTeams = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+        
+        // Equipes especiais fixas
+        const specialTeams = ['CRC'];
+        
+        // Combinar: primeiro as especiais, depois numéricas, depois personalizadas
+        // (excluindo duplicatas)
+        const allTeams = [...specialTeams];
+        
+        // Adicionar numéricas (se não estiverem já incluídas)
+        numericTeams.forEach(team => {
+            if (!allTeams.includes(team)) {
+                allTeams.push(team);
+            }
+        });
+        
+        // Adicionar personalizadas (excluindo duplicatas com especiais e numéricas)
+        this.customTeams.forEach(team => {
+            if (!allTeams.includes(team) && team !== 'CRC') {
+                allTeams.push(team);
+            }
+        });
+        
+        return allTeams;
+    },
+
+    /**
+     * Obtém lista completa de cargos
+     */
+    getCargoOptions() {
+        return [
+            'Coordenador(a)',
+            'Defensor(a)',
+            'Residente',
+            'Servidor(a)',
+            'Técnico(a) de TI',
+            'Assessor(a)',
+            'Estagiário(a)',
+            'Voluntário(a)',
+            'Outro'
+        ];
+    },
+
+    /**
+     * Renderiza o select de cargos
+     */
+    renderCargoSelect(selectedValue = 'Defensor(a)') {
+        const cargos = this.getCargoOptions();
+        let html = '';
+        
+        cargos.forEach(cargo => {
+            const selected = cargo === selectedValue ? 'selected' : '';
+            html += `<option value="${escapeHTML(cargo)}" ${selected}>${escapeHTML(cargo)}</option>`;
+        });
+        
+        return html;
+    },
+
+    /**
+     * Renderiza o select de equipes com todas as opções
+     */
+    renderTeamSelect(selectedValue = '1') {
+        const options = this.getTeamOptions();
+        let html = '';
+        
+        options.forEach(team => {
+            const selected = team === selectedValue ? 'selected' : '';
+            // Destacar CRC visualmente
+            const displayTeam = team === 'CRC' ? 'CRC (Central de Relacionamento)' : `EQP ${team}`;
+            const className = team === 'CRC' ? 'style="font-weight: bold; color: #2563eb;"' : '';
+            html += `<option value="${escapeHTML(team)}" ${selected} ${className}>${displayTeam}</option>`;
+        });
+        
+        // Adicionar opção para criar nova equipe
+        html += `<option value="__new__">➕ Criar Nova Equipe...</option>`;
+        
+        return html;
+    },
+
+    /**
+     * Configura listener para colaboradores
      */
     setupListener(app, pautaId) {
         if (!pautaId || !app?.db) return;
         
-        console.log("📋 Configurando listener para pauta:", pautaId);
+        console.log("Configurando listener de colaboradores para pauta:", pautaId);
         
         if (this.currentListener) {
             this.currentListener();
         }
         
+        // Carregar equipes personalizadas
+        this.loadCustomTeams();
+        
         const ref = collection(app.db, "pautas", pautaId, "collaborators");
         this.currentListener = onSnapshot(ref, (snapshot) => {
             const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
-            // Ordenar lista
+            // ORDENAÇÃO: Por equipe e depois por cargo
             lista.sort((a, b) => {
+                // Primeiro por equipe (com CRC sempre primeiro)
                 const teamA = a.equipe || '0';
                 const teamB = b.equipe || '0';
                 
+                // CRC tem prioridade máxima na ordenação
                 if (teamA === 'CRC' && teamB !== 'CRC') return -1;
                 if (teamA !== 'CRC' && teamB === 'CRC') return 1;
                 
+                // Para as demais equipes, ordenação normal
                 if (teamA !== teamB) {
                     return String(teamA).localeCompare(String(teamB), undefined, { numeric: true });
                 }
                 
+                // Mesma equipe: ordenar por cargo
                 const orderA = CARGO_ORDER[a.cargo] || DEFAULT_CARGO_ORDER;
                 const orderB = CARGO_ORDER[b.cargo] || DEFAULT_CARGO_ORDER;
                 
@@ -148,29 +252,16 @@ const CollaboratorService = {
                     return orderA - orderB;
                 }
                 
+                // Mesmo cargo: ordenar por nome
                 return (a.nome || '').localeCompare(b.nome || '');
             });
             
+            console.log("Colaboradores carregados e ordenados:", lista.length);
             app.colaboradores = lista;
-            this.salvarNoLocalStorage(app);
             this.renderTable(app);
         }, (error) => {
-            console.error("Erro no listener:", error);
+            console.error("Erro no listener de colaboradores:", error);
         });
-    },
-
-    /**
-     * Salva colaboradores no localStorage
-     */
-    salvarNoLocalStorage(app) {
-        try {
-            if (app && app.colaboradores) {
-                localStorage.setItem('sigap_colaboradores', JSON.stringify(app.colaboradores));
-                console.log("📋 Colaboradores salvos no localStorage:", app.colaboradores.length);
-            }
-        } catch (e) {
-            console.error("Erro ao salvar no localStorage:", e);
-        }
     },
 
     /**
@@ -183,22 +274,27 @@ const CollaboratorService = {
         tbody.innerHTML = '';
         let selfT = 0, compT = 0;
 
-        (app.colaboradores || []).forEach(colab => {
+        app.colaboradores.forEach(colab => {
             if (colab.transporte === 'Meios Próprios') selfT++; 
             else if (colab.transporte === 'Com a Empresa') compT++;
             
             const row = document.createElement('tr');
+            
+            // Destacar visualmente baseado no cargo
             let rowClass = "border-b hover:bg-gray-50 transition-colors";
             let leaderBadge = '';
             
+            // Coordenador (prioridade 1)
             if (CARGO_ORDER[colab.cargo] === 1) {
                 rowClass += " bg-purple-50 font-bold";
                 leaderBadge = '<span class="ml-2 text-xs bg-purple-200 px-2 py-1 rounded-full">Coordenador</span>';
-            } else if (CARGO_ORDER[colab.cargo] === 2) {
+            }
+            // Defensor (prioridade 2)
+            else if (CARGO_ORDER[colab.cargo] === 2) {
                 rowClass += " bg-green-50";
                 leaderBadge = '<span class="ml-2 text-xs bg-green-200 px-2 py-1 rounded-full">Defensor</span>';
             }
-            
+            // CRC em destaque
             if (colab.equipe === 'CRC') {
                 rowClass += " border-l-4 border-blue-500";
             }
@@ -208,7 +304,7 @@ const CollaboratorService = {
             row.innerHTML = `
                 <td class="p-3">
                     <div class="flex items-center">
-                        <span>${escapeHTML(colab.nome || '')}</span>
+                        <span>${escapeHTML(colab.nome)}</span>
                         ${leaderBadge}
                     </div>
                 </td>
@@ -231,25 +327,22 @@ const CollaboratorService = {
             tbody.appendChild(row);
         });
 
-        const totalEl = document.getElementById('total-participants-count');
-        const selfEl = document.getElementById('self-transport-count');
-        const compEl = document.getElementById('company-transport-count');
-        
-        if (totalEl) totalEl.textContent = app.colaboradores?.length || 0;
-        if (selfEl) selfEl.textContent = selfT;
-        if (compEl) compEl.textContent = compT;
+        document.getElementById('total-participants-count').textContent = app.colaboradores.length;
+        document.getElementById('self-transport-count').textContent = selfT;
+        document.getElementById('company-transport-count').textContent = compT;
 
-        this.addEventListeners(app);
+        this.addEventListenersToTable(app);
     },
 
     /**
-     * Adiciona eventos à tabela
+     * Adiciona event listeners à tabela
      */
-    addEventListeners(app) {
+    addEventListenersToTable(app) {
         document.querySelectorAll('#collaborators-modal .checkin-checkbox').forEach(checkbox => {
             checkbox.onchange = async (e) => {
                 const docId = e.target.dataset.id;
                 const presente = e.target.checked;
+                const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
                 await this.togglePresence(app, docId, presente);
             };
         });
@@ -272,16 +365,79 @@ const CollaboratorService = {
     },
 
     /**
-     * Alterna presença
+     * Abre modal de colaboradores
      */
-    async togglePresence(app, id, presente) {
-        try {
-            const ref = doc(app.db, "pautas", app.currentPauta.id, "collaborators", id);
-            const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-            await updateDoc(ref, { presente, horario });
-        } catch (error) {
-            console.error("Erro ao marcar presença:", error);
+    openModal(app) {
+        const modal = document.getElementById('collaborators-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            this.resetForm();
+            
+            // Atualizar os selects
+            this.updateTeamSelect();
+            this.updateCargoSelect();
         }
+    },
+
+    /**
+     * Atualiza o select de cargo
+     */
+    updateCargoSelect(selectedValue = 'Defensor(a)') {
+        const select = document.getElementById('collaborator-role-modal');
+        if (select) {
+            select.innerHTML = this.renderCargoSelect(selectedValue);
+        }
+    },
+
+    /**
+     * Atualiza o select de equipe com as opções atuais
+     */
+    updateTeamSelect(selectedValue = '1') {
+        const select = document.getElementById('collaborator-team-modal');
+        if (select) {
+            select.innerHTML = this.renderTeamSelect(selectedValue);
+            
+            // Adicionar evento para criar nova equipe
+            select.onchange = (e) => {
+                if (e.target.value === '__new__') {
+                    this.promptNewTeam();
+                }
+            };
+        }
+    },
+
+    /**
+     * Solicita nome da nova equipe
+     */
+    promptNewTeam() {
+        const teamName = prompt("Digite o nome da nova equipe:");
+        if (teamName && teamName.trim() !== '') {
+            if (this.addCustomTeam(teamName)) {
+                this.updateTeamSelect(teamName);
+                showNotification(`Equipe "${teamName}" criada!`);
+            } else {
+                showNotification("Esta equipe já existe!", "error");
+            }
+        }
+    },
+
+    /**
+     * Reseta formulário
+     */
+    resetForm() {
+        const form = document.getElementById('collaborator-form-modal');
+        if (form) form.reset();
+        this.editId = null;
+        const btn = document.getElementById('add-collaborator-btn-modal');
+        if (btn) btn.textContent = "Salvar Membro";
+        
+        // Resetar selects
+        this.updateTeamSelect('1');
+        this.updateCargoSelect('Defensor(a)');
+        
+        // Resetar transporte
+        const transpDefault = document.querySelector('input[name="transporte-colaborador"][value="Meios Próprios"]');
+        if (transpDefault) transpDefault.checked = true;
     },
 
     /**
@@ -312,6 +468,19 @@ const CollaboratorService = {
     },
 
     /**
+     * Alterna presença
+     */
+    async togglePresence(app, id, presente) {
+        try {
+            const ref = doc(app.db, "pautas", app.currentPauta.id, "collaborators", id);
+            const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+            await updateDoc(ref, { presente, horario });
+        } catch (error) {
+            console.error("Erro ao marcar presença:", error);
+        }
+    },
+
+    /**
      * Edita colaborador
      */
     async editCollaborator(app, id) {
@@ -324,8 +493,13 @@ const CollaboratorService = {
                 this.editId = id;
                 
                 document.getElementById('collaborator-name-modal').value = c.nome || '';
+                
+                // Atualizar cargo
                 this.updateCargoSelect(c.cargo || 'Defensor(a)');
+                
+                // Atualizar equipe
                 this.updateTeamSelect(c.equipe || '1');
+                
                 document.getElementById('collaborator-phone-modal').value = c.telefone || '';
                 document.getElementById('collaborator-email-modal').value = c.email || '';
                 
@@ -375,162 +549,10 @@ const CollaboratorService = {
     },
 
     /**
-     * Reseta formulário
-     */
-    resetForm() {
-        const form = document.getElementById('collaborator-form-modal');
-        if (form) form.reset();
-        this.editId = null;
-        const btn = document.getElementById('add-collaborator-btn-modal');
-        if (btn) btn.textContent = "Salvar Membro";
-        
-        this.updateTeamSelect('1');
-        this.updateCargoSelect('Defensor(a)');
-        
-        const transpDefault = document.querySelector('input[name="transporte-colaborador"][value="Meios Próprios"]');
-        if (transpDefault) transpDefault.checked = true;
-    },
-
-    /**
-     * Obtém opções de equipe
-     */
-    getTeamOptions() {
-        const numericTeams = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
-        const specialTeams = ['CRC'];
-        const allTeams = [...specialTeams];
-        
-        numericTeams.forEach(team => {
-            if (!allTeams.includes(team)) allTeams.push(team);
-        });
-        
-        this.customTeams.forEach(team => {
-            if (!allTeams.includes(team) && team !== 'CRC') allTeams.push(team);
-        });
-        
-        return allTeams;
-    },
-
-    /**
-     * Obtém opções de cargo
-     */
-    getCargoOptions() {
-        return [
-            'Coordenador(a)',
-            'Defensor(a)',
-            'Residente',
-            'Servidor(a)',
-            'CRC',
-            'Técnico(a) de TI',
-            'Assessor(a)',
-            'Estagiário(a)',
-            'Voluntário(a)',
-            'Outro'
-        ];
-    },
-
-    /**
-     * Renderiza select de cargo
-     */
-    renderCargoSelect(selectedValue = 'Defensor(a)') {
-        const cargos = this.getCargoOptions();
-        let html = '';
-        cargos.forEach(cargo => {
-            const selected = cargo === selectedValue ? 'selected' : '';
-            html += `<option value="${escapeHTML(cargo)}" ${selected}>${escapeHTML(cargo)}</option>`;
-        });
-        return html;
-    },
-
-    /**
-     * Renderiza select de equipe
-     */
-    renderTeamSelect(selectedValue = '1') {
-        const options = this.getTeamOptions();
-        let html = '';
-        options.forEach(team => {
-            const selected = team === selectedValue ? 'selected' : '';
-            const displayTeam = team === 'CRC' ? 'CRC (Central de Relacionamento)' : `EQP ${team}`;
-            html += `<option value="${escapeHTML(team)}" ${selected}>${displayTeam}</option>`;
-        });
-        html += `<option value="__new__">➕ Criar Nova Equipe...</option>`;
-        return html;
-    },
-
-    /**
-     * Atualiza select de cargo
-     */
-    updateCargoSelect(selectedValue = 'Defensor(a)') {
-        const select = document.getElementById('collaborator-role-modal');
-        if (select) {
-            select.innerHTML = this.renderCargoSelect(selectedValue);
-        }
-    },
-
-    /**
-     * Atualiza select de equipe
-     */
-    updateTeamSelect(selectedValue = '1') {
-        const select = document.getElementById('collaborator-team-modal');
-        if (select) {
-            select.innerHTML = this.renderTeamSelect(selectedValue);
-            select.onchange = null;
-            select.addEventListener('change', (e) => {
-                if (e.target.value === '__new__') {
-                    this.promptNewTeam();
-                }
-            });
-        }
-    },
-
-    /**
-     * Solicita nova equipe
-     */
-    promptNewTeam() {
-        const teamName = prompt("Digite o nome da nova equipe:");
-        if (teamName && teamName.trim() !== '') {
-            if (this.addCustomTeam(teamName)) {
-                this.updateTeamSelect(teamName);
-                showNotification(`Equipe "${teamName}" criada!`);
-            } else {
-                showNotification("Esta equipe já existe!", "error");
-            }
-        }
-    },
-
-    /**
-     * Adiciona equipe personalizada
-     */
-    addCustomTeam(teamName) {
-        if (!teamName || teamName.trim() === '') return false;
-        const cleanName = teamName.trim();
-        if (this.customTeams.some(t => t.toLowerCase() === cleanName.toLowerCase())) return false;
-        this.customTeams.push(cleanName);
-        this.saveCustomTeams();
-        return true;
-    },
-
-    /**
-     * Remove equipe personalizada
-     */
-    removeCustomTeam(teamName) {
-        if (teamName === 'CRC') {
-            showNotification("A equipe CRC não pode ser removida!", "error");
-            return false;
-        }
-        const index = this.customTeams.findIndex(t => t.toLowerCase() === teamName.toLowerCase());
-        if (index !== -1) {
-            this.customTeams.splice(index, 1);
-            this.saveCustomTeams();
-            return true;
-        }
-        return false;
-    },
-
-    /**
-     * Gerencia equipes
+     * Gerenciar equipes
      */
     manageTeams() {
-        const teams = this.customTeams.filter(t => t !== 'CRC');
+        const teams = this.customTeams.filter(t => t !== 'CRC'); // Não mostrar CRC na lista de remoção
         let message = "EQUIPES DISPONÍVEIS:\n\n";
         message += "🔵 CRC (fixa)\n";
         
@@ -570,50 +592,5 @@ const CollaboratorService = {
                 showNotification("Comando não reconhecido", "error");
             }
         }
-    },
-
-    /**
-     * Obtém colaborador por nome (para estatísticas)
-     */
-    getColaboradorByNome(nome) {
-        try {
-            const stored = localStorage.getItem('sigap_colaboradores');
-            const colaboradores = stored ? JSON.parse(stored) : [];
-            return colaboradores.find(c => c.nome === nome) || null;
-        } catch (e) {
-            return null;
-        }
-    },
-
-    /**
-     * Obtém colaboradores agrupados por equipe (para estatísticas)
-     */
-    getColaboradoresPorEquipe() {
-        try {
-            const stored = localStorage.getItem('sigap_colaboradores');
-            const colaboradores = stored ? JSON.parse(stored) : [];
-            const porEquipe = {};
-            colaboradores.forEach(col => {
-                const equipe = col.equipe || 'Equipe Não Definida';
-                if (!porEquipe[equipe]) porEquipe[equipe] = [];
-                porEquipe[equipe].push(col);
-            });
-            return porEquipe;
-        } catch (e) {
-            return {};
-        }
     }
 };
-
-// Inicializar
-CollaboratorService.init();
-
-// ========================================================
-// EXPORTAÇÕES
-// ========================================================
-
-export { CollaboratorService };
-export default CollaboratorService;
-window.CollaboratorService = CollaboratorService;
-
-console.log("✅ colaboradores.js carregado com sucesso!");
