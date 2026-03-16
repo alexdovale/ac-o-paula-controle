@@ -1,14 +1,10 @@
 /**
- * estatisticas.js - SIGAP
- * Versão COMPLETA com 3 tipos de PDF
- * 
+ * estatisticas.js - Versão Completa com PDF por Equipe mostrando apenas nomes
  * Funcionalidades:
- * ✅ Estatísticas por colaborador (baseado no cadastro)
- * ✅ Estatísticas por equipe (baseado no cadastro)
- * ✅ Inclui colaboradores que não atenderam (mostra 0)
- * ✅ PDF Resumo (estatísticas completas)
- * ✅ PDF por Equipe (detalhado com atendimentos individuais)
- * ✅ PDF por Grupo (visão geral - apenas total do grupo e lista de membros)
+ * - Atendidos por equipe (quantidade total)
+ * - Atendidos por colaborador (quantidade individual) - OPCIONAL
+ * - PDF por Equipe mostra TODOS os colaboradores (apenas nomes)
+ * - PDF Detalhado com lista de assistidos
  */
 
 // ========================================================
@@ -16,41 +12,8 @@
 // ========================================================
 
 export const StatisticsService = {
-    
-    /* ========================================================
-       1. FUNÇÕES AUXILIARES
-       ======================================================== */
-    
     /**
-     * 1.1 Carrega a lista de colaboradores do sistema
-     * @returns {Array} - Lista de colaboradores
-     */
-    carregarColaboradores() {
-        let colaboradores = [];
-        
-        // Tenta carregar do window.app (se existir)
-        if (window.app && window.app.colaboradores) {
-            colaboradores = window.app.colaboradores;
-            console.log("📋 Estatísticas: Colaboradores carregados do window.app:", colaboradores.length);
-        } 
-        // Tenta carregar do localStorage
-        else {
-            const stored = localStorage.getItem('sigap_colaboradores');
-            if (stored) {
-                try {
-                    colaboradores = JSON.parse(stored);
-                    console.log("📋 Estatísticas: Colaboradores carregados do localStorage:", colaboradores.length);
-                } catch (e) {
-                    console.error("Erro ao carregar colaboradores:", e);
-                }
-            }
-        }
-        
-        return colaboradores;
-    },
-
-    /**
-     * 1.2 Calcula diferença em minutos entre duas datas
+     * Calcula diferença em minutos entre duas datas
      */
     getTimeDifferenceInMinutes(startTimeISO, endTimeISO) {
         if (!startTimeISO || !endTimeISO) return null;
@@ -60,12 +23,8 @@ export const StatisticsService = {
         return Math.round((end - start) / 60000);
     },
 
-    /* ========================================================
-       2. FUNÇÃO PRINCIPAL - RENDERIZAR MODAL
-       ======================================================== */
-
     /**
-     * 2.1 Renderiza o modal de estatísticas
+     * Renderiza o modal de estatísticas
      */
     showModal(allAssisted, useDelegationFlow, pautaName) {
         const modal = document.getElementById('statistics-modal');
@@ -99,119 +58,132 @@ export const StatisticsService = {
         // Mostrar loading
         content.innerHTML = `<div class="flex items-center justify-center h-full"><p class="text-gray-600">Calculando estatísticas...</p></div>`;
 
-        // ===== CARREGAR COLABORADORES DO CADASTRO =====
-        const colaboradoresCadastro = this.carregarColaboradores();
-        
         // Filtrar dados
         const atendidos = allAssisted.filter(a => a.status === 'atendido');
         const faltosos = allAssisted.filter(a => a.status === 'faltoso');
 
-        // ===== PROCESSAR DADOS DOS ATENDIMENTOS =====
+        // ===== BUSCAR DADOS DOS COLABORADORES DO SISTEMA =====
+        // Tenta obter a lista de colaboradores do armazenamento global
+        let todosColaboradores = [];
         
-        // Mapear atendimentos por colaborador (usando nome como chave)
-        const atendimentosPorColaborador = {};
-        
-        atendidos.forEach(a => {
-            // Extrair nome do atendente
-            let nomeAtendente = 'Não informado';
-            if (a.attendant) {
-                if (typeof a.attendant === 'object') {
-                    nomeAtendente = a.attendant.nome || a.attendant.name || 'Não informado';
-                } else {
-                    nomeAtendente = String(a.attendant);
+        // Verificar se existe no window.app
+        if (window.app && window.app.colaboradores) {
+            todosColaboradores = window.app.colaboradores;
+        } 
+        // Verificar se existe no localStorage
+        else {
+            const stored = localStorage.getItem('sigap_colaboradores');
+            if (stored) {
+                try {
+                    todosColaboradores = JSON.parse(stored);
+                } catch (e) {
+                    console.error("Erro ao parsear colaboradores:", e);
                 }
             }
+        }
+        
+        console.log("📋 Colaboradores carregados:", todosColaboradores.length);
+
+        // Organizar colaboradores por equipe
+        const colaboradoresPorEquipe = {};
+        
+        todosColaboradores.forEach(col => {
+            const equipe = col.equipe ? `Equipe ${col.equipe}` : 'Equipe Não Definida';
             
-            // Contabilizar atendimento
-            if (!atendimentosPorColaborador[nomeAtendente]) {
-                atendimentosPorColaborador[nomeAtendente] = 0;
+            if (!colaboradoresPorEquipe[equipe]) {
+                colaboradoresPorEquipe[equipe] = [];
             }
-            atendimentosPorColaborador[nomeAtendente]++;
+            
+            colaboradoresPorEquipe[equipe].push({
+                nome: col.nome || 'Nome não informado',
+                cargo: col.cargo || 'Sem cargo',
+                id: col.id
+            });
         });
 
-        // ===== COMBINAR COM CADASTRO DE COLABORADORES =====
+        // Estatísticas por equipe baseadas nos atendimentos
+        const statsByGroup = {};
         
-        // Criar mapa de colaboradores por nome (para busca rápida)
-        const mapaColaboradores = {};
-        colaboradoresCadastro.forEach(col => {
-            mapaColaboradores[col.nome] = col;
-        });
-        
-        // Lista completa de colaboradores (do cadastro)
-        const todosColaboradores = colaboradoresCadastro.map(col => ({
-            nome: col.nome,
-            cargo: col.cargo || 'Sem cargo',
-            equipe: col.equipe ? `Equipe ${col.equipe}` : 'Equipe Não Definida',
-            atendimentos: atendimentosPorColaborador[col.nome] || 0
-        }));
-        
-        // Adicionar colaboradores que apareceram nos atendimentos mas não estão no cadastro
-        Object.keys(atendimentosPorColaborador).forEach(nome => {
-            if (!mapaColaboradores[nome]) {
-                todosColaboradores.push({
-                    nome: nome,
-                    cargo: 'Não cadastrado',
-                    equipe: 'Equipe Não Definida',
-                    atendimentos: atendimentosPorColaborador[nome]
-                });
-            }
-        });
-
-        // ===== AGRUPAR POR EQUIPE =====
-        
-        // Primeiro, coletar todas as equipes do cadastro
-        const equipesCadastro = {};
-        colaboradoresCadastro.forEach(col => {
-            const nomeEquipe = col.equipe ? `Equipe ${col.equipe}` : 'Equipe Não Definida';
-            if (!equipesCadastro[nomeEquipe]) {
-                equipesCadastro[nomeEquipe] = {
-                    nome: nomeEquipe,
-                    total: 0,
-                    colaboradores: []
-                };
-            }
-        });
-        
-        // Adicionar equipe padrão para colaboradores não cadastrados
-        if (!equipesCadastro['Equipe Não Definida']) {
-            equipesCadastro['Equipe Não Definida'] = {
-                nome: 'Equipe Não Definida',
+        // Inicializar com todas as equipes do cadastro
+        Object.keys(colaboradoresPorEquipe).forEach(equipe => {
+            statsByGroup[equipe] = { 
+                collaborators: {}, 
                 total: 0,
-                colaboradores: []
+                atendimentos: [],
+                todosColaboradores: colaboradoresPorEquipe[equipe] // Guarda lista completa
+            };
+        });
+        
+        // Adicionar equipe padrão para atendimentos sem equipe definida
+        if (!statsByGroup['Equipe Não Definida']) {
+            statsByGroup['Equipe Não Definida'] = { 
+                collaborators: {}, 
+                total: 0,
+                atendimentos: [],
+                todosColaboradores: []
             };
         }
         
-        // Preencher com dados dos colaboradores
-        todosColaboradores.forEach(col => {
-            const nomeEquipe = col.equipe;
-            if (equipesCadastro[nomeEquipe]) {
-                equipesCadastro[nomeEquipe].colaboradores.push(col);
-                equipesCadastro[nomeEquipe].total += col.atendimentos;
-            } else {
-                // Se a equipe não existe no cadastro, criar
-                if (!equipesCadastro[nomeEquipe]) {
-                    equipesCadastro[nomeEquipe] = {
-                        nome: nomeEquipe,
-                        total: 0,
-                        colaboradores: []
-                    };
-                }
-                equipesCadastro[nomeEquipe].colaboradores.push(col);
-                equipesCadastro[nomeEquipe].total += col.atendimentos;
+        // Preencher com dados reais de atendimentos
+        atendidos.forEach(a => {
+            const attendantIsObject = typeof a.attendant === 'object' && a.attendant !== null;
+            const attendantName = attendantIsObject ? a.attendant.nome : (a.attendant || 'Não informado');
+            
+            const groupName = attendantIsObject && a.attendant.equipe ? `Equipe ${a.attendant.equipe}` : 'Equipe Não Definida';
+
+            if (!statsByGroup[groupName]) {
+                statsByGroup[groupName] = { 
+                    collaborators: {}, 
+                    total: 0,
+                    atendimentos: [],
+                    todosColaboradores: []
+                };
             }
+
+            const safeAttendantName = attendantName || 'Não informado';
+            statsByGroup[groupName].collaborators[safeAttendantName] = (statsByGroup[groupName].collaborators[safeAttendantName] || 0) + 1;
+            statsByGroup[groupName].total++;
+            
+            // Adicionar atendimento para lista detalhada
+            statsByGroup[groupName].atendimentos.push({
+                nome: a.name || 'Não informado',
+                assunto: a.subject || 'Sem assunto',
+                atendente: safeAttendantName,
+                horario: a.attendedTime ? new Date(a.attendedTime.seconds * 1000).toLocaleString('pt-BR') : 'Não finalizado'
+            });
         });
-
-        // Ordenar equipes por nome
-        const equipesOrdenadas = Object.values(equipesCadastro).sort((a, b) => 
-            a.nome.localeCompare(b.nome)
-        );
-
-        // Ordenar colaboradores por nome dentro de cada equipe
-        equipesOrdenadas.forEach(equipe => {
-            equipe.colaboradores.sort((a, b) => a.nome.localeCompare(b.nome));
+        
+        // 2. Colaboradores flat (sem agrupamento)
+        const statsByCollaboratorFlat = {};
+        Object.values(statsByGroup).forEach(groupData => {
+            Object.entries(groupData.collaborators).forEach(([name, count]) => {
+                statsByCollaboratorFlat[name] = (statsByCollaboratorFlat[name] || 0) + count;
+            });
         });
-
-        // ===== ESTATÍSTICAS POR ASSUNTO =====
+        
+        // Ordenar colaboradores por quantidade (decrescente)
+        const sortedFlatCollaborators = Object.entries(statsByCollaboratorFlat)
+            .sort(([, a], [, b]) => b - a)
+            .map(([name, count]) => ({ name, count }));
+        
+        // 3. Equipes ordenadas por nome
+        const sortedGroups = Object.keys(statsByGroup)
+            .sort()
+            .map(groupName => ({
+                groupName,
+                total: statsByGroup[groupName]?.total || 0,
+                collaborators: statsByGroup[groupName]?.collaborators ? 
+                    Object.entries(statsByGroup[groupName].collaborators)
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([name, count]) => ({ name, count })) : [],
+                todosColaboradores: statsByGroup[groupName]?.todosColaboradores || [],
+                atendimentos: statsByGroup[groupName]?.atendimentos || []
+            }));
+        
+        // 4. Total geral
+        const totalGeral = atendidos.length;
+        
+        // Estatísticas por assunto
         const statsBySubject = allAssisted.reduce((acc, a) => {
             const demandasDoAssistido = (a.subject ? [a.subject] : []).concat(a.demandas?.descricoes || []);
             demandasDoAssistido.forEach(demanda => {
@@ -232,7 +204,7 @@ export const StatisticsService = {
         const totalDemandasAtendidos = Object.values(statsBySubject).reduce((sum, data) => sum + data.atendidos, 0);
         const totalDemandasFaltosos = Object.values(statsBySubject).reduce((sum, data) => sum + data.faltosos, 0);
 
-        // ===== ESTATÍSTICAS POR HORÁRIO =====
+        // Estatísticas por horário
         const statsByTime = atendidos.filter(a => a.scheduledTime).reduce((acc, a) => {
             acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
             return acc;
@@ -251,7 +223,7 @@ export const StatisticsService = {
         }, {});
         const sortedScheduledTimes = Object.keys(statsByScheduledTime).sort();
 
-        // ===== CÁLCULO DE TEMPOS MÉDIOS =====
+        // Cálculo de tempos médios
         let totalDelegatedMinutes = 0, delegatedCount = 0;
         let totalDirectMinutes = 0, directCount = 0;
 
@@ -277,72 +249,100 @@ export const StatisticsService = {
                 <p class="text-[8px] md:text-xs text-gray-600 mt-1">Tempo Médio (delegação)</p>
             </div>` : '';
 
-        // ===== HTML DOS COLABORADORES =====
-        
-        // Lista de colaboradores (todos, com atendimentos)
-        const colaboradoresHTML = `
+        // HTML para colaboradores flat
+        const collaboratorsFlatHTML = sortedFlatCollaborators.length > 0 ? `
             <div class="bg-white p-3 md:p-4 rounded-lg border">
                 <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-2">Atendimentos por Colaborador</h3>
-                <div class="max-h-[40vh] overflow-y-auto">
+                <div class="max-h-[30vh] overflow-y-auto">
                     <table class="w-full text-xs md:text-sm text-left">
                         <thead class="text-[10px] md:text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
                             <tr>
                                 <th class="px-2 md:px-4 py-1 md:py-2">Colaborador</th>
-                                <th class="px-2 md:px-4 py-1 md:py-2">Cargo</th>
-                                <th class="px-2 md:px-4 py-1 md:py-2">Equipe</th>
-                                <th class="px-2 md:px-4 py-1 md:py-2 text-right">Atend.</th>
+                                <th class="px-2 md:px-4 py-1 md:py-2 text-right">Total</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${todosColaboradores.map(col => `
-                                <tr class="border-b hover:bg-gray-50">
-                                    <td class="px-2 md:px-4 py-1 md:py-2 font-medium">${col.nome}</td>
-                                    <td class="px-2 md:px-4 py-1 md:py-2 text-xs">${col.cargo}</td>
-                                    <td class="px-2 md:px-4 py-1 md:py-2 text-xs">${col.equipe}</td>
-                                    <td class="px-2 md:px-4 py-1 md:py-2 text-right font-bold ${col.atendimentos > 0 ? 'text-green-600' : 'text-gray-400'}">${col.atendimentos}</td>
+                            ${sortedFlatCollaborators.map(({name, count}) => `
+                                <tr class="border-b">
+                                    <td class="px-2 md:px-4 py-1 md:py-2 font-medium text-xs md:text-sm">${name}</td>
+                                    <td class="px-2 md:px-4 py-1 md:py-2 text-right text-xs md:text-sm font-bold text-blue-600">${count}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
                         <tfoot class="bg-gray-100 font-bold">
                             <tr>
-                                <td colspan="3" class="px-2 md:px-4 py-1 md:py-2">TOTAL</td>
-                                <td class="px-2 md:px-4 py-1 md:py-2 text-right">${atendidos.length}</td>
+                                <td class="px-2 md:px-4 py-1 md:py-2">TOTAL</td>
+                                <td class="px-2 md:px-4 py-1 md:py-2 text-right">${totalGeral}</td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
             </div>
-        `;
+        ` : '';
 
-        // HTML das equipes
-        const equipesHTML = `
-            <div class="bg-white p-3 md:p-4 rounded-lg border">
-                <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-2">Atendimentos por Equipe</h3>
-                <div class="max-h-[40vh] overflow-y-auto">
-                    ${equipesOrdenadas.map(equipe => `
-                        <div class="mb-4 border rounded-lg overflow-hidden">
-                            <div class="bg-gray-100 px-3 py-2 font-bold flex justify-between items-center">
-                                <span>${equipe.nome}</span>
-                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">Total: ${equipe.total}</span>
-                            </div>
-                            <table class="w-full text-xs">
-                                <tbody>
-                                    ${equipe.colaboradores.map(col => `
-                                        <tr class="border-b">
-                                            <td class="px-3 py-1">${col.nome}</td>
-                                            <td class="px-3 py-1 text-xs text-gray-600">${col.cargo}</td>
-                                            <td class="px-3 py-1 text-right font-bold ${col.atendimentos > 0 ? 'text-green-600' : 'text-gray-400'}">${col.atendimentos}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
+        // HTML para equipes com controle de visualização
+        const groupsHTML = sortedGroups.map(({groupName, total, collaborators, todosColaboradores}, index) => {
+            // Combinar colaboradores que atenderam com os que não atenderam
+            const colaboradoresCompletos = [];
+            
+            // Primeiro, adicionar todos os colaboradores da equipe (do cadastro)
+            todosColaboradores.forEach(col => {
+                const atendimentos = collaborators.find(c => c.name === col.nome)?.count || 0;
+                colaboradoresCompletos.push({
+                    nome: col.nome,
+                    atendimentos: atendimentos,
+                    cargo: col.cargo
+                });
+            });
+            
+            // Ordenar por nome
+            colaboradoresCompletos.sort((a, b) => a.nome.localeCompare(b.nome));
+            
+            const collaboratorsRows = colaboradoresCompletos.map(({nome, atendimentos, cargo}) => `
+                <tr class="border-b collaborator-row group-${index}">
+                    <td class="px-2 md:px-4 py-1 md:py-2 font-medium text-xs md:text-sm pl-2 md:pl-8">${nome}</td>
+                    <td class="px-2 md:px-4 py-1 md:py-2 text-xs text-gray-600">${cargo || '-'}</td>
+                    <td class="px-2 md:px-4 py-1 md:py-2 text-right text-xs md:text-sm font-bold ${atendimentos > 0 ? 'text-green-600' : 'text-gray-400'}">${atendimentos}</td>
+                </tr>
+            `).join('');
+
+            const hasCollaborators = colaboradoresCompletos.length > 0;
+
+            return `
+                <div class="mb-3 md:mb-4 border rounded-lg overflow-hidden group-container" data-group-index="${index}">
+                    <div class="bg-gray-100 px-2 md:px-4 py-2 font-bold text-xs md:text-sm flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <span>👥 ${groupName}</span>
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-[10px] md:text-xs">Total: ${total}</span>
+                            <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-[10px] md:text-xs">Membros: ${todosColaboradores.length}</span>
                         </div>
-                    `).join('')}
+                        ${hasCollaborators ? `
+                            <button class="toggle-details-btn text-xs bg-white px-2 py-1 rounded border hover:bg-gray-50" data-group-index="${index}">
+                                🔽 Ocultar detalhes
+                            </button>
+                        ` : ''}
+                    </div>
+                    ${hasCollaborators ? `
+                        <table class="w-full text-xs md:text-sm text-left collaborators-table" data-group-index="${index}">
+                            <thead class="text-[9px] text-gray-500 uppercase bg-gray-50">
+                                <tr>
+                                    <th class="px-2 md:px-4 py-1 pl-8">Colaborador</th>
+                                    <th class="px-2 md:px-4 py-1">Cargo</th>
+                                    <th class="px-2 md:px-4 py-1 text-right">Atend.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${collaboratorsRows}
+                            </tbody>
+                        </table>
+                    ` : `
+                        <div class="p-2 text-xs text-gray-500 italic">Nenhum colaborador cadastrado nesta equipe</div>
+                    `}
                 </div>
-            </div>
-        `;
+            `;
+        }).join('');
 
-        // ===== HTML DOS BOTÕES (AGORA COM 3 BOTÕES) =====
+        // HTML dos botões de exportação
         const botoesExportacaoHTML = `
             <div class="bg-white p-3 md:p-4 rounded-lg border mt-4">
                 <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-3">Exportar Relatórios</h3>
@@ -351,10 +351,10 @@ export const StatisticsService = {
                         📊 PDF Resumo
                     </button>
                     <button id="export-equipes-pdf-btn" class="bg-purple-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-purple-700 text-xs md:text-sm transition-colors">
-                        👥 PDF por Equipe (Detalhado)
+                        👥 PDF por Equipe (Apenas Nomes)
                     </button>
-                    <button id="export-grupos-pdf-btn" class="bg-green-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-green-700 text-xs md:text-sm transition-colors">
-                        📋 PDF por Grupo (Visão Geral)
+                    <button id="export-stats-detalhado-btn" class="bg-green-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-green-700 text-xs md:text-sm transition-colors">
+                        📋 PDF Detalhado
                     </button>
                 </div>
                 <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
@@ -500,40 +500,67 @@ export const StatisticsService = {
                     </div>
                 </div>
                 
-                ${colaboradoresHTML}
-                ${equipesHTML}
+                ${collaboratorsFlatHTML}
+                
+                <div class="bg-white p-3 md:p-4 rounded-lg border">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-base md:text-lg font-semibold text-gray-800">Atendimentos por Equipe</h3>
+                        <button id="toggle-all-groups-btn" class="text-xs bg-gray-200 px-3 py-1 rounded-full hover:bg-gray-300">
+                            🔽 Ocultar todos os detalhes
+                        </button>
+                    </div>
+                    <div class="max-h-[40vh] overflow-y-auto" id="groups-container">
+                        ${groupsHTML}
+                    </div>
+                </div>
             </div>
         </div>
         `;
         
         content.innerHTML = html;
 
-        // Configurar botões de exportar PDF
-        this.configurarBotoesPDF(pautaName, {
-            agendadosCount: allAssisted.length,
-            atendidosCount: atendidos.length,
-            faltososCount: faltosos.length,
-            avgTimeDirect,
-            avgTimeDelegated,
-            useDelegationFlow,
-            todosColaboradores,
-            equipesOrdenadas,
-            statsBySubject,
-            statsByScheduledTime: sortedScheduledTimes.map(time => ({ time, count: statsByScheduledTime[time] })),
-            statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
-            statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
+        // Adicionar funcionalidade de ocultar/mostrar detalhes
+        const toggleAllBtn = document.getElementById('toggle-all-groups-btn');
+        if (toggleAllBtn) {
+            toggleAllBtn.addEventListener('click', () => {
+                const isShowing = toggleAllBtn.textContent.includes('Ocultar');
+                
+                document.querySelectorAll('.collaborators-table').forEach(table => {
+                    if (table) {
+                        table.style.display = isShowing ? 'none' : 'table';
+                    }
+                });
+                
+                document.querySelectorAll('.toggle-details-btn').forEach(btn => {
+                    if (btn) {
+                        btn.textContent = isShowing ? '🔽 Mostrar detalhes' : '🔽 Ocultar detalhes';
+                    }
+                });
+                
+                toggleAllBtn.textContent = isShowing ? '🔽 Mostrar todos os detalhes' : '🔽 Ocultar todos os detalhes';
+            });
+        }
+        
+        // Botões individuais por equipe
+        document.querySelectorAll('.toggle-details-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const groupIndex = btn.dataset.groupIndex;
+                const table = document.querySelector(`.collaborators-table[data-group-index="${groupIndex}"]`);
+                
+                if (table) {
+                    if (table.style.display === 'none') {
+                        table.style.display = 'table';
+                        btn.textContent = '🔽 Ocultar detalhes';
+                    } else {
+                        table.style.display = 'none';
+                        btn.textContent = '🔽 Mostrar detalhes';
+                    }
+                }
+            });
         });
-    },
 
-    /* ========================================================
-       3. CONFIGURAÇÃO DOS BOTÕES PDF
-       ======================================================== */
-
-    /**
-     * 3.1 Configura os botões de exportação PDF
-     */
-    configurarBotoesPDF(pautaName, dados) {
-        // Botão PDF Resumo
+        // Configurar botões de exportar PDF
         const exportBtn = document.getElementById('export-stats-pdf-btn');
         if (exportBtn) {
             const newExportBtn = exportBtn.cloneNode(true);
@@ -543,14 +570,26 @@ export const StatisticsService = {
                 newExportBtn.textContent = 'Gerando PDF Resumo...';
                 newExportBtn.disabled = true;
 
-                this.exportStatisticsToPDF(pautaName, dados).finally(() => {
+                this.exportStatisticsToPDF(pautaName, {
+                    agendadosCount: allAssisted.length,
+                    atendidosCount: atendidos.length,
+                    faltososCount: faltosos.length,
+                    avgTimeDirect,
+                    avgTimeDelegated,
+                    useDelegationFlow,
+                    statsByGroup,
+                    statsBySubject,
+                    statsByScheduledTime: sortedScheduledTimes.map(time => ({ time, count: statsByScheduledTime[time] })),
+                    statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
+                    statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
+                }).finally(() => {
                     newExportBtn.textContent = '📊 PDF Resumo';
                     newExportBtn.disabled = false;
                 });
             });
         }
 
-        // Botão PDF por Equipe (Detalhado)
+        // Botão para PDF por Equipe (NOVO - com apenas nomes)
         const exportEquipesBtn = document.getElementById('export-equipes-pdf-btn');
         if (exportEquipesBtn) {
             const newEquipesBtn = exportEquipesBtn.cloneNode(true);
@@ -560,39 +599,347 @@ export const StatisticsService = {
                 newEquipesBtn.textContent = 'Gerando PDF por Equipe...';
                 newEquipesBtn.disabled = true;
 
-                this.exportEquipesPDF(pautaName, dados).finally(() => {
-                    newEquipesBtn.textContent = '👥 PDF por Equipe (Detalhado)';
+                this.exportEquipesPDF(pautaName, {
+                    statsByGroup,
+                    sortedGroups,
+                    totalGeral
+                }).finally(() => {
+                    newEquipesBtn.textContent = '👥 PDF por Equipe (Apenas Nomes)';
                     newEquipesBtn.disabled = false;
                 });
             });
         }
 
-        // Botão PDF por Grupo (Visão Geral) - NOVO
-        const exportGruposBtn = document.getElementById('export-grupos-pdf-btn');
-        if (exportGruposBtn) {
-            const newGruposBtn = exportGruposBtn.cloneNode(true);
-            exportGruposBtn.parentNode.replaceChild(newGruposBtn, exportGruposBtn);
+        // Botão para PDF Detalhado
+        const exportDetalhadoBtn = document.getElementById('export-stats-detalhado-btn');
+        if (exportDetalhadoBtn) {
+            const newDetalhadoBtn = exportDetalhadoBtn.cloneNode(true);
+            exportDetalhadoBtn.parentNode.replaceChild(newDetalhadoBtn, exportDetalhadoBtn);
             
-            newGruposBtn.addEventListener('click', () => {
-                newGruposBtn.textContent = 'Gerando PDF por Grupo...';
-                newGruposBtn.disabled = true;
+            newDetalhadoBtn.addEventListener('click', () => {
+                newDetalhadoBtn.textContent = 'Gerando PDF Detalhado...';
+                newDetalhadoBtn.disabled = true;
 
-                this.exportGruposPDF(pautaName, dados).finally(() => {
-                    newGruposBtn.textContent = '📋 PDF por Grupo (Visão Geral)';
-                    newGruposBtn.disabled = false;
+                this.exportDetailedStatisticsPDF(pautaName, {
+                    totalGeral,
+                    sortedGroups
+                }).finally(() => {
+                    newDetalhadoBtn.textContent = '📋 PDF Detalhado';
+                    newDetalhadoBtn.disabled = false;
                 });
             });
         }
     },
 
-    /* ========================================================
-       4. FUNÇÕES DE EXPORTAÇÃO PDF
-       ======================================================== */
+    /**
+     * Exporta PDF por Equipe - MOSTRA TODOS OS COLABORADORES DO CADASTRO
+     * AGORA: Puxa direto do cadastro de colaboradores e mostra apenas nomes
+     */
+    async exportEquipesPDF(pautaName, dados) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 40;
+        let yPos = margin + 30;
+
+        // ===== CARREGAR COLABORADORES DIRETO DO CADASTRO =====
+        let colaboradoresCadastro = [];
+        
+        // Tenta carregar do window.app (se existir)
+        if (window.app && window.app.colaboradores) {
+            colaboradoresCadastro = window.app.colaboradores;
+            console.log("📋 PDF Equipe: Colaboradores carregados do window.app:", colaboradoresCadastro.length);
+        } 
+        // Tenta carregar do localStorage
+        else {
+            const stored = localStorage.getItem('sigap_colaboradores');
+            if (stored) {
+                try {
+                    colaboradoresCadastro = JSON.parse(stored);
+                    console.log("📋 PDF Equipe: Colaboradores carregados do localStorage:", colaboradoresCadastro.length);
+                } catch (e) {
+                    console.error("Erro ao carregar colaboradores:", e);
+                }
+            }
+        }
+
+        // Se não encontrou nenhum colaborador, mostrar mensagem
+        if (colaboradoresCadastro.length === 0) {
+            doc.setFontSize(14);
+            doc.setTextColor(255, 0, 0);
+            doc.text("NENHUM COLABORADOR CADASTRADO!", pageWidth / 2, yPos, { align: "center" });
+            doc.save(`equipes_${pautaName.replace(/\s+/g, '_')}.pdf`);
+            return;
+        }
+
+        // ===== ORGANIZAR COLABORADORES POR EQUIPE =====
+        const equipesMap = {};
+        
+        colaboradoresCadastro.forEach(col => {
+            // Determinar o nome da equipe
+            let nomeEquipe = 'Equipe Não Definida';
+            if (col.equipe) {
+                // Se equipe for número, adicionar "Equipe " na frente
+                if (!isNaN(col.equipe)) {
+                    nomeEquipe = `Equipe ${col.equipe}`;
+                } else {
+                    nomeEquipe = col.equipe;
+                }
+            }
+            
+            if (!equipesMap[nomeEquipe]) {
+                equipesMap[nomeEquipe] = {
+                    nome: nomeEquipe,
+                    colaboradores: []
+                };
+            }
+            
+            equipesMap[nomeEquipe].colaboradores.push({
+                nome: col.nome || 'Nome não informado',
+                cargo: col.cargo || 'Sem cargo'
+            });
+        });
+
+        // ===== CALCULAR ATENDIMENTOS POR COLABORADOR =====
+        // Mapear atendimentos por nome
+        const atendimentosPorColaborador = {};
+        
+        if (dados && dados.statsByGroup) {
+            Object.entries(dados.statsByGroup).forEach(([grupo, data]) => {
+                Object.entries(data.collaborators || {}).forEach(([nome, count]) => {
+                    atendimentosPorColaborador[nome] = count;
+                });
+            });
+        }
+
+        // ===== ORDENAR EQUIPES POR NOME =====
+        const equipesOrdenadas = Object.values(equipesMap).sort((a, b) => a.nome.localeCompare(b.nome));
+
+        // ===== TÍTULO =====
+        doc.setFontSize(18);
+        doc.setTextColor(22, 163, 74);
+        doc.setFont("helvetica", "bold");
+        doc.text(`RELATÓRIO DE EQUIPES - ${pautaName}`, pageWidth / 2, yPos, { align: "center" });
+        yPos += 20;
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
+        yPos += 20;
+        
+        // ===== TOTAL GERAL DE ATENDIMENTOS =====
+        const totalGeral = dados?.totalGeral || dados?.atendidosCount || 0;
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Total de Atendimentos: ${totalGeral}`, margin, yPos);
+        yPos += 20;
+
+        // ===== LISTAR CADA EQUIPE =====
+        equipesOrdenadas.forEach((equipe, index) => {
+            // Calcular total de atendimentos da equipe
+            let totalEquipe = 0;
+            equipe.colaboradores.forEach(col => {
+                totalEquipe += atendimentosPorColaborador[col.nome] || 0;
+            });
+
+            // Verificar espaço na página
+            if (yPos > pageHeight - 150) {
+                doc.addPage();
+                yPos = margin + 30;
+            }
+
+            // Título da equipe com fundo cinza
+            doc.setFillColor(240, 240, 240);
+            doc.rect(margin, yPos - 12, pageWidth - (margin * 2), 30, 'F');
+            
+            doc.setFontSize(16);
+            doc.setTextColor(0, 102, 204);
+            doc.setFont("helvetica", "bold");
+            doc.text(`${equipe.nome}`, margin + 10, yPos);
+            yPos += 15;
+            
+            doc.setFontSize(14);
+            doc.setTextColor(22, 163, 74);
+            doc.text(`Total de Atendimentos: ${totalEquipe}`, margin + 10, yPos);
+            yPos += 20;
+
+            // Lista de Membros (APENAS NOMES)
+            doc.setFontSize(11);
+            doc.setTextColor(60, 60, 60);
+            doc.setFont("helvetica", "bold");
+            doc.text("Membros da Equipe:", margin + 10, yPos);
+            yPos += 15;
+            
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+
+            if (equipe.colaboradores.length > 0) {
+                // Ordenar colaboradores por nome
+                const colaboradoresOrdenados = [...equipe.colaboradores].sort((a, b) => a.nome.localeCompare(b.nome));
+                
+                // Listar em até 2 colunas para melhor legibilidade
+                const col1X = margin + 20;
+                const col2X = margin + 250;
+                
+                colaboradoresOrdenados.forEach((col, index) => {
+                    if (yPos > pageHeight - 40) {
+                        doc.addPage();
+                        yPos = margin + 30;
+                        
+                        // Repetir título na nova página
+                        doc.setFontSize(14);
+                        doc.setTextColor(0, 102, 204);
+                        doc.setFont("helvetica", "bold");
+                        doc.text(`${equipe.nome} (continuação)`, margin, yPos);
+                        yPos += 15;
+                        
+                        doc.setFontSize(10);
+                        doc.setFont("helvetica", "normal");
+                    }
+                    
+                    // Distribuir em 2 colunas
+                    if (index % 2 === 0) {
+                        doc.text(`• ${col.nome}`, col1X, yPos);
+                        // Se for o último e estiver na coluna 1, não pula linha ainda
+                        if (index === colaboradoresOrdenados.length - 1) {
+                            yPos += 15;
+                        }
+                    } else {
+                        doc.text(`• ${col.nome}`, col2X, yPos);
+                        yPos += 15; // Pula linha após a segunda coluna
+                    }
+                });
+            } else {
+                doc.text("Nenhum colaborador cadastrado nesta equipe", margin + 20, yPos);
+                yPos += 15;
+            }
+
+            yPos += 15; // Espaço extra entre equipes
+        });
+
+        // ===== RODAPÉ =====
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(
+                `Página ${i} de ${pageCount}`,
+                pageWidth - margin - 50,
+                pageHeight - 20
+            );
+        }
+
+        doc.save(`equipes_${pautaName.replace(/\s+/g, '_')}.pdf`);
+    },
 
     /**
-     * 4.1 Exporta PDF Resumo (visual original)
+     * Exporta estatísticas detalhadas (lista de assistidos por equipe)
      */
-    async exportStatisticsToPDF(pautaName, dados) {
+    async exportDetailedStatisticsPDF(pautaName, detalhesData) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 40;
+        let yPos = margin + 30;
+
+        // Título
+        doc.setFontSize(18);
+        doc.setTextColor(22, 163, 74);
+        doc.setFont("helvetica", "bold");
+        doc.text(`LISTA DE ASSISTIDOS POR EQUIPE - ${pautaName}`, margin, yPos);
+        yPos += 20;
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
+        yPos += 20;
+        
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Total de Atendimentos: ${detalhesData.totalGeral}`, margin, yPos);
+        yPos += 25;
+
+        // Listar cada equipe com seus assistidos
+        detalhesData.sortedGroups.forEach(({groupName, total, atendimentos}) => {
+            if (yPos > pageHeight - 100) {
+                doc.addPage();
+                yPos = margin + 30;
+            }
+
+            // Título da equipe
+            doc.setFontSize(14);
+            doc.setTextColor(0, 102, 204);
+            doc.setFont("helvetica", "bold");
+            doc.text(`${groupName} (${total} atendimentos)`, margin, yPos);
+            yPos += 20;
+
+            // Listar assistidos
+            doc.setFontSize(9);
+            doc.setTextColor(60, 60, 60);
+            doc.setFont("helvetica", "normal");
+
+            if (atendimentos && atendimentos.length > 0) {
+                atendimentos.forEach((att, index) => {
+                    if (yPos > pageHeight - 60) {
+                        doc.addPage();
+                        yPos = margin + 30;
+                        
+                        // Repetir título da equipe na nova página
+                        doc.setFontSize(12);
+                        doc.setTextColor(0, 102, 204);
+                        doc.setFont("helvetica", "bold");
+                        doc.text(`${groupName} (continuação)`, margin, yPos);
+                        yPos += 20;
+                        doc.setFontSize(9);
+                    }
+
+                    doc.text(`${index + 1}. ${att.nome}`, margin + 10, yPos);
+                    yPos += 12;
+                    
+                    doc.text(`   Assunto: ${att.assunto}`, margin + 15, yPos);
+                    yPos += 12;
+                    
+                    doc.text(`   Atendente: ${att.atendente}`, margin + 15, yPos);
+                    yPos += 12;
+                    
+                    if (att.horario && att.horario !== 'Não finalizado') {
+                        doc.text(`   Horário: ${att.horario}`, margin + 15, yPos);
+                        yPos += 12;
+                    }
+                    
+                    yPos += 5;
+                });
+            } else {
+                doc.text(`   Nenhum atendimento registrado para esta equipe.`, margin + 10, yPos);
+                yPos += 20;
+            }
+
+            yPos += 10;
+        });
+
+        // Rodapé
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(
+                `Página ${i} de ${pageCount}`,
+                pageWidth - margin - 50,
+                pageHeight - 20
+            );
+        }
+
+        doc.save(`detalhado_${pautaName.replace(/\s+/g, '_')}.pdf`);
+    },
+
+    /**
+     * Exporta estatísticas para PDF - VERSÃO ORIGINAL
+     */
+    async exportStatisticsToPDF(pautaName, statsData) {
         const { jsPDF } = window.jspdf;
         
         // Verificar checkboxes
@@ -634,7 +981,7 @@ export const StatisticsService = {
             doc.setFont("helvetica", "bold");
             doc.setFontSize(24);
             doc.setTextColor(39, 174, 96);
-            doc.text(String(dados.atendidosCount || 0), startX + (colWidth - 10)/2, yPos + 15, { align: 'center' });
+            doc.text(String(statsData.atendidosCount || 0), startX + (colWidth - 10)/2, yPos + 15, { align: 'center' });
             doc.setFontSize(10);
             doc.setTextColor(0);
             doc.text("Atendidos", startX + (colWidth - 10)/2, yPos + 35, { align: 'center' });
@@ -646,7 +993,7 @@ export const StatisticsService = {
             doc.setFont("helvetica", "bold");
             doc.setFontSize(24);
             doc.setTextColor(192, 57, 43);
-            doc.text(String(dados.faltososCount || 0), startX + (colWidth - 10)/2, yPos + 15, { align: 'center' });
+            doc.text(String(statsData.faltososCount || 0), startX + (colWidth - 10)/2, yPos + 15, { align: 'center' });
             doc.setFontSize(10);
             doc.setTextColor(0);
             doc.text("Faltosos", startX + (colWidth - 10)/2, yPos + 35, { align: 'center' });
@@ -658,7 +1005,7 @@ export const StatisticsService = {
             doc.setFont("helvetica", "bold");
             doc.setFontSize(24);
             doc.setTextColor(41, 128, 185);
-            const tempoMedio = dados.avgTimeDirect || 0;
+            const tempoMedio = statsData.avgTimeDirect || 0;
             doc.text(tempoMedio + ' min', startX + (colWidth - 10)/2, yPos + 15, { align: 'center' });
             doc.setFontSize(10);
             doc.setTextColor(0);
@@ -668,23 +1015,25 @@ export const StatisticsService = {
         }
 
         // ===== 2. ATENDIMENTOS POR COLABORADOR =====
-        if (exportCollaborators && dados.todosColaboradores && dados.todosColaboradores.length > 0) {
+        if (exportCollaborators && statsData.statsByGroup) {
             addSectionTitle("Atendimentos por Colaborador");
             
-            const colaboradoresTable = dados.todosColaboradores.map(col => [
-                col.nome,
-                col.cargo,
-                col.equipe,
-                col.atendimentos.toString()
-            ]);
+            const colaboradores = [];
+            Object.entries(statsData.statsByGroup).forEach(([grupo, data]) => {
+                Object.entries(data.collaborators || {}).forEach(([nome, count]) => {
+                    colaboradores.push([nome, count]);
+                });
+            });
+            
+            colaboradores.sort((a, b) => b[1] - a[1]);
             
             doc.autoTable({
                 startY: yPos,
-                head: [['Colaborador', 'Cargo', 'Equipe', 'Atend.']],
-                body: colaboradoresTable,
+                head: [['Colaborador', 'Total']],
+                body: colaboradores,
                 theme: 'grid',
                 headStyles: { fillColor: [75, 85, 99], textColor: '#FFFFFF' },
-                styles: { fontSize: 8 },
+                styles: { fontSize: 9 },
                 margin: { left: margin, right: margin }
             });
             
@@ -692,20 +1041,17 @@ export const StatisticsService = {
         }
 
         // ===== 3. ATENDIMENTOS POR EQUIPE =====
-        if (exportCollaborators && dados.equipesOrdenadas && dados.equipesOrdenadas.length > 0) {
+        if (exportCollaborators && statsData.statsByGroup) {
             if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
             addSectionTitle("Atendimentos por Equipe");
             
-            const equipesTable = dados.equipesOrdenadas.map(equipe => [
-                equipe.nome,
-                equipe.total.toString(),
-                equipe.colaboradores.length.toString()
-            ]);
+            const equipes = Object.entries(statsData.statsByGroup).map(([nome, data]) => [nome, data.total]);
+            equipes.sort((a, b) => b[1] - a[1]);
             
             doc.autoTable({
                 startY: yPos,
-                head: [['Equipe', 'Total', 'Membros']],
-                body: equipesTable,
+                head: [['Equipe', 'Total']],
+                body: equipes,
                 theme: 'grid',
                 headStyles: { fillColor: [22, 163, 74], textColor: '#FFFFFF' },
                 styles: { fontSize: 9 },
@@ -716,15 +1062,15 @@ export const StatisticsService = {
         }
 
         // ===== 4. AGENDADOS POR HORÁRIO =====
-        if (exportScheduledTime && dados.statsByScheduledTime && dados.statsByScheduledTime.length > 0) {
+        if (exportScheduledTime && statsData.statsByScheduledTime && statsData.statsByScheduledTime.length > 0) {
             if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
             addSectionTitle("Agendados por Horário");
             
             doc.autoTable({
                 startY: yPos,
                 head: [['Horário', 'Quantidade']],
-                body: dados.statsByScheduledTime.map(item => [item.time, item.count]),
-                foot: [['Total', dados.agendadosCount || 0]],
+                body: statsData.statsByScheduledTime.map(item => [item.time, item.count]),
+                foot: [['Total', statsData.agendadosCount || 0]],
                 theme: 'grid',
                 headStyles: { fillColor: [22, 163, 74], textColor: '#FFFFFF' },
                 footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
@@ -736,15 +1082,15 @@ export const StatisticsService = {
         }
 
         // ===== 5. ATENDIMENTOS POR HORÁRIO =====
-        if (exportTimes && dados.statsByTime && dados.statsByTime.length > 0) {
+        if (exportTimes && statsData.statsByTime && statsData.statsByTime.length > 0) {
             if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
             addSectionTitle("Atendimentos por Horário (Chegada)");
             
             doc.autoTable({
                 startY: yPos,
                 head: [['Horário', 'Quantidade']],
-                body: dados.statsByTime.map(item => [item.time, item.count]),
-                foot: [['Total', dados.atendidosCount || 0]],
+                body: statsData.statsByTime.map(item => [item.time, item.count]),
+                foot: [['Total', statsData.atendidosCount || 0]],
                 theme: 'grid',
                 headStyles: { fillColor: [22, 163, 74], textColor: '#FFFFFF' },
                 footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
@@ -756,15 +1102,15 @@ export const StatisticsService = {
         }
 
         // ===== 6. FALTOSOS POR HORÁRIO =====
-        if (exportAbsenteesTime && dados.statsByTimeFaltosos && dados.statsByTimeFaltosos.length > 0) {
+        if (exportAbsenteesTime && statsData.statsByTimeFaltosos && statsData.statsByTimeFaltosos.length > 0) {
             if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
             addSectionTitle("Faltosos por Horário");
             
             doc.autoTable({
                 startY: yPos,
                 head: [['Horário', 'Quantidade']],
-                body: dados.statsByTimeFaltosos.map(item => [item.time, item.count]),
-                foot: [['Total', dados.faltososCount || 0]],
+                body: statsData.statsByTimeFaltosos.map(item => [item.time, item.count]),
+                foot: [['Total', statsData.faltososCount || 0]],
                 theme: 'grid',
                 headStyles: { fillColor: [220, 38, 38], textColor: '#FFFFFF' },
                 footStyles: { fillColor: [255, 240, 240], fontStyle: 'bold' },
@@ -776,11 +1122,11 @@ export const StatisticsService = {
         }
 
         // ===== 7. DEMANDAS POR ASSUNTO =====
-        if (exportSubjects && dados.statsBySubject && Object.keys(dados.statsBySubject).length > 0) {
+        if (exportSubjects && statsData.statsBySubject && Object.keys(statsData.statsBySubject).length > 0) {
             if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
             addSectionTitle("Demandas por Assunto");
             
-            const subjects = Object.entries(dados.statsBySubject)
+            const subjects = Object.entries(statsData.statsBySubject)
                 .sort(([,a], [,b]) => b.total - a.total)
                 .map(([name, data]) => [
                     name.length > 30 ? name.substring(0, 27) + '...' : name,
@@ -821,235 +1167,11 @@ export const StatisticsService = {
         }
 
         doc.save(`resumo_${pautaName.replace(/\s+/g, '_')}.pdf`);
-    },
-
-    /**
-     * 4.2 Exporta PDF por Equipe (detalhado)
-     */
-    async exportEquipesPDF(pautaName, dados) {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 40;
-        let yPos = margin + 30;
-
-        // Título
-        doc.setFontSize(18);
-        doc.setTextColor(22, 163, 74);
-        doc.setFont("helvetica", "bold");
-        doc.text(`RELATÓRIO DETALHADO POR EQUIPE - ${pautaName}`, margin, yPos);
-        yPos += 20;
-        
-        doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
-        yPos += 20;
-        
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.text(`Total de Atendimentos: ${dados.atendidosCount}`, margin, yPos);
-        yPos += 25;
-
-        // Listar todas as equipes
-        dados.equipesOrdenadas.forEach((equipe) => {
-            if (yPos > pageHeight - 150) {
-                doc.addPage();
-                yPos = margin + 30;
-            }
-
-            // Título da equipe
-            doc.setFontSize(14);
-            doc.setTextColor(0, 102, 204);
-            doc.setFont("helvetica", "bold");
-            doc.text(`${equipe.nome} - TOTAL: ${equipe.total} atendimentos`, margin, yPos);
-            yPos += 20;
-
-            // Cabeçalho da tabela
-            doc.setFillColor(240, 240, 240);
-            doc.rect(margin, yPos - 12, pageWidth - (margin * 2), 20, 'F');
-            
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(60, 60, 60);
-            doc.text("Colaborador", margin + 10, yPos);
-            doc.text("Cargo", margin + 200, yPos);
-            doc.text("Atendimentos", pageWidth - margin - 80, yPos);
-            yPos += 15;
-
-            // Lista de colaboradores
-            doc.setFontSize(9);
-            doc.setFont("helvetica", "normal");
-            doc.setTextColor(60, 60, 60);
-
-            equipe.colaboradores.forEach((col) => {
-                if (yPos > pageHeight - 40) {
-                    doc.addPage();
-                    yPos = margin + 30;
-                    
-                    // Repetir título na nova página
-                    doc.setFontSize(12);
-                    doc.setTextColor(0, 102, 204);
-                    doc.setFont("helvetica", "bold");
-                    doc.text(`${equipe.nome} (continuação)`, margin, yPos);
-                    yPos += 20;
-                    
-                    doc.setFontSize(9);
-                }
-                
-                doc.text(col.nome, margin + 10, yPos);
-                doc.text(col.cargo, margin + 200, yPos);
-                
-                doc.setFont("helvetica", "bold");
-                doc.setTextColor(col.atendimentos > 0 ? 22 : 150, col.atendimentos > 0 ? 163 : 150, col.atendimentos > 0 ? 74 : 150);
-                doc.text(col.atendimentos.toString(), pageWidth - margin - 50, yPos);
-                
-                doc.setFont("helvetica", "normal");
-                doc.setTextColor(60, 60, 60);
-                
-                yPos += 15;
-            });
-
-            yPos += 15;
-        });
-
-        // Rodapé
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.text(
-                `Página ${i} de ${pageCount}`,
-                pageWidth - margin - 50,
-                pageHeight - 20
-            );
-        }
-
-        doc.save(`equipe_detalhada_${pautaName.replace(/\s+/g, '_')}.pdf`);
-    },
-
-    /* ========================================================
-       5. PDF POR GRUPO - VISÃO GERAL (NOVO)
-       ======================================================== */
-
-    /**
-     * 5.1 Exporta PDF por Grupo (visão geral - apenas total do grupo e lista de membros)
-     */
-    async exportGruposPDF(pautaName, dados) {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 40;
-        let yPos = margin + 30;
-
-        // ===== TÍTULO =====
-        doc.setFontSize(20);
-        doc.setTextColor(22, 163, 74);
-        doc.setFont("helvetica", "bold");
-        doc.text("RELATÓRIO DE ATENDIMENTOS POR GRUPO", pageWidth / 2, yPos, { align: "center" });
-        yPos += 20;
-        
-        doc.setFontSize(12);
-        doc.setTextColor(80, 80, 80);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Pauta: ${pautaName}`, margin, yPos);
-        yPos += 15;
-        
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
-        yPos += 25;
-
-        // ===== TOTAL GERAL =====
-        doc.setFontSize(14);
-        doc.setTextColor(0, 0, 0);
-        doc.setFont("helvetica", "bold");
-        doc.text(`TOTAL GERAL DE ATENDIMENTOS: ${dados.atendidosCount}`, margin, yPos);
-        yPos += 20;
-
-        // ===== LINHA SEPARADORA =====
-        doc.setDrawColor(200, 200, 200);
-        doc.line(margin, yPos - 5, pageWidth - margin, yPos - 5);
-        yPos += 10;
-
-        // ===== LISTAR CADA GRUPO =====
-        dados.equipesOrdenadas.forEach((equipe, index) => {
-            // Verificar espaço na página
-            if (yPos > pageHeight - 100) {
-                doc.addPage();
-                yPos = margin + 30;
-            }
-
-            // Título do Grupo com fundo cinza claro
-            doc.setFillColor(240, 240, 240);
-            doc.rect(margin, yPos - 12, pageWidth - (margin * 2), 25, 'F');
-            
-            doc.setFontSize(16);
-            doc.setTextColor(0, 102, 204);
-            doc.setFont("helvetica", "bold");
-            doc.text(`${equipe.nome}`, margin + 10, yPos);
-            yPos += 15;
-            
-            doc.setFontSize(14);
-            doc.setTextColor(22, 163, 74);
-            doc.text(`Total de Atendimentos: ${equipe.total}`, margin + 10, yPos);
-            yPos += 20;
-
-            // Lista de Membros
-            doc.setFontSize(11);
-            doc.setTextColor(60, 60, 60);
-            doc.setFont("helvetica", "bold");
-            doc.text("Membros:", margin + 10, yPos);
-            yPos += 12;
-            
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(10);
-            
-            // Ordenar membros por nome
-            const membrosOrdenados = [...equipe.colaboradores].sort((a, b) => a.nome.localeCompare(b.nome));
-            
-            membrosOrdenados.forEach((membro) => {
-                if (yPos > pageHeight - 40) {
-                    doc.addPage();
-                    yPos = margin + 30;
-                    
-                    // Repetir título do grupo na nova página
-                    doc.setFontSize(14);
-                    doc.setTextColor(0, 102, 204);
-                    doc.setFont("helvetica", "bold");
-                    doc.text(`${equipe.nome} (continuação)`, margin, yPos);
-                    yPos += 15;
-                    
-                    doc.setFontSize(10);
-                    doc.setFont("helvetica", "normal");
-                }
-                
-                doc.text(`• ${membro.nome}`, margin + 20, yPos);
-                yPos += 12;
-            });
-
-            yPos += 15; // Espaço extra entre grupos
-        });
-
-        // ===== RODAPÉ COM TOTAL =====
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.text(
-                `Página ${i} de ${pageCount}`,
-                pageWidth - margin - 50,
-                pageHeight - 20
-            );
-        }
-
-        doc.save(`grupos_${pautaName.replace(/\s+/g, '_')}.pdf`);
     }
 };
 
 // ========================================================
-// FUNÇÕES AVULSAS (para compatibilidade)
+// FUNÇÕES AVULSAS
 // ========================================================
 
 export const renderStatisticsModal = (allAssisted, useDelegationFlow, pautaName) => {
