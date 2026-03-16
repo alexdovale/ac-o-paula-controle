@@ -1,12 +1,14 @@
 /**
  * estatisticas.js - SIGAP
- * Versão COMPLETA com integração ao cadastro de colaboradores
+ * Versão COMPLETA com 3 tipos de PDF
  * 
  * Funcionalidades:
  * ✅ Estatísticas por colaborador (baseado no cadastro)
  * ✅ Estatísticas por equipe (baseado no cadastro)
  * ✅ Inclui colaboradores que não atenderam (mostra 0)
- * ✅ PDFs com visual original
+ * ✅ PDF Resumo (estatísticas completas)
+ * ✅ PDF por Equipe (detalhado com atendimentos individuais)
+ * ✅ PDF por Grupo (visão geral - apenas total do grupo e lista de membros)
  */
 
 // ========================================================
@@ -340,16 +342,19 @@ export const StatisticsService = {
             </div>
         `;
 
-        // HTML dos botões de exportação
+        // ===== HTML DOS BOTÕES (AGORA COM 3 BOTÕES) =====
         const botoesExportacaoHTML = `
             <div class="bg-white p-3 md:p-4 rounded-lg border mt-4">
                 <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-3">Exportar Relatórios</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <button id="export-stats-pdf-btn" class="bg-blue-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-700 text-xs md:text-sm transition-colors">
                         📊 PDF Resumo
                     </button>
                     <button id="export-equipes-pdf-btn" class="bg-purple-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-purple-700 text-xs md:text-sm transition-colors">
-                        👥 PDF por Equipe
+                        👥 PDF por Equipe (Detalhado)
+                    </button>
+                    <button id="export-grupos-pdf-btn" class="bg-green-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-green-700 text-xs md:text-sm transition-colors">
+                        📋 PDF por Grupo (Visão Geral)
                     </button>
                 </div>
                 <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
@@ -545,7 +550,7 @@ export const StatisticsService = {
             });
         }
 
-        // Botão PDF por Equipe
+        // Botão PDF por Equipe (Detalhado)
         const exportEquipesBtn = document.getElementById('export-equipes-pdf-btn');
         if (exportEquipesBtn) {
             const newEquipesBtn = exportEquipesBtn.cloneNode(true);
@@ -556,8 +561,25 @@ export const StatisticsService = {
                 newEquipesBtn.disabled = true;
 
                 this.exportEquipesPDF(pautaName, dados).finally(() => {
-                    newEquipesBtn.textContent = '👥 PDF por Equipe';
+                    newEquipesBtn.textContent = '👥 PDF por Equipe (Detalhado)';
                     newEquipesBtn.disabled = false;
+                });
+            });
+        }
+
+        // Botão PDF por Grupo (Visão Geral) - NOVO
+        const exportGruposBtn = document.getElementById('export-grupos-pdf-btn');
+        if (exportGruposBtn) {
+            const newGruposBtn = exportGruposBtn.cloneNode(true);
+            exportGruposBtn.parentNode.replaceChild(newGruposBtn, exportGruposBtn);
+            
+            newGruposBtn.addEventListener('click', () => {
+                newGruposBtn.textContent = 'Gerando PDF por Grupo...';
+                newGruposBtn.disabled = true;
+
+                this.exportGruposPDF(pautaName, dados).finally(() => {
+                    newGruposBtn.textContent = '📋 PDF por Grupo (Visão Geral)';
+                    newGruposBtn.disabled = false;
                 });
             });
         }
@@ -802,7 +824,7 @@ export const StatisticsService = {
     },
 
     /**
-     * 4.2 Exporta PDF por Equipe (completo)
+     * 4.2 Exporta PDF por Equipe (detalhado)
      */
     async exportEquipesPDF(pautaName, dados) {
         const { jsPDF } = window.jspdf;
@@ -816,7 +838,7 @@ export const StatisticsService = {
         doc.setFontSize(18);
         doc.setTextColor(22, 163, 74);
         doc.setFont("helvetica", "bold");
-        doc.text(`RELATÓRIO COMPLETO POR EQUIPE - ${pautaName}`, margin, yPos);
+        doc.text(`RELATÓRIO DETALHADO POR EQUIPE - ${pautaName}`, margin, yPos);
         yPos += 20;
         
         doc.setFontSize(10);
@@ -904,7 +926,125 @@ export const StatisticsService = {
             );
         }
 
-        doc.save(`equipe_completa_${pautaName.replace(/\s+/g, '_')}.pdf`);
+        doc.save(`equipe_detalhada_${pautaName.replace(/\s+/g, '_')}.pdf`);
+    },
+
+    /* ========================================================
+       5. PDF POR GRUPO - VISÃO GERAL (NOVO)
+       ======================================================== */
+
+    /**
+     * 5.1 Exporta PDF por Grupo (visão geral - apenas total do grupo e lista de membros)
+     */
+    async exportGruposPDF(pautaName, dados) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 40;
+        let yPos = margin + 30;
+
+        // ===== TÍTULO =====
+        doc.setFontSize(20);
+        doc.setTextColor(22, 163, 74);
+        doc.setFont("helvetica", "bold");
+        doc.text("RELATÓRIO DE ATENDIMENTOS POR GRUPO", pageWidth / 2, yPos, { align: "center" });
+        yPos += 20;
+        
+        doc.setFontSize(12);
+        doc.setTextColor(80, 80, 80);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Pauta: ${pautaName}`, margin, yPos);
+        yPos += 15;
+        
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
+        yPos += 25;
+
+        // ===== TOTAL GERAL =====
+        doc.setFontSize(14);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont("helvetica", "bold");
+        doc.text(`TOTAL GERAL DE ATENDIMENTOS: ${dados.atendidosCount}`, margin, yPos);
+        yPos += 20;
+
+        // ===== LINHA SEPARADORA =====
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin, yPos - 5, pageWidth - margin, yPos - 5);
+        yPos += 10;
+
+        // ===== LISTAR CADA GRUPO =====
+        dados.equipesOrdenadas.forEach((equipe, index) => {
+            // Verificar espaço na página
+            if (yPos > pageHeight - 100) {
+                doc.addPage();
+                yPos = margin + 30;
+            }
+
+            // Título do Grupo com fundo cinza claro
+            doc.setFillColor(240, 240, 240);
+            doc.rect(margin, yPos - 12, pageWidth - (margin * 2), 25, 'F');
+            
+            doc.setFontSize(16);
+            doc.setTextColor(0, 102, 204);
+            doc.setFont("helvetica", "bold");
+            doc.text(`${equipe.nome}`, margin + 10, yPos);
+            yPos += 15;
+            
+            doc.setFontSize(14);
+            doc.setTextColor(22, 163, 74);
+            doc.text(`Total de Atendimentos: ${equipe.total}`, margin + 10, yPos);
+            yPos += 20;
+
+            // Lista de Membros
+            doc.setFontSize(11);
+            doc.setTextColor(60, 60, 60);
+            doc.setFont("helvetica", "bold");
+            doc.text("Membros:", margin + 10, yPos);
+            yPos += 12;
+            
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            
+            // Ordenar membros por nome
+            const membrosOrdenados = [...equipe.colaboradores].sort((a, b) => a.nome.localeCompare(b.nome));
+            
+            membrosOrdenados.forEach((membro) => {
+                if (yPos > pageHeight - 40) {
+                    doc.addPage();
+                    yPos = margin + 30;
+                    
+                    // Repetir título do grupo na nova página
+                    doc.setFontSize(14);
+                    doc.setTextColor(0, 102, 204);
+                    doc.setFont("helvetica", "bold");
+                    doc.text(`${equipe.nome} (continuação)`, margin, yPos);
+                    yPos += 15;
+                    
+                    doc.setFontSize(10);
+                    doc.setFont("helvetica", "normal");
+                }
+                
+                doc.text(`• ${membro.nome}`, margin + 20, yPos);
+                yPos += 12;
+            });
+
+            yPos += 15; // Espaço extra entre grupos
+        });
+
+        // ===== RODAPÉ COM TOTAL =====
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(
+                `Página ${i} de ${pageCount}`,
+                pageWidth - margin - 50,
+                pageHeight - 20
+            );
+        }
+
+        doc.save(`grupos_${pautaName.replace(/\s+/g, '_')}.pdf`);
     }
 };
 
