@@ -2,7 +2,7 @@
  * ========================================================
  * DETALHES.JS - SIGAP
  * Módulo de Checklist e Documentos
- * Versão: 5.0 (Réu como Único Item)
+ * Versão: 5.0 (Réu como Único Item - COM TESTE)
  * ========================================================
  * 
  * Este módulo gerencia:
@@ -14,6 +14,21 @@
  * 
  * ========================================================
  */
+
+// ========================================================
+// TESTE DE VERSÃO - APAGUE ESTA LINHA DEPOIS DE TESTAR
+// ========================================================
+window.detalhesJsVersion = "5.0 - RÉU EM ÚNICO ITEM";
+console.log("%c🚀 detalhes.js versão 5.0 CARREGADO!", "color: green; font-size: 16px; font-weight: bold");
+console.log("%c✅ Se você está vendo esta mensagem, o arquivo novo está funcionando!", "color: blue; font-size: 14px");
+
+// ========================================================
+// TESTE VISUAL - MOSTRA UM ALERTA PARA CONFIRMAR
+// ========================================================
+setTimeout(() => {
+    console.log("%c🔍 VERIFIQUE O CHECKLIST DO RÉU:", "color: orange; font-size: 14px");
+    console.log("%c   Deve aparecer APENAS UM checkbox: '📋 DADOS DO RÉU (Endereço completo e Dados de trabalho)'", "color: orange");
+}, 500);
 
 import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification } from './utils.js';
@@ -668,6 +683,8 @@ function renderReuForm(containerId) {
     const container = getEl(containerId);
     if (!container) return;
 
+    console.log("%c👤 RENDERIZANDO FORMULÁRIO DO RÉU (versão com único checkbox)", "color: purple; font-weight: bold");
+
     container.innerHTML = `
         <div class="p-4 sm:p-6 bg-red-50 border-2 border-red-200 rounded-2xl shadow-sm mt-6">
             <!-- Cabeçalho -->
@@ -697,15 +714,18 @@ function renderReuForm(containerId) {
             </div>
 
             <!-- CHECKBOX ÚNICO QUE CONTROLA TUDO -->
-            <div class="bg-white p-4 rounded-lg border border-gray-200 mb-4">
+            <div class="bg-white p-4 rounded-lg border border-gray-200 mb-4" style="border: 2px solid #f97316;">
                 <div class="flex items-center gap-3">
                     <input type="checkbox" id="check-reu-unico" class="h-5 w-5 text-red-600 rounded border-gray-300 focus:ring-red-500" checked>
-                    <label for="check-reu-unico" class="text-sm font-bold text-gray-700 cursor-pointer">
+                    <label for="check-reu-unico" class="text-sm font-bold text-gray-700 cursor-pointer" style="font-size: 16px; color: #b91c1c;">
                         📋 DADOS DO RÉU (Endereço completo e Dados de trabalho)
                     </label>
                 </div>
                 <p class="text-[9px] text-gray-500 mt-1 ml-8">
                     Marque esta opção para incluir todos os dados do réu no processo
+                </p>
+                <p class="text-green-600 text-xs mt-2 font-bold ml-8">
+                    ✅ TESTE: Este é o NOVO formulário com ÚNICO checkbox!
                 </p>
             </div>
 
