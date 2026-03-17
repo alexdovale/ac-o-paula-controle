@@ -36,6 +36,10 @@ const CARGO_ORDER = {
 
 const DEFAULT_CARGO_ORDER = 99;
 
+// ========================================================
+// COLLABORATOR SERVICE - Objeto com todas as funções
+// ========================================================
+
 const CollaboratorService = {
     currentListener: null,
     editId: null,
@@ -68,6 +72,10 @@ const CollaboratorService = {
         }
     },
 
+    // ========================================================
+    // FUNÇÃO PRINCIPAL - ABRIR MODAL (É ISSO QUE ESTÁ FALTANDO!)
+    // ========================================================
+    
     openModal(app) {
         console.log("📋 Abrindo modal de colaboradores", app);
         
@@ -514,13 +522,20 @@ const CollaboratorService = {
     }
 };
 
+// Inicializar
 CollaboratorService.init();
 
 // ========================================================
-// EXPORTAÇÕES - PRONTO PARA USAR COM import * as
+// EXPORTAÇÕES - IMPORTANTE: ISSO É PARA O import * as
 // ========================================================
 
+// Exportar o objeto completo (para import * as)
 export default CollaboratorService;
+
+// Também exportar como named export (para compatibilidade)
+export { CollaboratorService };
+
+// Tornar global
 window.CollaboratorService = CollaboratorService;
 
 console.log("✅ colaboradores.js carregado com sucesso!");
