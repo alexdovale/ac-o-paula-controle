@@ -1525,22 +1525,32 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
 
             setupOfflinePersistence() {
+                // Não tenta ativar persistência se já estiver em conflito
                 try {
                     enableIndexedDbPersistence(this.db).catch((err) => {
                         if (err.code == 'failed-precondition') {
-                            console.warn('Persistência falhou: Múltiplas abas abertas.');
+                            // Múltiplas abas abertas - podemos ignorar ou mostrar aviso
+                            console.warn('⚠️ Persistência desativada: Múltiplas abas abertas.');
+                            console.warn('O sistema funcionará normalmente, mas sem cache offline.');
+                            
+                            // Opcional: Mostrar notificação para o usuário
+                            showNotification(
+                                'Múltiplas abas detectadas. Feche outras abas para ativar o modo offline.',
+                                'warning'
+                            );
                         } else if (err.code == 'unimplemented') {
-                            console.warn('Persistência falhou: Navegador não suportado.');
+                            console.warn('⚠️ Navegador não suporta persistência offline.');
                         }
                     });
                 } catch (e) {
                     console.log("Erro ao ativar persistência:", e);
                 }
-
+            
+                // Listeners de conexão (continuam funcionando)
                 window.addEventListener('offline', () => {
                     document.getElementById('offline-indicator').classList.remove('hidden');
                 });
-
+            
                 window.addEventListener('online', () => {
                     document.getElementById('offline-indicator').classList.add('hidden');
                     showNotification("Conexão restabelecida!", "success");
