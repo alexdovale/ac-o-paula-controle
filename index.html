@@ -1598,6 +1598,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (btn) btn.addEventListener('click', () => AuthService.logout(this.auth));
                 });
 
+                // No final do setupEventListeners, adicione:
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.quick-action-toggle') && !e.target.closest('[id^="quick-menu-"]')) {
+                        document.querySelectorAll('[id^="quick-menu-"]').forEach(menu => {
+                            menu.classList.add('hidden');
+                        });
+                    }
+                });
+
                 // ================================================
                 // LISTENERS DOS BOTÕES DE RÁDIO DO FORMULÁRIO
                 // ================================================
