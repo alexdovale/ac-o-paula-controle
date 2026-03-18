@@ -636,7 +636,7 @@ export const UIService = {
             console.error("Erro ao criar card de aguardando:", error, item);
             return null;
         }
-    }
+    },
 
     renderEmAtendimentoColumn(items, currentPautaData, pautaId, userName) {
         const container = document.getElementById('em-atendimento-list');
