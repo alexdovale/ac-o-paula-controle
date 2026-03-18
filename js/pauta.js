@@ -6,6 +6,49 @@ import { logAction } from './admin.js';
 
 export const PautaService = {
     currentListeners: new Map(),
+    
+    // Mapa para controle de cooldown de ações
+    actionCooldown: new Map(),
+
+    /**
+     * Utilitário para verificar se é mobile
+     */
+    isMobileDevice() {
+        return window.innerWidth <= 768;
+    },
+
+    /**
+     * Utilitário para fechar todos os menus rápidos
+     */
+    closeAllQuickMenus(excludeMenuId = null) {
+        document.querySelectorAll('[id^="quick-menu-"]').forEach(menu => {
+            if (excludeMenuId === null || menu.id !== excludeMenuId) {
+                menu.classList.add('hidden');
+                
+                // Atualizar botão toggle correspondente
+                const toggleId = menu.id.replace('quick-menu', 'quick-toggle');
+                const toggle = document.getElementById(toggleId);
+                if (toggle) {
+                    toggle.setAttribute('aria-expanded', 'false');
+                }
+            }
+        });
+    },
+
+    /**
+     * Utilitário para verificar cooldown de ações
+     */
+    canPerformAction(actionId, cooldownMs = 500) {
+        const lastAction = this.actionCooldown.get(actionId);
+        const now = Date.now();
+        
+        if (lastAction && now - lastAction < cooldownMs) {
+            return false;
+        }
+        
+        this.actionCooldown.set(actionId, now);
+        return true;
+    },
 
     /**
      * Configura listener em tempo real para atendimentos
@@ -566,7 +609,7 @@ export const PautaService = {
             if (window.sortableAguardando) window.sortableAguardando.destroy();
 
             // Detectar se é mobile para ajustar comportamento
-            const isMobile = window.innerWidth <= 768;
+            const isMobile = this.isMobileDevice();
             
             window.sortableAguardando = new Sortable(el, {
                 animation: isMobile ? 200 : 300,
@@ -576,7 +619,6 @@ export const PautaService = {
                 handle: '.relative',
                 filter: 'button, svg, p, span',
                 preventOnFilter: false,
-                // No mobile, permitir arrastar com toque
                 forceFallback: isMobile,
                 fallbackClass: 'sortable-fallback',
                 fallbackOnBody: true,
@@ -594,7 +636,6 @@ export const PautaService = {
                     try {
                         await batch.commit();
                         
-                        // Registrar log
                         await logAction(
                             app.db,
                             app.auth,
@@ -624,19 +665,15 @@ export const PautaService = {
             return;
         }
         
-        // Guardar o valor selecionado anteriormente (se houver)
         const valorAnterior = select.value;
         
-        // Limpar select (manter apenas a primeira opção)
         while (select.options.length > 1) {
             select.remove(1);
         }
         
-        // Adicionar colaboradores
         if (app.colaboradores && app.colaboradores.length > 0) {
             console.log("Preenchendo select com", app.colaboradores.length, "colaboradores");
             
-            // Ordenar colaboradores por nome
             const colaboradoresOrdenados = [...app.colaboradores].sort((a, b) => 
                 a.nome.localeCompare(b.nome)
             );
@@ -651,9 +688,7 @@ export const PautaService = {
                 select.appendChild(option);
             });
             
-            // Restaurar valor anterior se existir
             if (valorAnterior) {
-                // Verificar se o valor ainda existe nas opções
                 const options = Array.from(select.options).map(opt => opt.value);
                 if (options.includes(valorAnterior)) {
                     select.value = valorAnterior;
@@ -668,14 +703,13 @@ export const PautaService = {
             select.appendChild(option);
         }
         
-        // Ajustar altura do select para mobile
-        if (window.innerWidth <= 768) {
-            select.style.fontSize = '16px'; // Evita zoom automático no iOS
+        if (this.isMobileDevice()) {
+            select.style.fontSize = '16px';
         }
     },
 
     /**
-     * NOVA FUNÇÃO: Preenche a lista de colaboradores no modal de seleção com busca
+     * Preenche a lista de colaboradores no modal de seleção com busca
      */
     preencherListaColaboradoresModal(app) {
         const container = document.getElementById('collaborator-selection-list');
@@ -686,7 +720,6 @@ export const PautaService = {
             return;
         }
         
-        // Limpar busca anterior
         if (searchInput) {
             searchInput.value = '';
         }
@@ -696,18 +729,15 @@ export const PautaService = {
             return;
         }
         
-        // Ordenar colaboradores por nome
         const colaboradoresOrdenados = [...app.colaboradores].sort((a, b) => 
             a.nome.localeCompare(b.nome)
         );
         
-        // Função para renderizar a lista filtrada
         const renderLista = (filtro = '') => {
             container.innerHTML = '';
             
             const filtroLower = filtro.toLowerCase().trim();
             
-            // Filtrar colaboradores
             const colaboradoresFiltrados = filtro 
                 ? colaboradoresOrdenados.filter(c => 
                     c.nome.toLowerCase().includes(filtroLower) ||
@@ -716,12 +746,13 @@ export const PautaService = {
                   )
                 : colaboradoresOrdenados;
             
-            // Adicionar opção "Não atribuir" apenas se não houver filtro
             if (!filtro) {
                 const optionNaoAtribuir = document.createElement('div');
                 optionNaoAtribuir.className = "p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer transition-all mb-2";
                 optionNaoAtribuir.setAttribute('data-colaborador-id', 'null');
                 optionNaoAtribuir.setAttribute('data-colaborador-nome', '');
+                optionNaoAtribuir.setAttribute('role', 'option');
+                optionNaoAtribuir.setAttribute('tabindex', '0');
                 optionNaoAtribuir.innerHTML = `
                     <div class="flex items-center gap-3">
                         <div class="w-5 h-5 rounded-full bg-gray-400 flex items-center justify-center text-white text-xs">🚫</div>
@@ -733,15 +764,22 @@ export const PautaService = {
                 `;
                 
                 optionNaoAtribuir.addEventListener('click', () => {
-                    // Remover seleção anterior
                     document.querySelectorAll('#collaborator-selection-list > div').forEach(div => {
                         div.classList.remove('bg-blue-100', 'border-blue-500');
+                        div.setAttribute('aria-selected', 'false');
                     });
                     optionNaoAtribuir.classList.add('bg-blue-100', 'border-blue-500', 'border-2');
+                    optionNaoAtribuir.setAttribute('aria-selected', 'true');
                     
-                    // Guardar o ID do colaborador selecionado
                     window.selectedCollaboratorId = 'null';
                     window.selectedCollaboratorName = null;
+                });
+                
+                optionNaoAtribuir.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        optionNaoAtribuir.click();
+                    }
                 });
                 
                 container.appendChild(optionNaoAtribuir);
@@ -755,12 +793,13 @@ export const PautaService = {
                 return;
             }
             
-            // Adicionar cada colaborador filtrado
             colaboradoresFiltrados.forEach(collab => {
                 const div = document.createElement('div');
                 div.className = "p-3 border rounded-lg hover:bg-blue-50 cursor-pointer transition-all mb-2";
                 div.setAttribute('data-colaborador-id', collab.id || collab.nome);
                 div.setAttribute('data-colaborador-nome', collab.nome);
+                div.setAttribute('role', 'option');
+                div.setAttribute('tabindex', '0');
                 div.innerHTML = `
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
@@ -773,35 +812,40 @@ export const PautaService = {
                     </div>
                 `;
                 
-                // Adicionar evento de clique
                 div.addEventListener('click', () => {
-                    // Remover seleção anterior
                     document.querySelectorAll('#collaborator-selection-list > div').forEach(div => {
                         div.classList.remove('bg-blue-100', 'border-blue-500');
+                        div.setAttribute('aria-selected', 'false');
                     });
                     div.classList.add('bg-blue-100', 'border-blue-500', 'border-2');
+                    div.setAttribute('aria-selected', 'true');
                     
-                    // Guardar o ID do colaborador selecionado
                     window.selectedCollaboratorId = collab.id || collab.nome;
                     window.selectedCollaboratorName = collab.nome;
+                });
+                
+                div.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        div.click();
+                    }
                 });
                 
                 container.appendChild(div);
             });
         };
         
-        // Renderizar lista inicial
         renderLista();
         
-        // Adicionar evento de busca
         if (searchInput) {
-            // Remover listener anterior para evitar duplicação
             const novoSearchInput = searchInput.cloneNode(true);
             searchInput.parentNode.replaceChild(novoSearchInput, searchInput);
             
             novoSearchInput.addEventListener('input', (e) => {
                 renderLista(e.target.value);
             });
+            
+            novoSearchInput.setAttribute('aria-label', 'Buscar colaboradores');
         }
     },
 
@@ -817,7 +861,6 @@ export const PautaService = {
         localStorage.removeItem('lastPautaId');
         localStorage.removeItem('lastPautaType');
 
-        // Renderizar filtros
         UIService.renderPautaFilters('filters-container', app.currentPautaFilter || 'all', async (filter) => {
             app.currentPautaFilter = filter;
             await this.loadPautasWithFilter(app);
@@ -841,7 +884,6 @@ export const PautaService = {
         pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas...</p>';
 
         try {
-            // Buscar todas as pautas que o usuário tem acesso
             const q = query(
                 collection(app.db, "pautas"),
                 where("members", "array-contains", user.uid)
@@ -850,7 +892,6 @@ export const PautaService = {
             const snapshot = await getDocs(q);
             let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
-            // Preparar filtros adicionais para período
             const filtrosAdicionais = {};
             
             if (app.currentPautaFilter === 'periodo') {
@@ -859,7 +900,6 @@ export const PautaService = {
                 filtrosAdicionais.tipo = document.getElementById('filter-tipo-pauta')?.value;
             }
             
-            // Aplicar filtro
             const filteredPautas = this.filterPautas(
                 pautas, 
                 app.currentPautaFilter || 'all', 
@@ -868,7 +908,6 @@ export const PautaService = {
                 filtrosAdicionais
             );
             
-            // Renderizar cards
             this.renderPautaCards(filteredPautas, user.uid, user.email, app);
             
         } catch (error) {
@@ -878,7 +917,7 @@ export const PautaService = {
     },
 
     /**
-     * Renderiza cards de pauta na tela de seleção (VERSÃO ANTIGA - IGUAL DA IMAGEM)
+     * Renderiza cards de pauta na tela de seleção
      */
     renderPautaCards(pautas, currentUserId, currentUserEmail, app) {
         const container = document.getElementById('pautas-list');
@@ -894,7 +933,6 @@ export const PautaService = {
         container.innerHTML = pautas.map(pauta => {
             const isOwner = pauta.owner === currentUserId;
             
-            // Verificar expiração
             let isExpired = false;
             let dataCriacao = 'Desconhecida';
             let dataExpiracao = 'Desconhecida';
@@ -912,39 +950,36 @@ export const PautaService = {
                 }
             }
             
-            // Texto de expiração
             const expiracaoTexto = isExpired ? 'Expirou em:' : 'Será eliminada em:';
-            
-            // Classe de opacidade se expirado
             const expiredClass = isExpired ? 'opacity-60 bg-gray-100' : '';
             
             return `
             <div class="relative bg-white p-6 rounded-lg shadow-md flex flex-col justify-between h-full ${expiredClass} ${!isExpired ? 'hover:shadow-xl transition-shadow cursor-pointer' : 'cursor-not-allowed'}" 
                  ${!isExpired ? `onclick="window.app.loadPauta('${pauta.id}', '${escapeHTML(pauta.name)}', '${pauta.type}')"` 
-                              : `onclick="showNotification('🔒 Esta pauta expirou e não pode ser acessada', 'error')"`}>
+                              : `onclick="showNotification('🔒 Esta pauta expirou e não pode ser acessada', 'error')"`}
+                 role="${!isExpired ? 'button' : 'presentation'}"
+                 tabindex="${!isExpired ? '0' : '-1'}"
+                 aria-label="${!isExpired ? `Abrir pauta ${pauta.name}` : `Pauta expirada ${pauta.name}`}">
                 
-                <!-- Botão de lixeira (só para o criador) -->
                 ${isOwner ? `
                 <button onclick="event.stopPropagation(); window.app.deletePauta('${pauta.id}', '${escapeHTML(pauta.name)}')" 
                         class="absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:text-red-600 transition-colors z-10"
-                        title="Excluir pauta">
+                        title="Excluir pauta"
+                        aria-label="Excluir pauta ${pauta.name}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                 </button>
                 ` : ''}
                 
-                <!-- Título da pauta -->
                 <h3 class="font-bold text-xl text-gray-800 mb-2 pr-8" title="${escapeHTML(pauta.name)}">
                     ${escapeHTML(pauta.name)}
                 </h3>
                 
-                <!-- Membros -->
                 <p class="text-sm text-gray-600 mb-4">
                     Membros: <span class="font-semibold">${pauta.memberEmails?.length || 1}</span>
                 </p>
                 
-                <!-- Datas de criação e expiração -->
                 <div class="mt-4 pt-2 border-t border-gray-200">
                     <p class="text-xs text-gray-500">
                         Criada em: <span class="font-bold">${dataCriacao}</span>
@@ -954,7 +989,6 @@ export const PautaService = {
                     </p>
                 </div>
                 
-                <!-- Badge de proprietário (opcional) -->
                 ${isOwner ? '<span class="absolute bottom-3 left-3 text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Criador</span>' : ''}
             </div>
             `;
@@ -986,7 +1020,6 @@ export const PautaService = {
                 try {
                     await deleteDoc(doc(app.db, "pautas", docSnap.id));
                     
-                    // Registrar log
                     await logAction(
                         app.db,
                         app.auth,
@@ -1034,7 +1067,7 @@ export const PautaService = {
     },
 
     /**
-     * Manipula ações dos cards (cliques em botões) - VERSÃO RESPONSIVA
+     * Manipula ações dos cards (cliques em botões) - VERSÃO OTIMIZADA
      */
     handleCardActions(e, app) {
         const button = e.target.closest('button');
@@ -1045,9 +1078,126 @@ export const PautaService = {
 
         console.log("Botão clicado:", button.className, "ID:", id);
 
-        // Detectar se é mobile para ajustar comportamentos
-        const isMobile = window.innerWidth <= 768;
+        const isMobile = this.isMobileDevice();
 
+        // ================================================
+        // AÇÕES RÁPIDAS (MENU)
+        // ================================================
+        
+        // Toggle do menu de ações rápidas
+        if (button.classList.contains('quick-action-toggle')) {
+            e.stopPropagation();
+            const menuId = `quick-menu-${id}`;
+            const menu = document.getElementById(menuId);
+            
+            if (!menu) {
+                console.warn(`Menu ${menuId} não encontrado`);
+                return;
+            }
+            
+            // Fechar todos os outros menus
+            this.closeAllQuickMenus(menuId);
+            
+            // Toggle do menu atual
+            const isHidden = menu.classList.contains('hidden');
+            menu.classList.toggle('hidden');
+            
+            // Atualizar atributos ARIA
+            button.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+            button.setAttribute('aria-label', isHidden ? 'Fechar menu rápido' : 'Abrir menu rápido');
+            
+            // Se abriu o menu, configurar para fechar ao clicar fora
+            if (!menu.classList.contains('hidden')) {
+                // Focar no primeiro item para melhor acessibilidade
+                setTimeout(() => {
+                    const firstItem = menu.querySelector('.quick-action-item');
+                    if (firstItem) firstItem.focus();
+                }, 100);
+                
+                // Fechar ao clicar fora
+                setTimeout(() => {
+                    const clickOutsideHandler = (e) => {
+                        if (!menu.contains(e.target) && !button.contains(e.target)) {
+                            menu.classList.add('hidden');
+                            button.setAttribute('aria-expanded', 'false');
+                            document.removeEventListener('click', clickOutsideHandler);
+                        }
+                    };
+                    document.addEventListener('click', clickOutsideHandler);
+                }, 0);
+            }
+        }
+
+        // Clique em uma ação rápida
+        if (button.classList.contains('quick-action-item')) {
+            e.stopPropagation();
+            
+            const actionKey = `${id}-${button.dataset.tipo}`;
+            if (!this.canPerformAction(actionKey)) {
+                console.log("Ação ignorada (cooldown)");
+                return;
+            }
+            
+            const tipoAcao = button.dataset.tipo;
+            const assisted = app.allAssisted?.find(a => a.id === id);
+            
+            if (!assisted) {
+                console.error(`Assistido com ID ${id} não encontrado`);
+                showNotification("Erro: Assistido não encontrado", "error");
+                return;
+            }
+            
+            // Fechar o menu
+            const menu = document.getElementById(`quick-menu-${id}`);
+            if (menu) {
+                menu.classList.add('hidden');
+                
+                const toggle = document.getElementById(`quick-toggle-${id}`);
+                if (toggle) {
+                    toggle.setAttribute('aria-expanded', 'false');
+                }
+            }
+            
+            const tipoMap = {
+                'reagendar': 'Reagendamento',
+                'agendar': 'Agendamento',
+                'consulta': 'Consulta Processual',
+                'outros': 'Outros Assuntos'
+            };
+            
+            const tipoDescricao = tipoMap[tipoAcao] || tipoAcao;
+            
+            window.assistedIdToHandle = id;
+            window.assistedNameToHandle = assisted.name || '';
+            window.assistedTipoAcao = tipoAcao;
+            window.assistedTipoDescricao = tipoDescricao;
+            
+            const nameElement = document.getElementById('assisted-to-attend-name');
+            if (nameElement) {
+                nameElement.textContent = assisted.name || '';
+            }
+            
+            showNotification(`${tipoDescricao} para ${assisted.name}`, "info");
+            
+            if (typeof this.preencherListaColaboradoresModal === 'function') {
+                this.preencherListaColaboradoresModal(app);
+            }
+            
+            const modal = document.getElementById('select-collaborator-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                
+                setTimeout(() => {
+                    const firstInput = modal.querySelector('input, button, [tabindex="0"]');
+                    if (firstInput) firstInput.focus();
+                }, 100);
+            }
+        }
+
+        // ================================================
+        // AÇÕES EXISTENTES (Check-in, Faltou, etc)
+        // ================================================
+        
         // Check-in (Marcar Chegada)
         if (button.classList.contains('check-in-btn')) {
             console.log("Abrindo modal de chegada para:", id);
@@ -1056,7 +1206,6 @@ export const PautaService = {
             if (modal) {
                 document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5);
                 
-                // No mobile, ajustar o input time para melhor experiência
                 if (isMobile) {
                     const timeInput = document.getElementById('arrival-time-input');
                     timeInput.setAttribute('pattern', '[0-9]{2}:[0-9]{2}');
@@ -1152,26 +1301,32 @@ export const PautaService = {
             }
         }
 
-        // Atender (com delegação) - VERSÃO CORRIGIDA COM BUSCA
+        // Atender (com delegação)
         if (button.classList.contains('select-collaborator-btn')) {
             console.log("Selecionando colaborador para:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
-            window.assistedIdToHandle = id;
-            window.assistedNameToHandle = assisted?.name || '';
-            document.getElementById('assisted-to-attend-name').textContent = assisted?.name || '';
+            if (!assisted) {
+                showNotification("Erro: Assistido não encontrado", "error");
+                return;
+            }
             
-            // PREENCHER A LISTA DE COLABORADORES NO MODAL COM BUSCA
+            window.assistedIdToHandle = id;
+            window.assistedNameToHandle = assisted.name || '';
+            document.getElementById('assisted-to-attend-name').textContent = assisted.name || '';
+            
             this.preencherListaColaboradoresModal(app);
             
-            document.getElementById('select-collaborator-modal')?.classList.remove('hidden');
+            const modal = document.getElementById('select-collaborator-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
         }
 
-        // Atender (direto) - Finalizar Atendimento
+        // Atender (direto)
         if (button.classList.contains('attend-directly-from-aguardando-btn')) {
             console.log("Atendendo diretamente:", id);
             window.assistedIdToHandle = id;
             
-            // Preencher o select com os colaboradores
             this.preencherSelectColaboradores(app, 'attendant-select');
             
             document.getElementById('attendant-modal')?.classList.remove('hidden');
@@ -1181,10 +1336,15 @@ export const PautaService = {
         if (button.classList.contains('delegate-finalization-btn')) {
             console.log("Delegando finalização:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
+            if (!assisted) {
+                showNotification("Erro: Assistido não encontrado", "error");
+                return;
+            }
+            
             window.assistedIdForDelegation = id;
-            window.assistedNameForDelegation = assisted?.name || '';
-            window.collaboratorNameForDelegation = assisted?.assignedCollaborator?.name || '';
-            document.getElementById('delegate-assisted-name').textContent = assisted?.name || '';
+            window.assistedNameForDelegation = assisted.name || '';
+            window.collaboratorNameForDelegation = assisted.assignedCollaborator?.name || '';
+            document.getElementById('delegate-assisted-name').textContent = assisted.name || '';
             document.getElementById('delegate-email-modal')?.classList.remove('hidden');
         }
 
@@ -1202,18 +1362,15 @@ export const PautaService = {
             }
         }
 
-        // Editar atendente - VERSÃO CORRIGIDA COM SELECT
+        // Editar atendente
         if (button.classList.contains('edit-attendant-btn')) {
             console.log("Editando atendente:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
             if (assisted) {
-                // Preencher o select de edição com os colaboradores
                 this.preencherSelectColaboradores(app, 'edit-attendant-select');
                 
-                // Selecionar o valor atual no select
                 const select = document.getElementById('edit-attendant-select');
                 if (select && assisted.attendant) {
-                    // Extrair o nome do atendente (pode ser string ou objeto)
                     let nomeAtendente = '';
                     if (typeof assisted.attendant === 'object') {
                         nomeAtendente = assisted.attendant.nome || '';
@@ -1221,7 +1378,6 @@ export const PautaService = {
                         nomeAtendente = assisted.attendant;
                     }
                     
-                    // Verificar se o nome existe nas opções
                     const options = Array.from(select.options).map(opt => opt.value);
                     if (options.includes(nomeAtendente)) {
                         select.value = nomeAtendente;
@@ -1266,7 +1422,6 @@ export const PautaService = {
         if (button.classList.contains('view-details-btn')) {
             console.log("Ver detalhes:", id);
             
-            // Verificar se a função openDetailsModal existe
             if (window.openDetailsModal) {
                 window.openDetailsModal({
                     assistedId: id,
@@ -1300,7 +1455,7 @@ export const PautaService = {
             this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
         }
 
-        // Confirmar atendido (botão verde de confirmação)
+        // Confirmar atendido
         if (button.classList.contains('toggle-confirmed-atendido') || button.classList.contains('toggle-confirmed-faltoso')) {
             console.log("Toggle confirmado:", id);
             const currentAssisted = app.allAssisted?.find(a => a.id === id);
@@ -1319,28 +1474,14 @@ export const PautaService = {
     },
 
     /**
-     * Utilitário para verificar se é mobile
-     */
-    isMobileDevice() {
-        return window.innerWidth <= 768;
-    },
-
-    // ================================================
-    // NOVOS MÉTODOS PARA REFRESH DA LISTA
-    // ================================================
-    
-    /**
      * Atualiza a lista de assistidos (para refresh após salvar/gerar PDF)
      */
     refreshAssistedList(app) {
         if (!app || !app.currentPauta?.id) return;
         
-        // Forçar recarregamento dos dados
         if (app.unsubscribeFromAttendances) {
-            // Se já existe um listener, ele vai atualizar automaticamente
             console.log("🔄 Lista de assistidos será atualizada pelo listener");
         } else {
-            // Recarregar manualmente
             this.loadAssistedList(app);
         }
     },
