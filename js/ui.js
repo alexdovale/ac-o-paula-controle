@@ -3,7 +3,7 @@ import { escapeHTML, normalizeText, showNotification } from './utils.js';
 import { PautaService } from './pauta.js';
 
 export const UIService = {
-    showScreen(screenName) {
+    showScreen(screenName) {-
         document.getElementById('loading-container').classList.toggle('hidden', screenName !== 'loading');
         document.getElementById('login-container').classList.toggle('hidden', screenName !== 'login');
         document.getElementById('pauta-selection-container').classList.toggle('hidden', screenName !== 'pautaSelection');
@@ -502,16 +502,18 @@ export const UIService = {
         }
     },
 
+    // ui.js - Parte da função createAguardandoCard (localize e substitua)
+
     createAguardandoCard(item, currentPautaData, colaboradores, index) {
         try {
             if (!item || !item.id) return null;
-
+    
             const card = document.createElement('div');
             const priorityClass = PautaService.getPriorityClass(item.priority);
             card.className = `relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
             card.setAttribute('data-id', item.id);
-
-            // === INDICADORES DE STATUS DO DOCUMENTO COM TEXTO ===
+    
+            // === INDICADORES DE STATUS DO DOCUMENTO ===
             let docStatusHtml = '';
             if (item.selectedAction) {
                 let statusColor = 'bg-gray-100 text-gray-600';
@@ -531,7 +533,7 @@ export const UIService = {
                     statusText = '📄 PDF Emitido'; 
                     statusIcon = '📄';
                 }
-
+    
                 docStatusHtml = `
                     <div class="mt-2 flex flex-col gap-1">
                         <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
@@ -545,13 +547,13 @@ export const UIService = {
                         </span>
                     </div>`;
             }
-
+    
             // Tratar valores com fallbacks seguros
             const nomeSeguro = item.name || 'Nome não informado';
             const assuntoSeguro = item.subject || 'Assunto não informado';
             const scheduledTimeSeguro = item.scheduledTime || '--:--';
             const priorityReasonSeguro = item.priorityReason || '';
-
+    
             // Tratar arrivalTime
             let arrivalText = 'Chegada: --:--';
             if (item.arrivalTime) {
@@ -569,19 +571,38 @@ export const UIService = {
                     console.warn("Erro ao formatar data:", e);
                 }
             }
-
-            const atenderButton = currentPautaData?.useDelegationFlow
-                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`
-                : `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`;
-
-            // NÚMERO DA ORDEM - ADICIONADO PARA IDENTIFICAÇÃO DA FILA
+    
+            // NÚMERO DA ORDEM
             const numeroOrdem = index + 1;
             const numeroBadge = `
                 <div class="absolute -left-2 -top-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
                     ${numeroOrdem}
                 </div>
             `;
-
+    
+            // Botão de ação padrão (Atender)
+            const atenderButton = currentPautaData?.useDelegationFlow
+                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`
+                : `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`;
+    
+            // === NOVOS BOTÕES DE AÇÃO RÁPIDA ===
+            const actionButtonsHTML = `
+                <div class="grid grid-cols-2 gap-1 mt-3">
+                    <button data-id="${item.id}" data-tipo="reagendar" class="quick-action-btn bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold py-1.5 px-2 rounded transition-colors">
+                        🔄 Reagendar
+                    </button>
+                    <button data-id="${item.id}" data-tipo="agendar" class="quick-action-btn bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold py-1.5 px-2 rounded transition-colors">
+                        📅 Agendar
+                    </button>
+                    <button data-id="${item.id}" data-tipo="consulta" class="quick-action-btn bg-purple-500 hover:bg-purple-600 text-white text-[10px] font-bold py-1.5 px-2 rounded transition-colors">
+                        🔍 Consulta
+                    </button>
+                    <button data-id="${item.id}" data-tipo="outros" class="quick-action-btn bg-gray-500 hover:bg-gray-600 text-white text-[10px] font-bold py-1.5 px-2 rounded transition-colors">
+                        ⚙️ Outros
+                    </button>
+                </div>
+            `;
+    
             card.innerHTML = `
                 ${numeroBadge}
                 <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors">
@@ -598,6 +619,10 @@ export const UIService = {
                         ${item.room ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(item.room)}</span>` : ''}
                     </div>
                     ${docStatusHtml}
+                    
+                    <!-- NOVOS BOTÕES DE AÇÃO RÁPIDA -->
+                    ${actionButtonsHTML}
+                    
                     <div class="mt-4 grid grid-cols-2 gap-2">
                         ${atenderButton}
                         <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs">${item.priority === 'URGENTE' ? 'Urgente' : 'Prioridade'}</button>
@@ -611,7 +636,7 @@ export const UIService = {
             console.error("Erro ao criar card de aguardando:", error, item);
             return null;
         }
-    },
+    }
 
     renderEmAtendimentoColumn(items, currentPautaData, pautaId, userName) {
         const container = document.getElementById('em-atendimento-list');
