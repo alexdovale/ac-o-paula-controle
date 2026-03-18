@@ -4,6 +4,8 @@
  * - PDF por Equipe mostra TODOS os colaboradores da equipe (cadastro)
  * - Inclui quem não atendeu (mostra 0 atendimentos)
  * - Baseado nos dados de colaboradores da gestão
+ * - NOVO: PDF por Grupo (apenas total do grupo + lista de membros)
+ * - NOVO: Botão para ocultar/mostrar totais individuais
  */
 
 // ========================================================
@@ -279,7 +281,7 @@ export const StatisticsService = {
             </div>
         ` : '';
 
-        // HTML para equipes com controle de visualização
+        // HTML para equipes com controle de visualização (agora com botão extra para ocultar totais)
         const groupsHTML = sortedGroups.map(({groupName, total, collaborators, todosColaboradores}, index) => {
             // Combinar colaboradores que atenderam com os que não atenderam
             const colaboradoresCompletos = [];
@@ -301,7 +303,7 @@ export const StatisticsService = {
                 <tr class="border-b collaborator-row group-${index}">
                     <td class="px-2 md:px-4 py-1 md:py-2 font-medium text-xs md:text-sm pl-2 md:pl-8">${nome}</td>
                     <td class="px-2 md:px-4 py-1 md:py-2 text-xs text-gray-600">${cargo || '-'}</td>
-                    <td class="px-2 md:px-4 py-1 md:py-2 text-right text-xs md:text-sm font-bold ${atendimentos > 0 ? 'text-green-600' : 'text-gray-400'}">${atendimentos}</td>
+                    <td class="px-2 md:px-4 py-1 md:py-2 text-right text-xs md:text-sm font-bold atendimento-valor-${index} ${atendimentos > 0 ? 'text-green-600' : 'text-gray-400'}">${atendimentos}</td>
                 </tr>
             `).join('');
 
@@ -315,11 +317,16 @@ export const StatisticsService = {
                             <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-[10px] md:text-xs">Total: ${total}</span>
                             <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-[10px] md:text-xs">Membros: ${todosColaboradores.length}</span>
                         </div>
-                        ${hasCollaborators ? `
-                            <button class="toggle-details-btn text-xs bg-white px-2 py-1 rounded border hover:bg-gray-50" data-group-index="${index}">
-                                🔽 Ocultar detalhes
+                        <div class="flex gap-2">
+                            <button class="hide-individual-btn text-xs bg-white px-2 py-1 rounded border hover:bg-gray-50" data-group-index="${index}">
+                                🔽 Ocultar individuais
                             </button>
-                        ` : ''}
+                            ${hasCollaborators ? `
+                                <button class="toggle-details-btn text-xs bg-white px-2 py-1 rounded border hover:bg-gray-50" data-group-index="${index}">
+                                    🔽 Ocultar detalhes
+                                </button>
+                            ` : ''}
+                        </div>
                     </div>
                     ${hasCollaborators ? `
                         <table class="w-full text-xs md:text-sm text-left collaborators-table" data-group-index="${index}">
@@ -327,7 +334,7 @@ export const StatisticsService = {
                                 <tr>
                                     <th class="px-2 md:px-4 py-1 pl-8">Colaborador</th>
                                     <th class="px-2 md:px-4 py-1">Cargo</th>
-                                    <th class="px-2 md:px-4 py-1 text-right">Atend.</th>
+                                    <th class="px-2 md:px-4 py-1 text-right atendimento-header-${index}">Atend.</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -341,19 +348,22 @@ export const StatisticsService = {
             `;
         }).join('');
 
-        // HTML dos botões de exportação
+        // HTML dos botões de exportação - AGORA COM 4 BOTÕES
         const botoesExportacaoHTML = `
             <div class="bg-white p-3 md:p-4 rounded-lg border mt-4">
                 <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-3">Exportar Relatórios</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
                     <button id="export-stats-pdf-btn" class="bg-blue-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-700 text-xs md:text-sm transition-colors">
                         📊 PDF Resumo
                     </button>
                     <button id="export-equipes-pdf-btn" class="bg-purple-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-purple-700 text-xs md:text-sm transition-colors">
-                        👥 PDF por Equipe (Completo)
+                        👥 PDF Equipe
                     </button>
-                    <button id="export-stats-detalhado-btn" class="bg-green-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-green-700 text-xs md:text-sm transition-colors">
-                        📋 PDF Detalhado
+                    <button id="export-grupo-pdf-btn" class="bg-green-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-green-700 text-xs md:text-sm transition-colors">
+                        📋 PDF Grupo
+                    </button>
+                    <button id="export-stats-detalhado-btn" class="bg-orange-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-orange-700 text-xs md:text-sm transition-colors">
+                        📖 PDF Detalhado
                     </button>
                 </div>
                 <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
@@ -518,7 +528,39 @@ export const StatisticsService = {
         
         content.innerHTML = html;
 
-        // Adicionar funcionalidade de ocultar/mostrar detalhes
+        // ===== NOVAS FUNCIONALIDADES =====
+        
+        // Botões para ocultar/mostrar totais individuais
+        document.querySelectorAll('.hide-individual-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const groupIndex = btn.dataset.groupIndex;
+                const individuais = document.querySelectorAll(`.atendimento-valor-${groupIndex}`);
+                const header = document.querySelector(`.atendimento-header-${groupIndex}`);
+                
+                const isHidden = btn.textContent.includes('Mostrar');
+                
+                individuais.forEach(el => {
+                    if (isHidden) {
+                        el.style.display = 'table-cell';
+                    } else {
+                        el.style.display = 'none';
+                    }
+                });
+                
+                if (header) {
+                    if (isHidden) {
+                        header.style.display = 'table-cell';
+                    } else {
+                        header.style.display = 'none';
+                    }
+                }
+                
+                btn.textContent = isHidden ? '🔽 Ocultar individuais' : '👁️ Mostrar individuais';
+            });
+        });
+
+        // Adicionar funcionalidade de ocultar/mostrar detalhes (já existente)
         const toggleAllBtn = document.getElementById('toggle-all-groups-btn');
         if (toggleAllBtn) {
             toggleAllBtn.addEventListener('click', () => {
@@ -588,7 +630,7 @@ export const StatisticsService = {
             });
         }
 
-        // Botão para PDF por Equipe (NOVO - com todos os colaboradores)
+        // Botão para PDF por Equipe (já existente)
         const exportEquipesBtn = document.getElementById('export-equipes-pdf-btn');
         if (exportEquipesBtn) {
             const newEquipesBtn = exportEquipesBtn.cloneNode(true);
@@ -603,8 +645,28 @@ export const StatisticsService = {
                     sortedGroups,
                     totalGeral
                 }).finally(() => {
-                    newEquipesBtn.textContent = '👥 PDF por Equipe (Completo)';
+                    newEquipesBtn.textContent = '👥 PDF por Equipe';
                     newEquipesBtn.disabled = false;
+                });
+            });
+        }
+
+        // NOVO: Botão para PDF por Grupo (sem individuais)
+        const exportGrupoBtn = document.getElementById('export-grupo-pdf-btn');
+        if (exportGrupoBtn) {
+            const newGrupoBtn = exportGrupoBtn.cloneNode(true);
+            exportGrupoBtn.parentNode.replaceChild(newGrupoBtn, exportGrupoBtn);
+            
+            newGrupoBtn.addEventListener('click', () => {
+                newGrupoBtn.textContent = 'Gerando PDF por Grupo...';
+                newGrupoBtn.disabled = true;
+
+                this.exportGrupoPDF(pautaName, {
+                    sortedGroups,
+                    totalGeral
+                }).finally(() => {
+                    newGrupoBtn.textContent = '📋 PDF por Grupo';
+                    newGrupoBtn.disabled = false;
                 });
             });
         }
@@ -623,7 +685,7 @@ export const StatisticsService = {
                     totalGeral,
                     sortedGroups
                 }).finally(() => {
-                    newDetalhadoBtn.textContent = '📋 PDF Detalhado';
+                    newDetalhadoBtn.textContent = '📖 PDF Detalhado';
                     newDetalhadoBtn.disabled = false;
                 });
             });
@@ -745,6 +807,123 @@ export const StatisticsService = {
         }
 
         doc.save(`equipe_completa_${pautaName.replace(/\s+/g, '_')}.pdf`);
+    },
+
+    /**
+     * NOVO: Exporta PDF por Grupo (apenas total e lista de membros, sem individuais)
+     */
+    async exportGrupoPDF(pautaName, dados) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 40;
+        let yPos = margin + 30;
+
+        // Título
+        doc.setFontSize(18);
+        doc.setTextColor(22, 163, 74);
+        doc.setFont("helvetica", "bold");
+        doc.text(`RELATÓRIO DE GRUPOS - ${pautaName}`, pageWidth / 2, yPos, { align: "center" });
+        yPos += 20;
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
+        yPos += 20;
+        
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Total de Atendimentos: ${dados.totalGeral}`, margin, yPos);
+        yPos += 25;
+
+        // Listar cada grupo
+        dados.sortedGroups.forEach(({groupName, total, todosColaboradores}) => {
+            if (yPos > pageHeight - 150) {
+                doc.addPage();
+                yPos = margin + 30;
+            }
+
+            // Título do grupo
+            doc.setFontSize(16);
+            doc.setTextColor(0, 102, 204);
+            doc.setFont("helvetica", "bold");
+            doc.text(groupName, margin, yPos);
+            yPos += 15;
+            
+            doc.setFontSize(14);
+            doc.setTextColor(22, 163, 74);
+            doc.text(`Total de Atendimentos: ${total}`, margin, yPos);
+            yPos += 20;
+
+            // Lista de membros (apenas nomes)
+            doc.setFontSize(11);
+            doc.setTextColor(60, 60, 60);
+            doc.setFont("helvetica", "bold");
+            doc.text("Membros da equipe:", margin, yPos);
+            yPos += 15;
+            
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+
+            if (todosColaboradores && todosColaboradores.length > 0) {
+                // Ordenar por nome
+                const membrosOrdenados = [...todosColaboradores].sort((a, b) => a.nome.localeCompare(b.nome));
+                
+                // Listar em 2 colunas para economizar espaço
+                const col1X = margin + 10;
+                const col2X = margin + 250;
+                let col = 1;
+                
+                membrosOrdenados.forEach((membro, index) => {
+                    if (yPos > pageHeight - 40) {
+                        doc.addPage();
+                        yPos = margin + 30;
+                        
+                        // Repetir título na nova página
+                        doc.setFontSize(14);
+                        doc.setTextColor(0, 102, 204);
+                        doc.setFont("helvetica", "bold");
+                        doc.text(`${groupName} (continuação)`, margin, yPos);
+                        yPos += 20;
+                        
+                        doc.setFontSize(10);
+                        doc.setFont("helvetica", "normal");
+                    }
+                    
+                    if (col === 1) {
+                        doc.text(`• ${membro.nome}`, col1X, yPos);
+                        col = 2;
+                    } else {
+                        doc.text(`• ${membro.nome}`, col2X, yPos);
+                        col = 1;
+                        yPos += 15;
+                    }
+                });
+                
+                if (col === 2) yPos += 15; // Ajuste se última linha ficou na coluna 1
+            } else {
+                doc.text("Nenhum colaborador cadastrado nesta equipe", margin + 10, yPos);
+                yPos += 15;
+            }
+
+            yPos += 20;
+        });
+
+        // Rodapé
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(
+                `Página ${i} de ${pageCount}`,
+                pageWidth - margin - 50,
+                pageHeight - 20
+            );
+        }
+
+        doc.save(`grupo_${pautaName.replace(/\s+/g, '_')}.pdf`);
     },
 
     /**
@@ -1098,4 +1277,4 @@ export const exportStatisticsToPDF = (pautaName, statsData) => {
 // Tornar global
 window.StatisticsService = StatisticsService;
 
-console.log("✅ estatisticas.js carregado com sucesso!");
+console.log("✅ estatisticas.js carregado com sucesso! Agora com 4 tipos de PDF e controle de totais individuais.");
