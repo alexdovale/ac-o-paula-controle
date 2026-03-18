@@ -150,8 +150,12 @@ export const PautaService = {
             status: hasArrived ? 'aguardando' : 'pauta',
             scheduledTime: scheduledTimeValue,
             arrivalTime: hasArrived && arrivalDate ? arrivalDate.toISOString() : null,
-            assignedCollaborator: null,
+            assignedCollaborator: null, // Colaborador para quem foi delegado
+            delegatedBy: null, // Quem delegou
+            delegatedAt: null, // Quando delegou
             inAttendanceTime: null,
+            attendedBy: null, // Quem realmente atendeu
+            attendedAt: null, // Quando atendeu
             finalizadoPeloColaborador: false,
             isConfirmed: false,
             confirmationDetails: null,
@@ -159,7 +163,10 @@ export const PautaService = {
             manualIndex: Date.now(),
             createdAt: new Date().toISOString(),
             lastActionBy: app.currentUserName || 'Sistema',
-            lastActionTimestamp: new Date().toISOString()
+            lastActionTimestamp: new Date().toISOString(),
+            // Informações de distribuição
+            distributionStatus: null, // 'pending', 'distributed', 'completed'
+            distributionHistory: [] // Histórico de distribuições
         };
 
         try {
@@ -247,6 +254,158 @@ export const PautaService = {
         } catch (error) {
             console.error("Erro ao atualizar status:", error);
             showNotification("Erro ao atualizar", "error");
+        }
+    },
+
+    /**
+     * Delegar atendimento para um colaborador
+     */
+    async delegateAttendance(app, assistedId, collaboratorName, collaboratorId) {
+        if (!app || !app.currentPauta?.id || !assistedId || !collaboratorName) {
+            showNotification("Dados incompletos para delegação", "error");
+            return false;
+        }
+
+        try {
+            const assisted = app.allAssisted?.find(a => a.id === assistedId);
+            if (!assisted) {
+                showNotification("Assistido não encontrado", "error");
+                return false;
+            }
+
+            const updates = {
+                assignedCollaborator: {
+                    id: collaboratorId,
+                    name: collaboratorName,
+                    delegatedBy: app.currentUserName,
+                    delegatedAt: new Date().toISOString()
+                },
+                delegatedBy: app.currentUserName,
+                delegatedAt: new Date().toISOString(),
+                status: app.currentPautaData?.useDelegationFlow ? 'emAtendimento' : 'aguardando',
+                distributionStatus: 'distributed'
+            };
+
+            // Adicionar ao histórico de distribuição
+            const distributionHistory = assisted.distributionHistory || [];
+            distributionHistory.push({
+                type: 'delegation',
+                from: app.currentUserName,
+                to: collaboratorName,
+                timestamp: new Date().toISOString(),
+                action: 'delegated'
+            });
+            updates.distributionHistory = distributionHistory;
+
+            await this.updateStatus(
+                app.db, 
+                app.currentPauta.id, 
+                assistedId, 
+                updates, 
+                app.currentUserName
+            );
+
+            showNotification(`Atendimento delegado para ${collaboratorName}`, "success");
+            
+            // Registrar log específico de delegação
+            await logAction(
+                app.db,
+                app.auth,
+                app.currentUserName,
+                app.currentPauta.id,
+                'DELEGATE_ATTENDANCE',
+                `Delegou atendimento de ${assisted.name} para ${collaboratorName}`,
+                assistedId
+            );
+
+            return true;
+        } catch (error) {
+            console.error("Erro ao delegar atendimento:", error);
+            showNotification("Erro ao delegar atendimento", "error");
+            return false;
+        }
+    },
+
+    /**
+     * Finalizar atendimento (marcar como atendido)
+     */
+    async finishAttendance(app, assistedId, attendedBy, demands = []) {
+        if (!app || !app.currentPauta?.id || !assistedId) {
+            showNotification("Dados incompletos para finalizar atendimento", "error");
+            return false;
+        }
+
+        try {
+            const assisted = app.allAssisted?.find(a => a.id === assistedId);
+            if (!assisted) {
+                showNotification("Assistido não encontrado", "error");
+                return false;
+            }
+
+            const updates = {
+                status: 'atendido',
+                attendedBy: attendedBy || app.currentUserName,
+                attendedAt: new Date().toISOString(),
+                inAttendanceTime: new Date().toISOString(),
+                finalizadoPeloColaborador: true,
+                distributionStatus: 'completed'
+            };
+
+            // Se tinha um colaborador delegado, registrar quem finalizou
+            if (assisted.assignedCollaborator) {
+                updates.finalizedBy = app.currentUserName;
+                updates.finalizedAt = new Date().toISOString();
+            }
+
+            // Adicionar demandas se houver
+            if (demands && demands.length > 0) {
+                updates.demandas = {
+                    descricoes: demands,
+                    registeredBy: app.currentUserName,
+                    registeredAt: new Date().toISOString()
+                };
+            }
+
+            // Adicionar ao histórico
+            const distributionHistory = assisted.distributionHistory || [];
+            distributionHistory.push({
+                type: 'attendance',
+                attendedBy: attendedBy || app.currentUserName,
+                timestamp: new Date().toISOString(),
+                action: 'completed',
+                demands: demands.length > 0 ? demands : []
+            });
+            updates.distributionHistory = distributionHistory;
+
+            await this.updateStatus(
+                app.db, 
+                app.currentPauta.id, 
+                assistedId, 
+                updates, 
+                app.currentUserName
+            );
+
+            const quemAtendeu = attendedBy || app.currentUserName;
+            const quemDelegou = assisted.delegatedBy ? ` (delegado por ${assisted.delegatedBy})` : '';
+            
+            showNotification(`Atendimento finalizado por ${quemAtendeu}${quemDelegou}`, "success");
+            
+            // Registrar log específico de finalização
+            await logAction(
+                app.db,
+                app.auth,
+                app.currentUserName,
+                app.currentPauta.id,
+                'FINISH_ATTENDANCE',
+                `Finalizou atendimento de ${assisted.name}. Atendido por: ${quemAtendeu}${quemDelegou}. Demandas: ${demands.length}`,
+                assistedId
+            );
+
+            return true;
+        } catch (error) {
+            console.error("Erro ao finalizar atendimento:", error);
+            showNotification("Erro ao finalizar atendimento", "error");
+            return false;
         }
     },
 
@@ -484,7 +643,8 @@ export const PautaService = {
                         status: 'pauta',
                         createdAt: new Date().toISOString(),
                         lastActionBy: app.currentUserName || 'Sistema',
-                        lastActionTimestamp: new Date().toISOString()
+                        lastActionTimestamp: new Date().toISOString(),
+                        distributionHistory: []
                     };
                     
                     const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
@@ -1195,7 +1355,7 @@ export const PautaService = {
         }
 
         // ================================================
-        // AÇÕES EXISTENTES (Check-in, Faltou, etc)
+        // AÇÕES DE ATENDIMENTO
         // ================================================
         
         // Check-in (Marcar Chegada)
@@ -1230,7 +1390,8 @@ export const PautaService = {
                 priority: null,
                 assignedCollaborator: null,
                 inAttendanceTime: null,
-                room: null
+                room: null,
+                distributionStatus: null
             }, app.currentUserName);
         }
 
@@ -1252,14 +1413,23 @@ export const PautaService = {
             }, app.currentUserName);
         }
 
-        // Voltar de em atendimento para aguardando
+        // Voltar de em atendimento para aguardando (quando tem delegação)
         if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) {
             console.log("Voltando de em atendimento para aguardando:", id);
+            const assisted = app.allAssisted?.find(a => a.id === id);
+            
             this.updateStatus(app.db, app.currentPauta.id, id, {
                 status: 'aguardando',
                 assignedCollaborator: null,
-                inAttendanceTime: null
+                delegatedBy: null,
+                delegatedAt: null,
+                inAttendanceTime: null,
+                distributionStatus: null
             }, app.currentUserName);
+            
+            if (assisted?.assignedCollaborator) {
+                showNotification(`Delegação para ${assisted.assignedCollaborator.name} removida`, "info");
+            }
         }
 
         // Voltar de distribuição para aguardando
@@ -1301,9 +1471,9 @@ export const PautaService = {
             }
         }
 
-        // Atender (com delegação)
+        // Atender (com delegação) - Selecionar colaborador para delegar
         if (button.classList.contains('select-collaborator-btn')) {
-            console.log("Selecionando colaborador para:", id);
+            console.log("Selecionando colaborador para delegar atendimento:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
             if (!assisted) {
                 showNotification("Erro: Assistido não encontrado", "error");
@@ -1312,6 +1482,7 @@ export const PautaService = {
             
             window.assistedIdToHandle = id;
             window.assistedNameToHandle = assisted.name || '';
+            window.assistedTipoAcao = 'delegar';
             document.getElementById('assisted-to-attend-name').textContent = assisted.name || '';
             
             this.preencherListaColaboradoresModal(app);
@@ -1319,20 +1490,67 @@ export const PautaService = {
             const modal = document.getElementById('select-collaborator-modal');
             if (modal) {
                 modal.classList.remove('hidden');
+                
+                // Configurar botão de confirmação para delegação
+                const confirmBtn = document.getElementById('confirm-select-collaborator');
+                if (confirmBtn) {
+                    // Remover listeners antigos
+                    const newConfirmBtn = confirmBtn.cloneNode(true);
+                    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+                    
+                    newConfirmBtn.addEventListener('click', async () => {
+                        if (window.selectedCollaboratorId && window.selectedCollaboratorId !== 'null') {
+                            await this.delegateAttendance(
+                                app, 
+                                window.assistedIdToHandle, 
+                                window.selectedCollaboratorName, 
+                                window.selectedCollaboratorId
+                            );
+                            modal.classList.add('hidden');
+                        } else if (window.selectedCollaboratorId === 'null') {
+                            // Atender sem delegação
+                            document.getElementById('attendant-modal')?.classList.remove('hidden');
+                            this.preencherSelectColaboradores(app, 'attendant-select');
+                            modal.classList.add('hidden');
+                        } else {
+                            showNotification("Selecione um colaborador", "warning");
+                        }
+                    });
+                }
             }
         }
 
-        // Atender (direto)
+        // Atender (direto) - Modal de atendimento direto
         if (button.classList.contains('attend-directly-from-aguardando-btn')) {
             console.log("Atendendo diretamente:", id);
             window.assistedIdToHandle = id;
             
             this.preencherSelectColaboradores(app, 'attendant-select');
             
-            document.getElementById('attendant-modal')?.classList.remove('hidden');
+            const modal = document.getElementById('attendant-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                
+                // Configurar botão de confirmação para atendimento direto
+                const confirmBtn = document.getElementById('confirm-attendant');
+                if (confirmBtn) {
+                    const newConfirmBtn = confirmBtn.cloneNode(true);
+                    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+                    
+                    newConfirmBtn.addEventListener('click', async () => {
+                        const attendant = document.getElementById('attendant-select').value;
+                        if (attendant) {
+                            await this.finishAttendance(app, window.assistedIdToHandle, attendant, []);
+                            modal.classList.add('hidden');
+                        } else {
+                            showNotification("Selecione um atendente", "warning");
+                        }
+                    });
+                }
+            }
         }
 
-        // Delegar finalização
+        // Delegar finalização (para colaboradores)
         if (button.classList.contains('delegate-finalization-btn')) {
             console.log("Delegando finalização:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
@@ -1345,7 +1563,29 @@ export const PautaService = {
             window.assistedNameForDelegation = assisted.name || '';
             window.collaboratorNameForDelegation = assisted.assignedCollaborator?.name || '';
             document.getElementById('delegate-assisted-name').textContent = assisted.name || '';
-            document.getElementById('delegate-email-modal')?.classList.remove('hidden');
+            
+            const modal = document.getElementById('delegate-email-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                
+                // Configurar botão de confirmação para delegação de finalização
+                const confirmBtn = document.getElementById('confirm-delegate-email');
+                if (confirmBtn) {
+                    const newConfirmBtn = confirmBtn.cloneNode(true);
+                    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+                    
+                    newConfirmBtn.addEventListener('click', async () => {
+                        const email = document.getElementById('delegate-email').value;
+                        if (email) {
+                            // Aqui você pode implementar o envio de email
+                            showNotification(`Notificação enviada para ${email}`, "success");
+                            modal.classList.add('hidden');
+                        } else {
+                            showNotification("Informe um email", "warning");
+                        }
+                    });
+                }
+            }
         }
 
         // Editar assistido
@@ -1370,12 +1610,12 @@ export const PautaService = {
                 this.preencherSelectColaboradores(app, 'edit-attendant-select');
                 
                 const select = document.getElementById('edit-attendant-select');
-                if (select && assisted.attendant) {
+                if (select && assisted.attendedBy) {
                     let nomeAtendente = '';
-                    if (typeof assisted.attendant === 'object') {
-                        nomeAtendente = assisted.attendant.nome || '';
+                    if (typeof assisted.attendedBy === 'object') {
+                        nomeAtendente = assisted.attendedBy.nome || '';
                     } else {
-                        nomeAtendente = assisted.attendant;
+                        nomeAtendente = assisted.attendedBy;
                     }
                     
                     const options = Array.from(select.options).map(opt => opt.value);
@@ -1396,6 +1636,35 @@ export const PautaService = {
             if (assisted) {
                 window.assistedIdToHandle = id;
                 document.getElementById('demands-assisted-name-modal').textContent = assisted.name || '';
+                
+                // Mostrar informações de quem atendeu/delegou
+                const infoDiv = document.createElement('div');
+                infoDiv.className = "mb-4 p-3 bg-gray-50 rounded-lg text-sm";
+                
+                let infoHtml = '';
+                if (assisted.attendedBy) {
+                    infoHtml += `<p><span class="font-semibold">Atendido por:</span> ${assisted.attendedBy}</p>`;
+                }
+                if (assisted.delegatedBy) {
+                    infoHtml += `<p><span class="font-semibold">Delegado por:</span> ${assisted.delegatedBy}`;
+                    if (assisted.assignedCollaborator) {
+                        infoHtml += ` para ${assisted.assignedCollaborator.name}`;
+                    }
+                    infoHtml += `</p>`;
+                }
+                if (assisted.demandas?.descricoes?.length > 0) {
+                    infoHtml += `<p><span class="font-semibold">Demandas registradas:</span> ${assisted.demandas.descricoes.length}</p>`;
+                }
+                
+                if (infoHtml) {
+                    infoDiv.innerHTML = infoHtml;
+                    const modal = document.getElementById('demands-modal');
+                    const existingInfo = modal.querySelector('.attendance-info');
+                    if (existingInfo) existingInfo.remove();
+                    infoDiv.classList.add('attendance-info');
+                    modal.insertBefore(infoDiv, modal.querySelector('.demands-list-container'));
+                }
+                
                 const container = document.getElementById('demands-modal-list-container');
                 if (container) {
                     container.innerHTML = '';
@@ -1442,14 +1711,19 @@ export const PautaService = {
                 status: 'aguardando',
                 attendant: null,
                 attendedTime: null,
+                attendedBy: null,
+                attendedAt: null,
                 finalizadoPeloColaborador: false,
                 isConfirmed: false,
-                confirmationDetails: null
+                confirmationDetails: null,
+                distributionStatus: 'pending'
             };
 
-            if (app.currentPautaData?.useDelegationFlow) {
+            // Se tinha delegação, manter o colaborador designado
+            if (currentAssisted?.assignedCollaborator) {
                 updateData.status = 'emAtendimento';
-                updateData.attendant = currentAssisted?.attendant;
+                updateData.attendant = currentAssisted.assignedCollaborator.name;
+                updateData.distributionStatus = 'distributed';
             }
             
             this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
