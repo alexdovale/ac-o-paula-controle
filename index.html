@@ -2436,17 +2436,18 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 // Confirmar seleção de colaborador
                 document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
-                    const selectedDiv = document.querySelector('#collaborator-selection-list [aria-selected="true"]');
-                    
-                    const collaboratorId = selectedDiv?.dataset?.colaboradorId || null;
-                    const collaboratorName = selectedDiv?.dataset?.colaboradorNome || null;
+                    // pauta.js seta window.selectedCollaboratorId e window.selectedCollaboratorName ao clicar num item
+                    // 'null' (string) = "Não atribuir"; undefined = nada selecionado ainda
+                    const collaboratorId = window.selectedCollaboratorId;
+                    const collaboratorName = window.selectedCollaboratorName || null;
 
                     // Ações rápidas: Reagendar, Agendar, Consulta, Outros
                     // Devem finalizar o atendimento direto (status: 'atendido')
                     const acoesRapidas = ['reagendar', 'agendar', 'consulta', 'outros'];
                     const isAcaoRapida = acoesRapidas.includes(window.assistedTipoAcao);
 
-                    if (!selectedDiv) {
+                    // collaboratorId undefined = usuário não clicou em nada ainda
+                    if (collaboratorId === undefined) {
                         showNotification("Selecione um colaborador ou 'Não atribuir'.", "warning");
                         return;
                     }
@@ -2505,13 +2506,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     // Limpa a seleção para a próxima vez
                     window.assistedTipoAcao = null;
                     window.assistedTipoDescricao = null;
-                    window.selectedCollaboratorId = null;
-                    window.selectedCollaboratorName = null;
+                    window.selectedCollaboratorId = undefined;
+                    window.selectedCollaboratorName = undefined;
                 });
 
                 // Cancelar seleção de colaborador
                 document.getElementById('cancel-select-collaborator-btn')?.addEventListener('click', () => {
                     document.getElementById('select-collaborator-modal')?.classList.add('hidden');
+                    window.selectedCollaboratorId = undefined;
+                    window.selectedCollaboratorName = undefined;
+                    window.assistedTipoAcao = null;
+                    window.assistedTipoDescricao = null;
                 });
 
                 // ================================================
@@ -3189,6 +3194,24 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         window.openDetailsModal = openDetailsModal;
 
         window.app = new SIGAPApp();
+
+        // Reseta seleção de colaborador toda vez que o modal de seleção for aberto
+        const _collabModalObserver = new MutationObserver((mutations) => {
+            mutations.forEach(m => {
+                if (m.type === 'attributes' && m.attributeName === 'class') {
+                    const modal = m.target;
+                    if (!modal.classList.contains('hidden')) {
+                        // Modal abriu — reseta seleção anterior
+                        window.selectedCollaboratorId = undefined;
+                        window.selectedCollaboratorName = undefined;
+                    }
+                }
+            });
+        });
+        const _collabModal = document.getElementById('select-collaborator-modal');
+        if (_collabModal) {
+            _collabModalObserver.observe(_collabModal, { attributes: true });
+        }
 
         setTimeout(() => {
             if (window.app && typeof window.app.deletePauta === 'function') {
