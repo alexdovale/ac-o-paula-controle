@@ -2264,82 +2264,47 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     showNotification("Gerando PDF...", "info");
                     
                     try {
-                        const assistedName = document.getElementById('documents-assisted-name')?.textContent || 'Assistido';
-                        const actionTitle = document.getElementById('checklist-title')?.textContent || '';
-
-                        // Coleta documentos marcados
-                        const documentosTextos = [];
-                        document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
-                            let text = '';
-                            const label = cb.closest('label');
-                            if (label) {
-                                const span = label.querySelector('span:not(.sr-only)');
-                                if (span) text = span.textContent;
-                            }
-                            documentosTextos.push({
-                                id: cb.id,
-                                text: (text || cb.id || 'Documento').trim()
+                        const { jsPDF } = window.jspdf;
+                        const docPDF = new jsPDF();
+                        const pageWidth = docPDF.internal.pageSize.getWidth();
+                        let y = 20;
+                
+                        docPDF.setFontSize(16);
+                        docPDF.text("Checklist de Atendimento - SIGAP", pageWidth / 2, y, { align: "center" });
+                        y += 15;
+                
+                        docPDF.setFontSize(12);
+                        docPDF.text(`Assistido: ${document.getElementById('documents-assisted-name')?.textContent || ''}`, 15, y);
+                        y += 7;
+                        docPDF.text(`Ação: ${document.getElementById('checklist-title')?.textContent || ''}`, 15, y);
+                        y += 15;
+                
+                        const checked = document.querySelectorAll('.doc-checkbox:checked');
+                        
+                        if (checked.length > 0) {
+                            docPDF.setFont("helvetica", "bold");
+                            docPDF.text("DOCUMENTAÇÃO ENTREGUE:", 15, y);
+                            y += 8;
+                            docPDF.setFont("helvetica", "normal");
+                            docPDF.setFontSize(10);
+                            
+                            checked.forEach(cb => {
+                                const text = cb.closest('label').querySelector('span').textContent;
+                                const type = document.querySelector(`input[name="type-${cb.id}"]:checked`)?.value || 'Físico';
+                                docPDF.text(`[X] ${text} - [${type.toUpperCase()}]`, 20, y);
+                                y += 6;
+                                if (y > 280) {
+                                    docPDF.addPage();
+                                    y = 20;
+                                }
                             });
-                        });
-
-                        // Coleta tipos (Físico/Digital)
-                        const docTypes = {};
-                        document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
-                            const typeRadio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
-                            docTypes[cb.id] = typeRadio ? typeRadio.value : 'Físico';
-                        });
-
-                        // Coleta dados do réu
-                        const reu = window.getReuDataFromForm ? window.getReuDataFromForm() : {};
-
-                        // Coleta dados de gastos
-                        const gastos = window.getExpenseDataFromForm ? window.getExpenseDataFromForm() : {};
-
-                        // Adiciona dados do réu na lista de documentos (se checkbox marcado)
-                        if (reu.checkReuUnico) {
-                            documentosTextos.push({ id: 'reu-titulo', text: '👤 DADOS DO RÉU (Endereço para citação):' });
-                            if (reu.nome) documentosTextos.push({ id: 'reu-nome', text: `   • Nome do Réu: ${reu.nome}` });
-                            if (reu.cpf) documentosTextos.push({ id: 'reu-cpf', text: `   • CPF: ${reu.cpf}` });
-                            if (reu.telefone) documentosTextos.push({ id: 'reu-tel', text: `   • Telefone: ${reu.telefone}` });
-                            if (reu.rua) {
-                                let end = `   • Endereço: ${reu.rua}`;
-                                if (reu.numero) end += `, nº ${reu.numero}`;
-                                if (reu.complemento) end += ` - ${reu.complemento}`;
-                                documentosTextos.push({ id: 'reu-end', text: end });
-                            }
-                            if (reu.bairro) documentosTextos.push({ id: 'reu-bairro', text: `   • Bairro: ${reu.bairro}` });
-                            if (reu.cidade) documentosTextos.push({ id: 'reu-cidade', text: `   • Cidade: ${reu.cidade}${reu.uf ? ' - ' + reu.uf : ''}` });
-                            if (reu.cep) documentosTextos.push({ id: 'reu-cep', text: `   • CEP: ${reu.cep}` });
-                            if (reu.referencia) documentosTextos.push({ id: 'reu-ref', text: `   • Referência: ${reu.referencia}` });
-                            if (reu.empresa) documentosTextos.push({ id: 'reu-emp', text: `   • Empresa: ${reu.empresa}` });
-                            if (reu.rua_comercial) {
-                                let endC = `   • End. Comercial: ${reu.rua_comercial}`;
-                                if (reu.numero_comercial) endC += `, nº ${reu.numero_comercial}`;
-                                documentosTextos.push({ id: 'reu-endc', text: endC });
-                            }
-                            if (reu.cidade_comercial) documentosTextos.push({ id: 'reu-cidadec', text: `   • Cidade Comercial: ${reu.cidade_comercial}${reu.uf_comercial ? ' - ' + reu.uf_comercial : ''}` });
                         }
-
-                        // Monta checklistData completo
-                        const checklistData = {
-                            checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
-                            docTypes: docTypes,
-                            reuData: reu,
-                            expenseData: gastos
-                        };
-
-                        const resultado = PDFService.generateChecklistPDF(
-                            assistedName, actionTitle, checklistData, documentosTextos
-                        );
-
-                        if (resultado) {
-                            showNotification("PDF gerado com sucesso!");
-                        } else {
-                            showNotification("Erro ao gerar PDF", "error");
-                        }
+                
+                        docPDF.save(`Checklist_SIGAP.pdf`);
+                        showNotification("PDF gerado com sucesso!");
                     } catch (err) {
                         console.error("Erro PDF:", err);
-                        showNotification("Erro ao gerar PDF: " + err.message, "error");
+                        showNotification("Erro ao gerar PDF", "error");
                     }
                 });
                 
@@ -2471,32 +2436,77 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 // Confirmar seleção de colaborador
                 document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
-                    const selectedRadio = document.querySelector('#collaborator-selection-list input[name="selectedCollaborator"]:checked');
+                    const selectedDiv = document.querySelector('#collaborator-selection-list [aria-selected="true"]');
                     
-                    let collaboratorData = null;
-                    
-                    if (selectedRadio && selectedRadio.value !== 'null') {
-                        const collaboratorId = selectedRadio.value;
-                        const collaboratorName = selectedRadio.dataset.name;
-                        collaboratorData = { id: collaboratorId, name: collaboratorName };
-                        showNotification(`${window.assistedNameToHandle} atribuído a ${collaboratorName}.`);
-                    } else {
-                        showNotification(`${window.assistedNameToHandle} movido para 'Em Atendimento' sem colaborador atribuído.`);
+                    const collaboratorId = selectedDiv?.dataset?.colaboradorId || null;
+                    const collaboratorName = selectedDiv?.dataset?.colaboradorNome || null;
+
+                    // Ações rápidas: Reagendar, Agendar, Consulta, Outros
+                    // Devem finalizar o atendimento direto (status: 'atendido')
+                    const acoesRapidas = ['reagendar', 'agendar', 'consulta', 'outros'];
+                    const isAcaoRapida = acoesRapidas.includes(window.assistedTipoAcao);
+
+                    if (!selectedDiv) {
+                        showNotification("Selecione um colaborador ou 'Não atribuir'.", "warning");
+                        return;
                     }
 
-                    await PautaService.updateStatus(
-                        this.db,
-                        this.currentPauta.id,
-                        window.assistedIdToHandle,
-                        {
-                            status: 'emAtendimento',
-                            assignedCollaborator: collaboratorData,
-                            inAttendanceTime: new Date().toISOString()
-                        },
-                        this.currentUserName
-                    );
+                    if (isAcaoRapida) {
+                        // Finaliza direto como atendido, registrando quem atendeu e o tipo de ação
+                        const tipoDescricao = window.assistedTipoDescricao || window.assistedTipoAcao || 'Ação rápida';
+                        const atendenteFinal = collaboratorName || this.currentUserName;
+
+                        await PautaService.updateStatus(
+                            this.db,
+                            this.currentPauta.id,
+                            window.assistedIdToHandle,
+                            {
+                                status: 'atendido',
+                                attendedBy: atendenteFinal,
+                                attendedAt: new Date().toISOString(),
+                                inAttendanceTime: new Date().toISOString(),
+                                isConfirmed: false,
+                                finalizadoPeloColaborador: true,
+                                distributionStatus: 'completed',
+                                tipoAcaoRapida: tipoDescricao,
+                                assignedCollaborator: collaboratorName
+                                    ? { id: collaboratorId, name: collaboratorName }
+                                    : null
+                            },
+                            this.currentUserName
+                        );
+
+                        showNotification(`${window.assistedNameToHandle} marcado como atendido por ${atendenteFinal} (${tipoDescricao}).`, "success");
+
+                    } else {
+                        // Fluxo normal: manda para emAtendimento
+                        let collaboratorData = null;
+                        if (collaboratorName) {
+                            collaboratorData = { id: collaboratorId, name: collaboratorName };
+                            showNotification(`${window.assistedNameToHandle} atribuído a ${collaboratorName}.`);
+                        } else {
+                            showNotification(`${window.assistedNameToHandle} movido para 'Em Atendimento' sem colaborador atribuído.`);
+                        }
+
+                        await PautaService.updateStatus(
+                            this.db,
+                            this.currentPauta.id,
+                            window.assistedIdToHandle,
+                            {
+                                status: 'emAtendimento',
+                                assignedCollaborator: collaboratorData,
+                                inAttendanceTime: new Date().toISOString()
+                            },
+                            this.currentUserName
+                        );
+                    }
                     
                     document.getElementById('select-collaborator-modal')?.classList.add('hidden');
+                    // Limpa a seleção para a próxima vez
+                    window.assistedTipoAcao = null;
+                    window.assistedTipoDescricao = null;
+                    window.selectedCollaboratorId = null;
+                    window.selectedCollaboratorName = null;
                 });
 
                 // Cancelar seleção de colaborador
