@@ -203,11 +203,25 @@ export const PDFService = {
                         y = 20;
                     }
                     
-                    const tipo = checklistData?.docTypes && checklistData.docTypes[doc.id] 
-                        ? ` [${checklistData.docTypes[doc.id]}]` 
+                    // Itens especiais (reu, gastos) nao recebem checkmark nem tipo
+                    const isSpecial = doc.id.startsWith('reu-') || doc.id.startsWith('gasto-');
+                    
+                    const tipo = (!isSpecial && checklistData?.docTypes && checklistData.docTypes[doc.id])
+                        ? ` [${checklistData.docTypes[doc.id]}]`
                         : '';
                     
-                    docPDF.text(`✓ ${doc.text}${tipo}`, margin + 5, y);
+                    // Remove emojis e chars nao suportados por helvetica
+                    const safeText = doc.text.replace(/[^\x00-\x7F\xC0-\xFF\s\-\,\.\:\;\!\?\(\)\/\\\[\]#@$%&*+<>=~^|]/g, '');
+                    
+                    const prefix = isSpecial ? '' : '[X] ';
+                    
+                    if (doc.id === 'reu-titulo' || doc.id === 'gastos-titulo') {
+                        docPDF.setFont("helvetica", "bold");
+                        docPDF.text(safeText.trim(), margin + 5, y);
+                        docPDF.setFont("helvetica", "normal");
+                    } else {
+                        docPDF.text(`${prefix}${safeText}${tipo}`, margin + 5, y);
+                    }
                     y += 5;
                 });
             } else {
@@ -293,87 +307,6 @@ export const PDFService = {
                 }
             }
 
-            // ===== 4. DADOS DO RÉU (CORRIGIDO) =====
-            if (checklistData && checklistData.reuData) {
-                const reu = checklistData.reuData;
-                
-                // Verifica se TEM algum dado do réu preenchido E se o checkbox foi marcado
-                const hasReuData = reu && reu.checkReuUnico === true && Object.values(reu).some(v => v && typeof v === 'string' && v.trim() !== '');
-                
-                if (hasReuData) {
-                    if (y > pageHeight - 100) {
-                        docPDF.addPage();
-                        y = 20;
-                    }
-                    
-                    docPDF.setFont("helvetica", "bold");
-                    docPDF.setFontSize(11);
-                    docPDF.text("4. DADOS DA PARTE CONTRÁRIA (RÉU):", margin, y);
-                    y += 7;
-                    docPDF.setFont("helvetica", "normal");
-                    docPDF.setFontSize(9);
-                    
-                    // Nome
-                    if (reu.nome && String(reu.nome).trim() !== '') {
-                        docPDF.text(`Nome: ${reu.nome}`, margin + 5, y);
-                        y += 5;
-                    }
-                    
-                    // CPF e Telefone
-                    if ((reu.cpf && String(reu.cpf).trim() !== '') || (reu.telefone && String(reu.telefone).trim() !== '')) {
-                        let linha = '';
-                        if (reu.cpf && String(reu.cpf).trim() !== '') linha += `CPF: ${reu.cpf}`;
-                        if (reu.cpf && reu.telefone) linha += ' | ';
-                        if (reu.telefone && String(reu.telefone).trim() !== '') linha += `Tel: ${reu.telefone}`;
-                        docPDF.text(linha, margin + 5, y);
-                        y += 5;
-                    }
-                    
-                    // Endereço completo
-                    const enderecoParts = [];
-                    if (reu.rua && String(reu.rua).trim() !== '') enderecoParts.push(reu.rua);
-                    if (reu.numero && String(reu.numero).trim() !== '') enderecoParts.push(`nº ${reu.numero}`);
-                    if (reu.bairro && String(reu.bairro).trim() !== '') enderecoParts.push(reu.bairro);
-                    
-                    if (enderecoParts.length > 0) {
-                        let enderecoTexto = `Endereço: ${enderecoParts.join(', ')}`;
-                        if (reu.cep && String(reu.cep).trim() !== '') {
-                            enderecoTexto += ` - CEP: ${reu.cep}`;
-                        }
-                        const splitAddress = docPDF.splitTextToSize(enderecoTexto, pageWidth - 2*margin - 10);
-                        docPDF.text(splitAddress, margin + 5, y);
-                        y += 5 * splitAddress.length;
-                    } else if (reu.cep && String(reu.cep).trim() !== '') {
-                        // Tem CEP mas não tem endereço completo
-                        docPDF.text(`CEP: ${reu.cep}`, margin + 5, y);
-                        y += 5;
-                    }
-                    
-                    // Cidade e UF
-                    if ((reu.cidade && String(reu.cidade).trim() !== '') || (reu.uf && String(reu.uf).trim() !== '')) {
-                        let linhaCidade = '';
-                        if (reu.cidade && String(reu.cidade).trim() !== '') linhaCidade += reu.cidade;
-                        if (reu.uf && String(reu.uf).trim() !== '') linhaCidade += linhaCidade ? ` - ${reu.uf}` : reu.uf;
-                        
-                        if (linhaCidade) {
-                            docPDF.text(linhaCidade, margin + 5, y);
-                            y += 5;
-                        }
-                    }
-                    
-                    // Dados do trabalho
-                    if (reu.empresa && String(reu.empresa).trim() !== '') {
-                        docPDF.text(`Empresa: ${reu.empresa}`, margin + 5, y);
-                        y += 5;
-                    }
-                    
-                    if (reu.enderecoTrabalho && String(reu.enderecoTrabalho).trim() !== '') {
-                        const splitWork = docPDF.splitTextToSize(`End. Comercial: ${reu.enderecoTrabalho}`, pageWidth - 2*margin - 10);
-                        docPDF.text(splitWork, margin + 5, y);
-                        y += 5 * splitWork.length;
-                    }
-                }
-            }
 
             // ===== RODAPÉ =====
             const pageCount = docPDF.internal.getNumberOfPages();
