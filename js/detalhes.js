@@ -1473,7 +1473,7 @@ function addReuToPdfData(documentosTextos, reu) {
  * @param {Object} gastos - Dados de gastos
  */
 function addExpensesToPdfData(documentosTextos, gastos) {
-    const temGastos = gastos.checkExibirGastos && Object.values(gastos).some(v => v && v !== 'R$ 0,00' && v.trim() !== '');
+    const temGastos = gastos.checkExibirGastos === true && Object.entries(gastos).some(([k, v]) => k !== 'checkExibirGastos' && v && typeof v === 'string' && v !== 'R$ 0,00' && v.trim() !== '');
     
     if (!temGastos) return;
     
