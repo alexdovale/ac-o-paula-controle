@@ -884,6 +884,10 @@ export const PautaService = {
             searchInput.value = '';
         }
         
+        // Reseta selecao anterior para que a validacao do confirm funcione corretamente
+        window.selectedCollaboratorId = undefined;
+        window.selectedCollaboratorName = undefined;
+        
         if (!app.colaboradores || app.colaboradores.length === 0) {
             container.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhum colaborador cadastrado.</p>';
             return;
