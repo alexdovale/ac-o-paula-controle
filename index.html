@@ -2446,8 +2446,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const acoesRapidas = ['reagendar', 'agendar', 'consulta', 'outros'];
                     const isAcaoRapida = acoesRapidas.includes(window.assistedTipoAcao);
 
-                    // collaboratorId undefined = usuário não clicou em nada ainda
-                    if (collaboratorId === undefined) {
+                    // Para ações rápidas: se nada selecionado, usa o usuário logado
+                    // Para fluxo normal: exige seleção
+                    if (!isAcaoRapida && collaboratorId === undefined) {
                         showNotification("Selecione um colaborador ou 'Não atribuir'.", "warning");
                         return;
                     }
@@ -3195,23 +3196,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
         window.app = new SIGAPApp();
 
-        // Reseta seleção de colaborador toda vez que o modal de seleção for aberto
-        const _collabModalObserver = new MutationObserver((mutations) => {
-            mutations.forEach(m => {
-                if (m.type === 'attributes' && m.attributeName === 'class') {
-                    const modal = m.target;
-                    if (!modal.classList.contains('hidden')) {
-                        // Modal abriu — reseta seleção anterior
-                        window.selectedCollaboratorId = undefined;
-                        window.selectedCollaboratorName = undefined;
-                    }
-                }
-            });
-        });
-        const _collabModal = document.getElementById('select-collaborator-modal');
-        if (_collabModal) {
-            _collabModalObserver.observe(_collabModal, { attributes: true });
-        }
+
 
         setTimeout(() => {
             if (window.app && typeof window.app.deletePauta === 'function') {
