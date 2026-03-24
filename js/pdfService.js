@@ -297,8 +297,8 @@ export const PDFService = {
             if (checklistData && checklistData.reuData) {
                 const reu = checklistData.reuData;
                 
-                // Verifica se TEM algum dado do réu preenchido
-                const hasReuData = reu && Object.values(reu).some(v => v && String(v).trim() !== '');
+                // Verifica se TEM algum dado do réu preenchido E se o checkbox foi marcado
+                const hasReuData = reu && reu.checkReuUnico === true && Object.values(reu).some(v => v && typeof v === 'string' && v.trim() !== '');
                 
                 if (hasReuData) {
                     if (y > pageHeight - 100) {
