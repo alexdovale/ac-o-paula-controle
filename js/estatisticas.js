@@ -127,10 +127,12 @@ export const StatisticsService = {
         
         // Preencher com dados reais de atendimentos
         atendidos.forEach(a => {
-            const attendantIsObject = typeof a.attendant === 'object' && a.attendant !== null;
-            const attendantName = attendantIsObject ? a.attendant.nome : (a.attendant || 'Não informado');
+            // attendedBy = ações rápidas | attendant = fluxo normal
+            const rawAttendant = a.attendedBy || a.attendant;
+            const attendantIsObject = typeof rawAttendant === 'object' && rawAttendant !== null;
+            const attendantName = attendantIsObject ? (rawAttendant.nome || rawAttendant.name) : (rawAttendant || 'Não informado');
             
-            const groupName = attendantIsObject && a.attendant.equipe ? `Equipe ${a.attendant.equipe}` : 'Equipe Não Definida';
+            const groupName = attendantIsObject && rawAttendant.equipe ? `Equipe ${rawAttendant.equipe}` : 'Equipe Não Definida';
 
             if (!statsByGroup[groupName]) {
                 statsByGroup[groupName] = { 
@@ -202,6 +204,21 @@ export const StatisticsService = {
         }, {});
 
         const totalDemandasGeral = Object.values(statsBySubject).reduce((sum, data) => sum + data.total, 0);
+
+        // Estatísticas por tipo de ação rápida
+        const acoesRapidasMap = {
+            'Reagendamento': { icon: '🔄', color: 'amber' },
+            'Agendamento':   { icon: '📅', color: 'emerald' },
+            'Consulta Processual': { icon: '🔍', color: 'purple' },
+            'Outros Assuntos': { icon: '⚙️', color: 'gray' }
+        };
+        const statsByAcaoRapida = {};
+        atendidos.forEach(a => {
+            if (a.tipoAcaoRapida) {
+                statsByAcaoRapida[a.tipoAcaoRapida] = (statsByAcaoRapida[a.tipoAcaoRapida] || 0) + 1;
+            }
+        });
+        const totalAcoesRapidas = Object.values(statsByAcaoRapida).reduce((s, v) => s + v, 0);
         const totalDemandasAtendidos = Object.values(statsBySubject).reduce((sum, data) => sum + data.atendidos, 0);
         const totalDemandasFaltosos = Object.values(statsBySubject).reduce((sum, data) => sum + data.faltosos, 0);
 
@@ -249,6 +266,30 @@ export const StatisticsService = {
                 <p class="text-xl md:text-2xl font-bold text-indigo-700">${avgTimeDelegated} min</p>
                 <p class="text-[8px] md:text-xs text-gray-600 mt-1">Tempo Médio (delegação)</p>
             </div>` : '';
+
+        // HTML do bloco de ações rápidas
+        // Cores fixas por tipo (Tailwind não suporta classes dinâmicas)
+        const acoesRapidasCores = {
+            'Reagendamento':       { icon: '🔄', bg: '#fffbeb', border: '#fcd34d', text: '#92400e' },
+            'Agendamento':         { icon: '📅', bg: '#ecfdf5', border: '#6ee7b7', text: '#065f46' },
+            'Consulta Processual': { icon: '🔍', bg: '#f5f3ff', border: '#c4b5fd', text: '#4c1d95' },
+            'Outros Assuntos':     { icon: '⚙️', bg: '#f9fafb', border: '#d1d5db', text: '#374151' }
+        };
+        const acoesRapidasHTML = totalAcoesRapidas > 0 ? `
+            <div class="bg-white p-3 md:p-4 rounded-lg border">
+                <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-2">⚡ Ações Rápidas</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    ${Object.entries(statsByAcaoRapida).sort(([,a],[,b]) => b-a).map(([tipo, qtd]) => {
+                        const cfg = acoesRapidasCores[tipo] || { icon: '⚡', bg: '#eff6ff', border: '#93c5fd', text: '#1e40af' };
+                        return `<div style="background:${cfg.bg};border:1px solid ${cfg.border};color:${cfg.text}" class="flex items-center justify-between rounded-lg px-3 py-2">
+                            <span class="text-xs font-bold">${cfg.icon} ${tipo}</span>
+                            <span class="text-xl font-black">${qtd}</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+                <p class="text-[10px] text-gray-500 text-right mt-2">Total: <b>${totalAcoesRapidas}</b></p>
+            </div>
+        ` : '';
 
         // HTML para colaboradores flat
         const collaboratorsFlatHTML = sortedFlatCollaborators.length > 0 ? `
@@ -396,10 +437,17 @@ export const StatisticsService = {
                             <p class="text-xl md:text-2xl font-bold text-blue-700">${avgTimeDirect} min</p>
                             <p class="text-[9px] md:text-xs text-gray-600 mt-1">Tempo Médio</p>
                         </div>
+                        ${totalAcoesRapidas > 0 ? `
+                        <div class="bg-amber-50 p-2 md:p-3 rounded-lg border border-amber-300 col-span-2 sm:col-span-1">
+                            <p class="text-xl md:text-2xl font-bold text-amber-700">${totalAcoesRapidas}</p>
+                            <p class="text-[9px] md:text-xs text-gray-600 mt-1">Opções de Atendimento</p>
+                        </div>` : ''}
                         ${delegationHTML}
                     </div>
                 </div>
                 
+                ${acoesRapidasHTML}
+
                 ${botoesExportacaoHTML}
 
                 ${sortedScheduledTimes.length > 0 ? `
@@ -620,6 +668,8 @@ export const StatisticsService = {
                     useDelegationFlow,
                     statsByGroup,
                     statsBySubject,
+                    statsByAcaoRapida,
+                    totalAcoesRapidas,
                     statsByScheduledTime: sortedScheduledTimes.map(time => ({ time, count: statsByScheduledTime[time] })),
                     statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
                     statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
@@ -1106,7 +1156,31 @@ export const StatisticsService = {
             yPos += 70;
         }
 
-        // ===== 2. ATENDIMENTOS POR COLABORADOR =====
+        // ===== 2. AÇÕES RÁPIDAS =====
+        if (statsData.statsByAcaoRapida && statsData.totalAcoesRapidas > 0) {
+            if (yPos > pageHeight - 80) { doc.addPage(); yPos = margin + 30; }
+            addSectionTitle("Acoes Rapidas");
+            
+            const acoesRows = Object.entries(statsData.statsByAcaoRapida)
+                .sort(([,a],[,b]) => b - a)
+                .map(([tipo, qtd]) => [tipo, qtd]);
+            
+            doc.autoTable({
+                startY: yPos,
+                head: [['Tipo de Acao', 'Total']],
+                body: acoesRows,
+                foot: [['TOTAL', statsData.totalAcoesRapidas]],
+                theme: 'grid',
+                headStyles: { fillColor: [99, 102, 241], textColor: '#FFFFFF' },
+                footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
+                styles: { fontSize: 9 },
+                margin: { left: margin, right: margin }
+            });
+            
+            yPos = doc.lastAutoTable.finalY + 20;
+        }
+
+        // ===== 3. ATENDIMENTOS POR COLABORADOR =====
         if (exportCollaborators && statsData.statsByGroup) {
             addSectionTitle("Atendimentos por Colaborador");
             
