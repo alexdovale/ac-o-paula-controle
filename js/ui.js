@@ -732,11 +732,13 @@ export const UIService = {
                 new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
             
             let atendenteNome = 'Não informado';
-            if (item.attendant) {
-                if (typeof item.attendant === 'object') {
-                    atendenteNome = item.attendant.nome || item.attendant.name || 'Não informado';
+            // attendedBy = ações rápidas | attendant = fluxo normal
+            const atendenteRaw = item.attendedBy || item.attendant;
+            if (atendenteRaw) {
+                if (typeof atendenteRaw === 'object') {
+                    atendenteNome = atendenteRaw.nome || atendenteRaw.name || 'Não informado';
                 } else {
-                    atendenteNome = item.attendant;
+                    atendenteNome = atendenteRaw;
                 }
             }
 
@@ -756,6 +758,21 @@ export const UIService = {
                 </div>
                 
                 <p class="text-xs md:text-sm mt-1 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
+                
+                ${item.tipoAcaoRapida ? (() => {
+                    const acaoCfg = {
+                        'Reagendamento':       { icon: '🔄', bg: '#fffbeb', border: '#f59e0b', text: '#92400e', label: 'REAGENDADO' },
+                        'Agendamento':         { icon: '📅', bg: '#ecfdf5', border: '#10b981', text: '#065f46', label: 'AGENDADO' },
+                        'Consulta Processual': { icon: '🔍', bg: '#f5f3ff', border: '#8b5cf6', text: '#4c1d95', label: 'CONSULTA' },
+                        'Outros Assuntos':     { icon: '⚙️', bg: '#f0f9ff', border: '#0ea5e9', text: '#0c4a6e', label: 'OUTROS' }
+                    }[item.tipoAcaoRapida] || { icon: '⚡', bg: '#f0fdf4', border: '#22c55e', text: '#14532d', label: item.tipoAcaoRapida };
+                    return `<div class="mt-1 mb-2">
+                        <span style="background:${acaoCfg.bg};border:1.5px solid ${acaoCfg.border};color:${acaoCfg.text}" 
+                              class="inline-flex items-center gap-1 text-[10px] md:text-xs font-black px-2 py-1 rounded-lg">
+                            ${acaoCfg.icon} ${acaoCfg.label}
+                        </span>
+                    </div>`;
+                })() : ''}
                 
                 <div class="grid grid-cols-3 gap-1 md:gap-2 text-center border-t border-b py-2 md:py-3 my-2 md:my-3 text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-wider">
                     <div>Agendado:<br><span class="text-gray-600">${item.scheduledTime || 'N/A'}</span></div>
