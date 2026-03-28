@@ -2328,12 +2328,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 });
                 
-                // Funções auxiliares para dados do formulário
+                // Funções auxiliares — lêem direto do DOM (mesmos IDs do detalhes.js)
                 function getReuDataFromForm() {
-                    // Usa a função do detalhes.js se disponível (mais completa)
-                    if (window.getReuDataFromForm && window.getReuDataFromForm !== getReuDataFromForm) {
-                        return window.getReuDataFromForm();
-                    }
                     return {
                         checkReuUnico: document.getElementById('check-reu-unico')?.checked || false,
                         nome: document.getElementById('nome-reu')?.value || '',
@@ -2356,12 +2352,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         cep_comercial: document.getElementById('cep-comercial-reu')?.value || ''
                     };
                 }
-                
+
                 function getExpenseDataFromForm() {
-                    // Usa a função do detalhes.js se disponível (mais completa)
-                    if (window.getExpenseDataFromForm && window.getExpenseDataFromForm !== getExpenseDataFromForm) {
-                        return window.getExpenseDataFromForm();
-                    }
                     return {
                         checkExibirGastos: document.getElementById('check-exibir-gastos')?.checked ?? true,
                         moradia: document.getElementById('expense-moradia')?.value || '',
