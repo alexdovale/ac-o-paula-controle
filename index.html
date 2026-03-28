@@ -2295,31 +2295,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         // Coleta dados de gastos — prioriza detalhes.js (window), fallback local
                         const gastos = getExpenseDataFromForm();
 
-                        // Adiciona dados do reu na lista se checkbox marcado
-                        if (reu.checkReuUnico) {
-                            documentosTextos.push({ id: 'reu-titulo', text: 'DADOS DO REU (Endereco para citacao):' });
-                            if (reu.nome)     documentosTextos.push({ id: 'reu-nome',   text: `   Nome do Reu: ${reu.nome}` });
-                            if (reu.cpf)      documentosTextos.push({ id: 'reu-cpf',    text: `   CPF: ${reu.cpf}` });
-                            if (reu.telefone) documentosTextos.push({ id: 'reu-tel',    text: `   Telefone: ${reu.telefone}` });
-                            if (reu.rua) {
-                                let end = `   Endereco: ${reu.rua}`;
-                                if (reu.numero) end += `, n ${reu.numero}`;
-                                if (reu.complemento) end += ` - ${reu.complemento}`;
-                                documentosTextos.push({ id: 'reu-end', text: end });
-                            }
-                            if (reu.bairro)  documentosTextos.push({ id: 'reu-bairro', text: `   Bairro: ${reu.bairro}` });
-                            if (reu.cidade)  documentosTextos.push({ id: 'reu-cidade', text: `   Cidade: ${reu.cidade}${reu.uf ? ' - ' + reu.uf : ''}` });
-                            if (reu.cep)     documentosTextos.push({ id: 'reu-cep',    text: `   CEP: ${reu.cep}` });
-                            if (reu.referencia) documentosTextos.push({ id: 'reu-ref', text: `   Referencia: ${reu.referencia}` });
-                            if (reu.empresa) documentosTextos.push({ id: 'reu-emp',    text: `   Empresa: ${reu.empresa}` });
-                            if (reu.rua_comercial) {
-                                let endC = `   End. Comercial: ${reu.rua_comercial}`;
-                                if (reu.numero_comercial) endC += `, n ${reu.numero_comercial}`;
-                                documentosTextos.push({ id: 'reu-endc', text: endC });
-                            }
-                            if (reu.cidade_comercial) documentosTextos.push({ id: 'reu-cidadec', text: `   Cidade Comercial: ${reu.cidade_comercial}${reu.uf_comercial ? ' - ' + reu.uf_comercial : ''}` });
-                        }
-
                         // Monta checklistData completo
                         const checklistData = {
                             checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
