@@ -1473,7 +1473,7 @@ function addReuToPdfData(documentosTextos, reu) {
  * @param {Object} gastos - Dados de gastos
  */
 function addExpensesToPdfData(documentosTextos, gastos) {
-    const temGastos = gastos.checkExibirGastos === true && Object.entries(gastos).some(([k, v]) => k !== 'checkExibirGastos' && v && typeof v === 'string' && v !== 'R$ 0,00' && v.trim() !== '');
+    const temGastos = gastos.checkExibirGastos && Object.values(gastos).some(v => v && v !== 'R$ 0,00' && v.trim() !== '');
     
     if (!temGastos) return;
     
@@ -1584,6 +1584,9 @@ async function handleReset() {
                 selectedAction: null
             });
         }
+        // Força rerenderização na próxima abertura
+        window._lastOpenedAssistedId = null;
+        currentChecklistAction = null;
         handleBack();
     } catch (e) {
         console.error(e);
@@ -1716,6 +1719,22 @@ export async function openDetailsModal(config) {
     const checklistHeader = getEl('document-checklist-view-header');
     const searchContainer = getEl('checklist-search-container');
     const reuContainer = getEl('address-editor-container');
+
+    // Se o modal já está aberto para o mesmo assistido E já tem checklist renderizado,
+    // apenas reabre sem rerenderizar (preserva o estado atual dos campos)
+    const modalAberto = !getEl('documents-modal')?.classList.contains('hidden');
+    const mesmoAssistido = window._lastOpenedAssistedId === currentAssistedId;
+    const checklistJaRenderizado = currentChecklistAction && 
+        !checklistView?.classList.contains('hidden');
+
+    if (modalAberto && mesmoAssistido && checklistJaRenderizado) {
+        console.log("♻️ Mesmo assistido — reabrindo sem rerenderizar");
+        getEl('documents-modal')?.classList.remove('hidden');
+        return;
+    }
+
+    // Guarda qual assistido está aberto
+    window._lastOpenedAssistedId = currentAssistedId;
     
     if (assisted.documentChecklist && assisted.documentChecklist.action) {
         // Carrega checklist salvo
