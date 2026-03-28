@@ -2264,47 +2264,82 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     showNotification("Gerando PDF...", "info");
                     
                     try {
-                        const { jsPDF } = window.jspdf;
-                        const docPDF = new jsPDF();
-                        const pageWidth = docPDF.internal.pageSize.getWidth();
-                        let y = 20;
-                
-                        docPDF.setFontSize(16);
-                        docPDF.text("Checklist de Atendimento - SIGAP", pageWidth / 2, y, { align: "center" });
-                        y += 15;
-                
-                        docPDF.setFontSize(12);
-                        docPDF.text(`Assistido: ${document.getElementById('documents-assisted-name')?.textContent || ''}`, 15, y);
-                        y += 7;
-                        docPDF.text(`Ação: ${document.getElementById('checklist-title')?.textContent || ''}`, 15, y);
-                        y += 15;
-                
-                        const checked = document.querySelectorAll('.doc-checkbox:checked');
-                        
-                        if (checked.length > 0) {
-                            docPDF.setFont("helvetica", "bold");
-                            docPDF.text("DOCUMENTAÇÃO ENTREGUE:", 15, y);
-                            y += 8;
-                            docPDF.setFont("helvetica", "normal");
-                            docPDF.setFontSize(10);
-                            
-                            checked.forEach(cb => {
-                                const text = cb.closest('label').querySelector('span').textContent;
-                                const type = document.querySelector(`input[name="type-${cb.id}"]:checked`)?.value || 'Físico';
-                                docPDF.text(`[X] ${text} - [${type.toUpperCase()}]`, 20, y);
-                                y += 6;
-                                if (y > 280) {
-                                    docPDF.addPage();
-                                    y = 20;
-                                }
+                        const assistedName = document.getElementById('documents-assisted-name')?.textContent || 'Assistido';
+                        const actionTitle = document.getElementById('checklist-title')?.textContent || '';
+
+                        // Coleta documentos marcados
+                        const documentosTextos = [];
+                        document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
+                            let text = '';
+                            const label = cb.closest('label');
+                            if (label) {
+                                const span = label.querySelector('span:not(.sr-only)');
+                                if (span) text = span.textContent;
+                            }
+                            documentosTextos.push({
+                                id: cb.id,
+                                text: (text || cb.id || 'Documento').trim()
                             });
+                        });
+
+                        // Coleta tipos (Fisico/Digital)
+                        const docTypes = {};
+                        document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
+                            const typeRadio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
+                            docTypes[cb.id] = typeRadio ? typeRadio.value : 'Fisico';
+                        });
+
+                        // Coleta dados do reu — prioriza detalhes.js (window), fallback local
+                        const reu = getReuDataFromForm();
+
+                        // Coleta dados de gastos — prioriza detalhes.js (window), fallback local
+                        const gastos = getExpenseDataFromForm();
+
+                        // Adiciona dados do reu na lista se checkbox marcado
+                        if (reu.checkReuUnico) {
+                            documentosTextos.push({ id: 'reu-titulo', text: 'DADOS DO REU (Endereco para citacao):' });
+                            if (reu.nome)     documentosTextos.push({ id: 'reu-nome',   text: `   Nome do Reu: ${reu.nome}` });
+                            if (reu.cpf)      documentosTextos.push({ id: 'reu-cpf',    text: `   CPF: ${reu.cpf}` });
+                            if (reu.telefone) documentosTextos.push({ id: 'reu-tel',    text: `   Telefone: ${reu.telefone}` });
+                            if (reu.rua) {
+                                let end = `   Endereco: ${reu.rua}`;
+                                if (reu.numero) end += `, n ${reu.numero}`;
+                                if (reu.complemento) end += ` - ${reu.complemento}`;
+                                documentosTextos.push({ id: 'reu-end', text: end });
+                            }
+                            if (reu.bairro)  documentosTextos.push({ id: 'reu-bairro', text: `   Bairro: ${reu.bairro}` });
+                            if (reu.cidade)  documentosTextos.push({ id: 'reu-cidade', text: `   Cidade: ${reu.cidade}${reu.uf ? ' - ' + reu.uf : ''}` });
+                            if (reu.cep)     documentosTextos.push({ id: 'reu-cep',    text: `   CEP: ${reu.cep}` });
+                            if (reu.referencia) documentosTextos.push({ id: 'reu-ref', text: `   Referencia: ${reu.referencia}` });
+                            if (reu.empresa) documentosTextos.push({ id: 'reu-emp',    text: `   Empresa: ${reu.empresa}` });
+                            if (reu.rua_comercial) {
+                                let endC = `   End. Comercial: ${reu.rua_comercial}`;
+                                if (reu.numero_comercial) endC += `, n ${reu.numero_comercial}`;
+                                documentosTextos.push({ id: 'reu-endc', text: endC });
+                            }
+                            if (reu.cidade_comercial) documentosTextos.push({ id: 'reu-cidadec', text: `   Cidade Comercial: ${reu.cidade_comercial}${reu.uf_comercial ? ' - ' + reu.uf_comercial : ''}` });
                         }
-                
-                        docPDF.save(`Checklist_SIGAP.pdf`);
-                        showNotification("PDF gerado com sucesso!");
+
+                        // Monta checklistData completo
+                        const checklistData = {
+                            checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
+                            docTypes: docTypes,
+                            reuData: reu,
+                            expenseData: gastos
+                        };
+
+                        const resultado = PDFService.generateChecklistPDF(
+                            assistedName, actionTitle, checklistData, documentosTextos
+                        );
+
+                        if (resultado) {
+                            showNotification("PDF gerado com sucesso!");
+                        } else {
+                            showNotification("Erro ao gerar PDF", "error");
+                        }
                     } catch (err) {
                         console.error("Erro PDF:", err);
-                        showNotification("Erro ao gerar PDF", "error");
+                        showNotification("Erro ao gerar PDF: " + err.message, "error");
                     }
                 });
                 
@@ -2320,23 +2355,40 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 
                 // Funções auxiliares para dados do formulário
                 function getReuDataFromForm() {
+                    // Usa a função do detalhes.js se disponível (mais completa)
+                    if (window.getReuDataFromForm && window.getReuDataFromForm !== getReuDataFromForm) {
+                        return window.getReuDataFromForm();
+                    }
                     return {
+                        checkReuUnico: document.getElementById('check-reu-unico')?.checked || false,
                         nome: document.getElementById('nome-reu')?.value || '',
                         cpf: document.getElementById('cpf-reu')?.value || '',
                         telefone: document.getElementById('telefone-reu')?.value || '',
                         cep: document.getElementById('cep-reu')?.value || '',
                         rua: document.getElementById('rua-reu')?.value || '',
                         numero: document.getElementById('numero-reu')?.value || '',
+                        complemento: document.getElementById('complemento-reu')?.value || '',
                         bairro: document.getElementById('bairro-reu')?.value || '',
                         cidade: document.getElementById('cidade-reu')?.value || '',
                         uf: document.getElementById('estado-reu')?.value || '',
+                        referencia: document.getElementById('referencia-reu')?.value || '',
                         empresa: document.getElementById('empresa-reu')?.value || '',
-                        enderecoTrabalho: document.getElementById('endereco-trabalho-reu')?.value || ''
+                        rua_comercial: document.getElementById('rua-comercial-reu')?.value || '',
+                        numero_comercial: document.getElementById('numero-comercial-reu')?.value || '',
+                        bairro_comercial: document.getElementById('bairro-comercial-reu')?.value || '',
+                        cidade_comercial: document.getElementById('cidade-comercial-reu')?.value || '',
+                        uf_comercial: document.getElementById('estado-comercial-reu')?.value || '',
+                        cep_comercial: document.getElementById('cep-comercial-reu')?.value || ''
                     };
                 }
                 
                 function getExpenseDataFromForm() {
+                    // Usa a função do detalhes.js se disponível (mais completa)
+                    if (window.getExpenseDataFromForm && window.getExpenseDataFromForm !== getExpenseDataFromForm) {
+                        return window.getExpenseDataFromForm();
+                    }
                     return {
+                        checkExibirGastos: document.getElementById('check-exibir-gastos')?.checked ?? true,
                         moradia: document.getElementById('expense-moradia')?.value || '',
                         alimentacao: document.getElementById('expense-alimentacao')?.value || '',
                         educacao: document.getElementById('expense-educacao')?.value || '',
