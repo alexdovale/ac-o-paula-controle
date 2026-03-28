@@ -230,11 +230,13 @@ export const PDFService = {
             }
             y += 5;
 
-            // ===== 3. PLANILHA DE GASTOS (CORRIGIDO) =====
+            // ===== 3. PLANILHA DE GASTOS =====
             if (checklistData && checklistData.expenseData) {
-                // Verifica se há ALGUM gasto preenchido (diferente de vazio)
-                const hasExpenses = Object.values(checklistData.expenseData).some(v => 
-                    v && String(v).trim() !== '' && String(v).trim() !== 'R$ 0,00'
+                const expData = checklistData.expenseData;
+                // Só mostra se checkExibirGastos for true E tiver valores preenchidos
+                const gastoAtivo = expData.checkExibirGastos !== false;
+                const hasExpenses = gastoAtivo && Object.entries(expData).some(([k, v]) =>
+                    k !== 'checkExibirGastos' && v && typeof v === 'string' && v.trim() !== '' && v.trim() !== 'R$ 0,00'
                 );
                 
                 if (hasExpenses) {
@@ -307,6 +309,56 @@ export const PDFService = {
                 }
             }
 
+
+            // ===== 4. DADOS DO RÉU =====
+            if (checklistData && checklistData.reuData) {
+                const reu = checklistData.reuData;
+                // Só mostra se checkReuUnico === true e tiver ao menos nome ou endereço
+                const hasReu = reu.checkReuUnico === true && (reu.nome || reu.rua || reu.cep);
+                if (hasReu) {
+                    if (y > pageHeight - 80) { docPDF.addPage(); y = 20; }
+                    docPDF.setFont("helvetica", "bold");
+                    docPDF.setFontSize(11);
+                    docPDF.text("4. DADOS DA PARTE CONTRARIA (REU):", margin, y);
+                    y += 7;
+                    docPDF.setFont("helvetica", "normal");
+                    docPDF.setFontSize(9);
+
+                    const addLinha = (texto) => {
+                        if (y > pageHeight - 20) { docPDF.addPage(); y = 20; }
+                        const safe = texto.replace(/[^ -À-ÿ\s\-\,\.\:\;\!\?\(\)\/\[\]#@$%&*+<>=~^|]/g, '');
+                        const linhas = docPDF.splitTextToSize(safe, pageWidth - 2*margin - 10);
+                        docPDF.text(linhas, margin + 5, y);
+                        y += 5 * linhas.length;
+                    };
+
+                    if (reu.nome)     addLinha(`Nome: ${reu.nome}`);
+                    if (reu.cpf)      addLinha(`CPF: ${reu.cpf}`);
+                    if (reu.telefone) addLinha(`Tel: ${reu.telefone}`);
+                    if (reu.rua) {
+                        let end = `Endereco: ${reu.rua}`;
+                        if (reu.numero) end += `, n ${reu.numero}`;
+                        if (reu.complemento) end += ` - ${reu.complemento}`;
+                        addLinha(end);
+                    }
+                    if (reu.bairro)    addLinha(`Bairro: ${reu.bairro}`);
+                    if (reu.cidade || reu.uf) addLinha(`${reu.cidade || ''}${reu.uf ? ' - ' + reu.uf : ''}`);
+                    if (reu.cep)       addLinha(`CEP: ${reu.cep}`);
+                    if (reu.referencia) addLinha(`Referencia: ${reu.referencia}`);
+                    if (reu.empresa)   addLinha(`Empresa: ${reu.empresa}`);
+                    if (reu.rua_comercial) {
+                        let endC = `End. Comercial: ${reu.rua_comercial}`;
+                        if (reu.numero_comercial) endC += `, n ${reu.numero_comercial}`;
+                        addLinha(endC);
+                    }
+                    if (reu.bairro_comercial) addLinha(`Bairro Comercial: ${reu.bairro_comercial}`);
+                    if (reu.cidade_comercial || reu.uf_comercial) {
+                        addLinha(`${reu.cidade_comercial || ''}${reu.uf_comercial ? ' - ' + reu.uf_comercial : ''}`);
+                    }
+                    if (reu.cep_comercial) addLinha(`CEP Comercial: ${reu.cep_comercial}`);
+                    y += 3;
+                }
+            }
 
             // ===== RODAPÉ =====
             const pageCount = docPDF.internal.getNumberOfPages();
