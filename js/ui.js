@@ -3,24 +3,17 @@ import { escapeHTML, normalizeText, showNotification } from './utils.js';
 import { PautaService } from './pauta.js';
 
 export const UIService = {
-    showScreen(screenName) {-
+    showScreen(screenName) {
         document.getElementById('loading-container').classList.toggle('hidden', screenName !== 'loading');
         document.getElementById('login-container').classList.toggle('hidden', screenName !== 'login');
         document.getElementById('pauta-selection-container').classList.toggle('hidden', screenName !== 'pautaSelection');
         document.getElementById('app-container').classList.toggle('hidden', screenName !== 'app');
     },
 
-    /**
-     * Renderiza os botões de filtro na tela de seleção de pautas
-     */
     renderPautaFilters(containerId, activeFilter, onFilterChange, app) {
         const container = document.getElementById(containerId);
-        if (!container) {
-            console.error(`Container ${containerId} não encontrado`);
-            return;
-        }
+        if (!container) return;
         
-        // Verificar se os elementos de filtro de data já existem
         let dateFiltersHTML = '';
         if (activeFilter === 'periodo') {
             dateFiltersHTML = `
@@ -53,29 +46,16 @@ export const UIService = {
         
         container.innerHTML = `
             <div class="flex flex-wrap gap-2 mb-4 justify-center">
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'all' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="all">
-                    📋 Todas
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'active' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="active">
-                    ✅ Pautas com prazo
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'expired' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="expired">
-                    🔒 Pautas expiradas
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'my' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="my">
-                    👑 Criadas por mim
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'shared' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="shared">
-                    🤝 Compartilhadas
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'periodo' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="periodo">
-                    📅 Período
-                </button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'all' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="all">📋 Todas</button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'active' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="active">✅ Pautas com prazo</button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'expired' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="expired">🔒 Pautas expiradas</button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'my' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="my">👑 Criadas por mim</button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'shared' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="shared">🤝 Compartilhadas</button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'periodo' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="periodo">📅 Período</button>
             </div>
             ${dateFiltersHTML}
         `;
         
-        // Adicionar eventos aos botões
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const filter = btn.dataset.filter;
@@ -83,7 +63,6 @@ export const UIService = {
             });
         });
         
-        // Adicionar evento ao botão de aplicar filtro de período
         const btnAplicar = document.getElementById('aplicar-filtro-periodo');
         if (btnAplicar) {
             btnAplicar.addEventListener('click', () => {
@@ -270,23 +249,22 @@ export const UIService = {
     },
 
     renderAssistedLists(app) {
-        console.log("🎨 renderAssistedLists chamado");
-        
-        if (!app) {
-            console.error("App não definido");
-            return;
-        }
+        if (!app) return;
         
         const allAssisted = app.allAssisted || [];
         const currentPautaData = app.currentPautaData;
         const colaboradores = app.colaboradores || [];
 
-        console.log("allAssisted:", allAssisted.length, "itens");
+        // NOVO: Controle de visibilidade das novas colunas de revisão
+        const useReview = currentPautaData?.useReviewFlow || false;
+        document.getElementById('em-revisao-column')?.classList.toggle('hidden', !useReview);
+        document.getElementById('aguardando-numero-column')?.classList.toggle('hidden', !useReview);
+        document.getElementById('aguardando-correcao-column')?.classList.toggle('hidden', !useReview);
+        document.getElementById('distribuido-column')?.classList.toggle('hidden', !useReview);
+        document.getElementById('review-stats-summary')?.classList.toggle('hidden', !useReview);
 
         if (allAssisted.length === 0) {
-            console.log("Nenhum assistido encontrado");
             this.clearContainers();
-            
             const pautaList = document.getElementById('pauta-list');
             const aguardandoList = document.getElementById('aguardando-list');
             const atendidosList = document.getElementById('atendidos-list');
@@ -295,9 +273,7 @@ export const UIService = {
             if (aguardandoList) aguardandoList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém aguardando</p>';
             if (atendidosList) atendidosList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum atendido</p>';
             
-            this.updateCounters({
-                pauta: 0, aguardando: 0, emAtendimento: 0, atendidos: 0, faltosos: 0, distribuicao: 0
-            });
+            this.updateCounters({ pauta: 0, aguardando: 0, emAtendimento: 0, atendidos: 0, faltosos: 0, distribuicao: 0, emRevisao: 0, aguardandoNumero: 0, aguardandoCorrecao: 0, distribuido: 0 });
             return;
         }
 
@@ -317,17 +293,13 @@ export const UIService = {
             emAtendimento: allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode && this.searchFilter(a, searchTerms.emAtendimento)),
             atendidos: allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && this.searchFilter(a, searchTerms.atendidos)),
             faltosos: allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento' && this.searchFilter(a, searchTerms.faltosos)),
-            distribuicao: allAssisted.filter(a => a.status === 'aguardandoDistribuicao' && this.searchFilter(a, searchTerms.distribuicao))
+            distribuicao: allAssisted.filter(a => a.status === 'aguardandoDistribuicao' && this.searchFilter(a, searchTerms.distribuicao)),
+            // NOVO: Filtros das colunas de revisão
+            emRevisao: allAssisted.filter(a => a.status === 'emRevisao' && this.searchFilter(a, searchTerms.emRevisao)),
+            aguardandoNumero: allAssisted.filter(a => a.status === 'aguardandoNumero' && this.searchFilter(a, searchTerms.aguardandoNumero)),
+            aguardandoCorrecao: allAssisted.filter(a => a.status === 'aguardandoCorrecao' && this.searchFilter(a, searchTerms.aguardandoCorrecao)),
+            distribuido: allAssisted.filter(a => a.status === 'distribuido' && this.searchFilter(a, searchTerms.distribuido))
         };
-
-        console.log("Listas filtradas:", {
-            pauta: lists.pauta.length,
-            aguardando: lists.aguardando.length,
-            emAtendimento: lists.emAtendimento.length,
-            atendidos: lists.atendidos.length,
-            faltosos: lists.faltosos.length,
-            distribuicao: lists.distribuicao.length
-        });
 
         lists.pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
         lists.atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
@@ -341,18 +313,20 @@ export const UIService = {
         this.updateCounters(lists);
         this.clearContainers();
 
-        console.log("Renderizando colunas...");
         this.renderPautaColumn(lists.pauta);
         this.renderAguardandoColumn(lists.aguardando, currentPautaData, colaboradores);
         this.renderEmAtendimentoColumn(lists.emAtendimento, currentPautaData, app.currentPauta?.id, app.currentUserName);
         this.renderAtendidosColumn(lists.atendidos);
         this.renderFaltososColumn(lists.faltosos);
         this.renderDistribuicaoColumn(lists.distribuicao, app.currentPauta?.id, app.currentUserName);
+        
+        // NOVO: Renderizar colunas de revisão
+        if (useReview) {
+            this.renderReviewColumns(lists, app);
+        }
 
         this.togglePautaLock(app);
         setTimeout(() => PautaService.setupManualSort(app), 100);
-        
-        console.log("✅ Renderização concluída");
     },
 
     getSearchTerms() {
@@ -362,7 +336,12 @@ export const UIService = {
             emAtendimento: normalizeText(document.getElementById('em-atendimento-search')?.value || ''),
             atendidos: normalizeText(document.getElementById('atendidos-search')?.value || ''),
             faltosos: normalizeText(document.getElementById('faltosos-search')?.value || ''),
-            distribuicao: normalizeText(document.getElementById('distribuicao-search')?.value || '')
+            distribuicao: normalizeText(document.getElementById('distribuicao-search')?.value || ''),
+            // NOVO: Inputs de busca de revisão
+            emRevisao: normalizeText(document.getElementById('em-revisao-search')?.value || ''),
+            aguardandoNumero: normalizeText(document.getElementById('aguardando-numero-search')?.value || ''),
+            aguardandoCorrecao: normalizeText(document.getElementById('aguardando-correcao-search')?.value || ''),
+            distribuido: normalizeText(document.getElementById('distribuido-search')?.value || '')
         };
     },
 
@@ -393,18 +372,30 @@ export const UIService = {
         const faltososCount = document.getElementById('faltosos-count');
         const distribuicaoCount = document.getElementById('distribuicao-count');
         
-        if (pautaCount) pautaCount.textContent = lists.pauta.length;
-        if (aguardandoCount) aguardandoCount.textContent = lists.aguardando.length;
-        if (emAtendimentoCount) emAtendimentoCount.textContent = lists.emAtendimento.length;
-        if (atendidosCount) atendidosCount.textContent = lists.atendidos.length;
-        if (faltososCount) faltososCount.textContent = lists.faltosos.length;
-        if (distribuicaoCount) distribuicaoCount.textContent = lists.distribuicao.length;
+        // NOVO: Contadores de revisão
+        const emRevisaoCount = document.getElementById('em-revisao-count');
+        const aguardandoNumeroCount = document.getElementById('aguardando-numero-count');
+        const aguardandoCorrecaoCount = document.getElementById('aguardando-correcao-count');
+        const distribuidoCount = document.getElementById('distribuido-count');
+        
+        if (pautaCount) pautaCount.textContent = lists.pauta?.length || 0;
+        if (aguardandoCount) aguardandoCount.textContent = lists.aguardando?.length || 0;
+        if (emAtendimentoCount) emAtendimentoCount.textContent = lists.emAtendimento?.length || 0;
+        if (atendidosCount) atendidosCount.textContent = lists.atendidos?.length || 0;
+        if (faltososCount) faltososCount.textContent = lists.faltosos?.length || 0;
+        if (distribuicaoCount) distribuicaoCount.textContent = lists.distribuicao?.length || 0;
+
+        if (emRevisaoCount) emRevisaoCount.textContent = lists.emRevisao?.length || 0;
+        if (aguardandoNumeroCount) aguardandoNumeroCount.textContent = lists.aguardandoNumero?.length || 0;
+        if (aguardandoCorrecaoCount) aguardandoCorrecaoCount.textContent = lists.aguardandoCorrecao?.length || 0;
+        if (distribuidoCount) distribuidoCount.textContent = lists.distribuido?.length || 0;
     },
 
     clearContainers() {
         const containers = [
             'pauta-list', 'aguardando-list', 'em-atendimento-list', 
-            'atendidos-list', 'faltosos-list', 'distribuicao-list'
+            'atendidos-list', 'faltosos-list', 'distribuicao-list',
+            'em-revisao-list', 'aguardando-numero-list', 'aguardando-correcao-list', 'distribuido-list' // NOVO
         ];
         containers.forEach(id => {
             const el = document.getElementById(id);
@@ -476,7 +467,6 @@ export const UIService = {
             return;
         }
 
-        console.log("Renderizando aguardando:", items.length);
         container.innerHTML = '';
 
         if (currentPautaData?.type === 'multisala' && currentPautaData.rooms?.length > 0) {
@@ -502,7 +492,6 @@ export const UIService = {
         }
     },
 
-    // ui.js - Parte da função createAguardandoCard (localize e substitua)
     createAguardandoCard(item, currentPautaData, colaboradores, index) {
     try {
         if (!item || !item.id) return null;
@@ -512,7 +501,6 @@ export const UIService = {
         card.className = `relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
         card.setAttribute('data-id', item.id);
 
-        // === INDICADORES DE STATUS DO DOCUMENTO ===
         let docStatusHtml = '';
         if (item.selectedAction) {
             let statusColor = 'bg-gray-100 text-gray-600';
@@ -547,13 +535,11 @@ export const UIService = {
                 </div>`;
         }
 
-        // Tratar valores com fallbacks seguros
         const nomeSeguro = item.name || 'Nome não informado';
         const assuntoSeguro = item.subject || 'Assunto não informado';
         const scheduledTimeSeguro = item.scheduledTime || '--:--';
         const priorityReasonSeguro = item.priorityReason || '';
 
-        // Tratar arrivalTime
         let arrivalText = 'Chegada: --:--';
         if (item.arrivalTime) {
             try {
@@ -571,7 +557,6 @@ export const UIService = {
             }
         }
 
-        // NÚMERO DA ORDEM
         const numeroOrdem = index + 1;
         const numeroBadge = `
             <div class="absolute -left-2 -top-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
@@ -579,18 +564,16 @@ export const UIService = {
             </div>
         `;
 
-        // Botão de ação padrão (Atender)
         const atenderButton = currentPautaData?.useDelegationFlow
             ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`
             : `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`;
 
-        // === BOTÃO DE AÇÕES (DROPDOWN) AO LADO DA LIXEIRA ===
         const actionButtonsHTML = `
             <div class="absolute top-2 right-10 flex items-center">
                 <div class="relative">
                     <button data-id="${item.id}" class="quick-action-toggle text-gray-400 hover:text-blue-600 p-1 rounded-full transition-colors" title="Opções de atendimento">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
+                            <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
                         </svg>
                     </button>
                     <div id="quick-menu-${item.id}" class="hidden absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 z-30 py-1">
@@ -640,8 +623,8 @@ export const UIService = {
         } catch (error) {
             console.error("Erro ao criar card de aguardando:", error, item);
              return null;
-                }
-            },
+        }
+    },
     
     renderEmAtendimentoColumn(items, currentPautaData, pautaId, userName) {
         const container = document.getElementById('em-atendimento-list');
@@ -669,6 +652,12 @@ export const UIService = {
             const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
             const linkDireto = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&collaboratorName=${encodeURIComponent(userName)}`;
 
+            // NOVO: Adicionar botão de "Revisão" se o fluxo estiver ativado na pauta
+            let revisaoBtn = '';
+            if (currentPautaData?.useReviewFlow) {
+                revisaoBtn = `<button onclick="window.app.abrirModalEnviarRevisao('${item.id}', '${escapeHTML(item.name || '')}')" class="bg-purple-600 text-white font-bold py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm shadow-md transition active:scale-95 col-span-2 mt-2">Enviar p/ Defensor (Revisão)</button>`;
+            }
+
             card.innerHTML = `
                 <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
@@ -689,6 +678,7 @@ export const UIService = {
                         <button onclick="window.open('${linkDireto}', '_blank')" class="bg-green-500 text-white font-bold py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm shadow-md transition active:scale-95">
                             Finalizar
                         </button>
+                        ${revisaoBtn}
                     </div>
                     <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 text-white font-bold py-2 rounded-lg text-xs md:text-sm shadow-md transition active:scale-95">
                         Voltar p/ Aguardando
@@ -742,7 +732,6 @@ export const UIService = {
                 }
             }
 
-            // Indicador de confirmação (responsivo)
             const confirmButton = item.isConfirmed 
                 ? 'bg-green-500 border-green-500 text-white' 
                 : 'bg-slate-100 text-slate-300';
@@ -856,6 +845,95 @@ export const UIService = {
                     <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white text-[10px] font-bold py-2 rounded hover:bg-cyan-700 uppercase shadow-sm">Painel de Protocolo</button>
                     <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-white text-gray-400 border border-gray-200 text-[9px] py-1 rounded uppercase">Reverter</button>
                 </div>
+            `;
+            container.appendChild(card);
+        });
+    },
+
+    // =========================================================================
+    // NOVOS RENDERIZADORES: FLUXO DE REVISÃO HIERÁRQUICA
+    // =========================================================================
+
+    renderReviewColumns(lists, app) {
+        this.renderEmRevisaoColumn(lists.emRevisao, app);
+        this.renderAguardandoCorrecaoColumn(lists.aguardandoCorrecao, app);
+        this.renderAguardandoNumeroColumn(lists.aguardandoNumero, app);
+        this.renderDistribuidoColumn(lists.distribuido, app);
+    },
+
+    renderEmRevisaoColumn(items, app) {
+        const container = document.getElementById('em-revisao-list');
+        if (!container) return;
+        container.innerHTML = items.length === 0 ? '<p class="text-gray-400 text-center p-4 text-xs">Vazio</p>' : '';
+        const isDefensor = app.currentUserCargo === 'Defensor(a)';
+
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = "bg-white p-3 rounded-lg shadow-sm mb-2 border-l-4 border-purple-500 relative";
+            card.innerHTML = `
+                <p class="font-bold text-sm text-gray-800 pr-6">${escapeHTML(item.name || '')}</p>
+                <p class="text-[10px] text-gray-500 uppercase mt-1">Enviado por: ${escapeHTML(item.reviewData?.sentBy || '---')}</p>
+                ${isDefensor ? `<div class="mt-2 grid grid-cols-2 gap-1">
+                    <button onclick="window.app.abrirModalAprovarRevisao('${item.id}')" class="bg-green-600 text-white font-bold py-1.5 rounded text-[9px] uppercase shadow-sm">Aprovar</button>
+                    <button onclick="window.app.abrirModalDevolverRevisao('${item.id}')" class="bg-orange-500 text-white font-bold py-1.5 rounded text-[9px] uppercase shadow-sm">Devolver</button>
+                </div>` : '<p class="text-[9px] italic text-purple-400 mt-2">Aguardando Defensor...</p>'}
+                <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[10px] font-bold mt-2 text-center underline w-full">Ver Detalhes</button>
+            `;
+            container.appendChild(card);
+        });
+    },
+
+    renderAguardandoCorrecaoColumn(items, app) {
+        const container = document.getElementById('aguardando-correcao-list');
+        if (!container) return;
+        container.innerHTML = items.length === 0 ? '<p class="text-gray-400 text-center p-4 text-xs">Vazio</p>' : '';
+
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = "bg-white p-3 rounded-lg shadow-sm mb-2 border-l-4 border-red-500";
+            card.innerHTML = `
+                <p class="font-bold text-sm text-gray-800">${escapeHTML(item.name || '')}</p>
+                <div class="mt-2 p-2 bg-red-50 text-[10px] text-red-600 italic rounded border border-red-100">
+                    <b>Devolução:</b> ${escapeHTML(item.reviewMotivoDevolucao || '---')}
+                </div>
+                <button onclick="window.app.abrirModalReenviarRevisao('${item.id}')" class="mt-3 w-full bg-purple-600 text-white font-bold py-2 rounded text-[10px] uppercase shadow-sm">Corrigir e Reenviar</button>
+                <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[10px] font-bold mt-2 text-center underline w-full">Ver Detalhes</button>
+            `;
+            container.appendChild(card);
+        });
+    },
+
+    renderAguardandoNumeroColumn(items, app) {
+        const container = document.getElementById('aguardando-numero-list');
+        if (!container) return;
+        container.innerHTML = items.length === 0 ? '<p class="text-gray-400 text-center p-4 text-xs">Vazio</p>' : '';
+        const isDefensor = app.currentUserCargo === 'Defensor(a)';
+
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = "bg-white p-3 rounded-lg shadow-sm mb-2 border-l-4 border-indigo-500";
+            card.innerHTML = `
+                <p class="font-bold text-sm text-gray-800">${escapeHTML(item.name || '')}</p>
+                <p class="text-[10px] text-indigo-600 font-bold uppercase mt-1">Aprovado pelo Defensor</p>
+                ${isDefensor ? `<button onclick="window.app.abrirModalInformarNumero('${item.id}')" class="mt-2 w-full bg-indigo-600 text-white font-bold py-1.5 rounded text-[10px] uppercase shadow-sm">Informar Processo</button>` : '<p class="text-[9px] italic text-gray-400 mt-2">Aguardando inserção de número...</p>'}
+            `;
+            container.appendChild(card);
+        });
+    },
+
+    renderDistribuidoColumn(items, app) {
+        const container = document.getElementById('distribuido-list');
+        if (!container) return;
+        container.innerHTML = items.length === 0 ? '<p class="text-gray-400 text-center p-4 text-xs">Vazio</p>' : '';
+        const isDefensor = app.currentUserCargo === 'Defensor(a)';
+
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = "bg-white p-3 rounded-lg shadow-sm mb-2 border-l-4 border-teal-500";
+            card.innerHTML = `
+                <p class="font-bold text-sm text-gray-800">${escapeHTML(item.name || '')}</p>
+                ${item.processNumber ? `<p class="text-[11px] font-mono text-teal-700 bg-teal-50 px-2 py-1 rounded mt-1 border border-teal-100 font-bold">Nº ${escapeHTML(item.processNumber)}</p>` : ''}
+                ${isDefensor ? `<button onclick="window.app.finalizarRegistroDistribuido('${item.id}')" class="mt-2 w-full bg-teal-600 text-white font-bold py-1.5 rounded text-[10px] uppercase shadow-sm hover:bg-teal-700">Arquivar como Atendido</button>` : ''}
             `;
             container.appendChild(card);
         });
