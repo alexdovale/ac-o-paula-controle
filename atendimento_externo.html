@@ -2,153 +2,404 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Painel do Colaborador - SIGAP</title>
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #16a34a; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .tab-active { border-bottom: 3px solid #16a34a; color: #16a34a; font-weight: 700; }
-        .tab-inactive { color: #9ca3af; font-weight: 500; }
+        * { font-family: 'Inter', sans-serif; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        
+        /* Animações */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .animate-fadeInUp { animation: fadeInUp 0.4s ease-out; }
+        .animate-pulse-fast { animation: pulse 0.5s ease-in-out; }
+        
+        /* Scrollbar customizada */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Tabs animadas */
+        .tab-transition { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .tab-active { 
+            border-bottom: 3px solid #10b981; 
+            color: #10b981; 
+            font-weight: 700;
+            background: linear-gradient(to top, #f0fdf4, transparent);
+        }
+        
+        /* Cards com efeito glass */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Badge status */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        
+        /* Loader moderno */
+        .modern-loader {
+            width: 48px;
+            height: 48px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #10b981;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Botões com feedback */
+        .btn-press:active { transform: scale(0.96); transition: transform 0.1s; }
+        
+        /* Inputs focados */
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            ring: 2px solid #10b981;
+            border-color: #10b981;
+        }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-2 md:p-4">
+<body class="flex items-center justify-center">
 
-    <!-- Camada de Carregamento -->
-    <div id="loading" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
-        <div class="loader"></div>
-        <p class="mt-4 text-gray-600 font-semibold text-sm">Sincronizando com o sistema...</p>
-    </div>
-
-    <!-- Container de Erro -->
-    <div id="expired-container" class="hidden bg-white p-8 rounded-xl shadow-lg text-center max-w-md w-full border-t-8 border-red-500">
-        <div class="text-5xl mb-4">⚠️</div>
-        <h2 class="text-xl font-bold text-gray-800 mb-2 uppercase">Acesso Indisponível</h2>
-        <p id="error-message" class="text-gray-600 text-sm">O registro não foi encontrado ou as permissões de acesso foram negadas pelo servidor.</p>
-        <div class="mt-6 flex flex-col gap-2">
-            <button onclick="location.reload()" class="bg-green-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-green-700 transition">Tentar Novamente</button>
-            <button onclick="window.close()" class="text-gray-400 text-[10px] uppercase font-bold hover:underline">Fechar esta aba</button>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-[200]">
+        <div class="bg-white rounded-2xl p-8 flex flex-col items-center shadow-2xl">
+            <div class="modern-loader"></div>
+            <p id="loading-text" class="mt-4 text-gray-600 font-semibold text-sm">Carregando dados do atendimento...</p>
         </div>
     </div>
 
-    <!-- Painel Principal -->
-    <main id="main-card" class="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden hidden flex flex-col h-[95vh] md:h-auto">
+    <!-- Container Principal -->
+    <div id="main-container" class="w-full max-w-5xl hidden animate-fadeInUp">
         
-        <!-- Cabeçalho -->
-        <div id="header-bg" class="bg-green-600 p-5 text-white text-center flex-shrink-0 transition-colors duration-500">
-            <h1 class="text-lg font-bold uppercase tracking-tight">Finalização de Atendimento</h1>
-            <p id="pauta-mode-text" class="text-[9px] opacity-90 mt-1 uppercase tracking-widest font-bold">Painel Externo - SIGAP</p>
-        </div>
-
-        <!-- Info do Assistido -->
-        <div class="p-4 bg-gray-50 border-b flex-shrink-0">
-            <h2 id="assisted-name" class="text-lg font-bold text-gray-800 text-center uppercase">---</h2>
-            <p id="assisted-subject" class="text-xs text-gray-500 text-center mt-0.5">---</p>
-        </div>
-
-        <!-- Menu de Abas -->
-        <div class="flex border-b shrink-0 bg-white">
-            <button id="tab-finish" class="flex-1 py-3 text-[10px] uppercase tab-active">Encerrar Registro</button>
-            <button id="tab-docs" class="flex-1 py-3 text-[10px] uppercase tab-inactive">Consultar Triagem</button>
-        </div>
-
-        <!-- Área de Conteúdo -->
-        <div class="flex-grow overflow-y-auto p-4 md:p-6 space-y-6">
+        <!-- Card Principal -->
+        <div class="glass-card overflow-hidden">
             
-            <div id="content-finish" class="space-y-6">
-                <!-- Nome Atendente -->
-                <div>
-                    <label class="block text-[10px] font-black text-gray-400 uppercase mb-1 tracking-wider">Nome do Atendente Responsável</label>
-                    <input type="text" id="attendant-name" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 font-bold text-gray-700 outline-none transition-all" placeholder="Seu nome completo">
+            <!-- Header Gradiente -->
+            <div id="header-bg" class="relative bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white">
+                <div class="absolute top-4 right-4">
+                    <span id="mode-badge" class="bg-white bg-opacity-20 backdrop-blur-sm px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                        Modo Colaborador
+                    </span>
                 </div>
-
-                <!-- Demandas Adicionais -->
-                <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                    <label class="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-wider">Outras demandas identificadas</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="new-demand-input" class="flex-grow p-2 border border-gray-300 rounded-lg text-sm" placeholder="Ex: Divórcio, Alimentos...">
-                        <button id="add-demand-btn" class="bg-slate-800 text-white px-3 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-black transition">Add</button>
-                    </div>
-                    <ul id="demands-list" class="mt-3 space-y-1.5"></ul>
+                <div class="text-center">
+                    <i class="fas fa-user-check text-4xl mb-3 opacity-90"></i>
+                    <h1 class="text-xl font-black uppercase tracking-wider">Painel do Colaborador</h1>
+                    <p class="text-[11px] opacity-90 mt-1">Sistema de Gerenciamento de Pauta - SIGAP</p>
                 </div>
-
-                <!-- FLUXO COM DISTRIBUIÇÃO -->
-                <div id="ui-distribution" class="hidden border-t pt-4 space-y-4">
-                    <div id="step-signature" class="text-center space-y-4">
-                        <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                            <p class="text-yellow-800 font-bold text-xs uppercase">✍️ Passo 1: Assinatura</p>
-                            <p class="text-[10px] text-yellow-600">Confirme se a petição foi devidamente assinada pelo assistido.</p>
+            </div>
+            
+            <!-- Info do Assistido -->
+            <div class="p-5 bg-gradient-to-br from-gray-50 to-white border-b">
+                <div class="flex items-center justify-between flex-wrap gap-3">
+                    <div class="flex-1">
+                        <h2 id="assisted-name" class="text-2xl font-black text-gray-800">---</h2>
+                        <div class="flex items-center gap-2 mt-1 flex-wrap">
+                            <span id="assisted-subject" class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">---</span>
+                            <span id="assisted-status-badge" class="status-badge hidden"></span>
                         </div>
-                        <button id="btn-confirm-signature" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-black py-4 rounded-xl shadow uppercase text-sm active:scale-95 transition-all">
-                            Confirmar Assinatura e Seguir
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[10px] text-gray-400 uppercase font-bold">Protocolo</p>
+                        <p id="process-number-display" class="text-xs font-mono text-gray-600">---</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tabs Modernas -->
+            <div class="flex border-b bg-white px-2 gap-1">
+                <button id="tab-finish" class="tab-transition flex items-center gap-2 px-5 py-3 text-sm font-semibold tab-active">
+                    <i class="fas fa-check-circle text-sm"></i>
+                    <span>Encerrar Atendimento</span>
+                </button>
+                <button id="tab-history" class="tab-transition flex items-center gap-2 px-5 py-3 text-sm font-semibold text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-history text-sm"></i>
+                    <span>Histórico do Assistido</span>
+                </button>
+                <button id="tab-docs" class="tab-transition flex items-center gap-2 px-5 py-3 text-sm font-semibold text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-file-alt text-sm"></i>
+                    <span>Documentos e Triagem</span>
+                </button>
+            </div>
+            
+            <!-- Área de Conteúdo Scrollável -->
+            <div class="h-[calc(100vh-450px)] min-h-[500px] overflow-y-auto p-6 bg-gray-50">
+                
+                <!-- ABA 1: FINALIZAR ATENDIMENTO -->
+                <div id="content-finish" class="space-y-6">
+                    
+                    <!-- Card de Boas-vindas -->
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100">
+                        <div class="flex items-start gap-3">
+                            <i class="fas fa-info-circle text-blue-500 text-xl mt-0.5"></i>
+                            <div>
+                                <p class="text-xs text-blue-800 font-semibold">Instruções</p>
+                                <p class="text-[11px] text-blue-600 mt-1">Preencha os campos abaixo para finalizar o atendimento. O sistema registrará automaticamente todas as informações.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Nome do Atendente -->
+                    <div>
+                        <label class="block text-[11px] font-black text-gray-500 uppercase mb-2 tracking-wider">
+                            <i class="fas fa-user mr-1"></i> Seu Nome Completo
+                        </label>
+                        <input type="text" id="attendant-name" 
+                               class="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all font-semibold" 
+                               placeholder="Digite seu nome completo">
+                    </div>
+                    
+                    <!-- Demandas Adicionais -->
+                    <div class="bg-white p-4 rounded-xl border-2 border-gray-100">
+                        <label class="block text-[11px] font-black text-gray-500 uppercase mb-3 tracking-wider">
+                            <i class="fas fa-clipboard-list mr-1"></i> Demandas Adicionais Identificadas
+                        </label>
+                        <div class="flex gap-2 mb-3">
+                            <input type="text" id="new-demand-input" class="flex-grow p-3 border-2 border-gray-200 rounded-xl text-sm" 
+                                   placeholder="Ex: Ação de Alimentos, Divórcio Consensual...">
+                            <button id="add-demand-btn" class="bg-emerald-600 text-white px-5 py-3 rounded-xl text-xs font-bold hover:bg-emerald-700 transition btn-press">
+                                <i class="fas fa-plus mr-1"></i> Adicionar
+                            </button>
+                        </div>
+                        <div id="demands-list" class="space-y-2 max-h-48 overflow-y-auto"></div>
+                        <p id="no-demands-msg" class="text-[10px] text-gray-400 text-center py-3">Nenhuma demanda adicional registrada</p>
+                    </div>
+                    
+                    <!-- SELEÇÃO DE MODO DE FLUXO -->
+                    <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border-2 border-purple-100">
+                        <div class="flex items-center gap-2 mb-3">
+                            <i class="fas fa-code-branch text-purple-600"></i>
+                            <h3 class="text-sm font-black text-purple-800 uppercase tracking-wide">Escolha o Fluxo de Trabalho</h3>
+                        </div>
+                        <p class="text-[10px] text-purple-600 mb-3">Selecione como este atendimento será finalizado:</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <label class="flex items-start p-3 bg-white rounded-xl border-2 border-gray-200 cursor-pointer hover:border-emerald-300 transition-all">
+                                <input type="radio" name="flow-mode" value="standard" class="mt-1 mr-3" checked>
+                                <div>
+                                    <span class="font-bold text-gray-800 text-sm">✅ Finalização Direta</span>
+                                    <p class="text-[10px] text-gray-500">Encerra o atendimento imediatamente, marcando como concluído.</p>
+                                </div>
+                            </label>
+                            <label class="flex items-start p-3 bg-white rounded-xl border-2 border-gray-200 cursor-pointer hover:border-purple-300 transition-all">
+                                <input type="radio" name="flow-mode" value="distribution" class="mt-1 mr-3">
+                                <div>
+                                    <span class="font-bold text-gray-800 text-sm">⚖️ Fluxo com Distribuição</span>
+                                    <p class="text-[10px] text-gray-500">Encaminha para revisão ou distribuição (fluxo completo).</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- FLUXO PADRÃO (Direto) -->
+                    <div id="ui-standard" class="block">
+                        <button id="btn-standard-finish" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-xl shadow-lg transition-all btn-press text-sm uppercase tracking-wider">
+                            <i class="fas fa-check-double mr-2"></i> Encerrar Atendimento
                         </button>
                     </div>
-
-                    <div id="step-decision" class="hidden space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-400">
-                            <p class="text-orange-800 font-bold text-xs uppercase">⚠️ Mensagem de Atenção</p>
-                            <p class="text-[11px] text-orange-700 leading-relaxed mt-1">
-                                Você está finalizando este atendimento. O processo já foi <b>distribuído/protocolado</b> agora ou o assistido deve <b>aguardar a distribuição</b> pela secretaria?
-                            </p>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <button id="btn-wait-dist" class="flex flex-col items-center justify-center p-4 border-2 border-cyan-500 rounded-xl hover:bg-cyan-50 transition-all active:scale-95">
-                                <span class="block text-2xl mb-1">⚖️</span>
-                                <span class="text-[10px] font-black text-cyan-700 uppercase">Aguardar Distribuição</span>
-                            </button>
-
-                            <button id="btn-show-fields" class="flex flex-col items-center justify-center p-4 border-2 border-green-500 rounded-xl hover:bg-green-50 transition-all active:scale-95">
-                                <span class="block text-2xl mb-1">✅</span>
-                                <span class="text-[10px] font-black text-green-700 uppercase tracking-tighter">Já foi Distribuído</span>
+                    
+                    <!-- FLUXO COM DISTRIBUIÇÃO (Completo) -->
+                    <div id="ui-distribution" class="hidden space-y-4">
+                        <!-- Passo 1: Assinatura -->
+                        <div id="step-signature" class="bg-yellow-50 p-5 rounded-xl border-2 border-yellow-200">
+                            <div class="flex items-center gap-3 mb-3">
+                                <i class="fas fa-signature text-yellow-600 text-2xl"></i>
+                                <div>
+                                    <p class="font-black text-yellow-800 text-sm uppercase">Passo 1 - Assinatura</p>
+                                    <p class="text-[10px] text-yellow-700">Confirme que a documentação foi assinada pelo assistido</p>
+                                </div>
+                            </div>
+                            <button id="btn-confirm-signature" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 rounded-xl transition btn-press text-sm">
+                                <i class="fas fa-check-circle mr-2"></i> Confirmar Assinatura
                             </button>
                         </div>
-
-                        <div id="fields-protocol" class="hidden bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
-                             <input type="text" id="input-process-number" class="w-full p-3 border rounded-lg text-sm font-mono" placeholder="Nº do Processo">
-                             <select id="select-defensor" class="w-full p-3 border rounded-lg text-sm bg-white font-semibold">
-                                <option value="">Selecione o Defensor Responsável...</option>
-                             </select>
-                             <input type="file" id="input-pdf" accept="application/pdf" class="w-full text-[10px] text-gray-400">
-                             <button id="btn-final-finish-dist" class="w-full bg-green-600 text-white font-black py-4 rounded-xl uppercase text-xs shadow-lg">Finalizar Agora</button>
+                        
+                        <!-- Passo 2: Decisão -->
+                        <div id="step-decision" class="hidden space-y-4">
+                            <div class="bg-orange-50 p-4 rounded-xl border-l-4 border-orange-400">
+                                <i class="fas fa-exclamation-triangle text-orange-500 mr-2"></i>
+                                <span class="text-xs text-orange-800 font-semibold">O processo já foi distribuído/protocolado ou precisa aguardar?</span>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-3">
+                                <button id="btn-wait-dist" class="flex flex-col items-center gap-2 p-4 bg-white border-2 border-cyan-300 rounded-xl hover:bg-cyan-50 transition btn-press">
+                                    <i class="fas fa-clock text-cyan-600 text-2xl"></i>
+                                    <span class="text-[11px] font-bold text-cyan-700">Aguardar Distribuição</span>
+                                </button>
+                                <button id="btn-show-fields" class="flex flex-col items-center gap-2 p-4 bg-white border-2 border-emerald-300 rounded-xl hover:bg-emerald-50 transition btn-press">
+                                    <i class="fas fa-check-double text-emerald-600 text-2xl"></i>
+                                    <span class="text-[11px] font-bold text-emerald-700">Já foi Distribuído</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Campos para protocolo -->
+                            <div id="fields-protocol" class="hidden bg-white p-4 rounded-xl border-2 border-gray-200 space-y-3">
+                                <div>
+                                    <label class="text-[10px] font-bold text-gray-600 uppercase">Número do Processo</label>
+                                    <input type="text" id="input-process-number" class="w-full p-3 border rounded-xl font-mono text-sm" placeholder="0000.00.00.0000">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-gray-600 uppercase">Destinatário / Defensor</label>
+                                    <select id="select-defensor" class="w-full p-3 border rounded-xl bg-white text-sm">
+                                        <option value="">Selecione o responsável...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-gray-600 uppercase">Anexar Documento (PDF)</label>
+                                    <input type="file" id="input-pdf" accept="application/pdf" class="w-full text-[10px] text-gray-500">
+                                </div>
+                                <button id="btn-final-finish-dist" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl transition btn-press">
+                                    <i class="fas fa-paper-plane mr-2"></i> Finalizar e Distribuir
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Fluxo de Revisão Hierárquica -->
+                        <div id="review-flow-container" class="hidden border-t-2 border-purple-200 pt-4 mt-4">
+                            <div class="bg-purple-50 p-4 rounded-xl">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="fas fa-layer-group text-purple-600"></i>
+                                    <span class="text-xs font-black text-purple-800 uppercase">Modo Revisão Hierárquica</span>
+                                </div>
+                                <div class="space-y-2">
+                                    <button id="btn-send-review" class="w-full bg-purple-600 text-white font-bold py-3 rounded-xl transition btn-press text-sm">
+                                        <i class="fas fa-share mr-2"></i> Enviar para Revisão
+                                    </button>
+                                    <p class="text-[9px] text-purple-600 text-center">O defensor revisará antes da distribuição final</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- FLUXO PADRÃO -->
-                <div id="ui-standard" class="hidden border-t pt-4">
-                    <button id="btn-standard-finish" class="w-full bg-green-600 hover:bg-green-700 text-white font-black py-5 rounded-xl shadow-xl transition-all uppercase tracking-widest">
-                        Encerrar Atendimento
-                    </button>
+                
+                <!-- ABA 2: HISTÓRICO DO ASSISTIDO -->
+                <div id="content-history" class="hidden space-y-6">
+                    <div class="bg-white rounded-xl border-2 border-gray-100 overflow-hidden">
+                        <div class="bg-gray-50 p-4 border-b">
+                            <h3 class="text-sm font-black text-gray-700">
+                                <i class="fas fa-timeline mr-2 text-emerald-600"></i> Linha do Tempo
+                            </h3>
+                        </div>
+                        <div id="timeline-container" class="p-4 space-y-4 max-h-[500px] overflow-y-auto">
+                            <p class="text-center text-gray-400 text-xs py-8">Carregando histórico...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Próximos Agendamentos -->
+                    <div class="bg-white rounded-xl border-2 border-gray-100">
+                        <div class="bg-gray-50 p-4 border-b">
+                            <h3 class="text-sm font-black text-gray-700">
+                                <i class="fas fa-calendar-alt mr-2 text-emerald-600"></i> Próximos Agendamentos
+                            </h3>
+                        </div>
+                        <div id="future-appointments" class="p-4">
+                            <p class="text-center text-gray-400 text-xs py-4">Nenhum agendamento futuro encontrado</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Atendimentos Anteriores -->
+                    <div class="bg-white rounded-xl border-2 border-gray-100">
+                        <div class="bg-gray-50 p-4 border-b">
+                            <h3 class="text-sm font-black text-gray-700">
+                                <i class="fas fa-check-circle mr-2 text-emerald-600"></i> Atendimentos Realizados
+                            </h3>
+                        </div>
+                        <div id="past-attendances" class="p-4 space-y-3">
+                            <p class="text-center text-gray-400 text-xs py-4">Nenhum atendimento anterior registrado</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ABA 3: DOCUMENTOS E TRIAGEM -->
+                <div id="content-docs" class="hidden space-y-6">
+                    <!-- Checklist de Documentos -->
+                    <div class="bg-white rounded-xl border-2 border-gray-100">
+                        <div class="bg-gray-50 p-4 border-b">
+                            <h3 class="text-sm font-black text-gray-700">
+                                <i class="fas fa-check-square mr-2 text-emerald-600"></i> Documentos Conferidos
+                            </h3>
+                        </div>
+                        <div id="checklist-container" class="p-4 space-y-2 max-h-[300px] overflow-y-auto"></div>
+                    </div>
+                    
+                    <!-- Dados do Réu -->
+                    <div id="reu-container" class="hidden bg-blue-50 rounded-xl border-2 border-blue-100">
+                        <div class="bg-blue-100 p-3 rounded-t-xl">
+                            <h3 class="text-sm font-black text-blue-800">
+                                <i class="fas fa-gavel mr-2"></i> Dados do Réu
+                            </h3>
+                        </div>
+                        <div id="reu-content" class="p-4 space-y-2 text-sm"></div>
+                    </div>
+                    
+                    <!-- Dados de Gastos -->
+                    <div id="expenses-container" class="hidden bg-green-50 rounded-xl border-2 border-green-100">
+                        <div class="bg-green-100 p-3 rounded-t-xl">
+                            <h3 class="text-sm font-black text-green-800">
+                                <i class="fas fa-chart-line mr-2"></i> Demonstrativo de Gastos
+                            </h3>
+                        </div>
+                        <div id="expenses-content" class="p-4 space-y-2 text-sm"></div>
+                    </div>
+                    
+                    <!-- Histórico de Revisões -->
+                    <div id="review-history-container" class="hidden bg-purple-50 rounded-xl border-2 border-purple-100">
+                        <div class="bg-purple-100 p-3 rounded-t-xl">
+                            <h3 class="text-sm font-black text-purple-800">
+                                <i class="fas fa-code-branch mr-2"></i> Histórico de Revisões
+                            </h3>
+                        </div>
+                        <div id="review-history-content" class="p-4 space-y-3 max-h-[300px] overflow-y-auto"></div>
+                    </div>
                 </div>
             </div>
-
-            <!-- ABA DOCUMENTOS -->
-            <div id="content-docs" class="hidden space-y-4">
-                <div id="checklist-container" class="space-y-2"></div>
-                <div id="reu-container" class="hidden p-4 bg-blue-50 border border-blue-100 rounded-xl text-xs">
-                    <h3 class="text-[10px] font-black text-blue-800 uppercase mb-2 border-b border-blue-200 pb-1">Dados do Réu</h3>
-                    <div id="reu-content" class="space-y-1"></div>
-                </div>
+        </div>
+    </div>
+    
+    <!-- Overlay de Sucesso -->
+    <div id="success-overlay" class="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-[300] hidden">
+        <div class="bg-white rounded-2xl p-8 text-center max-w-md mx-4 animate-fadeInUp">
+            <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-check text-emerald-600 text-4xl"></i>
             </div>
-
+            <h3 class="text-2xl font-black text-gray-800 mb-2">Sucesso!</h3>
+            <p id="success-msg" class="text-gray-600 mb-4">Atendimento finalizado com sucesso.</p>
+            <button onclick="location.reload()" class="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-emerald-700 transition btn-press">
+                <i class="fas fa-home mr-2"></i> Voltar ao Início
+            </button>
         </div>
-        
-        <!--Overlay Sucesso -->
-        <div id="success-overlay" class="absolute inset-0 bg-white flex flex-col items-center justify-center z-[100] hidden text-center p-6">
-            <div class="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-5xl mb-6 shadow-inner border-4 border-green-200">✓</div>
-            <h3 class="text-3xl font-black text-gray-800 uppercase tracking-tighter">Sucesso!</h3>
-            <p id="success-msg" class="text-gray-500 mt-2 font-medium">O registro foi processado corretamente.</p>
-            <p class="text-[10px] text-gray-400 mt-10">Você já pode fechar esta aba.</p>
-        </div>
-    </main>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = { 
             apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", 
@@ -165,157 +416,476 @@
         const urlParams = new URLSearchParams(window.location.search);
         const pautaId = urlParams.get('pautaId');
         const assistidoId = urlParams.get('assistidoId');
-        let useDist = false;
+        
+        let currentAssistedData = null;
+        let currentPautaData = null;
 
         async function init() {
             if (!pautaId || !assistidoId) {
-                document.getElementById('loading').innerHTML = "<p class='text-red-500 font-bold'>Erro: Link incompleto.</p>";
+                document.getElementById('loading-overlay').innerHTML = "<div class='bg-white p-8 rounded-2xl text-center'><i class='fas fa-exclamation-triangle text-red-500 text-5xl mb-4'></i><p class='text-red-600 font-bold'>Erro: Link incompleto.</p></div>";
                 return;
             }
 
             try {
-                const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
-                const pSnap = await getDoc(doc(db, "pautas", pautaId));
-                const snap = await getDoc(docRef);
-
-                if (snap.exists()) {
-                    const data = snap.data();
-                    const pData = pSnap.exists() ? pSnap.data() : {};
-                    useDist = pData.useDistributionFlow || false;
-
-                    if (data.status === 'atendido' && data.finalizadoPeloColaborador) {
-                        document.getElementById('loading').classList.add('hidden');
-                        document.getElementById('expired-container').classList.remove('hidden');
-                        return;
-                    }
-
-                    document.getElementById('assisted-name').textContent = data.name;
-                    document.getElementById('assisted-subject').textContent = data.subject;
-                    document.getElementById('attendant-name').value = urlParams.get('collaboratorName') || '';
-
-                    if (useDist) {
-                        document.getElementById('ui-distribution').classList.remove('hidden');
-                        document.getElementById('header-bg').className = "bg-cyan-700 p-5 text-white text-center flex-shrink-0";
-                        document.getElementById('pauta-mode-text').textContent = "MODO: ATENDIMENTO COM DISTRIBUIÇÃO";
-                        loadDefensores();
-                    } else {
-                        document.getElementById('ui-standard').classList.remove('hidden');
-                        document.getElementById('section-signature').classList.add('hidden');
-                    }
-
-                    renderChecklist(data.documentChecklist);
-                    document.getElementById('main-card').classList.remove('hidden');
-                    document.getElementById('loading').classList.add('hidden');
-                } else {
-                    document.getElementById('loading').innerHTML = "Registro não encontrado.";
+                // Carregar dados do assistido
+                const assistedRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
+                const assistedSnap = await getDoc(assistedRef);
+                
+                // Carregar dados da pauta
+                const pautaRef = doc(db, "pautas", pautaId);
+                const pautaSnap = await getDoc(pautaRef);
+                
+                if (!assistedSnap.exists()) {
+                    throw new Error("Assistido não encontrado");
                 }
-            } catch (e) {
-                console.error("Erro Firebase:", e);
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('expired-container').classList.remove('hidden');
-                document.getElementById('error-message').innerHTML = "<b>Erro de Permissão</b><br>As regras do banco de dados estão bloqueando este acesso. Verifique se as Rules foram publicadas.";
+                
+                currentAssistedData = assistedSnap.data();
+                currentPautaData = pautaSnap.exists() ? pautaSnap.data() : {};
+                
+                // Verificar se já foi finalizado
+                if (currentAssistedData.status === 'atendido' && currentAssistedData.finalizadoPeloColaborador) {
+                    showError("Este atendimento já foi finalizado anteriormente.");
+                    return;
+                }
+                
+                // Preencher informações do assistido
+                document.getElementById('assisted-name').textContent = currentAssistedData.name || '---';
+                document.getElementById('assisted-subject').textContent = currentAssistedData.subject || 'Sem assunto definido';
+                
+                if (currentAssistedData.processNumber) {
+                    document.getElementById('process-number-display').textContent = currentAssistedData.processNumber;
+                }
+                
+                // Configurar badge de status
+                const statusBadge = document.getElementById('assisted-status-badge');
+                const statusMap = {
+                    'pauta': { icon: 'fa-list', text: 'Na Pauta', color: 'bg-gray-100 text-gray-700' },
+                    'aguardando': { icon: 'fa-hourglass-half', text: 'Aguardando', color: 'bg-yellow-100 text-yellow-700' },
+                    'emAtendimento': { icon: 'fa-user-check', text: 'Em Atendimento', color: 'bg-blue-100 text-blue-700' },
+                    'emRevisao': { icon: 'fa-search', text: 'Em Revisão', color: 'bg-purple-100 text-purple-700' },
+                    'aguardandoCorrecao': { icon: 'fa-edit', text: 'Aguardando Correção', color: 'bg-orange-100 text-orange-700' },
+                    'aguardandoNumero': { icon: 'fa-hashtag', text: 'Aguardando Número', color: 'bg-cyan-100 text-cyan-700' },
+                    'distribuido': { icon: 'fa-paper-plane', text: 'Distribuído', color: 'bg-emerald-100 text-emerald-700' }
+                };
+                
+                const statusInfo = statusMap[currentAssistedData.status] || { icon: 'fa-question', text: currentAssistedData.status || 'Desconhecido', color: 'bg-gray-100 text-gray-700' };
+                statusBadge.innerHTML = `<i class="fas ${statusInfo.icon} mr-1"></i> ${statusInfo.text}`;
+                statusBadge.className = `status-badge ${statusInfo.color}`;
+                statusBadge.classList.remove('hidden');
+                
+                // Preencher nome do atendente
+                const collaboratorName = urlParams.get('collaboratorName');
+                if (collaboratorName) {
+                    document.getElementById('attendant-name').value = collaboratorName;
+                }
+                
+                // Configurar fluxos baseado na configuração da pauta
+                setupFlows();
+                
+                // Carregar demandas existentes
+                loadExistingDemands();
+                
+                // Carregar histórico
+                await loadAssistedHistory();
+                
+                // Carregar checklist
+                renderChecklist(currentAssistedData.documentChecklist);
+                
+                // Carregar dados do réu e gastos
+                loadAdditionalData();
+                
+                // Carregar defensores se necessário
+                await loadDefensores();
+                
+                // Mostrar container principal
+                document.getElementById('loading-overlay').classList.add('hidden');
+                document.getElementById('main-container').classList.remove('hidden');
+                
+            } catch (error) {
+                console.error("Erro ao carregar:", error);
+                showError(error.message || "Erro ao carregar dados do atendimento.");
             }
         }
-
+        
+        function setupFlows() {
+            const useDistribution = currentPautaData.useDistributionFlow || false;
+            const useReviewFlow = currentPautaData.useReviewFlow || false;
+            
+            if (useReviewFlow) {
+                // Mostrar opção de revisão hierárquica
+                document.getElementById('review-flow-container').classList.remove('hidden');
+                document.getElementById('header-bg').className = "relative bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white";
+                document.getElementById('mode-badge').innerHTML = '<i class="fas fa-layer-group mr-1"></i> Modo Revisão Hierárquica';
+            } else if (useDistribution) {
+                document.getElementById('ui-distribution').classList.remove('hidden');
+                document.getElementById('ui-standard').classList.add('hidden');
+                document.getElementById('header-bg').className = "relative bg-gradient-to-r from-cyan-600 to-blue-600 p-6 text-white";
+                document.getElementById('mode-badge').innerHTML = '<i class="fas fa-balance-scale mr-1"></i> Modo Distribuição';
+            } else {
+                document.getElementById('ui-standard').classList.remove('hidden');
+                document.getElementById('ui-distribution').classList.add('hidden');
+                document.getElementById('header-bg').className = "relative bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white";
+                document.getElementById('mode-badge').innerHTML = '<i class="fas fa-check-circle mr-1"></i> Modo Direto';
+            }
+        }
+        
+        function loadExistingDemands() {
+            const demands = currentAssistedData.demandas?.descricoes || [];
+            const container = document.getElementById('demands-list');
+            const noDemandsMsg = document.getElementById('no-demands-msg');
+            
+            if (demands.length > 0) {
+                noDemandsMsg.classList.add('hidden');
+                demands.forEach(demand => {
+                    addDemandToList(demand);
+                });
+            }
+        }
+        
+        function addDemandToList(text) {
+            const container = document.getElementById('demands-list');
+            const noDemandsMsg = document.getElementById('no-demands-msg');
+            noDemandsMsg.classList.add('hidden');
+            
+            const li = document.createElement('div');
+            li.className = "flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-200";
+            li.innerHTML = `
+                <span class="text-sm text-gray-700">${escapeHtml(text)}</span>
+                <button class="remove-demand text-red-400 hover:text-red-600 transition">
+                    <i class="fas fa-trash-alt text-xs"></i>
+                </button>
+            `;
+            li.querySelector('.remove-demand').onclick = () => li.remove();
+            container.appendChild(li);
+        }
+        
+        async function loadAssistedHistory() {
+            try {
+                // Buscar histórico de revisões
+                const history = currentAssistedData.reviewHistory || [];
+                const timelineContainer = document.getElementById('timeline-container');
+                
+                if (history.length === 0) {
+                    timelineContainer.innerHTML = '<p class="text-center text-gray-400 text-xs py-8">Nenhum registro de histórico encontrado</p>';
+                } else {
+                    timelineContainer.innerHTML = history.reverse().map(item => `
+                        <div class="flex gap-3 p-3 bg-gray-50 rounded-lg border-l-4 border-emerald-400">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                                    <i class="fas ${getActionIcon(item.action)} text-emerald-600 text-xs"></i>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex justify-between items-start flex-wrap gap-2">
+                                    <span class="text-xs font-bold text-gray-700">${getActionLabel(item.action)}</span>
+                                    <span class="text-[9px] text-gray-400">${new Date(item.timestamp).toLocaleString('pt-BR')}</span>
+                                </div>
+                                <p class="text-[10px] text-gray-600 mt-1">${item.notes || 'Sem observações'}</p>
+                                ${item.processNumber ? `<p class="text-[9px] font-mono text-blue-600 mt-1">Processo: ${item.processNumber}</p>` : ''}
+                                ${item.byName ? `<p class="text-[9px] text-gray-400 mt-1">Por: ${item.byName}</p>` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                
+                // Buscar agendamentos futuros (simulado - pode expandir)
+                const futureContainer = document.getElementById('future-appointments');
+                futureContainer.innerHTML = '<p class="text-center text-gray-400 text-xs py-4">Nenhum agendamento futuro encontrado</p>';
+                
+                // Atendimentos anteriores (mesma pauta)
+                const pastContainer = document.getElementById('past-attendances');
+                pastContainer.innerHTML = '<p class="text-center text-gray-400 text-xs py-4">Nenhum atendimento anterior registrado</p>';
+                
+            } catch (error) {
+                console.error("Erro ao carregar histórico:", error);
+            }
+        }
+        
+        function getActionIcon(action) {
+            const icons = {
+                'sent_to_review': 'fa-share',
+                'approved_with_number': 'fa-check-circle',
+                'returned_for_correction': 'fa-undo',
+                'resend_after_correction': 'fa-redo',
+                'distributed': 'fa-paper-plane'
+            };
+            return icons[action] || 'fa-clock';
+        }
+        
+        function getActionLabel(action) {
+            const labels = {
+                'sent_to_review': 'Enviado para Revisão',
+                'approved_with_number': 'Aprovado com Número',
+                'returned_for_correction': 'Devolvido para Correção',
+                'resend_after_correction': 'Reenviado após Correção',
+                'distributed': 'Distribuído'
+            };
+            return labels[action] || 'Atualização de Status';
+        }
+        
+        function renderChecklist(checklist) {
+            const container = document.getElementById('checklist-container');
+            if (!checklist || !checklist.checkedIds || checklist.checkedIds.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-400 text-xs py-8"><i class="fas fa-folder-open mr-2"></i>Nenhum documento registrado na triagem</p>';
+                return;
+            }
+            
+            const docTypes = checklist.docTypes || {};
+            container.innerHTML = checklist.checkedIds.map(id => `
+                <div class="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                    <i class="fas fa-check-circle text-green-500"></i>
+                    <div class="flex-1">
+                        <span class="text-sm font-medium text-gray-700">${id}</span>
+                        <span class="text-[10px] text-gray-500 ml-2">(${docTypes[id] || 'Físico'})</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function loadAdditionalData() {
+            const checklist = currentAssistedData.documentChecklist;
+            
+            // Dados do Réu
+            if (checklist?.reuData?.nome) {
+                const reuContainer = document.getElementById('reu-container');
+                const reuContent = document.getElementById('reu-content');
+                reuContainer.classList.remove('hidden');
+                reuContent.innerHTML = `
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="font-semibold text-gray-600">Nome:</div>
+                        <div>${escapeHtml(checklist.reuData.nome)}</div>
+                        ${checklist.reuData.cpf ? `<div class="font-semibold text-gray-600">CPF:</div><div>${checklist.reuData.cpf}</div>` : ''}
+                        ${checklist.reuData.rua ? `<div class="font-semibold text-gray-600">Endereço:</div><div>${checklist.reuData.rua}, ${checklist.reuData.numero || ''}</div>` : ''}
+                        ${checklist.reuData.bairro ? `<div class="font-semibold text-gray-600">Bairro:</div><div>${checklist.reuData.bairro}</div>` : ''}
+                        ${checklist.reuData.cidade ? `<div class="font-semibold text-gray-600">Cidade/UF:</div><div>${checklist.reuData.cidade}/${checklist.reuData.uf || ''}</div>` : ''}
+                        ${checklist.reuData.telefone ? `<div class="font-semibold text-gray-600">Telefone:</div><div>${checklist.reuData.telefone}</div>` : ''}
+                    </div>
+                `;
+            }
+            
+            // Dados de Gastos
+            if (checklist?.expenseData) {
+                const expensesContainer = document.getElementById('expenses-container');
+                const expensesContent = document.getElementById('expenses-content');
+                expensesContainer.classList.remove('hidden');
+                const expenses = checklist.expenseData;
+                expensesContent.innerHTML = `
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        ${expenses.moradia ? `<div class="font-semibold text-gray-600">Moradia:</div><div>R$ ${expenses.moradia}</div>` : ''}
+                        ${expenses.alimentacao ? `<div class="font-semibold text-gray-600">Alimentação:</div><div>R$ ${expenses.alimentacao}</div>` : ''}
+                        ${expenses.educacao ? `<div class="font-semibold text-gray-600">Educação:</div><div>R$ ${expenses.educacao}</div>` : ''}
+                        ${expenses.saude ? `<div class="font-semibold text-gray-600">Saúde:</div><div>R$ ${expenses.saude}</div>` : ''}
+                        ${expenses.vestuario ? `<div class="font-semibold text-gray-600">Vestuário:</div><div>R$ ${expenses.vestuario}</div>` : ''}
+                        ${expenses.lazer ? `<div class="font-semibold text-gray-600">Lazer:</div><div>R$ ${expenses.lazer}</div>` : ''}
+                        ${expenses.outras ? `<div class="font-semibold text-gray-600">Outras:</div><div>R$ ${expenses.outras}</div>` : ''}
+                    </div>
+                `;
+            }
+            
+            // Histórico de Revisões
+            if (currentAssistedData.reviewHistory && currentAssistedData.reviewHistory.length > 0) {
+                const reviewContainer = document.getElementById('review-history-container');
+                const reviewContent = document.getElementById('review-history-content');
+                reviewContainer.classList.remove('hidden');
+                reviewContent.innerHTML = currentAssistedData.reviewHistory.map(item => `
+                    <div class="flex gap-2 p-2 bg-white rounded-lg border text-xs">
+                        <i class="fas ${getActionIcon(item.action)} text-purple-500 mt-1"></i>
+                        <div>
+                            <span class="font-semibold">${getActionLabel(item.action)}</span>
+                            <p class="text-gray-500 text-[10px]">${new Date(item.timestamp).toLocaleString('pt-BR')}</p>
+                            ${item.notes ? `<p class="text-gray-600 mt-1">${item.notes}</p>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+        
         async function loadDefensores() {
             try {
-                const q = query(collection(db, "pautas", pautaId, "collaborators"), where("cargo", "==", "Defensor(a)"));
+                const q = query(collection(db, "pautas", pautaId, "collaborators"), where("cargo", "in", ["Defensor(a)", "Defensor"]));
                 const snap = await getDocs(q);
                 const select = document.getElementById('select-defensor');
-                snap.forEach(d => {
+                select.innerHTML = '<option value="">Selecione o responsável...</option>';
+                snap.forEach(doc => {
+                    const data = doc.data();
                     const opt = document.createElement('option');
-                    opt.value = d.data().nome; opt.textContent = d.data().nome; select.appendChild(opt);
+                    opt.value = data.nome;
+                    opt.textContent = `${data.nome} (${data.cargo || 'Defensor'})`;
+                    select.appendChild(opt);
                 });
-            } catch(e) { console.error("Erro defensores", e); }
+            } catch(e) { 
+                console.error("Erro ao carregar defensores", e);
+            }
         }
-
-        const bind = (id, func) => { const el = document.getElementById(id); if(el) el.onclick = func; };
-
-        bind('btn-confirm-signature', () => {
-            document.getElementById('step-signature').classList.add('hidden');
-            document.getElementById('step-decision').classList.remove('hidden');
-        });
-
-        bind('btn-wait-dist', () => handleSave('aguardandoDistribuicao', "Encaminhado para Fila de Distribuição ⚖️"));
-        bind('btn-show-fields', () => document.getElementById('fields-protocol').classList.remove('hidden'));
-        bind('btn-final-finish-dist', () => {
-            const def = document.getElementById('select-defensor').value;
-            if(!def) return alert("Selecione o Defensor.");
-            handleSave('atendido', "Finalizado e Protocolado ✅", def);
-        });
-        bind('btn-standard-finish', () => handleSave('atendido', "Atendimento Concluído ✅"));
-
-        async function handleSave(status, msg, finalAttendant = null) {
+        
+        async function handleSave(status, successMsg, finalAttendant = null, processNumber = null) {
             const name = document.getElementById('attendant-name').value.trim();
-            if(!name) return alert("Informe seu nome.");
-            document.getElementById('loading').classList.remove('hidden');
-            const demands = Array.from(document.querySelectorAll('#demands-list li span')).map(s => s.textContent);
-
+            if (!name) {
+                alert("Por favor, informe seu nome.");
+                return;
+            }
+            
+            document.getElementById('loading-overlay').classList.remove('hidden');
+            document.getElementById('loading-text').textContent = "Salvando informações...";
+            
+            // Coletar demandas adicionais
+            const demands = Array.from(document.querySelectorAll('#demands-list .flex span')).map(span => span.textContent);
+            const existingDemands = currentAssistedData.demandas?.descricoes || [];
+            const mergedDemands = [...new Set([...existingDemands, ...demands])];
+            
             try {
-                const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
-                const snap = await getDoc(docRef);
-                const oldDemands = snap.data().demandas?.descricoes || [];
-                const merged = [...new Set([...oldDemands, ...demands])];
-
-                await updateDoc(docRef, {
+                const assistedRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
+                const updateData = {
                     status: status,
                     attendant: finalAttendant || name,
                     attendedTime: new Date().toISOString(),
                     finalizadoPeloColaborador: true,
-                    processNumber: document.getElementById('input-process-number')?.value || null,
-                    demandas: { descricoes: merged, quantidade: merged.length },
-                    finalizadoVia: 'Painel Externo Único'
-                });
-
-                document.getElementById('success-msg').textContent = msg;
+                    demandas: { descricoes: mergedDemands, quantidade: mergedDemands.length },
+                    finalizadoVia: 'Painel do Colaborador'
+                };
+                
+                if (processNumber) {
+                    updateData.processNumber = processNumber;
+                }
+                
+                // Adicionar ao histórico
+                const historyEntry = {
+                    action: status === 'atendido' ? 'finalized' : 'sent_to_distribution',
+                    notes: `Finalizado por ${name}`,
+                    timestamp: new Date().toISOString(),
+                    byName: name
+                };
+                
+                updateData.reviewHistory = [...(currentAssistedData.reviewHistory || []), historyEntry];
+                
+                await updateDoc(assistedRef, updateData);
+                
+                document.getElementById('success-msg').textContent = successMsg;
                 document.getElementById('success-overlay').classList.remove('hidden');
-                document.getElementById('loading').classList.add('hidden');
-            } catch (e) {
-                alert("Erro ao salvar.");
-                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('loading-overlay').classList.add('hidden');
+                
+            } catch (error) {
+                console.error("Erro ao salvar:", error);
+                alert("Erro ao salvar. Tente novamente.");
+                document.getElementById('loading-overlay').classList.add('hidden');
             }
         }
-
-        function renderChecklist(checklist) {
-            const cont = document.getElementById('checklist-container');
-            if(!checklist) return cont.innerHTML = "<p class='text-gray-400 text-center text-[10px] py-10 uppercase font-bold'>Sem triagem registrada.</p>";
-            (checklist.checkedIds || []).forEach(id => {
-                const d = document.createElement('div');
-                d.className = "p-3 bg-green-50 border border-green-100 rounded-lg text-[10px] font-bold text-green-700 uppercase";
-                d.textContent = "✓ Documento Conferido";
-                cont.appendChild(d);
-            });
-            if(checklist.reuData?.nome) {
-                document.getElementById('reu-container').classList.remove('hidden');
-                document.getElementById('reu-content').innerHTML = `<b>NOME:</b> ${checklist.reuData.nome}<br><b>ENDEREÇO:</b> ${checklist.reuData.rua || 'NÃO INFORMADO'}`;
+        
+        async function handleSendToReview() {
+            const name = document.getElementById('attendant-name').value.trim();
+            if (!name) {
+                alert("Informe seu nome antes de enviar para revisão.");
+                return;
+            }
+            
+            document.getElementById('loading-overlay').classList.remove('hidden');
+            document.getElementById('loading-text').textContent = "Enviando para revisão...";
+            
+            try {
+                const assistedRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
+                const historyEntry = {
+                    action: 'sent_to_review',
+                    notes: `Enviado para revisão por ${name}`,
+                    timestamp: new Date().toISOString(),
+                    byName: name
+                };
+                
+                await updateDoc(assistedRef, {
+                    status: 'emRevisao',
+                    reviewStatus: 'pending',
+                    sentForReviewAt: new Date().toISOString(),
+                    reviewHistory: [...(currentAssistedData.reviewHistory || []), historyEntry]
+                });
+                
+                document.getElementById('success-msg').textContent = "Atendimento enviado para revisão!";
+                document.getElementById('success-overlay').classList.remove('hidden');
+                document.getElementById('loading-overlay').classList.add('hidden');
+                
+            } catch (error) {
+                console.error("Erro:", error);
+                alert("Erro ao enviar para revisão.");
+                document.getElementById('loading-overlay').classList.add('hidden');
             }
         }
-
-        bind('add-demand-btn', () => {
+        
+        function showError(message) {
+            document.getElementById('loading-overlay').innerHTML = `
+                <div class="bg-white p-8 rounded-2xl text-center max-w-md mx-4">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-5xl mb-4"></i>
+                    <p class="text-red-600 font-bold mb-2">Acesso Indisponível</p>
+                    <p class="text-gray-600 text-sm">${message}</p>
+                    <button onclick="location.reload()" class="mt-4 bg-emerald-600 text-white px-6 py-2 rounded-lg text-sm font-bold">Tentar Novamente</button>
+                </div>
+            `;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Event Listeners
+        document.getElementById('btn-standard-finish')?.addEventListener('click', () => handleSave('atendido', "Atendimento finalizado com sucesso!"));
+        document.getElementById('btn-confirm-signature')?.addEventListener('click', () => {
+            document.getElementById('step-signature').classList.add('hidden');
+            document.getElementById('step-decision').classList.remove('hidden');
+        });
+        document.getElementById('btn-wait-dist')?.addEventListener('click', () => handleSave('aguardandoDistribuicao', "Encaminhado para fila de distribuição ⚖️"));
+        document.getElementById('btn-show-fields')?.addEventListener('click', () => document.getElementById('fields-protocol').classList.remove('hidden'));
+        document.getElementById('btn-final-finish-dist')?.addEventListener('click', () => {
+            const def = document.getElementById('select-defensor').value;
+            const processNum = document.getElementById('input-process-number').value;
+            if (!def) {
+                alert("Selecione o defensor responsável.");
+                return;
+            }
+            if (!processNum) {
+                alert("Informe o número do processo.");
+                return;
+            }
+            handleSave('atendido', "Processo finalizado e distribuído!", def, processNum);
+        });
+        document.getElementById('btn-send-review')?.addEventListener('click', handleSendToReview);
+        
+        document.getElementById('add-demand-btn')?.addEventListener('click', () => {
             const val = document.getElementById('new-demand-input').value.trim();
-            if(val) {
-                const li = document.createElement('li');
-                li.className = "flex justify-between items-center bg-white p-2.5 rounded-lg border text-xs shadow-sm";
-                li.innerHTML = `<span>${val}</span> <button class="text-red-500 font-bold px-2 hover:bg-red-50">✕</button>`;
-                li.querySelector('button').onclick = () => li.remove();
-                document.getElementById('demands-list').appendChild(li);
+            if (val) {
+                addDemandToList(val);
                 document.getElementById('new-demand-input').value = '';
             }
         });
-
-        bind('tab-finish', () => {
-            document.getElementById('content-finish').classList.remove('hidden');
-            document.getElementById('content-docs').classList.add('hidden');
-            document.getElementById('tab-finish').className = "flex-1 py-3 text-[10px] uppercase tab-active";
-            document.getElementById('tab-docs').className = "flex-1 py-3 text-[10px] uppercase tab-inactive";
-        });
-        bind('tab-docs', () => {
-            document.getElementById('content-docs').classList.remove('hidden');
-            document.getElementById('content-finish').classList.add('hidden');
-            document.getElementById('tab-docs').className = "flex-1 py-3 text-[10px] uppercase tab-active";
-            document.getElementById('tab-finish').className = "flex-1 py-3 text-[10px] uppercase tab-inactive";
-        });
-
+        
+        // Tabs
+        const tabs = {
+            finish: { btn: 'tab-finish', content: 'content-finish' },
+            history: { btn: 'tab-history', content: 'content-history' },
+            docs: { btn: 'tab-docs', content: 'content-docs' }
+        };
+        
+        function switchTab(activeTab) {
+            Object.values(tabs).forEach(tab => {
+                const btn = document.getElementById(tab.btn);
+                const content = document.getElementById(tab.content);
+                if (btn && content) {
+                    if (tab.btn === activeTab) {
+                        btn.classList.add('tab-active');
+                        btn.classList.remove('text-gray-500');
+                        content.classList.remove('hidden');
+                    } else {
+                        btn.classList.remove('tab-active');
+                        btn.classList.add('text-gray-500');
+                        content.classList.add('hidden');
+                    }
+                }
+            });
+        }
+        
+        document.getElementById('tab-finish')?.addEventListener('click', () => switchTab('tab-finish'));
+        document.getElementById('tab-history')?.addEventListener('click', () => switchTab('tab-history'));
+        document.getElementById('tab-docs')?.addEventListener('click', () => switchTab('tab-docs'));
+        
+        // Iniciar
         init();
     </script>
 </body>
