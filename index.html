@@ -23,7 +23,7 @@
           replaysSessionSampleRate: 0.1, 
           replaysOnErrorSampleRate: 1.0, 
           environment: "production",
-          release: "sigap@2.1.0",
+          release: "sigap@1.0.0",
           beforeSend(event, hint) {
             if (event.exception) {
               Sentry.showReportDialog({ eventId: event.event_id });
@@ -41,9 +41,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
         .priority-urgente { border-left: 5px solid #ef4444; }
@@ -101,30 +100,6 @@
             animation: spin 1s linear infinite;
             margin: 0 auto;
         }
-        
-        /* Animações para cards */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .card-animate {
-            animation: fadeInUp 0.2s ease-out;
-        }
-        
-        /* Badges de status */
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 2px 8px;
-            border-radius: 20px;
-            font-size: 10px;
-            font-weight: 700;
-        }
-        .status-emRevisao { background: #f3e8ff; color: #7c3aed; }
-        .status-aguardandoNumero { background: #dbeafe; color: #1e40af; }
-        .status-aguardandoCorrecao { background: #ffedd5; color: #c2410c; }
-        .status-distribuido { background: #d1fae5; color: #065f46; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -221,7 +196,6 @@
             <div class="bg-white p-4 rounded-lg shadow-sm space-y-4">
                 <div class="text-center border-b pb-4">
                     <h2 id="pauta-title" class="text-2xl md:text-3xl font-bold text-gray-800 truncate px-4"></h2>
-                    <div id="pauta-mode-badge" class="hidden mt-2 text-xs font-bold uppercase tracking-wider"></div>
                 </div>
 
                 <div class="flex flex-col sm:flex-row justify-between items-center w-full gap-4 pt-4">
@@ -412,51 +386,6 @@
                     <div id="distribuicao-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
 
-                <!-- NOVAS COLUNAS DO FLUXO DE REVISÃO HIERÁRQUICA -->
-                <div id="em-revisao-column" class="bg-purple-50 rounded-lg shadow-md flex flex-col hidden">
-                    <div class="p-4 border-b border-purple-200 bg-purple-100 rounded-t-lg">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-xl font-semibold text-purple-800">🔍 Em Revisão</h3>
-                            <span id="em-revisao-count" class="bg-purple-200 text-purple-800 px-2 py-1 rounded-full text-sm font-bold">0</span>
-                        </div>
-                        <input type="search" id="em-revisao-search" placeholder="Pesquisar por nome, CPF..." class="w-full mt-3 p-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500">
-                    </div>
-                    <div id="em-revisao-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
-                </div>
-
-                <div id="aguardando-numero-column" class="bg-blue-50 rounded-lg shadow-md flex flex-col hidden">
-                    <div class="p-4 border-b border-blue-200 bg-blue-100 rounded-t-lg">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-xl font-semibold text-blue-800">📝 Aguardando Número</h3>
-                            <span id="aguardando-numero-count" class="bg-blue-200 text-blue-800 px-2 py-1 rounded-full text-sm font-bold">0</span>
-                        </div>
-                        <input type="search" id="aguardando-numero-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-blue-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div id="aguardando-numero-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
-                </div>
-
-                <div id="aguardando-correcao-column" class="bg-orange-50 rounded-lg shadow-md flex flex-col hidden">
-                    <div class="p-4 border-b border-orange-200 bg-orange-100 rounded-t-lg">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-xl font-semibold text-orange-800">✏️ Aguardando Correção</h3>
-                            <span id="aguardando-correcao-count" class="bg-orange-200 text-orange-800 px-2 py-1 rounded-full text-sm font-bold">0</span>
-                        </div>
-                        <input type="search" id="aguardando-correcao-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-orange-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500">
-                    </div>
-                    <div id="aguardando-correcao-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
-                </div>
-
-                <div id="distribuidos-column" class="bg-cyan-50 rounded-lg shadow-md flex flex-col hidden">
-                    <div class="p-4 border-b border-cyan-200 bg-cyan-100 rounded-t-lg">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-xl font-semibold text-cyan-800">📦 Distribuídos</h3>
-                            <span id="distribuidos-count" class="bg-cyan-200 text-cyan-800 px-2 py-1 rounded-full text-sm font-bold">0</span>
-                        </div>
-                        <input type="search" id="distribuidos-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-cyan-300 rounded-lg text-sm focus:ring-2 focus:ring-cyan-500">
-                    </div>
-                    <div id="distribuidos-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
-                </div>
-
                 <div id="atendidos-column" class="bg-white rounded-lg shadow-md flex flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                         <div class="flex justify-between items-center mb-3">
@@ -486,16 +415,8 @@
                 </div>
             </main>
             
-            <div class="mt-8 flex justify-center gap-4">
+            <div class="mt-8 flex justify-center">
                 <button id="toggle-faltosos-btn" class="w-full sm:w-auto bg-purple-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-purple-700">Ver Faltosos</button>
-            </div>
-            
-            <!-- Painel de Estatísticas do Fluxo de Revisão -->
-            <div id="review-stats-panel" class="hidden mt-6 bg-white p-4 rounded-lg shadow-md">
-                <h4 class="font-bold text-purple-800 mb-3 flex items-center gap-2">
-                    <i class="fas fa-chart-line"></i> Estatísticas do Fluxo de Revisão
-                </h4>
-                <div id="review-stats-container" class="grid grid-cols-2 md:grid-cols-5 gap-3"></div>
             </div>
             
             <footer class="mt-12 bg-white p-6 rounded-lg shadow-md">
@@ -554,7 +475,7 @@
     </div>
 
     <!-- ======================================================= -->
-    <!-- TODOS OS MODAIS (CONTINUAM IGUAIS, APENAS ADICIONEI OS NOVOS CAMPOS) -->
+    <!-- TODOS OS MODAIS - COMPLETOS E FUNCIONAIS -->
     <!-- ======================================================= -->
 
     <!-- Modal de Tipo de Pauta -->
@@ -614,7 +535,7 @@
         </div>
     </div>
 
-    <!-- Modal de Editar Configurações da Pauta (ATUALIZADO COM REVIEW FLOW) -->
+    <!-- Modal de Editar Configurações da Pauta -->
     <div id="edit-pauta-config-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4 text-center">Editar Configurações da Pauta</h2>
@@ -696,21 +617,6 @@
                             </span>
                         </label>
                     </div>
-                    <!-- NOVO: Modo Revisão Hierárquica -->
-                    <div class="ml-7 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                        <label class="flex items-start cursor-pointer">
-                            <input type="checkbox" id="edit-use-review-flow" class="h-4 w-4 text-purple-600 rounded mt-1">
-                            <span class="ml-3">
-                                <span class="font-semibold text-sm">🎯 Modo Revisão Hierárquica</span>
-                                <span class="block text-xs text-gray-500">
-                                    Ativa fluxo completo: Colaborador → Revisão → Defensor → Aprova/Devolve → Distribui
-                                </span>
-                                <span class="block text-xs text-purple-600 mt-1">
-                                    Alternativa ao modo de distribuição simples. Permite revisão antes da distribuição.
-                                </span>
-                            </span>
-                        </label>
-                    </div>
                     <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
                         <input type="radio" name="edit-delegation" value="false" class="h-4 w-4 text-red-600">
                         <span class="ml-3">
@@ -763,7 +669,7 @@
         </div>
     </div>
 
-    <!-- Modal de Fluxo de Delegação (para criação - ATUALIZADO) -->
+    <!-- Modal de Fluxo de Delegação (para criação) -->
     <div id="delegation-flow-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Fluxo de Atendimento</h2>
@@ -782,19 +688,6 @@
                         <div class="flex-1">
                             <span class="font-semibold text-gray-700 block">Habilitar Fila de Distribuição?</span>
                             <span class="text-xs text-gray-500">Adiciona a coluna "Aguardando Distribuição" para processos que precisam de assinatura/protocolo antes de finalizar.</span>
-                        </div>
-                    </label>
-                </div>
-                <!-- NOVO: Modo Revisão Hierárquica na criação -->
-                <div id="review-option-container" class="p-4 border-x border-b rounded-b-lg bg-purple-50 ml-8 border-t-0 mt-2">
-                    <label class="flex items-start space-x-3 cursor-pointer">
-                        <input type="checkbox" id="check-use-review-flow" class="h-5 w-5 text-purple-600 focus:ring-purple-500 rounded mt-1">
-                        <div class="flex-1">
-                            <span class="font-semibold text-gray-700 block">🎯 Habilitar Modo Revisão Hierárquica?</span>
-                            <span class="text-xs text-gray-500">
-                                Adiciona fluxo de revisão: Colaborador → Revisão → Defensor → Aprova/Devolve → Distribui.
-                                <br><span class="text-purple-600">Alternativa ao fluxo de distribuição simples.</span>
-                            </span>
                         </div>
                     </label>
                 </div>
@@ -854,12 +747,718 @@
         </div>
     </div>
 
-    <!-- Os demais modais continuam os mesmos (members-modal, collaborators-modal, etc) -->
-    <!-- Para não estender demais, os modais existentes permanecem como estão no seu arquivo original -->
-    <!-- Certifique-se de manter todos os modais existentes que já estavam funcionando -->
+    <!-- Modal de Conclusão de Distribuição -->
+    <div id="distribution-finish-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4 text-cyan-800">Concluir Distribuição</h2>
+            <p class="mb-4 text-gray-600">O processo foi distribuído. Por favor, insira o número (opcional).</p>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Número do Processo</label>
+                <input type="text" id="dist-process-number" placeholder="0000.00.00.0000" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500">
+            </div>
 
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-dist-finish-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-dist-finish-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700">Salvar e Finalizar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Membros -->
+    <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg" style="max-height: 90vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Gerenciar Membros da Pauta</h2>
+                <button id="close-members-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+            </div>
+            <div class="overflow-y-auto">
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-700">Convidar Novo Membro (Usuário do Sistema)</h3>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="email" id="invite-email-input" placeholder="email@exemplo.com" class="flex-grow p-2 border border-gray-300 rounded-lg">
+                        <button id="invite-member-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 flex-shrink-0">Convidar</button>
+                    </div>
+                    <div id="invite-status" class="text-sm h-4"></div>
+                </div>
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Membros Atuais da Pauta</h3>
+                    <div id="members-list-container" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Colaboradores -->
+    <div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-0 sm:p-4">
+        <div class="bg-white w-full max-w-4xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;">
+            <div class="flex justify-between items-center p-4 border-b bg-gray-50 sm:rounded-t-xl shrink-0">
+                <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <span class="text-violet-600">👥</span> Lista de Presença da Equipe
+                </h2>
+                <button id="close-collaborators-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl p-1 leading-none">&times;</button>
+            </div>
+    
+            <div class="flex-grow overflow-y-auto p-4 sm:p-6 space-y-6 scrollable-content bg-white">
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest border-b pb-2">Cadastro / Edição</h3>
+                    <form id="collaborator-form-modal" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <label class="text-[9px] font-black text-gray-500 uppercase">Nome Completo</label>
+                                <input type="text" id="collaborator-name-modal" required class="w-full p-2 border rounded-lg text-sm bg-white">
+                            </div>
+                            <div>
+                                <label class="text-[9px] font-black text-gray-500 uppercase">Cargo</label>
+                                <select id="collaborator-role-modal" required class="w-full p-2 border rounded-lg text-sm bg-white">
+                                    <option value="Defensor(a)">Defensor(a)</option>
+                                    <option value="Servidor(a)">Servidor(a)</option>
+                                    <option value="CRC">CRC</option>
+                                    <option value="Residente">Residente</option>
+                                    <option value="Estagiário(a)">Estagiário(a)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[9px] font-black text-gray-500 uppercase">Equipe</label>
+                                <select id="collaborator-team-modal" required class="w-full p-2 border rounded-lg text-sm bg-white">
+                                    <option value="1">Equipe 1</option>
+                                    <option value="2">Equipe 2</option>
+                                    <option value="3">Equipe 3</option>
+                                    <option value="4">Equipe 4</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                            <div class="md:col-span-1">
+                                <label class="text-[9px] font-black text-gray-500 uppercase">WhatsApp</label>
+                                <input type="tel" id="collaborator-phone-modal" placeholder="21999998888" class="w-full p-2 border rounded-lg text-sm bg-white">
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="text-[9px] font-black text-gray-500 uppercase">E-mail</label>
+                                <input type="email" id="collaborator-email-modal" class="w-full p-2 border rounded-lg text-sm bg-white">
+                            </div>
+                            <div class="flex gap-4 p-2 bg-white border rounded-lg">
+                                <label class="text-[9px] font-black text-gray-500 uppercase mr-2">Transp:</label>
+                                <label class="flex items-center gap-1 text-xs cursor-pointer"><input type="radio" name="transporte-colaborador" value="Meios Próprios" checked> Próprio</label>
+                                <label class="flex items-center gap-1 text-xs cursor-pointer"><input type="radio" name="transporte-colaborador" value="Com a Empresa"> Empresa</label>
+                            </div>
+                        </div>
+                        <button type="submit" id="add-collaborator-btn-modal" class="w-full bg-green-600 text-white font-bold py-2.5 rounded-lg hover:bg-green-700 transition shadow-md uppercase text-xs">Salvar Membro</button>
+                    </form>
+                </div>
+    
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-3 bg-violet-50 p-3 rounded-xl border border-violet-100">
+                    <div class="flex gap-3 text-[10px] font-bold text-violet-800 uppercase">
+                        <span>Total: <b id="total-participants-count">0</b></span>
+                        <span>Próprio: <b id="self-transport-count">0</b></span>
+                        <span>Empresa: <b id="company-transport-count">0</b></span>
+                    </div>
+                    <div class="flex flex-wrap gap-3 text-[9px] font-black text-violet-600 uppercase border-l-0 sm:border-l sm:pl-3 border-violet-200">
+                        <label class="flex items-center gap-1"><input type="checkbox" class="pdf-col-check" value="nome" checked> Nome</label>
+                        <label class="flex items-center gap-1"><input type="checkbox" class="pdf-col-check" value="cargo" checked> Cargo</label>
+                        <label class="flex items-center gap-1"><input type="checkbox" class="pdf-col-check" value="equipe" checked> Equipe</label>
+                        <label class="flex items-center gap-1"><input type="checkbox" class="pdf-col-check" value="transporte" checked> Transp</label>
+                    </div>
+                </div>
+    
+                <div class="overflow-x-auto border border-gray-100 rounded-xl shadow-sm">
+                    <table id="collaborators-list-table-modal" class="w-full text-left border-collapse bg-white">
+                        <thead class="bg-gray-50 text-[9px] font-black text-gray-400 uppercase border-b">
+                            <tr>
+                                <th class="p-3 cursor-pointer hover:text-violet-600" onclick="window.sortColaboradores('nome')">Membro ↕️</th>
+                                <th class="p-3 text-center">Presença</th>
+                                <th class="p-3 cursor-pointer hover:text-violet-600" onclick="window.sortColaboradores('equipe')">Cargo/Equipe ↕️</th>
+                                <th class="p-3">Horário</th>
+                                <th class="p-3 text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-xs text-gray-600"></tbody>
+                    </table>
+                </div>
+    
+                <div class="flex justify-between items-center pt-2">
+                    <button id="download-collaborators-pdf-modal" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 text-[10px] shadow-md uppercase">Emitir PDF</button>
+                    <button id="clear-collaborators-list-modal" class="text-gray-400 hover:text-red-600 text-[10px] font-bold uppercase">Limpar Lista</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Chegada -->
+    <div id="arrival-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Confirmar Horário de Chegada</h2>
+            <p class="mb-4 text-gray-600">Por favor, informe o horário de chegada do assistido.</p>
+            
+            <div id="arrival-room-container" class="hidden mb-4">
+                <label for="arrival-room-select" class="block text-sm font-medium text-gray-700 mb-1">Selecionar Sala de Espera</label>
+                <select id="arrival-room-select" class="w-full p-3 border border-gray-300 rounded-lg bg-white"></select>
+            </div>
+
+            <input type="time" id="arrival-time-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-arrival-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-arrival-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Finalização de Atendimento -->
+    <div id="attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Finalizar Atendimento</h2>
+            <p class="mb-4 text-gray-600">Selecione o profissional que realizou o atendimento (opcional):</p>
+            
+            <select id="attendant-select" class="w-full p-3 border border-gray-300 rounded-lg mb-6 bg-white">
+                <option value="">-- Selecione um profissional (opcional) --</option>
+            </select>
+            
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-attendant-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Selecionar Colaborador com Busca -->
+<div id="select-collaborator-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md max-h-[80vh] overflow-y-auto">
+        <h2 class="text-2xl font-bold mb-4">Atender Assistido</h2>
+        <p class="mb-4 text-gray-600">Selecione o colaborador que irá atender <strong id="assisted-to-attend-name"></strong>:</p>
+        
+        <!-- Campo de busca -->
+        <div class="mb-4">
+            <input type="text" 
+                   id="collaborator-search-input" 
+                   placeholder="🔍 Digite para pesquisar colaborador..." 
+                   class="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+        </div>
+        
+        <!-- Lista de colaboradores (será preenchida dinamicamente) -->
+        <div id="collaborator-selection-list" class="space-y-2 mb-6 max-h-60 overflow-y-auto border rounded-lg p-2 bg-gray-50">
+            <!-- Será preenchido pela função preencherListaColaboradoresModal -->
+        </div>
+        
+        <div class="flex justify-end space-x-4">
+            <button id="cancel-select-collaborator-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+            <button id="confirm-select-collaborator-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Confirmar Seleção</button>
+        </div>
+    </div>
+</div>
+
+    <!-- Modal de Editar Atendente -->
+    <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Editar Atendente</h2>
+            <p class="mb-4 text-gray-600">Selecione o profissional que realizou o atendimento:</p>
+            
+            <select id="edit-attendant-select" class="w-full p-3 border border-gray-300 rounded-lg mb-6 bg-white">
+                <option value="">-- Selecione um profissional --</option>
+            </select>
+            
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-edit-attendant-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-edit-attendant-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Delegar Finalização por Email -->
+    <div id="delegate-email-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Delegar Finalização de Atendimento</h2>
+            <p class="mb-4 text-gray-600">Enviar link de finalização para <strong id="delegate-assisted-name"></strong>.</p>
+            <div class="mb-4">
+                <label for="collaborator-email-input" class="block text-sm font-medium text-gray-700">Email do Colaborador:</label>
+                <input type="email" id="collaborator-email-input" placeholder="email@exemplo.com" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <p class="text-sm text-gray-500 mb-6">O colaborador receberá um link por e-mail para finalizar o atendimento.</p>
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-delegate-email-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="send-delegate-email-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Enviar Link por E-mail</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Zerar Pauta -->
+    <div id="reset-confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg space-y-4">
+            <h2 class="text-2xl font-bold text-gray-800">Zerar Pauta</h2>
+            <p class="text-gray-600">Tem certeza de que deseja apagar permanentemente todos os dados desta pauta?</p>
+            <div id="reset-auth-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden" role="alert"></div>
+            <div>
+                <label for="reset-pauta-password" class="block text-sm font-medium text-gray-700">Confirme sua senha:</label>
+                <input type="password" id="reset-pauta-password" class="w-full p-3 border border-gray-300 rounded-lg mt-1" required>
+            </div>
+            <div class="flex justify-end space-x-4 pt-4">
+                <button id="cancel-reset-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-reset-btn" class="bg-red-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-800">Zerar Pauta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Editar Nome da Pauta -->
+    <div id="edit-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Editar Nome da Pauta</h2>
+            <label for="edit-pauta-name-input" class="block text-sm font-medium text-gray-700 mb-2">Novo nome</label>
+            <input type="text" id="edit-pauta-name-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-edit-pauta-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-edit-pauta-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Fechar/Reabrir Pauta -->
+    <div id="close-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4" id="close-modal-title">Fechar Pauta</h2>
+            <p class="mb-4 text-gray-600" id="close-modal-message">Para fechar esta pauta, confirme sua senha. Nenhum membro poderá fazer alterações até que você a reabra.</p>
+            <input type="password" id="close-pauta-password" placeholder="Sua senha de login" class="w-full p-3 border border-gray-300 rounded-lg mb-6">
+            <div id="close-auth-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden" role="alert"></div>
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-close-pauta-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-close-pauta-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Ajuda de Formato CSV -->
+    <div id="format-help-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl relative flex flex-col" style="max-height: 90vh;">
+            <div class="flex-shrink-0">
+                <button id="close-format-help-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+                <h2 class="text-2xl font-bold mb-4">Como Preparar sua Pauta para Importação</h2>
+            </div>
+            <div class="flex-grow overflow-y-auto scrollable-content pr-4">
+                <p class="mb-4 text-gray-600">Para importar seus agendamentos de uma vez, crie um arquivo <strong>.csv</strong> (Valores Separados por Vírgula). Você pode criar este arquivo usando o Bloco de Notas, Excel, Google Sheets ou similar.</p>
+                <div class="flex justify-between items-center mb-2">
+                     <p class="font-semibold">O arquivo deve seguir o formato abaixo, com 4 colunas, nesta ordem:</p>
+                     <button id="copy-csv-format-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Formato</button>
+                </div>
+                <div class="bg-gray-100 p-4 rounded-lg text-sm mb-4">
+                    <code id="csv-format-code">Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code>
+                </div>
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-lg font-semibold">Exemplo:</h3>
+                    <button id="copy-csv-example-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Exemplo</button>
+                </div>
+                <pre class="bg-gray-100 p-4 rounded-lg text-sm" style="white-space: pre-wrap; word-break: break-all;"><code id="csv-example-code">Maria Joaquina de Amaral Pereira;09:00;Divórcio Consensual;111.222.333-44
+João da Silva;09:30;Ação de Alimentos;
+Fulano de Tal;10:00;Curatela;444.555.666-77</code></pre>
+                <ul class="list-disc list-inside mt-4 space-y-2 text-gray-700">
+                    <li>A primeira linha (cabeçalho) é <strong>opcional</strong>. O sistema a ignorará se presente.</li>
+                    <li>O campo <strong>CPF</strong> é opcional. Se não houver CPF, deixe o espaço em branco (ou não coloque nada após o último ponto e vírgula).</li>
+                    <li>O <strong>horário</strong> deve estar no formato <strong>HH:MM</strong> (Ex: 09:00, 14:30).</li>
+                    <li>Salve o arquivo com a extensão <strong>.csv</strong>.</li>
+                </ul>
+                <div class="mt-6 pt-4 border-t">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-lg font-semibold">Prompt para IA (Ex: ChatGPT, Gemini):</h3>
+                        <button id="copy-ai-prompt-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-300">Copiar Prompt</button>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-2">Se sua pauta está em um PDF, copie o texto abaixo e cole junto com o conteúdo do seu PDF em uma IA para formatá-lo corretamente.</p>
+                    <pre class="bg-gray-100 p-4 rounded-lg text-sm" style="white-space: pre-wrap; word-break: break-all;"><code id="ai-prompt-code">Olá! Por favor, converta o conteúdo do arquivo PDF que estou enviando para o formato CSV, usando ponto e vírgula (;) como separador. O resultado deve seguir este padrão:
+
+Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)
+
+Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .csv.</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Demandas -->
+    <div id="demands-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg flex flex-col" style="max-height: 90vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Gerenciar Demandas Adicionais</h2>
+                <button id="close-demands-modal-btn" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+            </div>
+            <div class="flex-grow overflow-y-auto pr-2">
+                <p class="mb-4">Assistido: <strong id="demands-assisted-name-modal" class="text-green-600"></strong></p>
+                <div class="space-y-2">
+                    <label for="demands-modal-new-demand-input" class="block text-sm font-medium text-gray-700">Adicionar nova demanda:</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="demands-modal-new-demand-input" placeholder="Ex: Ação de Partilha de Bens" class="flex-grow p-2 border border-gray-300 rounded-lg">
+                        <button id="demands-modal-add-demand-btn" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 flex-shrink-0">Adicionar</button>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Demandas Adicionais Registradas:</h3>
+                    <div id="demands-modal-list-container" class="space-y-2 max-h-60 overflow-y-auto bg-gray-50 p-3 rounded-lg border">
+                        <p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-4 mt-6 flex-shrink-0 border-t pt-4">
+                <button id="cancel-demands-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
+                <button id="save-demands-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Editar Assistido -->
+    <div id="edit-assisted-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
+            <h2 class="text-2xl font-bold mb-6">Editar Dados do Assistido</h2>
+            <div class="space-y-4">
+                <div><label for="edit-assisted-name" class="block text-sm font-medium text-gray-700">Nome</label><input type="text" id="edit-assisted-name" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
+                <div><label for="edit-assisted-cpf" class="block text-sm font-medium text-gray-700">CPF</label><input type="text" id="edit-assisted-cpf" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
+                <div><label for="edit-assisted-subject" class="block text-sm font-medium text-gray-700">Assunto</label><input list="subjects-list" type="text" id="edit-assisted-subject" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
+                <div><label for="edit-scheduled-time" class="block text-sm font-medium text-gray-700">Horário Agendado</label><input type="time" id="edit-scheduled-time" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg"></div>
+            </div>
+            <div class="flex justify-end space-x-4 mt-8">
+                <button id="cancel-edit-assisted-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-edit-assisted-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Atendimento Prioritário -->
+    <div id="priority-reason-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border-t-8 border-red-600">
+            <h2 class="text-2xl font-bold mb-2 text-gray-800">Atendimento Prioritário</h2>
+            <p class="mb-6 text-sm text-gray-500">Selecione uma ou mais categorias de prioridade legal:</p>
+            
+            <div id="priority-types-grid" class="grid grid-cols-2 gap-2 mb-6">
+                <button type="button" data-value="Idoso (60+)" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">👴 Idoso (60+)</button>
+                <button type="button" data-value="Idoso (80+)" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">🎖️ Idoso (80+)</button>
+                <button type="button" data-value="Deficiência (PCD)" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">♿ Deficiência</button>
+                <button type="button" data-value="Autismo (TEA)" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">🧩 Autismo</button>
+                <button type="button" data-value="Gestante" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">🤰 Gestante</button>
+                <button type="button" data-value="Criança de Colo" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">👶 Criança de Colo</button>
+                <button type="button" data-value="Obesidade" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">⚖️ Obesidade</button>
+                <button type="button" data-value="Urgência Médica" class="p-chip border border-gray-200 rounded-lg py-2 px-3 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">🚑 Urgência Médica</button>
+            </div>
+    
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Outros / Observações:</label>
+            <textarea id="priority-reason-input" placeholder="Ex: Advogado com prazo, viagem agendada..." class="w-full p-3 border border-gray-300 rounded-lg mb-6 h-20 text-sm"></textarea>
+            
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-priority-reason-btn" class="bg-gray-200 text-gray-700 font-bold py-2 px-6 rounded-lg hover:bg-gray-300 transition">Cancelar</button>
+                <button id="confirm-priority-reason-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 transition shadow-lg">Confirmar Prioridade</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Política de Privacidade -->
+    <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 80vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Política de Privacidade</h2>
+                <button id="close-policy-modal-btn-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            </div>
+            <div id="policy-content" class="text-gray-700 space-y-4 overflow-y-auto pr-2">
+                <p><strong>1. Natureza do Sistema e Ciclo de Vida dos Dados</strong></p>
+                <p>O Sistema de Gerenciamento de Pauta (SIGAP) é uma interface de controle para a gestão de atendimentos. Ele coleta e armazena os dados pessoais de assistidos, como nome, CPF (opcional), assunto e demanda, por um período de sete dias após a finalização da ação. Após esse prazo, os dados são permanentemente excluídos do SIGAP.</p>
+                <p>Para o armazenamento permanente, todos os dados são enviados e salvos no sistema Verde, que é de responsabilidade da Defensoria Pública do Estado do Rio de Janeiro (DPERJ) e está em total conformidade com a LGPD.</p>
+                <p><strong>2. Dados Coletados pelo SIGAP</strong></p>
+                <p>Para permitir o uso da interface, o SIGAP coleta apenas os dados de autenticação dos usuários (profissionais): e-mail e senha.</p>
+                <p><strong>3. Tratamento e Proteção de Dados (dentro do SIGAP)</strong></p>
+                <p>Os dados de autenticação são utilizados para garantir o acesso restrito e seguro ao sistema. Os dados de assistidos são armazenados por apenas sete dias, tempo necessário para a conclusão da ação, e são protegidos por medidas de segurança para evitar acesso não autorizado.</p>
+                <p><strong>4. Direitos dos Titulares dos Dados</strong></p>
+                <p>Os direitos dos assistidos, como acesso, correção e exclusão de dados, são garantidos e exercidos diretamente por meio do sistema Verde, que é o responsável pelo armazenamento final. Os usuários do SIGAP podem gerenciar a pauta e solicitar alterações no sistema Verde conforme as normas da DPERJ.</p>
+                <p><strong>5. Origem e Transferência de Dados dos Assistidos</strong></p>
+                <p>Os dados dos assistidos gerenciados no SIGAP podem ter duas origens:</p>
+                <p><strong>Importação do Sistema Verde:</strong> A maior parte dos dados (nome, horário, assunto) é transferida manualmente do sistema oficial Verde (DPERJ) através de um processo de exportação e importação. Neste fluxo, o CPF do assistido não é transferido.</p>
+                <p><strong>Cadastro Direto no SIGAP:</strong> Novos atendimentos, como os avulsos, podem ser registrados diretamente na plataforma. Nesses casos, o campo CPF é opcional e pode ser preenchido pelo profissional responsável pelo cadastro (criador ou membro da pauta).</p>
+                <p>O processo de transferência manual consiste na exportação da pauta do sistema Verde, quando houver pauta previamente cadastrada, sua conversão para um formato compatível e a importação do arquivo final no SIGAP. Cabe ao usuário responsável pela transferência garantir a segurança dos dados durante este processo, incluindo a exclusão segura dos arquivos intermediários (como PDFs e CSVs) de seus dispositivos locais após a importação bem-sucedida. O SIGAP não se responsabiliza pelo manuseio dos dados fora de sua plataforma, mas orienta todos os usuários a seguirem as melhores práticas de segurança para proteger a privacidade dos assistidos.</p>
+            </div>
+            <div class="flex justify-end mt-6 flex-shrink-0">
+                <button id="close-policy-modal-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Manual do Utilizador -->
+    <div id="manual-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 80vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Manual do Utilizador</h2>
+                <button id="close-manual-modal-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            </div>
+            <div class="text-gray-700 space-y-4 overflow-y-auto pr-2">
+                <p><strong>Bem-vindo ao SIGAP!</strong></p>
+                <p>Este sistema foi desenvolvido para facilitar a gestão de pautas de atendimento jurídico.</p>
+                <ul class="list-disc list-inside space-y-2">
+                    <li><strong>Criar Pauta:</strong> Use o botão verde na tela inicial para começar.</li>
+                    <li><strong>Importar Dados:</strong> Você pode carregar arquivos CSV para agilizar o preenchimento.</li>
+                    <li><strong>Gestão de Status:</strong> Mova os assistidos entre "Pauta", "Aguardando" e "Atendido".</li>
+                    <li><strong>Delegação:</strong> Use a coluna "Em Atendimento" para enviar links de finalização por e-mail.</li>
+                    <li><strong>Privacidade:</strong> O sistema limpa dados sensíveis periodicamente para sua segurança.</li>
+                </ul>
+            </div>
+            <div class="flex justify-end mt-6 flex-shrink-0">
+                <button id="close-manual-modal-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Fechar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal: Termos de Uso -->
+    <div id="terms-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 80vh;">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-gray-800">Termos de Uso</h2>
+                <button id="close-terms-modal-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            </div>
+            <div class="text-gray-700 space-y-4 overflow-y-auto pr-2">
+                <p><strong>1. Uso do Sistema</strong></p>
+                <p>O SIGAP é uma ferramenta de apoio à gestão. O usuário é responsável pela veracidade dos dados inseridos.</p>
+                <p><strong>2. Segurança</strong></p>
+                <p>O acesso é pessoal e intransferível. Não compartilhe sua senha de acesso.</p>
+                <p><strong>3. Dados Sensíveis</strong></p>
+                <p>O usuário compromete-se a utilizar os dados dos assistidos apenas para fins profissionais, respeitando o sigilo funcional.</p>
+            </div>
+            <div class="flex justify-end mt-6 flex-shrink-0">
+                <button id="close-terms-modal-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Detalhes -->
+    <div id="documents-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-0 sm:p-4">
+        <div class="bg-white shadow-2xl w-full max-w-4xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;">
+            <div class="flex justify-between items-center p-3 sm:p-4 border-b bg-gray-50 shrink-0 sm:rounded-t-xl">
+                <h2 class="text-xs sm:text-lg font-bold text-gray-800 truncate pr-2">
+                    <span id="documents-assisted-name" class="text-green-600 uppercase"></span>
+                </h2>
+                <button id="close-documents-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl p-1 leading-none">&times;</button>
+            </div>
+    
+            <div id="document-checklist-view-header" class="hidden p-2 bg-white border-b flex flex-col gap-2 shrink-0">
+                <div class="flex items-center gap-2 w-full">
+                    <button id="back-to-action-selection-btn" class="bg-gray-100 border border-gray-300 text-gray-700 font-bold p-2 rounded-lg text-xs shrink-0 active:bg-gray-200">
+                        &larr;
+                    </button>
+                    <div class="flex flex-col min-w-0">
+                        <h3 id="checklist-title" class="text-[10px] font-black text-gray-500 uppercase truncate leading-none mb-1"></h3>
+                        <span id="checklist-counter" class="text-[9px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full w-max">
+                            0 itens selecionados
+                        </span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-1.5 w-full">
+                    <button id="print-checklist-btn" class="bg-red-600 text-white font-bold py-2.5 rounded-lg text-[10px] uppercase shadow-sm active:bg-red-700 transition-colors">PDF</button>
+                    <button id="reset-checklist-btn" class="bg-amber-500 text-white font-bold py-2.5 rounded-lg text-[10px] uppercase shadow-sm active:bg-amber-600 transition-colors">Mudar</button>
+                    <button id="save-checklist-btn" class="bg-green-600 text-white font-bold py-2.5 rounded-lg text-[10px] uppercase shadow-lg active:bg-green-700 transition-colors">Salvar</button>
+                </div>
+            </div>
+    
+            <div id="checklist-search-container" class="hidden p-2 bg-gray-50 border-b shrink-0">
+                <input type="search" id="checklist-search" placeholder="Pesquisar documento..." class="w-full p-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+    
+            <div class="flex-grow overflow-y-auto p-3 sm:p-6 bg-white scrollable-content">
+                <div id="document-action-selection"></div>
+                <div id="document-checklist-view" class="hidden flex-col">
+                    <div id="checklist-container" class="space-y-1"></div>
+                    <div id="address-editor-container" class="mt-8 border-t pt-6 mb-10"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Anotações -->
+    <div id="notes-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
+        <div class="bg-white rounded-xl p-6 w-96 shadow-lg">
+            <h2 class="text-lg font-semibold text-gray-700 mb-3">Minhas Anotações</h2>
+            <textarea id="notes-text" class="w-full h-40 border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500"></textarea>
+            <div class="mt-4 flex justify-end gap-2">
+                <button id="save-notes-btn" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Salvar</button>
+                <button id="close-notes-btn" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação -->
+    <div id="confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Confirmação</h2>
+            <p id="modal-text" class="mb-6 text-gray-600">Tem certeza que deseja realizar esta ação?</p>
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-action" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-action" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal do Painel Admin -->
+    <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
+        <div id="admin-window" class="bg-white rounded-lg shadow-2xl w-full max-w-4xl flex flex-col transition-all duration-300" style="max-height: 90vh;">
+            <div class="flex justify-between items-center bg-gray-100 px-4 py-2 rounded-t-lg border-b select-none">
+                <div class="flex items-center gap-2">
+                    <span class="text-blue-600">🛡️</span>
+                    <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Painel do Administrador</h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="min-admin-btn" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-300 text-gray-600">_</button>
+                    <button id="max-admin-btn" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-300 text-gray-600">▢</button>
+                    <button id="close-admin-modal-btn" class="w-8 h-8 flex items-center justify-center rounded hover:bg-red-500 hover:text-white text-gray-600 font-bold">×</button>
+                </div>
+            </div>
+
+            <div id="admin-content-area" class="flex-grow overflow-y-auto p-4 md:p-6 space-y-8 text-left">
+                <div class="mt-4 border-t pt-4">
+                    <h3 class="font-semibold text-red-600 mb-2 uppercase text-sm">Manutenção do Sistema (LGPD)</h3>
+                    <p class="text-xs text-gray-500 mb-4">Apaga permanentemente atendimentos com mais de 7 dias de todas as pautas.</p>
+                    <button id="cleanup-old-data-btn" class="w-full bg-red-100 text-red-700 font-bold py-2 rounded-lg hover:bg-red-200 transition border border-red-300">
+                        Executar Limpeza de 7 Dias
+                    </button>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2 border-l-4 border-purple-500 pl-2">Auditoria e Segurança</h3>
+                    <div class="bg-gray-50 p-4 rounded border border-gray-200">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h4 class="font-bold text-gray-700">Logs de Atividade</h4>
+                                <p class="text-xs text-gray-600">Visualize o histórico de ações críticas.</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button id="view-audit-logs-btn" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 text-sm font-bold">Carregar Logs</button>
+                                <button id="export-audit-pdf-btn" class="hidden bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 text-sm font-bold">PDF</button>
+                            </div>
+                        </div>
+                        <div id="audit-logs-container" class="hidden mt-4">
+                            <div class="overflow-x-auto border rounded bg-white" style="max-height: 250px; overflow-y: auto;">
+                                <table class="w-full text-xs text-left text-gray-500">
+                                    <thead class="text-gray-700 uppercase bg-gray-100 sticky top-0">
+                                        <tr>
+                                            <th class="px-3 py-2">Data/Hora</th>
+                                            <th class="px-3 py-2">Usuário</th>
+                                            <th class="px-3 py-2 text-center">Ação</th>
+                                            <th class="px-3 py-2">Detalhes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="audit-logs-table-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4 border-l-4 border-green-500 pl-2">Análise de Dados (BI)</h3>
+                    <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                        <div class="flex flex-wrap items-end gap-4 mb-6">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase">Início</label>
+                                <input type="date" id="stats-filter-start" class="border rounded p-2 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase">Fim</label>
+                                <input type="date" id="stats-filter-end" class="border rounded p-2 text-sm">
+                            </div>
+                            <div class="flex-grow">
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase">Criador da Pauta</label>
+                                <select id="stats-filter-user" class="w-full border rounded p-2 text-sm">
+                                    <option value="all">Todos os Usuários</option>
+                                </select>
+                            </div>
+                            <button id="btn-load-dashboard" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700 transition shadow-md">
+                                Gerar Relatório
+                            </button>
+                        </div>
+                
+                        <div id="dashboard-results" class="hidden space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="p-4 bg-blue-50 rounded-lg text-center">
+                                    <p class="text-xs text-blue-600 font-bold uppercase">Total de Assistidos</p>
+                                    <h4 id="dash-total-geral" class="text-3xl font-black text-blue-800">0</h4>
+                                </div>
+                                <div class="p-4 bg-green-50 rounded-lg text-center">
+                                    <p class="text-xs text-green-600 font-bold uppercase">Efetivamente Atendidos</p>
+                                    <h4 id="dash-total-atendidos" class="text-3xl font-black text-green-800">0</h4>
+                                </div>
+                                <div class="p-4 bg-orange-50 rounded-lg text-center">
+                                    <p class="text-xs text-orange-600 font-bold uppercase">Taxa de Absenteísmo</p>
+                                    <h4 id="dash-taxa-falta" class="text-3xl font-black text-orange-800">0%</h4>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="border rounded-lg p-4 bg-gray-50">
+                                    <h5 class="text-xs font-bold mb-4 uppercase text-gray-500">Top 5 Assuntos</h5>
+                                    <div id="dash-subjects-list" class="space-y-2 text-xs"></div>
+                                </div>
+                                <div class="border rounded-lg p-4 bg-gray-50">
+                                    <h5 class="text-xs font-bold mb-4 uppercase text-gray-500">Volume por Criador</h5>
+                                    <div id="dash-users-list" class="space-y-2 text-xs"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h3 class="font-semibold text-gray-700 mb-2">Usuários Pendentes</h3>
+                        <div id="pending-users-list" class="space-y-3 mb-6"></div>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-700 mb-2">Usuários Aprovados</h3>
+                        <div id="approved-users-list" class="space-y-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Estatísticas - Padrão igual ao de colaboradores -->
+    <div id="statistics-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-6xl flex flex-col" style="max-height: 90vh;">
+            <!-- Cabeçalho igual ao de colaboradores -->
+            <div class="flex justify-between items-center p-4 border-b bg-gray-50 rounded-t-lg shrink-0">
+                <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <span class="text-green-600">📊</span> Estatísticas da Pauta
+                </h2>
+                <button id="close-statistics-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl p-1 leading-none">&times;</button>
+            </div>
+
+            <!-- Conteúdo -->
+            <div id="statistics-content" class="flex-grow overflow-auto p-4">
+                <!-- Conteúdo será gerado pelo StatisticsService -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Rodapé -->
+    <footer class="bg-white border-t border-gray-200 mt-8 pt-6 pb-6 text-center">
+        <div class="flex justify-center space-x-6 mb-4 text-xs text-gray-500 font-medium">
+            <button id="manual-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none">
+                Manual do Utilizador
+            </button>
+            <button id="privacy-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none">Privacidade</button>
+            <button id="terms-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none">Termos</button>
+        </div>
+    
+        <div class="flex justify-center items-center gap-4 mb-2 opacity-60">
+            <span class="flex items-center gap-1 text-[10px] text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full" title="Conexão Criptografada">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="green" viewBox="0 0 16 16"><path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/></svg>
+                Ambiente Seguro
+            </span>
+            <span class="flex items-center gap-1 text-[10px] text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full" title="Monitoramento de Erros Ativo">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="blue" viewBox="0 0 16 16"><path d="M8 0c-.69 0-1.843.265-2.928.56-1.11.3-2.229.655-2.887.87a1.54 1.54 0 0 0-1.044 1.262c-.596 4.477.787 7.795 2.465 9.99a11.775 11.775 0 0 0 2.517 2.453c.386.262.794.5 1.218.697.12.056.242.107.366.153l.232.083.232-.083c.124-.046.246-.097.366-.153.424-.197.832-.435 1.218-.697a11.775 11.775 0 0 0 2.517-2.453c1.678-2.195 3.061-5.513 2.465-9.99a1.54 1.54 0 0 0-1.044-1.262 62.456 62.456 0 0 0-2.887-.87C9.843.265 8.69 0 8 0zm0 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg>
+                Sentry Monitored
+            </span>
+            <span class="flex items-center gap-1 text-[10px] text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full" title="Conformidade com Proteção de Dados">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="purple" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                    <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                </svg>
+                LGPD Ready
+            </span>
+        </div>
+    
+        <p class="text-xs text-gray-400">
+            &copy; 2026 SIGEP - Sistema de Gestão. Versão 2.1 (Segura)
+        </p>
+    </footer>
+
+    <!-- Script principal -->
     <script type="module">
-        // Importações
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -870,19 +1469,18 @@
         import { PautaService } from './js/pauta.js';
         import { UIService } from './js/ui.js';
         import CollaboratorService from './js/colaboradores.js';        
-        import { ModalService } from './js/modal.js?v=20260330';
-        import { NotesService } from './js/notes.js?v=20260330';
-        import { StatisticsService } from './js/estatisticas.js?v=20260330';
-        import { PDFService } from './js/pdfService.js?v=20260330';
-        import { EmailService } from './js/emailService.js?v=20260330';
-        import { escapeHTML, showNotification, normalizeText, copyToClipboard, formatTime } from './js/utils.js?v=20260330';
+        import { ModalService } from './js/modal.js?v=20260313';
+        import { NotesService } from './js/notes.js?v=20260313';
+        import { StatisticsService } from './js/estatisticas.js?v=20260313';
+        import { PDFService } from './js/pdfService.js?v=novo_pdf_v2';
+        import { EmailService } from './js/emailService.js?v=20260313';
+        import { escapeHTML, showNotification, normalizeText, copyToClipboard, formatTime } from './js/utils.js?v=20260313';
         import { setupDetailsModal, openDetailsModal } from './js/detalhes.js';
         import { subjectTree, flatSubjects } from './js/assuntos.js';
         import { showConfirmModal } from './js/confirmModal.js';
         import { logAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser, loadAuditLogs, exportAuditLogsPDF, loadDashboardData, populateUserFilter } from './js/admin.js';
         import { parsePautaCSV } from './js/csvHandler.js';
         import { getChecklistHTML } from './js/checklist.js';
-        import ReviewFlowService from './js/reviewFlow.js';
 
         class SIGAPApp {
             constructor() {
@@ -899,9 +1497,7 @@
                 this.customRoomsList = [];
                 this.unsubscribeFromAttendances = null;
                 this.unsubscribeFromCollaborators = null;
-                this.currentPautaFilter = 'all';
-                this.useReviewFlow = false;
-                this.reviewFlowService = ReviewFlowService;
+                this.currentPautaFilter = 'all'; // Estado do filtro
                 
                 this.init();
             }
@@ -929,11 +1525,19 @@
             }
 
             setupOfflinePersistence() {
+                // Não tenta ativar persistência se já estiver em conflito
                 try {
                     enableIndexedDbPersistence(this.db).catch((err) => {
                         if (err.code == 'failed-precondition') {
+                            // Múltiplas abas abertas - podemos ignorar ou mostrar aviso
                             console.warn('⚠️ Persistência desativada: Múltiplas abas abertas.');
-                            showNotification('Múltiplas abas detectadas. Feche outras abas para ativar o modo offline.', 'warning');
+                            console.warn('O sistema funcionará normalmente, mas sem cache offline.');
+                            
+                            // Opcional: Mostrar notificação para o usuário
+                            showNotification(
+                                'Múltiplas abas detectadas. Feche outras abas para ativar o modo offline.',
+                                'warning'
+                            );
                         } else if (err.code == 'unimplemented') {
                             console.warn('⚠️ Navegador não suporta persistência offline.');
                         }
@@ -942,6 +1546,7 @@
                     console.log("Erro ao ativar persistência:", e);
                 }
             
+                // Listeners de conexão (continuam funcionando)
                 window.addEventListener('offline', () => {
                     document.getElementById('offline-indicator').classList.remove('hidden');
                 });
@@ -993,7 +1598,19 @@
                     if (btn) btn.addEventListener('click', () => AuthService.logout(this.auth));
                 });
 
-                // Formulário
+                // No final do setupEventListeners, adicione:
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.quick-action-toggle') && !e.target.closest('[id^="quick-menu-"]')) {
+                        document.querySelectorAll('[id^="quick-menu-"]').forEach(menu => {
+                            menu.classList.add('hidden');
+                        });
+                    }
+                });
+
+                // ================================================
+                // LISTENERS DOS BOTÕES DE RÁDIO DO FORMULÁRIO
+                // ================================================
+                
                 document.querySelectorAll('input[name="is-scheduled"]').forEach(radio => {
                     radio.addEventListener('change', (e) => {
                         const wrapper = document.getElementById('scheduled-time-wrapper');
@@ -1030,6 +1647,10 @@
                     document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
                     document.getElementById('scheduled-time-wrapper').classList.add('hidden');
                 });
+
+                // ================================================
+                // BOTÕES PRINCIPAIS
+                // ================================================
 
                 // Botão Criar Pauta
                 document.getElementById('create-pauta-btn')?.addEventListener('click', () => {
@@ -1120,7 +1741,6 @@
                     const ordemAtendimento = document.querySelector('input[name="ordemAtendimento"]:checked')?.value;
                     const useDelegationFlow = document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true';
                     const useDistributionFlow = document.getElementById('check-use-distribution')?.checked || false;
-                    const useReviewFlow = document.getElementById('check-use-review-flow')?.checked || false;
                     const user = this.auth.currentUser;
                     
                     if (!user) {
@@ -1134,13 +1754,13 @@
                     }
                 
                     try {
+                        // PRIMEIRO: Criar a pauta e guardar a referência
                         const pautaRef = await addDoc(collection(this.db, "pautas"), {
                             name: pautaName,
                             type: pautaType,
                             ordemAtendimento: ordemAtendimento,
                             useDelegationFlow: useDelegationFlow,
                             useDistributionFlow: useDistributionFlow,
-                            useReviewFlow: useReviewFlow,
                             owner: user.uid,
                             ownerEmail: user.email,
                             members: [user.uid],
@@ -1150,13 +1770,14 @@
                             rooms: pautaType === 'multisala' ? [...this.customRoomsList] : []
                         });
                         
+                        // SEGUNDO: Registrar o log de auditoria
                         await logAction(
                             this.db,
                             this.auth,
                             this.currentUserName || user.email,
                             pautaRef.id,
                             'CREATE_PAUTA',
-                            `Criou a pauta "${pautaName}" do tipo ${pautaType} ${useReviewFlow ? '(Modo Revisão Hierárquica)' : ''}`,
+                            `Criou a pauta "${pautaName}" do tipo ${pautaType}`,
                             pautaRef.id
                         );
                         
@@ -1197,6 +1818,7 @@
 
                 document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
                 
+                // Botão Compartilhar
                 document.getElementById('share-pauta-btn')?.addEventListener('click', () => {
                     const modal = document.getElementById('share-modal');
                     if (modal) {
@@ -1226,6 +1848,7 @@
                     }
                 });
 
+                // Toggle do link público
                 document.getElementById('share-toggle')?.addEventListener('change', async (e) => {
                     const isPublic = e.target.checked;
                     const statusText = document.getElementById('share-status-text');
@@ -1254,6 +1877,7 @@
                     }
                 });
 
+                // Copiar link
                 document.getElementById('copy-share-link-btn')?.addEventListener('click', () => {
                     const input = document.getElementById('share-link-input');
                     input.select();
@@ -1261,6 +1885,7 @@
                     showNotification("Link copiado!", "info");
                 });
 
+                // Ocultar sobrenomes
                 document.getElementById('mask-names-check')?.addEventListener('change', async (e) => {
                     const mask = e.target.checked;
                     try {
@@ -1273,14 +1898,17 @@
                     }
                 });
 
+               // Botão Estatísticas
                 document.getElementById('view-stats-btn')?.addEventListener('click', () => {
                     console.log("Botão estatísticas clicado");
+                    
                     const modal = document.getElementById('statistics-modal');
                     if (!modal) {
                         console.error("Modal de estatísticas não encontrado");
                         showNotification("Modal de estatísticas não encontrado", "error");
                         return;
                     }
+                    
                     if (this.allAssisted && this.currentPauta?.name) {
                         if (typeof StatisticsService?.showModal === 'function') {
                             StatisticsService.showModal(this.allAssisted, this.currentPautaData?.useDelegationFlow, this.currentPauta.name);
@@ -1298,40 +1926,47 @@
                     document.getElementById('edit-pauta-modal').classList.remove('hidden');
                 });
 
+                // Botão Editar Configurações da Pauta
                 document.getElementById('edit-pauta-config-btn')?.addEventListener('click', () => {
                     if (!this.currentPautaData) return;
                     
+                    // Preencher valores atuais no modal
                     const typeRadios = document.querySelectorAll('input[name="edit-pauta-type"]');
                     typeRadios.forEach(radio => {
-                        if (radio.value === this.currentPautaData.type) radio.checked = true;
+                        if (radio.value === this.currentPautaData.type) {
+                            radio.checked = true;
+                        }
                     });
                     
                     const ordemRadios = document.querySelectorAll('input[name="edit-ordem"]');
                     ordemRadios.forEach(radio => {
-                        if (radio.value === this.currentPautaData.ordemAtendimento) radio.checked = true;
+                        if (radio.value === this.currentPautaData.ordemAtendimento) {
+                            radio.checked = true;
+                        }
                     });
                     
                     const delegationRadios = document.querySelectorAll('input[name="edit-delegation"]');
                     delegationRadios.forEach(radio => {
                         const value = radio.value === 'true' ? true : false;
-                        if (value === this.currentPautaData.useDelegationFlow) radio.checked = true;
+                        if (value === this.currentPautaData.useDelegationFlow) {
+                            radio.checked = true;
+                        }
                     });
                     
                     const distCheck = document.getElementById('edit-use-distribution');
-                    if (distCheck) distCheck.checked = this.currentPautaData.useDistributionFlow || false;
-                    
-                    const reviewCheck = document.getElementById('edit-use-review-flow');
-                    if (reviewCheck) reviewCheck.checked = this.currentPautaData.useReviewFlow || false;
+                    if (distCheck) {
+                        distCheck.checked = this.currentPautaData.useDistributionFlow || false;
+                    }
                     
                     document.getElementById('edit-pauta-config-modal').classList.remove('hidden');
                 });
 
+                // Confirmar edição de configurações
                 document.getElementById('confirm-edit-pauta-config-btn')?.addEventListener('click', async () => {
                     const newType = document.querySelector('input[name="edit-pauta-type"]:checked')?.value;
                     const newOrdem = document.querySelector('input[name="edit-ordem"]:checked')?.value;
                     const newDelegation = document.querySelector('input[name="edit-delegation"]:checked')?.value === 'true';
                     const newDistribution = document.getElementById('edit-use-distribution')?.checked || false;
-                    const newReviewFlow = document.getElementById('edit-use-review-flow')?.checked || false;
                     
                     if (!newType || !newOrdem) {
                         showNotification("Selecione todas as opções", "error");
@@ -1344,16 +1979,16 @@
                             type: newType,
                             ordemAtendimento: newOrdem,
                             useDelegationFlow: newDelegation,
-                            useDistributionFlow: newDistribution,
-                            useReviewFlow: newReviewFlow
+                            useDistributionFlow: newDistribution
                         });
                         
+                        // Atualizar dados locais
                         this.currentPautaData.type = newType;
                         this.currentPautaData.ordemAtendimento = newOrdem;
                         this.currentPautaData.useDelegationFlow = newDelegation;
                         this.currentPautaData.useDistributionFlow = newDistribution;
-                        this.currentPautaData.useReviewFlow = newReviewFlow;
                         
+                        // Atualizar colunas visíveis
                         const emAtendimentoColumn = document.getElementById('em-atendimento-column');
                         const distColumn = document.getElementById('distribuicao-column');
                         
@@ -1363,13 +1998,11 @@
                             emAtendimentoColumn?.classList.add('hidden');
                         }
                         
-                        if (newDistribution && !newReviewFlow) {
+                        if (newDistribution) {
                             distColumn?.classList.remove('hidden');
                         } else {
                             distColumn?.classList.add('hidden');
                         }
-                        
-                        this.toggleReviewFlowColumns(newReviewFlow);
                         
                         showNotification("Configurações atualizadas com sucesso!");
                         document.getElementById('edit-pauta-config-modal').classList.add('hidden');
@@ -1385,9 +2018,12 @@
                 });
 
                 document.getElementById('manage-members-btn')?.addEventListener('click', async () => {
+                    console.log("Botão gerenciar membros clicado");
+                    
                     if (typeof ModalService?.openMembersModal === 'function') {
                         await ModalService.openMembersModal(this);
                     } else {
+                        console.error("ModalService.openMembersModal não é uma função");
                         showNotification("Erro ao abrir gerenciar membros", "error");
                     }
                 });
@@ -1428,8 +2064,7 @@
 
                 document.getElementById('toggle-faltosos-btn')?.addEventListener('click', UIService.toggleFaltosos);
 
-                ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search', 
-                 'em-revisao-search', 'aguardando-numero-search', 'aguardando-correcao-search', 'distribuidos-search'].forEach(id => {
+                ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
                     const element = document.getElementById(id);
                     if (element) {
                         element.addEventListener('input', () => {
@@ -1449,7 +2084,8 @@
                 });
 
                 document.getElementById('download-collaborators-pdf-modal')?.addEventListener('click', () => {
-                    const selectedCols = Array.from(document.querySelectorAll('.pdf-col-check:checked')).map(cb => cb.value);
+                    const selectedCols = Array.from(document.querySelectorAll('.pdf-col-check:checked'))
+                        .map(cb => cb.value);
                     PDFService.generateCollaboratorsPDF(this.currentPauta?.name || 'Pauta', this.colaboradores, selectedCols);
                 });
 
@@ -1475,14 +2111,19 @@
                     PautaService.handleCardActions(e, this);
                 });
 
-                // Formulário de Colaboradores
+                // ================================================
+                // FORMULÁRIO DE COLABORADORES
+                // ================================================
+                
                 document.getElementById('collaborator-form-modal')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
+                    
                     const nome = document.getElementById('collaborator-name-modal')?.value.trim();
                     if (!nome) {
                         showNotification("Nome obrigatório", "error");
                         return;
                     }
+                    
                     const data = {
                         nome: nome,
                         cargo: document.getElementById('collaborator-role-modal')?.value,
@@ -1491,10 +2132,609 @@
                         telefone: document.getElementById('collaborator-phone-modal')?.value || '',
                         transporte: document.querySelector('input[name="transporte-colaborador"]:checked')?.value || 'Meios Próprios'
                     };
+                    
                     await CollaboratorService.saveCollaborator(this, data);
                 });
                 
-                // Confirmar fechamento da pauta
+                document.querySelectorAll('[id^="cancel-"], [id^="close-"]').forEach(btn => {
+                    if (btn) {
+                        btn.addEventListener('click', (e) => {
+                            const modal = e.target.closest('.fixed');
+                            if (modal) modal.classList.add('hidden');
+                        });
+                    }
+                });
+
+                // ================================================
+                // LISTENERS DOS MODAIS DE PRIORIDADE
+                // ================================================
+
+                // Selecionar/desselecionar chips de prioridade
+                document.querySelectorAll('.p-chip').forEach(chip => {
+                    chip.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        this.classList.toggle('selected');
+                        console.log("Chip clicado:", this.dataset.value, "selected:", this.classList.contains('selected'));
+                    });
+                });
+
+                // Confirmar prioridade
+                document.getElementById('confirm-priority-reason-btn')?.addEventListener('click', async () => {
+                    console.log("Confirmar prioridade clicado");
+                    
+                    const selectedChips = Array.from(document.querySelectorAll('.p-chip.selected'))
+                                               .map(chip => chip.dataset.value);
+                                               
+                    const customReason = document.getElementById('priority-reason-input')?.value.trim() || '';
+                    
+                    let finalReason = selectedChips.join(', ');
+                    if (customReason) {
+                        finalReason = finalReason ? `${finalReason} | Obs: ${customReason}` : customReason;
+                    }
+
+                    console.log("Razão final:", finalReason);
+
+                    if (!finalReason) { 
+                        showNotification("Selecione uma categoria ou descreva o motivo.", "error"); 
+                        return; 
+                    }
+
+                    if (!window.assistedIdToHandle) {
+                        showNotification("ID do assistido não encontrado.", "error");
+                        return;
+                    }
+
+                    await PautaService.updateStatus(
+                        this.db,
+                        this.currentPauta.id,
+                        window.assistedIdToHandle,
+                        { 
+                            priority: 'URGENTE', 
+                            priorityReason: finalReason 
+                        },
+                        this.currentUserName
+                    );
+
+                    document.querySelectorAll('.p-chip').forEach(c => c.classList.remove('selected'));
+                    document.getElementById('priority-reason-input').value = '';
+                    document.getElementById('priority-reason-modal')?.classList.add('hidden');
+                    showNotification("Prioridade Ativada!");
+                });
+
+                // Cancelar prioridade
+                document.getElementById('cancel-priority-reason-btn')?.addEventListener('click', () => {
+                    document.getElementById('priority-reason-modal')?.classList.add('hidden');
+                });
+
+                // ================================================
+                // LISTENERS DO MODAL DE DETALHES (CHECKLIST)
+                // ================================================
+                
+                // Botão Voltar
+                document.getElementById('back-to-action-selection-btn')?.addEventListener('click', () => {
+                    document.getElementById('document-checklist-view').classList.add('hidden');
+                    document.getElementById('document-action-selection').classList.remove('hidden');
+                    document.getElementById('document-checklist-view-header').classList.add('hidden');
+                    document.getElementById('checklist-search-container').classList.add('hidden');
+                });
+                
+                // Botão Salvar Checklist
+                document.getElementById('save-checklist-btn')?.addEventListener('click', async () => {
+                    console.log("💾 Salvar checklist clicado");
+                    
+                    if (!window.assistedIdToHandle && !window.currentAssistedId) {
+                        showNotification("Erro: assistido não identificado", "error");
+                        return;
+                    }
+                    
+                    const assistedId = window.assistedIdToHandle || window.currentAssistedId;
+                    const container = document.getElementById('checklist-container');
+                    
+                    const checkedItems = Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => ({
+                        id: cb.id,
+                        text: cb.closest('label').querySelector('span').textContent,
+                        type: document.querySelector(`input[name="type-${cb.id}"]:checked`)?.value || 'Físico'
+                    }));
+                
+                    const checklistData = {
+                        checkedIds: checkedItems.map(item => item.id),
+                        docTypes: checkedItems.reduce((acc, item) => {
+                            acc[item.id] = item.type;
+                            return acc;
+                        }, {}),
+                        reuData: getReuDataFromForm(),
+                        expenseData: getExpenseDataFromForm()
+                    };
+                
+                    try {
+                        await updateDoc(doc(this.db, "pautas", this.currentPauta.id, "attendances", assistedId), {
+                            documentChecklist: checklistData,
+                            documentState: 'saved'
+                        });
+                        showNotification("Checklist salvo com sucesso!");
+                        document.getElementById('documents-modal').classList.add('hidden');
+                    } catch (error) {
+                        console.error("Erro ao salvar checklist:", error);
+                        showNotification("Erro ao salvar checklist", "error");
+                    }
+                });
+                
+                // Botão PDF
+                document.getElementById('print-checklist-btn')?.addEventListener('click', async () => {
+                    showNotification("Gerando PDF...", "info");
+                    
+                    try {
+                        const assistedName = document.getElementById('documents-assisted-name')?.textContent || 'Assistido';
+                        const actionTitle = document.getElementById('checklist-title')?.textContent || '';
+
+                        // Coleta documentos marcados
+                        const documentosTextos = [];
+                        document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
+                            let text = '';
+                            const label = cb.closest('label');
+                            if (label) {
+                                const span = label.querySelector('span:not(.sr-only)');
+                                if (span) text = span.textContent;
+                            }
+                            documentosTextos.push({
+                                id: cb.id,
+                                text: (text || cb.id || 'Documento').trim()
+                            });
+                        });
+
+                        // Coleta tipos (Fisico/Digital)
+                        const docTypes = {};
+                        document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
+                            const typeRadio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
+                            docTypes[cb.id] = typeRadio ? typeRadio.value : 'Fisico';
+                        });
+
+                        // Coleta dados do reu — prioriza detalhes.js (window), fallback local
+                        const reu = getReuDataFromForm();
+
+                        // Coleta dados de gastos — prioriza detalhes.js (window), fallback local
+                        const gastos = getExpenseDataFromForm();
+
+                        // Monta checklistData completo
+                        const checklistData = {
+                            checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
+                            docTypes: docTypes,
+                            reuData: reu,
+                            expenseData: gastos
+                        };
+
+                        const resultado = PDFService.generateChecklistPDF(
+                            assistedName, actionTitle, checklistData, documentosTextos
+                        );
+
+                        if (resultado) {
+                            showNotification("PDF gerado com sucesso!");
+                        } else {
+                            showNotification("Erro ao gerar PDF", "error");
+                        }
+                    } catch (err) {
+                        console.error("Erro PDF:", err);
+                        showNotification("Erro ao gerar PDF: " + err.message, "error");
+                    }
+                });
+                
+                // Botão Mudar (Reset)
+                document.getElementById('reset-checklist-btn')?.addEventListener('click', () => {
+                    if (confirm("Deseja mudar de assunto? Isso apagará o checklist atual.")) {
+                        document.getElementById('document-checklist-view').classList.add('hidden');
+                        document.getElementById('document-action-selection').classList.remove('hidden');
+                        document.getElementById('document-checklist-view-header').classList.add('hidden');
+                        document.getElementById('checklist-search-container').classList.add('hidden');
+                    }
+                });
+                
+                // Funções auxiliares — lêem direto do DOM (mesmos IDs do detalhes.js)
+                function getReuDataFromForm() {
+                    return {
+                        checkReuUnico: document.getElementById('check-reu-unico')?.checked || false,
+                        nome: document.getElementById('nome-reu')?.value || '',
+                        cpf: document.getElementById('cpf-reu')?.value || '',
+                        telefone: document.getElementById('telefone-reu')?.value || '',
+                        cep: document.getElementById('cep-reu')?.value || '',
+                        rua: document.getElementById('rua-reu')?.value || '',
+                        numero: document.getElementById('numero-reu')?.value || '',
+                        complemento: document.getElementById('complemento-reu')?.value || '',
+                        bairro: document.getElementById('bairro-reu')?.value || '',
+                        cidade: document.getElementById('cidade-reu')?.value || '',
+                        uf: document.getElementById('estado-reu')?.value || '',
+                        referencia: document.getElementById('referencia-reu')?.value || '',
+                        empresa: document.getElementById('empresa-reu')?.value || '',
+                        rua_comercial: document.getElementById('rua-comercial-reu')?.value || '',
+                        numero_comercial: document.getElementById('numero-comercial-reu')?.value || '',
+                        bairro_comercial: document.getElementById('bairro-comercial-reu')?.value || '',
+                        cidade_comercial: document.getElementById('cidade-comercial-reu')?.value || '',
+                        uf_comercial: document.getElementById('estado-comercial-reu')?.value || '',
+                        cep_comercial: document.getElementById('cep-comercial-reu')?.value || ''
+                    };
+                }
+
+                function getExpenseDataFromForm() {
+                    return {
+                        checkExibirGastos: document.getElementById('check-exibir-gastos')?.checked ?? true,
+                        moradia: document.getElementById('expense-moradia')?.value || '',
+                        alimentacao: document.getElementById('expense-alimentacao')?.value || '',
+                        educacao: document.getElementById('expense-educacao')?.value || '',
+                        saude: document.getElementById('expense-saude')?.value || '',
+                        vestuario: document.getElementById('expense-vestuario')?.value || '',
+                        lazer: document.getElementById('expense-lazer')?.value || '',
+                        outras: document.getElementById('expense-outras')?.value || ''
+                    };
+                }
+
+                // ================================================
+                // LISTENERS DO MODAL DE ATENDENTE (FINALIZAR)
+                // ================================================
+
+                // Confirmar atendimento (finalizar)
+                document.getElementById('confirm-attendant-btn')?.addEventListener('click', async () => {
+                    const select = document.getElementById('attendant-select');
+                    const attendantName = select?.value;
+                    
+                    const nomeFinal = attendantName || null;
+                    
+                    const useDist = this.currentPautaData?.useDistributionFlow === true;
+                    const novoStatus = useDist ? 'aguardandoDistribuicao' : 'atendido';
+
+                    let attendantData = nomeFinal;
+                    if (nomeFinal) {
+                        const selectedCollab = this.colaboradores?.find(c => c.nome === nomeFinal);
+                        if (selectedCollab) {
+                            attendantData = { 
+                                nome: selectedCollab.nome, 
+                                cargo: selectedCollab.cargo, 
+                                equipe: selectedCollab.equipe 
+                            };
+                        }
+                    }
+
+                    await PautaService.updateStatus(
+                        this.db,
+                        this.currentPauta.id,
+                        window.assistedIdToHandle,
+                        { 
+                            status: novoStatus, 
+                            attendant: attendantData, 
+                            attendedTime: new Date().toISOString() 
+                        },
+                        this.currentUserName
+                    );
+                    
+                    document.getElementById('attendant-modal')?.classList.add('hidden');
+                    showNotification(novoStatus === 'atendido' ? "Atendimento finalizado!" : "Enviado para Distribuição ⚖️");
+                });
+
+                // Cancelar atendimento
+                document.getElementById('cancel-attendant-btn')?.addEventListener('click', () => {
+                    document.getElementById('attendant-modal')?.classList.add('hidden');
+                });
+
+                // ================================================
+                // LISTENERS DO MODAL DE EDIÇÃO DE ATENDENTE
+                // ================================================
+
+                // Confirmar edição de atendente
+                document.getElementById('confirm-edit-attendant-btn')?.addEventListener('click', async () => {
+                    const select = document.getElementById('edit-attendant-select');
+                    const attendantName = select?.value;
+                    
+                    if (!attendantName) {
+                        showNotification("Selecione um profissional", "error");
+                        return;
+                    }
+                    
+                    const selectedCollab = this.colaboradores?.find(c => c.nome === attendantName);
+                    let attendantData = selectedCollab ? 
+                        { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe } : 
+                        attendantName;
+
+                    await PautaService.updateStatus(
+                        this.db,
+                        this.currentPauta.id,
+                        window.assistedIdToHandle,
+                        { attendant: attendantData },
+                        this.currentUserName
+                    );
+                    
+                    document.getElementById('edit-attendant-modal')?.classList.add('hidden');
+                    showNotification("Atendente atualizado com sucesso!");
+                });
+
+                // Cancelar edição de atendente
+                document.getElementById('cancel-edit-attendant-btn')?.addEventListener('click', () => {
+                    document.getElementById('edit-attendant-modal')?.classList.add('hidden');
+                });
+
+                // ================================================
+                // LISTENERS DO MODAL DE SELEÇÃO DE COLABORADOR
+                // ================================================
+
+                // Confirmar seleção de colaborador
+                document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
+                    // pauta.js seta window.selectedCollaboratorId e window.selectedCollaboratorName ao clicar num item
+                    // 'null' (string) = "Não atribuir"; undefined = nada selecionado ainda
+                    const collaboratorId = window.selectedCollaboratorId;
+                    const collaboratorName = window.selectedCollaboratorName || null;
+
+                    // Ações rápidas: Reagendar, Agendar, Consulta, Outros
+                    // Devem finalizar o atendimento direto (status: 'atendido')
+                    const acoesRapidas = ['reagendar', 'agendar', 'consulta', 'outros'];
+                    const isAcaoRapida = acoesRapidas.includes(window.assistedTipoAcao);
+
+                    // Para ações rápidas: se nada selecionado, usa o usuário logado
+                    // Para fluxo normal: exige seleção
+                    if (!isAcaoRapida && collaboratorId === undefined) {
+                        showNotification("Selecione um colaborador ou 'Não atribuir'.", "warning");
+                        return;
+                    }
+
+                    if (isAcaoRapida) {
+                        // Finaliza direto como atendido, registrando quem atendeu e o tipo de ação
+                        const tipoDescricao = window.assistedTipoDescricao || window.assistedTipoAcao || 'Ação rápida';
+                        const atendenteFinal = collaboratorName || this.currentUserName;
+
+                        await PautaService.updateStatus(
+                            this.db,
+                            this.currentPauta.id,
+                            window.assistedIdToHandle,
+                            {
+                                status: 'atendido',
+                                attendedBy: atendenteFinal,
+                                attendedAt: new Date().toISOString(),
+                                inAttendanceTime: new Date().toISOString(),
+                                isConfirmed: false,
+                                finalizadoPeloColaborador: true,
+                                distributionStatus: 'completed',
+                                tipoAcaoRapida: tipoDescricao,
+                                assignedCollaborator: collaboratorName
+                                    ? { id: collaboratorId, name: collaboratorName }
+                                    : null
+                            },
+                            this.currentUserName
+                        );
+
+                        showNotification(`${window.assistedNameToHandle} marcado como atendido por ${atendenteFinal} (${tipoDescricao}).`, "success");
+
+                    } else {
+                        // Fluxo normal: manda para emAtendimento
+                        let collaboratorData = null;
+                        if (collaboratorName) {
+                            collaboratorData = { id: collaboratorId, name: collaboratorName };
+                            showNotification(`${window.assistedNameToHandle} atribuído a ${collaboratorName}.`);
+                        } else {
+                            showNotification(`${window.assistedNameToHandle} movido para 'Em Atendimento' sem colaborador atribuído.`);
+                        }
+
+                        await PautaService.updateStatus(
+                            this.db,
+                            this.currentPauta.id,
+                            window.assistedIdToHandle,
+                            {
+                                status: 'emAtendimento',
+                                assignedCollaborator: collaboratorData,
+                                inAttendanceTime: new Date().toISOString()
+                            },
+                            this.currentUserName
+                        );
+                    }
+                    
+                    document.getElementById('select-collaborator-modal')?.classList.add('hidden');
+                    // Limpa a seleção para a próxima vez
+                    window.assistedTipoAcao = null;
+                    window.assistedTipoDescricao = null;
+                    window.selectedCollaboratorId = undefined;
+                    window.selectedCollaboratorName = undefined;
+                });
+
+                // Cancelar seleção de colaborador
+                document.getElementById('cancel-select-collaborator-btn')?.addEventListener('click', () => {
+                    document.getElementById('select-collaborator-modal')?.classList.add('hidden');
+                    window.selectedCollaboratorId = undefined;
+                    window.selectedCollaboratorName = undefined;
+                    window.assistedTipoAcao = null;
+                    window.assistedTipoDescricao = null;
+                });
+
+                // ================================================
+                // LISTENERS DOS MODAIS DE CHEGADA
+                // ================================================
+
+                // Confirmar chegada
+                document.getElementById('confirm-arrival-btn')?.addEventListener('click', async () => {
+                    const time = document.getElementById('arrival-time-input')?.value;
+                    if (!time) {
+                        showNotification("Informe o horário", "error");
+                        return;
+                    }
+
+                    const [hours, minutes] = time.split(':');
+                    const arrivalDate = new Date();
+                    arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+                    const roomSelect = document.getElementById('arrival-room-select');
+                    const room = roomSelect && !roomSelect.classList.contains('hidden') ? roomSelect.value : null;
+
+                    await PautaService.updateStatus(
+                        this.db,
+                        this.currentPauta.id,
+                        window.assistedIdToHandle,
+                        {
+                            status: 'aguardando',
+                            arrivalTime: arrivalDate.toISOString(),
+                            checkInOrder: Date.now(),
+                            room: room
+                        },
+                        this.currentUserName
+                    );
+
+                    document.getElementById('arrival-modal')?.classList.add('hidden');
+                    showNotification("Chegada registrada com sucesso!", "success");
+                });
+
+                // Cancelar chegada
+                document.getElementById('cancel-arrival-btn')?.addEventListener('click', () => {
+                    document.getElementById('arrival-modal')?.classList.add('hidden');
+                });
+
+                // ================================================
+                // LISTENERS DO MODAL DE EDIÇÃO DE ASSISTIDO
+                // ================================================
+
+                // Confirmar edição de assistido
+                document.getElementById('confirm-edit-assisted-btn')?.addEventListener('click', async () => {
+                    const name = document.getElementById('edit-assisted-name')?.value.trim();
+                    if (!name) {
+                        showNotification("O nome não pode ficar em branco.", "error");
+                        return;
+                    }
+                    
+                    const updatedData = {
+                        name: name,
+                        cpf: document.getElementById('edit-assisted-cpf')?.value.trim() || '',
+                        subject: document.getElementById('edit-assisted-subject')?.value.trim() || '',
+                        scheduledTime: document.getElementById('edit-scheduled-time')?.value || null,
+                    };
+                    
+                    await PautaService.updateStatus(
+                        this.db,
+                        this.currentPauta.id,
+                        window.assistedIdToHandle,
+                        updatedData,
+                        this.currentUserName
+                    );
+                    
+                    document.getElementById('edit-assisted-modal')?.classList.add('hidden');
+                    showNotification("Dados atualizados com sucesso!", "success");
+                });
+
+                // Cancelar edição de assistido
+                document.getElementById('cancel-edit-assisted-btn')?.addEventListener('click', () => {
+                    document.getElementById('edit-assisted-modal')?.classList.add('hidden');
+                });
+
+                // ================================================
+                // LISTENERS DO MODAL DE DEMANDAS
+                // ================================================
+
+                // Adicionar demanda
+                document.getElementById('demands-modal-add-demand-btn')?.addEventListener('click', () => {
+                    const input = document.getElementById('demands-modal-new-demand-input');
+                    const text = input?.value.trim();
+                    if (text) {
+                        const container = document.getElementById('demands-modal-list-container');
+                        if (container) {
+                            if (container.querySelector('p.text-gray-500')) {
+                                container.innerHTML = '';
+                            }
+                            
+                            const li = document.createElement('li');
+                            li.className = 'flex justify-between items-center p-2 bg-white rounded-md';
+                            li.innerHTML = `
+                                <span>${escapeHTML(text)}</span>
+                                <button class="remove-demand-item-btn text-red-500 text-xs">Remover</button>
+                            `;
+                            container.appendChild(li);
+                            input.value = '';
+                        }
+                    }
+                });
+
+                document.getElementById('demands-modal-list-container')?.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('remove-demand-item-btn')) {
+                        const li = e.target.closest('li');
+                        if (li) li.remove();
+                        
+                        const container = document.getElementById('demands-modal-list-container');
+                        if (container && container.children.length === 0) {
+                            container.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
+                        }
+                    }
+                });
+
+                document.getElementById('save-demands-btn')?.addEventListener('click', async () => {
+                    const container = document.getElementById('demands-modal-list-container');
+                    const items = container?.querySelectorAll('li') || [];
+                    const descricoes = Array.from(items).map(li => li.querySelector('span')?.textContent || '');
+                    
+                    const demandsData = {
+                        quantidade: descricoes.length,
+                        descricoes: descricoes
+                    };
+                    
+                    await PautaService.updateStatus(
+                        this.db,
+                        this.currentPauta.id,
+                        window.assistedIdToHandle,
+                        { demandas: demandsData },
+                        this.currentUserName
+                    );
+                    
+                    showNotification("Demandas salvas com sucesso!");
+                    document.getElementById('demands-modal')?.classList.add('hidden');
+                });
+
+                document.getElementById('cancel-demands-btn')?.addEventListener('click', () => {
+                    document.getElementById('demands-modal')?.classList.add('hidden');
+                });
+
+                document.getElementById('close-demands-modal-btn')?.addEventListener('click', () => {
+                    document.getElementById('demands-modal')?.classList.add('hidden');
+                });
+
+                // ================================================
+                // LISTENERS DO MODAL DE CONFIRMAÇÃO DE RESET
+                // ================================================
+
+                document.getElementById('confirm-reset-btn')?.addEventListener('click', async () => {
+                    const attendanceCollectionRef = collection(this.db, "pautas", this.currentPauta.id, "attendances");
+                    const snapshot = await getDocs(attendanceCollectionRef);
+                    
+                    if (snapshot.empty) {
+                        showNotification("A pauta já está vazia.", "info");
+                        document.getElementById('reset-confirm-modal')?.classList.add('hidden');
+                        return;
+                    }
+                    
+                    const batch = writeBatch(this.db);
+                    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                    await batch.commit();
+                    
+                    showNotification("Pauta zerada com sucesso.", "success");
+                    document.getElementById('reset-confirm-modal')?.classList.add('hidden');
+                });
+
+                document.getElementById('cancel-reset-btn')?.addEventListener('click', () => {
+                    document.getElementById('reset-confirm-modal')?.classList.add('hidden');
+                });
+
+                // ================================================
+                // LISTENERS DO MODAL DE EDIÇÃO DE NOME DA PAUTA
+                // ================================================
+
+                document.getElementById('confirm-edit-pauta-btn')?.addEventListener('click', async () => {
+                    const newName = document.getElementById('edit-pauta-name-input')?.value.trim();
+                    if (newName && this.currentPauta?.id) {
+                        await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { name: newName });
+                        document.getElementById('pauta-title').textContent = newName;
+                        showNotification("Nome da pauta atualizado.");
+                        document.getElementById('edit-pauta-modal')?.classList.add('hidden');
+                    } else {
+                        showNotification("O nome não pode ser vazio.", "error");
+                    }
+                });
+
+                document.getElementById('cancel-edit-pauta-btn')?.addEventListener('click', () => {
+                    document.getElementById('edit-pauta-modal')?.classList.add('hidden');
+                });
+
+                // ================================================
+                // LISTENERS DO MODAL DE FECHAR/REABRIR PAUTA
+                // ================================================
+
                 document.getElementById('confirm-close-pauta-btn')?.addEventListener('click', async () => {
                     const password = document.getElementById('close-pauta-password')?.value;
                     const errorDiv = document.getElementById('close-auth-error');
@@ -1535,47 +2775,101 @@
                     document.getElementById('close-pauta-modal')?.classList.add('hidden');
                 });
 
-                // Confirmar reset
-                document.getElementById('confirm-reset-btn')?.addEventListener('click', async () => {
-                    const attendanceCollectionRef = collection(this.db, "pautas", this.currentPauta.id, "attendances");
-                    const snapshot = await getDocs(attendanceCollectionRef);
+                // ================================================
+                // LISTENERS DO MODAL DE DELEGAÇÃO POR EMAIL
+                // ================================================
+
+                document.getElementById('send-delegate-email-btn')?.addEventListener('click', async () => {
+                    const emailInput = document.getElementById('collaborator-email-input');
+                    const emailDestino = emailInput?.value.trim();
                     
-                    if (snapshot.empty) {
-                        showNotification("A pauta já está vazia.", "info");
-                        document.getElementById('reset-confirm-modal')?.classList.add('hidden');
+                    if (!emailDestino) {
+                        showNotification("Por favor, insira o e-mail.", "error");
                         return;
                     }
-                    
-                    const batch = writeBatch(this.db);
-                    snapshot.docs.forEach(doc => batch.delete(doc.ref));
-                    await batch.commit();
-                    
-                    showNotification("Pauta zerada com sucesso.", "success");
-                    document.getElementById('reset-confirm-modal')?.classList.add('hidden');
-                });
 
-                document.getElementById('cancel-reset-btn')?.addEventListener('click', () => {
-                    document.getElementById('reset-confirm-modal')?.classList.add('hidden');
-                });
+                    const btn = document.getElementById('send-delegate-email-btn');
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.textContent = "Enviando...";
+                    }
 
-                // Confirmar edição de nome
-                document.getElementById('confirm-edit-pauta-btn')?.addEventListener('click', async () => {
-                    const newName = document.getElementById('edit-pauta-name-input')?.value.trim();
-                    if (newName && this.currentPauta?.id) {
-                        await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { name: newName });
-                        document.getElementById('pauta-title').textContent = newName;
-                        showNotification("Nome da pauta atualizado.");
-                        document.getElementById('edit-pauta-modal')?.classList.add('hidden');
-                    } else {
-                        showNotification("O nome não pode ser vazio.", "error");
+                    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                    const urlFinal = `${baseUrl}/atendimento_externo.html?pautaId=${this.currentPauta.id}&assistidoId=${window.assistedIdForDelegation}&collaboratorName=${encodeURIComponent(this.currentUserName)}`;
+
+                    let nomeColega = window.collaboratorNameForDelegation;
+                    if (!nomeColega || nomeColega === "Não informado" || nomeColega === "undefined") {
+                        nomeColega = "Colega Colaborador";
+                    }
+
+                    try {
+                        await EmailService.sendDelegationEmail(
+                            emailDestino, 
+                            nomeColega, 
+                            window.assistedNameForDelegation, 
+                            this.currentUserName,
+                            this.currentPauta.id,
+                            window.assistedIdForDelegation
+                        );
+
+                        document.getElementById('delegate-email-modal')?.classList.add('hidden');
+                        if (emailInput) emailInput.value = '';
+                        
+                    } catch (error) {
+                        console.error("Erro ao enviar email:", error);
+                        showNotification("Falha no envio do e-mail.", "error");
+                    } finally {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.textContent = "Enviar Link por E-mail";
+                        }
                     }
                 });
 
-                document.getElementById('cancel-edit-pauta-btn')?.addEventListener('click', () => {
-                    document.getElementById('edit-pauta-modal')?.classList.add('hidden');
+                document.getElementById('cancel-delegate-email-btn')?.addEventListener('click', () => {
+                    document.getElementById('delegate-email-modal')?.classList.add('hidden');
                 });
 
-                // Configurar painel admin
+                // ================================================
+                // LISTENER GLOBAL PARA REMOVER MEMBROS
+                // ================================================
+                
+                document.body.addEventListener('click', async (e) => {
+                    if (e.target.classList.contains('remove-member-btn')) {
+                        const email = e.target.dataset.email;
+                        if (confirm(`Remover ${email} da pauta?`)) {
+                            try {
+                                const usersRef = collection(this.db, "users");
+                                const q = query(usersRef, where("email", "==", email));
+                                const querySnapshot = await getDocs(q);
+                                
+                                if (!querySnapshot.empty) {
+                                    const userId = querySnapshot.docs[0].id;
+                                    const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                                    
+                                    await updateDoc(pautaRef, {
+                                        members: arrayRemove(userId),
+                                        memberEmails: arrayRemove(email)
+                                    });
+                                    
+                                    showNotification(`Membro ${email} removido`);
+                                    
+                                    if (typeof ModalService?.openMembersModal === 'function') {
+                                        await ModalService.openMembersModal(this);
+                                    }
+                                }
+                            } catch (error) {
+                                console.error("Erro ao remover membro:", error);
+                                showNotification("Erro ao remover membro", "error");
+                            }
+                        }
+                    }
+                });
+
+                // ================================================
+                // CONFIGURAÇÃO DO PAINEL ADMIN
+                // ================================================
+                
                 this.setupAdminPanel();
             }
 
@@ -1694,6 +2988,8 @@
                 });
 
                 document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
+                    console.log("Carregando logs de auditoria...");
+                    
                     const btn = document.getElementById('view-audit-logs-btn');
                     const originalText = btn.textContent;
                     btn.textContent = "Carregando...";
@@ -1717,41 +3013,6 @@
                 document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
                     loadDashboardData(this.db);
                 });
-            }
-
-            toggleReviewFlowColumns(show) {
-                const columns = ['em-revisao', 'aguardando-numero', 'aguardando-correcao', 'distribuidos'];
-                columns.forEach(col => {
-                    const el = document.getElementById(`${col}-column`);
-                    if (el) {
-                        if (show) el.classList.remove('hidden');
-                        else el.classList.add('hidden');
-                    }
-                });
-                
-                const statsPanel = document.getElementById('review-stats-panel');
-                if (statsPanel) {
-                    if (show) statsPanel.classList.remove('hidden');
-                    else statsPanel.classList.add('hidden');
-                }
-                
-                // Se mostrar revisão, esconde distribuição simples
-                const distColumn = document.getElementById('distribuicao-column');
-                if (distColumn) {
-                    if (show) distColumn.classList.add('hidden');
-                    else if (this.currentPautaData?.useDistributionFlow) distColumn.classList.remove('hidden');
-                }
-                
-                // Atualizar badge do modo
-                const modeBadge = document.getElementById('pauta-mode-badge');
-                if (modeBadge) {
-                    if (show) {
-                        modeBadge.innerHTML = '<span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs">🎯 Modo Revisão Hierárquica Ativo</span>';
-                        modeBadge.classList.remove('hidden');
-                    } else {
-                        modeBadge.classList.add('hidden');
-                    }
-                }
             }
 
             async loadPauta(pautaId, pautaName, pautaType) {
@@ -1789,7 +3050,6 @@
                         this.currentPautaData = pautaDoc.data();
                         this.currentPautaOwnerId = this.currentPautaData.owner;
                         this.isPautaClosed = this.currentPautaData.isClosed || false;
-                        this.useReviewFlow = this.currentPautaData.useReviewFlow || false;
                         
                         UIService.togglePautaLock(this);
 
@@ -1802,13 +3062,11 @@
                             emAtendimentoColumn?.classList.add('hidden');
                         }
 
-                        if (this.currentPautaData.useDistributionFlow && !this.useReviewFlow) {
+                        if (this.currentPautaData.useDistributionFlow) {
                             distColumn?.classList.remove('hidden');
                         } else {
                             distColumn?.classList.add('hidden');
                         }
-                        
-                        this.toggleReviewFlowColumns(this.useReviewFlow);
                     }
 
                     this.setupRealtimeListener(pautaId);
@@ -1933,11 +3191,6 @@
                     const snapshot = await getDocs(attendanceRef);
                     this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     UIService.renderAssistedLists(this);
-                    
-                    // Renderizar estatísticas do fluxo de revisão se ativo
-                    if (this.useReviewFlow && typeof ReviewFlowService?.renderReviewStatsPanel === 'function') {
-                        ReviewFlowService.renderReviewStatsPanel(this.allAssisted, 'review-stats-container');
-                    }
                 } catch (error) {
                     console.error("Erro ao carregar lista:", error);
                 }
@@ -1950,10 +3203,6 @@
                 this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
                     this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     UIService.renderAssistedLists(this);
-                    
-                    if (this.useReviewFlow && typeof ReviewFlowService?.renderReviewStatsPanel === 'function') {
-                        ReviewFlowService.renderReviewStatsPanel(this.allAssisted, 'review-stats-container');
-                    }
                 }, (error) => {
                     console.error("Erro no listener:", error);
                     showNotification("Erro ao carregar dados", "error");
@@ -1963,7 +3212,10 @@
 
         window.showNotification = showNotification;
         window.openDetailsModal = openDetailsModal;
+
         window.app = new SIGAPApp();
+
+
 
         setTimeout(() => {
             if (window.app && typeof window.app.deletePauta === 'function') {
@@ -1976,27 +3228,60 @@
                 console.error("❌ App não inicializado");
             }
         }, 500);
-    </script>
 
-    <!-- Script para o toggle da explicação da ordem de atendimento -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const toggleBtn = document.getElementById('toggle-logic-btn-padrao');
-            const content = document.getElementById('logic-explanation-padrao-content');
-            
-            if (toggleBtn && content) {
-                toggleBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    content.classList.toggle('hidden');
-                    
-                    if (content.classList.contains('hidden')) {
-                        toggleBtn.textContent = 'Por que esta ordem é a mais justa? (Clique para expandir)';
-                    } else {
-                        toggleBtn.textContent = 'Por que esta ordem é a mais justa? (Clique para recolher)';
-                    }
-                });
-            }
+        console.log("🔍 Verificando métodos:", {
+            deletePauta: typeof window.app?.deletePauta,
+            loadPauta: typeof window.app?.loadPauta
         });
     </script>
+
+    <!-- ================================================ -->
+    <!-- EVENTO DE CEP (fora da classe) -->
+    <!-- ================================================ -->
+    <script>
+        document.addEventListener('blur', async (e) => {
+            if (e.target.id === 'cep-reu') {
+                const cep = e.target.value.replace(/\D/g, '');
+                if (cep.length === 8) {
+                    try {
+                        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                        const data = await response.json();
+                        if (!data.erro) {
+                            document.getElementById('rua-reu').value = data.logradouro || '';
+                            document.getElementById('bairro-reu').value = data.bairro || '';
+                            document.getElementById('cidade-reu').value = data.localidade || '';
+                            document.getElementById('estado-reu').value = data.uf || '';
+                        } else {
+                            showNotification("CEP não encontrado", "error");
+                        }
+                    } catch (error) {
+                        console.error("Erro ao buscar CEP:", error);
+                        showNotification("Erro ao buscar CEP", "error");
+                    }
+                }
+            }
+        }, true);
+    </script>
+
+<!-- Script para o toggle da explicação da ordem de atendimento -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleBtn = document.getElementById('toggle-logic-btn-padrao');
+        const content = document.getElementById('logic-explanation-padrao-content');
+        
+        if (toggleBtn && content) {
+            toggleBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                content.classList.toggle('hidden');
+                
+                if (content.classList.contains('hidden')) {
+                    toggleBtn.textContent = 'Por que esta ordem é a mais justa? (Clique para expandir)';
+                } else {
+                    toggleBtn.textContent = 'Por que esta ordem é a mais justa? (Clique para recolher)';
+                }
+            });
+        }
+    });
+</script>
 </body>
 </html>
