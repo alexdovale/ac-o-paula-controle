@@ -1528,6 +1528,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { logAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser, loadAuditLogs, exportAuditLogsPDF, loadDashboardData, populateUserFilter } from './js/admin.js';
         import { parsePautaCSV } from './js/csvHandler.js';
         import { getChecklistHTML } from './js/checklist.js';
+        import { ReviewFlowService } from './js/reviewFlow.js';
+
 
         class SIGAPApp {
             constructor() {
@@ -1545,42 +1547,39 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 this.unsubscribeFromAttendances = null;
                 this.unsubscribeFromCollaborators = null;
                 this.currentPautaFilter = 'all'; // Estado do filtro
-                
+        
                 this.init();
             }
-
+        
             async init() {
                 try {
                     const app = initializeApp(firebaseConfig);
-                    
+        
                     initializeAppCheck(app, {
                         provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
                         isTokenAutoRefreshEnabled: true
                     });
-
+        
                     this.db = getFirestore(app);
                     this.auth = getAuth(app);
-
+        
                     await this.setupOfflinePersistence();
                     this.setupEventListeners();
                     this.setupAuthListener();
-                    
+        
                 } catch (error) {
                     console.error("Erro na inicialização:", error);
                     showNotification("Erro ao iniciar o sistema", "error");
                 }
             }
-
+        
             setupOfflinePersistence() {
-                // Não tenta ativar persistência se já estiver em conflito
                 try {
                     enableIndexedDbPersistence(this.db).catch((err) => {
                         if (err.code == 'failed-precondition') {
-                            // Múltiplas abas abertas - podemos ignorar ou mostrar aviso
                             console.warn('⚠️ Persistência desativada: Múltiplas abas abertas.');
                             console.warn('O sistema funcionará normalmente, mas sem cache offline.');
-                            
-                            // Opcional: Mostrar notificação para o usuário
+        
                             showNotification(
                                 'Múltiplas abas detectadas. Feche outras abas para ativar o modo offline.',
                                 'warning'
@@ -1592,18 +1591,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 } catch (e) {
                     console.log("Erro ao ativar persistência:", e);
                 }
-            
-                // Listeners de conexão (continuam funcionando)
+        
                 window.addEventListener('offline', () => {
                     document.getElementById('offline-indicator').classList.remove('hidden');
                 });
-            
+        
                 window.addEventListener('online', () => {
                     document.getElementById('offline-indicator').classList.add('hidden');
                     showNotification("Conexão restabelecida!", "success");
                 });
             }
-
+        
             setupAuthListener() {
                 onAuthStateChanged(this.auth, async (user) => {
                     if (user) {
@@ -1615,37 +1613,36 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 });
             }
-
+        
             setupEventListeners() {
                 // Login
                 document.getElementById('login-form')?.addEventListener('submit', (e) => {
                     e.preventDefault();
                     AuthService.login(this);
                 });
-
+        
                 document.getElementById('register-form')?.addEventListener('submit', (e) => {
                     e.preventDefault();
                     AuthService.register(this);
                 });
-
+        
                 document.getElementById('forgot-password-link')?.addEventListener('click', (e) => {
                     e.preventDefault();
                     AuthService.resetPassword(this.auth);
                 });
-
+        
                 document.getElementById('login-tab-btn')?.addEventListener('click', () => {
                     UIService.toggleAuthTabs('login');
                 });
-
+        
                 document.getElementById('register-tab-btn')?.addEventListener('click', () => {
                     UIService.toggleAuthTabs('register');
                 });
-
+        
                 document.querySelectorAll('#logout-btn-main, #logout-btn-app').forEach(btn => {
                     if (btn) btn.addEventListener('click', () => AuthService.logout(this.auth));
                 });
-
-                // No final do setupEventListeners, adicione:
+        
                 document.addEventListener('click', (e) => {
                     if (!e.target.closest('.quick-action-toggle') && !e.target.closest('[id^="quick-menu-"]')) {
                         document.querySelectorAll('[id^="quick-menu-"]').forEach(menu => {
@@ -1653,6 +1650,37 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         });
                     }
                 });
+            }
+        
+            // --- Métodos de Fluxo de Revisão ---
+        
+            abrirModalAprovarRevisao(id) {
+                window.revisaoAssistidoId = id;
+                document.getElementById('revisao-input-processo').value = '';
+                document.getElementById('modal-aprovar-revisao').classList.remove('hidden');
+            }
+        
+            abrirModalDevolverRevisao(id) {
+                window.revisaoAssistidoId = id;
+                document.getElementById('revisao-input-motivo').value = '';
+                document.getElementById('modal-devolver-revisao').classList.remove('hidden');
+            }
+        
+            async executarAprovacao() {
+                const id = window.revisaoAssistidoId;
+                const numero = document.getElementById('revisao-input-processo').value.trim();
+                await ReviewFlowService.approveReview(this, id, numero);
+                document.getElementById('modal-aprovar-revisao').classList.add('hidden');
+            }
+        
+            async executarDevolucao() {
+                const id = window.revisaoAssistidoId;
+                const motivo = document.getElementById('revisao-input-motivo').value.trim();
+                if (!motivo) return showNotification("O motivo é obrigatório!", "error");
+                await ReviewFlowService.returnForCorrection(this, id, motivo);
+                document.getElementById('modal-devolver-revisao').classList.add('hidden');
+            }
+        }
 
                 // ================================================
                 // LISTENERS DOS BOTÕES DE RÁDIO DO FORMULÁRIO
