@@ -266,6 +266,9 @@
             </div>
         </header>
 
+        <!-- NOVO: PAINEL DE ESTATÍSTICAS DA REVISÃO (Acima das colunas) -->
+        <div id="review-stats-summary" class="hidden mb-4"></div>
+
         <div id="app-content" class="w-full">
             <div class="mb-6">
                 <div class="border-b border-gray-200">
@@ -385,6 +388,54 @@
                     </div>
                     <div id="distribuicao-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
                 </div>
+
+                <!-- ======================================================== -->
+                <!-- NOVAS COLUNAS DO FLUXO DE REVISÃO HIERÁRQUICA -->
+                <!-- ======================================================== -->
+                <div id="em-revisao-column" class="hidden bg-white rounded-lg shadow-md flex flex-col border border-purple-100">
+                    <div class="p-4 border-b border-purple-200 bg-purple-50 rounded-t-lg">
+                        <h3 class="text-xl font-semibold text-purple-800 flex justify-between items-center">
+                            <span>🔍 Em Revisão</span>
+                            <span id="em-revisao-count" class="text-base font-normal bg-purple-200 text-purple-900 px-2 rounded-full">0</span>
+                        </h3>
+                        <input type="search" id="em-revisao-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div id="em-revisao-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                </div>
+
+                <div id="aguardando-correcao-column" class="hidden bg-white rounded-lg shadow-md flex flex-col border border-red-100">
+                    <div class="p-4 border-b border-red-200 bg-red-50 rounded-t-lg">
+                        <h3 class="text-xl font-semibold text-red-800 flex justify-between items-center">
+                            <span>✏️ Correção</span>
+                            <span id="aguardando-correcao-count" class="text-base font-normal bg-red-200 text-red-900 px-2 rounded-full">0</span>
+                        </h3>
+                        <input type="search" id="aguardando-correcao-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-red-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500">
+                    </div>
+                    <div id="aguardando-correcao-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                </div>
+
+                <div id="aguardando-numero-column" class="hidden bg-white rounded-lg shadow-md flex flex-col border border-indigo-100">
+                    <div class="p-4 border-b border-indigo-200 bg-indigo-50 rounded-t-lg">
+                        <h3 class="text-xl font-semibold text-indigo-800 flex justify-between items-center">
+                            <span>⏳ Aguard. Nº</span>
+                            <span id="aguardando-numero-count" class="text-base font-normal bg-indigo-200 text-indigo-900 px-2 rounded-full">0</span>
+                        </h3>
+                        <input type="search" id="aguardando-numero-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-indigo-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div id="aguardando-numero-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                </div>
+
+                <div id="distribuido-column" class="hidden bg-white rounded-lg shadow-md flex flex-col border border-teal-100">
+                    <div class="p-4 border-b border-teal-200 bg-teal-50 rounded-t-lg">
+                        <h3 class="text-xl font-semibold text-teal-800 flex justify-between items-center">
+                            <span>📤 Distribuídos</span>
+                            <span id="distribuido-count" class="text-base font-normal bg-teal-200 text-teal-900 px-2 rounded-full">0</span>
+                        </h3>
+                        <input type="search" id="distribuido-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-teal-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500">
+                    </div>
+                    <div id="distribuido-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
+                </div>
+                <!-- FIM DAS NOVAS COLUNAS -->
 
                 <div id="atendidos-column" class="bg-white rounded-lg shadow-md flex flex-col">
                     <div class="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
@@ -597,14 +648,15 @@
                 </div>
             </div>
 
-            <!-- Fluxo de Delegação -->
+            <!-- Fluxo de Delegação (MODIFICADO PARA REVISÃO) -->
             <div class="mb-6">
                 <h3 class="font-semibold text-gray-700 mb-2">Fluxo de Atendimento</h3>
                 <div class="space-y-2">
+                    <!-- Opção 1: Delegação Simples -->
                     <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="edit-delegation" value="true" class="h-4 w-4 text-green-600">
+                        <input type="radio" name="edit-delegation" value="delegation" class="h-4 w-4 text-green-600">
                         <span class="ml-3">
-                            <span class="font-semibold">Usar fluxo de delegação</span>
+                            <span class="font-semibold">Usar fluxo de delegação (Simples)</span>
                             <span class="block text-xs text-gray-500">Permite delegar finalização para colaborador</span>
                         </span>
                     </label>
@@ -617,8 +669,19 @@
                             </span>
                         </label>
                     </div>
+
+                    <!-- Opção 2: Revisão Hierárquica (NOVO) -->
                     <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="edit-delegation" value="false" class="h-4 w-4 text-red-600">
+                        <input type="radio" name="edit-delegation" value="review" class="h-4 w-4 text-purple-600">
+                        <span class="ml-3">
+                            <span class="font-semibold text-purple-700">Fluxo de Revisão Hierárquica</span>
+                            <span class="block text-xs text-gray-500">Colaborador envia para o Defensor aprovar e assinar.</span>
+                        </span>
+                    </label>
+
+                    <!-- Opção 3: Direto -->
+                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="radio" name="edit-delegation" value="none" class="h-4 w-4 text-red-600">
                         <span class="ml-3">
                             <span class="font-semibold">Finalizar diretamente</span>
                             <span class="block text-xs text-gray-500">Pular a coluna "Em Atendimento"</span>
@@ -669,14 +732,15 @@
         </div>
     </div>
 
-    <!-- Modal de Fluxo de Delegação (para criação) -->
+    <!-- Modal de Fluxo de Delegação (para criação) (MODIFICADO PARA REVISÃO) -->
     <div id="delegation-flow-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">Fluxo de Atendimento</h2>
             <p class="text-gray-600 mb-6">Deseja utilizar a coluna "Em Atendimento" para delegar a finalização a um colaborador?</p>
             <div class="space-y-3">
+                <!-- Opção 1: Delegação -->
                 <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="radio" name="useDelegationFlow" value="true" class="h-5 w-5 text-green-600 focus:ring-green-500" checked>
+                    <input type="radio" name="useDelegationFlow" value="delegation" class="h-5 w-5 text-green-600 focus:ring-green-500" checked>
                     <span class="ml-3">
                         <span class="font-semibold text-gray-800">Sim, usar fluxo de delegação</span>
                         <span class="block text-sm text-gray-500">Permite atribuir e delegar a finalização para outro colaborador.</span>
@@ -691,10 +755,19 @@
                         </div>
                     </label>
                 </div>
-            </div>
-            <div class="mt-4">
+                
+                <!-- Opção 2: Revisão (NOVO) -->
                 <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="radio" name="useDelegationFlow" value="false" class="h-5 w-5 text-red-600 focus:ring-red-500">
+                    <input type="radio" name="useDelegationFlow" value="review" class="h-5 w-5 text-purple-600 focus:ring-purple-500">
+                    <span class="ml-3">
+                        <span class="font-semibold text-purple-700">Fluxo de Revisão Hierárquica</span>
+                        <span class="block text-sm text-gray-500">Colaborador envia para o Defensor revisar, aprovar e distribuir o processo.</span>
+                    </span>
+                </label>
+
+                <!-- Opção 3: Direto -->
+                <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="radio" name="useDelegationFlow" value="none" class="h-5 w-5 text-red-600 focus:ring-red-500">
                     <span class="ml-3">
                         <span class="font-semibold text-gray-800">Não, finalizar diretamente</span>
                         <span class="block text-sm text-gray-500">Pular a coluna "Em Atendimento", indo direto para "Atendidos".</span>
@@ -709,53 +782,6 @@
         </div>
     </div>
 
-    <!-- COLUNAS DO FLUXO DE REVISÃO -->
-    <div id="em-revisao-column" class="hidden bg-white rounded-lg shadow-md flex flex-col">
-        <div class="p-4 border-b border-purple-200 bg-purple-50 rounded-t-lg">
-            <h3 class="text-xl font-semibold text-purple-800 flex justify-between items-center">
-                <span>🔍 Em Revisão</span>
-                <span id="em-revisao-count" class="text-base font-normal bg-purple-200 text-purple-900 px-2 rounded-full">0</span>
-            </h3>
-            <input type="search" id="em-revisao-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500">
-        </div>
-        <div id="em-revisao-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
-    </div>
-    
-    <div id="aguardando-correcao-column" class="hidden bg-white rounded-lg shadow-md flex flex-col">
-        <div class="p-4 border-b border-red-200 bg-red-50 rounded-t-lg">
-            <h3 class="text-xl font-semibold text-red-800 flex justify-between items-center">
-                <span>✏️ Correção</span>
-                <span id="aguardando-correcao-count" class="text-base font-normal bg-red-200 text-red-900 px-2 rounded-full">0</span>
-            </h3>
-            <input type="search" id="aguardando-correcao-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-red-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500">
-        </div>
-        <div id="aguardando-correcao-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
-    </div>
-    
-    <div id="aguardando-numero-column" class="hidden bg-white rounded-lg shadow-md flex flex-col">
-        <div class="p-4 border-b border-indigo-200 bg-indigo-50 rounded-t-lg">
-            <h3 class="text-xl font-semibold text-indigo-800 flex justify-between items-center">
-                <span>⏳ Aguard. Nº</span>
-                <span id="aguardando-numero-count" class="text-base font-normal bg-indigo-200 text-indigo-900 px-2 rounded-full">0</span>
-            </h3>
-            <input type="search" id="aguardando-numero-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-indigo-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
-        </div>
-        <div id="aguardando-numero-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
-    </div>
-    
-    <div id="distribuido-column" class="hidden bg-white rounded-lg shadow-md flex flex-col">
-        <div class="p-4 border-b border-teal-200 bg-teal-50 rounded-t-lg">
-            <h3 class="text-xl font-semibold text-teal-800 flex justify-between items-center">
-                <span>📤 Distribuídos</span>
-                <span id="distribuido-count" class="text-base font-normal bg-teal-200 text-teal-900 px-2 rounded-full">0</span>
-            </h3>
-            <input type="search" id="distribuido-search" placeholder="Pesquisar..." class="w-full mt-3 p-2 border border-teal-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500">
-        </div>
-        <div id="distribuido-list" class="p-2 space-y-2 overflow-y-auto column-content" style="max-height: 60vh;"></div>
-    </div>
-
-
-    
     <!-- Modal de Compartilhamento Externo -->
     <div id="share-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
@@ -1453,20 +1479,54 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
 
-    <!-- Modal de Estatísticas - Padrão igual ao de colaboradores -->
+    <!-- Modal de Estatísticas -->
     <div id="statistics-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-6xl flex flex-col" style="max-height: 90vh;">
-            <!-- Cabeçalho igual ao de colaboradores -->
             <div class="flex justify-between items-center p-4 border-b bg-gray-50 rounded-t-lg shrink-0">
                 <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
                     <span class="text-green-600">📊</span> Estatísticas da Pauta
                 </h2>
                 <button id="close-statistics-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl p-1 leading-none">&times;</button>
             </div>
+            <div id="statistics-content" class="flex-grow overflow-auto p-4"></div>
+        </div>
+    </div>
 
-            <!-- Conteúdo -->
-            <div id="statistics-content" class="flex-grow overflow-auto p-4">
-                <!-- Conteúdo será gerado pelo StatisticsService -->
+    <!-- ========================================================================= -->
+    <!-- MODAIS DO FLUXO DE REVISÃO HIERÁRQUICA (NOVOS) -->
+    <!-- ========================================================================= -->
+
+    <!-- MODAL DE APROVAÇÃO (DEFENSOR) -->
+    <div id="modal-aprovar-revisao" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="bg-green-600 p-4 text-white font-bold uppercase text-sm">Aprovar e Distribuir</div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase">Número do Processo (Opcional agora)</label>
+                    <input type="text" id="revisao-input-processo" class="w-full border rounded p-2 text-sm font-mono" placeholder="Ex: 0000000-00.2026.8.19.0001">
+                    <p class="text-[9px] text-gray-500 mt-1">Se deixar em branco, o registro irá para a coluna "Aguardando Nº".</p>
+                </div>
+                <div class="flex gap-2 pt-4">
+                    <button onclick="window.app.executarAprovacao()" class="flex-1 bg-green-600 text-white font-bold py-2 rounded uppercase text-xs">Confirmar Aprovação</button>
+                    <button onclick="document.getElementById('modal-aprovar-revisao').classList.add('hidden')" class="flex-1 bg-gray-300 text-gray-700 font-bold py-2 rounded uppercase text-xs">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE DEVOLUÇÃO (DEFENSOR) -->
+    <div id="modal-devolver-revisao" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="bg-orange-500 p-4 text-white font-bold uppercase text-sm">Devolver para Correção</div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase">Motivo da Devolução (Obrigatório)</label>
+                    <textarea id="revisao-input-motivo" class="w-full border rounded p-2 text-sm h-24" placeholder="Ex: Faltou comprovante de residência. Corrija o nome da ré."></textarea>
+                </div>
+                <div class="flex gap-2 pt-4">
+                    <button onclick="window.app.executarDevolucao()" class="flex-1 bg-orange-600 text-white font-bold py-2 rounded uppercase text-xs">Devolver Processo</button>
+                    <button onclick="document.getElementById('modal-devolver-revisao').classList.add('hidden')" class="flex-1 bg-gray-300 text-gray-700 font-bold py-2 rounded uppercase text-xs">Cancelar</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1474,9 +1534,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     <!-- Rodapé -->
     <footer class="bg-white border-t border-gray-200 mt-8 pt-6 pb-6 text-center">
         <div class="flex justify-center space-x-6 mb-4 text-xs text-gray-500 font-medium">
-            <button id="manual-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none">
-                Manual do Utilizador
-            </button>
+            <button id="manual-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none">Manual do Utilizador</button>
             <button id="privacy-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none">Privacidade</button>
             <button id="terms-btn-footer" class="hover:text-green-600 transition-colors focus:outline-none">Termos</button>
         </div>
@@ -1500,7 +1558,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     
         <p class="text-xs text-gray-400">
-            &copy; 2026 SIGEP - Sistema de Gestão. Versão 2.1 (Segura)
+            &copy; 2026 SIGEP - Sistema de Gestão. Versão 2.2 (Revisão Hierárquica)
         </p>
     </footer>
 
@@ -1530,12 +1588,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { getChecklistHTML } from './js/checklist.js';
         import { ReviewFlowService } from './js/reviewFlow.js';
 
-
         class SIGAPApp {
             constructor() {
                 this.db = null;
                 this.auth = null;
                 this.currentUser = null;
+                this.currentUserCargo = 'Colaborador(a)'; // Para controle visual do Defensor
                 this.currentPauta = null;
                 this.currentPautaData = null;
                 this.allAssisted = [];
@@ -1546,66 +1604,62 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 this.customRoomsList = [];
                 this.unsubscribeFromAttendances = null;
                 this.unsubscribeFromCollaborators = null;
-                this.currentPautaFilter = 'all'; // Estado do filtro
-        
+                this.currentPautaFilter = 'all'; 
+                
                 this.init();
             }
-        
+
             async init() {
                 try {
                     const app = initializeApp(firebaseConfig);
-        
+                    
                     initializeAppCheck(app, {
                         provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
                         isTokenAutoRefreshEnabled: true
                     });
-        
+
                     this.db = getFirestore(app);
                     this.auth = getAuth(app);
-        
+
                     await this.setupOfflinePersistence();
                     this.setupEventListeners();
                     this.setupAuthListener();
-        
+                    
                 } catch (error) {
                     console.error("Erro na inicialização:", error);
                     showNotification("Erro ao iniciar o sistema", "error");
                 }
             }
-        
+
             setupOfflinePersistence() {
                 try {
                     enableIndexedDbPersistence(this.db).catch((err) => {
                         if (err.code == 'failed-precondition') {
                             console.warn('⚠️ Persistência desativada: Múltiplas abas abertas.');
-                            console.warn('O sistema funcionará normalmente, mas sem cache offline.');
-        
-                            showNotification(
-                                'Múltiplas abas detectadas. Feche outras abas para ativar o modo offline.',
-                                'warning'
-                            );
                         } else if (err.code == 'unimplemented') {
                             console.warn('⚠️ Navegador não suporta persistência offline.');
                         }
                     });
-                } catch (e) {
-                    console.log("Erro ao ativar persistência:", e);
-                }
-        
-                window.addEventListener('offline', () => {
-                    document.getElementById('offline-indicator').classList.remove('hidden');
-                });
-        
+                } catch (e) { console.log(e); }
+            
+                window.addEventListener('offline', () => document.getElementById('offline-indicator').classList.remove('hidden'));
                 window.addEventListener('online', () => {
                     document.getElementById('offline-indicator').classList.add('hidden');
                     showNotification("Conexão restabelecida!", "success");
                 });
             }
-        
+
             setupAuthListener() {
                 onAuthStateChanged(this.auth, async (user) => {
                     if (user) {
                         await AuthService.handleAuthState(this, user);
+                        // Descobrir se o usuário é admin/defensor pela collection users
+                        try {
+                            const userDoc = await getDoc(doc(this.db, "users", user.uid));
+                            if (userDoc.exists() && userDoc.data().role === 'admin') {
+                                this.currentUserCargo = 'Defensor(a)'; // Admin age como defensor para testar
+                            }
+                        } catch(e){}
                     } else {
                         UIService.showScreen('login');
                         document.getElementById('admin-panel-btn')?.classList.add('hidden');
@@ -1613,36 +1667,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 });
             }
-        
+
             setupEventListeners() {
-                // Login
-                document.getElementById('login-form')?.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    AuthService.login(this);
-                });
-        
-                document.getElementById('register-form')?.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    AuthService.register(this);
-                });
-        
-                document.getElementById('forgot-password-link')?.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    AuthService.resetPassword(this.auth);
-                });
-        
-                document.getElementById('login-tab-btn')?.addEventListener('click', () => {
-                    UIService.toggleAuthTabs('login');
-                });
-        
-                document.getElementById('register-tab-btn')?.addEventListener('click', () => {
-                    UIService.toggleAuthTabs('register');
-                });
-        
+                document.getElementById('login-form')?.addEventListener('submit', (e) => { e.preventDefault(); AuthService.login(this); });
+                document.getElementById('register-form')?.addEventListener('submit', (e) => { e.preventDefault(); AuthService.register(this); });
+                document.getElementById('forgot-password-link')?.addEventListener('click', (e) => { e.preventDefault(); AuthService.resetPassword(this.auth); });
+                document.getElementById('login-tab-btn')?.addEventListener('click', () => { UIService.toggleAuthTabs('login'); });
+                document.getElementById('register-tab-btn')?.addEventListener('click', () => { UIService.toggleAuthTabs('register'); });
                 document.querySelectorAll('#logout-btn-main, #logout-btn-app').forEach(btn => {
                     if (btn) btn.addEventListener('click', () => AuthService.logout(this.auth));
                 });
-        
+
                 document.addEventListener('click', (e) => {
                     if (!e.target.closest('.quick-action-toggle') && !e.target.closest('[id^="quick-menu-"]')) {
                         document.querySelectorAll('[id^="quick-menu-"]').forEach(menu => {
@@ -1650,50 +1685,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         });
                     }
                 });
-            }
-        
-            // --- Métodos de Fluxo de Revisão ---
-        
-            abrirModalAprovarRevisao(id) {
-                window.revisaoAssistidoId = id;
-                document.getElementById('revisao-input-processo').value = '';
-                document.getElementById('modal-aprovar-revisao').classList.remove('hidden');
-            }
-        
-            abrirModalDevolverRevisao(id) {
-                window.revisaoAssistidoId = id;
-                document.getElementById('revisao-input-motivo').value = '';
-                document.getElementById('modal-devolver-revisao').classList.remove('hidden');
-            }
-        
-            async executarAprovacao() {
-                const id = window.revisaoAssistidoId;
-                const numero = document.getElementById('revisao-input-processo').value.trim();
-                await ReviewFlowService.approveReview(this, id, numero);
-                document.getElementById('modal-aprovar-revisao').classList.add('hidden');
-            }
-        
-            async executarDevolucao() {
-                const id = window.revisaoAssistidoId;
-                const motivo = document.getElementById('revisao-input-motivo').value.trim();
-                if (!motivo) return showNotification("O motivo é obrigatório!", "error");
-                await ReviewFlowService.returnForCorrection(this, id, motivo);
-                document.getElementById('modal-devolver-revisao').classList.add('hidden');
-            }
-        }
-
-                // ================================================
-                // LISTENERS DOS BOTÕES DE RÁDIO DO FORMULÁRIO
-                // ================================================
                 
                 document.querySelectorAll('input[name="is-scheduled"]').forEach(radio => {
                     radio.addEventListener('change', (e) => {
                         const wrapper = document.getElementById('scheduled-time-wrapper');
-                        if (e.target.value === 'yes') {
-                            wrapper.classList.remove('hidden');
-                        } else {
-                            wrapper.classList.add('hidden');
-                        }
+                        if (e.target.value === 'yes') wrapper.classList.remove('hidden');
+                        else wrapper.classList.add('hidden');
                     });
                 });
 
@@ -1703,9 +1700,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         if (e.target.value === 'yes') {
                             wrapper.classList.remove('hidden');
                             document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
-                        } else {
-                            wrapper.classList.add('hidden');
-                        }
+                        } else wrapper.classList.add('hidden');
                     });
                 });
 
@@ -1723,11 +1718,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.getElementById('scheduled-time-wrapper').classList.add('hidden');
                 });
 
-                // ================================================
-                // BOTÕES PRINCIPAIS
-                // ================================================
-
-                // Botão Criar Pauta
                 document.getElementById('create-pauta-btn')?.addEventListener('click', () => {
                     document.getElementById('pauta-type-modal').classList.remove('hidden');
                 });
@@ -1740,7 +1730,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     btn.addEventListener('click', (e) => {
                         const type = e.currentTarget.dataset.type;
                         document.getElementById('pauta-type-modal').classList.add('hidden');
-                        
                         const createModal = document.getElementById('create-pauta-modal');
                         createModal.dataset.pautaType = type;
                         
@@ -1752,7 +1741,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         } else {
                             roomConfig.classList.add('hidden');
                         }
-                        
                         createModal.classList.remove('hidden');
                     });
                 });
@@ -1767,9 +1755,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             this.renderCustomRooms();
                             input.value = '';
                             input.focus();
-                        } else {
-                            showNotification("Este local já foi adicionado.", "error");
-                        }
+                        } else showNotification("Este local já foi adicionado.", "error");
                     }
                 });
 
@@ -1787,10 +1773,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 document.getElementById('next-to-ordem-btn')?.addEventListener('click', () => {
                     const pautaName = document.getElementById('create-pauta-name-input').value.trim();
-                    if (!pautaName) {
-                        showNotification("O nome da pauta não pode ser vazio.", "error");
-                        return;
-                    }
+                    if (!pautaName) return showNotification("O nome da pauta não pode ser vazio.", "error");
                     document.getElementById('create-pauta-modal').classList.add('hidden');
                     document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
                 });
@@ -1814,27 +1797,24 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     const pautaName = document.getElementById('create-pauta-name-input').value.trim();
                     const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
                     const ordemAtendimento = document.querySelector('input[name="ordemAtendimento"]:checked')?.value;
-                    const useDelegationFlow = document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true';
+                    
+                    const flowVal = document.querySelector('input[name="useDelegationFlow"]:checked')?.value;
+                    const useDelegationFlow = flowVal === 'delegation';
+                    const useReviewFlow = flowVal === 'review';
                     const useDistributionFlow = document.getElementById('check-use-distribution')?.checked || false;
+                    
                     const user = this.auth.currentUser;
                     
-                    if (!user) {
-                        showNotification("Você precisa estar logado.", "error");
-                        return;
-                    }
-                    
-                    if (pautaType === 'multisala' && this.customRoomsList.length === 0) {
-                        showNotification("Adicione pelo menos uma sala.", "error");
-                        return;
-                    }
+                    if (!user) return showNotification("Você precisa estar logado.", "error");
+                    if (pautaType === 'multisala' && this.customRoomsList.length === 0) return showNotification("Adicione pelo menos uma sala.", "error");
                 
                     try {
-                        // PRIMEIRO: Criar a pauta e guardar a referência
                         const pautaRef = await addDoc(collection(this.db, "pautas"), {
                             name: pautaName,
                             type: pautaType,
                             ordemAtendimento: ordemAtendimento,
                             useDelegationFlow: useDelegationFlow,
+                            useReviewFlow: useReviewFlow,
                             useDistributionFlow: useDistributionFlow,
                             owner: user.uid,
                             ownerEmail: user.email,
@@ -1845,26 +1825,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             rooms: pautaType === 'multisala' ? [...this.customRoomsList] : []
                         });
                         
-                        // SEGUNDO: Registrar o log de auditoria
-                        await logAction(
-                            this.db,
-                            this.auth,
-                            this.currentUserName || user.email,
-                            pautaRef.id,
-                            'CREATE_PAUTA',
-                            `Criou a pauta "${pautaName}" do tipo ${pautaType}`,
-                            pautaRef.id
-                        );
-                        
+                        await logAction(this.db, this.auth, this.currentUserName || user.email, pautaRef.id, 'CREATE_PAUTA', `Criou a pauta "${pautaName}"`, pautaRef.id);
                         showNotification("Pauta criada com sucesso!");
                         
                         document.getElementById('create-pauta-name-input').value = '';
                         document.getElementById('delegation-flow-modal').classList.add('hidden');
                         
-                        if (this.auth.currentUser) {
-                            this.showPautaSelectionScreen();
-                        }
-                        
+                        if (this.auth.currentUser) this.showPautaSelectionScreen();
                     } catch (error) {
                         console.error("Erro ao criar pauta:", error);
                         showNotification("Erro ao criar pauta.", "error");
@@ -1878,57 +1845,40 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     this.allAssisted = [];
                     this.colaboradores = [];
                     UIService.showScreen('pautaSelection');
-                    if (this.auth?.currentUser) {
-                        this.showPautaSelectionScreen();
-                    }
+                    if (this.auth?.currentUser) this.showPautaSelectionScreen();
                 });
 
-                document.getElementById('tab-agendamento')?.addEventListener('click', () => {
-                    UIService.switchTab('agendamento', this);
-                });
-                
-                document.getElementById('tab-avulso')?.addEventListener('click', () => {
-                    UIService.switchTab('avulso', this);
-                });
-
+                document.getElementById('tab-agendamento')?.addEventListener('click', () => UIService.switchTab('agendamento', this));
+                document.getElementById('tab-avulso')?.addEventListener('click', () => UIService.switchTab('avulso', this));
                 document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
                 
-                // Botão Compartilhar
                 document.getElementById('share-pauta-btn')?.addEventListener('click', () => {
                     const modal = document.getElementById('share-modal');
                     if (modal) {
                         const toggle = document.getElementById('share-toggle');
                         const maskCheck = document.getElementById('mask-names-check');
-                        
                         if (this.currentPautaData) {
                             toggle.checked = this.currentPautaData.isPublic || false;
                             maskCheck.checked = this.currentPautaData.maskNames || false;
-                            
                             const statusText = document.getElementById('share-status-text');
                             const linkContainer = document.getElementById('share-link-container');
-                            
                             statusText.textContent = toggle.checked ? "Público" : "Privado";
-                            
                             if (toggle.checked) {
                                 linkContainer.classList.remove('hidden');
                                 const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
                                 const link = `${baseUrl}/acompanhamento.html?id=${this.currentPauta.id}`;
                                 document.getElementById('share-link-input').value = link;
                                 document.getElementById('open-external-btn').href = link;
-                            } else {
-                                linkContainer.classList.add('hidden');
-                            }
+                            } else linkContainer.classList.add('hidden');
                         }
                         modal.classList.remove('hidden');
                     }
                 });
 
-                // Toggle do link público
                 document.getElementById('share-toggle')?.addEventListener('change', async (e) => {
                     const isPublic = e.target.checked;
                     const statusText = document.getElementById('share-status-text');
                     const linkContainer = document.getElementById('share-link-container');
-                    
                     statusText.textContent = isPublic ? "Público" : "Privado";
                     
                     if (isPublic) {
@@ -1937,22 +1887,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         const link = `${baseUrl}/acompanhamento.html?id=${this.currentPauta.id}`;
                         document.getElementById('share-link-input').value = link;
                         document.getElementById('open-external-btn').href = link;
-                    } else {
-                        linkContainer.classList.add('hidden');
-                    }
+                    } else linkContainer.classList.add('hidden');
                     
                     try {
-                        const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
-                        await updateDoc(pautaRef, { isPublic: isPublic });
+                        await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { isPublic: isPublic });
                         this.currentPautaData.isPublic = isPublic;
                         showNotification(isPublic ? "Link público ativado." : "Link público desativado.");
-                    } catch (error) {
-                        console.error(error);
-                        showNotification("Erro ao atualizar status.", "error");
-                    }
+                    } catch (error) { showNotification("Erro ao atualizar status.", "error"); }
                 });
 
-                // Copiar link
                 document.getElementById('copy-share-link-btn')?.addEventListener('click', () => {
                     const input = document.getElementById('share-link-input');
                     input.select();
@@ -1960,40 +1903,23 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     showNotification("Link copiado!", "info");
                 });
 
-                // Ocultar sobrenomes
                 document.getElementById('mask-names-check')?.addEventListener('change', async (e) => {
                     const mask = e.target.checked;
                     try {
-                        const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
-                        await updateDoc(pautaRef, { maskNames: mask });
+                        await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { maskNames: mask });
                         this.currentPautaData.maskNames = mask;
                         showNotification("Configuração de privacidade atualizada.");
-                    } catch (error) {
-                        showNotification("Erro ao salvar configuração.", "error");
-                    }
+                    } catch (error) { showNotification("Erro ao salvar configuração.", "error"); }
                 });
 
-               // Botão Estatísticas
                 document.getElementById('view-stats-btn')?.addEventListener('click', () => {
-                    console.log("Botão estatísticas clicado");
-                    
                     const modal = document.getElementById('statistics-modal');
-                    if (!modal) {
-                        console.error("Modal de estatísticas não encontrado");
-                        showNotification("Modal de estatísticas não encontrado", "error");
-                        return;
-                    }
-                    
+                    if (!modal) return showNotification("Modal não encontrado", "error");
                     if (this.allAssisted && this.currentPauta?.name) {
                         if (typeof StatisticsService?.showModal === 'function') {
                             StatisticsService.showModal(this.allAssisted, this.currentPautaData?.useDelegationFlow, this.currentPauta.name);
-                        } else {
-                            console.error("StatisticsService.showModal não é uma função");
-                            showNotification("Erro ao carregar estatísticas", "error");
                         }
-                    } else {
-                        showNotification("Carregue uma pauta primeiro", "info");
-                    }
+                    } else showNotification("Carregue uma pauta primeiro", "info");
                 });
 
                 document.getElementById('edit-pauta-name-btn')?.addEventListener('click', () => {
@@ -2001,115 +1927,69 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.getElementById('edit-pauta-modal').classList.remove('hidden');
                 });
 
-                // Botão Editar Configurações da Pauta
                 document.getElementById('edit-pauta-config-btn')?.addEventListener('click', () => {
                     if (!this.currentPautaData) return;
                     
-                    // Preencher valores atuais no modal
                     const typeRadios = document.querySelectorAll('input[name="edit-pauta-type"]');
-                    typeRadios.forEach(radio => {
-                        if (radio.value === this.currentPautaData.type) {
-                            radio.checked = true;
-                        }
-                    });
+                    typeRadios.forEach(radio => { if (radio.value === this.currentPautaData.type) radio.checked = true; });
                     
                     const ordemRadios = document.querySelectorAll('input[name="edit-ordem"]');
-                    ordemRadios.forEach(radio => {
-                        if (radio.value === this.currentPautaData.ordemAtendimento) {
-                            radio.checked = true;
-                        }
-                    });
+                    ordemRadios.forEach(radio => { if (radio.value === this.currentPautaData.ordemAtendimento) radio.checked = true; });
                     
                     const delegationRadios = document.querySelectorAll('input[name="edit-delegation"]');
                     delegationRadios.forEach(radio => {
-                        const value = radio.value === 'true' ? true : false;
-                        if (value === this.currentPautaData.useDelegationFlow) {
-                            radio.checked = true;
-                        }
+                        let isChecked = false;
+                        if (radio.value === 'delegation' && this.currentPautaData.useDelegationFlow) isChecked = true;
+                        if (radio.value === 'review' && this.currentPautaData.useReviewFlow) isChecked = true;
+                        if (radio.value === 'none' && !this.currentPautaData.useDelegationFlow && !this.currentPautaData.useReviewFlow) isChecked = true;
+                        radio.checked = isChecked;
                     });
                     
                     const distCheck = document.getElementById('edit-use-distribution');
-                    if (distCheck) {
-                        distCheck.checked = this.currentPautaData.useDistributionFlow || false;
-                    }
+                    if (distCheck) distCheck.checked = this.currentPautaData.useDistributionFlow || false;
                     
                     document.getElementById('edit-pauta-config-modal').classList.remove('hidden');
                 });
 
-                // Confirmar edição de configurações
                 document.getElementById('confirm-edit-pauta-config-btn')?.addEventListener('click', async () => {
                     const newType = document.querySelector('input[name="edit-pauta-type"]:checked')?.value;
                     const newOrdem = document.querySelector('input[name="edit-ordem"]:checked')?.value;
-                    const newDelegation = document.querySelector('input[name="edit-delegation"]:checked')?.value === 'true';
+                    const flowVal = document.querySelector('input[name="edit-delegation"]:checked')?.value;
+                    const newDelegation = flowVal === 'delegation';
+                    const newReview = flowVal === 'review';
                     const newDistribution = document.getElementById('edit-use-distribution')?.checked || false;
                     
-                    if (!newType || !newOrdem) {
-                        showNotification("Selecione todas as opções", "error");
-                        return;
-                    }
+                    if (!newType || !newOrdem) return showNotification("Selecione todas as opções", "error");
                     
                     try {
-                        const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
-                        await updateDoc(pautaRef, {
+                        await updateDoc(doc(this.db, "pautas", this.currentPauta.id), {
                             type: newType,
                             ordemAtendimento: newOrdem,
                             useDelegationFlow: newDelegation,
+                            useReviewFlow: newReview,
                             useDistributionFlow: newDistribution
                         });
                         
-                        // Atualizar dados locais
                         this.currentPautaData.type = newType;
                         this.currentPautaData.ordemAtendimento = newOrdem;
                         this.currentPautaData.useDelegationFlow = newDelegation;
+                        this.currentPautaData.useReviewFlow = newReview;
                         this.currentPautaData.useDistributionFlow = newDistribution;
                         
-                        // Atualizar colunas visíveis
-                        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-                        const distColumn = document.getElementById('distribuicao-column');
-                        
-                        if (newDelegation) {
-                            emAtendimentoColumn?.classList.remove('hidden');
-                        } else {
-                            emAtendimentoColumn?.classList.add('hidden');
-                        }
-                        
-                        if (newDistribution) {
-                            distColumn?.classList.remove('hidden');
-                        } else {
-                            distColumn?.classList.add('hidden');
-                        }
+                        UIService.updateColumnVisibility(this);
                         
                         showNotification("Configurações atualizadas com sucesso!");
                         document.getElementById('edit-pauta-config-modal').classList.add('hidden');
-                        
-                    } catch (error) {
-                        console.error("Erro ao atualizar configurações:", error);
-                        showNotification("Erro ao atualizar configurações", "error");
-                    }
+                    } catch (error) { showNotification("Erro ao atualizar configurações", "error"); }
                 });
 
-                document.getElementById('cancel-edit-pauta-config-btn')?.addEventListener('click', () => {
-                    document.getElementById('edit-pauta-config-modal').classList.add('hidden');
-                });
-
-                document.getElementById('manage-members-btn')?.addEventListener('click', async () => {
-                    console.log("Botão gerenciar membros clicado");
-                    
-                    if (typeof ModalService?.openMembersModal === 'function') {
-                        await ModalService.openMembersModal(this);
-                    } else {
-                        console.error("ModalService.openMembersModal não é uma função");
-                        showNotification("Erro ao abrir gerenciar membros", "error");
-                    }
-                });
-
-                document.getElementById('manage-collaborators-btn')?.addEventListener('click', () => {
-                    CollaboratorService.openModal(this);
-                });
+                document.getElementById('cancel-edit-pauta-config-btn')?.addEventListener('click', () => { document.getElementById('edit-pauta-config-modal').classList.add('hidden'); });
+                document.getElementById('manage-members-btn')?.addEventListener('click', async () => { await ModalService.openMembersModal(this); });
+                document.getElementById('manage-collaborators-btn')?.addEventListener('click', () => { CollaboratorService.openModal(this); });
 
                 document.getElementById('close-pauta-btn')?.addEventListener('click', () => {
                     document.getElementById('close-modal-title').textContent = 'Fechar Pauta';
-                    document.getElementById('close-modal-message').textContent = 'Para fechar esta pauta, confirme sua senha.';
+                    document.getElementById('close-modal-message').textContent = 'Para fechar esta pauta, confirme sua senha. Nenhum membro poderá fazer alterações até que você a reabra.';
                     document.getElementById('close-pauta-password').value = '';
                     document.getElementById('confirm-close-pauta-btn').textContent = 'Confirmar';
                     document.getElementById('close-pauta-modal').classList.remove('hidden');
@@ -2123,29 +2003,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.getElementById('close-pauta-modal').classList.remove('hidden');
                 });
 
-                document.getElementById('reset-all-btn')?.addEventListener('click', () => {
-                    document.getElementById('reset-confirm-modal').classList.remove('hidden');
-                });
-
+                document.getElementById('reset-all-btn')?.addEventListener('click', () => { document.getElementById('reset-confirm-modal').classList.remove('hidden'); });
                 NotesService.setup();
-
-                document.getElementById('add-assisted-btn')?.addEventListener('click', () => {
-                    PautaService.addAssisted(this);
-                });
-
-                document.getElementById('file-upload')?.addEventListener('change', (e) => {
-                    PautaService.handleCSVUpload(e, this);
-                });
-
+                document.getElementById('add-assisted-btn')?.addEventListener('click', () => { PautaService.addAssisted(this); });
+                document.getElementById('file-upload')?.addEventListener('change', (e) => { PautaService.handleCSVUpload(e, this); });
                 document.getElementById('toggle-faltosos-btn')?.addEventListener('click', UIService.toggleFaltosos);
 
-                ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
+                ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search', 'em-revisao-search', 'aguardando-numero-search', 'aguardando-correcao-search', 'distribuido-search'].forEach(id => {
                     const element = document.getElementById(id);
-                    if (element) {
-                        element.addEventListener('input', () => {
-                            UIService.renderAssistedLists(this);
-                        });
-                    }
+                    if (element) element.addEventListener('input', () => { UIService.renderAssistedLists(this); });
                 });
 
                 document.getElementById('download-pdf-btn')?.addEventListener('click', () => {
@@ -2159,46 +2025,21 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 });
 
                 document.getElementById('download-collaborators-pdf-modal')?.addEventListener('click', () => {
-                    const selectedCols = Array.from(document.querySelectorAll('.pdf-col-check:checked'))
-                        .map(cb => cb.value);
+                    const selectedCols = Array.from(document.querySelectorAll('.pdf-col-check:checked')).map(cb => cb.value);
                     PDFService.generateCollaboratorsPDF(this.currentPauta?.name || 'Pauta', this.colaboradores, selectedCols);
                 });
 
-                document.getElementById('clear-collaborators-list-modal')?.addEventListener('click', () => {
-                    CollaboratorService.clearAll(this);
-                });
-
-                document.getElementById('format-help-link')?.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    document.getElementById('format-help-modal').classList.remove('hidden');
-                });
-
-                document.getElementById('privacy-policy-link')?.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    document.getElementById('privacy-policy-modal').classList.remove('hidden');
-                });
-
+                document.getElementById('clear-collaborators-list-modal')?.addEventListener('click', () => { CollaboratorService.clearAll(this); });
+                document.getElementById('format-help-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('format-help-modal').classList.remove('hidden'); });
+                document.getElementById('privacy-policy-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('privacy-policy-modal').classList.remove('hidden'); });
                 UIService.setupFooterModals();
-
                 this.setupSubjectsAutocomplete();
+                document.body.addEventListener('click', (e) => { PautaService.handleCardActions(e, this); });
 
-                document.body.addEventListener('click', (e) => {
-                    PautaService.handleCardActions(e, this);
-                });
-
-                // ================================================
-                // FORMULÁRIO DE COLABORADORES
-                // ================================================
-                
                 document.getElementById('collaborator-form-modal')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    
                     const nome = document.getElementById('collaborator-name-modal')?.value.trim();
-                    if (!nome) {
-                        showNotification("Nome obrigatório", "error");
-                        return;
-                    }
-                    
+                    if (!nome) return showNotification("Nome obrigatório", "error");
                     const data = {
                         nome: nome,
                         cargo: document.getElementById('collaborator-role-modal')?.value,
@@ -2207,85 +2048,33 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         telefone: document.getElementById('collaborator-phone-modal')?.value || '',
                         transporte: document.querySelector('input[name="transporte-colaborador"]:checked')?.value || 'Meios Próprios'
                     };
-                    
                     await CollaboratorService.saveCollaborator(this, data);
                 });
                 
                 document.querySelectorAll('[id^="cancel-"], [id^="close-"]').forEach(btn => {
-                    if (btn) {
-                        btn.addEventListener('click', (e) => {
-                            const modal = e.target.closest('.fixed');
-                            if (modal) modal.classList.add('hidden');
-                        });
-                    }
+                    if (btn) btn.addEventListener('click', (e) => { const modal = e.target.closest('.fixed'); if (modal) modal.classList.add('hidden'); });
                 });
 
-                // ================================================
-                // LISTENERS DOS MODAIS DE PRIORIDADE
-                // ================================================
-
-                // Selecionar/desselecionar chips de prioridade
                 document.querySelectorAll('.p-chip').forEach(chip => {
-                    chip.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        this.classList.toggle('selected');
-                        console.log("Chip clicado:", this.dataset.value, "selected:", this.classList.contains('selected'));
-                    });
+                    chip.addEventListener('click', function(e) { e.preventDefault(); this.classList.toggle('selected'); });
                 });
 
-                // Confirmar prioridade
                 document.getElementById('confirm-priority-reason-btn')?.addEventListener('click', async () => {
-                    console.log("Confirmar prioridade clicado");
-                    
-                    const selectedChips = Array.from(document.querySelectorAll('.p-chip.selected'))
-                                               .map(chip => chip.dataset.value);
-                                               
+                    const selectedChips = Array.from(document.querySelectorAll('.p-chip.selected')).map(chip => chip.dataset.value);
                     const customReason = document.getElementById('priority-reason-input')?.value.trim() || '';
-                    
                     let finalReason = selectedChips.join(', ');
-                    if (customReason) {
-                        finalReason = finalReason ? `${finalReason} | Obs: ${customReason}` : customReason;
-                    }
-
-                    console.log("Razão final:", finalReason);
-
-                    if (!finalReason) { 
-                        showNotification("Selecione uma categoria ou descreva o motivo.", "error"); 
-                        return; 
-                    }
-
-                    if (!window.assistedIdToHandle) {
-                        showNotification("ID do assistido não encontrado.", "error");
-                        return;
-                    }
-
-                    await PautaService.updateStatus(
-                        this.db,
-                        this.currentPauta.id,
-                        window.assistedIdToHandle,
-                        { 
-                            priority: 'URGENTE', 
-                            priorityReason: finalReason 
-                        },
-                        this.currentUserName
-                    );
-
+                    if (customReason) finalReason = finalReason ? `${finalReason} | Obs: ${customReason}` : customReason;
+                    if (!finalReason) return showNotification("Selecione uma categoria ou descreva o motivo.", "error"); 
+                    if (!window.assistedIdToHandle) return showNotification("ID do assistido não encontrado.", "error");
+                    await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, { priority: 'URGENTE', priorityReason: finalReason }, this.currentUserName);
                     document.querySelectorAll('.p-chip').forEach(c => c.classList.remove('selected'));
                     document.getElementById('priority-reason-input').value = '';
                     document.getElementById('priority-reason-modal')?.classList.add('hidden');
                     showNotification("Prioridade Ativada!");
                 });
 
-                // Cancelar prioridade
-                document.getElementById('cancel-priority-reason-btn')?.addEventListener('click', () => {
-                    document.getElementById('priority-reason-modal')?.classList.add('hidden');
-                });
+                document.getElementById('cancel-priority-reason-btn')?.addEventListener('click', () => { document.getElementById('priority-reason-modal')?.classList.add('hidden'); });
 
-                // ================================================
-                // LISTENERS DO MODAL DE DETALHES (CHECKLIST)
-                // ================================================
-                
-                // Botão Voltar
                 document.getElementById('back-to-action-selection-btn')?.addEventListener('click', () => {
                     document.getElementById('document-checklist-view').classList.add('hidden');
                     document.getElementById('document-action-selection').classList.remove('hidden');
@@ -2293,107 +2082,52 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     document.getElementById('checklist-search-container').classList.add('hidden');
                 });
                 
-                // Botão Salvar Checklist
                 document.getElementById('save-checklist-btn')?.addEventListener('click', async () => {
-                    console.log("💾 Salvar checklist clicado");
-                    
-                    if (!window.assistedIdToHandle && !window.currentAssistedId) {
-                        showNotification("Erro: assistido não identificado", "error");
-                        return;
-                    }
-                    
+                    if (!window.assistedIdToHandle && !window.currentAssistedId) return showNotification("Erro: assistido não identificado", "error");
                     const assistedId = window.assistedIdToHandle || window.currentAssistedId;
                     const container = document.getElementById('checklist-container');
-                    
                     const checkedItems = Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => ({
                         id: cb.id,
                         text: cb.closest('label').querySelector('span').textContent,
                         type: document.querySelector(`input[name="type-${cb.id}"]:checked`)?.value || 'Físico'
                     }));
-                
                     const checklistData = {
                         checkedIds: checkedItems.map(item => item.id),
-                        docTypes: checkedItems.reduce((acc, item) => {
-                            acc[item.id] = item.type;
-                            return acc;
-                        }, {}),
+                        docTypes: checkedItems.reduce((acc, item) => { acc[item.id] = item.type; return acc; }, {}),
                         reuData: getReuDataFromForm(),
                         expenseData: getExpenseDataFromForm()
                     };
-                
                     try {
-                        await updateDoc(doc(this.db, "pautas", this.currentPauta.id, "attendances", assistedId), {
-                            documentChecklist: checklistData,
-                            documentState: 'saved'
-                        });
+                        await updateDoc(doc(this.db, "pautas", this.currentPauta.id, "attendances", assistedId), { documentChecklist: checklistData, documentState: 'saved' });
                         showNotification("Checklist salvo com sucesso!");
                         document.getElementById('documents-modal').classList.add('hidden');
-                    } catch (error) {
-                        console.error("Erro ao salvar checklist:", error);
-                        showNotification("Erro ao salvar checklist", "error");
-                    }
+                    } catch (error) { showNotification("Erro ao salvar checklist", "error"); }
                 });
                 
-                // Botão PDF
                 document.getElementById('print-checklist-btn')?.addEventListener('click', async () => {
                     showNotification("Gerando PDF...", "info");
-                    
                     try {
                         const assistedName = document.getElementById('documents-assisted-name')?.textContent || 'Assistido';
                         const actionTitle = document.getElementById('checklist-title')?.textContent || '';
-
-                        // Coleta documentos marcados
                         const documentosTextos = [];
                         document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
                             let text = '';
                             const label = cb.closest('label');
-                            if (label) {
-                                const span = label.querySelector('span:not(.sr-only)');
-                                if (span) text = span.textContent;
-                            }
-                            documentosTextos.push({
-                                id: cb.id,
-                                text: (text || cb.id || 'Documento').trim()
-                            });
+                            if (label) { const span = label.querySelector('span:not(.sr-only)'); if (span) text = span.textContent; }
+                            documentosTextos.push({ id: cb.id, text: (text || cb.id || 'Documento').trim() });
                         });
-
-                        // Coleta tipos (Fisico/Digital)
                         const docTypes = {};
                         document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
                             const typeRadio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
                             docTypes[cb.id] = typeRadio ? typeRadio.value : 'Fisico';
                         });
-
-                        // Coleta dados do reu — prioriza detalhes.js (window), fallback local
-                        const reu = getReuDataFromForm();
-
-                        // Coleta dados de gastos — prioriza detalhes.js (window), fallback local
-                        const gastos = getExpenseDataFromForm();
-
-                        // Monta checklistData completo
-                        const checklistData = {
-                            checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
-                            docTypes: docTypes,
-                            reuData: reu,
-                            expenseData: gastos
-                        };
-
-                        const resultado = PDFService.generateChecklistPDF(
-                            assistedName, actionTitle, checklistData, documentosTextos
-                        );
-
-                        if (resultado) {
-                            showNotification("PDF gerado com sucesso!");
-                        } else {
-                            showNotification("Erro ao gerar PDF", "error");
-                        }
-                    } catch (err) {
-                        console.error("Erro PDF:", err);
-                        showNotification("Erro ao gerar PDF: " + err.message, "error");
-                    }
+                        const checklistData = { checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id), docTypes: docTypes, reuData: getReuDataFromForm(), expenseData: getExpenseDataFromForm() };
+                        const resultado = PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
+                        if (resultado) showNotification("PDF gerado com sucesso!");
+                        else showNotification("Erro ao gerar PDF", "error");
+                    } catch (err) { showNotification("Erro ao gerar PDF: " + err.message, "error"); }
                 });
                 
-                // Botão Mudar (Reset)
                 document.getElementById('reset-checklist-btn')?.addEventListener('click', () => {
                     if (confirm("Deseja mudar de assunto? Isso apagará o checklist atual.")) {
                         document.getElementById('document-checklist-view').classList.add('hidden');
@@ -2403,7 +2137,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 });
                 
-                // Funções auxiliares — lêem direto do DOM (mesmos IDs do detalhes.js)
                 function getReuDataFromForm() {
                     return {
                         checkReuUnico: document.getElementById('check-reu-unico')?.checked || false,
@@ -2441,277 +2174,112 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     };
                 }
 
-                // ================================================
-                // LISTENERS DO MODAL DE ATENDENTE (FINALIZAR)
-                // ================================================
-
-                // Confirmar atendimento (finalizar)
                 document.getElementById('confirm-attendant-btn')?.addEventListener('click', async () => {
                     const select = document.getElementById('attendant-select');
-                    const attendantName = select?.value;
-                    
-                    const nomeFinal = attendantName || null;
-                    
+                    const nomeFinal = select?.value || null;
                     const useDist = this.currentPautaData?.useDistributionFlow === true;
                     const novoStatus = useDist ? 'aguardandoDistribuicao' : 'atendido';
 
                     let attendantData = nomeFinal;
                     if (nomeFinal) {
                         const selectedCollab = this.colaboradores?.find(c => c.nome === nomeFinal);
-                        if (selectedCollab) {
-                            attendantData = { 
-                                nome: selectedCollab.nome, 
-                                cargo: selectedCollab.cargo, 
-                                equipe: selectedCollab.equipe 
-                            };
-                        }
+                        if (selectedCollab) attendantData = { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe };
                     }
-
-                    await PautaService.updateStatus(
-                        this.db,
-                        this.currentPauta.id,
-                        window.assistedIdToHandle,
-                        { 
-                            status: novoStatus, 
-                            attendant: attendantData, 
-                            attendedTime: new Date().toISOString() 
-                        },
-                        this.currentUserName
-                    );
-                    
+                    await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, { status: novoStatus, attendant: attendantData, attendedTime: new Date().toISOString() }, this.currentUserName);
                     document.getElementById('attendant-modal')?.classList.add('hidden');
                     showNotification(novoStatus === 'atendido' ? "Atendimento finalizado!" : "Enviado para Distribuição ⚖️");
                 });
 
-                // Cancelar atendimento
-                document.getElementById('cancel-attendant-btn')?.addEventListener('click', () => {
-                    document.getElementById('attendant-modal')?.classList.add('hidden');
-                });
+                document.getElementById('cancel-attendant-btn')?.addEventListener('click', () => { document.getElementById('attendant-modal')?.classList.add('hidden'); });
 
-                // ================================================
-                // LISTENERS DO MODAL DE EDIÇÃO DE ATENDENTE
-                // ================================================
-
-                // Confirmar edição de atendente
                 document.getElementById('confirm-edit-attendant-btn')?.addEventListener('click', async () => {
-                    const select = document.getElementById('edit-attendant-select');
-                    const attendantName = select?.value;
-                    
-                    if (!attendantName) {
-                        showNotification("Selecione um profissional", "error");
-                        return;
-                    }
-                    
+                    const attendantName = document.getElementById('edit-attendant-select')?.value;
+                    if (!attendantName) return showNotification("Selecione um profissional", "error");
                     const selectedCollab = this.colaboradores?.find(c => c.nome === attendantName);
-                    let attendantData = selectedCollab ? 
-                        { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe } : 
-                        attendantName;
-
-                    await PautaService.updateStatus(
-                        this.db,
-                        this.currentPauta.id,
-                        window.assistedIdToHandle,
-                        { attendant: attendantData },
-                        this.currentUserName
-                    );
-                    
+                    let attendantData = selectedCollab ? { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe } : attendantName;
+                    await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, { attendant: attendantData }, this.currentUserName);
                     document.getElementById('edit-attendant-modal')?.classList.add('hidden');
                     showNotification("Atendente atualizado com sucesso!");
                 });
 
-                // Cancelar edição de atendente
-                document.getElementById('cancel-edit-attendant-btn')?.addEventListener('click', () => {
-                    document.getElementById('edit-attendant-modal')?.classList.add('hidden');
-                });
+                document.getElementById('cancel-edit-attendant-btn')?.addEventListener('click', () => { document.getElementById('edit-attendant-modal')?.classList.add('hidden'); });
 
-                // ================================================
-                // LISTENERS DO MODAL DE SELEÇÃO DE COLABORADOR
-                // ================================================
-
-                // Confirmar seleção de colaborador
                 document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
-                    // pauta.js seta window.selectedCollaboratorId e window.selectedCollaboratorName ao clicar num item
-                    // 'null' (string) = "Não atribuir"; undefined = nada selecionado ainda
                     const collaboratorId = window.selectedCollaboratorId;
                     const collaboratorName = window.selectedCollaboratorName || null;
+                    const isAcaoRapida = ['reagendar', 'agendar', 'consulta', 'outros'].includes(window.assistedTipoAcao);
 
-                    // Ações rápidas: Reagendar, Agendar, Consulta, Outros
-                    // Devem finalizar o atendimento direto (status: 'atendido')
-                    const acoesRapidas = ['reagendar', 'agendar', 'consulta', 'outros'];
-                    const isAcaoRapida = acoesRapidas.includes(window.assistedTipoAcao);
-
-                    // Para ações rápidas: se nada selecionado, usa o usuário logado
-                    // Para fluxo normal: exige seleção
-                    if (!isAcaoRapida && collaboratorId === undefined) {
-                        showNotification("Selecione um colaborador ou 'Não atribuir'.", "warning");
-                        return;
-                    }
+                    if (!isAcaoRapida && collaboratorId === undefined) return showNotification("Selecione um colaborador ou 'Não atribuir'.", "warning");
 
                     if (isAcaoRapida) {
-                        // Finaliza direto como atendido, registrando quem atendeu e o tipo de ação
                         const tipoDescricao = window.assistedTipoDescricao || window.assistedTipoAcao || 'Ação rápida';
                         const atendenteFinal = collaboratorName || this.currentUserName;
-
-                        await PautaService.updateStatus(
-                            this.db,
-                            this.currentPauta.id,
-                            window.assistedIdToHandle,
-                            {
-                                status: 'atendido',
-                                attendedBy: atendenteFinal,
-                                attendedAt: new Date().toISOString(),
-                                inAttendanceTime: new Date().toISOString(),
-                                isConfirmed: false,
-                                finalizadoPeloColaborador: true,
-                                distributionStatus: 'completed',
-                                tipoAcaoRapida: tipoDescricao,
-                                assignedCollaborator: collaboratorName
-                                    ? { id: collaboratorId, name: collaboratorName }
-                                    : null
-                            },
-                            this.currentUserName
-                        );
-
+                        await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, {
+                                status: 'atendido', attendedBy: atendenteFinal, attendedAt: new Date().toISOString(),
+                                inAttendanceTime: new Date().toISOString(), isConfirmed: false, finalizadoPeloColaborador: true,
+                                distributionStatus: 'completed', tipoAcaoRapida: tipoDescricao,
+                                assignedCollaborator: collaboratorName ? { id: collaboratorId, name: collaboratorName } : null
+                            }, this.currentUserName);
                         showNotification(`${window.assistedNameToHandle} marcado como atendido por ${atendenteFinal} (${tipoDescricao}).`, "success");
-
                     } else {
-                        // Fluxo normal: manda para emAtendimento
-                        let collaboratorData = null;
-                        if (collaboratorName) {
-                            collaboratorData = { id: collaboratorId, name: collaboratorName };
-                            showNotification(`${window.assistedNameToHandle} atribuído a ${collaboratorName}.`);
-                        } else {
-                            showNotification(`${window.assistedNameToHandle} movido para 'Em Atendimento' sem colaborador atribuído.`);
-                        }
-
-                        await PautaService.updateStatus(
-                            this.db,
-                            this.currentPauta.id,
-                            window.assistedIdToHandle,
-                            {
-                                status: 'emAtendimento',
-                                assignedCollaborator: collaboratorData,
-                                inAttendanceTime: new Date().toISOString()
-                            },
-                            this.currentUserName
-                        );
+                        let collaboratorData = collaboratorName ? { id: collaboratorId, name: collaboratorName } : null;
+                        if (collaboratorName) showNotification(`${window.assistedNameToHandle} atribuído a ${collaboratorName}.`);
+                        else showNotification(`${window.assistedNameToHandle} movido para 'Em Atendimento' sem colaborador atribuído.`);
+                        await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, {
+                                status: 'emAtendimento', assignedCollaborator: collaboratorData, inAttendanceTime: new Date().toISOString()
+                            }, this.currentUserName);
                     }
-                    
                     document.getElementById('select-collaborator-modal')?.classList.add('hidden');
-                    // Limpa a seleção para a próxima vez
-                    window.assistedTipoAcao = null;
-                    window.assistedTipoDescricao = null;
-                    window.selectedCollaboratorId = undefined;
-                    window.selectedCollaboratorName = undefined;
+                    window.assistedTipoAcao = null; window.assistedTipoDescricao = null; window.selectedCollaboratorId = undefined; window.selectedCollaboratorName = undefined;
                 });
 
-                // Cancelar seleção de colaborador
                 document.getElementById('cancel-select-collaborator-btn')?.addEventListener('click', () => {
                     document.getElementById('select-collaborator-modal')?.classList.add('hidden');
-                    window.selectedCollaboratorId = undefined;
-                    window.selectedCollaboratorName = undefined;
-                    window.assistedTipoAcao = null;
-                    window.assistedTipoDescricao = null;
+                    window.selectedCollaboratorId = undefined; window.selectedCollaboratorName = undefined; window.assistedTipoAcao = null; window.assistedTipoDescricao = null;
                 });
 
-                // ================================================
-                // LISTENERS DOS MODAIS DE CHEGADA
-                // ================================================
-
-                // Confirmar chegada
                 document.getElementById('confirm-arrival-btn')?.addEventListener('click', async () => {
                     const time = document.getElementById('arrival-time-input')?.value;
-                    if (!time) {
-                        showNotification("Informe o horário", "error");
-                        return;
-                    }
-
+                    if (!time) return showNotification("Informe o horário", "error");
                     const [hours, minutes] = time.split(':');
                     const arrivalDate = new Date();
                     arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-
                     const roomSelect = document.getElementById('arrival-room-select');
                     const room = roomSelect && !roomSelect.classList.contains('hidden') ? roomSelect.value : null;
 
-                    await PautaService.updateStatus(
-                        this.db,
-                        this.currentPauta.id,
-                        window.assistedIdToHandle,
-                        {
-                            status: 'aguardando',
-                            arrivalTime: arrivalDate.toISOString(),
-                            checkInOrder: Date.now(),
-                            room: room
-                        },
-                        this.currentUserName
-                    );
-
+                    await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, {
+                            status: 'aguardando', arrivalTime: arrivalDate.toISOString(), checkInOrder: Date.now(), room: room
+                        }, this.currentUserName);
                     document.getElementById('arrival-modal')?.classList.add('hidden');
                     showNotification("Chegada registrada com sucesso!", "success");
                 });
 
-                // Cancelar chegada
-                document.getElementById('cancel-arrival-btn')?.addEventListener('click', () => {
-                    document.getElementById('arrival-modal')?.classList.add('hidden');
-                });
+                document.getElementById('cancel-arrival-btn')?.addEventListener('click', () => { document.getElementById('arrival-modal')?.classList.add('hidden'); });
 
-                // ================================================
-                // LISTENERS DO MODAL DE EDIÇÃO DE ASSISTIDO
-                // ================================================
-
-                // Confirmar edição de assistido
                 document.getElementById('confirm-edit-assisted-btn')?.addEventListener('click', async () => {
                     const name = document.getElementById('edit-assisted-name')?.value.trim();
-                    if (!name) {
-                        showNotification("O nome não pode ficar em branco.", "error");
-                        return;
-                    }
-                    
-                    const updatedData = {
-                        name: name,
-                        cpf: document.getElementById('edit-assisted-cpf')?.value.trim() || '',
+                    if (!name) return showNotification("O nome não pode ficar em branco.", "error");
+                    await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, {
+                        name: name, cpf: document.getElementById('edit-assisted-cpf')?.value.trim() || '',
                         subject: document.getElementById('edit-assisted-subject')?.value.trim() || '',
                         scheduledTime: document.getElementById('edit-scheduled-time')?.value || null,
-                    };
-                    
-                    await PautaService.updateStatus(
-                        this.db,
-                        this.currentPauta.id,
-                        window.assistedIdToHandle,
-                        updatedData,
-                        this.currentUserName
-                    );
-                    
+                    }, this.currentUserName);
                     document.getElementById('edit-assisted-modal')?.classList.add('hidden');
                     showNotification("Dados atualizados com sucesso!", "success");
                 });
 
-                // Cancelar edição de assistido
-                document.getElementById('cancel-edit-assisted-btn')?.addEventListener('click', () => {
-                    document.getElementById('edit-assisted-modal')?.classList.add('hidden');
-                });
+                document.getElementById('cancel-edit-assisted-btn')?.addEventListener('click', () => { document.getElementById('edit-assisted-modal')?.classList.add('hidden'); });
 
-                // ================================================
-                // LISTENERS DO MODAL DE DEMANDAS
-                // ================================================
-
-                // Adicionar demanda
                 document.getElementById('demands-modal-add-demand-btn')?.addEventListener('click', () => {
                     const input = document.getElementById('demands-modal-new-demand-input');
                     const text = input?.value.trim();
                     if (text) {
                         const container = document.getElementById('demands-modal-list-container');
                         if (container) {
-                            if (container.querySelector('p.text-gray-500')) {
-                                container.innerHTML = '';
-                            }
-                            
+                            if (container.querySelector('p.text-gray-500')) container.innerHTML = '';
                             const li = document.createElement('li');
                             li.className = 'flex justify-between items-center p-2 bg-white rounded-md';
-                            li.innerHTML = `
-                                <span>${escapeHTML(text)}</span>
-                                <button class="remove-demand-item-btn text-red-500 text-xs">Remover</button>
-                            `;
+                            li.innerHTML = `<span>${escapeHTML(text)}</span><button class="remove-demand-item-btn text-red-500 text-xs">Remover</button>`;
                             container.appendChild(li);
                             input.value = '';
                         }
@@ -2722,73 +2290,33 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (e.target.classList.contains('remove-demand-item-btn')) {
                         const li = e.target.closest('li');
                         if (li) li.remove();
-                        
                         const container = document.getElementById('demands-modal-list-container');
-                        if (container && container.children.length === 0) {
-                            container.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
-                        }
+                        if (container && container.children.length === 0) container.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
                     }
                 });
 
                 document.getElementById('save-demands-btn')?.addEventListener('click', async () => {
                     const container = document.getElementById('demands-modal-list-container');
-                    const items = container?.querySelectorAll('li') || [];
-                    const descricoes = Array.from(items).map(li => li.querySelector('span')?.textContent || '');
-                    
-                    const demandsData = {
-                        quantidade: descricoes.length,
-                        descricoes: descricoes
-                    };
-                    
-                    await PautaService.updateStatus(
-                        this.db,
-                        this.currentPauta.id,
-                        window.assistedIdToHandle,
-                        { demandas: demandsData },
-                        this.currentUserName
-                    );
-                    
+                    const descricoes = Array.from(container?.querySelectorAll('li') || []).map(li => li.querySelector('span')?.textContent || '');
+                    await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, { demandas: { quantidade: descricoes.length, descricoes: descricoes } }, this.currentUserName);
                     showNotification("Demandas salvas com sucesso!");
                     document.getElementById('demands-modal')?.classList.add('hidden');
                 });
 
-                document.getElementById('cancel-demands-btn')?.addEventListener('click', () => {
-                    document.getElementById('demands-modal')?.classList.add('hidden');
-                });
-
-                document.getElementById('close-demands-modal-btn')?.addEventListener('click', () => {
-                    document.getElementById('demands-modal')?.classList.add('hidden');
-                });
-
-                // ================================================
-                // LISTENERS DO MODAL DE CONFIRMAÇÃO DE RESET
-                // ================================================
+                document.getElementById('cancel-demands-btn')?.addEventListener('click', () => { document.getElementById('demands-modal')?.classList.add('hidden'); });
+                document.getElementById('close-demands-modal-btn')?.addEventListener('click', () => { document.getElementById('demands-modal')?.classList.add('hidden'); });
 
                 document.getElementById('confirm-reset-btn')?.addEventListener('click', async () => {
-                    const attendanceCollectionRef = collection(this.db, "pautas", this.currentPauta.id, "attendances");
-                    const snapshot = await getDocs(attendanceCollectionRef);
-                    
-                    if (snapshot.empty) {
-                        showNotification("A pauta já está vazia.", "info");
-                        document.getElementById('reset-confirm-modal')?.classList.add('hidden');
-                        return;
-                    }
-                    
+                    const snapshot = await getDocs(collection(this.db, "pautas", this.currentPauta.id, "attendances"));
+                    if (snapshot.empty) { showNotification("A pauta já está vazia.", "info"); document.getElementById('reset-confirm-modal')?.classList.add('hidden'); return; }
                     const batch = writeBatch(this.db);
                     snapshot.docs.forEach(doc => batch.delete(doc.ref));
                     await batch.commit();
-                    
                     showNotification("Pauta zerada com sucesso.", "success");
                     document.getElementById('reset-confirm-modal')?.classList.add('hidden');
                 });
 
-                document.getElementById('cancel-reset-btn')?.addEventListener('click', () => {
-                    document.getElementById('reset-confirm-modal')?.classList.add('hidden');
-                });
-
-                // ================================================
-                // LISTENERS DO MODAL DE EDIÇÃO DE NOME DA PAUTA
-                // ================================================
+                document.getElementById('cancel-reset-btn')?.addEventListener('click', () => { document.getElementById('reset-confirm-modal')?.classList.add('hidden'); });
 
                 document.getElementById('confirm-edit-pauta-btn')?.addEventListener('click', async () => {
                     const newName = document.getElementById('edit-pauta-name-input')?.value.trim();
@@ -2797,156 +2325,131 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         document.getElementById('pauta-title').textContent = newName;
                         showNotification("Nome da pauta atualizado.");
                         document.getElementById('edit-pauta-modal')?.classList.add('hidden');
-                    } else {
-                        showNotification("O nome não pode ser vazio.", "error");
-                    }
+                    } else showNotification("O nome não pode ser vazio.", "error");
                 });
 
-                document.getElementById('cancel-edit-pauta-btn')?.addEventListener('click', () => {
-                    document.getElementById('edit-pauta-modal')?.classList.add('hidden');
-                });
-
-                // ================================================
-                // LISTENERS DO MODAL DE FECHAR/REABRIR PAUTA
-                // ================================================
+                document.getElementById('cancel-edit-pauta-btn')?.addEventListener('click', () => { document.getElementById('edit-pauta-modal')?.classList.add('hidden'); });
 
                 document.getElementById('confirm-close-pauta-btn')?.addEventListener('click', async () => {
                     const password = document.getElementById('close-pauta-password')?.value;
                     const errorDiv = document.getElementById('close-auth-error');
                     if (errorDiv) errorDiv.classList.add('hidden');
-
                     const isReopen = document.getElementById('confirm-close-pauta-btn')?.textContent.includes('Reabrir');
                     const user = this.auth.currentUser;
-                    
                     if (!user || user.uid !== this.currentPautaOwnerId) {
                         showNotification("Você não tem permissão para esta ação.", "error");
                         document.getElementById('close-pauta-modal')?.classList.add('hidden');
                         return;
                     }
-
                     try {
                         const credential = EmailAuthProvider.credential(user.email, password);
                         await reauthenticateWithCredential(user, credential);
-                        
-                        const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
-                        await updateDoc(pautaRef, { isClosed: !isReopen });
-                        
+                        await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { isClosed: !isReopen });
                         this.isPautaClosed = !isReopen;
                         UIService.togglePautaLock(this);
-
                         showNotification(`Pauta ${isReopen ? 'reaberta' : 'fechada'} com sucesso.`);
                         document.getElementById('close-pauta-modal')?.classList.add('hidden');
-                        
                     } catch (error) {
-                        console.error("Authentication failed:", error);
-                        if (errorDiv) {
-                            errorDiv.textContent = 'Senha incorreta. Tente novamente.';
-                            errorDiv.classList.remove('hidden');
-                        }
+                        if (errorDiv) { errorDiv.textContent = 'Senha incorreta. Tente novamente.'; errorDiv.classList.remove('hidden'); }
                     }
                 });
 
-                document.getElementById('cancel-close-pauta-btn')?.addEventListener('click', () => {
-                    document.getElementById('close-pauta-modal')?.classList.add('hidden');
-                });
-
-                // ================================================
-                // LISTENERS DO MODAL DE DELEGAÇÃO POR EMAIL
-                // ================================================
+                document.getElementById('cancel-close-pauta-btn')?.addEventListener('click', () => { document.getElementById('close-pauta-modal')?.classList.add('hidden'); });
 
                 document.getElementById('send-delegate-email-btn')?.addEventListener('click', async () => {
                     const emailInput = document.getElementById('collaborator-email-input');
                     const emailDestino = emailInput?.value.trim();
-                    
-                    if (!emailDestino) {
-                        showNotification("Por favor, insira o e-mail.", "error");
-                        return;
-                    }
-
+                    if (!emailDestino) return showNotification("Por favor, insira o e-mail.", "error");
                     const btn = document.getElementById('send-delegate-email-btn');
-                    if (btn) {
-                        btn.disabled = true;
-                        btn.textContent = "Enviando...";
-                    }
-
+                    if (btn) { btn.disabled = true; btn.textContent = "Enviando..."; }
                     const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
                     const urlFinal = `${baseUrl}/atendimento_externo.html?pautaId=${this.currentPauta.id}&assistidoId=${window.assistedIdForDelegation}&collaboratorName=${encodeURIComponent(this.currentUserName)}`;
-
-                    let nomeColega = window.collaboratorNameForDelegation;
-                    if (!nomeColega || nomeColega === "Não informado" || nomeColega === "undefined") {
-                        nomeColega = "Colega Colaborador";
-                    }
-
+                    let nomeColega = window.collaboratorNameForDelegation || "Colega Colaborador";
                     try {
-                        await EmailService.sendDelegationEmail(
-                            emailDestino, 
-                            nomeColega, 
-                            window.assistedNameForDelegation, 
-                            this.currentUserName,
-                            this.currentPauta.id,
-                            window.assistedIdForDelegation
-                        );
-
+                        await EmailService.sendDelegationEmail(emailDestino, nomeColega, window.assistedNameForDelegation, this.currentUserName, this.currentPauta.id, window.assistedIdForDelegation);
                         document.getElementById('delegate-email-modal')?.classList.add('hidden');
                         if (emailInput) emailInput.value = '';
-                        
-                    } catch (error) {
-                        console.error("Erro ao enviar email:", error);
-                        showNotification("Falha no envio do e-mail.", "error");
-                    } finally {
-                        if (btn) {
-                            btn.disabled = false;
-                            btn.textContent = "Enviar Link por E-mail";
-                        }
-                    }
+                    } catch (error) { showNotification("Falha no envio do e-mail.", "error"); } 
+                    finally { if (btn) { btn.disabled = false; btn.textContent = "Enviar Link por E-mail"; } }
                 });
 
-                document.getElementById('cancel-delegate-email-btn')?.addEventListener('click', () => {
-                    document.getElementById('delegate-email-modal')?.classList.add('hidden');
-                });
+                document.getElementById('cancel-delegate-email-btn')?.addEventListener('click', () => { document.getElementById('delegate-email-modal')?.classList.add('hidden'); });
 
-                // ================================================
-                // LISTENER GLOBAL PARA REMOVER MEMBROS
-                // ================================================
-                
                 document.body.addEventListener('click', async (e) => {
                     if (e.target.classList.contains('remove-member-btn')) {
                         const email = e.target.dataset.email;
                         if (confirm(`Remover ${email} da pauta?`)) {
                             try {
-                                const usersRef = collection(this.db, "users");
-                                const q = query(usersRef, where("email", "==", email));
+                                const q = query(collection(this.db, "users"), where("email", "==", email));
                                 const querySnapshot = await getDocs(q);
-                                
                                 if (!querySnapshot.empty) {
-                                    const userId = querySnapshot.docs[0].id;
-                                    const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
-                                    
-                                    await updateDoc(pautaRef, {
-                                        members: arrayRemove(userId),
+                                    await updateDoc(doc(this.db, "pautas", this.currentPauta.id), {
+                                        members: arrayRemove(querySnapshot.docs[0].id),
                                         memberEmails: arrayRemove(email)
                                     });
-                                    
                                     showNotification(`Membro ${email} removido`);
-                                    
-                                    if (typeof ModalService?.openMembersModal === 'function') {
-                                        await ModalService.openMembersModal(this);
-                                    }
+                                    await ModalService.openMembersModal(this);
                                 }
-                            } catch (error) {
-                                console.error("Erro ao remover membro:", error);
-                                showNotification("Erro ao remover membro", "error");
-                            }
+                            } catch (error) { showNotification("Erro ao remover membro", "error"); }
                         }
                     }
                 });
 
-                // ================================================
-                // CONFIGURAÇÃO DO PAINEL ADMIN
-                // ================================================
-                
                 this.setupAdminPanel();
             }
+
+            // ===========================================================
+            // MÉTODOS DO FLUXO DE REVISÃO HIERÁRQUICA (Novos)
+            // ===========================================================
+
+            abrirModalAprovarRevisao(id) {
+                window.revisaoAssistidoId = id;
+                document.getElementById('revisao-input-processo').value = '';
+                document.getElementById('modal-aprovar-revisao').classList.remove('hidden');
+            }
+
+            abrirModalDevolverRevisao(id) {
+                window.revisaoAssistidoId = id;
+                document.getElementById('revisao-input-motivo').value = '';
+                document.getElementById('modal-devolver-revisao').classList.remove('hidden');
+            }
+
+            abrirModalInformarNumero(id) {
+                window.revisaoAssistidoId = id;
+                document.getElementById('revisao-input-processo').value = '';
+                document.getElementById('modal-aprovar-revisao').classList.remove('hidden');
+            }
+
+            abrirModalReenviarRevisao(id) {
+                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                const url = `${baseUrl}/atendimento_externo.html?pautaId=${this.currentPauta.id}&assistidoId=${id}&collaboratorName=${encodeURIComponent(this.currentUserName)}`;
+                window.open(url, '_blank');
+            }
+
+            async executarAprovacao() {
+                const id = window.revisaoAssistidoId;
+                const numero = document.getElementById('revisao-input-processo').value.trim();
+                await ReviewFlowService.approveReview(this, id, numero);
+                document.getElementById('modal-aprovar-revisao').classList.add('hidden');
+            }
+
+            async executarDevolucao() {
+                const id = window.revisaoAssistidoId;
+                const motivo = document.getElementById('revisao-input-motivo').value.trim();
+                if (!motivo) return showNotification("O motivo é obrigatório!", "error");
+                await ReviewFlowService.returnForCorrection(this, id, motivo);
+                document.getElementById('modal-devolver-revisao').classList.add('hidden');
+            }
+
+            async finalizarRegistroDistribuido(id) {
+                if(confirm("Confirmar a finalização definitiva (arquivamento) deste processo?")) {
+                    const ref = doc(this.db, "pautas", this.currentPauta.id, "attendances", id);
+                    await updateDoc(ref, { status: 'atendido', attendedTime: new Date().toISOString() });
+                    showNotification("Processo arquivado em Atendidos.");
+                }
+            }
+
+            // ... Demais métodos (CustomRooms, AdminPanel, loadPautas, etc) ...
 
             renderCustomRooms() {
                 const list = document.getElementById('custom-rooms-list');
@@ -2954,7 +2457,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (!list || !noRoomsMsg) return;
                 
                 list.innerHTML = '';
-
                 if (this.customRoomsList.length === 0) {
                     noRoomsMsg.classList.remove('hidden');
                 } else {
@@ -2962,10 +2464,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     this.customRoomsList.forEach((room, index) => {
                         const li = document.createElement('li');
                         li.className = "flex justify-between items-center bg-white border p-2 rounded";
-                        li.innerHTML = `
-                            <span>🏢 ${escapeHTML(room)}</span>
-                            <button class="remove-room-btn text-red-500" data-index="${index}">Remover</button>
-                        `;
+                        li.innerHTML = `<span>🏢 ${escapeHTML(room)}</span><button class="remove-room-btn text-red-500" data-index="${index}">Remover</button>`;
                         list.appendChild(li);
                     });
                 }
@@ -2974,24 +2473,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             setupSubjectsAutocomplete() {
                 const datalist = document.getElementById('subjects-list');
                 if (!datalist) return;
-                
                 flatSubjects.forEach(subject => {
                     const option = document.createElement('option');
                     option.value = subject.value;
                     datalist.appendChild(option);
                 });
-
                 const subjectInput = document.getElementById('assisted-subject');
                 const descriptionBox = document.getElementById('subject-description');
-                
                 if (subjectInput) {
                     subjectInput.addEventListener('input', (e) => {
                         const query = e.target.value.toLowerCase();
-                        const filtered = flatSubjects.filter(item =>
-                            item.value.toLowerCase().includes(query) ||
-                            item.description.toLowerCase().includes(query)
-                        );
-
+                        const filtered = flatSubjects.filter(item => item.value.toLowerCase().includes(query) || item.description.toLowerCase().includes(query));
                         datalist.innerHTML = '';
                         filtered.forEach(subject => {
                             const option = document.createElement('option');
@@ -2999,320 +2491,168 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             datalist.appendChild(option);
                         });
                     });
-
                     subjectInput.addEventListener('change', () => {
                         const value = subjectInput.value;
                         let selectedText = value.includes(' > ') ? value.split(' > ').pop() : value;
                         subjectInput.value = selectedText;
-
                         const found = flatSubjects.find(s => s.value === value || s.value.split(' > ').pop() === selectedText);
-                        if (found?.description && descriptionBox) {
-                            descriptionBox.textContent = found.description;
-                            descriptionBox.classList.remove('hidden');
-                        } else if (descriptionBox) {
-                            descriptionBox.classList.add('hidden');
-                        }
+                        if (found?.description && descriptionBox) { descriptionBox.textContent = found.description; descriptionBox.classList.remove('hidden'); } 
+                        else if (descriptionBox) descriptionBox.classList.add('hidden');
                     });
                 }
-
                 document.getElementById('subject-info-btn')?.addEventListener('click', () => {
                     const value = subjectInput?.value || '';
                     const found = flatSubjects.find(s => s.value === value || s.value.split(' > ').pop() === value);
-                    
-                    if (found?.description && descriptionBox) {
-                        descriptionBox.textContent = found.description;
-                        descriptionBox.classList.toggle('hidden');
-                    } else if (descriptionBox) {
-                        descriptionBox.textContent = 'Selecione um assunto válido.';
-                        descriptionBox.classList.remove('hidden');
-                    }
+                    if (found?.description && descriptionBox) { descriptionBox.textContent = found.description; descriptionBox.classList.toggle('hidden'); } 
+                    else if (descriptionBox) { descriptionBox.textContent = 'Selecione um assunto válido.'; descriptionBox.classList.remove('hidden'); }
                 });
             }
 
             setupAdminPanel() {
                 const btnAdmin = document.getElementById('admin-panel-btn');
                 const adminModal = document.getElementById('admin-modal');
-                
                 if (btnAdmin && adminModal) {
-                    btnAdmin.onclick = () => {
-                        adminModal.classList.remove('hidden');
-                        loadUsersList(this.db);
-                        populateUserFilter(this.db);
-                    };
+                    btnAdmin.onclick = () => { adminModal.classList.remove('hidden'); loadUsersList(this.db); populateUserFilter(this.db); };
                 }
-
                 document.getElementById('max-admin-btn')?.addEventListener('click', () => {
                     const window = document.getElementById('admin-window');
-                    if (window) {
-                        window.classList.toggle('max-w-4xl');
-                        window.classList.toggle('max-w-none');
-                        window.classList.toggle('rounded-lg');
-                    }
+                    if (window) { window.classList.toggle('max-w-4xl'); window.classList.toggle('max-w-none'); window.classList.toggle('rounded-lg'); }
                 });
-
-                document.getElementById('min-admin-btn')?.addEventListener('click', () => {
-                    document.getElementById('admin-content-area')?.classList.toggle('hidden');
-                });
-
-                document.getElementById('close-admin-modal-btn')?.addEventListener('click', () => {
-                    if (adminModal) adminModal.classList.add('hidden');
-                });
-
-                document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
-                    cleanupOldData(this.db);
-                });
-
+                document.getElementById('min-admin-btn')?.addEventListener('click', () => { document.getElementById('admin-content-area')?.classList.toggle('hidden'); });
+                document.getElementById('close-admin-modal-btn')?.addEventListener('click', () => { if (adminModal) adminModal.classList.add('hidden'); });
+                document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => { cleanupOldData(this.db); });
                 document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
-                    console.log("Carregando logs de auditoria...");
-                    
                     const btn = document.getElementById('view-audit-logs-btn');
                     const originalText = btn.textContent;
-                    btn.textContent = "Carregando...";
-                    btn.disabled = true;
-                    
-                    try {
-                        await loadAuditLogs(this.db);
-                    } catch (error) {
-                        console.error("Erro ao carregar logs:", error);
-                        showNotification("Erro ao carregar logs de auditoria", "error");
-                    } finally {
-                        btn.textContent = originalText;
-                        btn.disabled = false;
-                    }
+                    btn.textContent = "Carregando..."; btn.disabled = true;
+                    try { await loadAuditLogs(this.db); } catch (error) { showNotification("Erro ao carregar logs de auditoria", "error"); } 
+                    finally { btn.textContent = originalText; btn.disabled = false; }
                 });
-
-                document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
-                    exportAuditLogsPDF(this.db);
-                });
-
-                document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
-                    loadDashboardData(this.db);
-                });
+                document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => { exportAuditLogsPDF(this.db); });
+                document.getElementById('btn-load-dashboard')?.addEventListener('click', () => { loadDashboardData(this.db); });
             }
 
             async loadPauta(pautaId, pautaName, pautaType) {
                 try {
                     const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
-                    
                     if (pautaDoc.exists()) {
                         const pautaData = pautaDoc.data();
-                        
                         if (pautaData.createdAt) {
                             const creationDate = new Date(pautaData.createdAt);
                             const expirationDate = new Date(creationDate);
                             expirationDate.setDate(creationDate.getDate() + 7);
-                            
-                            if (new Date() > expirationDate) {
-                                showNotification("Esta pauta expirou e não pode mais ser acessada.", "error");
-                                return;
-                            }
+                            if (new Date() > expirationDate) return showNotification("Esta pauta expirou e não pode mais ser acessada.", "error");
                         }
                     }
-                } catch (error) {
-                    console.error("Erro ao verificar expiração:", error);
-                }
+                } catch (error) { console.error("Erro ao verificar expiração:", error); }
 
                 this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
                 document.getElementById('pauta-title').textContent = pautaName;
-
                 localStorage.setItem('lastPautaId', pautaId);
                 localStorage.setItem('lastPautaType', pautaType);
 
                 try {
                     const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
-                    
                     if (pautaDoc.exists()) {
                         this.currentPautaData = pautaDoc.data();
                         this.currentPautaOwnerId = this.currentPautaData.owner;
                         this.isPautaClosed = this.currentPautaData.isClosed || false;
                         
-                        UIService.togglePautaLock(this);
-
-                        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-                        const distColumn = document.getElementById('distribuicao-column');
+                        // SE FOR O CRIADOR, DEFINIR COMO DEFENSOR PARA ACESSO AOS BOTÕES
+                        if (this.currentPautaOwnerId === this.auth.currentUser.uid) {
+                            this.currentUserCargo = 'Defensor(a)';
+                        }
                         
-                        if (this.currentPautaData.useDelegationFlow) {
-                            emAtendimentoColumn?.classList.remove('hidden');
-                        } else {
-                            emAtendimentoColumn?.classList.add('hidden');
-                        }
-
-                        if (this.currentPautaData.useDistributionFlow) {
-                            distColumn?.classList.remove('hidden');
-                        } else {
-                            distColumn?.classList.add('hidden');
-                        }
+                        UIService.togglePautaLock(this);
+                        UIService.updateColumnVisibility(this);
                     }
-
                     this.setupRealtimeListener(pautaId);
-                    
-                    if (typeof CollaboratorService?.setupListener === 'function') {
-                        CollaboratorService.setupListener(this, pautaId);
-                    }
-                    
+                    if (typeof CollaboratorService?.setupListener === 'function') CollaboratorService.setupListener(this, pautaId);
                     UIService.showScreen('app');
-                    
-                } catch (error) {
-                    console.error("Erro ao carregar pauta:", error);
-                    showNotification("Erro ao carregar pauta", "error");
-                }
+                } catch (error) { showNotification("Erro ao carregar pauta", "error"); }
             }
 
             async showPautaSelectionScreen() {
                 UIService.showScreen('pautaSelection');
-                
                 this.currentPautaFilter = this.currentPautaFilter || 'all';
-                
                 UIService.renderPautaFilters('filters-container', this.currentPautaFilter, async (filter) => {
                     this.currentPautaFilter = filter;
                     await this.loadPautasWithFilter();
                 }, this);
-                
                 await this.loadPautasWithFilter();
             }
 
             async loadPautasWithFilter() {
                 const user = this.auth.currentUser;
                 if (!user) return;
-                
                 const pautasList = document.getElementById('pautas-list');
-                if (!pautasList) {
-                    console.error("Elemento pautas-list não encontrado");
-                    return;
-                }
-                
+                if (!pautasList) return;
                 pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas...</p>';
-            
                 try {
-                    const q = query(
-                        collection(this.db, "pautas"),
-                        where("members", "array-contains", user.uid)
-                    );
-                    
+                    const q = query(collection(this.db, "pautas"), where("members", "array-contains", user.uid));
                     const snapshot = await getDocs(q);
                     let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    
                     const filtrosAdicionais = {};
-                    
                     if (this.currentPautaFilter === 'periodo') {
                         filtrosAdicionais.dataInicial = document.getElementById('filter-data-inicial')?.value;
                         filtrosAdicionais.dataFinal = document.getElementById('filter-data-final')?.value;
                         filtrosAdicionais.tipo = document.getElementById('filter-tipo-pauta')?.value;
                     }
-                    
-                    const filteredPautas = PautaService.filterPautas(
-                        pautas, 
-                        this.currentPautaFilter, 
-                        user.uid, 
-                        user.email,
-                        filtrosAdicionais
-                    );
-                    
-                    PautaService.renderPautaCards(
-                        filteredPautas, 
-                        user.uid, 
-                        user.email,
-                        this
-                    );
-                    
-                } catch (error) {
-                    console.error("Erro ao carregar pautas:", error);
-                    if (pautasList) {
-                        pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>';
-                    }
-                }
+                    const filteredPautas = PautaService.filterPautas(pautas, this.currentPautaFilter, user.uid, user.email, filtrosAdicionais);
+                    PautaService.renderPautaCards(filteredPautas, user.uid, user.email, this);
+                } catch (error) { pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>'; }
             }
 
             async deletePauta(pautaId, pautaName) {
-                console.log("🗑️ Tentando deletar pauta:", pautaId, pautaName);
-                
-                if (!this.db || !this.auth) {
-                    console.error("Database ou Auth não inicializados");
-                    showNotification("Erro: sistema não inicializado", "error");
-                    return;
-                }
-                
+                if (!this.db || !this.auth) return showNotification("Erro: sistema não inicializado", "error");
                 try {
-                    const success = await PautaService.deletePauta(
-                        this.db, 
-                        this.auth, 
-                        pautaId, 
-                        pautaName, 
-                        this.currentUserName || 'Sistema'
-                    );
-                    
-                    if (success) {
-                        await this.loadPautasWithFilter();
-                    }
-                } catch (error) {
-                    console.error("Erro ao deletar pauta:", error);
-                    showNotification("Erro ao deletar pauta: " + error.message, "error");
-                }
+                    const success = await PautaService.deletePauta(this.db, this.auth, pautaId, pautaName, this.currentUserName || 'Sistema');
+                    if (success) await this.loadPautasWithFilter();
+                } catch (error) { showNotification("Erro ao deletar pauta: " + error.message, "error"); }
             }
 
             refreshAssistedList() {
-                if (this.unsubscribeFromAttendances) {
-                    console.log("🔄 Lista será atualizada pelo listener");
-                } else {
-                    this.loadAssistedList();
-                }
+                if (!this.unsubscribeFromAttendances) this.loadAssistedList();
             }
             
             async loadAssistedList() {
                 if (!this.currentPauta?.id) return;
-                
                 try {
-                    const attendanceRef = collection(this.db, "pautas", this.currentPauta.id, "attendances");
-                    const snapshot = await getDocs(attendanceRef);
+                    const snapshot = await getDocs(collection(this.db, "pautas", this.currentPauta.id, "attendances"));
                     this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     UIService.renderAssistedLists(this);
-                } catch (error) {
-                    console.error("Erro ao carregar lista:", error);
-                }
+                } catch (error) { console.error("Erro ao carregar lista:", error); }
             }
 
             setupRealtimeListener(pautaId) {
                 if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
-                
-                const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
-                this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
+                this.unsubscribeFromAttendances = onSnapshot(collection(this.db, "pautas", pautaId, "attendances"), (snapshot) => {
                     this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     UIService.renderAssistedLists(this);
-                }, (error) => {
-                    console.error("Erro no listener:", error);
-                    showNotification("Erro ao carregar dados", "error");
-                });
+                }, (error) => { showNotification("Erro ao carregar dados", "error"); });
             }
         }
 
         window.showNotification = showNotification;
         window.openDetailsModal = openDetailsModal;
-
         window.app = new SIGAPApp();
 
-
+        // MÉTODOS GLOBAIS DE REVISÃO HIERÁRQUICA
+        window.app.abrirModalAprovarRevisao = window.app.abrirModalAprovarRevisao.bind(window.app);
+        window.app.abrirModalDevolverRevisao = window.app.abrirModalDevolverRevisao.bind(window.app);
+        window.app.abrirModalInformarNumero = window.app.abrirModalInformarNumero.bind(window.app);
+        window.app.abrirModalReenviarRevisao = window.app.abrirModalReenviarRevisao.bind(window.app);
+        window.app.executarAprovacao = window.app.executarAprovacao.bind(window.app);
+        window.app.executarDevolucao = window.app.executarDevolucao.bind(window.app);
+        window.app.finalizarRegistroDistribuido = window.app.finalizarRegistroDistribuido.bind(window.app);
 
         setTimeout(() => {
-            if (window.app && typeof window.app.deletePauta === 'function') {
-                console.log("✅ Método deletePauta disponível globalmente");
-                window.app.deletePauta = window.app.deletePauta.bind(window.app);
-            } else if (window.app) {
-                console.log("⚠️ Recriando método deletePauta");
-                window.app.deletePauta = window.app.deletePauta.bind(window.app);
-            } else {
-                console.error("❌ App não inicializado");
-            }
+            if (window.app && typeof window.app.deletePauta === 'function') window.app.deletePauta = window.app.deletePauta.bind(window.app);
         }, 500);
 
-        console.log("🔍 Verificando métodos:", {
-            deletePauta: typeof window.app?.deletePauta,
-            loadPauta: typeof window.app?.loadPauta
-        });
     </script>
 
-    <!-- ================================================ -->
     <!-- EVENTO DE CEP (fora da classe) -->
-    <!-- ================================================ -->
     <script>
         document.addEventListener('blur', async (e) => {
             if (e.target.id === 'cep-reu') {
@@ -3326,37 +2666,26 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                             document.getElementById('bairro-reu').value = data.bairro || '';
                             document.getElementById('cidade-reu').value = data.localidade || '';
                             document.getElementById('estado-reu').value = data.uf || '';
-                        } else {
-                            showNotification("CEP não encontrado", "error");
-                        }
-                    } catch (error) {
-                        console.error("Erro ao buscar CEP:", error);
-                        showNotification("Erro ao buscar CEP", "error");
-                    }
+                        } else showNotification("CEP não encontrado", "error");
+                    } catch (error) { showNotification("Erro ao buscar CEP", "error"); }
                 }
             }
         }, true);
     </script>
 
-<!-- Script para o toggle da explicação da ordem de atendimento -->
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const toggleBtn = document.getElementById('toggle-logic-btn-padrao');
-        const content = document.getElementById('logic-explanation-padrao-content');
-        
-        if (toggleBtn && content) {
-            toggleBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                content.classList.toggle('hidden');
-                
-                if (content.classList.contains('hidden')) {
-                    toggleBtn.textContent = 'Por que esta ordem é a mais justa? (Clique para expandir)';
-                } else {
-                    toggleBtn.textContent = 'Por que esta ordem é a mais justa? (Clique para recolher)';
-                }
-            });
-        }
-    });
-</script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleBtn = document.getElementById('toggle-logic-btn-padrao');
+            const content = document.getElementById('logic-explanation-padrao-content');
+            if (toggleBtn && content) {
+                toggleBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    content.classList.toggle('hidden');
+                    if (content.classList.contains('hidden')) toggleBtn.textContent = 'Por que esta ordem é a mais justa? (Clique para expandir)';
+                    else toggleBtn.textContent = 'Por que esta ordem é a mais justa? (Clique para recolher)';
+                });
+            }
+        });
+    </script>
 </body>
 </html>
