@@ -4,6 +4,38 @@ import { showNotification, normalizeText, escapeHTML } from './utils.js';
 import { UIService } from './ui.js';
 import { logAction } from './admin.js';
 
+export const PAUTA_STATUS = {
+    PAUTA: 'pauta',
+    AGUARDANDO: 'aguardando',
+    EM_ATENDIMENTO: 'emAtendimento',
+    EM_REVISAO: 'emRevisao',
+    AGUARDANDO_NUMERO: 'aguardandoNumero',
+    AGUARDANDO_CORRECAO: 'aguardandoCorrecao',
+    AGUARDANDO_DISTRIBUICAO: 'aguardandoDistribuicao',
+    DISTRIBUIDO: 'distribuido',
+    ATENDIDO: 'atendido',
+    FALTOSO: 'faltoso'
+};
+
+export const FLOW_TYPES = {
+    DIRETO: 'direto',
+    DISTRIBUICAO: 'distribuicao',
+    REVISAO: 'revisao'
+};
+
+export const STATUS_LABELS = {
+    pauta: 'Na Pauta',
+    aguardando: 'Aguardando',
+    emAtendimento: 'Atendendo',
+    emRevisao: '🔍 Em Revisão',
+    aguardandoNumero: '⏳ Aguard. Nº',
+    aguardandoCorrecao: '✏️ Correção',
+    aguardandoDistribuicao: '⚖️ Distribuição',
+    distribuido: '📤 Distribuído',
+    atendido: '✅ Atendido',
+    faltoso: '🚫 Faltoso'
+};
+
 export const PautaService = {
     currentListeners: new Map(),
     
@@ -1780,4 +1812,17 @@ export const PautaService = {
             console.error("Erro ao carregar lista:", error);
         }
     },
+
+    /**
+     * Método para decidir qual coluna exibir baseado na config da pauta
+     */
+    getVisibleColumns(pautaData) {
+        const cols = ['pauta', 'aguardando', 'emAtendimento', 'atendidos'];
+        if (pautaData.useReviewFlow) {
+            cols.push('emRevisao', 'aguardandoNumero', 'aguardandoCorrecao', 'distribuido');
+        } else if (pautaData.useDistributionFlow) {
+            cols.push('distribuicao');
+        }
+        return cols;
+    }
 };
