@@ -1,4 +1,4 @@
-// js/colaboradores.js - VERSÃO CORRIGIDA E SIMPLIFICADA
+// js/colaboradores.js - VERSÃO CORRIGIDA E SIMPLIFICADA (COM FLUXO DE REVISÃO)
 import { 
     collection, 
     onSnapshot, 
@@ -8,7 +8,9 @@ import {
     deleteDoc, 
     getDocs, 
     writeBatch,
-    getDoc
+    getDoc,
+    query,
+    where
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
@@ -19,7 +21,29 @@ const CollaboratorService = {
     customTeams: [],
 
     // ========================================================
-    // MÉTODO PRINCIPAL - ABRIR MODAL (É ISSO QUE ESTÁ FALTANDO!)
+    // MÉTODO PARA CARREGAR DEFENSORES (FLUXO DE REVISÃO)
+    // ========================================================
+    async loadDefensores(app, selectId) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+
+        try {
+            const ref = collection(app.db, "pautas", app.currentPauta.id, "collaborators");
+            const q = query(ref, where("cargo", "==", "Defensor(a)"));
+            const snap = await getDocs(q);
+            
+            select.innerHTML = '<option value="">Selecione o Defensor...</option>';
+            snap.forEach(doc => {
+                const c = doc.data();
+                select.innerHTML += `<option value="${escapeHTML(c.nome)}">${escapeHTML(c.nome)}</option>`;
+            });
+        } catch (e) {
+            console.error("Erro ao carregar defensores:", e);
+        }
+    },
+
+    // ========================================================
+    // MÉTODO PRINCIPAL - ABRIR MODAL
     // ========================================================
     openModal(app) {
         console.log("📋 Abrindo modal de colaboradores", app);
