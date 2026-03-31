@@ -1,4 +1,4 @@
-// js/colaboradores.js - VERSÃO COM FLUXO DE REVISÃO HIERÁRQUICA
+// js/colaboradores.js - VERSÃO COMPLETA COM FLUXO DE REVISÃO HIERÁRQUICA
 import { 
     collection, 
     onSnapshot, 
