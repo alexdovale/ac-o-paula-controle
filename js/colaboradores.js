@@ -1,4 +1,4 @@
-// js/colaboradores.js - VERSÃO CORRIGIDA E SIMPLIFICADA (COM FLUXO DE REVISÃO)
+// js/colaboradores.js - VERSÃO COM FLUXO DE REVISÃO HIERÁRQUICA
 import { 
     collection, 
     onSnapshot, 
@@ -301,4 +301,4 @@ export { CollaboratorService };
 // Tornar global (para acesso no console)
 window.CollaboratorService = CollaboratorService;
 
-console.log("✅ colaboradores.js carregado com sucesso! openModal disponível:", typeof CollaboratorService.openModal);
+console.log("✅ colaboradores.js carregado com sucesso!");
