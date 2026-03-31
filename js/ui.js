@@ -1,4 +1,4 @@
-// ui.js
+// js/ui.js
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
 import { PautaService } from './pauta.js';
 
@@ -167,6 +167,24 @@ export const UIService = {
         }
     },
 
+    /**
+     * Controle de Visibilidade das Colunas
+     */
+    updateColumnVisibility(app) {
+        const data = app.currentPautaData;
+        if (!data) return;
+
+        const useReview = data.useReviewFlow || false;
+        const useDist = data.useDistributionFlow || false;
+
+        document.getElementById('em-revisao-column')?.classList.toggle('hidden', !useReview);
+        document.getElementById('aguardando-numero-column')?.classList.toggle('hidden', !useReview);
+        document.getElementById('aguardando-correcao-column')?.classList.toggle('hidden', !useReview);
+        document.getElementById('distribuido-column')?.classList.toggle('hidden', !useReview);
+        document.getElementById('distribuicao-column')?.classList.toggle('hidden', useReview || !useDist);
+        document.getElementById('review-stats-summary')?.classList.toggle('hidden', !useReview);
+    },
+
     togglePautaLock(app) {
         const isOwner = app.auth?.currentUser?.uid === app.currentPautaOwnerId;
         const isClosed = app.isPautaClosed;
@@ -204,18 +222,18 @@ export const UIService = {
         });
 
         if (isClosed) {
-            document.getElementById('closed-pauta-alert').classList.remove('hidden');
-            document.getElementById('close-pauta-btn').classList.add('hidden');
-            document.getElementById('reopen-pauta-btn').classList.remove('hidden');
+            document.getElementById('closed-pauta-alert')?.classList.remove('hidden');
+            document.getElementById('close-pauta-btn')?.classList.add('hidden');
+            document.getElementById('reopen-pauta-btn')?.classList.remove('hidden');
         } else {
-            document.getElementById('closed-pauta-alert').classList.add('hidden');
-            document.getElementById('close-pauta-btn').classList.remove('hidden');
-            document.getElementById('reopen-pauta-btn').classList.add('hidden');
+            document.getElementById('closed-pauta-alert')?.classList.add('hidden');
+            document.getElementById('close-pauta-btn')?.classList.remove('hidden');
+            document.getElementById('reopen-pauta-btn')?.classList.add('hidden');
         }
 
         if (!isOwner) {
-            document.getElementById('close-pauta-btn').classList.add('hidden');
-            document.getElementById('reopen-pauta-btn').classList.add('hidden');
+            document.getElementById('close-pauta-btn')?.classList.add('hidden');
+            document.getElementById('reopen-pauta-btn')?.classList.add('hidden');
         }
     },
 
@@ -255,13 +273,7 @@ export const UIService = {
         const currentPautaData = app.currentPautaData;
         const colaboradores = app.colaboradores || [];
 
-        // NOVO: Controle de visibilidade das novas colunas de revisão
-        const useReview = currentPautaData?.useReviewFlow || false;
-        document.getElementById('em-revisao-column')?.classList.toggle('hidden', !useReview);
-        document.getElementById('aguardando-numero-column')?.classList.toggle('hidden', !useReview);
-        document.getElementById('aguardando-correcao-column')?.classList.toggle('hidden', !useReview);
-        document.getElementById('distribuido-column')?.classList.toggle('hidden', !useReview);
-        document.getElementById('review-stats-summary')?.classList.toggle('hidden', !useReview);
+        this.updateColumnVisibility(app);
 
         if (allAssisted.length === 0) {
             this.clearContainers();
@@ -294,7 +306,6 @@ export const UIService = {
             atendidos: allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && this.searchFilter(a, searchTerms.atendidos)),
             faltosos: allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento' && this.searchFilter(a, searchTerms.faltosos)),
             distribuicao: allAssisted.filter(a => a.status === 'aguardandoDistribuicao' && this.searchFilter(a, searchTerms.distribuicao)),
-            // NOVO: Filtros das colunas de revisão
             emRevisao: allAssisted.filter(a => a.status === 'emRevisao' && this.searchFilter(a, searchTerms.emRevisao)),
             aguardandoNumero: allAssisted.filter(a => a.status === 'aguardandoNumero' && this.searchFilter(a, searchTerms.aguardandoNumero)),
             aguardandoCorrecao: allAssisted.filter(a => a.status === 'aguardandoCorrecao' && this.searchFilter(a, searchTerms.aguardandoCorrecao)),
@@ -320,9 +331,9 @@ export const UIService = {
         this.renderFaltososColumn(lists.faltosos);
         this.renderDistribuicaoColumn(lists.distribuicao, app.currentPauta?.id, app.currentUserName);
         
-        // NOVO: Renderizar colunas de revisão
-        if (useReview) {
+        if (currentPautaData?.useReviewFlow) {
             this.renderReviewColumns(lists, app);
+            this.updateReviewStats(allAssisted);
         }
 
         this.togglePautaLock(app);
@@ -337,7 +348,6 @@ export const UIService = {
             atendidos: normalizeText(document.getElementById('atendidos-search')?.value || ''),
             faltosos: normalizeText(document.getElementById('faltosos-search')?.value || ''),
             distribuicao: normalizeText(document.getElementById('distribuicao-search')?.value || ''),
-            // NOVO: Inputs de busca de revisão
             emRevisao: normalizeText(document.getElementById('em-revisao-search')?.value || ''),
             aguardandoNumero: normalizeText(document.getElementById('aguardando-numero-search')?.value || ''),
             aguardandoCorrecao: normalizeText(document.getElementById('aguardando-correcao-search')?.value || ''),
@@ -371,8 +381,6 @@ export const UIService = {
         const atendidosCount = document.getElementById('atendidos-count');
         const faltososCount = document.getElementById('faltosos-count');
         const distribuicaoCount = document.getElementById('distribuicao-count');
-        
-        // NOVO: Contadores de revisão
         const emRevisaoCount = document.getElementById('em-revisao-count');
         const aguardandoNumeroCount = document.getElementById('aguardando-numero-count');
         const aguardandoCorrecaoCount = document.getElementById('aguardando-correcao-count');
@@ -384,7 +392,6 @@ export const UIService = {
         if (atendidosCount) atendidosCount.textContent = lists.atendidos?.length || 0;
         if (faltososCount) faltososCount.textContent = lists.faltosos?.length || 0;
         if (distribuicaoCount) distribuicaoCount.textContent = lists.distribuicao?.length || 0;
-
         if (emRevisaoCount) emRevisaoCount.textContent = lists.emRevisao?.length || 0;
         if (aguardandoNumeroCount) aguardandoNumeroCount.textContent = lists.aguardandoNumero?.length || 0;
         if (aguardandoCorrecaoCount) aguardandoCorrecaoCount.textContent = lists.aguardandoCorrecao?.length || 0;
@@ -395,7 +402,7 @@ export const UIService = {
         const containers = [
             'pauta-list', 'aguardando-list', 'em-atendimento-list', 
             'atendidos-list', 'faltosos-list', 'distribuicao-list',
-            'em-revisao-list', 'aguardando-numero-list', 'aguardando-correcao-list', 'distribuido-list' // NOVO
+            'em-revisao-list', 'aguardando-numero-list', 'aguardando-correcao-list', 'distribuido-list'
         ];
         containers.forEach(id => {
             const el = document.getElementById(id);
@@ -493,136 +500,136 @@ export const UIService = {
     },
 
     createAguardandoCard(item, currentPautaData, colaboradores, index) {
-    try {
-        if (!item || !item.id) return null;
+        try {
+            if (!item || !item.id) return null;
 
-        const card = document.createElement('div');
-        const priorityClass = PautaService.getPriorityClass(item.priority);
-        card.className = `relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
-        card.setAttribute('data-id', item.id);
+            const card = document.createElement('div');
+            const priorityClass = PautaService.getPriorityClass(item.priority);
+            card.className = `relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
+            card.setAttribute('data-id', item.id);
 
-        let docStatusHtml = '';
-        if (item.selectedAction) {
-            let statusColor = 'bg-gray-100 text-gray-600';
-            let statusText = '📋 Selecionado';
-            let statusIcon = '📋';
-            
-            if (item.documentState === 'filling') { 
-                statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
-                statusText = '✏️ Preenchendo'; 
-                statusIcon = '✏️';
-            } else if (item.documentState === 'saved') { 
-                statusColor = 'bg-green-100 text-green-700 font-bold'; 
-                statusText = '✅ Salvo'; 
-                statusIcon = '✅';
-            } else if (item.documentState === 'pdf') { 
-                statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
-                statusText = '📄 PDF Emitido'; 
-                statusIcon = '📄';
-            }
-
-            docStatusHtml = `
-                <div class="mt-2 flex flex-col gap-1">
-                    <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
-                        <span>📂</span> 
-                        <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
-                        <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
-                    </span>
-                    <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
-                        <span>${statusIcon}</span>
-                        <span class="hidden xs:inline">${statusText}</span>
-                    </span>
-                </div>`;
-        }
-
-        const nomeSeguro = item.name || 'Nome não informado';
-        const assuntoSeguro = item.subject || 'Assunto não informado';
-        const scheduledTimeSeguro = item.scheduledTime || '--:--';
-        const priorityReasonSeguro = item.priorityReason || '';
-
-        let arrivalText = 'Chegada: --:--';
-        if (item.arrivalTime) {
-            try {
-                const arrivalDate = new Date(item.arrivalTime);
-                if (!isNaN(arrivalDate)) {
-                    const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                    if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
-                        arrivalText = `Agendado: ${escapeHTML(scheduledTimeSeguro)} | Chegou: ${horaChegada}`;
-                    } else {
-                        arrivalText = `Chegada: ${horaChegada}`;
-                    }
+            let docStatusHtml = '';
+            if (item.selectedAction) {
+                let statusColor = 'bg-gray-100 text-gray-600';
+                let statusText = '📋 Selecionado';
+                let statusIcon = '📋';
+                
+                if (item.documentState === 'filling') { 
+                    statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
+                    statusText = '✏️ Preenchendo'; 
+                    statusIcon = '✏️';
+                } else if (item.documentState === 'saved') { 
+                    statusColor = 'bg-green-100 text-green-700 font-bold'; 
+                    statusText = '✅ Salvo'; 
+                    statusIcon = '✅';
+                } else if (item.documentState === 'pdf') { 
+                    statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
+                    statusText = '📄 PDF Emitido'; 
+                    statusIcon = '📄';
                 }
-            } catch (e) {
-                console.warn("Erro ao formatar data:", e);
+
+                docStatusHtml = `
+                    <div class="mt-2 flex flex-col gap-1">
+                        <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
+                            <span>📂</span> 
+                            <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
+                            <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
+                        </span>
+                        <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
+                            <span>${statusIcon}</span>
+                            <span class="hidden xs:inline">${statusText}</span>
+                        </span>
+                    </div>`;
             }
-        }
 
-        const numeroOrdem = index + 1;
-        const numeroBadge = `
-            <div class="absolute -left-2 -top-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
-                ${numeroOrdem}
-            </div>
-        `;
+            const nomeSeguro = item.name || 'Nome não informado';
+            const assuntoSeguro = item.subject || 'Assunto não informado';
+            const scheduledTimeSeguro = item.scheduledTime || '--:--';
+            const priorityReasonSeguro = item.priorityReason || '';
 
-        const atenderButton = currentPautaData?.useDelegationFlow
-            ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`
-            : `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`;
+            let arrivalText = 'Chegada: --:--';
+            if (item.arrivalTime) {
+                try {
+                    const arrivalDate = new Date(item.arrivalTime);
+                    if (!isNaN(arrivalDate)) {
+                        const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
+                            arrivalText = `Agendado: ${escapeHTML(scheduledTimeSeguro)} | Chegou: ${horaChegada}`;
+                        } else {
+                            arrivalText = `Chegada: ${horaChegada}`;
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Erro ao formatar data:", e);
+                }
+            }
 
-        const actionButtonsHTML = `
-            <div class="absolute top-2 right-10 flex items-center">
-                <div class="relative">
-                    <button data-id="${item.id}" class="quick-action-toggle text-gray-400 hover:text-blue-600 p-1 rounded-full transition-colors" title="Opções de atendimento">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
-                        </svg>
-                    </button>
-                    <div id="quick-menu-${item.id}" class="hidden absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 z-30 py-1">
-                        <button data-id="${item.id}" data-tipo="reagendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2">
-                            <span>🔄</span> Reagendar
+            const numeroOrdem = index + 1;
+            const numeroBadge = `
+                <div class="absolute -left-2 -top-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
+                    ${numeroOrdem}
+                </div>
+            `;
+
+            const atenderButton = currentPautaData?.useDelegationFlow
+                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`
+                : `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`;
+
+            const actionButtonsHTML = `
+                <div class="absolute top-2 right-10 flex items-center">
+                    <div class="relative">
+                        <button data-id="${item.id}" class="quick-action-toggle text-gray-400 hover:text-blue-600 p-1 rounded-full transition-colors" title="Opções de atendimento">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
+                            </svg>
                         </button>
-                        <button data-id="${item.id}" data-tipo="agendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2">
-                            <span>📅</span> Agendar
-                        </button>
-                        <button data-id="${item.id}" data-tipo="consulta" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2">
-                            <span>🔍</span> Consulta
-                        </button>
-                        <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2">
-                            <span>⚙️</span> Outros
-                        </button>
+                        <div id="quick-menu-${item.id}" class="hidden absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 z-30 py-1">
+                            <button data-id="${item.id}" data-tipo="reagendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2">
+                                <span>🔄</span> Reagendar
+                            </button>
+                            <button data-id="${item.id}" data-tipo="agendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2">
+                                <span>📅</span> Agendar
+                            </button>
+                            <button data-id="${item.id}" data-tipo="consulta" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2">
+                                <span>🔍</span> Consulta
+                            </button>
+                            <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2">
+                                <span>⚙️</span> Outros
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `;
+            `;
 
-        card.innerHTML = `
-            ${numeroBadge}
-            ${actionButtonsHTML}
-            <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                </svg>
-            </button>
-            <div class="flex flex-col h-full">
-                ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
-                <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(nomeSeguro)}</p>
-                <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
-                <div class="flex flex-wrap gap-2 mb-1">
-                    <span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">${arrivalText}</span>
-                    ${item.room ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(item.room)}</span>` : ''}
-                </div>
-                ${docStatusHtml}
-                <div class="mt-4 grid grid-cols-2 gap-2">
-                    ${atenderButton}
-                    <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs">${item.priority === 'URGENTE' ? 'Urgente' : 'Prioridade'}</button>
-                    <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-semibold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase">Voltar</button>
-                </div>
-                <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
-            </div>`;
-        
-        return card;
+            card.innerHTML = `
+                ${numeroBadge}
+                ${actionButtonsHTML}
+                <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
+                    </svg>
+                </button>
+                <div class="flex flex-col h-full">
+                    ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
+                    <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(nomeSeguro)}</p>
+                    <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
+                    <div class="flex flex-wrap gap-2 mb-1">
+                        <span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">${arrivalText}</span>
+                        ${item.room ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(item.room)}</span>` : ''}
+                    </div>
+                    ${docStatusHtml}
+                    <div class="mt-4 grid grid-cols-2 gap-2">
+                        ${atenderButton}
+                        <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs">${item.priority === 'URGENTE' ? 'Urgente' : 'Prioridade'}</button>
+                        <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-semibold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase">Voltar</button>
+                    </div>
+                    <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
+                </div>`;
+            
+            return card;
         } catch (error) {
             console.error("Erro ao criar card de aguardando:", error, item);
-             return null;
+            return null;
         }
     },
     
@@ -652,10 +659,10 @@ export const UIService = {
             const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
             const linkDireto = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&collaboratorName=${encodeURIComponent(userName)}`;
 
-            // NOVO: Adicionar botão de "Revisão" se o fluxo estiver ativado na pauta
+            // Botão adicional se a Revisão estiver ativada
             let revisaoBtn = '';
             if (currentPautaData?.useReviewFlow) {
-                revisaoBtn = `<button onclick="window.app.abrirModalEnviarRevisao('${item.id}', '${escapeHTML(item.name || '')}')" class="bg-purple-600 text-white font-bold py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm shadow-md transition active:scale-95 col-span-2 mt-2">Enviar p/ Defensor (Revisão)</button>`;
+                revisaoBtn = `<button onclick="window.app.abrirModalReenviarRevisao('${item.id}')" class="bg-purple-600 text-white font-bold py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm shadow-md transition active:scale-95 col-span-2 mt-2">Enviar p/ Defensor (Revisão)</button>`;
             }
 
             card.innerHTML = `
@@ -937,6 +944,21 @@ export const UIService = {
             `;
             container.appendChild(card);
         });
+    },
+
+    updateReviewStats(all) {
+        const panel = document.getElementById('review-stats-summary');
+        if (!panel) return;
+        const rev = all.filter(a => a.status === 'emRevisao').length;
+        const num = all.filter(a => a.status === 'aguardandoNumero').length;
+        const cor = all.filter(a => a.status === 'aguardandoCorrecao').length;
+        
+        panel.innerHTML = `
+            <div class="flex flex-wrap gap-3 bg-white p-3 rounded-lg border border-purple-100 shadow-sm mb-4">
+                <span class="text-[10px] font-black text-purple-600 uppercase">🔍 Revisão: ${rev}</span>
+                <span class="text-[10px] font-black text-indigo-600 uppercase">⏳ Aguard. Nº: ${num}</span>
+                <span class="text-[10px] font-black text-orange-600 uppercase">✏️ Correção: ${cor}</span>
+            </div>`;
     },
 
     setupFooterModals() {
