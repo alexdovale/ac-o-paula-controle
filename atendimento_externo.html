@@ -2,890 +2,258 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Painel do Colaborador - SIGAP</title>
-    <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Atendimento - SIGAP</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        * { font-family: 'Inter', sans-serif; }
-        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
-        
-        /* Animações */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-        
-        .animate-fadeInUp { animation: fadeInUp 0.4s ease-out; }
-        .animate-pulse-fast { animation: pulse 0.5s ease-in-out; }
-        
-        /* Scrollbar customizada */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        
-        /* Tabs animadas */
-        .tab-transition { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .tab-active { 
-            border-bottom: 3px solid #10b981; 
-            color: #10b981; 
-            font-weight: 700;
-            background: linear-gradient(to top, #f0fdf4, transparent);
-        }
-        
-        /* Cards com efeito glass */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 1.5rem;
-            box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.15);
-        }
-        
-        /* Badge status */
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-        
-        /* Loader moderno */
-        .modern-loader {
-            width: 48px;
-            height: 48px;
-            border: 3px solid #e2e8f0;
-            border-top-color: #10b981;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        /* Botões com feedback */
-        .btn-press:active { transform: scale(0.96); transition: transform 0.1s; }
-        
-        /* Inputs focados */
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            ring: 2px solid #10b981;
-            border-color: #10b981;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .tab-active { border-bottom: 3px solid #16a34a; color: #16a34a; font-weight: bold; }
     </style>
 </head>
-<body class="flex items-center justify-center">
+<body class="p-2 md:p-6 min-h-screen flex justify-center items-start pt-10">
 
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-[200]">
-        <div class="bg-white rounded-2xl p-8 flex flex-col items-center shadow-2xl">
-            <div class="modern-loader"></div>
-            <p id="loading-text" class="mt-4 text-gray-600 font-semibold text-sm">Carregando dados do atendimento...</p>
+    <div class="w-full max-w-2xl bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div id="header-bg" class="bg-blue-600 p-5 text-white">
+            <h1 id="assistido-nome" class="font-black text-xl uppercase truncate">CARREGANDO...</h1>
+            <p id="assistido-assunto" class="text-xs opacity-90 truncate mt-1">Aguarde...</p>
         </div>
-    </div>
 
-    <!-- Container Principal -->
-    <div id="main-container" class="w-full max-w-5xl hidden animate-fadeInUp">
-        
-        <!-- Card Principal -->
-        <div class="glass-card overflow-hidden">
-            
-            <!-- Header Gradiente -->
-            <div id="header-bg" class="relative bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white">
-                <div class="absolute top-4 right-4">
-                    <span id="mode-badge" class="bg-white bg-opacity-20 backdrop-blur-sm px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                        Modo Colaborador
-                    </span>
-                </div>
-                <div class="text-center">
-                    <i class="fas fa-user-check text-4xl mb-3 opacity-90"></i>
-                    <h1 class="text-xl font-black uppercase tracking-wider">Painel do Colaborador</h1>
-                    <p class="text-[11px] opacity-90 mt-1">Sistema de Gerenciamento de Pauta - SIGAP</p>
-                </div>
-            </div>
-            
-            <!-- Info do Assistido -->
-            <div class="p-5 bg-gradient-to-br from-gray-50 to-white border-b">
-                <div class="flex items-center justify-between flex-wrap gap-3">
-                    <div class="flex-1">
-                        <h2 id="assisted-name" class="text-2xl font-black text-gray-800">---</h2>
-                        <div class="flex items-center gap-2 mt-1 flex-wrap">
-                            <span id="assisted-subject" class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">---</span>
-                            <span id="assisted-status-badge" class="status-badge hidden"></span>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-[10px] text-gray-400 uppercase font-bold">Protocolo</p>
-                        <p id="process-number-display" class="text-xs font-mono text-gray-600">---</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Tabs Modernas -->
-            <div class="flex border-b bg-white px-2 gap-1">
-                <button id="tab-finish" class="tab-transition flex items-center gap-2 px-5 py-3 text-sm font-semibold tab-active">
-                    <i class="fas fa-check-circle text-sm"></i>
-                    <span>Encerrar Atendimento</span>
-                </button>
-                <button id="tab-history" class="tab-transition flex items-center gap-2 px-5 py-3 text-sm font-semibold text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-history text-sm"></i>
-                    <span>Histórico do Assistido</span>
-                </button>
-                <button id="tab-docs" class="tab-transition flex items-center gap-2 px-5 py-3 text-sm font-semibold text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-file-alt text-sm"></i>
-                    <span>Documentos e Triagem</span>
-                </button>
-            </div>
-            
-            <!-- Área de Conteúdo Scrollável -->
-            <div class="h-[calc(100vh-450px)] min-h-[500px] overflow-y-auto p-6 bg-gray-50">
+        <!-- Abas -->
+        <div class="flex border-b bg-gray-50">
+            <button onclick="mudarAba('encerramento')" id="tab-btn-encerramento" class="flex-1 p-3 text-[10px] uppercase tab-active">Encerramento / Fluxo</button>
+            <button onclick="mudarAba('historico')" id="tab-btn-historico" class="flex-1 p-3 text-[10px] uppercase text-gray-400 font-bold">Histórico</button>
+        </div>
+
+        <div class="p-6">
+            <!-- ABA: ENCERRAMENTO E FLUXO -->
+            <div id="aba-encerramento">
                 
-                <!-- ABA 1: FINALIZAR ATENDIMENTO -->
-                <div id="content-finish" class="space-y-6">
-                    
-                    <!-- Card de Boas-vindas -->
-                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100">
-                        <div class="flex items-start gap-3">
-                            <i class="fas fa-info-circle text-blue-500 text-xl mt-0.5"></i>
-                            <div>
-                                <p class="text-xs text-blue-800 font-semibold">Instruções</p>
-                                <p class="text-[11px] text-blue-600 mt-1">Preencha os campos abaixo para finalizar o atendimento. O sistema registrará automaticamente todas as informações.</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Nome do Atendente -->
-                    <div>
-                        <label class="block text-[11px] font-black text-gray-500 uppercase mb-2 tracking-wider">
-                            <i class="fas fa-user mr-1"></i> Seu Nome Completo
-                        </label>
-                        <input type="text" id="attendant-name" 
-                               class="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all font-semibold" 
-                               placeholder="Digite seu nome completo">
-                    </div>
-                    
-                    <!-- Demandas Adicionais -->
-                    <div class="bg-white p-4 rounded-xl border-2 border-gray-100">
-                        <label class="block text-[11px] font-black text-gray-500 uppercase mb-3 tracking-wider">
-                            <i class="fas fa-clipboard-list mr-1"></i> Demandas Adicionais Identificadas
-                        </label>
-                        <div class="flex gap-2 mb-3">
-                            <input type="text" id="new-demand-input" class="flex-grow p-3 border-2 border-gray-200 rounded-xl text-sm" 
-                                   placeholder="Ex: Ação de Alimentos, Divórcio Consensual...">
-                            <button id="add-demand-btn" class="bg-emerald-600 text-white px-5 py-3 rounded-xl text-xs font-bold hover:bg-emerald-700 transition btn-press">
-                                <i class="fas fa-plus mr-1"></i> Adicionar
-                            </button>
-                        </div>
-                        <div id="demands-list" class="space-y-2 max-h-48 overflow-y-auto"></div>
-                        <p id="no-demands-msg" class="text-[10px] text-gray-400 text-center py-3">Nenhuma demanda adicional registrada</p>
-                    </div>
-                    
-                    <!-- SELEÇÃO DE MODO DE FLUXO -->
-                    <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border-2 border-purple-100">
-                        <div class="flex items-center gap-2 mb-3">
-                            <i class="fas fa-code-branch text-purple-600"></i>
-                            <h3 class="text-sm font-black text-purple-800 uppercase tracking-wide">Escolha o Fluxo de Trabalho</h3>
-                        </div>
-                        <p class="text-[10px] text-purple-600 mb-3">Selecione como este atendimento será finalizado:</p>
+                <!-- ÁREA DO COLABORADOR -->
+                <div id="area-colaborador" class="hidden space-y-6">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase">Como deseja finalizar?</h3>
+                    <div class="grid grid-cols-1 gap-3">
+                        <button onclick="escolherFluxo('direto')" id="btn-fluxo-direto" class="p-4 border-2 rounded-xl text-left transition border-gray-200 hover:bg-green-50">
+                            <span class="block font-bold text-gray-800 text-sm">✅ Finalizar Atendimento</span>
+                            <span class="text-[10px] text-gray-500">Concluir sem necessidade de revisão ou protocolo.</span>
+                        </button>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <label class="flex items-start p-3 bg-white rounded-xl border-2 border-gray-200 cursor-pointer hover:border-emerald-300 transition-all">
-                                <input type="radio" name="flow-mode" value="standard" class="mt-1 mr-3" checked>
-                                <div>
-                                    <span class="font-bold text-gray-800 text-sm">✅ Finalização Direta</span>
-                                    <p class="text-[10px] text-gray-500">Encerra o atendimento imediatamente, marcando como concluído.</p>
-                                </div>
-                            </label>
-                            <label class="flex items-start p-3 bg-white rounded-xl border-2 border-gray-200 cursor-pointer hover:border-purple-300 transition-all">
-                                <input type="radio" name="flow-mode" value="distribution" class="mt-1 mr-3">
-                                <div>
-                                    <span class="font-bold text-gray-800 text-sm">⚖️ Fluxo com Distribuição</span>
-                                    <p class="text-[10px] text-gray-500">Encaminha para revisão ou distribuição (fluxo completo).</p>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <!-- FLUXO PADRÃO (Direto) -->
-                    <div id="ui-standard" class="block">
-                        <button id="btn-standard-finish" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-xl shadow-lg transition-all btn-press text-sm uppercase tracking-wider">
-                            <i class="fas fa-check-double mr-2"></i> Encerrar Atendimento
+                        <button onclick="escolherFluxo('distribuicao')" id="btn-fluxo-dist" class="hidden p-4 border-2 rounded-xl text-left transition border-gray-200 hover:bg-cyan-50">
+                            <span class="block font-bold text-gray-800 text-sm">⚖️ Fila de Distribuição</span>
+                            <span class="text-[10px] text-gray-500">Mandar para a fila de processos que precisam de protocolo.</span>
+                        </button>
+
+                        <button onclick="escolherFluxo('revisao')" id="btn-fluxo-rev" class="hidden p-4 border-2 rounded-xl text-left transition border-gray-200 hover:bg-purple-50">
+                            <span class="block font-bold text-gray-800 text-sm">🔍 Enviar p/ Defensor (Revisão)</span>
+                            <span class="text-[10px] text-gray-500">O Defensor aprovará e distribuirá o processo.</span>
                         </button>
                     </div>
-                    
-                    <!-- FLUXO COM DISTRIBUIÇÃO (Completo) -->
-                    <div id="ui-distribution" class="hidden space-y-4">
-                        <!-- Passo 1: Assinatura -->
-                        <div id="step-signature" class="bg-yellow-50 p-5 rounded-xl border-2 border-yellow-200">
-                            <div class="flex items-center gap-3 mb-3">
-                                <i class="fas fa-signature text-yellow-600 text-2xl"></i>
-                                <div>
-                                    <p class="font-black text-yellow-800 text-sm uppercase">Passo 1 - Assinatura</p>
-                                    <p class="text-[10px] text-yellow-700">Confirme que a documentação foi assinada pelo assistido</p>
-                                </div>
-                            </div>
-                            <button id="btn-confirm-signature" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 rounded-xl transition btn-press text-sm">
-                                <i class="fas fa-check-circle mr-2"></i> Confirmar Assinatura
-                            </button>
+
+                    <!-- Configurações de Revisão -->
+                    <div id="config-revisao" class="hidden bg-purple-50 p-4 rounded-xl border border-purple-100 space-y-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-purple-600 uppercase mb-1">Defensor Responsável</label>
+                            <select id="select-defensor" class="w-full border border-purple-200 p-2.5 rounded-lg text-sm bg-white"></select>
                         </div>
-                        
-                        <!-- Passo 2: Decisão -->
-                        <div id="step-decision" class="hidden space-y-4">
-                            <div class="bg-orange-50 p-4 rounded-xl border-l-4 border-orange-400">
-                                <i class="fas fa-exclamation-triangle text-orange-500 mr-2"></i>
-                                <span class="text-xs text-orange-800 font-semibold">O processo já foi distribuído/protocolado ou precisa aguardar?</span>
-                            </div>
-                            
-                            <div class="grid grid-cols-2 gap-3">
-                                <button id="btn-wait-dist" class="flex flex-col items-center gap-2 p-4 bg-white border-2 border-cyan-300 rounded-xl hover:bg-cyan-50 transition btn-press">
-                                    <i class="fas fa-clock text-cyan-600 text-2xl"></i>
-                                    <span class="text-[11px] font-bold text-cyan-700">Aguardar Distribuição</span>
-                                </button>
-                                <button id="btn-show-fields" class="flex flex-col items-center gap-2 p-4 bg-white border-2 border-emerald-300 rounded-xl hover:bg-emerald-50 transition btn-press">
-                                    <i class="fas fa-check-double text-emerald-600 text-2xl"></i>
-                                    <span class="text-[11px] font-bold text-emerald-700">Já foi Distribuído</span>
-                                </button>
-                            </div>
-                            
-                            <!-- Campos para protocolo -->
-                            <div id="fields-protocol" class="hidden bg-white p-4 rounded-xl border-2 border-gray-200 space-y-3">
-                                <div>
-                                    <label class="text-[10px] font-bold text-gray-600 uppercase">Número do Processo</label>
-                                    <input type="text" id="input-process-number" class="w-full p-3 border rounded-xl font-mono text-sm" placeholder="0000.00.00.0000">
-                                </div>
-                                <div>
-                                    <label class="text-[10px] font-bold text-gray-600 uppercase">Destinatário / Defensor</label>
-                                    <select id="select-defensor" class="w-full p-3 border rounded-xl bg-white text-sm">
-                                        <option value="">Selecione o responsável...</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="text-[10px] font-bold text-gray-600 uppercase">Anexar Documento (PDF)</label>
-                                    <input type="file" id="input-pdf" accept="application/pdf" class="w-full text-[10px] text-gray-500">
-                                </div>
-                                <button id="btn-final-finish-dist" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl transition btn-press">
-                                    <i class="fas fa-paper-plane mr-2"></i> Finalizar e Distribuir
-                                </button>
-                            </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-purple-600 uppercase mb-1">Notas para o Defensor</label>
+                            <textarea id="notas-revisao" class="w-full border border-purple-200 p-2.5 rounded-lg text-sm h-20" placeholder="Ex: Faltou comprovante de residência, mas anexei o resto."></textarea>
                         </div>
-                        
-                        <!-- Fluxo de Revisão Hierárquica -->
-                        <div id="review-flow-container" class="hidden border-t-2 border-purple-200 pt-4 mt-4">
-                            <div class="bg-purple-50 p-4 rounded-xl">
-                                <div class="flex items-center gap-2 mb-3">
-                                    <i class="fas fa-layer-group text-purple-600"></i>
-                                    <span class="text-xs font-black text-purple-800 uppercase">Modo Revisão Hierárquica</span>
-                                </div>
-                                <div class="space-y-2">
-                                    <button id="btn-send-review" class="w-full bg-purple-600 text-white font-bold py-3 rounded-xl transition btn-press text-sm">
-                                        <i class="fas fa-share mr-2"></i> Enviar para Revisão
-                                    </button>
-                                    <p class="text-[9px] text-purple-600 text-center">O defensor revisará antes da distribuição final</p>
-                                </div>
-                            </div>
+                    </div>
+
+                    <button id="btn-finalizar" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg uppercase tracking-wide active:scale-95 transition-all mt-4">Confirmar e Seguir</button>
+                </div>
+
+                <!-- ÁREA DO DEFENSOR -->
+                <div id="area-defensor" class="hidden space-y-6">
+                    <div class="bg-purple-50 p-4 rounded-xl border border-purple-200">
+                        <h3 class="text-sm font-bold text-purple-800 mb-1">Processo em Revisão</h3>
+                        <p class="text-[11px] text-purple-600">Verifique a petição/triagem e decida o prosseguimento.</p>
+                    </div>
+
+                    <div class="space-y-4 border-t pt-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Número do Processo (Se aprovado)</label>
+                            <input type="text" id="input-processo" class="w-full border p-3 rounded-lg text-sm font-mono" placeholder="Ex: 000000-00.2026.8.19.0000">
                         </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Motivo (Se precisar corrigir)</label>
+                            <textarea id="input-motivo" class="w-full border p-3 rounded-lg text-sm h-20" placeholder="Descreva o erro para o colaborador consertar..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 pt-4 border-t">
+                        <button id="btn-aprovar" class="bg-green-600 text-white font-black py-3.5 rounded-xl uppercase text-xs shadow hover:bg-green-700">Aprovar e Protocolar</button>
+                        <button id="btn-devolver" class="bg-orange-500 text-white font-black py-3.5 rounded-xl uppercase text-xs shadow hover:bg-orange-600">Devolver p/ Correção</button>
                     </div>
                 </div>
-                
-                <!-- ABA 2: HISTÓRICO DO ASSISTIDO -->
-                <div id="content-history" class="hidden space-y-6">
-                    <div class="bg-white rounded-xl border-2 border-gray-100 overflow-hidden">
-                        <div class="bg-gray-50 p-4 border-b">
-                            <h3 class="text-sm font-black text-gray-700">
-                                <i class="fas fa-timeline mr-2 text-emerald-600"></i> Linha do Tempo
-                            </h3>
-                        </div>
-                        <div id="timeline-container" class="p-4 space-y-4 max-h-[500px] overflow-y-auto">
-                            <p class="text-center text-gray-400 text-xs py-8">Carregando histórico...</p>
-                        </div>
-                    </div>
-                    
-                    <!-- Próximos Agendamentos -->
-                    <div class="bg-white rounded-xl border-2 border-gray-100">
-                        <div class="bg-gray-50 p-4 border-b">
-                            <h3 class="text-sm font-black text-gray-700">
-                                <i class="fas fa-calendar-alt mr-2 text-emerald-600"></i> Próximos Agendamentos
-                            </h3>
-                        </div>
-                        <div id="future-appointments" class="p-4">
-                            <p class="text-center text-gray-400 text-xs py-4">Nenhum agendamento futuro encontrado</p>
-                        </div>
-                    </div>
-                    
-                    <!-- Atendimentos Anteriores -->
-                    <div class="bg-white rounded-xl border-2 border-gray-100">
-                        <div class="bg-gray-50 p-4 border-b">
-                            <h3 class="text-sm font-black text-gray-700">
-                                <i class="fas fa-check-circle mr-2 text-emerald-600"></i> Atendimentos Realizados
-                            </h3>
-                        </div>
-                        <div id="past-attendances" class="p-4 space-y-3">
-                            <p class="text-center text-gray-400 text-xs py-4">Nenhum atendimento anterior registrado</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- ABA 3: DOCUMENTOS E TRIAGEM -->
-                <div id="content-docs" class="hidden space-y-6">
-                    <!-- Checklist de Documentos -->
-                    <div class="bg-white rounded-xl border-2 border-gray-100">
-                        <div class="bg-gray-50 p-4 border-b">
-                            <h3 class="text-sm font-black text-gray-700">
-                                <i class="fas fa-check-square mr-2 text-emerald-600"></i> Documentos Conferidos
-                            </h3>
-                        </div>
-                        <div id="checklist-container" class="p-4 space-y-2 max-h-[300px] overflow-y-auto"></div>
-                    </div>
-                    
-                    <!-- Dados do Réu -->
-                    <div id="reu-container" class="hidden bg-blue-50 rounded-xl border-2 border-blue-100">
-                        <div class="bg-blue-100 p-3 rounded-t-xl">
-                            <h3 class="text-sm font-black text-blue-800">
-                                <i class="fas fa-gavel mr-2"></i> Dados do Réu
-                            </h3>
-                        </div>
-                        <div id="reu-content" class="p-4 space-y-2 text-sm"></div>
-                    </div>
-                    
-                    <!-- Dados de Gastos -->
-                    <div id="expenses-container" class="hidden bg-green-50 rounded-xl border-2 border-green-100">
-                        <div class="bg-green-100 p-3 rounded-t-xl">
-                            <h3 class="text-sm font-black text-green-800">
-                                <i class="fas fa-chart-line mr-2"></i> Demonstrativo de Gastos
-                            </h3>
-                        </div>
-                        <div id="expenses-content" class="p-4 space-y-2 text-sm"></div>
-                    </div>
-                    
-                    <!-- Histórico de Revisões -->
-                    <div id="review-history-container" class="hidden bg-purple-50 rounded-xl border-2 border-purple-100">
-                        <div class="bg-purple-100 p-3 rounded-t-xl">
-                            <h3 class="text-sm font-black text-purple-800">
-                                <i class="fas fa-code-branch mr-2"></i> Histórico de Revisões
-                            </h3>
-                        </div>
-                        <div id="review-history-content" class="p-4 space-y-3 max-h-[300px] overflow-y-auto"></div>
-                    </div>
-                </div>
+
             </div>
-        </div>
-    </div>
-    
-    <!-- Overlay de Sucesso -->
-    <div id="success-overlay" class="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-[300] hidden">
-        <div class="bg-white rounded-2xl p-8 text-center max-w-md mx-4 animate-fadeInUp">
-            <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fas fa-check text-emerald-600 text-4xl"></i>
+
+            <!-- ABA HISTÓRICO -->
+            <div id="aba-historico" class="hidden">
+                <div id="lista-historico" class="space-y-3"></div>
             </div>
-            <h3 class="text-2xl font-black text-gray-800 mb-2">Sucesso!</h3>
-            <p id="success-msg" class="text-gray-600 mb-4">Atendimento finalizado com sucesso.</p>
-            <button onclick="location.reload()" class="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-emerald-700 transition btn-press">
-                <i class="fas fa-home mr-2"></i> Voltar ao Início
-            </button>
         </div>
     </div>
 
+    <!-- Script Principal -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const firebaseConfig = { 
-            apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE", 
-            authDomain: "pauta-ce162.firebaseapp.com", 
-            projectId: "pauta-ce162", 
-            storageBucket: "pauta-ce162.appspot.com", 
-            messagingSenderId: "87113750208", 
-            appId: "1:87113750208:web:4abba0024f4d4af699bf25" 
-        };
-
+        import { getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        const firebaseConfig = { /* INSIRA SUA CONFIGURAÇÃO DO FIREBASE AQUI */ };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const pautaId = urlParams.get('pautaId');
-        const assistidoId = urlParams.get('assistidoId');
-        
-        let currentAssistedData = null;
-        let currentPautaData = null;
+        const params = new URLSearchParams(window.location.search);
+        const pId = params.get('pautaId');
+        const aId = params.get('assistidoId');
+        const myName = params.get('collaboratorName');
+        let fluxoEscolhido = 'direto';
+
+        // Lógica de Abas
+        window.mudarAba = (aba) => {
+            document.getElementById('aba-encerramento').classList.add('hidden');
+            document.getElementById('aba-historico').classList.add('hidden');
+            document.getElementById('tab-btn-encerramento').className = "flex-1 py-3 text-[10px] uppercase text-gray-400 font-bold";
+            document.getElementById('tab-btn-historico').className = "flex-1 py-3 text-[10px] uppercase text-gray-400 font-bold";
+            
+            document.getElementById(`aba-${aba}`).classList.remove('hidden');
+            document.getElementById(`tab-btn-${aba}`).className = "flex-1 py-3 text-[10px] uppercase tab-active";
+        };
+
+        // Lógica de Botões do Colaborador
+        window.escolherFluxo = (fluxo) => {
+            fluxoEscolhido = fluxo;
+            document.getElementById('config-revisao').classList.toggle('hidden', fluxo !== 'revisao');
+            
+            document.getElementById('btn-fluxo-direto').className = fluxo === 'direto' ? 'p-4 border-2 rounded-xl text-left border-green-500 bg-green-50' : 'p-4 border-2 rounded-xl text-left border-gray-200';
+            document.getElementById('btn-fluxo-dist').className = fluxo === 'distribuicao' ? 'p-4 border-2 rounded-xl text-left border-cyan-500 bg-cyan-50' : 'p-4 border-2 rounded-xl text-left border-gray-200';
+            document.getElementById('btn-fluxo-rev').className = fluxo === 'revisao' ? 'p-4 border-2 rounded-xl text-left border-purple-500 bg-purple-50' : 'p-4 border-2 rounded-xl text-left border-gray-200';
+        };
 
         async function init() {
-            if (!pautaId || !assistidoId) {
-                document.getElementById('loading-overlay').innerHTML = "<div class='bg-white p-8 rounded-2xl text-center'><i class='fas fa-exclamation-triangle text-red-500 text-5xl mb-4'></i><p class='text-red-600 font-bold'>Erro: Link incompleto.</p></div>";
-                return;
+            const pautaSnap = await getDoc(doc(db, "pautas", pId));
+            const pautaData = pautaSnap.data();
+            const snap = await getDoc(doc(db, "pautas", pId, "attendances", aId));
+            const data = snap.data();
+
+            document.getElementById('assistido-nome').textContent = data.name;
+            document.getElementById('assistido-assunto').textContent = data.subject || 'Sem assunto';
+
+            // Verifica as configurações da Pauta para liberar os botões
+            if (pautaData.useDistributionFlow) {
+                document.getElementById('btn-fluxo-dist').classList.remove('hidden');
+            }
+            if (pautaData.useReviewFlow) {
+                document.getElementById('btn-fluxo-rev').classList.remove('hidden');
+                
+                // Carrega defensores no Select
+                const q = query(collection(db, "pautas", pId, "collaborators"), where("cargo", "==", "Defensor(a)"));
+                const colabs = await getDocs(q);
+                const select = document.getElementById('select-defensor');
+                colabs.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.data().nome; opt.textContent = d.data().nome; select.appendChild(opt);
+                });
             }
 
-            try {
-                // Carregar dados do assistido
-                const assistedRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
-                const assistedSnap = await getDoc(assistedRef);
-                
-                // Carregar dados da pauta
-                const pautaRef = doc(db, "pautas", pautaId);
-                const pautaSnap = await getDoc(pautaRef);
-                
-                if (!assistedSnap.exists()) {
-                    throw new Error("Assistido não encontrado");
-                }
-                
-                currentAssistedData = assistedSnap.data();
-                currentPautaData = pautaSnap.exists() ? pautaSnap.data() : {};
-                
-                // Verificar se já foi finalizado
-                if (currentAssistedData.status === 'atendido' && currentAssistedData.finalizadoPeloColaborador) {
-                    showError("Este atendimento já foi finalizado anteriormente.");
-                    return;
-                }
-                
-                // Preencher informações do assistido
-                document.getElementById('assisted-name').textContent = currentAssistedData.name || '---';
-                document.getElementById('assisted-subject').textContent = currentAssistedData.subject || 'Sem assunto definido';
-                
-                if (currentAssistedData.processNumber) {
-                    document.getElementById('process-number-display').textContent = currentAssistedData.processNumber;
-                }
-                
-                // Configurar badge de status
-                const statusBadge = document.getElementById('assisted-status-badge');
-                const statusMap = {
-                    'pauta': { icon: 'fa-list', text: 'Na Pauta', color: 'bg-gray-100 text-gray-700' },
-                    'aguardando': { icon: 'fa-hourglass-half', text: 'Aguardando', color: 'bg-yellow-100 text-yellow-700' },
-                    'emAtendimento': { icon: 'fa-user-check', text: 'Em Atendimento', color: 'bg-blue-100 text-blue-700' },
-                    'emRevisao': { icon: 'fa-search', text: 'Em Revisão', color: 'bg-purple-100 text-purple-700' },
-                    'aguardandoCorrecao': { icon: 'fa-edit', text: 'Aguardando Correção', color: 'bg-orange-100 text-orange-700' },
-                    'aguardandoNumero': { icon: 'fa-hashtag', text: 'Aguardando Número', color: 'bg-cyan-100 text-cyan-700' },
-                    'distribuido': { icon: 'fa-paper-plane', text: 'Distribuído', color: 'bg-emerald-100 text-emerald-700' }
-                };
-                
-                const statusInfo = statusMap[currentAssistedData.status] || { icon: 'fa-question', text: currentAssistedData.status || 'Desconhecido', color: 'bg-gray-100 text-gray-700' };
-                statusBadge.innerHTML = `<i class="fas ${statusInfo.icon} mr-1"></i> ${statusInfo.text}`;
-                statusBadge.className = `status-badge ${statusInfo.color}`;
-                statusBadge.classList.remove('hidden');
-                
-                // Preencher nome do atendente
-                const collaboratorName = urlParams.get('collaboratorName');
-                if (collaboratorName) {
-                    document.getElementById('attendant-name').value = collaboratorName;
-                }
-                
-                // Configurar fluxos baseado na configuração da pauta
-                setupFlows();
-                
-                // Carregar demandas existentes
-                loadExistingDemands();
-                
-                // Carregar histórico
-                await loadAssistedHistory();
-                
-                // Carregar checklist
-                renderChecklist(currentAssistedData.documentChecklist);
-                
-                // Carregar dados do réu e gastos
-                loadAdditionalData();
-                
-                // Carregar defensores se necessário
-                await loadDefensores();
-                
-                // Mostrar container principal
-                document.getElementById('loading-overlay').classList.add('hidden');
-                document.getElementById('main-container').classList.remove('hidden');
-                
-            } catch (error) {
-                console.error("Erro ao carregar:", error);
-                showError(error.message || "Erro ao carregar dados do atendimento.");
-            }
-        }
-        
-        function setupFlows() {
-            const useDistribution = currentPautaData.useDistributionFlow || false;
-            const useReviewFlow = currentPautaData.useReviewFlow || false;
-            
-            if (useReviewFlow) {
-                // Mostrar opção de revisão hierárquica
-                document.getElementById('review-flow-container').classList.remove('hidden');
-                document.getElementById('header-bg').className = "relative bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white";
-                document.getElementById('mode-badge').innerHTML = '<i class="fas fa-layer-group mr-1"></i> Modo Revisão Hierárquica';
-            } else if (useDistribution) {
-                document.getElementById('ui-distribution').classList.remove('hidden');
-                document.getElementById('ui-standard').classList.add('hidden');
-                document.getElementById('header-bg').className = "relative bg-gradient-to-r from-cyan-600 to-blue-600 p-6 text-white";
-                document.getElementById('mode-badge').innerHTML = '<i class="fas fa-balance-scale mr-1"></i> Modo Distribuição';
+            // MÁGICA: Se for status de revisão, a tela vira o PAINEL DO DEFENSOR
+            if (data.status === 'emRevisao') {
+                document.getElementById('header-bg').className = "bg-purple-600 p-5 text-white";
+                document.getElementById('area-colaborador').classList.add('hidden');
+                document.getElementById('area-defensor').classList.remove('hidden');
+                document.getElementById('input-motivo').value = '';
+            } else if (data.status === 'aguardandoCorrecao') {
+                document.getElementById('header-bg').className = "bg-red-600 p-5 text-white";
+                document.getElementById('area-colaborador').classList.remove('hidden');
+                document.getElementById('area-defensor').classList.add('hidden');
+                alert(`ATENÇÃO: Este processo foi devolvido. Motivo: ${data.reviewMotivoDevolucao}`);
             } else {
-                document.getElementById('ui-standard').classList.remove('hidden');
-                document.getElementById('ui-distribution').classList.add('hidden');
-                document.getElementById('header-bg').className = "relative bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white";
-                document.getElementById('mode-badge').innerHTML = '<i class="fas fa-check-circle mr-1"></i> Modo Direto';
+                document.getElementById('area-colaborador').classList.remove('hidden');
             }
-        }
-        
-        function loadExistingDemands() {
-            const demands = currentAssistedData.demandas?.descricoes || [];
-            const container = document.getElementById('demands-list');
-            const noDemandsMsg = document.getElementById('no-demands-msg');
-            
-            if (demands.length > 0) {
-                noDemandsMsg.classList.add('hidden');
-                demands.forEach(demand => {
-                    addDemandToList(demand);
+
+            // Histórico
+            const histCont = document.getElementById('lista-historico');
+            if (data.history && data.history.length > 0) {
+                [...data.history].reverse().forEach(h => {
+                    histCont.innerHTML += `
+                        <div class="bg-gray-50 border p-3 rounded-lg text-xs">
+                            <b class="text-blue-600">${h.action}</b>
+                            <p class="text-[9px] text-gray-500 mb-1">${new Date(h.at).toLocaleString('pt-BR')}</p>
+                            ${h.msg ? `<p class="italic text-gray-700">"${h.msg}"</p>` : ''}
+                        </div>`;
                 });
+            } else {
+                histCont.innerHTML = "<p class='text-xs text-gray-400'>Nenhum histórico registrado.</p>";
             }
         }
-        
-        function addDemandToList(text) {
-            const container = document.getElementById('demands-list');
-            const noDemandsMsg = document.getElementById('no-demands-msg');
-            noDemandsMsg.classList.add('hidden');
+
+        // AÇÕES DO COLABORADOR
+        document.getElementById('btn-finalizar').onclick = async () => {
+            const updates = {};
             
-            const li = document.createElement('div');
-            li.className = "flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-200";
-            li.innerHTML = `
-                <span class="text-sm text-gray-700">${escapeHtml(text)}</span>
-                <button class="remove-demand text-red-400 hover:text-red-600 transition">
-                    <i class="fas fa-trash-alt text-xs"></i>
-                </button>
-            `;
-            li.querySelector('.remove-demand').onclick = () => li.remove();
-            container.appendChild(li);
-        }
-        
-        async function loadAssistedHistory() {
-            try {
-                // Buscar histórico de revisões
-                const history = currentAssistedData.reviewHistory || [];
-                const timelineContainer = document.getElementById('timeline-container');
-                
-                if (history.length === 0) {
-                    timelineContainer.innerHTML = '<p class="text-center text-gray-400 text-xs py-8">Nenhum registro de histórico encontrado</p>';
-                } else {
-                    timelineContainer.innerHTML = history.reverse().map(item => `
-                        <div class="flex gap-3 p-3 bg-gray-50 rounded-lg border-l-4 border-emerald-400">
-                            <div class="flex-shrink-0">
-                                <div class="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                                    <i class="fas ${getActionIcon(item.action)} text-emerald-600 text-xs"></i>
-                                </div>
-                            </div>
-                            <div class="flex-1">
-                                <div class="flex justify-between items-start flex-wrap gap-2">
-                                    <span class="text-xs font-bold text-gray-700">${getActionLabel(item.action)}</span>
-                                    <span class="text-[9px] text-gray-400">${new Date(item.timestamp).toLocaleString('pt-BR')}</span>
-                                </div>
-                                <p class="text-[10px] text-gray-600 mt-1">${item.notes || 'Sem observações'}</p>
-                                ${item.processNumber ? `<p class="text-[9px] font-mono text-blue-600 mt-1">Processo: ${item.processNumber}</p>` : ''}
-                                ${item.byName ? `<p class="text-[9px] text-gray-400 mt-1">Por: ${item.byName}</p>` : ''}
-                            </div>
-                        </div>
-                    `).join('');
-                }
-                
-                // Buscar agendamentos futuros (simulado - pode expandir)
-                const futureContainer = document.getElementById('future-appointments');
-                futureContainer.innerHTML = '<p class="text-center text-gray-400 text-xs py-4">Nenhum agendamento futuro encontrado</p>';
-                
-                // Atendimentos anteriores (mesma pauta)
-                const pastContainer = document.getElementById('past-attendances');
-                pastContainer.innerHTML = '<p class="text-center text-gray-400 text-xs py-4">Nenhum atendimento anterior registrado</p>';
-                
-            } catch (error) {
-                console.error("Erro ao carregar histórico:", error);
-            }
-        }
-        
-        function getActionIcon(action) {
-            const icons = {
-                'sent_to_review': 'fa-share',
-                'approved_with_number': 'fa-check-circle',
-                'returned_for_correction': 'fa-undo',
-                'resend_after_correction': 'fa-redo',
-                'distributed': 'fa-paper-plane'
-            };
-            return icons[action] || 'fa-clock';
-        }
-        
-        function getActionLabel(action) {
-            const labels = {
-                'sent_to_review': 'Enviado para Revisão',
-                'approved_with_number': 'Aprovado com Número',
-                'returned_for_correction': 'Devolvido para Correção',
-                'resend_after_correction': 'Reenviado após Correção',
-                'distributed': 'Distribuído'
-            };
-            return labels[action] || 'Atualização de Status';
-        }
-        
-        function renderChecklist(checklist) {
-            const container = document.getElementById('checklist-container');
-            if (!checklist || !checklist.checkedIds || checklist.checkedIds.length === 0) {
-                container.innerHTML = '<p class="text-center text-gray-400 text-xs py-8"><i class="fas fa-folder-open mr-2"></i>Nenhum documento registrado na triagem</p>';
-                return;
-            }
-            
-            const docTypes = checklist.docTypes || {};
-            container.innerHTML = checklist.checkedIds.map(id => `
-                <div class="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                    <i class="fas fa-check-circle text-green-500"></i>
-                    <div class="flex-1">
-                        <span class="text-sm font-medium text-gray-700">${id}</span>
-                        <span class="text-[10px] text-gray-500 ml-2">(${docTypes[id] || 'Físico'})</span>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        function loadAdditionalData() {
-            const checklist = currentAssistedData.documentChecklist;
-            
-            // Dados do Réu
-            if (checklist?.reuData?.nome) {
-                const reuContainer = document.getElementById('reu-container');
-                const reuContent = document.getElementById('reu-content');
-                reuContainer.classList.remove('hidden');
-                reuContent.innerHTML = `
-                    <div class="grid grid-cols-2 gap-2 text-xs">
-                        <div class="font-semibold text-gray-600">Nome:</div>
-                        <div>${escapeHtml(checklist.reuData.nome)}</div>
-                        ${checklist.reuData.cpf ? `<div class="font-semibold text-gray-600">CPF:</div><div>${checklist.reuData.cpf}</div>` : ''}
-                        ${checklist.reuData.rua ? `<div class="font-semibold text-gray-600">Endereço:</div><div>${checklist.reuData.rua}, ${checklist.reuData.numero || ''}</div>` : ''}
-                        ${checklist.reuData.bairro ? `<div class="font-semibold text-gray-600">Bairro:</div><div>${checklist.reuData.bairro}</div>` : ''}
-                        ${checklist.reuData.cidade ? `<div class="font-semibold text-gray-600">Cidade/UF:</div><div>${checklist.reuData.cidade}/${checklist.reuData.uf || ''}</div>` : ''}
-                        ${checklist.reuData.telefone ? `<div class="font-semibold text-gray-600">Telefone:</div><div>${checklist.reuData.telefone}</div>` : ''}
-                    </div>
-                `;
-            }
-            
-            // Dados de Gastos
-            if (checklist?.expenseData) {
-                const expensesContainer = document.getElementById('expenses-container');
-                const expensesContent = document.getElementById('expenses-content');
-                expensesContainer.classList.remove('hidden');
-                const expenses = checklist.expenseData;
-                expensesContent.innerHTML = `
-                    <div class="grid grid-cols-2 gap-2 text-xs">
-                        ${expenses.moradia ? `<div class="font-semibold text-gray-600">Moradia:</div><div>R$ ${expenses.moradia}</div>` : ''}
-                        ${expenses.alimentacao ? `<div class="font-semibold text-gray-600">Alimentação:</div><div>R$ ${expenses.alimentacao}</div>` : ''}
-                        ${expenses.educacao ? `<div class="font-semibold text-gray-600">Educação:</div><div>R$ ${expenses.educacao}</div>` : ''}
-                        ${expenses.saude ? `<div class="font-semibold text-gray-600">Saúde:</div><div>R$ ${expenses.saude}</div>` : ''}
-                        ${expenses.vestuario ? `<div class="font-semibold text-gray-600">Vestuário:</div><div>R$ ${expenses.vestuario}</div>` : ''}
-                        ${expenses.lazer ? `<div class="font-semibold text-gray-600">Lazer:</div><div>R$ ${expenses.lazer}</div>` : ''}
-                        ${expenses.outras ? `<div class="font-semibold text-gray-600">Outras:</div><div>R$ ${expenses.outras}</div>` : ''}
-                    </div>
-                `;
-            }
-            
-            // Histórico de Revisões
-            if (currentAssistedData.reviewHistory && currentAssistedData.reviewHistory.length > 0) {
-                const reviewContainer = document.getElementById('review-history-container');
-                const reviewContent = document.getElementById('review-history-content');
-                reviewContainer.classList.remove('hidden');
-                reviewContent.innerHTML = currentAssistedData.reviewHistory.map(item => `
-                    <div class="flex gap-2 p-2 bg-white rounded-lg border text-xs">
-                        <i class="fas ${getActionIcon(item.action)} text-purple-500 mt-1"></i>
-                        <div>
-                            <span class="font-semibold">${getActionLabel(item.action)}</span>
-                            <p class="text-gray-500 text-[10px]">${new Date(item.timestamp).toLocaleString('pt-BR')}</p>
-                            ${item.notes ? `<p class="text-gray-600 mt-1">${item.notes}</p>` : ''}
-                        </div>
-                    </div>
-                `).join('');
-            }
-        }
-        
-        async function loadDefensores() {
-            try {
-                const q = query(collection(db, "pautas", pautaId, "collaborators"), where("cargo", "in", ["Defensor(a)", "Defensor"]));
-                const snap = await getDocs(q);
-                const select = document.getElementById('select-defensor');
-                select.innerHTML = '<option value="">Selecione o responsável...</option>';
-                snap.forEach(doc => {
-                    const data = doc.data();
-                    const opt = document.createElement('option');
-                    opt.value = data.nome;
-                    opt.textContent = `${data.nome} (${data.cargo || 'Defensor'})`;
-                    select.appendChild(opt);
-                });
-            } catch(e) { 
-                console.error("Erro ao carregar defensores", e);
-            }
-        }
-        
-        async function handleSave(status, successMsg, finalAttendant = null, processNumber = null) {
-            const name = document.getElementById('attendant-name').value.trim();
-            if (!name) {
-                alert("Por favor, informe seu nome.");
-                return;
-            }
-            
-            document.getElementById('loading-overlay').classList.remove('hidden');
-            document.getElementById('loading-text').textContent = "Salvando informações...";
-            
-            // Coletar demandas adicionais
-            const demands = Array.from(document.querySelectorAll('#demands-list .flex span')).map(span => span.textContent);
-            const existingDemands = currentAssistedData.demandas?.descricoes || [];
-            const mergedDemands = [...new Set([...existingDemands, ...demands])];
-            
-            try {
-                const assistedRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
-                const updateData = {
-                    status: status,
-                    attendant: finalAttendant || name,
-                    attendedTime: new Date().toISOString(),
-                    finalizadoPeloColaborador: true,
-                    demandas: { descricoes: mergedDemands, quantidade: mergedDemands.length },
-                    finalizadoVia: 'Painel do Colaborador'
+            if (fluxoEscolhido === 'direto') {
+                updates.status = 'atendido';
+            } else if (fluxoEscolhido === 'distribuicao') {
+                updates.status = 'aguardandoDistribuicao';
+            } else if (fluxoEscolhido === 'revisao') {
+                updates.status = 'emRevisao';
+                updates.reviewData = {
+                    sentBy: myName,
+                    defensor: document.getElementById('select-defensor').value,
+                    notes: document.getElementById('notas-revisao').value
                 };
-                
-                if (processNumber) {
-                    updateData.processNumber = processNumber;
-                }
-                
-                // Adicionar ao histórico
-                const historyEntry = {
-                    action: status === 'atendido' ? 'finalized' : 'sent_to_distribution',
-                    notes: `Finalizado por ${name}`,
-                    timestamp: new Date().toISOString(),
-                    byName: name
-                };
-                
-                updateData.reviewHistory = [...(currentAssistedData.reviewHistory || []), historyEntry];
-                
-                await updateDoc(assistedRef, updateData);
-                
-                document.getElementById('success-msg').textContent = successMsg;
-                document.getElementById('success-overlay').classList.remove('hidden');
-                document.getElementById('loading-overlay').classList.add('hidden');
-                
-            } catch (error) {
-                console.error("Erro ao salvar:", error);
-                alert("Erro ao salvar. Tente novamente.");
-                document.getElementById('loading-overlay').classList.add('hidden');
-            }
-        }
-        
-        async function handleSendToReview() {
-            const name = document.getElementById('attendant-name').value.trim();
-            if (!name) {
-                alert("Informe seu nome antes de enviar para revisão.");
-                return;
             }
             
-            document.getElementById('loading-overlay').classList.remove('hidden');
-            document.getElementById('loading-text').textContent = "Enviando para revisão...";
-            
-            try {
-                const assistedRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
-                const historyEntry = {
-                    action: 'sent_to_review',
-                    notes: `Enviado para revisão por ${name}`,
-                    timestamp: new Date().toISOString(),
-                    byName: name
-                };
-                
-                await updateDoc(assistedRef, {
-                    status: 'emRevisao',
-                    reviewStatus: 'pending',
-                    sentForReviewAt: new Date().toISOString(),
-                    reviewHistory: [...(currentAssistedData.reviewHistory || []), historyEntry]
-                });
-                
-                document.getElementById('success-msg').textContent = "Atendimento enviado para revisão!";
-                document.getElementById('success-overlay').classList.remove('hidden');
-                document.getElementById('loading-overlay').classList.add('hidden');
-                
-            } catch (error) {
-                console.error("Erro:", error);
-                alert("Erro ao enviar para revisão.");
-                document.getElementById('loading-overlay').classList.add('hidden');
-            }
-        }
-        
-        function showError(message) {
-            document.getElementById('loading-overlay').innerHTML = `
-                <div class="bg-white p-8 rounded-2xl text-center max-w-md mx-4">
-                    <i class="fas fa-exclamation-triangle text-red-500 text-5xl mb-4"></i>
-                    <p class="text-red-600 font-bold mb-2">Acesso Indisponível</p>
-                    <p class="text-gray-600 text-sm">${message}</p>
-                    <button onclick="location.reload()" class="mt-4 bg-emerald-600 text-white px-6 py-2 rounded-lg text-sm font-bold">Tentar Novamente</button>
-                </div>
-            `;
-        }
-        
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-        
-        // Event Listeners
-        document.getElementById('btn-standard-finish')?.addEventListener('click', () => handleSave('atendido', "Atendimento finalizado com sucesso!"));
-        document.getElementById('btn-confirm-signature')?.addEventListener('click', () => {
-            document.getElementById('step-signature').classList.add('hidden');
-            document.getElementById('step-decision').classList.remove('hidden');
-        });
-        document.getElementById('btn-wait-dist')?.addEventListener('click', () => handleSave('aguardandoDistribuicao', "Encaminhado para fila de distribuição ⚖️"));
-        document.getElementById('btn-show-fields')?.addEventListener('click', () => document.getElementById('fields-protocol').classList.remove('hidden'));
-        document.getElementById('btn-final-finish-dist')?.addEventListener('click', () => {
-            const def = document.getElementById('select-defensor').value;
-            const processNum = document.getElementById('input-process-number').value;
-            if (!def) {
-                alert("Selecione o defensor responsável.");
-                return;
-            }
-            if (!processNum) {
-                alert("Informe o número do processo.");
-                return;
-            }
-            handleSave('atendido', "Processo finalizado e distribuído!", def, processNum);
-        });
-        document.getElementById('btn-send-review')?.addEventListener('click', handleSendToReview);
-        
-        document.getElementById('add-demand-btn')?.addEventListener('click', () => {
-            const val = document.getElementById('new-demand-input').value.trim();
-            if (val) {
-                addDemandToList(val);
-                document.getElementById('new-demand-input').value = '';
-            }
-        });
-        
-        // Tabs
-        const tabs = {
-            finish: { btn: 'tab-finish', content: 'content-finish' },
-            history: { btn: 'tab-history', content: 'content-history' },
-            docs: { btn: 'tab-docs', content: 'content-docs' }
-        };
-        
-        function switchTab(activeTab) {
-            Object.values(tabs).forEach(tab => {
-                const btn = document.getElementById(tab.btn);
-                const content = document.getElementById(tab.content);
-                if (btn && content) {
-                    if (tab.btn === activeTab) {
-                        btn.classList.add('tab-active');
-                        btn.classList.remove('text-gray-500');
-                        content.classList.remove('hidden');
-                    } else {
-                        btn.classList.remove('tab-active');
-                        btn.classList.add('text-gray-500');
-                        content.classList.add('hidden');
-                    }
-                }
+            updates.history = arrayUnion({
+                action: `MARCADO COMO ${updates.status.toUpperCase()}`,
+                by: myName,
+                at: new Date().toISOString()
             });
-        }
-        
-        document.getElementById('tab-finish')?.addEventListener('click', () => switchTab('tab-finish'));
-        document.getElementById('tab-history')?.addEventListener('click', () => switchTab('tab-history'));
-        document.getElementById('tab-docs')?.addEventListener('click', () => switchTab('tab-docs'));
-        
-        // Iniciar
+
+            await updateDoc(doc(db, "pautas", pId, "attendances", aId), updates);
+            alert("Processo encaminhado com sucesso!");
+            window.close();
+        };
+
+        // AÇÕES DO DEFENSOR
+        document.getElementById('btn-aprovar').onclick = async () => {
+            const numero = document.getElementById('input-processo').value;
+            const status = numero ? 'distribuido' : 'aguardandoNumero';
+            
+            await updateDoc(doc(db, "pautas", pId, "attendances", aId), {
+                status: status,
+                processNumber: numero || null,
+                history: arrayUnion({
+                    action: numero ? 'APROVADO_E_DISTRIBUIDO' : 'APROVADO_SEM_NUMERO',
+                    by: myName,
+                    at: new Date().toISOString()
+                })
+            });
+            alert("Aprovado com sucesso!");
+            window.close();
+        };
+
+        document.getElementById('btn-devolver').onclick = async () => {
+            const motivo = document.getElementById('input-motivo').value;
+            if (!motivo) return alert("Descreva o motivo da devolução!");
+
+            await updateDoc(doc(db, "pautas", pId, "attendances", aId), {
+                status: 'aguardandoCorrecao',
+                reviewMotivoDevolucao: motivo,
+                history: arrayUnion({
+                    action: 'DEVOLVIDO_PARA_CORRECAO',
+                    msg: motivo,
+                    by: myName,
+                    at: new Date().toISOString()
+                })
+            });
+            alert("Processo devolvido para correção.");
+            window.close();
+        };
+
         init();
     </script>
 </body>
