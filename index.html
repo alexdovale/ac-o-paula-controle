@@ -1600,6 +1600,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (btn) btn.addEventListener('click', () => AuthService.logout(this.auth));
                 });
 
+                document.getElementById('btn-gerar-ata-social')?.addEventListener('click', () => {
+                    // Chamando a função passando o objeto 'this' (que contém todos os dados da app)
+                    generateAtaAcaoSocial(this); 
+                });
+
                 // No final do setupEventListeners, adicione:
                 document.addEventListener('click', (e) => {
                     if (!e.target.closest('.quick-action-toggle') && !e.target.closest('[id^="quick-menu-"]')) {
