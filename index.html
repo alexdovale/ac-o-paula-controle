@@ -3211,10 +3211,43 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
         }
 
-        window.showNotification = showNotification;
+       window.showNotification = showNotification;
         window.openDetailsModal = openDetailsModal;
 
+        // Adiciona a função de ordenação ao escopo global (window)
+        window.sortColaboradores = function(criterio) {
+            // Verifica se a função existe no CollaboratorService e a chama
+            if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.sortColaboradores === 'function') {
+                CollaboratorService.sortColaboradores(window.app, criterio);
+            } else {
+                // FALLBACK: Caso a função não exista no serviço, faz a ordenação básica aqui
+                if (!window.app || !window.app.colaboradores) return;
+                
+                // Alterna entre Crescente e Decrescente
+                window._sortColabDir = window._sortColabDir === 'asc' ? 'desc' : 'asc';
+                const direction = window._sortColabDir === 'asc' ? 1 : -1;
+                
+                window.app.colaboradores.sort((a, b) => {
+                    let valA = (a[criterio] || '').toString().toLowerCase();
+                    let valB = (b[criterio] || '').toString().toLowerCase();
+                    if (valA < valB) return -1 * direction;
+                    if (valA > valB) return 1 * direction;
+                    return 0;
+                });
+                
+                // Renderiza a lista atualizada (chame a sua função de renderização exata aqui)
+                if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.renderModalList === 'function') {
+                    CollaboratorService.renderModalList(window.app);
+                } else if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.updateList === 'function') {
+                    CollaboratorService.updateList(window.app);
+                } else {
+                    console.warn("Ordenado com sucesso, mas a função de re-renderização da tabela não foi encontrada.");
+                }
+            }
+        };
+
         window.app = new SIGAPApp();
+
 
 
 
