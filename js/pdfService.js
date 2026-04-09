@@ -326,7 +326,7 @@ export const PDFService = {
 
                     const addLinha = (texto) => {
                         if (y > pageHeight - 20) { docPDF.addPage(); y = 20; }
-                        const safe = texto.replace(/[^ -À-ÿ\s\-\,\.\:\;\!\?\(\)\/\[\]#@$%&*+<>=~^|]/g, '');
+                        const safe = texto.replace(/[^-À-ÿ\s\-\,\.\:\;\!\?\(\)\/\[\]#@$%&*+<>=~^|]/g, '');
                         const linhas = docPDF.splitTextToSize(safe, pageWidth - 2*margin - 10);
                         docPDF.text(linhas, margin + 5, y);
                         y += 5 * linhas.length;
@@ -467,6 +467,103 @@ export const PDFService = {
             return true;
         } catch (error) {
             console.error("Erro PDF Estatísticas:", error);
+            return false;
+        }
+    },
+
+    /**
+     * GERA ATA DE AÇÃO SOCIAL (DOCUMENTO OFICIAL)
+     * @param {string} pautaName - Nome da pauta/local da ação
+     * @param {Array} colaboradores - Lista de colaboradores com nome, cargo, etc.
+     * @param {Array} atendidos - Lista de atendidos (para total de atendimentos)
+     * @returns {boolean} - Sucesso ou falha na geração
+     */
+    generateAtaAcaoSocial(pautaName, colaboradores, atendidos) {
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const dataAtual = new Date();
+            const dia = dataAtual.getDate();
+            const mesExtenso = dataAtual.toLocaleString('pt-BR', { month: 'long' });
+            const ano = dataAtual.getFullYear();
+            const totalAtendidos = atendidos.length;
+
+            // 1. LOGO (Centralizado)
+            const logoUrl = "https://alexdovale.github.io/ponto.codoc/imagem.png";
+            doc.addImage(logoUrl, 'PNG', 45, 10, 110, 25); 
+
+            // 2. TÍTULO
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("ATA AÇÃO SOCIAL", 105, 45, { align: "center" });
+
+            // 3. TEXTO INTRODUTÓRIO
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            const introText = `Aos ${dia} dias do mês de ${mesExtenso} do ano de ${ano}, a partir das 9h, trabalharam na ${pautaName}, os(as) Defensores(as) Públicos(as) abaixo listados(as), bem como os(as) servidores(as), conforme listagem a seguir:`;
+            
+            const splitIntro = doc.splitTextToSize(introText, 180);
+            doc.text(splitIntro, 15, 55);
+
+            // Filtrar categorias (baseado no cargo)
+            const defensores = colaboradores.filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'));
+            const servidores = colaboradores.filter(c => c.cargo && !c.cargo.toLowerCase().includes('defensor'));
+
+            // 4. TABELA DEFENSOR PÚBLICO
+            doc.autoTable({
+                startY: 70,
+                head: [['DEFENSOR PÚBLICO', '', '']],
+                body: [
+                    [{ content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}, 
+                     { content: 'MATRÍCULA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}, 
+                     { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}],
+                    ...defensores.map(c => [c.nome, '', ''])
+                ],
+                theme: 'grid',
+                headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold' },
+                styles: { fontSize: 9, cellPadding: 4 },
+                columnStyles: { 0: { cellWidth: 80 }, 1: { cellWidth: 40 }, 2: { cellWidth: 'auto' } }
+            });
+
+            // 5. TABELA SERVIDOR
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 10,
+                head: [['SERVIDOR', '', '']],
+                body: [
+                    [{ content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}, 
+                     { content: 'ID FUNCIONAL', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}, 
+                     { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}],
+                    ...servidores.map(c => [c.nome, '', ''])
+                ],
+                theme: 'grid',
+                headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold' },
+                styles: { fontSize: 8, cellPadding: 3 },
+                columnStyles: { 0: { cellWidth: 80 }, 1: { cellWidth: 40 }, 2: { cellWidth: 'auto' } }
+            });
+
+            // 6. TABELA RODAPÉ (ÓRGÃO E TOTAL)
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 10,
+                body: [
+                    [{ content: 'ÓRGÃO DE ATENDIMENTO - AS', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }}, 
+                     { content: 'TOTAL DE ATENDIMENTOS', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }}],
+                    [pautaName.toUpperCase(), totalAtendidos]
+                ],
+                theme: 'grid',
+                styles: { fontSize: 9, halign: 'center', cellPadding: 4 }
+            });
+
+            // 7. OBSERVAÇÕES
+            const finalY = doc.lastAutoTable.finalY + 15;
+            doc.setFont("helvetica", "bold");
+            doc.text("OBSERVAÇÕES:", 15, finalY);
+            doc.line(15, finalY + 8, 195, finalY + 8); // Linha decorativa
+
+            doc.save(`Ata_Social_${pautaName.replace(/\s+/g, '_')}.pdf`);
+            return true;
+        } catch (error) {
+            console.error("Erro ao gerar Ata Social:", error);
             return false;
         }
     }
