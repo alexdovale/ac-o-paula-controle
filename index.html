@@ -1600,12 +1600,32 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (btn) btn.addEventListener('click', () => AuthService.logout(this.auth));
                 });
 
+                // --- SUBSTITUA O BLOCO DO BTN-GERAR-ATA-SOCIAL POR ESTE ---
                 document.getElementById('btn-gerar-ata-social')?.addEventListener('click', () => {
-                    // Chamando a função passando o objeto 'this' (que contém todos os dados da app)
-                    generateAtaAcaoSocial(this); 
+                    // 1. Coleta os dados dinâmicos via prompt
+                    const acaoNome = prompt("Nome da Ação Social:", this.currentPauta?.name || "");
+                    const endereco = prompt("Endereço / Local do Atendimento:", "Ex: Rua Marechal, nº 10, Duque de Caxias");
+                    const dataAcao = prompt("Data do evento (AAAA-MM-DD):", new Date().toISOString().split('T')[0]);
+
+                    // Validação simples
+                    if (!acaoNome || !endereco) {
+                        showNotification("Ação cancelada. Nome e endereço são obrigatórios.", "error");
+                        return;
+                    }
+
+                    // 2. Filtra os assistidos atendidos na pauta atual
+                    const atendidos = this.allAssisted.filter(a => a.status === 'atendido');
+                    const dadosExtras = { acao: acaoNome, endereco: endereco, data: dataAcao };
+
+                    // 3. Oferece a Visualização ou Download Direto
+                    if (confirm("Deseja VISUALIZAR (Preview) a Ata antes de baixar?\n\n(Clique em 'Cancelar' para baixar o arquivo direto)")) {
+                        PDFService.previewAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
+                    } else {
+                        PDFService.generateAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
+                    }
                 });
 
-                // No final do setupEventListeners, adicione:
+                // --- MANTENHA O RESTANTE DO CÓDIGO ABAIXO COMO ESTÁ ---
                 document.addEventListener('click', (e) => {
                     if (!e.target.closest('.quick-action-toggle') && !e.target.closest('[id^="quick-menu-"]')) {
                         document.querySelectorAll('[id^="quick-menu-"]').forEach(menu => {
