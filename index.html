@@ -1491,6 +1491,33 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { parsePautaCSV } from './js/csvHandler.js';
         import { getChecklistHTML } from './js/checklist.js';
 
+        // ================================================
+        // FUNÇÕES PARA SALVAR ÚLTIMOS DADOS DA ATA
+        // ================================================
+        
+        const STORAGE_KEY_ATA = 'sigap_ultima_ata';
+        
+        function salvarUltimosDadosAta(dados) {
+            try {
+                localStorage.setItem(STORAGE_KEY_ATA, JSON.stringify(dados));
+                console.log("💾 Últimos dados da Ata salvos:", dados);
+            } catch (e) {
+                console.error("Erro ao salvar dados da ata:", e);
+            }
+        }
+        
+        function carregarUltimosDadosAta() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY_ATA);
+                if (saved) {
+                    return JSON.parse(saved);
+                }
+            } catch (e) {
+                console.error("Erro ao carregar dados da ata:", e);
+            }
+            return null;
+        }
+
         class SIGAPApp {
             constructor() {
                 this.db = null;
