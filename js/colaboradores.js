@@ -1,4 +1,4 @@
-// js/colaboradores.js - VERSÃO COM ORDENAÇÃO MANUAL
+// js/colaboradores.js - VERSÃO CORRIGIDA (ID para Servidores | Matrícula para Defensores)
 import { 
     collection, 
     onSnapshot, 
@@ -27,8 +27,8 @@ const CollaboratorService = {
         if (!identificador || identificador.length < 3) return;
 
         try {
-            const idBusca = identificador.replace(/\D/g, '');
-            const masterRef = doc(app.db, "colaboradores_gerais", idBusca);
+            // Busca pelo identificador (pode ser ID ou Matrícula)
+            const masterRef = doc(app.db, "colaboradores_gerais", identificador);
             const snap = await getDoc(masterRef);
 
             if (snap.exists()) {
@@ -56,12 +56,10 @@ const CollaboratorService = {
     // ========================================================
     ordenarColaboradores(colaboradores) {
         if (this.ordemAtual === 'nome') {
-            // Ordena por nome (A-Z)
             return [...colaboradores].sort((a, b) => {
                 return (a.nome || '').localeCompare(b.nome || '');
             });
         } else {
-            // Ordena por grupo, com defensores primeiro dentro de cada grupo
             return [...colaboradores].sort((a, b) => {
                 // Primeiro critério: grupo
                 const grupoA = a.equipe || '';
@@ -77,7 +75,6 @@ const CollaboratorService = {
                     return isDefensorA - isDefensorB;
                 }
                 
-                // Depois ordena por nome
                 return (a.nome || '').localeCompare(b.nome || '');
             });
         }
@@ -89,7 +86,6 @@ const CollaboratorService = {
         if (btn) {
             btn.textContent = this.ordemAtual === 'grupo' ? '📁 Ordenar por Grupo' : '🔤 Ordenar por Nome';
         }
-        // Re-renderizar com a nova ordem
         if (window.app && window.app.colaboradores) {
             this.renderTable(window.app);
         }
@@ -108,8 +104,15 @@ const CollaboratorService = {
             const snap = await getDocs(q);
             
             select.innerHTML = '<option value="">Selecione o Defensor...</option>';
+            const defensores = [];
             snap.forEach(doc => {
-                const c = doc.data();
+                defensores.push({ id: doc.id, ...doc.data() });
+            });
+            
+            // Ordenar defensores por nome
+            defensores.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+            
+            defensores.forEach(c => {
                 select.innerHTML += `<option value="${escapeHTML(c.nome)}">${escapeHTML(c.nome)}</option>`;
             });
         } catch (e) {
@@ -135,7 +138,6 @@ const CollaboratorService = {
         this.configurarLogicaCargo();
         this.configurarEventoBusca(app);
         
-        // Adicionar botão de ordenação se não existir
         this.adicionarBotaoOrdenacao();
         
         if (app && app.currentPauta && app.currentPauta.id) {
@@ -147,7 +149,6 @@ const CollaboratorService = {
         const container = document.querySelector('#collaborators-list-table-modal');
         if (!container) return;
         
-        // Verifica se o botão já existe
         if (document.getElementById('toggle-order-btn')) return;
         
         const header = container.querySelector('.flex.justify-between') || container;
@@ -170,7 +171,7 @@ const CollaboratorService = {
         if (!inputId) return;
 
         inputId.onblur = () => {
-            if (!this.editId) {
+            if (!this.editId && inputId.value) {
                 this.buscarColaboradorMaster(app, inputId.value);
             }
         };
@@ -183,7 +184,8 @@ const CollaboratorService = {
         if (!cargoSelect || !labelIdentificador) return;
 
         const atualizarLabel = () => {
-            labelIdentificador.textContent = (cargoSelect.value === "Defensor(a)") ? "ID" : "Matrícula";
+            // CORREÇÃO: Defensor(a) usa Matrícula | Servidor usa ID
+            labelIdentificador.textContent = (cargoSelect.value === "Defensor(a)") ? "Matrícula" : "ID";
         };
 
         cargoSelect.onchange = atualizarLabel;
@@ -236,11 +238,14 @@ const CollaboratorService = {
             return;
         }
 
+        // CORREÇÃO: tipo_id baseado no cargo
+        const tipo_id = (cargo === "Defensor(a)") ? "Matrícula" : "ID";
+
         const data = {
             nome,
             cargo,
             identificador,
-            tipo_id: (cargo === "Defensor(a)") ? "ID" : "Matrícula",
+            tipo_id,
             equipe,
             telefone,
             email,
@@ -268,9 +273,10 @@ const CollaboratorService = {
     },
 
     async salvarNaBaseMaster(app, data) {
-        const idUnico = data.identificador.replace(/\D/g, '');
-        if (!idUnico) return;
-        const masterRef = doc(app.db, "colaboradores_gerais", idUnico);
+        // Usa o identificador como chave (pode ser ID ou Matrícula)
+        const chave = data.identificador;
+        if (!chave) return;
+        const masterRef = doc(app.db, "colaboradores_gerais", chave);
         await setDoc(masterRef, data, { merge: true });
     },
 
@@ -314,7 +320,6 @@ const CollaboratorService = {
         tbody.innerHTML = '';
         let selfT = 0, compT = 0;
         
-        // Aplica a ordenação atual
         const colaboradoresOrdenados = this.ordenarColaboradores(app.colaboradores || []);
         
         let ultimoGrupo = '';
@@ -325,7 +330,6 @@ const CollaboratorService = {
             
             const grupoAtual = colab.equipe || 'Sem Grupo';
             
-            // Adiciona separador de grupo se for ordenação por grupo e mudou de grupo
             if (this.ordemAtual === 'grupo' && ultimoGrupo !== grupoAtual) {
                 ultimoGrupo = grupoAtual;
                 const groupRow = document.createElement('tr');
@@ -341,14 +345,16 @@ const CollaboratorService = {
             const row = document.createElement('tr');
             row.className = "border-b hover:bg-gray-50 text-sm";
             
-            // Destacar defensores
             const isDefensor = colab.cargo === 'Defensor(a)';
             const nomeClass = isDefensor ? 'font-bold text-blue-700' : 'font-bold text-gray-800';
+            
+            // Mostrar o tipo correto (Matrícula para Defensor, ID para Servidor)
+            const labelTipo = colab.tipo_id || (isDefensor ? 'Matrícula' : 'ID');
             
             row.innerHTML = `
                 <td class="p-3">
                     <div class="${nomeClass}">${escapeHTML(colab.nome || '')}</div>
-                    <div class="text-[10px] text-gray-500 uppercase">${colab.tipo_id || 'ID'}: ${colab.identificador || ''}</div>
+                    <div class="text-[10px] text-gray-500 uppercase">${labelTipo}: ${colab.identificador || ''}</div>
                 </td>
                 <td class="p-3 text-center">
                     <input type="checkbox" class="checkin-checkbox w-5 h-5" 
@@ -367,7 +373,6 @@ const CollaboratorService = {
             tbody.appendChild(row);
         });
 
-        // Atualizar contadores
         const totalSpan = document.getElementById('total-participants-count');
         if (totalSpan) totalSpan.textContent = app.colaboradores?.length || 0;
         
@@ -489,8 +494,7 @@ const CollaboratorService = {
         const transpDefault = document.querySelector('input[name="transporte-colaborador"][value="Meios Próprios"]');
         if (transpDefault) transpDefault.checked = true;
         
-        // NÃO limpar o campo identificador automaticamente - preservar o que foi digitado
-        // Mas se for edição, será sobrescrito pelo editCollaborator
+        this.configurarLogicaCargo();
     }
 };
 
@@ -501,4 +505,4 @@ export default CollaboratorService;
 export { CollaboratorService };
 window.CollaboratorService = CollaboratorService;
 
-console.log("✅ colaboradores.js carregado (com ordenação manual por grupo/nome)!");
+console.log("✅ colaboradores.js carregado (ID para Servidores | Matrícula para Defensores)!");
