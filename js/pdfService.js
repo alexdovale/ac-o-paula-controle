@@ -1,4 +1,4 @@
-// js/pdfService.js - VERSÃO FINAL (LOGO 106x30mm + TEXTO JUSTIFICADO + SALVAR ÚLTIMOS DADOS)
+// js/pdfService.js - VERSÃO FINAL CORRIGIDA (Texto limitado + Logo 106x25mm)
 
 /**
  * Utilitários de limpeza e formatação
@@ -45,32 +45,6 @@ const getIdentificador = (colaborador) => {
     return '';
 };
 
-// Chave para salvar no localStorage
-const STORAGE_KEY = 'sigap_ultima_ata';
-
-// Função para salvar os últimos dados da ata
-const salvarUltimosDadosAta = (dados) => {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
-        console.log("💾 Últimos dados da Ata salvos:", dados);
-    } catch (e) {
-        console.error("Erro ao salvar dados da ata:", e);
-    }
-};
-
-// Função para carregar os últimos dados da ata
-const carregarUltimosDadosAta = () => {
-    try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            return JSON.parse(saved);
-        }
-    } catch (e) {
-        console.error("Erro ao carregar dados da ata:", e);
-    }
-    return null;
-};
-
 // ========================================================
 // PDF SERVICE - VERSÃO FINAL
 // ========================================================
@@ -101,29 +75,29 @@ export const PDFService = {
                 ? dadosExtras.totalAtendimentos 
                 : atendidos.length;
 
-            // 1. LOGO (106x30mm - maior)
+            // 1. LOGO (106x25mm)
             const logoUrl = "https://raw.githubusercontent.com/alexdovale/calculo-mensuracao-codoc/main/logo.png";
             try {
                 // Centralizado: (210 - 106) / 2 = 52mm de margem esquerda
-                doc.addImage(logoUrl, 'PNG', 52, 8, 106, 30);
+                doc.addImage(logoUrl, 'PNG', 52, 8, 106, 25);
             } catch(e) { console.warn("Logo não carregada:", e); }
 
             // 2. TÍTULO
             doc.setFont("helvetica", "bold");
             doc.setFontSize(13);
-            doc.text("ATA AÇÃO SOCIAL", 105, 48, { align: "center" });
+            doc.text("ATA AÇÃO SOCIAL", 105, 45, { align: "center" });
 
-            // 3. TEXTO INTRODUTÓRIO JUSTIFICADO
+            // 3. TEXTO INTRODUTÓRIO (limitado à largura das tabelas = 170mm)
             doc.setFont("helvetica", "normal");
             doc.setFontSize(9);
             
             const introText = `Aos ${dia} dias do mês de ${mesExtenso} do ano de ${ano}, a partir das 9h, em ${endereco}, trabalharam na ${nomeDaAcao}, os(as) Defensores(as) Públicos(as) abaixo listados(as), bem como os(as) servidores(as), conforme listagem a seguir:`;
             
-            // Dividir o texto em linhas com largura total (justificado visualmente)
+            // Divide o texto com largura máxima de 170mm (mesma das tabelas)
             const splitIntro = doc.splitTextToSize(introText, 170);
-            doc.text(splitIntro, 20, 58, { align: 'justify' });
+            doc.text(splitIntro, 20, 55);
             
-            let currentY = 58 + (splitIntro.length * 4.5);
+            let currentY = 55 + (splitIntro.length * 4.5);
 
             // Filtrar por cargo
             const defensores = colaboradores.filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'));
@@ -280,21 +254,21 @@ export const PDFService = {
 
             const logoUrl = "https://raw.githubusercontent.com/alexdovale/calculo-mensuracao-codoc/main/logo.png";
             try {
-                doc.addImage(logoUrl, 'PNG', 52, 8, 106, 30);
+                doc.addImage(logoUrl, 'PNG', 52, 8, 106, 25);
             } catch(e) {}
 
             doc.setFont("helvetica", "bold");
             doc.setFontSize(13);
-            doc.text("ATA AÇÃO SOCIAL", 105, 48, { align: "center" });
+            doc.text("ATA AÇÃO SOCIAL", 105, 45, { align: "center" });
 
             doc.setFont("helvetica", "normal");
             doc.setFontSize(9);
             const introText = `Aos ${dia} dias do mês de ${mesExtenso} do ano de ${ano}, a partir das 9h, em ${endereco}, trabalharam na ${nomeDaAcao}, os(as) Defensores(as) Públicos(as) abaixo listados(as), bem como os(as) servidores(as), conforme listagem a seguir:`;
             
             const splitIntro = doc.splitTextToSize(introText, 170);
-            doc.text(splitIntro, 20, 58, { align: 'justify' });
+            doc.text(splitIntro, 20, 55);
             
-            let currentY = 58 + (splitIntro.length * 4.5);
+            let currentY = 55 + (splitIntro.length * 4.5);
 
             const defensores = colaboradores.filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'));
             const servidores = colaboradores.filter(c => c.cargo && !c.cargo.toLowerCase().includes('defensor'));
@@ -728,4 +702,4 @@ export const generateStatisticsPDF = (pautaName, statsData) => {
 
 window.PDFService = PDFService;
 
-console.log("✅ pdfService.js carregado - VERSÃO FINAL (Logo 106x30mm, Texto Justificado)!");
+console.log("✅ pdfService.js carregado - VERSÃO FINAL (Logo 106x25mm, Texto limitado)!");
