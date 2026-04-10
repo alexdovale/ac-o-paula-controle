@@ -1609,35 +1609,33 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 // --- SUBSTITUA O BLOCO DO BTN-GERAR-ATA-SOCIAL POR ESTE ---
                 document.getElementById('btn-gerar-ata-social')?.addEventListener('click', () => {
-                    // 1. Coleta os dados dinâmicos via prompt
+                    // 1. Coleta os dados dinâmicos via prompt (Igual ao modelo oficial)
                     const acaoNome = prompt("Nome da Ação Social:", this.currentPauta?.name || "");
-                    const endereco = prompt("Endereço / Local do Atendimento:", "Ex: Rua Marechal, nº 10, Duque de Caxias");
+                    const endereco = prompt("Endereço / Local do Atendimento:", "Digite o endereço aqui...");
                     const dataAcao = prompt("Data do evento (AAAA-MM-DD):", new Date().toISOString().split('T')[0]);
-
-                    // Validação simples
+                
+                    // Validação
                     if (!acaoNome || !endereco) {
-                        showNotification("Ação cancelada. Nome e endereço são obrigatórios.", "error");
+                        showNotification("Operação cancelada. Nome da ação e endereço são obrigatórios.", "error");
                         return;
                     }
-
-                    // 2. Filtra os assistidos atendidos na pauta atual
+                
+                    // 2. Filtra quem realmente foi atendido na pauta atual
                     const atendidos = this.allAssisted.filter(a => a.status === 'atendido');
-                    const dadosExtras = { acao: acaoNome, endereco: endereco, data: dataAcao };
-
-                    // 3. Oferece a Visualização ou Download Direto
-                    if (confirm("Deseja VISUALIZAR (Preview) a Ata antes de baixar?\n\n(Clique em 'Cancelar' para baixar o arquivo direto)")) {
+                    
+                    // 3. Monta o objeto de dados extras que o seu pdfService.js pede
+                    const dadosExtras = { 
+                        acao: acaoNome, 
+                        endereco: endereco, 
+                        data: dataAcao,
+                        orgao: "DEFENSORIA PÚBLICA DO ESTADO DO RIO DE JANEIRO" // Opcional
+                    };
+                
+                    // 4. Pergunta se quer ver o Preview ou Download Direto
+                    if (confirm("Deseja VISUALIZAR a Ata em uma nova aba antes de baixar?\n\n(Clique em 'Cancelar' para baixar o arquivo direto)")) {
                         PDFService.previewAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
                     } else {
                         PDFService.generateAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
-                    }
-                });
-
-                // --- MANTENHA O RESTANTE DO CÓDIGO ABAIXO COMO ESTÁ ---
-                document.addEventListener('click', (e) => {
-                    if (!e.target.closest('.quick-action-toggle') && !e.target.closest('[id^="quick-menu-"]')) {
-                        document.querySelectorAll('[id^="quick-menu-"]').forEach(menu => {
-                            menu.classList.add('hidden');
-                        });
                     }
                 });
 
@@ -2164,6 +2162,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         equipe: document.getElementById('collaborator-team-modal')?.value,
                         email: document.getElementById('collaborator-email-modal')?.value || '',
                         telefone: document.getElementById('collaborator-phone-modal')?.value || '',
+                        identificador: document.getElementById('collaborator-identificador-modal')?.value || '',
                         transporte: document.querySelector('input[name="transporte-colaborador"]:checked')?.value || 'Meios Próprios'
                     };
                     
