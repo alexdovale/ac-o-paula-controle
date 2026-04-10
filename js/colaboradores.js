@@ -1,4 +1,4 @@
-// js/colaboradores.js - VERSÃO MOBILE + FILTRO ATA (Defensores, Servidores, Coordenadores, CRC)
+// js/colaboradores.js - VERSÃO COMPLETA (ATA x CERTIFICADO)
 import { 
     collection, 
     onSnapshot, 
@@ -19,7 +19,12 @@ const CollaboratorService = {
     currentListener: null,
     editId: null,
     ordemAtual: 'grupo',
-    gruposPermitidosAta: ['1', '2', '3', '4', 'CRC', 'Coordenadores'],
+    
+    // Cargos que aparecem na ATA
+    cargosParaAta: ['Defensor(a)', 'Servidor', 'Coordenador', 'CRC'],
+    
+    // Cargos que geram CERTIFICADO (todos os outros)
+    cargosParaCertificado: ['Residente', 'Voluntário', 'Estagiário', 'Consultor', 'Visitante', 'Outro'],
 
     // ========================================================
     // 1. AUTO-PREENCHIMENTO (BUSCA NA BASE MASTER)
@@ -44,6 +49,7 @@ const CollaboratorService = {
                 if (rTransp) rTransp.checked = true;
 
                 this.configurarLogicaCargo();
+                this.atualizarCargosDisponiveis();
                 showNotification("Dados recuperados da base master! ✅");
             }
         } catch (e) {
@@ -52,7 +58,39 @@ const CollaboratorService = {
     },
 
     // ========================================================
-    // 2. ORDENAÇÃO DA LISTA
+    // 2. ATUALIZAR SELECT DE CARGOS DINAMICAMENTE
+    // ========================================================
+    atualizarCargosDisponiveis() {
+        const cargoSelect = document.getElementById('collaborator-role-modal');
+        if (!cargoSelect) return;
+        
+        // Manter os valores já existentes
+        const cargosExistentes = Array.from(cargoSelect.options).map(opt => opt.value);
+        const todosCargos = [...this.cargosParaAta, ...this.cargosParaCertificado];
+        
+        todosCargos.forEach(cargo => {
+            if (!cargosExistentes.includes(cargo)) {
+                const option = document.createElement('option');
+                option.value = cargo;
+                option.textContent = cargo;
+                cargoSelect.appendChild(option);
+            }
+        });
+    },
+
+    // ========================================================
+    // 3. VERIFICAR TIPO DE DOCUMENTO (ATA ou CERTIFICADO)
+    // ========================================================
+    getTipoDocumento(cargo) {
+        if (this.cargosParaAta.includes(cargo)) {
+            return { tipo: 'ATA', classe: 'bg-green-100 text-green-800' };
+        } else {
+            return { tipo: 'CERTIFICADO', classe: 'bg-blue-100 text-blue-800' };
+        }
+    },
+
+    // ========================================================
+    // 4. ORDENAÇÃO DA LISTA
     // ========================================================
     ordenarColaboradores(colaboradores) {
         if (this.ordemAtual === 'nome') {
@@ -67,10 +105,11 @@ const CollaboratorService = {
                     return grupoA.localeCompare(grupoB);
                 }
                 
-                const isDefensorA = (a.cargo === 'Defensor(a)') ? 0 : 1;
-                const isDefensorB = (b.cargo === 'Defensor(a)') ? 0 : 1;
-                if (isDefensorA !== isDefensorB) {
-                    return isDefensorA - isDefensorB;
+                // Priorizar quem vai para ATA
+                const isAtaA = this.cargosParaAta.includes(a.cargo) ? 0 : 1;
+                const isAtaB = this.cargosParaAta.includes(b.cargo) ? 0 : 1;
+                if (isAtaA !== isAtaB) {
+                    return isAtaA - isAtaB;
                 }
                 
                 return (a.nome || '').localeCompare(b.nome || '');
@@ -79,12 +118,20 @@ const CollaboratorService = {
     },
 
     // ========================================================
-    // 2.1 FILTRO PARA ATA (Apenas grupos permitidos)
+    // 5. FILTRAR PARA ATA (APENAS CARGOS ESPECÍFICOS)
     // ========================================================
     filtrarParaAta(colaboradores) {
         return colaboradores.filter(colab => {
-            const equipe = colab.equipe || '';
-            return this.gruposPermitidosAta.includes(equipe);
+            return this.cargosParaAta.includes(colab.cargo);
+        });
+    },
+
+    // ========================================================
+    // 6. FILTRAR PARA CERTIFICADO (DEMAIS CARGOS)
+    // ========================================================
+    filtrarParaCertificado(colaboradores) {
+        return colaboradores.filter(colab => {
+            return !this.cargosParaAta.includes(colab.cargo);
         });
     },
 
@@ -100,7 +147,7 @@ const CollaboratorService = {
     },
 
     // ========================================================
-    // 3. FLUXO DE REVISÃO - CARREGAR DEFENSORES
+    // 7. FLUXO DE REVISÃO - CARREGAR DEFENSORES
     // ========================================================
     async loadDefensores(app, selectId) {
         const select = document.getElementById(selectId);
@@ -128,7 +175,7 @@ const CollaboratorService = {
     },
 
     // ========================================================
-    // 4. CONFIGURAÇÃO DO MODAL E EVENTOS (VERSÃO MOBILE)
+    // 8. CONFIGURAÇÃO DO MODAL E EVENTOS
     // ========================================================
     openModal(app) {
         console.log("📋 Abrindo modal de colaboradores");
@@ -144,14 +191,15 @@ const CollaboratorService = {
         this.updateTeamSelect();
         this.configurarLogicaCargo();
         this.configurarEventoBusca(app);
+        this.atualizarCargosDisponiveis();
         
         this.adicionarBotaoOrdenacao();
+        this.adicionarBotoesDocumentos();
         
         if (app && app.currentPauta && app.currentPauta.id) {
             this.setupListener(app, app.currentPauta.id);
         }
         
-        // Ajustar para mobile: scroll suave
         setTimeout(() => {
             modal.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
@@ -171,6 +219,34 @@ const CollaboratorService = {
         btn.onclick = () => this.toggleOrdem();
         
         header.appendChild(btn);
+    },
+
+    adicionarBotoesDocumentos() {
+        const container = document.querySelector('#collaborators-list-table-modal');
+        if (!container) return;
+        
+        if (document.getElementById('gerar-ata-btn')) return;
+        
+        const btnContainer = document.createElement('div');
+        btnContainer.className = 'flex flex-col md:flex-row gap-2 mb-3';
+        
+        const btnAta = document.createElement('button');
+        btnAta.id = 'gerar-ata-btn';
+        btnAta.className = 'bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm font-semibold';
+        btnAta.innerHTML = '📄 GERAR ATA (Oficial)';
+        btnAta.onclick = () => this.gerarAta();
+        
+        const btnCertificado = document.createElement('button');
+        btnCertificado.id = 'gerar-certificado-btn';
+        btnCertificado.className = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-semibold';
+        btnCertificado.innerHTML = '🎓 GERAR CERTIFICADOS (Residentes/Voluntários)';
+        btnCertificado.onclick = () => this.gerarCertificados();
+        
+        btnContainer.appendChild(btnAta);
+        btnContainer.appendChild(btnCertificado);
+        
+        const header = container.querySelector('.flex.justify-between') || container;
+        header.parentNode.insertBefore(btnContainer, header.nextSibling);
     },
 
     closeModal() {
@@ -207,7 +283,8 @@ const CollaboratorService = {
         const select = document.getElementById('collaborator-team-modal');
         if (!select) return;
 
-        let html = this.gruposPermitidosAta.map(g => 
+        const gruposPadrao = ['1', '2', '3', '4', 'CRC', 'Coordenadores'];
+        let html = gruposPadrao.map(g => 
             `<option value="${g}" ${selectedValue === g ? 'selected' : ''}>${isNaN(g) ? g : 'Equipe ' + g}</option>`
         ).join('');
         
@@ -221,17 +298,13 @@ const CollaboratorService = {
                     const opt = new Option(novo, novo, true, true);
                     select.add(opt, select.firstChild);
                     select.value = novo;
-                    // Adicionar aos permitidos para aparecer na ata
-                    if (!this.gruposPermitidosAta.includes(novo)) {
-                        this.gruposPermitidosAta.push(novo);
-                    }
                 } else { select.value = '1'; }
             }
         };
     },
 
     // ========================================================
-    // 5. SALVAR (PAUTA + MASTER)
+    // 9. SALVAR (PAUTA + MASTER)
     // ========================================================
     async saveCollaborator(app) {
         if (!app.currentPauta?.id) {
@@ -293,7 +366,7 @@ const CollaboratorService = {
     },
 
     // ========================================================
-    // 6. LISTENER E TABELA (COM ORDENAÇÃO E DESIGN MOBILE)
+    // 10. LISTENER E TABELA (COM INDICADOR VISUAL)
     // ========================================================
     setupListener(app, pautaId) {
         if (!pautaId || !app?.db) return;
@@ -325,13 +398,13 @@ const CollaboratorService = {
         }
     },
 
-    // Renderização com design responsivo mobile
     renderTable(app) {
         const tbody = document.querySelector('#collaborators-list-table-modal tbody');
         if (!tbody) return;
 
         tbody.innerHTML = '';
         let selfT = 0, compT = 0;
+        let totalAta = 0, totalCertificado = 0;
         
         const colaboradoresOrdenados = this.ordenarColaboradores(app.colaboradores || []);
         
@@ -340,6 +413,10 @@ const CollaboratorService = {
         colaboradoresOrdenados.forEach(colab => {
             if (colab.transporte === 'Meios Próprios') selfT++; 
             else if (colab.transporte === 'Com a Empresa') compT++;
+            
+            const docInfo = this.getTipoDocumento(colab.cargo);
+            if (docInfo.tipo === 'ATA') totalAta++;
+            else totalCertificado++;
             
             const grupoAtual = colab.equipe || 'Sem Grupo';
             
@@ -362,7 +439,6 @@ const CollaboratorService = {
             const nomeClass = isDefensor ? 'font-bold text-blue-700' : 'font-bold text-gray-800';
             const labelTipo = colab.tipo_id || (isDefensor ? 'Matrícula' : 'ID');
             
-            // Layout responsivo para mobile
             row.innerHTML = `
                 <td class="p-2 md:p-3">
                     <div class="${nomeClass} text-sm md:text-base">${escapeHTML(colab.nome || '')}</div>
@@ -370,6 +446,9 @@ const CollaboratorService = {
                     <div class="block md:hidden text-xs mt-1">
                         <span class="font-semibold">${escapeHTML(colab.cargo || 'N/A')}</span> | 
                         <span class="text-blue-600">GRP: ${escapeHTML(colab.equipe || 'N/A')}</span>
+                    </div>
+                    <div class="mt-1">
+                        <span class="text-[10px] px-1 py-0.5 rounded ${docInfo.classe}">📄 ${docInfo.tipo}</span>
                     </div>
                 </td>
                 <td class="p-2 md:p-3 text-center">
@@ -379,6 +458,9 @@ const CollaboratorService = {
                 <td class="p-2 md:p-3 hidden md:table-cell">
                     <span class="text-xs font-semibold">${escapeHTML(colab.cargo || 'N/A')}</span><br>
                     <span class="text-[10px] text-blue-600 font-bold">GRP: ${escapeHTML(colab.equipe || 'N/A')}</span>
+                    <div class="mt-1">
+                        <span class="text-[10px] px-1 py-0.5 rounded ${docInfo.classe}">📄 ${docInfo.tipo}</span>
+                    </div>
                 </td>
                 <td class="p-2 md:p-3 text-center text-xs md:text-sm">${colab.horario || '--:--'}</td>
                 <td class="p-2 md:p-3 text-center">
@@ -397,74 +479,108 @@ const CollaboratorService = {
         
         const compSpan = document.getElementById('company-transport-count');
         if (compSpan) compSpan.textContent = compT;
+        
+        // Adicionar contadores específicos
+        this.atualizarContadoresDocumentos(totalAta, totalCertificado);
 
         this.addEventListeners(app);
     },
+    
+    atualizarContadoresDocumentos(totalAta, totalCertificado) {
+        let ataDiv = document.getElementById('ata-counter');
+        let certDiv = document.getElementById('certificado-counter');
+        
+        if (!ataDiv) {
+            const container = document.querySelector('#collaborators-list-table-modal');
+            if (container) {
+                const counterDiv = document.createElement('div');
+                counterDiv.className = 'flex justify-between text-xs mb-2 p-2 bg-gray-50 rounded';
+                counterDiv.innerHTML = `
+                    <span id="ata-counter" class="text-green-700 font-semibold">📄 ATA: ${totalAta}</span>
+                    <span id="certificado-counter" class="text-blue-700 font-semibold">🎓 CERTIFICADOS: ${totalCertificado}</span>
+                `;
+                container.prepend(counterDiv);
+            }
+        } else {
+            ataDiv.textContent = `📄 ATA: ${totalAta}`;
+            certDiv.textContent = `🎓 CERTIFICADOS: ${totalCertificado}`;
+        }
+    },
 
     // ========================================================
-    // 7. GERAR ATA (APENAS GRUPOS PERMITIDOS)
+    // 11. GERAR ATA (APENAS CARGOS OFICIAIS)
     // ========================================================
-    gerarAta(app) {
-        if (!app.colaboradores || app.colaboradores.length === 0) {
+    gerarAta() {
+        if (!window.app || !window.app.colaboradores) {
             showNotification("Nenhum colaborador cadastrado", "error");
-            return null;
+            return;
         }
 
-        // Aplicar filtro: apenas grupos permitidos
-        const colaboradoresFiltrados = this.filtrarParaAta(app.colaboradores);
+        const colaboradoresAta = this.filtrarParaAta(window.app.colaboradores);
         
-        if (colaboradoresFiltrados.length === 0) {
-            showNotification("Nenhum colaborador dos grupos permitidos (Defensores, Servidores, Coordenadores, CRC)", "error");
-            return null;
+        if (colaboradoresAta.length === 0) {
+            showNotification("Nenhum colaborador com cargo para ATA (Defensor(a), Servidor, Coordenador, CRC)", "error");
+            return;
         }
 
         // Ordenar por grupo e nome
-        const ordenados = [...colaboradoresFiltrados].sort((a, b) => {
+        const ordenados = [...colaboradoresAta].sort((a, b) => {
             const grupoA = a.equipe || '';
             const grupoB = b.equipe || '';
             if (grupoA !== grupoB) return grupoA.localeCompare(grupoB);
             return (a.nome || '').localeCompare(b.nome || '');
         });
 
+        const dataAtual = new Date().toLocaleDateString('pt-BR');
+        const horaAtual = new Date().toLocaleTimeString('pt-BR');
+
         let ataHTML = `
-            <div style="font-family: Arial, sans-serif; max-width: 100%; overflow-x: auto;">
-                <h3 style="text-align: center;">LISTA DE PRESENÇA</h3>
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>ATA DE PRESENÇA - ${dataAtual}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    h1 { text-align: center; font-size: 18px; }
+                    h3 { text-align: center; font-size: 14px; margin-top: -10px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+                    th { background-color: #f3f4f6; }
+                    .footer { margin-top: 30px; font-size: 10px; text-align: center; }
+                    @media print {
+                        body { margin: 0; }
+                        button { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <button onclick="window.print()" style="margin-bottom: 20px; padding: 10px;">🖨️ Imprimir ATA</button>
+                <h1>ATA DE PRESENÇA</h1>
+                <h3>${window.app.currentPauta?.nome || 'Reunião'} - ${dataAtual} às ${horaAtual}</h3>
+                
+                <table>
                     <thead>
-                        <tr style="background-color: #f3f4f6;">
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Nome</th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Cargo</th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Equipe</th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Presente</th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Horário</th>
+                        <tr>
+                            <th>Nº</th>
+                            <th>Nome Completo</th>
+                            <th>Cargo/Função</th>
+                            <th>Equipe</th>
+                            <th>Assinatura</th>
                         </tr>
                     </thead>
                     <tbody>
         `;
 
-        let ultimoGrupo = '';
-        ordenados.forEach(colab => {
-            const grupoAtual = colab.equipe || 'Sem Grupo';
-            if (ultimoGrupo !== grupoAtual) {
-                ataHTML += `
-                    <tr style="background-color: #e5e7eb;">
-                        <td colspan="5" style="border: 1px solid #ddd; padding: 6px; font-weight: bold;">
-                            📁 ${escapeHTML(grupoAtual)}
-                        </td>
-                    </tr>
-                `;
-                ultimoGrupo = grupoAtual;
-            }
-
+        ordenados.forEach((colab, index) => {
             ataHTML += `
                 <tr>
-                    <td style="border: 1px solid #ddd; padding: 6px;">${escapeHTML(colab.nome || '')}</td>
-                    <td style="border: 1px solid #ddd; padding: 6px;">${escapeHTML(colab.cargo || '')}</td>
-                    <td style="border: 1px solid #ddd; padding: 6px;">${escapeHTML(colab.equipe || '')}</td>
-                    <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">
-                        ${colab.presente ? '✓' : ''}
-                    </td>
-                    <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${colab.horario || '--:--'}</td>
+                    <td style="text-align: center;">${index + 1}</td>
+                    <td>${escapeHTML(colab.nome || '')}</td>
+                    <td>${escapeHTML(colab.cargo || '')}</td>
+                    <td>${escapeHTML(colab.equipe || '')}</td>
+                    <td style="width: 150px;"></td>
                 </tr>
             `;
         });
@@ -472,13 +588,173 @@ const CollaboratorService = {
         ataHTML += `
                     </tbody>
                 </table>
-                <p style="font-size: 10px; margin-top: 16px; text-align: center;">
-                    Documento gerado automaticamente pelo SIGAP
-                </p>
-            </div>
+                
+                <div class="footer">
+                    <p>Documento gerado automaticamente pelo SIGAP - Sistema Integrado de Gestão de Atas e Pautas</p>
+                    <p>Total de participantes oficiais: ${ordenados.length}</p>
+                </div>
+            </body>
+            </html>
         `;
 
-        return ataHTML;
+        const win = window.open();
+        win.document.write(ataHTML);
+        win.document.close();
+    },
+
+    // ========================================================
+    // 12. GERAR CERTIFICADOS (RESIDENTES, VOLUNTÁRIOS, ETC)
+    // ========================================================
+    gerarCertificados() {
+        if (!window.app || !window.app.colaboradores) {
+            showNotification("Nenhum colaborador cadastrado", "error");
+            return;
+        }
+
+        const colaboradoresCertificado = this.filtrarParaCertificado(window.app.colaboradores);
+        
+        if (colaboradoresCertificado.length === 0) {
+            showNotification("Nenhum colaborador com direito a certificado", "error");
+            return;
+        }
+
+        const dataAtual = new Date().toLocaleDateString('pt-BR');
+        
+        // Gerar certificados individuais
+        colaboradoresCertificado.forEach((colab, index) => {
+            this.gerarCertificadoIndividual(colab, dataAtual, index);
+        });
+        
+        showNotification(`✅ ${colaboradoresCertificado.length} certificados gerados! Verifique as abas abertas.`);
+    },
+
+    gerarCertificadoIndividual(colab, dataAtual, index) {
+        const nomeArquivo = `certificado_${colab.nome.replace(/[^a-z0-9]/gi, '_')}.html`;
+        
+        let certificadoHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Certificado - ${escapeHTML(colab.nome)}</title>
+                <style>
+                    body {
+                        font-family: 'Times New Roman', serif;
+                        margin: 0;
+                        padding: 0;
+                        background: #f0f0f0;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                    }
+                    .certificado {
+                        width: 800px;
+                        height: 600px;
+                        background: white;
+                        margin: 20px auto;
+                        padding: 40px;
+                        border: 2px solid #d4af37;
+                        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+                        position: relative;
+                    }
+                    .certificado:before {
+                        content: "★";
+                        font-size: 60px;
+                        color: #d4af37;
+                        position: absolute;
+                        top: 20px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                    }
+                    h1 {
+                        text-align: center;
+                        font-size: 28px;
+                        margin-top: 60px;
+                        color: #333;
+                    }
+                    .certifico {
+                        text-align: center;
+                        font-size: 16px;
+                        margin: 30px 0;
+                    }
+                    .nome {
+                        text-align: center;
+                        font-size: 24px;
+                        font-weight: bold;
+                        margin: 20px 0;
+                        text-transform: uppercase;
+                        color: #1a4d8c;
+                    }
+                    .texto {
+                        text-align: justify;
+                        font-size: 14px;
+                        line-height: 1.6;
+                        margin: 30px 0;
+                    }
+                    .cargo {
+                        text-align: center;
+                        font-size: 16px;
+                        font-weight: bold;
+                        margin: 20px 0;
+                    }
+                    .data {
+                        text-align: center;
+                        font-size: 12px;
+                        margin-top: 50px;
+                    }
+                    .assinatura {
+                        margin-top: 40px;
+                        text-align: center;
+                    }
+                    .linha {
+                        width: 200px;
+                        border-top: 1px solid #333;
+                        margin: 10px auto;
+                    }
+                    @media print {
+                        body { background: white; }
+                        .certificado { box-shadow: none; margin: 0; }
+                        button { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="certificado">
+                    <button onclick="window.print()" style="position: absolute; top: 10px; right: 10px;">🖨️ Imprimir</button>
+                    <h1>CERTIFICADO DE PARTICIPAÇÃO</h1>
+                    
+                    <div class="certifico">
+                        O SIGAP certifica que
+                    </div>
+                    
+                    <div class="nome">
+                        ${escapeHTML(colab.nome)}
+                    </div>
+                    
+                    <div class="texto">
+                        participou da reunião realizada em ${dataAtual}, contribuindo ativamente 
+                        com suas atividades como ${escapeHTML(colab.cargo)} na equipe ${escapeHTML(colab.equipe || 'Geral')}, 
+                        demonstrando comprometimento e dedicação aos trabalhos desenvolvidos.
+                    </div>
+                    
+                    <div class="data">
+                        ${dataAtual}
+                    </div>
+                    
+                    <div class="assinatura">
+                        <div class="linha"></div>
+                        <div>Coordenação Geral</div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        const win = window.open();
+        win.document.write(certificadoHTML);
+        win.document.close();
     },
 
     addEventListeners(app) {
@@ -601,4 +877,4 @@ export default CollaboratorService;
 export { CollaboratorService };
 window.CollaboratorService = CollaboratorService;
 
-console.log("✅ colaboradores.js carregado (Mobile + Filtro ATA: Defensores, Servidores, Coordenadores, CRC)!");
+console.log("✅ colaboradores.js carregado (ATA: Defensores/Servidores/Coordenadores/CRC | CERTIFICADO: Residentes/Voluntários/Demais)!");
