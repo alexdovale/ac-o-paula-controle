@@ -1609,30 +1609,38 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 // --- SUBSTITUA O BLOCO DO BTN-GERAR-ATA-SOCIAL POR ESTE ---
                 document.getElementById('btn-gerar-ata-social')?.addEventListener('click', () => {
-                    // 1. Coleta os dados dinâmicos via prompt (Igual ao modelo oficial)
+                    // 1. Pergunta o Nome da Ação
                     const acaoNome = prompt("Nome da Ação Social:", this.currentPauta?.name || "");
-                    const endereco = prompt("Endereço / Local do Atendimento:", "Digite o endereço aqui...");
+                    if (acaoNome === null) return;
+                
+                    // 2. Pergunta o Endereço
+                    const endereco = prompt("Endereço / Local do Atendimento:", "Ex: Rua Marechal, nº 10, Duque de Caxias");
+                    if (endereco === null) return;
+                
+                    // 3. Pergunta a Data
                     const dataAcao = prompt("Data do evento (AAAA-MM-DD):", new Date().toISOString().split('T')[0]);
+                    if (dataAcao === null) return;
                 
-                    // Validação
-                    if (!acaoNome || !endereco) {
-                        showNotification("Operação cancelada. Nome da ação e endereço são obrigatórios.", "error");
-                        return;
-                    }
+                    // 4. NOVO: Pergunta o Órgão de Atendimento
+                    const orgaoNome = prompt("Informe o ÓRGÃO DE ATENDIMENTO - AS:", "AÇÃO SOCIAL 3");
+                    if (orgaoNome === null) return;
                 
-                    // 2. Filtra quem realmente foi atendido na pauta atual
+                    // 5. Pergunta o Total Manual
+                    const totalManual = prompt("Informe o TOTAL de atendimentos realizados:", "0");
+                    if (totalManual === null) return;
+                
+                    // Organiza os dados
                     const atendidos = this.allAssisted.filter(a => a.status === 'atendido');
-                    
-                    // 3. Monta o objeto de dados extras que o seu pdfService.js pede
                     const dadosExtras = { 
                         acao: acaoNome, 
                         endereco: endereco, 
                         data: dataAcao,
-                        orgao: "DEFENSORIA PÚBLICA DO ESTADO DO RIO DE JANEIRO" // Opcional
+                        orgao: orgaoNome, // Passa o nome do órgão informado
+                        totalAtendimentos: totalManual // Envia o texto digitado (ex: "50" ou "50 atendimentos")
                     };
                 
-                    // 4. Pergunta se quer ver o Preview ou Download Direto
-                    if (confirm("Deseja VISUALIZAR a Ata em uma nova aba antes de baixar?\n\n(Clique em 'Cancelar' para baixar o arquivo direto)")) {
+                    // Executa a geração
+                    if (confirm("Deseja VISUALIZAR a Ata antes de baixar?")) {
                         PDFService.previewAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
                     } else {
                         PDFService.generateAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
@@ -2149,12 +2157,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 
                 document.getElementById('collaborator-form-modal')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    
                     const nome = document.getElementById('collaborator-name-modal')?.value.trim();
-                    if (!nome) {
-                        showNotification("Nome obrigatório", "error");
-                        return;
-                    }
+                    if (!nome) return;
                     
                     const data = {
                         nome: nome,
@@ -2162,11 +2166,13 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         equipe: document.getElementById('collaborator-team-modal')?.value,
                         email: document.getElementById('collaborator-email-modal')?.value || '',
                         telefone: document.getElementById('collaborator-phone-modal')?.value || '',
-                        identificador: document.getElementById('collaborator-identificador-modal')?.value || '',
+                        // GARANTA QUE ESTA LINHA EXISTA:
+                        identificador: document.getElementById('collaborator-identificador-modal')?.value || '', 
                         transporte: document.querySelector('input[name="transporte-colaborador"]:checked')?.value || 'Meios Próprios'
                     };
                     
                     await CollaboratorService.saveCollaborator(this, data);
+                    document.getElementById('collaborator-identificador-modal').value = '';
                 });
                 
                 document.querySelectorAll('[id^="cancel-"], [id^="close-"]').forEach(btn => {
