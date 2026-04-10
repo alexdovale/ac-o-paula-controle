@@ -1607,8 +1607,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (btn) btn.addEventListener('click', () => AuthService.logout(this.auth));
                 });
 
-                // --- SUBSTITUA O BLOCO DO BTN-GERAR-ATA-SOCIAL POR ESTE ---
-                // --- SUBSTITUA O BLOCO DO BTN-GERAR-ATA-SOCIAL POR ESTE ---
+                // Botão Gerar Ata Social com salvamento automático
                 document.getElementById('btn-gerar-ata-social')?.addEventListener('click', () => {
                     // Verifica se há pauta selecionada
                     if (!this.currentPauta) {
@@ -1616,24 +1615,33 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         return;
                     }
                     
-                    // 1. Pergunta o Nome da Ação
-                    const acaoNome = prompt("🏷️ Nome da Ação Social:", this.currentPauta?.name || "");
+                    // Carrega últimos dados salvos
+                    const ultimosDados = carregarUltimosDadosAta();
+                    const totalAtendidosAuto = String(this.allAssisted.filter(a => a.status === 'atendido').length);
+                    
+                    // 1. Pergunta o Nome da Ação (com valor salvo)
+                    const acaoNome = prompt("🏷️ Nome da Ação Social:", 
+                        ultimosDados?.acao || this.currentPauta?.name || "");
                     if (acaoNome === null) return;
                     
-                    // 2. Pergunta o Endereço
-                    const endereco = prompt("📍 Endereço / Local do Atendimento:", "Ex: Rua Marechal, nº 10, Duque de Caxias");
+                    // 2. Pergunta o Endereço (com valor salvo)
+                    const endereco = prompt("📍 Endereço / Local do Atendimento:", 
+                        ultimosDados?.endereco || "Ex: Rua Marechal, nº 10, Duque de Caxias");
                     if (endereco === null) return;
                     
-                    // 3. Pergunta a Data
-                    const dataAcao = prompt("📅 Data do evento (AAAA-MM-DD):", new Date().toISOString().split('T')[0]);
+                    // 3. Pergunta a Data (com valor salvo)
+                    const dataAcao = prompt("📅 Data do evento (AAAA-MM-DD):", 
+                        ultimosDados?.data || new Date().toISOString().split('T')[0]);
                     if (dataAcao === null) return;
                     
-                    // 4. Pergunta o Órgão de Atendimento (conteúdo que vai abaixo do título)
-                    const orgaoNome = prompt("🏛️ Informe o ÓRGÃO DE ATENDIMENTO:", "DEFENSORIA PÚBLICA - NÚCLEO DE GUARATIBA");
+                    // 4. Pergunta o Órgão (com valor salvo)
+                    const orgaoNome = prompt("🏛️ Informe o ÓRGÃO DE ATENDIMENTO:", 
+                        ultimosDados?.orgao || "DEFENSORIA PÚBLICA - NÚCLEO DE GUARATIBA");
                     if (orgaoNome === null) return;
                     
-                    // 5. Pergunta o Total Manual
-                    const totalManual = prompt("🔢 TOTAL de atendimentos realizados:", String(this.allAssisted.filter(a => a.status === 'atendido').length));
+                    // 5. Pergunta o Total (com valor salvo ou automático)
+                    const totalManual = prompt("🔢 TOTAL de atendimentos realizados:", 
+                        ultimosDados?.totalAtendimentos || totalAtendidosAuto);
                     if (totalManual === null) return;
                     
                     // Organiza os dados
@@ -1645,6 +1653,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         orgao: orgaoNome,
                         totalAtendimentos: totalManual
                     };
+                    
+                    // SALVA OS DADOS PARA PRÓXIMA VEZ
+                    salvarUltimosDadosAta(dadosExtras);
                     
                     // Pergunta se quer visualizar antes
                     if (confirm("Deseja VISUALIZAR a Ata antes de baixar?")) {
