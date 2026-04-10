@@ -1,4 +1,4 @@
-// js/colaboradores.js - VERSÃO CORRIGIDA (ID para Servidores | Matrícula para Defensores)
+// js/colaboradores.js - VERSÃO MOBILE + FILTRO ATA (Defensores, Servidores, Coordenadores, CRC)
 import { 
     collection, 
     onSnapshot, 
@@ -18,7 +18,8 @@ import { escapeHTML, showNotification } from './utils.js';
 const CollaboratorService = {
     currentListener: null,
     editId: null,
-    ordemAtual: 'grupo', // 'grupo' ou 'nome'
+    ordemAtual: 'grupo',
+    gruposPermitidosAta: ['1', '2', '3', '4', 'CRC', 'Coordenadores'],
 
     // ========================================================
     // 1. AUTO-PREENCHIMENTO (BUSCA NA BASE MASTER)
@@ -27,7 +28,6 @@ const CollaboratorService = {
         if (!identificador || identificador.length < 3) return;
 
         try {
-            // Busca pelo identificador (pode ser ID ou Matrícula)
             const masterRef = doc(app.db, "colaboradores_gerais", identificador);
             const snap = await getDoc(masterRef);
 
@@ -61,14 +61,12 @@ const CollaboratorService = {
             });
         } else {
             return [...colaboradores].sort((a, b) => {
-                // Primeiro critério: grupo
                 const grupoA = a.equipe || '';
                 const grupoB = b.equipe || '';
                 if (grupoA !== grupoB) {
                     return grupoA.localeCompare(grupoB);
                 }
                 
-                // Mesmo grupo: defensores primeiro
                 const isDefensorA = (a.cargo === 'Defensor(a)') ? 0 : 1;
                 const isDefensorB = (b.cargo === 'Defensor(a)') ? 0 : 1;
                 if (isDefensorA !== isDefensorB) {
@@ -78,6 +76,16 @@ const CollaboratorService = {
                 return (a.nome || '').localeCompare(b.nome || '');
             });
         }
+    },
+
+    // ========================================================
+    // 2.1 FILTRO PARA ATA (Apenas grupos permitidos)
+    // ========================================================
+    filtrarParaAta(colaboradores) {
+        return colaboradores.filter(colab => {
+            const equipe = colab.equipe || '';
+            return this.gruposPermitidosAta.includes(equipe);
+        });
     },
 
     toggleOrdem() {
@@ -109,7 +117,6 @@ const CollaboratorService = {
                 defensores.push({ id: doc.id, ...doc.data() });
             });
             
-            // Ordenar defensores por nome
             defensores.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
             
             defensores.forEach(c => {
@@ -121,7 +128,7 @@ const CollaboratorService = {
     },
 
     // ========================================================
-    // 4. CONFIGURAÇÃO DO MODAL E EVENTOS
+    // 4. CONFIGURAÇÃO DO MODAL E EVENTOS (VERSÃO MOBILE)
     // ========================================================
     openModal(app) {
         console.log("📋 Abrindo modal de colaboradores");
@@ -143,6 +150,11 @@ const CollaboratorService = {
         if (app && app.currentPauta && app.currentPauta.id) {
             this.setupListener(app, app.currentPauta.id);
         }
+        
+        // Ajustar para mobile: scroll suave
+        setTimeout(() => {
+            modal.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
     },
 
     adicionarBotaoOrdenacao() {
@@ -154,7 +166,7 @@ const CollaboratorService = {
         const header = container.querySelector('.flex.justify-between') || container;
         const btn = document.createElement('button');
         btn.id = 'toggle-order-btn';
-        btn.className = 'bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded text-sm mb-2';
+        btn.className = 'w-full md:w-auto bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded text-sm mb-2';
         btn.textContent = this.ordemAtual === 'grupo' ? '📁 Ordenar por Grupo' : '🔤 Ordenar por Nome';
         btn.onclick = () => this.toggleOrdem();
         
@@ -184,7 +196,6 @@ const CollaboratorService = {
         if (!cargoSelect || !labelIdentificador) return;
 
         const atualizarLabel = () => {
-            // CORREÇÃO: Defensor(a) usa Matrícula | Servidor usa ID
             labelIdentificador.textContent = (cargoSelect.value === "Defensor(a)") ? "Matrícula" : "ID";
         };
 
@@ -196,8 +207,7 @@ const CollaboratorService = {
         const select = document.getElementById('collaborator-team-modal');
         if (!select) return;
 
-        const gruposPadrao = ['1', '2', '3', '4', 'CRC', 'Coordenadores'];
-        let html = gruposPadrao.map(g => 
+        let html = this.gruposPermitidosAta.map(g => 
             `<option value="${g}" ${selectedValue === g ? 'selected' : ''}>${isNaN(g) ? g : 'Equipe ' + g}</option>`
         ).join('');
         
@@ -207,10 +217,14 @@ const CollaboratorService = {
         select.onchange = (e) => {
             if (e.target.value === 'ADD_NEW') {
                 const novo = prompt("Digite o nome do novo grupo/setor:");
-                if (novo) {
+                if (novo && novo.trim()) {
                     const opt = new Option(novo, novo, true, true);
                     select.add(opt, select.firstChild);
                     select.value = novo;
+                    // Adicionar aos permitidos para aparecer na ata
+                    if (!this.gruposPermitidosAta.includes(novo)) {
+                        this.gruposPermitidosAta.push(novo);
+                    }
                 } else { select.value = '1'; }
             }
         };
@@ -238,7 +252,6 @@ const CollaboratorService = {
             return;
         }
 
-        // CORREÇÃO: tipo_id baseado no cargo
         const tipo_id = (cargo === "Defensor(a)") ? "Matrícula" : "ID";
 
         const data = {
@@ -273,7 +286,6 @@ const CollaboratorService = {
     },
 
     async salvarNaBaseMaster(app, data) {
-        // Usa o identificador como chave (pode ser ID ou Matrícula)
         const chave = data.identificador;
         if (!chave) return;
         const masterRef = doc(app.db, "colaboradores_gerais", chave);
@@ -281,7 +293,7 @@ const CollaboratorService = {
     },
 
     // ========================================================
-    // 6. LISTENER E TABELA (COM ORDENAÇÃO)
+    // 6. LISTENER E TABELA (COM ORDENAÇÃO E DESIGN MOBILE)
     // ========================================================
     setupListener(app, pautaId) {
         if (!pautaId || !app?.db) return;
@@ -313,6 +325,7 @@ const CollaboratorService = {
         }
     },
 
+    // Renderização com design responsivo mobile
     renderTable(app) {
         const tbody = document.querySelector('#collaborators-list-table-modal tbody');
         if (!tbody) return;
@@ -347,27 +360,30 @@ const CollaboratorService = {
             
             const isDefensor = colab.cargo === 'Defensor(a)';
             const nomeClass = isDefensor ? 'font-bold text-blue-700' : 'font-bold text-gray-800';
-            
-            // Mostrar o tipo correto (Matrícula para Defensor, ID para Servidor)
             const labelTipo = colab.tipo_id || (isDefensor ? 'Matrícula' : 'ID');
             
+            // Layout responsivo para mobile
             row.innerHTML = `
-                <td class="p-3">
-                    <div class="${nomeClass}">${escapeHTML(colab.nome || '')}</div>
-                    <div class="text-[10px] text-gray-500 uppercase">${labelTipo}: ${colab.identificador || ''}</div>
+                <td class="p-2 md:p-3">
+                    <div class="${nomeClass} text-sm md:text-base">${escapeHTML(colab.nome || '')}</div>
+                    <div class="text-[9px] md:text-[10px] text-gray-500 uppercase">${labelTipo}: ${colab.identificador || ''}</div>
+                    <div class="block md:hidden text-xs mt-1">
+                        <span class="font-semibold">${escapeHTML(colab.cargo || 'N/A')}</span> | 
+                        <span class="text-blue-600">GRP: ${escapeHTML(colab.equipe || 'N/A')}</span>
+                    </div>
                 </td>
-                <td class="p-3 text-center">
-                    <input type="checkbox" class="checkin-checkbox w-5 h-5" 
+                <td class="p-2 md:p-3 text-center">
+                    <input type="checkbox" class="checkin-checkbox w-5 h-5 md:w-5 md:h-5" 
                            data-id="${colab.id}" ${colab.presente ? 'checked' : ''}>
                 </td>
-                <td class="p-3">
+                <td class="p-2 md:p-3 hidden md:table-cell">
                     <span class="text-xs font-semibold">${escapeHTML(colab.cargo || 'N/A')}</span><br>
                     <span class="text-[10px] text-blue-600 font-bold">GRP: ${escapeHTML(colab.equipe || 'N/A')}</span>
                 </td>
-                <td class="p-3 text-center">${colab.horario || '--:--'}</td>
-                <td class="p-3 text-center">
-                    <button class="edit-collaborator-btn text-blue-500 mr-2" data-id="${colab.id}">✏️</button>
-                    <button class="delete-collaborator-btn text-red-500" data-id="${colab.id}">🗑️</button>
+                <td class="p-2 md:p-3 text-center text-xs md:text-sm">${colab.horario || '--:--'}</td>
+                <td class="p-2 md:p-3 text-center">
+                    <button class="edit-collaborator-btn text-blue-500 mr-1 md:mr-2 text-sm md:text-base" data-id="${colab.id}">✏️</button>
+                    <button class="delete-collaborator-btn text-red-500 text-sm md:text-base" data-id="${colab.id}">🗑️</button>
                 </td>
             `;
             tbody.appendChild(row);
@@ -383,6 +399,86 @@ const CollaboratorService = {
         if (compSpan) compSpan.textContent = compT;
 
         this.addEventListeners(app);
+    },
+
+    // ========================================================
+    // 7. GERAR ATA (APENAS GRUPOS PERMITIDOS)
+    // ========================================================
+    gerarAta(app) {
+        if (!app.colaboradores || app.colaboradores.length === 0) {
+            showNotification("Nenhum colaborador cadastrado", "error");
+            return null;
+        }
+
+        // Aplicar filtro: apenas grupos permitidos
+        const colaboradoresFiltrados = this.filtrarParaAta(app.colaboradores);
+        
+        if (colaboradoresFiltrados.length === 0) {
+            showNotification("Nenhum colaborador dos grupos permitidos (Defensores, Servidores, Coordenadores, CRC)", "error");
+            return null;
+        }
+
+        // Ordenar por grupo e nome
+        const ordenados = [...colaboradoresFiltrados].sort((a, b) => {
+            const grupoA = a.equipe || '';
+            const grupoB = b.equipe || '';
+            if (grupoA !== grupoB) return grupoA.localeCompare(grupoB);
+            return (a.nome || '').localeCompare(b.nome || '');
+        });
+
+        let ataHTML = `
+            <div style="font-family: Arial, sans-serif; max-width: 100%; overflow-x: auto;">
+                <h3 style="text-align: center;">LISTA DE PRESENÇA</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                    <thead>
+                        <tr style="background-color: #f3f4f6;">
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Nome</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Cargo</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Equipe</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Presente</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Horário</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        let ultimoGrupo = '';
+        ordenados.forEach(colab => {
+            const grupoAtual = colab.equipe || 'Sem Grupo';
+            if (ultimoGrupo !== grupoAtual) {
+                ataHTML += `
+                    <tr style="background-color: #e5e7eb;">
+                        <td colspan="5" style="border: 1px solid #ddd; padding: 6px; font-weight: bold;">
+                            📁 ${escapeHTML(grupoAtual)}
+                        </td>
+                    </tr>
+                `;
+                ultimoGrupo = grupoAtual;
+            }
+
+            ataHTML += `
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 6px;">${escapeHTML(colab.nome || '')}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px;">${escapeHTML(colab.cargo || '')}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px;">${escapeHTML(colab.equipe || '')}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">
+                        ${colab.presente ? '✓' : ''}
+                    </td>
+                    <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${colab.horario || '--:--'}</td>
+                </tr>
+            `;
+        });
+
+        ataHTML += `
+                    </tbody>
+                </table>
+                <p style="font-size: 10px; margin-top: 16px; text-align: center;">
+                    Documento gerado automaticamente pelo SIGAP
+                </p>
+            </div>
+        `;
+
+        return ataHTML;
     },
 
     addEventListeners(app) {
@@ -505,4 +601,4 @@ export default CollaboratorService;
 export { CollaboratorService };
 window.CollaboratorService = CollaboratorService;
 
-console.log("✅ colaboradores.js carregado (ID para Servidores | Matrícula para Defensores)!");
+console.log("✅ colaboradores.js carregado (Mobile + Filtro ATA: Defensores, Servidores, Coordenadores, CRC)!");
