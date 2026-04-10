@@ -1,4 +1,4 @@
-// js/pdfService.js - VERSÃO FINAL (APENAS AJUSTES SOLICITADOS)
+// js/pdfService.js - VERSÃO OTIMIZADA (UMA PÁGINA, ASSINATURA MAIS LARGA)
 
 /**
  * Utilitários de limpeza e formatação
@@ -46,17 +46,21 @@ const getIdentificador = (colaborador) => {
 };
 
 // ========================================================
-// PDF SERVICE
+// PDF SERVICE - VERSÃO OTIMIZADA (UMA PÁGINA)
 // ========================================================
 
 export const PDFService = {
     /**
-     * GERA ATA DE AÇÃO SOCIAL (DOCUMENTO OFICIAL)
+     * GERA ATA DE AÇÃO SOCIAL - VERSÃO COMPACTADA (UMA PÁGINA)
      */
     generateAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
         try {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            const doc = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'a4'
+            });
             
             // DADOS PARA O CABEÇALHO
             const dataInput = dadosExtras.data ? new Date(dadosExtras.data + 'T12:00:00') : new Date();
@@ -71,59 +75,62 @@ export const PDFService = {
                 ? dadosExtras.totalAtendimentos 
                 : atendidos.length;
 
-            // 1. LOGO
+            // 1. LOGO (menor para economizar espaço)
             const logoUrl = "https://raw.githubusercontent.com/alexdovale/calculo-mensuracao-codoc/main/logo.png";
-            doc.addImage(logoUrl, 'PNG', 80, 10, 50, 20); // Logo original (sem esticar)
+            try {
+                doc.addImage(logoUrl, 'PNG', 85, 8, 40, 16);
+            } catch(e) { console.warn("Logo não carregada:", e); }
 
             // 2. TÍTULO
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("ATA AÇÃO SOCIAL", 105, 42, { align: "center" });
+            doc.setFontSize(13);
+            doc.text("ATA AÇÃO SOCIAL", 105, 32, { align: "center" });
 
-            // 3. TEXTO INTRODUTÓRIO
+            // 3. TEXTO INTRODUTÓRIO (MAIS COMPACTO)
             doc.setFont("helvetica", "normal");
-            doc.setFontSize(10);
+            doc.setFontSize(9);
             const introText = `Aos ${dia} dias do mês de ${mesExtenso} do ano de ${ano}, a partir das 9h, em ${endereco}, trabalharam na ${nomeDaAcao}, os(as) Defensores(as) Públicos(as) abaixo listados(as), bem como os(as) servidores(as), conforme listagem a seguir:`;
             
             const splitIntro = doc.splitTextToSize(introText, 170);
-            doc.text(splitIntro, 20, 52);
+            doc.text(splitIntro, 20, 42);
             
-            let currentY = 52 + (splitIntro.length * 5);
+            let currentY = 42 + (splitIntro.length * 4.5);
 
             // Filtrar por cargo
             const defensores = colaboradores.filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'));
             const servidores = colaboradores.filter(c => c.cargo && !c.cargo.toLowerCase().includes('defensor'));
 
             // ====================================================
-            // TABELA 1: DEFENSOR(A) PÚBLICO(A) - com MATRÍCULA
+            // CONFIGURAÇÃO DE LARGURAS (ASSINATURA É A MAIOR)
+            // Largura total disponível = 170mm (190 - 20 margem)
+            // ====================================================
+            // NOME: suficiente para o maior nome (máx 70mm)
+            // MATRÍCULA/ID: 30mm
+            // ASSINATURA: TODO O RESTO (pelo menos 70mm)
+            
+            const larguraNome = 65;  // Fixo para garantir espaço
+            const larguraIdentificador = 30;
+            const larguraAssinatura = 170 - larguraNome - larguraIdentificador; // ~75mm (MAIOR)
+
+            // ====================================================
+            // TABELA 1: DEFENSOR(A) PÚBLICO(A)
             // ====================================================
             if (defensores.length > 0) {
-                // Calcula largura dinâmica: ASSINATURA é a maior coluna
-                let maxNomeLen = 70;
-                defensores.forEach(c => {
-                    const nomeLen = (c.nome || '').length * 1.5;
-                    if (nomeLen > maxNomeLen) maxNomeLen = Math.min(nomeLen, 90);
-                });
-                
-                const larguraNome = maxNomeLen;
-                const larguraMatricula = 35;
-                const larguraAssinatura = 190 - larguraNome - larguraMatricula - 40; // O RESTO É ASSINATURA (MAIOR)
-                
                 doc.autoTable({
-                    startY: currentY + 2,
+                    startY: currentY + 1,
                     head: [[
-                        { content: 'DEFENSOR(A) PÚBLICO(A)', colSpan: 3, styles: { halign: 'center', fontStyle: 'bold', fontSize: 10, fillColor: [146, 208, 80] } }
+                        { content: 'DEFENSOR(A) PÚBLICO(A)', colSpan: 3, styles: { halign: 'center', fontStyle: 'bold', fontSize: 9, fillColor: [146, 208, 80] } }
                     ]],
                     body: [
                         [
-                            { content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' } },
-                            { content: 'MATRÍCULA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' } },
-                            { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' } }
+                            { content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                            { content: 'MATRÍCULA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                            { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } }
                         ],
                         ...defensores.map(c => [
-                            { content: c.nome || '', styles: { halign: 'center' } },
-                            { content: getIdentificador(c), styles: { halign: 'center' } },
-                            { content: '', styles: { halign: 'center' } }
+                            { content: c.nome || '', styles: { halign: 'center', fontSize: 8, cellPadding: 2 } },
+                            { content: getIdentificador(c), styles: { halign: 'center', fontSize: 8, cellPadding: 2 } },
+                            { content: '', styles: { halign: 'center', fontSize: 8, cellPadding: 2 } }
                         ])
                     ],
                     theme: 'grid',
@@ -132,56 +139,45 @@ export const PDFService = {
                         textColor: [0, 0, 0], 
                         halign: 'center', 
                         fontStyle: 'bold',
-                        fontSize: 10
+                        fontSize: 9
                     },
                     styles: { 
-                        fontSize: 9, 
-                        cellPadding: 4, 
+                        fontSize: 8, 
+                        cellPadding: 2.5, 
                         lineColor: [0, 0, 0], 
-                        lineWidth: 0.3,
+                        lineWidth: 0.2,
                         valign: 'middle',
                         halign: 'center'
                     },
                     columnStyles: { 
                         0: { cellWidth: larguraNome }, 
-                        1: { cellWidth: larguraMatricula }, 
+                        1: { cellWidth: larguraIdentificador }, 
                         2: { cellWidth: larguraAssinatura } 
                     },
                     margin: { left: 20, right: 20 }
                 });
-                currentY = doc.lastAutoTable.finalY + 5;
+                currentY = doc.lastAutoTable.finalY + 2;
             }
 
             // ====================================================
-            // TABELA 2: SERVIDOR(A) - com ID FUNCIONAL
+            // TABELA 2: SERVIDOR(A)
             // ====================================================
             if (servidores.length > 0) {
-                // Calcula largura dinâmica: ASSINATURA é a maior coluna
-                let maxNomeLen = 70;
-                servidores.forEach(c => {
-                    const nomeLen = (c.nome || '').length * 1.5;
-                    if (nomeLen > maxNomeLen) maxNomeLen = Math.min(nomeLen, 90);
-                });
-                
-                const larguraNome = maxNomeLen;
-                const larguraIdFuncional = 40;
-                const larguraAssinatura = 190 - larguraNome - larguraIdFuncional - 40; // O RESTO É ASSINATURA (MAIOR)
-                
                 doc.autoTable({
                     startY: currentY,
                     head: [[
-                        { content: 'SERVIDOR(A)', colSpan: 3, styles: { halign: 'center', fontStyle: 'bold', fontSize: 10, fillColor: [146, 208, 80] } }
+                        { content: 'SERVIDOR(A)', colSpan: 3, styles: { halign: 'center', fontStyle: 'bold', fontSize: 9, fillColor: [146, 208, 80] } }
                     ]],
                     body: [
                         [
-                            { content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' } },
-                            { content: 'ID FUNCIONAL', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' } },
-                            { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' } }
+                            { content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                            { content: 'ID FUNCIONAL', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                            { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } }
                         ],
                         ...servidores.map(c => [
-                            { content: c.nome || '', styles: { halign: 'center' } },
-                            { content: getIdentificador(c), styles: { halign: 'center' } },
-                            { content: '', styles: { halign: 'center' } }
+                            { content: c.nome || '', styles: { halign: 'center', fontSize: 8, cellPadding: 2 } },
+                            { content: getIdentificador(c), styles: { halign: 'center', fontSize: 8, cellPadding: 2 } },
+                            { content: '', styles: { halign: 'center', fontSize: 8, cellPadding: 2 } }
                         ])
                     ],
                     theme: 'grid',
@@ -190,68 +186,69 @@ export const PDFService = {
                         textColor: [0, 0, 0], 
                         halign: 'center', 
                         fontStyle: 'bold',
-                        fontSize: 10
+                        fontSize: 9
                     },
                     styles: { 
-                        fontSize: 9, 
-                        cellPadding: 4, 
+                        fontSize: 8, 
+                        cellPadding: 2.5, 
                         lineColor: [0, 0, 0], 
-                        lineWidth: 0.3,
+                        lineWidth: 0.2,
                         valign: 'middle',
                         halign: 'center'
                     },
                     columnStyles: { 
                         0: { cellWidth: larguraNome }, 
-                        1: { cellWidth: larguraIdFuncional }, 
+                        1: { cellWidth: larguraIdentificador }, 
                         2: { cellWidth: larguraAssinatura } 
                     },
                     margin: { left: 20, right: 20 }
                 });
-                currentY = doc.lastAutoTable.finalY + 5;
+                currentY = doc.lastAutoTable.finalY + 2;
             }
 
             // ====================================================
-            // TABELA RODAPÉ (ÓRGÃO E TOTAL DE ATENDIMENTOS)
+            // TABELA RODAPÉ (ÓRGÃO E TOTAL)
             // ====================================================
             doc.autoTable({
                 startY: currentY,
                 body: [
                     [
-                        { content: orgaoAtendimento.toUpperCase(), styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' } },
-                        { content: 'TOTAL DE ATENDIMENTOS', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' } }
+                        { content: orgaoAtendimento.toUpperCase(), styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                        { content: 'TOTAL DE ATENDIMENTOS', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } }
                     ],
                     [
-                        { content: nomeDaAcao.toUpperCase(), styles: { halign: 'center' } },
-                        { content: String(totalAtendidos), styles: { halign: 'center' } }
+                        { content: nomeDaAcao.toUpperCase(), styles: { halign: 'center', fontSize: 8, cellPadding: 3 } },
+                        { content: String(totalAtendidos), styles: { halign: 'center', fontSize: 10, fontStyle: 'bold', cellPadding: 3 } }
                     ]
                 ],
                 theme: 'grid',
                 styles: { 
-                    fontSize: 10, 
+                    fontSize: 8, 
                     halign: 'center', 
-                    cellPadding: 6, 
+                    cellPadding: 3, 
                     lineColor: [0, 0, 0], 
-                    lineWidth: 0.3,
+                    lineWidth: 0.2,
                     valign: 'middle'
                 },
-                columnStyles: { 0: { cellWidth: 100 }, 1: { cellWidth: 50 } },
+                columnStyles: { 0: { cellWidth: 110 }, 1: { cellWidth: 60 } },
                 margin: { left: 20, right: 20 }
             });
             
-            currentY = doc.lastAutoTable.finalY + 10;
+            currentY = doc.lastAutoTable.finalY + 6;
 
             // ====================================================
-            // OBSERVAÇÕES
+            // OBSERVAÇÕES (MAIS COMPACTO)
             // ====================================================
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(10);
+            doc.setFontSize(8);
             doc.text("OBSERVAÇÕES:", 20, currentY);
-            doc.line(20, currentY + 4, 190, currentY + 4);
+            doc.setDrawColor(0, 0, 0);
+            doc.line(20, currentY + 3, 190, currentY + 3);
             
-            // Linhas para anotações
-            for (let i = 1; i <= 4; i++) {
-                const lineY = currentY + 8 + (i * 6);
-                if (lineY < doc.internal.pageSize.getHeight() - 20) {
+            // Apenas 3 linhas para observações (economiza espaço)
+            for (let i = 1; i <= 3; i++) {
+                const lineY = currentY + 6 + (i * 4.5);
+                if (lineY < doc.internal.pageSize.getHeight() - 15) {
                     doc.setDrawColor(200, 200, 200);
                     doc.line(20, lineY, 190, lineY);
                 }
@@ -260,6 +257,7 @@ export const PDFService = {
             // Salvar PDF
             const nomeArquivo = `Ata_Social_${(dadosExtras.acao || pautaName).replace(/\s+/g, '_')}.pdf`;
             doc.save(nomeArquivo);
+            console.log("✅ Ata gerada com sucesso!");
             return true;
             
         } catch (error) {
@@ -275,7 +273,11 @@ export const PDFService = {
     previewAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
         try {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            const doc = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'a4'
+            });
             
             const dataInput = dadosExtras.data ? new Date(dadosExtras.data + 'T12:00:00') : new Date();
             const dia = dataInput.getDate();
@@ -290,110 +292,100 @@ export const PDFService = {
                 : atendidos.length;
 
             const logoUrl = "https://raw.githubusercontent.com/alexdovale/calculo-mensuracao-codoc/main/logo.png";
-            doc.addImage(logoUrl, 'PNG', 80, 10, 50, 20);
+            try {
+                doc.addImage(logoUrl, 'PNG', 85, 8, 40, 16);
+            } catch(e) {}
 
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("ATA AÇÃO SOCIAL", 105, 42, { align: "center" });
+            doc.setFontSize(13);
+            doc.text("ATA AÇÃO SOCIAL", 105, 32, { align: "center" });
 
             doc.setFont("helvetica", "normal");
-            doc.setFontSize(10);
+            doc.setFontSize(9);
             const introText = `Aos ${dia} dias do mês de ${mesExtenso} do ano de ${ano}, a partir das 9h, em ${endereco}, trabalharam na ${nomeDaAcao}, os(as) Defensores(as) Públicos(as) abaixo listados(as), bem como os(as) servidores(as), conforme listagem a seguir:`;
             
             const splitIntro = doc.splitTextToSize(introText, 170);
-            doc.text(splitIntro, 20, 52);
+            doc.text(splitIntro, 20, 42);
             
-            let currentY = 52 + (splitIntro.length * 5);
+            let currentY = 42 + (splitIntro.length * 4.5);
 
             const defensores = colaboradores.filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'));
             const servidores = colaboradores.filter(c => c.cargo && !c.cargo.toLowerCase().includes('defensor'));
 
+            const larguraNome = 65;
+            const larguraIdentificador = 30;
+            const larguraAssinatura = 170 - larguraNome - larguraIdentificador;
+
             if (defensores.length > 0) {
-                let maxNomeLen = 70;
-                defensores.forEach(c => {
-                    const nomeLen = (c.nome || '').length * 1.5;
-                    if (nomeLen > maxNomeLen) maxNomeLen = Math.min(nomeLen, 90);
-                });
-                
-                const larguraNome = maxNomeLen;
-                const larguraMatricula = 35;
-                const larguraAssinatura = 190 - larguraNome - larguraMatricula - 40;
-                
                 doc.autoTable({
-                    startY: currentY + 2,
-                    head: [[{ content: 'DEFENSOR(A) PÚBLICO(A)', colSpan: 3, styles: { halign: 'center', fontStyle: 'bold', fontSize: 10, fillColor: [146, 208, 80] } }]],
+                    startY: currentY + 1,
+                    head: [[{ content: 'DEFENSOR(A) PÚBLICO(A)', colSpan: 3, styles: { halign: 'center', fontStyle: 'bold', fontSize: 9, fillColor: [146, 208, 80] } }]],
                     body: [
                         [
-                            { content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' } },
-                            { content: 'MATRÍCULA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' } },
-                            { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' } }
+                            { content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                            { content: 'MATRÍCULA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                            { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } }
                         ],
                         ...defensores.map(c => [c.nome || '', getIdentificador(c), ''])
                     ],
                     theme: 'grid',
-                    headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold', fontSize: 10 },
-                    styles: { fontSize: 9, cellPadding: 4, lineColor: [0, 0, 0], lineWidth: 0.3, valign: 'middle', halign: 'center' },
-                    columnStyles: { 0: { cellWidth: larguraNome }, 1: { cellWidth: larguraMatricula }, 2: { cellWidth: larguraAssinatura } },
+                    headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold', fontSize: 9 },
+                    styles: { fontSize: 8, cellPadding: 2.5, lineColor: [0, 0, 0], lineWidth: 0.2, valign: 'middle', halign: 'center' },
+                    columnStyles: { 0: { cellWidth: larguraNome }, 1: { cellWidth: larguraIdentificador }, 2: { cellWidth: larguraAssinatura } },
                     margin: { left: 20, right: 20 }
                 });
-                currentY = doc.lastAutoTable.finalY + 5;
+                currentY = doc.lastAutoTable.finalY + 2;
             }
 
             if (servidores.length > 0) {
-                let maxNomeLen = 70;
-                servidores.forEach(c => {
-                    const nomeLen = (c.nome || '').length * 1.5;
-                    if (nomeLen > maxNomeLen) maxNomeLen = Math.min(nomeLen, 90);
-                });
-                
-                const larguraNome = maxNomeLen;
-                const larguraIdFuncional = 40;
-                const larguraAssinatura = 190 - larguraNome - larguraIdFuncional - 40;
-                
                 doc.autoTable({
                     startY: currentY,
-                    head: [[{ content: 'SERVIDOR(A)', colSpan: 3, styles: { halign: 'center', fontStyle: 'bold', fontSize: 10, fillColor: [146, 208, 80] } }]],
+                    head: [[{ content: 'SERVIDOR(A)', colSpan: 3, styles: { halign: 'center', fontStyle: 'bold', fontSize: 9, fillColor: [146, 208, 80] } }]],
                     body: [
                         [
-                            { content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' } },
-                            { content: 'ID FUNCIONAL', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' } },
-                            { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' } }
+                            { content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                            { content: 'ID FUNCIONAL', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                            { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } }
                         ],
                         ...servidores.map(c => [c.nome || '', getIdentificador(c), ''])
                     ],
                     theme: 'grid',
-                    headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold', fontSize: 10 },
-                    styles: { fontSize: 9, cellPadding: 4, lineColor: [0, 0, 0], lineWidth: 0.3, valign: 'middle', halign: 'center' },
-                    columnStyles: { 0: { cellWidth: larguraNome }, 1: { cellWidth: larguraIdFuncional }, 2: { cellWidth: larguraAssinatura } },
+                    headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold', fontSize: 9 },
+                    styles: { fontSize: 8, cellPadding: 2.5, lineColor: [0, 0, 0], lineWidth: 0.2, valign: 'middle', halign: 'center' },
+                    columnStyles: { 0: { cellWidth: larguraNome }, 1: { cellWidth: larguraIdentificador }, 2: { cellWidth: larguraAssinatura } },
                     margin: { left: 20, right: 20 }
                 });
-                currentY = doc.lastAutoTable.finalY + 5;
+                currentY = doc.lastAutoTable.finalY + 2;
             }
 
             doc.autoTable({
                 startY: currentY,
                 body: [
-                    [{ content: orgaoAtendimento.toUpperCase(), styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' } },
-                     { content: 'TOTAL DE ATENDIMENTOS', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' } }],
-                    [{ content: nomeDaAcao.toUpperCase(), styles: { halign: 'center' } },
-                     { content: String(totalAtendidos), styles: { halign: 'center' } }]
+                    [
+                        { content: orgaoAtendimento.toUpperCase(), styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                        { content: 'TOTAL DE ATENDIMENTOS', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } }
+                    ],
+                    [
+                        { content: nomeDaAcao.toUpperCase(), styles: { halign: 'center', fontSize: 8, cellPadding: 3 } },
+                        { content: String(totalAtendidos), styles: { halign: 'center', fontSize: 10, fontStyle: 'bold', cellPadding: 3 } }
+                    ]
                 ],
                 theme: 'grid',
-                styles: { fontSize: 10, halign: 'center', cellPadding: 6, lineColor: [0, 0, 0], lineWidth: 0.3, valign: 'middle' },
-                columnStyles: { 0: { cellWidth: 100 }, 1: { cellWidth: 50 } },
+                styles: { fontSize: 8, halign: 'center', cellPadding: 3, lineColor: [0, 0, 0], lineWidth: 0.2, valign: 'middle' },
+                columnStyles: { 0: { cellWidth: 110 }, 1: { cellWidth: 60 } },
                 margin: { left: 20, right: 20 }
             });
             
-            currentY = doc.lastAutoTable.finalY + 10;
+            currentY = doc.lastAutoTable.finalY + 6;
 
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(10);
+            doc.setFontSize(8);
             doc.text("OBSERVAÇÕES:", 20, currentY);
-            doc.line(20, currentY + 4, 190, currentY + 4);
+            doc.line(20, currentY + 3, 190, currentY + 3);
             
-            for (let i = 1; i <= 4; i++) {
-                const lineY = currentY + 8 + (i * 6);
-                if (lineY < doc.internal.pageSize.getHeight() - 20) {
+            for (let i = 1; i <= 3; i++) {
+                const lineY = currentY + 6 + (i * 4.5);
+                if (lineY < doc.internal.pageSize.getHeight() - 15) {
                     doc.setDrawColor(200, 200, 200);
                     doc.line(20, lineY, 190, lineY);
                 }
@@ -749,4 +741,4 @@ export const generateStatisticsPDF = (pautaName, statsData) => {
 
 window.PDFService = PDFService;
 
-console.log("✅ pdfService.js carregado com sucesso!");
+console.log("✅ pdfService.js carregado - VERSÃO OTIMIZADA (UMA PÁGINA, ASSINATURA MAIS LARGA)!");
