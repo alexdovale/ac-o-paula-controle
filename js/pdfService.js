@@ -1,4 +1,4 @@
-// js/pdfService.js - VERSÃO COMPLETA E CORRIGIDA COM PDFService (MESCLADA)
+// js/pdfService.js - VERSÃO COMPLETA COM ATA SOCIAL OTIMIZADA
 
 /**
  * Utilitários de limpeza e formatação
@@ -21,9 +21,6 @@ const calculateDuration = (totalMinutes) => {
         : `${totalMinutes} min`;
 };
 
-/**
- * Formata CPF (000.000.000-00)
- */
 const formatCPF = (cpf) => {
     if (!cpf) return '';
     const numeros = String(cpf).replace(/\D/g, '');
@@ -31,9 +28,6 @@ const formatCPF = (cpf) => {
     return numeros.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 };
 
-/**
- * Formata CEP (00000-000)
- */
 const formatCEP = (cep) => {
     if (!cep) return '';
     const numeros = String(cep).replace(/\D/g, '');
@@ -41,9 +35,6 @@ const formatCEP = (cep) => {
     return numeros.replace(/(\d{5})(\d{3})/, '$1-$2');
 };
 
-/**
- * Formata moeda (R$ 0,00)
- */
 const formatCurrency = (value) => {
     if (!value) return 'R$ 0,00';
     if (typeof value === 'string' && value.includes('R$')) return value;
@@ -65,12 +56,19 @@ const formatCurrency = (value) => {
 
 export const PDFService = {
     /**
-     * FUNÇÃO INTERNA: CONSTRÓI O DOCUMENTO DA ATA SOCIAL (PARA REUSO)
+     * FUNÇÃO INTERNA: CONSTRÓI O DOCUMENTO DA ATA SOCIAL (UMA PÁGINA)
      */
     _buildAtaAcaoSocialDoc(pautaName, colaboradores, atendidos, dadosExtras = {}) {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
         
+        // ORIENTAÇÃO RETRATO (altura maior para caber tudo)
+        const doc = new jsPDF({
+            orientation: 'p',
+            unit: 'mm',
+            format: 'a4'
+        });
+        
+        // DADOS PARA O CABEÇALHO
         const dataInput = dadosExtras.data ? new Date(dadosExtras.data + 'T12:00:00') : new Date();
         const dia = dataInput.getDate();
         const mesExtenso = dataInput.toLocaleString('pt-BR', { month: 'long' });
@@ -78,82 +76,278 @@ export const PDFService = {
         
         const endereco = dadosExtras.endereco || "Não informado";
         const nomeDaAcao = dadosExtras.acao || pautaName;
+        const orgaoAtendimento = dadosExtras.orgao || "ÓRGÃO DE ATENDIMENTO - AS";
         const totalAtendidos = atendidos.length;
 
-        // 1. LOGO
-        const logoUrl = "https://alexdovale.github.io/ponto.codoc/imagem.png";
-        doc.addImage(logoUrl, 'PNG', 45, 10, 110, 25); 
+        // 1. LOGO DA DEFENSORIA (NOVO LINK)
+        const logoUrl = "https://raw.githubusercontent.com/alexdovale/calculo-mensuracao-codoc/main/logo.png";
+        
+        try {
+            doc.addImage(logoUrl, 'PNG', 80, 10, 50, 20);
+        } catch (e) {
+            console.warn("Não foi possível carregar a logo:", e);
+        }
 
         // 2. TÍTULO
         doc.setFont("helvetica", "bold");
         doc.setFontSize(14);
-        doc.text("ATA AÇÃO SOCIAL", 105, 45, { align: "center" });
+        doc.text("ATA DE AÇÃO SOCIAL", 105, 38, { align: "center" });
 
         // 3. TEXTO INTRODUTÓRIO DINÂMICO
         doc.setFont("helvetica", "normal");
         doc.setFontSize(10);
         const introText = `Aos ${dia} dias do mês de ${mesExtenso} do ano de ${ano}, a partir das 9h, em ${endereco}, trabalharam na ${nomeDaAcao}, os(as) Defensores(as) Públicos(as) abaixo listados(as), bem como os(as) servidores(as), conforme listagem a seguir:`;
         
-        const splitIntro = doc.splitTextToSize(introText, 180);
-        doc.text(splitIntro, 15, 55);
+        const splitIntro = doc.splitTextToSize(introText, 170);
+        doc.text(splitIntro, 20, 48);
+        
+        let currentY = 48 + (splitIntro.length * 5);
 
-        const defensores = colaboradores.filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'));
-        const servidores = colaboradores.filter(c => c.cargo && !c.cargo.toLowerCase().includes('defensor'));
-
-        // 4. TABELA DEFENSOR
-        doc.autoTable({
-            startY: 75,
-            head: [['DEFENSOR PÚBLICO', '', '']],
-            body: [
-                [{ content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}, 
-                 { content: 'MATRÍCULA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}, 
-                 { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}],
-                ...defensores.map(c => [c.nome, '', ''])
-            ],
-            theme: 'grid',
-            headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold' },
-            styles: { fontSize: 9, cellPadding: 4, lineColor: [0, 0, 0], lineWidth: 0.5 },
-            columnStyles: { 0: { cellWidth: 85 }, 1: { cellWidth: 40 }, 2: { cellWidth: 'auto' } }
+        // ====================================================
+        // CLASSIFICAÇÃO DOS COLABORADORES POR CARGO
+        // ====================================================
+        
+        // Defensores (qualquer cargo que contenha 'defensor')
+        const defensores = colaboradores.filter(c => 
+            c.cargo && c.cargo.toLowerCase().includes('defensor')
+        );
+        
+        // Servidores, CRC, Coordenadores
+        const cargosPrincipais = ['servidor', 'crc', 'coordenador', 'coordenadora'];
+        const servidoresPrincipais = colaboradores.filter(c => {
+            if (!c.cargo) return false;
+            const cargoLower = c.cargo.toLowerCase();
+            return cargosPrincipais.some(cargo => cargoLower.includes(cargo)) && 
+                   !cargoLower.includes('defensor');
+        });
+        
+        // Outros cargos (Voluntários, Estagiários, etc)
+        const outrosCargos = colaboradores.filter(c => {
+            if (!c.cargo) return true; // Sem cargo definido vai para outros
+            const cargoLower = c.cargo.toLowerCase();
+            return !cargoLower.includes('defensor') && 
+                   !cargosPrincipais.some(cargo => cargoLower.includes(cargo));
         });
 
-        // 5. TABELA SERVIDOR
+        // Helper para obter ID/Matrícula
+        const getIdMatricula = (colaborador) => {
+            return colaborador.id || colaborador.matricula || colaborador.codigo || '';
+        };
+
+        // ====================================================
+        // TABELA 1: DEFENSORES PÚBLICOS
+        // ====================================================
+        if (defensores.length > 0) {
+            doc.autoTable({
+                startY: currentY + 2,
+                head: [['DEFENSOR PÚBLICO', '', '']],
+                body: [
+                    [{ 
+                        content: 'NOME', 
+                        styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }
+                    }, { 
+                        content: 'MATRÍCULA/ID', 
+                        styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }
+                    }, { 
+                        content: 'ASSINATURA', 
+                        styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }
+                    }],
+                    ...defensores.map(c => [c.nome || '', getIdMatricula(c), ''])
+                ],
+                theme: 'grid',
+                headStyles: { 
+                    fillColor: [146, 208, 80], 
+                    textColor: [0, 0, 0], 
+                    halign: 'center', 
+                    fontStyle: 'bold',
+                    fontSize: 9
+                },
+                styles: { 
+                    fontSize: 9, 
+                    cellPadding: 3, 
+                    lineColor: [0, 0, 0], 
+                    lineWidth: 0.3,
+                    valign: 'middle'
+                },
+                columnStyles: { 
+                    0: { cellWidth: 85 }, 
+                    1: { cellWidth: 45 }, 
+                    2: { cellWidth: 'auto' } 
+                },
+                margin: { left: 20, right: 20 }
+            });
+            currentY = doc.lastAutoTable.finalY + 5;
+        }
+
+        // ====================================================
+        // TABELA 2: SERVIDORES, CRC E COORDENADORES
+        // ====================================================
+        if (servidoresPrincipais.length > 0) {
+            doc.autoTable({
+                startY: currentY,
+                head: [['SERVIDORES / CRC / COORDENADORES', '', '']],
+                body: [
+                    [{ 
+                        content: 'NOME', 
+                        styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }
+                    }, { 
+                        content: 'ID FUNCIONAL', 
+                        styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }
+                    }, { 
+                        content: 'ASSINATURA', 
+                        styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }
+                    }],
+                    ...servidoresPrincipais.map(c => [c.nome || '', getIdMatricula(c), ''])
+                ],
+                theme: 'grid',
+                headStyles: { 
+                    fillColor: [146, 208, 80], 
+                    textColor: [0, 0, 0], 
+                    halign: 'center', 
+                    fontStyle: 'bold',
+                    fontSize: 9
+                },
+                styles: { 
+                    fontSize: 9, 
+                    cellPadding: 3, 
+                    lineColor: [0, 0, 0], 
+                    lineWidth: 0.3,
+                    valign: 'middle'
+                },
+                columnStyles: { 
+                    0: { cellWidth: 85 }, 
+                    1: { cellWidth: 45 }, 
+                    2: { cellWidth: 'auto' } 
+                },
+                margin: { left: 20, right: 20 }
+            });
+            currentY = doc.lastAutoTable.finalY + 5;
+        }
+
+        // ====================================================
+        // TABELA 3: VOLUNTÁRIOS E OUTROS CARGOS
+        // ====================================================
+        if (outrosCargos.length > 0) {
+            // Agrupa por cargo para mostrar no relatório
+            const groupedByCargo = {};
+            outrosCargos.forEach(c => {
+                const cargo = c.cargo || 'Sem cargo definido';
+                if (!groupedByCargo[cargo]) groupedByCargo[cargo] = [];
+                groupedByCargo[cargo].push(c);
+            });
+            
+            // Título da seção
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.text("VOLUNTÁRIOS E DEMAIS COLABORADORES:", 20, currentY + 5);
+            currentY += 8;
+            
+            // Tabela para outros cargos
+            const bodyOutros = [];
+            
+            // Adiciona cabeçalho
+            bodyOutros.push([
+                { content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }},
+                { content: 'CARGO', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }},
+                { content: 'ID FUNCIONAL', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }},
+                { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }}
+            ]);
+            
+            // Adiciona os colaboradores
+            outrosCargos.forEach(c => {
+                bodyOutros.push([
+                    c.nome || '',
+                    c.cargo || 'Não informado',
+                    getIdMatricula(c),
+                    ''
+                ]);
+            });
+            
+            doc.autoTable({
+                startY: currentY,
+                body: bodyOutros,
+                theme: 'grid',
+                headStyles: { 
+                    fillColor: [200, 200, 200], 
+                    textColor: [0, 0, 0], 
+                    halign: 'center', 
+                    fontStyle: 'bold',
+                    fontSize: 8
+                },
+                styles: { 
+                    fontSize: 8, 
+                    cellPadding: 2, 
+                    lineColor: [0, 0, 0], 
+                    lineWidth: 0.3,
+                    valign: 'middle'
+                },
+                columnStyles: { 
+                    0: { cellWidth: 70 }, 
+                    1: { cellWidth: 45 },
+                    2: { cellWidth: 35 }, 
+                    3: { cellWidth: 'auto' } 
+                },
+                margin: { left: 20, right: 20 }
+            });
+            currentY = doc.lastAutoTable.finalY + 5;
+        }
+
+        // ====================================================
+        // TABELA RODAPÉ (ÓRGÃO E TOTAL DE ATENDIMENTOS)
+        // ====================================================
         doc.autoTable({
-            startY: doc.lastAutoTable.finalY + 10,
-            head: [['SERVIDOR', '', '']],
+            startY: currentY,
             body: [
-                [{ content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}, 
-                 { content: 'ID FUNCIONAL', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}, 
-                 { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}],
-                ...servidores.map(c => [c.nome, '', ''])
+                [{ 
+                    content: orgaoAtendimento.toUpperCase(), 
+                    styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }
+                }, { 
+                    content: 'TOTAL DE ATENDIMENTOS', 
+                    styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }
+                }],
+                [nomeDaAcao.toUpperCase(), String(totalAtendidos)]
             ],
             theme: 'grid',
-            headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold' },
-            styles: { fontSize: 8, cellPadding: 3, lineColor: [0, 0, 0], lineWidth: 0.5 },
-            columnStyles: { 0: { cellWidth: 85 }, 1: { cellWidth: 40 }, 2: { cellWidth: 'auto' } }
+            styles: { 
+                fontSize: 10, 
+                halign: 'center', 
+                cellPadding: 5, 
+                lineColor: [0, 0, 0], 
+                lineWidth: 0.3 
+            },
+            margin: { left: 20, right: 20 }
         });
+        
+        currentY = doc.lastAutoTable.finalY + 10;
 
-        // 6. TABELA RODAPÉ
-        doc.autoTable({
-            startY: doc.lastAutoTable.finalY + 10,
-            body: [
-                [{ content: 'ÓRGÃO DE ATENDIMENTO - AS', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }}, 
-                 { content: 'TOTAL DE ATENDIMENTOS', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }}],
-                [nomeDaAcao.toUpperCase(), totalAtendidos]
-            ],
-            theme: 'grid',
-            styles: { fontSize: 9, halign: 'center', cellPadding: 4, lineColor: [0, 0, 0], lineWidth: 0.5 }
-        });
-
-        const finalY = doc.lastAutoTable.finalY + 15;
+        // ====================================================
+        // OBSERVAÇÕES (com linha)
+        // ====================================================
         doc.setFont("helvetica", "bold");
-        doc.text("OBSERVAÇÕES:", 15, finalY);
-        doc.line(15, finalY + 8, 195, finalY + 8); 
+        doc.setFontSize(10);
+        doc.text("OBSERVAÇÕES:", 20, currentY);
+        doc.setDrawColor(0, 0, 0);
+        doc.line(20, currentY + 5, 190, currentY + 5);
+        
+        // ====================================================
+        // VERIFICA SE PRECISA DE MAIS PÁGINAS (AJUSTE DE ALTURA)
+        // ====================================================
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const finalYPosition = currentY + 20;
+        
+        // Se ultrapassou a página, força uma nova página
+        if (finalYPosition > pageHeight - 20) {
+            doc.addPage();
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.text("Continuação das observações...", 20, 30);
+        }
 
         return doc;
     },
 
     /**
-     * VISUALIZAR ATA (PREVIEW) - NOVIDADE
+     * VISUALIZAR ATA (PREVIEW)
      */
     previewAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
         const doc = this._buildAtaAcaoSocialDoc(pautaName, colaboradores, atendidos, dadosExtras);
@@ -162,11 +356,11 @@ export const PDFService = {
     },
 
     /**
-     * GERA ATA DE AÇÃO SOCIAL (DOCUMENTO OFICIAL) - VERSÃO MELHORADA
+     * GERA ATA DE AÇÃO SOCIAL (DOCUMENTO OFICIAL)
      * @param {string} pautaName - Nome da pauta/local da ação
-     * @param {Array} colaboradores - Lista de colaboradores com nome, cargo, etc.
+     * @param {Array} colaboradores - Lista de colaboradores com nome, cargo, id/matricula
      * @param {Array} atendidos - Lista de atendidos (para total de atendimentos)
-     * @param {Object} dadosExtras - Dados adicionais (data, endereco, acao)
+     * @param {Object} dadosExtras - Dados adicionais (data, endereco, acao, orgao)
      * @returns {boolean} - Sucesso ou falha na geração
      */
     generateAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
@@ -177,6 +371,7 @@ export const PDFService = {
             return true;
         } catch (error) {
             console.error("Erro ao gerar Ata Social:", error);
+            alert("Erro ao gerar a ata. Verifique o console para mais detalhes.");
             return false;
         }
     },
@@ -189,7 +384,6 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
 
-            // Cabeçalho
             docPDF.setFontSize(18);
             docPDF.setTextColor(22, 101, 52);
             docPDF.text(`Relatório de Atendidos - ${pautaName}`, 40, 40);
@@ -200,7 +394,6 @@ export const PDFService = {
             docPDF.text(`Data: ${new Date().toLocaleString('pt-BR')}`, 40, 55);
             docPDF.text(`Total: ${atendidos.length} assistidos | Assuntos totais: ${totalAssuntos}`, 40, 68);
 
-            // Definição das Colunas
             const head = [["#", "Nome", "Agendado", "Chegou", "Finalizado", "Duração", "Assunto", "Atendente", "Status"]];
 
             const body = atendidos.map((item, index) => {
@@ -256,17 +449,10 @@ export const PDFService = {
     },
 
     /**
-     * GERA PDF DO CHECKLIST COMPLETO (CORRIGIDO - VERSÃO FINAL)
+     * GERA PDF DO CHECKLIST COMPLETO
      */
     generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos = []) {
         try {
-            console.log("📄 PDFService: GERANDO PDF COM DADOS RECEBIDOS:", {
-                assistedName,
-                actionTitle,
-                checklistData,
-                documentosTextos: documentosTextos.length
-            });
-            
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF();
             const pageWidth = docPDF.internal.pageSize.getWidth();
@@ -274,7 +460,6 @@ export const PDFService = {
             let y = 20;
             const margin = 15;
 
-            // ===== CABEÇALHO =====
             docPDF.setFontSize(18);
             docPDF.setTextColor(22, 163, 74);
             docPDF.setFont("helvetica", "bold");
@@ -286,7 +471,6 @@ export const PDFService = {
             docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, y, { align: "center" });
             y += 15;
 
-            // ===== 1. DADOS DO ASSISTIDO =====
             docPDF.setFontSize(12);
             docPDF.setTextColor(0, 0, 0);
             docPDF.setFont("helvetica", "bold");
@@ -300,7 +484,6 @@ export const PDFService = {
             docPDF.text(`Ação: ${actionTitle || 'Não selecionada'}`, margin + 5, y);
             y += 10;
 
-            // ===== 2. DOCUMENTAÇÃO SELECIONADA =====
             docPDF.setFont("helvetica", "bold");
             docPDF.setFontSize(11);
             docPDF.text("2. DOCUMENTOS SELECIONADOS:", margin, y);
@@ -309,28 +492,21 @@ export const PDFService = {
             docPDF.setFontSize(9);
             
             if (documentosTextos && documentosTextos.length > 0) {
-                documentosTextos.forEach((doc, index) => {
+                documentosTextos.forEach((doc) => {
                     if (y > pageHeight - 20) {
                         docPDF.addPage();
                         y = 20;
                     }
                     
                     const isSpecial = doc.id.startsWith('reu-') || doc.id.startsWith('gasto-');
-                    
-                    const tipo = (!isSpecial && checklistData?.docTypes && checklistData.docTypes[doc.id])
-                        ? ` [${checklistData.docTypes[doc.id]}]`
-                        : '';
-                    
-                    const safeText = doc.text.replace(/[^\x00-\x7F\xC0-\xFF\s\-\,\.\:\;\!\?\(\)\/\\\[\]#@$%&*+<>=~^|]/g, '');
-                    
                     const prefix = isSpecial ? '' : '[X] ';
                     
                     if (doc.id === 'reu-titulo' || doc.id === 'gastos-titulo') {
                         docPDF.setFont("helvetica", "bold");
-                        docPDF.text(safeText.trim(), margin + 5, y);
+                        docPDF.text(doc.text.trim(), margin + 5, y);
                         docPDF.setFont("helvetica", "normal");
                     } else {
-                        docPDF.text(`${prefix}${safeText}${tipo}`, margin + 5, y);
+                        docPDF.text(`${prefix}${doc.text}`, margin + 5, y);
                     }
                     y += 5;
                 });
@@ -340,11 +516,9 @@ export const PDFService = {
             }
             y += 5;
 
-            // ===== 3. PLANILHA DE GASTOS =====
             if (checklistData && checklistData.expenseData) {
                 const expData = checklistData.expenseData;
-                const gastoAtivo = expData.checkExibirGastos !== false;
-                const hasExpenses = gastoAtivo && Object.entries(expData).some(([k, v]) =>
+                const hasExpenses = expData.checkExibirGastos !== false && Object.entries(expData).some(([k, v]) =>
                     k !== 'checkExibirGastos' && v && typeof v === 'string' && v.trim() !== '' && v.trim() !== 'R$ 0,00'
                 );
                 
@@ -361,14 +535,6 @@ export const PDFService = {
                     docPDF.setFont("helvetica", "normal");
                     docPDF.setFontSize(9);
                     
-                    docPDF.setFillColor(240, 240, 240);
-                    docPDF.rect(margin, y - 4, pageWidth - 2*margin, 6, 'F');
-                    docPDF.setFont("helvetica", "bold");
-                    docPDF.text("DESCRIÇÃO", margin + 5, y);
-                    docPDF.text("VALOR", pageWidth - margin - 40, y, { align: 'right' });
-                    y += 6;
-                    docPDF.setFont("helvetica", "normal");
-                    
                     const categorias = [
                         { id: 'moradia', label: 'Moradia' },
                         { id: 'alimentacao', label: 'Alimentação' },
@@ -379,41 +545,21 @@ export const PDFService = {
                         { id: 'outras', label: 'Outras' }
                     ];
                     
-                    let total = 0;
-                    
                     categorias.forEach(cat => {
                         let valor = checklistData.expenseData[cat.id] || '';
-                        
                         if (valor && String(valor).trim() !== '' && valor !== 'R$ 0,00') {
                             if (y > pageHeight - 20) {
                                 docPDF.addPage();
                                 y = 20;
                             }
-                            
-                            docPDF.text(cat.label, margin + 5, y);
-                            docPDF.text(valor, pageWidth - margin - 40, y, { align: 'right' });
+                            docPDF.text(`• ${cat.label}: ${valor}`, margin + 5, y);
                             y += 5;
-                            
-                            const valorNumerico = parseFloat(String(valor).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
-                            total += valorNumerico;
                         }
                     });
-                    
-                    if (total > 0) {
-                        y += 2;
-                        docPDF.setDrawColor(200, 200, 200);
-                        docPDF.line(margin, y - 2, pageWidth - margin, y - 2);
-                        docPDF.setFont("helvetica", "bold");
-                        docPDF.text("TOTAL:", margin + 5, y + 2);
-                        docPDF.text(`R$ ${total.toFixed(2).replace('.', ',')}`, pageWidth - margin - 40, y + 2, { align: 'right' });
-                        y += 10;
-                    } else {
-                        y += 5;
-                    }
+                    y += 5;
                 }
             }
 
-            // ===== 4. DADOS DO RÉU =====
             if (checklistData && checklistData.reuData) {
                 const reu = checklistData.reuData;
                 const hasReu = reu.checkReuUnico === true && (reu.nome || reu.rua || reu.cep);
@@ -426,43 +572,21 @@ export const PDFService = {
                     docPDF.setFont("helvetica", "normal");
                     docPDF.setFontSize(9);
 
-                    const addLinha = (texto) => {
-                        if (y > pageHeight - 20) { docPDF.addPage(); y = 20; }
-                        const safe = texto.replace(/[^-À-ÿ\s\-\,\.\:\;\!\?\(\)\/\[\]#@$%&*+<>=~^|]/g, '');
-                        const linhas = docPDF.splitTextToSize(safe, pageWidth - 2*margin - 10);
-                        docPDF.text(linhas, margin + 5, y);
-                        y += 5 * linhas.length;
-                    };
-
-                    if (reu.nome)     addLinha(`Nome: ${reu.nome}`);
-                    if (reu.cpf)      addLinha(`CPF: ${reu.cpf}`);
-                    if (reu.telefone) addLinha(`Tel: ${reu.telefone}`);
+                    if (reu.nome) { docPDF.text(`Nome: ${reu.nome}`, margin + 5, y); y += 5; }
+                    if (reu.cpf) { docPDF.text(`CPF: ${reu.cpf}`, margin + 5, y); y += 5; }
                     if (reu.rua) {
-                        let end = `Endereco: ${reu.rua}`;
-                        if (reu.numero) end += `, n ${reu.numero}`;
+                        let end = `Endereço: ${reu.rua}`;
+                        if (reu.numero) end += `, ${reu.numero}`;
                         if (reu.complemento) end += ` - ${reu.complemento}`;
-                        addLinha(end);
+                        docPDF.text(end, margin + 5, y); y += 5;
                     }
-                    if (reu.bairro)    addLinha(`Bairro: ${reu.bairro}`);
-                    if (reu.cidade || reu.uf) addLinha(`${reu.cidade || ''}${reu.uf ? ' - ' + reu.uf : ''}`);
-                    if (reu.cep)       addLinha(`CEP: ${reu.cep}`);
-                    if (reu.referencia) addLinha(`Referencia: ${reu.referencia}`);
-                    if (reu.empresa)   addLinha(`Empresa: ${reu.empresa}`);
-                    if (reu.rua_comercial) {
-                        let endC = `End. Comercial: ${reu.rua_comercial}`;
-                        if (reu.numero_comercial) endC += `, n ${reu.numero_comercial}`;
-                        addLinha(endC);
-                    }
-                    if (reu.bairro_comercial) addLinha(`Bairro Comercial: ${reu.bairro_comercial}`);
-                    if (reu.cidade_comercial || reu.uf_comercial) {
-                        addLinha(`${reu.cidade_comercial || ''}${reu.uf_comercial ? ' - ' + reu.uf_comercial : ''}`);
-                    }
-                    if (reu.cep_comercial) addLinha(`CEP Comercial: ${reu.cep_comercial}`);
+                    if (reu.bairro) { docPDF.text(`Bairro: ${reu.bairro}`, margin + 5, y); y += 5; }
+                    if (reu.cidade || reu.uf) { docPDF.text(`${reu.cidade || ''}${reu.uf ? ' - ' + reu.uf : ''}`, margin + 5, y); y += 5; }
+                    if (reu.cep) { docPDF.text(`CEP: ${reu.cep}`, margin + 5, y); y += 5; }
                     y += 3;
                 }
             }
 
-            // ===== RODAPÉ =====
             const pageCount = docPDF.internal.getNumberOfPages();
             for (let i = 1; i <= pageCount; i++) {
                 docPDF.setPage(i);
@@ -477,17 +601,16 @@ export const PDFService = {
 
             const nomeArquivo = `Checklist_${(assistedName || 'Assistido').replace(/\s+/g, '_')}.pdf`;
             docPDF.save(nomeArquivo);
-            console.log("✅ PDF gerado com sucesso!");
             return true;
             
         } catch (error) {
-            console.error("❌ Erro no PDFService:", error);
+            console.error("Erro no PDFService:", error);
             return false;
         }
     },
 
     /**
-     * GERA A LISTA DE PRESENÇA DA EQUIPE (DINÂMICA)
+     * GERA A LISTA DE PRESENÇA DA EQUIPE
      */
     generateCollaboratorsPDF(pautaName, colaboradores, selectedCols = ['nome', 'cargo', 'equipe', 'transporte']) {
         try {
@@ -534,7 +657,7 @@ export const PDFService = {
     },
 
     /**
-     * GERA PDF DE ESTATÍSTICAS (opcional)
+     * GERA PDF DE ESTATÍSTICAS
      */
     generateStatisticsPDF(pautaName, statsData) {
         try {
@@ -573,33 +696,21 @@ export const PDFService = {
 };
 
 // ========================================================
-// FUNÇÕES AVULSAS (para compatibilidade com código antigo)
+// FUNÇÕES AVULSAS (para compatibilidade)
 // ========================================================
 
-/**
- * @deprecated Use PDFService.generateAtendidosPDF() instead
- */
 export const generateAtendidosPDF = (pautaName, atendidos) => {
     return PDFService.generateAtendidosPDF(pautaName, atendidos);
 };
 
-/**
- * @deprecated Use PDFService.generateChecklistPDF() instead
- */
 export const generateChecklistPDF = (assistedName, actionTitle, checklistData, documentosTextos) => {
     return PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
 };
 
-/**
- * @deprecated Use PDFService.generateCollaboratorsPDF() instead
- */
 export const generateCollaboratorsPDF = (pautaName, colaboradores, selectedCols) => {
     return PDFService.generateCollaboratorsPDF(pautaName, colaboradores, selectedCols);
 };
 
-/**
- * @deprecated Use PDFService.generateStatisticsPDF() instead
- */
 export const generateStatisticsPDF = (pautaName, statsData) => {
     return PDFService.generateStatisticsPDF(pautaName, statsData);
 };
@@ -607,4 +718,4 @@ export const generateStatisticsPDF = (pautaName, statsData) => {
 // Tornar PDFService global
 window.PDFService = PDFService;
 
-console.log("✅ pdfService.js carregado com sucesso (versão mesclada)!");
+console.log("✅ pdfService.js carregado com sucesso (versão com ata otimizada)!");
