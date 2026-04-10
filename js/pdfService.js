@@ -78,7 +78,7 @@ export const PDFService = {
             // 1. LOGO (menor para economizar espaço)
             const logoUrl = "https://raw.githubusercontent.com/alexdovale/calculo-mensuracao-codoc/main/logo.png";
             try {
-                doc.addImage(logoUrl, 'PNG', 85, 8, 40, 16);
+                doc.addImage(logoUrl, 'PNG', 85, 8, 111.4, 25);
             } catch(e) { console.warn("Logo não carregada:", e); }
 
             // 2. TÍTULO
