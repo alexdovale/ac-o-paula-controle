@@ -1,4 +1,5 @@
-// js/colaboradores.js - VERSÃO COMPLETA COM FLUXO DE REVISÃO HIERÁRQUICA
+// js/colaboradores.js - VERSÃO UNIFICADA
+// Funcionalidades: Auto-preenchimento da base master + Fluxo de revisão hierárquica
 import { 
     collection, 
     onSnapshot, 
@@ -10,18 +11,49 @@ import {
     writeBatch,
     getDoc,
     query,
-    where
+    where,
+    setDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
-// Objeto principal com TODOS os métodos
 const CollaboratorService = {
     currentListener: null,
     editId: null,
     customTeams: [],
 
     // ========================================================
-    // MÉTODO PARA CARREGAR DEFENSORES (FLUXO DE REVISÃO)
+    // 1. AUTO-PREENCHIMENTO (BUSCA NA BASE MASTER)
+    // ========================================================
+    async buscarColaboradorMaster(app, identificador) {
+        if (!identificador || identificador.length < 3) return;
+
+        try {
+            const idBusca = identificador.replace(/\D/g, '');
+            const masterRef = doc(app.db, "colaboradores_gerais", idBusca);
+            const snap = await getDoc(masterRef);
+
+            if (snap.exists()) {
+                const dados = snap.data();
+                
+                document.getElementById('collaborator-name-modal').value = dados.nome || '';
+                document.getElementById('collaborator-role-modal').value = dados.cargo || 'Defensor(a)';
+                document.getElementById('collaborator-team-modal').value = dados.equipe || '1';
+                document.getElementById('collaborator-phone-modal').value = dados.telefone || '';
+                document.getElementById('collaborator-email-modal').value = dados.email || '';
+                
+                const rTransp = document.querySelector(`input[name="transporte-colaborador"][value="${dados.transporte || 'Meios Próprios'}"]`);
+                if (rTransp) rTransp.checked = true;
+
+                this.configurarLogicaCargo();
+                showNotification("Dados recuperados da base master! ✅");
+            }
+        } catch (e) {
+            console.error("Erro ao buscar na base master:", e);
+        }
+    },
+
+    // ========================================================
+    // 2. FLUXO DE REVISÃO - CARREGAR DEFENSORES
     // ========================================================
     async loadDefensores(app, selectId) {
         const select = document.getElementById(selectId);
@@ -43,7 +75,7 @@ const CollaboratorService = {
     },
 
     // ========================================================
-    // MÉTODO PRINCIPAL - ABRIR MODAL
+    // 3. CONFIGURAÇÃO DO MODAL E EVENTOS
     // ========================================================
     openModal(app) {
         console.log("📋 Abrindo modal de colaboradores", app);
@@ -58,21 +90,131 @@ const CollaboratorService = {
         modal.classList.remove('hidden');
         this.resetForm();
         this.updateTeamSelect();
-        this.updateCargoSelect();
+        this.configurarLogicaCargo();
+        this.configurarEventoBusca(app);
         
         if (app && app.currentPauta && app.currentPauta.id) {
             this.setupListener(app, app.currentPauta.id);
         }
     },
 
-    // ========================================================
-    // TODOS OS OUTROS MÉTODOS
-    // ========================================================
     closeModal() {
         const modal = document.getElementById('collaborators-modal');
         if (modal) modal.classList.add('hidden');
     },
 
+    configurarEventoBusca(app) {
+        const inputId = document.getElementById('collaborator-identificador-modal');
+        if (!inputId) return;
+
+        inputId.onblur = () => {
+            if (!this.editId) {
+                this.buscarColaboradorMaster(app, inputId.value);
+            }
+        };
+    },
+
+    configurarLogicaCargo() {
+        const cargoSelect = document.getElementById('collaborator-role-modal');
+        const labelIdentificador = document.getElementById('label-identificador-modal');
+        
+        if (!cargoSelect || !labelIdentificador) return;
+
+        const atualizarLabel = () => {
+            labelIdentificador.textContent = (cargoSelect.value === "Defensor(a)") ? "ID" : "Matrícula";
+        };
+
+        cargoSelect.onchange = atualizarLabel;
+        atualizarLabel();
+    },
+
+    updateTeamSelect(selectedValue = '1') {
+        const select = document.getElementById('collaborator-team-modal');
+        if (!select) return;
+
+        const gruposPadrao = ['1', '2', '3', '4', 'CRC', 'Coordenadores'];
+        let html = gruposPadrao.map(g => 
+            `<option value="${g}" ${selectedValue === g ? 'selected' : ''}>${isNaN(g) ? g : 'Equipe ' + g}</option>`
+        ).join('');
+        
+        html += `<option value="ADD_NEW">+ Adicionar outro...</option>`;
+        select.innerHTML = html;
+
+        select.onchange = (e) => {
+            if (e.target.value === 'ADD_NEW') {
+                const novo = prompt("Digite o nome do novo grupo/setor:");
+                if (novo) {
+                    const opt = new Option(novo, novo, true, true);
+                    select.add(opt, select.firstChild);
+                    select.value = novo;
+                } else { select.value = '1'; }
+            }
+        };
+    },
+
+    // ========================================================
+    // 4. SALVAR (PAUTA + MASTER)
+    // ========================================================
+    async saveCollaborator(app) {
+        if (!app.currentPauta?.id) {
+            showNotification("Nenhuma pauta selecionada", "error");
+            return;
+        }
+
+        const nome = document.getElementById('collaborator-name-modal').value;
+        const cargo = document.getElementById('collaborator-role-modal').value;
+        const identificador = document.getElementById('collaborator-identificador-modal').value;
+        const equipe = document.getElementById('collaborator-team-modal').value;
+        const telefone = document.getElementById('collaborator-phone-modal')?.value || '';
+        const email = document.getElementById('collaborator-email-modal')?.value || '';
+        const transporte = document.querySelector('input[name="transporte-colaborador"]:checked')?.value;
+
+        if (!nome || !identificador) {
+            showNotification("Preencha Nome e Matrícula/ID", "error");
+            return;
+        }
+
+        const data = {
+            nome,
+            cargo,
+            identificador,
+            tipo_id: (cargo === "Defensor(a)") ? "ID" : "Matrícula",
+            equipe,
+            telefone,
+            email,
+            transporte,
+            updatedAt: new Date()
+        };
+
+        try {
+            const colRef = collection(app.db, "pautas", app.currentPauta.id, "collaborators");
+            
+            if (this.editId) {
+                await updateDoc(doc(colRef, this.editId), data);
+                showNotification("Membro atualizado!");
+            } else {
+                await addDoc(colRef, { ...data, presente: false, horario: '--:--' });
+                showNotification("Membro adicionado!");
+            }
+            
+            await this.salvarNaBaseMaster(app, data);
+            this.resetForm();
+        } catch (error) {
+            console.error("Erro ao salvar:", error);
+            showNotification("Erro ao salvar membro", "error");
+        }
+    },
+
+    async salvarNaBaseMaster(app, data) {
+        const idUnico = data.identificador.replace(/\D/g, '');
+        if (!idUnico) return;
+        const masterRef = doc(app.db, "colaboradores_gerais", idUnico);
+        await setDoc(masterRef, data, { merge: true });
+    },
+
+    // ========================================================
+    // 5. LISTENER E TABELA
+    // ========================================================
     setupListener(app, pautaId) {
         if (!pautaId || !app?.db) return;
         
@@ -115,32 +257,39 @@ const CollaboratorService = {
             else if (colab.transporte === 'Com a Empresa') compT++;
             
             const row = document.createElement('tr');
-            row.className = "border-b hover:bg-gray-50";
+            row.className = "border-b hover:bg-gray-50 text-sm";
             
             row.innerHTML = `
                 <td class="p-3">
-                    <span>${escapeHTML(colab.nome || '')}</span>
+                    <div class="font-bold text-gray-800">${escapeHTML(colab.nome || '')}</div>
+                    <div class="text-[10px] text-gray-500 uppercase">${colab.tipo_id || 'ID'}: ${colab.identificador || ''}</div>
                 </td>
                 <td class="p-3 text-center">
-                    <input type="checkbox" class="checkin-checkbox w-5 h-5 text-green-600 rounded" 
+                    <input type="checkbox" class="checkin-checkbox w-5 h-5" 
                            data-id="${colab.id}" ${colab.presente ? 'checked' : ''}>
                 </td>
                 <td class="p-3">
-                    <b>${escapeHTML(colab.cargo || 'N/A')}</b><br>
-                    <span>EQP ${escapeHTML(colab.equipe || 'N/A')}</span>
+                    <span class="text-xs font-semibold">${escapeHTML(colab.cargo || 'N/A')}</span><br>
+                    <span class="text-[10px] text-blue-600 font-bold">GRP: ${escapeHTML(colab.equipe || 'N/A')}</span>
                 </td>
-                <td class="p-3">${colab.horario || '--:--'}</td>
+                <td class="p-3 text-center">${colab.horario || '--:--'}</td>
                 <td class="p-3 text-center">
-                    <button class="edit-collaborator-btn text-blue-400" data-id="${colab.id}">✏️</button>
-                    <button class="delete-collaborator-btn text-red-400" data-id="${colab.id}">🗑️</button>
+                    <button class="edit-collaborator-btn text-blue-500 mr-2" data-id="${colab.id}">✏️</button>
+                    <button class="delete-collaborator-btn text-red-500" data-id="${colab.id}">🗑️</button>
                 </td>
             `;
             tbody.appendChild(row);
         });
 
-        document.getElementById('total-participants-count').textContent = app.colaboradores?.length || 0;
-        document.getElementById('self-transport-count').textContent = selfT;
-        document.getElementById('company-transport-count').textContent = compT;
+        // Atualizar contadores
+        const totalSpan = document.getElementById('total-participants-count');
+        if (totalSpan) totalSpan.textContent = app.colaboradores?.length || 0;
+        
+        const selfSpan = document.getElementById('self-transport-count');
+        if (selfSpan) selfSpan.textContent = selfT;
+        
+        const compSpan = document.getElementById('company-transport-count');
+        if (compSpan) compSpan.textContent = compT;
 
         this.addEventListeners(app);
     },
@@ -181,30 +330,6 @@ const CollaboratorService = {
         }
     },
 
-    async saveCollaborator(app, data) {
-        if (!app.currentPauta?.id) {
-            showNotification("Nenhuma pauta selecionada", "error");
-            return;
-        }
-
-        try {
-            const ref = collection(app.db, "pautas", app.currentPauta.id, "collaborators");
-            
-            if (this.editId) {
-                await updateDoc(doc(ref, this.editId), data);
-                showNotification("Membro atualizado!");
-            } else {
-                await addDoc(ref, { ...data, presente: false, horario: '--:--' });
-                showNotification("Membro adicionado!");
-            }
-            
-            this.resetForm();
-        } catch (error) {
-            console.error("Erro ao salvar:", error);
-            showNotification("Erro ao salvar membro", "error");
-        }
-    },
-
     async editCollaborator(app, id) {
         try {
             const ref = doc(app.db, "pautas", app.currentPauta.id, "collaborators", id);
@@ -216,6 +341,7 @@ const CollaboratorService = {
                 
                 document.getElementById('collaborator-name-modal').value = c.nome || '';
                 document.getElementById('collaborator-role-modal').value = c.cargo || 'Defensor(a)';
+                document.getElementById('collaborator-identificador-modal').value = c.identificador || '';
                 document.getElementById('collaborator-team-modal').value = c.equipe || '1';
                 document.getElementById('collaborator-phone-modal').value = c.telefone || '';
                 document.getElementById('collaborator-email-modal').value = c.email || '';
@@ -223,6 +349,7 @@ const CollaboratorService = {
                 const rTransp = document.querySelector(`input[name="transporte-colaborador"][value="${c.transporte || 'Meios Próprios'}"]`);
                 if (rTransp) rTransp.checked = true;
 
+                this.configurarLogicaCargo();
                 document.getElementById('add-collaborator-btn-modal').textContent = "Atualizar Membro";
             }
         } catch (error) {
@@ -263,10 +390,10 @@ const CollaboratorService = {
         const form = document.getElementById('collaborator-form-modal');
         if (form) form.reset();
         this.editId = null;
+        
         const btn = document.getElementById('add-collaborator-btn-modal');
         if (btn) btn.textContent = "Salvar Membro";
         
-        // Resetar selects
         const teamSelect = document.getElementById('collaborator-team-modal');
         if (teamSelect) teamSelect.value = '1';
         
@@ -275,30 +402,18 @@ const CollaboratorService = {
         
         const transpDefault = document.querySelector('input[name="transporte-colaborador"][value="Meios Próprios"]');
         if (transpDefault) transpDefault.checked = true;
-    },
-
-    updateCargoSelect(selectedValue = 'Defensor(a)') {
-        const select = document.getElementById('collaborator-role-modal');
-        if (select) select.value = selectedValue;
-    },
-
-    updateTeamSelect(selectedValue = '1') {
-        const select = document.getElementById('collaborator-team-modal');
-        if (select) select.value = selectedValue;
+        
+        // Limpar campo de identificador
+        const identInput = document.getElementById('collaborator-identificador-modal');
+        if (identInput) identInput.value = '';
     }
 };
 
 // ========================================================
-// EXPORTAÇÕES - MUITO IMPORTANTE!
+// EXPORTAÇÕES
 // ========================================================
-
-// Exportar como default (para import * as)
 export default CollaboratorService;
-
-// Exportar como named (para import { CollaboratorService })
 export { CollaboratorService };
-
-// Tornar global (para acesso no console)
 window.CollaboratorService = CollaboratorService;
 
-console.log("✅ colaboradores.js carregado com sucesso!");
+console.log("✅ colaboradores.js carregado (versão unificada: auto-preenchimento + fluxo de revisão)!");
