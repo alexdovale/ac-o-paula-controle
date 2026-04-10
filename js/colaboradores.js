@@ -1,5 +1,4 @@
-// js/colaboradores.js - VERSÃO UNIFICADA
-// Funcionalidades: Auto-preenchimento da base master + Fluxo de revisão hierárquica
+// js/colaboradores.js - VERSÃO COM ORDENAÇÃO MANUAL
 import { 
     collection, 
     onSnapshot, 
@@ -19,7 +18,7 @@ import { escapeHTML, showNotification } from './utils.js';
 const CollaboratorService = {
     currentListener: null,
     editId: null,
-    customTeams: [],
+    ordemAtual: 'grupo', // 'grupo' ou 'nome'
 
     // ========================================================
     // 1. AUTO-PREENCHIMENTO (BUSCA NA BASE MASTER)
@@ -53,7 +52,51 @@ const CollaboratorService = {
     },
 
     // ========================================================
-    // 2. FLUXO DE REVISÃO - CARREGAR DEFENSORES
+    // 2. ORDENAÇÃO DA LISTA
+    // ========================================================
+    ordenarColaboradores(colaboradores) {
+        if (this.ordemAtual === 'nome') {
+            // Ordena por nome (A-Z)
+            return [...colaboradores].sort((a, b) => {
+                return (a.nome || '').localeCompare(b.nome || '');
+            });
+        } else {
+            // Ordena por grupo, com defensores primeiro dentro de cada grupo
+            return [...colaboradores].sort((a, b) => {
+                // Primeiro critério: grupo
+                const grupoA = a.equipe || '';
+                const grupoB = b.equipe || '';
+                if (grupoA !== grupoB) {
+                    return grupoA.localeCompare(grupoB);
+                }
+                
+                // Mesmo grupo: defensores primeiro
+                const isDefensorA = (a.cargo === 'Defensor(a)') ? 0 : 1;
+                const isDefensorB = (b.cargo === 'Defensor(a)') ? 0 : 1;
+                if (isDefensorA !== isDefensorB) {
+                    return isDefensorA - isDefensorB;
+                }
+                
+                // Depois ordena por nome
+                return (a.nome || '').localeCompare(b.nome || '');
+            });
+        }
+    },
+
+    toggleOrdem() {
+        this.ordemAtual = this.ordemAtual === 'grupo' ? 'nome' : 'grupo';
+        const btn = document.getElementById('toggle-order-btn');
+        if (btn) {
+            btn.textContent = this.ordemAtual === 'grupo' ? '📁 Ordenar por Grupo' : '🔤 Ordenar por Nome';
+        }
+        // Re-renderizar com a nova ordem
+        if (window.app && window.app.colaboradores) {
+            this.renderTable(window.app);
+        }
+    },
+
+    // ========================================================
+    // 3. FLUXO DE REVISÃO - CARREGAR DEFENSORES
     // ========================================================
     async loadDefensores(app, selectId) {
         const select = document.getElementById(selectId);
@@ -75,14 +118,13 @@ const CollaboratorService = {
     },
 
     // ========================================================
-    // 3. CONFIGURAÇÃO DO MODAL E EVENTOS
+    // 4. CONFIGURAÇÃO DO MODAL E EVENTOS
     // ========================================================
     openModal(app) {
-        console.log("📋 Abrindo modal de colaboradores", app);
+        console.log("📋 Abrindo modal de colaboradores");
         
         const modal = document.getElementById('collaborators-modal');
         if (!modal) {
-            console.error("Modal de colaboradores não encontrado");
             showNotification("Erro: Modal não encontrado", "error");
             return;
         }
@@ -93,9 +135,29 @@ const CollaboratorService = {
         this.configurarLogicaCargo();
         this.configurarEventoBusca(app);
         
+        // Adicionar botão de ordenação se não existir
+        this.adicionarBotaoOrdenacao();
+        
         if (app && app.currentPauta && app.currentPauta.id) {
             this.setupListener(app, app.currentPauta.id);
         }
+    },
+
+    adicionarBotaoOrdenacao() {
+        const container = document.querySelector('#collaborators-list-table-modal');
+        if (!container) return;
+        
+        // Verifica se o botão já existe
+        if (document.getElementById('toggle-order-btn')) return;
+        
+        const header = container.querySelector('.flex.justify-between') || container;
+        const btn = document.createElement('button');
+        btn.id = 'toggle-order-btn';
+        btn.className = 'bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded text-sm mb-2';
+        btn.textContent = this.ordemAtual === 'grupo' ? '📁 Ordenar por Grupo' : '🔤 Ordenar por Nome';
+        btn.onclick = () => this.toggleOrdem();
+        
+        header.appendChild(btn);
     },
 
     closeModal() {
@@ -153,7 +215,7 @@ const CollaboratorService = {
     },
 
     // ========================================================
-    // 4. SALVAR (PAUTA + MASTER)
+    // 5. SALVAR (PAUTA + MASTER)
     // ========================================================
     async saveCollaborator(app) {
         if (!app.currentPauta?.id) {
@@ -213,7 +275,7 @@ const CollaboratorService = {
     },
 
     // ========================================================
-    // 5. LISTENER E TABELA
+    // 6. LISTENER E TABELA (COM ORDENAÇÃO)
     // ========================================================
     setupListener(app, pautaId) {
         if (!pautaId || !app?.db) return;
@@ -251,17 +313,41 @@ const CollaboratorService = {
 
         tbody.innerHTML = '';
         let selfT = 0, compT = 0;
+        
+        // Aplica a ordenação atual
+        const colaboradoresOrdenados = this.ordenarColaboradores(app.colaboradores || []);
+        
+        let ultimoGrupo = '';
 
-        (app.colaboradores || []).forEach(colab => {
+        colaboradoresOrdenados.forEach(colab => {
             if (colab.transporte === 'Meios Próprios') selfT++; 
             else if (colab.transporte === 'Com a Empresa') compT++;
+            
+            const grupoAtual = colab.equipe || 'Sem Grupo';
+            
+            // Adiciona separador de grupo se for ordenação por grupo e mudou de grupo
+            if (this.ordemAtual === 'grupo' && ultimoGrupo !== grupoAtual) {
+                ultimoGrupo = grupoAtual;
+                const groupRow = document.createElement('tr');
+                groupRow.className = 'bg-gray-100';
+                groupRow.innerHTML = `
+                    <td colspan="5" class="p-2 font-bold text-gray-700">
+                        📁 ${escapeHTML(grupoAtual)}
+                    </td>
+                `;
+                tbody.appendChild(groupRow);
+            }
             
             const row = document.createElement('tr');
             row.className = "border-b hover:bg-gray-50 text-sm";
             
+            // Destacar defensores
+            const isDefensor = colab.cargo === 'Defensor(a)';
+            const nomeClass = isDefensor ? 'font-bold text-blue-700' : 'font-bold text-gray-800';
+            
             row.innerHTML = `
                 <td class="p-3">
-                    <div class="font-bold text-gray-800">${escapeHTML(colab.nome || '')}</div>
+                    <div class="${nomeClass}">${escapeHTML(colab.nome || '')}</div>
                     <div class="text-[10px] text-gray-500 uppercase">${colab.tipo_id || 'ID'}: ${colab.identificador || ''}</div>
                 </td>
                 <td class="p-3 text-center">
@@ -403,9 +489,8 @@ const CollaboratorService = {
         const transpDefault = document.querySelector('input[name="transporte-colaborador"][value="Meios Próprios"]');
         if (transpDefault) transpDefault.checked = true;
         
-        // Limpar campo de identificador
-        const identInput = document.getElementById('collaborator-identificador-modal');
-        if (identInput) identInput.value = '';
+        // NÃO limpar o campo identificador automaticamente - preservar o que foi digitado
+        // Mas se for edição, será sobrescrito pelo editCollaborator
     }
 };
 
@@ -416,4 +501,4 @@ export default CollaboratorService;
 export { CollaboratorService };
 window.CollaboratorService = CollaboratorService;
 
-console.log("✅ colaboradores.js carregado (versão unificada: auto-preenchimento + fluxo de revisão)!");
+console.log("✅ colaboradores.js carregado (com ordenação manual por grupo/nome)!");
