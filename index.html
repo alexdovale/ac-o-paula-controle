@@ -1608,38 +1608,45 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 });
 
                 // --- SUBSTITUA O BLOCO DO BTN-GERAR-ATA-SOCIAL POR ESTE ---
+                // --- SUBSTITUA O BLOCO DO BTN-GERAR-ATA-SOCIAL POR ESTE ---
                 document.getElementById('btn-gerar-ata-social')?.addEventListener('click', () => {
+                    // Verifica se há pauta selecionada
+                    if (!this.currentPauta) {
+                        showNotification("Nenhuma pauta selecionada!", "error");
+                        return;
+                    }
+                    
                     // 1. Pergunta o Nome da Ação
-                    const acaoNome = prompt("Nome da Ação Social:", this.currentPauta?.name || "");
+                    const acaoNome = prompt("🏷️ Nome da Ação Social:", this.currentPauta?.name || "");
                     if (acaoNome === null) return;
-                
+                    
                     // 2. Pergunta o Endereço
-                    const endereco = prompt("Endereço / Local do Atendimento:", "Ex: Rua Marechal, nº 10, Duque de Caxias");
+                    const endereco = prompt("📍 Endereço / Local do Atendimento:", "Ex: Rua Marechal, nº 10, Duque de Caxias");
                     if (endereco === null) return;
-                
+                    
                     // 3. Pergunta a Data
-                    const dataAcao = prompt("Data do evento (AAAA-MM-DD):", new Date().toISOString().split('T')[0]);
+                    const dataAcao = prompt("📅 Data do evento (AAAA-MM-DD):", new Date().toISOString().split('T')[0]);
                     if (dataAcao === null) return;
-                
-                    // 4. NOVO: Pergunta o Órgão de Atendimento
-                    const orgaoNome = prompt("Informe o ÓRGÃO DE ATENDIMENTO - AS:", "AÇÃO SOCIAL 3");
+                    
+                    // 4. Pergunta o Órgão de Atendimento (conteúdo que vai abaixo do título)
+                    const orgaoNome = prompt("🏛️ Informe o ÓRGÃO DE ATENDIMENTO:", "DEFENSORIA PÚBLICA - NÚCLEO DE GUARATIBA");
                     if (orgaoNome === null) return;
-                
+                    
                     // 5. Pergunta o Total Manual
-                    const totalManual = prompt("Informe o TOTAL de atendimentos realizados:", "0");
+                    const totalManual = prompt("🔢 TOTAL de atendimentos realizados:", String(this.allAssisted.filter(a => a.status === 'atendido').length));
                     if (totalManual === null) return;
-                
+                    
                     // Organiza os dados
                     const atendidos = this.allAssisted.filter(a => a.status === 'atendido');
                     const dadosExtras = { 
                         acao: acaoNome, 
                         endereco: endereco, 
                         data: dataAcao,
-                        orgao: orgaoNome, // Passa o nome do órgão informado
-                        totalAtendimentos: totalManual // Envia o texto digitado (ex: "50" ou "50 atendimentos")
+                        orgao: orgaoNome,
+                        totalAtendimentos: totalManual
                     };
-                
-                    // Executa a geração
+                    
+                    // Pergunta se quer visualizar antes
                     if (confirm("Deseja VISUALIZAR a Ata antes de baixar?")) {
                         PDFService.previewAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
                     } else {
