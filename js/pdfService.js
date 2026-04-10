@@ -1,4 +1,4 @@
-// js/pdfService.js - VERSÃO COMPLETA E CORRIGIDA COM PDFService
+// js/pdfService.js - VERSÃO COMPLETA E CORRIGIDA COM PDFService (MESCLADA)
 
 /**
  * Utilitários de limpeza e formatação
@@ -46,13 +46,10 @@ const formatCEP = (cep) => {
  */
 const formatCurrency = (value) => {
     if (!value) return 'R$ 0,00';
-    // Se já estiver formatado, retorna como está
     if (typeof value === 'string' && value.includes('R$')) return value;
     
-    // Tenta converter para número
     let num = 0;
     if (typeof value === 'string') {
-        // Remove R$ e espaços, substitui vírgula por ponto
         const cleanValue = value.replace(/[R$\s]/g, '').replace(',', '.');
         num = parseFloat(cleanValue) || 0;
     } else {
@@ -67,6 +64,123 @@ const formatCurrency = (value) => {
 // ========================================================
 
 export const PDFService = {
+    /**
+     * FUNÇÃO INTERNA: CONSTRÓI O DOCUMENTO DA ATA SOCIAL (PARA REUSO)
+     */
+    _buildAtaAcaoSocialDoc(pautaName, colaboradores, atendidos, dadosExtras = {}) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        const dataInput = dadosExtras.data ? new Date(dadosExtras.data + 'T12:00:00') : new Date();
+        const dia = dataInput.getDate();
+        const mesExtenso = dataInput.toLocaleString('pt-BR', { month: 'long' });
+        const ano = dataInput.getFullYear();
+        
+        const endereco = dadosExtras.endereco || "Não informado";
+        const nomeDaAcao = dadosExtras.acao || pautaName;
+        const totalAtendidos = atendidos.length;
+
+        // 1. LOGO
+        const logoUrl = "https://alexdovale.github.io/ponto.codoc/imagem.png";
+        doc.addImage(logoUrl, 'PNG', 45, 10, 110, 25); 
+
+        // 2. TÍTULO
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text("ATA AÇÃO SOCIAL", 105, 45, { align: "center" });
+
+        // 3. TEXTO INTRODUTÓRIO DINÂMICO
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        const introText = `Aos ${dia} dias do mês de ${mesExtenso} do ano de ${ano}, a partir das 9h, em ${endereco}, trabalharam na ${nomeDaAcao}, os(as) Defensores(as) Públicos(as) abaixo listados(as), bem como os(as) servidores(as), conforme listagem a seguir:`;
+        
+        const splitIntro = doc.splitTextToSize(introText, 180);
+        doc.text(splitIntro, 15, 55);
+
+        const defensores = colaboradores.filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'));
+        const servidores = colaboradores.filter(c => c.cargo && !c.cargo.toLowerCase().includes('defensor'));
+
+        // 4. TABELA DEFENSOR
+        doc.autoTable({
+            startY: 75,
+            head: [['DEFENSOR PÚBLICO', '', '']],
+            body: [
+                [{ content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}, 
+                 { content: 'MATRÍCULA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}, 
+                 { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}],
+                ...defensores.map(c => [c.nome, '', ''])
+            ],
+            theme: 'grid',
+            headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold' },
+            styles: { fontSize: 9, cellPadding: 4, lineColor: [0, 0, 0], lineWidth: 0.5 },
+            columnStyles: { 0: { cellWidth: 85 }, 1: { cellWidth: 40 }, 2: { cellWidth: 'auto' } }
+        });
+
+        // 5. TABELA SERVIDOR
+        doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 10,
+            head: [['SERVIDOR', '', '']],
+            body: [
+                [{ content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}, 
+                 { content: 'ID FUNCIONAL', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}, 
+                 { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}],
+                ...servidores.map(c => [c.nome, '', ''])
+            ],
+            theme: 'grid',
+            headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold' },
+            styles: { fontSize: 8, cellPadding: 3, lineColor: [0, 0, 0], lineWidth: 0.5 },
+            columnStyles: { 0: { cellWidth: 85 }, 1: { cellWidth: 40 }, 2: { cellWidth: 'auto' } }
+        });
+
+        // 6. TABELA RODAPÉ
+        doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 10,
+            body: [
+                [{ content: 'ÓRGÃO DE ATENDIMENTO - AS', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }}, 
+                 { content: 'TOTAL DE ATENDIMENTOS', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }}],
+                [nomeDaAcao.toUpperCase(), totalAtendidos]
+            ],
+            theme: 'grid',
+            styles: { fontSize: 9, halign: 'center', cellPadding: 4, lineColor: [0, 0, 0], lineWidth: 0.5 }
+        });
+
+        const finalY = doc.lastAutoTable.finalY + 15;
+        doc.setFont("helvetica", "bold");
+        doc.text("OBSERVAÇÕES:", 15, finalY);
+        doc.line(15, finalY + 8, 195, finalY + 8); 
+
+        return doc;
+    },
+
+    /**
+     * VISUALIZAR ATA (PREVIEW) - NOVIDADE
+     */
+    previewAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
+        const doc = this._buildAtaAcaoSocialDoc(pautaName, colaboradores, atendidos, dadosExtras);
+        const blob = doc.output('bloburl');
+        window.open(blob, '_blank');
+    },
+
+    /**
+     * GERA ATA DE AÇÃO SOCIAL (DOCUMENTO OFICIAL) - VERSÃO MELHORADA
+     * @param {string} pautaName - Nome da pauta/local da ação
+     * @param {Array} colaboradores - Lista de colaboradores com nome, cargo, etc.
+     * @param {Array} atendidos - Lista de atendidos (para total de atendimentos)
+     * @param {Object} dadosExtras - Dados adicionais (data, endereco, acao)
+     * @returns {boolean} - Sucesso ou falha na geração
+     */
+    generateAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
+        try {
+            const doc = this._buildAtaAcaoSocialDoc(pautaName, colaboradores, atendidos, dadosExtras);
+            const nomeArquivo = `Ata_Social_${(dadosExtras.acao || pautaName).replace(/\s+/g, '_')}.pdf`;
+            doc.save(nomeArquivo);
+            return true;
+        } catch (error) {
+            console.error("Erro ao gerar Ata Social:", error);
+            return false;
+        }
+    },
+
     /**
      * GERA O RELATÓRIO DE ATENDIDOS
      */
@@ -102,7 +216,6 @@ export const PDFService = {
                 const arrStr = arrivalDate ? arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
                 const attStr = attendedDate ? attendedDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
 
-                // Tratamento inteligente do atendente (String ou Objeto)
                 let atendente = 'N/A';
                 if (item.attendant) {
                     atendente = (typeof item.attendant === 'object')
@@ -123,7 +236,6 @@ export const PDFService = {
                 ];
             });
 
-            // Chamada moderna do autoTable
             docPDF.autoTable({
                 head: head,
                 body: body,
@@ -203,14 +315,12 @@ export const PDFService = {
                         y = 20;
                     }
                     
-                    // Itens especiais (reu, gastos) nao recebem checkmark nem tipo
                     const isSpecial = doc.id.startsWith('reu-') || doc.id.startsWith('gasto-');
                     
                     const tipo = (!isSpecial && checklistData?.docTypes && checklistData.docTypes[doc.id])
                         ? ` [${checklistData.docTypes[doc.id]}]`
                         : '';
                     
-                    // Remove emojis e chars nao suportados por helvetica
                     const safeText = doc.text.replace(/[^\x00-\x7F\xC0-\xFF\s\-\,\.\:\;\!\?\(\)\/\\\[\]#@$%&*+<>=~^|]/g, '');
                     
                     const prefix = isSpecial ? '' : '[X] ';
@@ -233,7 +343,6 @@ export const PDFService = {
             // ===== 3. PLANILHA DE GASTOS =====
             if (checklistData && checklistData.expenseData) {
                 const expData = checklistData.expenseData;
-                // Só mostra se checkExibirGastos for true E tiver valores preenchidos
                 const gastoAtivo = expData.checkExibirGastos !== false;
                 const hasExpenses = gastoAtivo && Object.entries(expData).some(([k, v]) =>
                     k !== 'checkExibirGastos' && v && typeof v === 'string' && v.trim() !== '' && v.trim() !== 'R$ 0,00'
@@ -252,7 +361,6 @@ export const PDFService = {
                     docPDF.setFont("helvetica", "normal");
                     docPDF.setFontSize(9);
                     
-                    // Cabeçalho da tabela
                     docPDF.setFillColor(240, 240, 240);
                     docPDF.rect(margin, y - 4, pageWidth - 2*margin, 6, 'F');
                     docPDF.setFont("helvetica", "bold");
@@ -261,7 +369,6 @@ export const PDFService = {
                     y += 6;
                     docPDF.setFont("helvetica", "normal");
                     
-                    // Lista de categorias
                     const categorias = [
                         { id: 'moradia', label: 'Moradia' },
                         { id: 'alimentacao', label: 'Alimentação' },
@@ -277,7 +384,6 @@ export const PDFService = {
                     categorias.forEach(cat => {
                         let valor = checklistData.expenseData[cat.id] || '';
                         
-                        // Só mostra se tiver valor
                         if (valor && String(valor).trim() !== '' && valor !== 'R$ 0,00') {
                             if (y > pageHeight - 20) {
                                 docPDF.addPage();
@@ -288,13 +394,11 @@ export const PDFService = {
                             docPDF.text(valor, pageWidth - margin - 40, y, { align: 'right' });
                             y += 5;
                             
-                            // Calcula total
                             const valorNumerico = parseFloat(String(valor).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
                             total += valorNumerico;
                         }
                     });
                     
-                    // Mostra total
                     if (total > 0) {
                         y += 2;
                         docPDF.setDrawColor(200, 200, 200);
@@ -309,11 +413,9 @@ export const PDFService = {
                 }
             }
 
-
             // ===== 4. DADOS DO RÉU =====
             if (checklistData && checklistData.reuData) {
                 const reu = checklistData.reuData;
-                // Só mostra se checkReuUnico === true e tiver ao menos nome ou endereço
                 const hasReu = reu.checkReuUnico === true && (reu.nome || reu.rua || reu.cep);
                 if (hasReu) {
                     if (y > pageHeight - 80) { docPDF.addPage(); y = 20; }
@@ -373,7 +475,6 @@ export const PDFService = {
                 );
             }
 
-            // Salvar PDF
             const nomeArquivo = `Checklist_${(assistedName || 'Assistido').replace(/\s+/g, '_')}.pdf`;
             docPDF.save(nomeArquivo);
             console.log("✅ PDF gerado com sucesso!");
@@ -450,7 +551,6 @@ export const PDFService = {
 
             let y = 40;
 
-            // Resumo
             doc.setFontSize(12);
             doc.setTextColor(0);
             doc.text("Resumo Geral:", 14, y);
@@ -467,103 +567,6 @@ export const PDFService = {
             return true;
         } catch (error) {
             console.error("Erro PDF Estatísticas:", error);
-            return false;
-        }
-    },
-
-    /**
-     * GERA ATA DE AÇÃO SOCIAL (DOCUMENTO OFICIAL)
-     * @param {string} pautaName - Nome da pauta/local da ação
-     * @param {Array} colaboradores - Lista de colaboradores com nome, cargo, etc.
-     * @param {Array} atendidos - Lista de atendidos (para total de atendimentos)
-     * @returns {boolean} - Sucesso ou falha na geração
-     */
-    generateAtaAcaoSocial(pautaName, colaboradores, atendidos) {
-        try {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            const dataAtual = new Date();
-            const dia = dataAtual.getDate();
-            const mesExtenso = dataAtual.toLocaleString('pt-BR', { month: 'long' });
-            const ano = dataAtual.getFullYear();
-            const totalAtendidos = atendidos.length;
-
-            // 1. LOGO (Centralizado)
-            const logoUrl = "https://alexdovale.github.io/ponto.codoc/imagem.png";
-            doc.addImage(logoUrl, 'PNG', 45, 10, 110, 25); 
-
-            // 2. TÍTULO
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("ATA AÇÃO SOCIAL", 105, 45, { align: "center" });
-
-            // 3. TEXTO INTRODUTÓRIO
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(10);
-            const introText = `Aos ${dia} dias do mês de ${mesExtenso} do ano de ${ano}, a partir das 9h, trabalharam na ${pautaName}, os(as) Defensores(as) Públicos(as) abaixo listados(as), bem como os(as) servidores(as), conforme listagem a seguir:`;
-            
-            const splitIntro = doc.splitTextToSize(introText, 180);
-            doc.text(splitIntro, 15, 55);
-
-            // Filtrar categorias (baseado no cargo)
-            const defensores = colaboradores.filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'));
-            const servidores = colaboradores.filter(c => c.cargo && !c.cargo.toLowerCase().includes('defensor'));
-
-            // 4. TABELA DEFENSOR PÚBLICO
-            doc.autoTable({
-                startY: 70,
-                head: [['DEFENSOR PÚBLICO', '', '']],
-                body: [
-                    [{ content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}, 
-                     { content: 'MATRÍCULA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}, 
-                     { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}],
-                    ...defensores.map(c => [c.nome, '', ''])
-                ],
-                theme: 'grid',
-                headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold' },
-                styles: { fontSize: 9, cellPadding: 4 },
-                columnStyles: { 0: { cellWidth: 80 }, 1: { cellWidth: 40 }, 2: { cellWidth: 'auto' } }
-            });
-
-            // 5. TABELA SERVIDOR
-            doc.autoTable({
-                startY: doc.lastAutoTable.finalY + 10,
-                head: [['SERVIDOR', '', '']],
-                body: [
-                    [{ content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}, 
-                     { content: 'ID FUNCIONAL', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}, 
-                     { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold' }}],
-                    ...servidores.map(c => [c.nome, '', ''])
-                ],
-                theme: 'grid',
-                headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold' },
-                styles: { fontSize: 8, cellPadding: 3 },
-                columnStyles: { 0: { cellWidth: 80 }, 1: { cellWidth: 40 }, 2: { cellWidth: 'auto' } }
-            });
-
-            // 6. TABELA RODAPÉ (ÓRGÃO E TOTAL)
-            doc.autoTable({
-                startY: doc.lastAutoTable.finalY + 10,
-                body: [
-                    [{ content: 'ÓRGÃO DE ATENDIMENTO - AS', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }}, 
-                     { content: 'TOTAL DE ATENDIMENTOS', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center' }}],
-                    [pautaName.toUpperCase(), totalAtendidos]
-                ],
-                theme: 'grid',
-                styles: { fontSize: 9, halign: 'center', cellPadding: 4 }
-            });
-
-            // 7. OBSERVAÇÕES
-            const finalY = doc.lastAutoTable.finalY + 15;
-            doc.setFont("helvetica", "bold");
-            doc.text("OBSERVAÇÕES:", 15, finalY);
-            doc.line(15, finalY + 8, 195, finalY + 8); // Linha decorativa
-
-            doc.save(`Ata_Social_${pautaName.replace(/\s+/g, '_')}.pdf`);
-            return true;
-        } catch (error) {
-            console.error("Erro ao gerar Ata Social:", error);
             return false;
         }
     }
@@ -604,4 +607,4 @@ export const generateStatisticsPDF = (pautaName, statsData) => {
 // Tornar PDFService global
 window.PDFService = PDFService;
 
-console.log("✅ pdfService.js carregado com sucesso!");
+console.log("✅ pdfService.js carregado com sucesso (versão mesclada)!");
