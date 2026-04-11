@@ -1,4 +1,4 @@
-// js/pauta.js - VERSÃO CORRIGIDA (checkInOrder adicionado)
+// js/pauta.js - VERSÃO CORRIGIDA (checkInOrder usa arrivalTime real)
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML } from './utils.js';
 import { UIService } from './ui.js';
@@ -142,7 +142,7 @@ export const PautaService = {
             assignedRoom = document.getElementById('manual-room-select')?.value;
         }
 
-        // ⭐ CORREÇÃO: Adicionar checkInOrder quando o assistido já chega
+        // ⭐ CORREÇÃO: checkInOrder usa o timestamp do arrivalTime real
         const newAssisted = {
             name: name,
             cpf: cpfInput?.value.trim() || '',
@@ -151,7 +151,7 @@ export const PautaService = {
             status: hasArrived ? 'aguardando' : 'pauta',
             scheduledTime: scheduledTimeValue,
             arrivalTime: hasArrived && arrivalDate ? arrivalDate.toISOString() : null,
-            checkInOrder: hasArrived ? Date.now() : null, // ⭐ NOVO: timestamp da ordem de chegada
+            checkInOrder: hasArrived && arrivalDate ? arrivalDate.getTime() : null,
             assignedCollaborator: null,
             delegatedBy: null,
             delegatedAt: null,
@@ -219,7 +219,7 @@ export const PautaService = {
     },
 
     /**
-     * Atualiza status de um assistido - VERSÃO CORRIGIDA
+     * Atualiza status de um assistido - VERSÃO CORRIGIDA (checkInOrder usa arrivalTime real)
      */
     async updateStatus(db, pautaId, assistedId, updates, userName) {
         if (!pautaId || !assistedId) return;
@@ -231,12 +231,23 @@ export const PautaService = {
             const docSnap = await getDoc(docRef);
             const currentData = docSnap.exists() ? docSnap.data() : {};
             
-            // ⭐ CORREÇÃO: Se estiver marcando chegada (status virando 'aguardando'), adicionar checkInOrder
             const finalUpdates = { ...updates };
             
-            if (updates.status === 'aguardando' && !currentData.checkInOrder) {
+            // ⭐ CORREÇÃO IMPORTANTE: Se estiver marcando chegada com arrivalTime
+            if (updates.status === 'aguardando' && updates.arrivalTime) {
+                const arrivalDate = new Date(updates.arrivalTime);
+                if (!isNaN(arrivalDate.getTime())) {
+                    finalUpdates.checkInOrder = arrivalDate.getTime();
+                    console.log("✅ checkInOrder definido usando arrivalTime:", arrivalDate.getTime(), "->", arrivalDate.toLocaleTimeString());
+                } else if (!currentData.checkInOrder) {
+                    finalUpdates.checkInOrder = Date.now();
+                    console.log("⚠️ checkInOrder definido como fallback:", finalUpdates.checkInOrder);
+                }
+            } 
+            // Se não tem arrivalTime mas está virando aguardando
+            else if (updates.status === 'aguardando' && !currentData.checkInOrder) {
                 finalUpdates.checkInOrder = Date.now();
-                console.log("✅ checkInOrder definido durante updateStatus:", finalUpdates.checkInOrder);
+                console.log("✅ checkInOrder definido (sem arrivalTime):", finalUpdates.checkInOrder);
             }
             
             await updateDoc(docRef, {
