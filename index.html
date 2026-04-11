@@ -1600,30 +1600,88 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (btn) btn.addEventListener('click', () => AuthService.logout(this.auth));
                 });
 
-                // --- SUBSTITUA O BLOCO DO BTN-GERAR-ATA-SOCIAL POR ESTE ---
-                document.getElementById('btn-gerar-ata-social')?.addEventListener('click', () => {
-                    // 1. Coleta os dados dinâmicos via prompt
-                    const acaoNome = prompt("Nome da Ação Social:", this.currentPauta?.name || "");
-                    const endereco = prompt("Endereço / Local do Atendimento:", "Ex: Rua Marechal, nº 10, Duque de Caxias");
-                    const dataAcao = prompt("Data do evento (AAAA-MM-DD):", new Date().toISOString().split('T')[0]);
 
-                    // Validação simples
-                    if (!acaoNome || !endereco) {
-                        showNotification("Ação cancelada. Nome e endereço são obrigatórios.", "error");
+                // ================================================
+                // BOTÃO GERAR ATA SOCIAL - COM MODAL PERSONALIZADO
+                // ================================================
+                document.getElementById('btn-gerar-ata-social')?.addEventListener('click', () => {
+                    console.log("🚀 Botão Gerar Ata Social clicado");
+                    
+                    if (!this.currentPauta) {
+                        showNotification("Nenhuma pauta selecionada!", "error");
                         return;
                     }
-
-                    // 2. Filtra os assistidos atendidos na pauta atual
+                    
+                    // Preencher valores padrão no modal
+                    const totalAtendidos = this.allAssisted.filter(a => a.status === 'atendido').length;
+                    document.getElementById('ata-acao-nome').value = this.currentPauta?.name || '';
+                    document.getElementById('ata-data').value = new Date().toISOString().split('T')[0];
+                    document.getElementById('ata-total').value = totalAtendidos;
+                    document.getElementById('ata-endereco').value = '';
+                    document.getElementById('ata-orgao').value = '';
+                    
+                    // Mostrar modal
+                    document.getElementById('ata-social-modal').classList.remove('hidden');
+                });
+                
+                // Confirmar no modal
+                document.getElementById('confirm-ata-modal-btn')?.addEventListener('click', () => {
+                    const acaoNome = document.getElementById('ata-acao-nome').value.trim();
+                    const endereco = document.getElementById('ata-endereco').value.trim();
+                    const dataAcao = document.getElementById('ata-data').value;
+                    const orgaoNome = document.getElementById('ata-orgao').value.trim();
+                    const totalManual = document.getElementById('ata-total').value;
+                    
+                    if (!acaoNome) {
+                        showNotification("Informe o nome da Ação Social", "error");
+                        return;
+                    }
+                    
+                    if (!endereco) {
+                        showNotification("Informe o endereço", "error");
+                        return;
+                    }
+                    
+                    if (!dataAcao) {
+                        showNotification("Informe a data", "error");
+                        return;
+                    }
+                    
+                    if (!orgaoNome) {
+                        showNotification("Informe o Órgão de Atendimento", "error");
+                        return;
+                    }
+                    
+                    if (!totalManual || totalManual < 0) {
+                        showNotification("Informe um total válido de atendimentos", "error");
+                        return;
+                    }
+                    
                     const atendidos = this.allAssisted.filter(a => a.status === 'atendido');
-                    const dadosExtras = { acao: acaoNome, endereco: endereco, data: dataAcao };
-
-                    // 3. Oferece a Visualização ou Download Direto
-                    if (confirm("Deseja VISUALIZAR (Preview) a Ata antes de baixar?\n\n(Clique em 'Cancelar' para baixar o arquivo direto)")) {
+                    const dadosExtras = { 
+                        acao: acaoNome, 
+                        endereco: endereco, 
+                        data: dataAcao,
+                        orgao: orgaoNome,
+                        totalAtendimentos: totalManual
+                    };
+                    
+                    // Fechar modal
+                    document.getElementById('ata-social-modal').classList.add('hidden');
+                    
+                    // Perguntar se quer visualizar
+                    if (confirm("Deseja VISUALIZAR a Ata antes de baixar?")) {
                         PDFService.previewAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
                     } else {
                         PDFService.generateAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
                     }
                 });
+                
+                // Cancelar modal
+                document.getElementById('cancel-ata-modal-btn')?.addEventListener('click', () => {
+                    document.getElementById('ata-social-modal').classList.add('hidden');
+                });
+                
 
                 // --- MANTENHA O RESTANTE DO CÓDIGO ABAIXO COMO ESTÁ ---
                 document.addEventListener('click', (e) => {
