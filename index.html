@@ -829,22 +829,15 @@
                                 </select>
                             </div>
                         </div>
-                       <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div>
-                                <label id="label-identificador-modal" class="text-[9px] font-black text-gray-500 uppercase">ID</label>
-                                <input type="text" id="collaborator-identificador-modal" 
-                                       class="w-full p-2 border rounded-lg text-sm bg-white"
-                                       placeholder="Digite o ID ou Matrícula">
-                            </div>
-                            <div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                            <div class="md:col-span-1">
                                 <label class="text-[9px] font-black text-gray-500 uppercase">WhatsApp</label>
                                 <input type="tel" id="collaborator-phone-modal" placeholder="21999998888" class="w-full p-2 border rounded-lg text-sm bg-white">
                             </div>
-                            <div>
+                            <div class="md:col-span-1">
                                 <label class="text-[9px] font-black text-gray-500 uppercase">E-mail</label>
                                 <input type="email" id="collaborator-email-modal" class="w-full p-2 border rounded-lg text-sm bg-white">
                             </div>
-                        </div>
                             <div class="flex gap-4 p-2 bg-white border rounded-lg">
                                 <label class="text-[9px] font-black text-gray-500 uppercase mr-2">Transp:</label>
                                 <label class="flex items-center gap-1 text-xs cursor-pointer"><input type="radio" name="transporte-colaborador" value="Meios Próprios" checked> Próprio</label>
@@ -884,27 +877,11 @@
                     </table>
                 </div>
     
-                <div class="flex flex-col sm:flex-row justify-between items-center gap-2 pt-2">
-    <button id="download-collaborators-pdf-modal" 
-            class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 text-[10px] shadow-md uppercase">
-        📄 Emitir PDF
-    </button>
-    
-    <button id="btn-gerar-ata-oficial" 
-            class="bg-green-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-800 text-[10px] shadow-md uppercase">
-        📋 GERAR ATA OFICIAL
-    </button>
-    
-    <button id="btn-gerar-certificados" 
-            class="bg-blue-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 text-[10px] shadow-md uppercase">
-        🎓 GERAR CERTIFICADOS
-    </button>
-    
-    <button id="clear-collaborators-list-modal" 
-            class="text-gray-400 hover:text-red-600 text-[10px] font-bold uppercase">
-        Limpar Lista
-    </button>
-</div>
+                <div class="flex justify-between items-center pt-2">
+                    <button id="download-collaborators-pdf-modal" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 text-[10px] shadow-md uppercase">Emitir PDF</button>
+                    <button id="clear-collaborators-list-modal" class="text-gray-400 hover:text-red-600 text-[10px] font-bold uppercase">Limpar Lista</button>
+                    <button id="btn-gerar-ata-social" class="bg-green-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-800 text-[10px] shadow-md uppercase"> Gerar Ata Ação Social</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1507,33 +1484,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         import { parsePautaCSV } from './js/csvHandler.js';
         import { getChecklistHTML } from './js/checklist.js';
 
-        // ================================================
-        // FUNÇÕES PARA SALVAR ÚLTIMOS DADOS DA ATA
-        // ================================================
-        
-        const STORAGE_KEY_ATA = 'sigap_ultima_ata';
-        
-        function salvarUltimosDadosAta(dados) {
-            try {
-                localStorage.setItem(STORAGE_KEY_ATA, JSON.stringify(dados));
-                console.log("💾 Últimos dados da Ata salvos:", dados);
-            } catch (e) {
-                console.error("Erro ao salvar dados da ata:", e);
-            }
-        }
-        
-        function carregarUltimosDadosAta() {
-            try {
-                const saved = localStorage.getItem(STORAGE_KEY_ATA);
-                if (saved) {
-                    return JSON.parse(saved);
-                }
-            } catch (e) {
-                console.error("Erro ao carregar dados da ata:", e);
-            }
-            return null;
-        }
-
         class SIGAPApp {
             constructor() {
                 this.db = null;
@@ -1650,61 +1600,37 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (btn) btn.addEventListener('click', () => AuthService.logout(this.auth));
                 });
 
-                // Botão Gerar Ata Social com salvamento automático
+                // --- SUBSTITUA O BLOCO DO BTN-GERAR-ATA-SOCIAL POR ESTE ---
                 document.getElementById('btn-gerar-ata-social')?.addEventListener('click', () => {
-                    // Verifica se há pauta selecionada
-                    if (!this.currentPauta) {
-                        showNotification("Nenhuma pauta selecionada!", "error");
+                    // 1. Coleta os dados dinâmicos via prompt
+                    const acaoNome = prompt("Nome da Ação Social:", this.currentPauta?.name || "");
+                    const endereco = prompt("Endereço / Local do Atendimento:", "Ex: Rua Marechal, nº 10, Duque de Caxias");
+                    const dataAcao = prompt("Data do evento (AAAA-MM-DD):", new Date().toISOString().split('T')[0]);
+
+                    // Validação simples
+                    if (!acaoNome || !endereco) {
+                        showNotification("Ação cancelada. Nome e endereço são obrigatórios.", "error");
                         return;
                     }
-                    
-                    // Carrega últimos dados salvos
-                    const ultimosDados = carregarUltimosDadosAta();
-                    const totalAtendidosAuto = String(this.allAssisted.filter(a => a.status === 'atendido').length);
-                    
-                    // 1. Pergunta o Nome da Ação (com valor salvo)
-                    const acaoNome = prompt("🏷️ Nome da Ação Social:", 
-                        ultimosDados?.acao || this.currentPauta?.name || "");
-                    if (acaoNome === null) return;
-                    
-                    // 2. Pergunta o Endereço (com valor salvo)
-                    const endereco = prompt("📍 Endereço / Local do Atendimento:", 
-                        ultimosDados?.endereco || "Ex: Rua Marechal, nº 10, Duque de Caxias");
-                    if (endereco === null) return;
-                    
-                    // 3. Pergunta a Data (com valor salvo)
-                    const dataAcao = prompt("📅 Data do evento (AAAA-MM-DD):", 
-                        ultimosDados?.data || new Date().toISOString().split('T')[0]);
-                    if (dataAcao === null) return;
-                    
-                    // 4. Pergunta o Órgão (com valor salvo)
-                    const orgaoNome = prompt("🏛️ Informe o ÓRGÃO DE ATENDIMENTO:", 
-                        ultimosDados?.orgao || "DEFENSORIA PÚBLICA - NÚCLEO DE GUARATIBA");
-                    if (orgaoNome === null) return;
-                    
-                    // 5. Pergunta o Total (com valor salvo ou automático)
-                    const totalManual = prompt("🔢 TOTAL de atendimentos realizados:", 
-                        ultimosDados?.totalAtendimentos || totalAtendidosAuto);
-                    if (totalManual === null) return;
-                    
-                    // Organiza os dados
+
+                    // 2. Filtra os assistidos atendidos na pauta atual
                     const atendidos = this.allAssisted.filter(a => a.status === 'atendido');
-                    const dadosExtras = { 
-                        acao: acaoNome, 
-                        endereco: endereco, 
-                        data: dataAcao,
-                        orgao: orgaoNome,
-                        totalAtendimentos: totalManual
-                    };
-                    
-                    // SALVA OS DADOS PARA PRÓXIMA VEZ
-                    salvarUltimosDadosAta(dadosExtras);
-                    
-                    // Pergunta se quer visualizar antes
-                    if (confirm("Deseja VISUALIZAR a Ata antes de baixar?")) {
+                    const dadosExtras = { acao: acaoNome, endereco: endereco, data: dataAcao };
+
+                    // 3. Oferece a Visualização ou Download Direto
+                    if (confirm("Deseja VISUALIZAR (Preview) a Ata antes de baixar?\n\n(Clique em 'Cancelar' para baixar o arquivo direto)")) {
                         PDFService.previewAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
                     } else {
                         PDFService.generateAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
+                    }
+                });
+
+                // --- MANTENHA O RESTANTE DO CÓDIGO ABAIXO COMO ESTÁ ---
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.quick-action-toggle') && !e.target.closest('[id^="quick-menu-"]')) {
+                        document.querySelectorAll('[id^="quick-menu-"]').forEach(menu => {
+                            menu.classList.add('hidden');
+                        });
                     }
                 });
 
@@ -2218,8 +2144,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 
                 document.getElementById('collaborator-form-modal')?.addEventListener('submit', async (e) => {
                     e.preventDefault();
+                    
                     const nome = document.getElementById('collaborator-name-modal')?.value.trim();
-                    if (!nome) return;
+                    if (!nome) {
+                        showNotification("Nome obrigatório", "error");
+                        return;
+                    }
                     
                     const data = {
                         nome: nome,
@@ -2227,13 +2157,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         equipe: document.getElementById('collaborator-team-modal')?.value,
                         email: document.getElementById('collaborator-email-modal')?.value || '',
                         telefone: document.getElementById('collaborator-phone-modal')?.value || '',
-                        // GARANTA QUE ESTA LINHA EXISTA:
-                        identificador: document.getElementById('collaborator-identificador-modal')?.value || '', 
                         transporte: document.querySelector('input[name="transporte-colaborador"]:checked')?.value || 'Meios Próprios'
                     };
                     
                     await CollaboratorService.saveCollaborator(this, data);
-                    document.getElementById('collaborator-identificador-modal').value = '';
                 });
                 
                 document.querySelectorAll('[id^="cancel-"], [id^="close-"]').forEach(btn => {
@@ -2425,152 +2352,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         document.getElementById('document-action-selection').classList.remove('hidden');
                         document.getElementById('document-checklist-view-header').classList.add('hidden');
                         document.getElementById('checklist-search-container').classList.add('hidden');
-                    }
-                });
-
-                // ================================================
-                // HANDLERS PARA OS BOTÕES DE VOLTAR (todos os status)
-                // ================================================
-                
-                // Handler para voltar de atendido
-                document.getElementById('return-from-atendido-btn')?.addEventListener('click', async (e) => {
-                    const button = e.currentTarget;
-                    const card = button.closest('[data-id]');
-                    const assistedId = card?.getAttribute('data-id');
-                    
-                    if (assistedId) {
-                        const currentAssisted = this.allAssisted?.find(a => a.id === assistedId);
-                        let updateData = {
-                            status: 'aguardando',
-                            attendant: null,
-                            attendedTime: null,
-                            attendedBy: null,
-                            attendedAt: null,
-                            finalizadoPeloColaborador: false,
-                            isConfirmed: false,
-                            confirmationDetails: null,
-                            distributionStatus: 'pending'
-                        };
-                
-                        if (currentAssisted?.assignedCollaborator) {
-                            updateData.status = 'emAtendimento';
-                            updateData.attendant = currentAssisted.assignedCollaborator.name;
-                            updateData.distributionStatus = 'distributed';
-                        }
-                        
-                        await PautaService.updateStatus(
-                            this.db, 
-                            this.currentPauta.id, 
-                            assistedId, 
-                            updateData, 
-                            this.currentUserName
-                        );
-                        
-                        showNotification("Atendimento revertido para Aguardando", "info");
-                    }
-                });
-                
-                // Handler para voltar de em revisão
-                document.getElementById('return-from-revisao-btn')?.addEventListener('click', async (e) => {
-                    const button = e.currentTarget;
-                    const card = button.closest('[data-id]');
-                    const assistedId = card?.getAttribute('data-id');
-                    
-                    if (assistedId) {
-                        await PautaService.updateStatus(
-                            this.db, 
-                            this.currentPauta.id, 
-                            assistedId, 
-                            { status: 'aguardando' }, 
-                            this.currentUserName
-                        );
-                        showNotification("Revertido para Aguardando", "info");
-                    }
-                });
-                
-                // Handler para voltar de aguardando número
-                document.getElementById('return-from-aguardando-numero-btn')?.addEventListener('click', async (e) => {
-                    const button = e.currentTarget;
-                    const card = button.closest('[data-id]');
-                    const assistedId = card?.getAttribute('data-id');
-                    
-                    if (assistedId) {
-                        await PautaService.updateStatus(
-                            this.db, 
-                            this.currentPauta.id, 
-                            assistedId, 
-                            { status: 'aguardando' }, 
-                            this.currentUserName
-                        );
-                        showNotification("Revertido para Aguardando", "info");
-                    }
-                });
-                
-                // Handler para voltar de aguardando correção
-                document.getElementById('return-from-aguardando-correcao-btn')?.addEventListener('click', async (e) => {
-                    const button = e.currentTarget;
-                    const card = button.closest('[data-id]');
-                    const assistedId = card?.getAttribute('data-id');
-                    
-                    if (assistedId) {
-                        await PautaService.updateStatus(
-                            this.db, 
-                            this.currentPauta.id, 
-                            assistedId, 
-                            { status: 'aguardando' }, 
-                            this.currentUserName
-                        );
-                        showNotification("Revertido para Aguardando", "info");
-                    }
-                });
-                
-                // Handler para voltar de distribuído
-                document.getElementById('return-from-distribuido-btn')?.addEventListener('click', async (e) => {
-                    const button = e.currentTarget;
-                    const card = button.closest('[data-id]');
-                    const assistedId = card?.getAttribute('data-id');
-                    
-                    if (assistedId) {
-                        await PautaService.updateStatus(
-                            this.db, 
-                            this.currentPauta.id, 
-                            assistedId, 
-                            { status: 'aguardando' }, 
-                            this.currentUserName
-                        );
-                        showNotification("Revertido para Aguardando", "info");
-                    }
-                });
-                
-                // Handler para voltar de em atendimento para aguardando
-                document.getElementById('return-to-aguardando-from-emAtendimento-btn')?.addEventListener('click', async (e) => {
-                    const button = e.currentTarget;
-                    const card = button.closest('[data-id]');
-                    const assistedId = card?.getAttribute('data-id');
-                    
-                    if (assistedId) {
-                        const assisted = this.allAssisted?.find(a => a.id === assistedId);
-                        
-                        await PautaService.updateStatus(
-                            this.db, 
-                            this.currentPauta.id, 
-                            assistedId, 
-                            {
-                                status: 'aguardando',
-                                assignedCollaborator: null,
-                                delegatedBy: null,
-                                delegatedAt: null,
-                                inAttendanceTime: null,
-                                distributionStatus: null
-                            }, 
-                            this.currentUserName
-                        );
-                        
-                        if (assisted?.assignedCollaborator) {
-                            showNotification(`Delegação para ${assisted.assignedCollaborator.name} removida`, "info");
-                        } else {
-                            showNotification("Revertido para Aguardando", "info");
-                        }
                     }
                 });
                 
