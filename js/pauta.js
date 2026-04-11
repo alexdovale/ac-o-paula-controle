@@ -83,6 +83,37 @@ export const PautaService = {
     },
 
     /**
+     * Retorna o horário formatado do agendamento
+     */
+    getFormattedScheduledTime(assisted) {
+        if (!assisted.scheduledTime) return null;
+        
+        // Se já estiver no formato HH:MM, retorna direto
+        if (assisted.scheduledTime.match(/^\d{2}:\d{2}$/)) {
+            return assisted.scheduledTime;
+        }
+        
+        // Tenta converter de ISO string ou Date
+        try {
+            const date = new Date(assisted.scheduledTime);
+            if (!isNaN(date.getTime())) {
+                return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            }
+        } catch (e) {
+            console.warn("Erro ao formatar horário:", e);
+        }
+        
+        return assisted.scheduledTime;
+    },
+
+    /**
+     * Verifica se um assistido tem agendamento
+     */
+    hasScheduledTime(assisted) {
+        return assisted.type === 'agendamento' && assisted.scheduledTime;
+    },
+
+    /**
      * Configura listener em tempo real para atendimentos
      */
     setupAttendancesListener(db, pautaId, callback) {
@@ -182,12 +213,12 @@ export const PautaService = {
             status: hasArrived ? 'aguardando' : 'pauta',
             scheduledTime: scheduledTimeValue,
             arrivalTime: hasArrived && arrivalDate ? arrivalDate.toISOString() : null,
-            assignedCollaborator: null, // Colaborador para quem foi delegado
-            delegatedBy: null, // Quem delegou
-            delegatedAt: null, // Quando delegou
+            assignedCollaborator: null,
+            delegatedBy: null,
+            delegatedAt: null,
             inAttendanceTime: null,
-            attendedBy: null, // Quem realmente atendeu
-            attendedAt: null, // Quando atendeu
+            attendedBy: null,
+            attendedAt: null,
             finalizadoPeloColaborador: false,
             isConfirmed: false,
             confirmationDetails: null,
@@ -196,9 +227,8 @@ export const PautaService = {
             createdAt: new Date().toISOString(),
             lastActionBy: app.currentUserName || 'Sistema',
             lastActionTimestamp: new Date().toISOString(),
-            // Informações de distribuição
-            distributionStatus: null, // 'pending', 'distributed', 'completed'
-            distributionHistory: [] // Histórico de distribuições
+            distributionStatus: null,
+            distributionHistory: []
         };
 
         try {
@@ -210,7 +240,6 @@ export const PautaService = {
             
             console.log("Documento criado com sucesso! ID:", docRef.id);
             
-            // Registrar log de auditoria
             await logAction(
                 app.db,
                 app.auth,
@@ -260,7 +289,6 @@ export const PautaService = {
             console.log("Atualizando status:", updates);
             const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
             
-            // Buscar dados atuais para o log
             const docSnap = await getDoc(docRef);
             const currentData = docSnap.exists() ? docSnap.data() : {};
             
@@ -270,7 +298,6 @@ export const PautaService = {
                 lastActionTimestamp: new Date().toISOString()
             });
             
-            // Registrar log de auditoria
             const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados atualizados';
             await logAction(
                 db,
@@ -318,7 +345,6 @@ export const PautaService = {
                 distributionStatus: 'distributed'
             };
 
-            // Adicionar ao histórico de distribuição
             const distributionHistory = assisted.distributionHistory || [];
             distributionHistory.push({
                 type: 'delegation',
@@ -339,7 +365,6 @@ export const PautaService = {
 
             showNotification(`Atendimento delegado para ${collaboratorName}`, "success");
             
-            // Registrar log específico de delegação
             await logAction(
                 app.db,
                 app.auth,
@@ -383,13 +408,11 @@ export const PautaService = {
                 distributionStatus: 'completed'
             };
 
-            // Se tinha um colaborador delegado, registrar quem finalizou
             if (assisted.assignedCollaborator) {
                 updates.finalizedBy = app.currentUserName;
                 updates.finalizedAt = new Date().toISOString();
             }
 
-            // Adicionar demandas se houver
             if (demands && demands.length > 0) {
                 updates.demandas = {
                     descricoes: demands,
@@ -398,7 +421,6 @@ export const PautaService = {
                 };
             }
 
-            // Adicionar ao histórico
             const distributionHistory = assisted.distributionHistory || [];
             distributionHistory.push({
                 type: 'attendance',
@@ -422,7 +444,6 @@ export const PautaService = {
             
             showNotification(`Atendimento finalizado por ${quemAtendeu}${quemDelegou}`, "success");
             
-            // Registrar log específico de finalização
             await logAction(
                 app.db,
                 app.auth,
@@ -448,14 +469,12 @@ export const PautaService = {
         if (!pautaId || !assistedId) return;
         
         try {
-            // Buscar dados para o log
             const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
             const docSnap = await getDoc(docRef);
             const assistedData = docSnap.exists() ? docSnap.data() : { name: 'Desconhecido' };
             
             await deleteDoc(docRef);
             
-            // Registrar log de auditoria
             await logAction(
                 db,
                 window.app?.auth,
@@ -487,7 +506,6 @@ export const PautaService = {
             });
             await batch.commit();
             
-            // Registrar log de auditoria
             await logAction(
                 db,
                 window.app?.auth,
@@ -513,7 +531,6 @@ export const PautaService = {
         }
 
         try {
-            // Verificar se o usuário tem permissão (é dono ou admin)
             const pautaRef = doc(db, "pautas", pautaId);
             const pautaDoc = await getDoc(pautaRef);
             
@@ -530,7 +547,6 @@ export const PautaService = {
                 return false;
             }
             
-            // Verificar se é o dono ou admin
             const userDoc = await getDoc(doc(db, "users", user.uid));
             const userData = userDoc.data();
             const isAdmin = userData?.role === 'admin' || userData?.role === 'superadmin';
@@ -540,7 +556,6 @@ export const PautaService = {
                 return false;
             }
 
-            // APAGAR TODOS OS SUBDOCUMENTOS (attendances)
             const attendanceRef = collection(db, "pautas", pautaId, "attendances");
             const attendanceSnapshot = await getDocs(attendanceRef);
             
@@ -549,12 +564,10 @@ export const PautaService = {
                 batch.delete(doc.ref);
             });
             
-            // Apagar a pauta principal
             batch.delete(pautaRef);
             
             await batch.commit();
             
-            // Registrar no log de auditoria
             await logAction(
                 db,
                 auth,
@@ -584,7 +597,6 @@ export const PautaService = {
         const now = new Date();
         let pautasFiltradas = [...pautas];
         
-        // Aplicar filtro principal
         switch(filterType) {
             case 'my':
                 pautasFiltradas = pautasFiltradas.filter(p => p.owner === currentUserId);
@@ -597,7 +609,7 @@ export const PautaService = {
                 );
                 break;
                 
-            case 'active': // Pautas com prazo (não expiradas)
+            case 'active':
                 pautasFiltradas = pautasFiltradas.filter(p => {
                     if (!p.createdAt) return true;
                     const creationDate = new Date(p.createdAt);
@@ -607,7 +619,7 @@ export const PautaService = {
                 });
                 break;
                 
-            case 'expired': // Pautas expiradas
+            case 'expired':
                 pautasFiltradas = pautasFiltradas.filter(p => {
                     if (!p.createdAt) return false;
                     const creationDate = new Date(p.createdAt);
@@ -618,7 +630,6 @@ export const PautaService = {
                 break;
                 
             case 'periodo':
-                // Aplica filtros de período e tipo
                 if (filtrosAdicionais.dataInicial) {
                     const dataInicial = new Date(filtrosAdicionais.dataInicial);
                     pautasFiltradas = pautasFiltradas.filter(p => {
@@ -629,7 +640,7 @@ export const PautaService = {
                 
                 if (filtrosAdicionais.dataFinal) {
                     const dataFinal = new Date(filtrosAdicionais.dataFinal);
-                    dataFinal.setHours(23, 59, 59, 999); // Final do dia
+                    dataFinal.setHours(23, 59, 59, 999);
                     pautasFiltradas = pautasFiltradas.filter(p => {
                         if (!p.createdAt) return true;
                         return new Date(p.createdAt) <= dataFinal;
@@ -643,7 +654,6 @@ export const PautaService = {
                 
             case 'all':
             default:
-                // Mantém todas
                 break;
         }
         
@@ -687,7 +697,6 @@ export const PautaService = {
                 }
             }
 
-            // Registrar log de auditoria
             await logAction(
                 app.db,
                 app.auth,
@@ -800,7 +809,6 @@ export const PautaService = {
         if (app.currentPautaData?.ordemAtendimento === 'manual' && !app.isPautaClosed) {
             if (window.sortableAguardando) window.sortableAguardando.destroy();
 
-            // Detectar se é mobile para ajustar comportamento
             const isMobile = this.isMobileDevice();
             
             window.sortableAguardando = new Sortable(el, {
@@ -916,7 +924,6 @@ export const PautaService = {
             searchInput.value = '';
         }
         
-        // Reseta selecao anterior para que a validacao do confirm funcione corretamente
         window.selectedCollaboratorId = undefined;
         window.selectedCollaboratorName = undefined;
         
@@ -1263,7 +1270,7 @@ export const PautaService = {
     },
 
     /**
-     * Manipula ações dos cards (cliques em botões) - VERSÃO OTIMIZADA
+     * Manipula ações dos cards (cliques em botões) - VERSÃO OTIMIZADA COM BOTÃO VOLTAR
      */
     handleCardActions(e, app) {
         const button = e.target.closest('button');
@@ -1291,26 +1298,20 @@ export const PautaService = {
                 return;
             }
             
-            // Fechar todos os outros menus
             this.closeAllQuickMenus(menuId);
             
-            // Toggle do menu atual
             const isHidden = menu.classList.contains('hidden');
             menu.classList.toggle('hidden');
             
-            // Atualizar atributos ARIA
             button.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
             button.setAttribute('aria-label', isHidden ? 'Fechar menu rápido' : 'Abrir menu rápido');
             
-            // Se abriu o menu, configurar para fechar ao clicar fora
             if (!menu.classList.contains('hidden')) {
-                // Focar no primeiro item para melhor acessibilidade
                 setTimeout(() => {
                     const firstItem = menu.querySelector('.quick-action-item');
                     if (firstItem) firstItem.focus();
                 }, 100);
                 
-                // Fechar ao clicar fora
                 setTimeout(() => {
                     const clickOutsideHandler = (e) => {
                         if (!menu.contains(e.target) && !button.contains(e.target)) {
@@ -1343,7 +1344,6 @@ export const PautaService = {
                 return;
             }
             
-            // Fechar o menu
             const menu = document.getElementById(`quick-menu-${id}`);
             if (menu) {
                 menu.classList.add('hidden');
@@ -1417,7 +1417,7 @@ export const PautaService = {
             this.updateStatus(app.db, app.currentPauta.id, id, { status: 'faltoso' }, app.currentUserName);
         }
 
-        // Voltar para pauta
+        // Voltar para pauta (BOTÃO VOLTAR UNIVERSAL)
         if (button.classList.contains('return-to-pauta-btn')) {
             console.log("Voltando para pauta:", id);
             this.updateStatus(app.db, app.currentPauta.id, id, {
@@ -1431,7 +1431,7 @@ export const PautaService = {
             }, app.currentUserName);
         }
 
-        // Voltar de faltoso para pauta
+        // Voltar de faltoso para pauta (BOTÃO VOLTAR UNIVERSAL)
         if (button.classList.contains('return-to-pauta-from-faltoso-btn')) {
             console.log("Revertendo faltoso para pauta:", id);
             this.updateStatus(app.db, app.currentPauta.id, id, {
@@ -1439,7 +1439,7 @@ export const PautaService = {
             }, app.currentUserName);
         }
 
-        // Voltar para aguardando
+        // Voltar para aguardando (BOTÃO VOLTAR UNIVERSAL)
         if (button.classList.contains('return-to-aguardando-btn')) {
             console.log("Voltando para aguardando:", id);
             this.updateStatus(app.db, app.currentPauta.id, id, {
@@ -1449,7 +1449,7 @@ export const PautaService = {
             }, app.currentUserName);
         }
 
-        // Voltar de em atendimento para aguardando (quando tem delegação)
+        // Voltar de em atendimento para aguardando (BOTÃO VOLTAR UNIVERSAL)
         if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) {
             console.log("Voltando de em atendimento para aguardando:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
@@ -1468,12 +1468,69 @@ export const PautaService = {
             }
         }
 
-        // Voltar de distribuição para aguardando
+        // Voltar de distribuição para aguardando (BOTÃO VOLTAR UNIVERSAL)
         if (button.classList.contains('return-to-aguardando-from-dist-btn')) {
             console.log("Voltando de distribuição para aguardando:", id);
             this.updateStatus(app.db, app.currentPauta.id, id, {
                 status: 'aguardando',
                 distributionStatus: null
+            }, app.currentUserName);
+        }
+
+        // VOLTAR DE ATENDIDO (BOTÃO VOLTAR UNIVERSAL)
+        if (button.classList.contains('return-from-atendido-btn')) {
+            console.log("Revertendo atendido para aguardando/emAtendimento:", id);
+            const currentAssisted = app.allAssisted?.find(a => a.id === id);
+            let updateData = {
+                status: 'aguardando',
+                attendant: null,
+                attendedTime: null,
+                attendedBy: null,
+                attendedAt: null,
+                finalizadoPeloColaborador: false,
+                isConfirmed: false,
+                confirmationDetails: null,
+                distributionStatus: 'pending'
+            };
+
+            if (currentAssisted?.assignedCollaborator) {
+                updateData.status = 'emAtendimento';
+                updateData.attendant = currentAssisted.assignedCollaborator.name;
+                updateData.distributionStatus = 'distributed';
+            }
+            
+            this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
+        }
+
+        // VOLTAR DE EM REVISÃO (BOTÃO VOLTAR UNIVERSAL)
+        if (button.classList.contains('return-from-revisao-btn')) {
+            console.log("Revertendo de em revisão para aguardando:", id);
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'aguardando'
+            }, app.currentUserName);
+        }
+
+        // VOLTAR DE AGUARDANDO NUMERO (BOTÃO VOLTAR UNIVERSAL)
+        if (button.classList.contains('return-from-aguardando-numero-btn')) {
+            console.log("Revertendo de aguardando número para aguardando:", id);
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'aguardando'
+            }, app.currentUserName);
+        }
+
+        // VOLTAR DE AGUARDANDO CORRECAO (BOTÃO VOLTAR UNIVERSAL)
+        if (button.classList.contains('return-from-aguardando-correcao-btn')) {
+            console.log("Revertendo de aguardando correção para aguardando:", id);
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'aguardando'
+            }, app.currentUserName);
+        }
+
+        // VOLTAR DE DISTRIBUÍDO (BOTÃO VOLTAR UNIVERSAL)
+        if (button.classList.contains('return-from-distribuido-btn')) {
+            console.log("Revertendo de distribuído para aguardando:", id);
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'aguardando'
             }, app.currentUserName);
         }
 
@@ -1507,7 +1564,7 @@ export const PautaService = {
             }
         }
 
-        // Atender (com delegação) - Selecionar colaborador para delegar
+        // Atender (com delegação)
         if (button.classList.contains('select-collaborator-btn')) {
             console.log("Selecionando colaborador para delegar atendimento:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
@@ -1527,10 +1584,8 @@ export const PautaService = {
             if (modal) {
                 modal.classList.remove('hidden');
                 
-                // Configurar botão de confirmação para delegação
                 const confirmBtn = document.getElementById('confirm-select-collaborator');
                 if (confirmBtn) {
-                    // Remover listeners antigos
                     const newConfirmBtn = confirmBtn.cloneNode(true);
                     confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
                     
@@ -1544,7 +1599,6 @@ export const PautaService = {
                             );
                             modal.classList.add('hidden');
                         } else if (window.selectedCollaboratorId === 'null') {
-                            // Atender sem delegação
                             document.getElementById('attendant-modal')?.classList.remove('hidden');
                             this.preencherSelectColaboradores(app, 'attendant-select');
                             modal.classList.add('hidden');
@@ -1556,7 +1610,7 @@ export const PautaService = {
             }
         }
 
-        // Atender (direto) - Modal de atendimento direto
+        // Atender (direto)
         if (button.classList.contains('attend-directly-from-aguardando-btn')) {
             console.log("Atendendo diretamente:", id);
             window.assistedIdToHandle = id;
@@ -1567,7 +1621,6 @@ export const PautaService = {
             if (modal) {
                 modal.classList.remove('hidden');
                 
-                // Configurar botão de confirmação para atendimento direto
                 const confirmBtn = document.getElementById('confirm-attendant');
                 if (confirmBtn) {
                     const newConfirmBtn = confirmBtn.cloneNode(true);
@@ -1586,7 +1639,7 @@ export const PautaService = {
             }
         }
 
-        // Delegar finalização (para colaboradores)
+        // Delegar finalização
         if (button.classList.contains('delegate-finalization-btn')) {
             console.log("Delegando finalização:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
@@ -1604,7 +1657,6 @@ export const PautaService = {
             if (modal) {
                 modal.classList.remove('hidden');
                 
-                // Configurar botão de confirmação para delegação de finalização
                 const confirmBtn = document.getElementById('confirm-delegate-email');
                 if (confirmBtn) {
                     const newConfirmBtn = confirmBtn.cloneNode(true);
@@ -1613,7 +1665,6 @@ export const PautaService = {
                     newConfirmBtn.addEventListener('click', async () => {
                         const email = document.getElementById('delegate-email').value;
                         if (email) {
-                            // Aqui você pode implementar o envio de email
                             showNotification(`Notificação enviada para ${email}`, "success");
                             modal.classList.add('hidden');
                         } else {
@@ -1673,7 +1724,6 @@ export const PautaService = {
                 window.assistedIdToHandle = id;
                 document.getElementById('demands-assisted-name-modal').textContent = assisted.name || '';
                 
-                // Mostrar informações de quem atendeu/delegou
                 const infoDiv = document.createElement('div');
                 infoDiv.className = "mb-4 p-3 bg-gray-50 rounded-lg text-sm";
                 
@@ -1739,33 +1789,7 @@ export const PautaService = {
             }
         }
 
-        // Voltar de atendido para em atendimento/aguardando
-        if (button.classList.contains('return-from-atendido-btn')) {
-            console.log("Revertendo atendido:", id);
-            const currentAssisted = app.allAssisted?.find(a => a.id === id);
-            let updateData = {
-                status: 'aguardando',
-                attendant: null,
-                attendedTime: null,
-                attendedBy: null,
-                attendedAt: null,
-                finalizadoPeloColaborador: false,
-                isConfirmed: false,
-                confirmationDetails: null,
-                distributionStatus: 'pending'
-            };
-
-            // Se tinha delegação, manter o colaborador designado
-            if (currentAssisted?.assignedCollaborator) {
-                updateData.status = 'emAtendimento';
-                updateData.attendant = currentAssisted.assignedCollaborator.name;
-                updateData.distributionStatus = 'distributed';
-            }
-            
-            this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
-        }
-
-        // Confirmar atendido
+        // Confirmar atendido (Marcar Presença no Verde)
         if (button.classList.contains('toggle-confirmed-atendido') || button.classList.contains('toggle-confirmed-faltoso')) {
             console.log("Toggle confirmado:", id);
             const currentAssisted = app.allAssisted?.find(a => a.id === id);
