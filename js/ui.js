@@ -10,6 +10,70 @@ export const UIService = {
         document.getElementById('app-container').classList.toggle('hidden', screenName !== 'app');
     },
 
+    /**
+     * Formata o horário de agendamento para exibição
+     */
+    formatScheduledTime(assisted) {
+        if (!assisted || assisted.type !== 'agendamento') return null;
+        if (!assisted.scheduledTime) return null;
+        
+        // Se já estiver no formato HH:MM
+        if (assisted.scheduledTime.match(/^\d{2}:\d{2}$/)) {
+            return assisted.scheduledTime;
+        }
+        
+        try {
+            const date = new Date(assisted.scheduledTime);
+            if (!isNaN(date.getTime())) {
+                return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            }
+        } catch (e) {}
+        
+        return assisted.scheduledTime;
+    },
+
+    /**
+     * Renderiza o badge de horário agendado
+     */
+    renderScheduledTimeBadge(assisted) {
+        const scheduledTime = this.formatScheduledTime(assisted);
+        if (!scheduledTime) return '';
+        
+        return `
+            <span class="inline-flex items-center gap-1 text-[10px] md:text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full ml-1 md:ml-2" title="Horário agendado">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                ${scheduledTime}
+            </span>
+        `;
+    },
+
+    /**
+     * Renderiza badge de prioridade
+     */
+    renderPriorityBadge(priority) {
+        if (!priority || priority === 'N/A') return '';
+        
+        const priorityStyles = {
+            'URGENTE': 'bg-red-500 text-white',
+            'Máxima': 'bg-orange-500 text-white',
+            'Média': 'bg-yellow-500 text-white',
+            'Mínima': 'bg-green-500 text-white'
+        };
+        
+        const style = priorityStyles[priority] || 'bg-gray-500 text-white';
+        
+        return `
+            <span class="inline-flex items-center gap-1 text-[10px] md:text-xs ${style} px-1.5 py-0.5 rounded-full ml-1 md:ml-2" title="Prioridade">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                ${priority}
+            </span>
+        `;
+    },
+
     renderPautaFilters(containerId, activeFilter, onFilterChange, app) {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -97,7 +161,6 @@ export const UIService = {
             this.showAvulsoForm(app);
         }
         
-        // Mostrar Em Atendimento apenas se Delegação estiver ligada
         if (app.currentPautaData?.useDelegationFlow) {
             emAtendimentoColumn?.classList.remove('hidden');
         } else {
@@ -167,7 +230,6 @@ export const UIService = {
         const currentPautaData = app.currentPautaData;
         const colaboradores = app.colaboradores || [];
 
-        // Controle da Visibilidade da Coluna de Distribuição
         const useDist = currentPautaData?.useDistributionFlow || false;
         document.getElementById('distribuicao-column')?.classList.toggle('hidden', !useDist);
 
@@ -191,17 +253,14 @@ export const UIService = {
         const lists = {
             pauta: allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && this.searchFilter(a, searchTerms.pauta)),
             aguardando: allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && this.searchFilter(a, searchTerms.aguardando)),
-            
-            // Aqui é o segredo: Todos os status de revisão continuam sendo renderizados na coluna "Em Atendimento"
             emAtendimento: allAssisted.filter(a => ['emAtendimento', 'emRevisao', 'aguardandoCorrecao', 'aguardandoNumero'].includes(a.status) && a.type === currentMode && this.searchFilter(a, searchTerms.emAtendimento)),
-            
             atendidos: allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && this.searchFilter(a, searchTerms.atendidos)),
             faltosos: allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento' && this.searchFilter(a, searchTerms.faltosos)),
             distribuicao: allAssisted.filter(a => a.status === 'aguardandoDistribuicao' && this.searchFilter(a, searchTerms.distribuicao))
         };
 
         lists.pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
-        lists.atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
+        lists.atendidos.sort((a, b) => new Date(b.attendedAt || b.attendedTime) - new Date(a.attendedAt || a.attendedTime));
         lists.faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
         lists.emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
         
@@ -272,9 +331,15 @@ export const UIService = {
     createPautaCard(item) {
         const card = document.createElement('div');
         card.className = 'relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3';
+        
+        const scheduledBadge = this.renderScheduledTimeBadge(item);
+        
         card.innerHTML = `
             <button data-id="${item.id}" class="delete-btn absolute top-3 right-3 text-gray-300 hover:text-red-500">🗑️</button>
-            <p class="font-bold text-xl text-gray-800 leading-tight pr-6">${escapeHTML(item.name || '').toUpperCase()}</p>
+            <div class="flex items-center flex-wrap pr-6">
+                <p class="font-bold text-xl text-gray-800 leading-tight">${escapeHTML(item.name || '').toUpperCase()}</p>
+                ${scheduledBadge}
+            </div>
             <div class="mt-2 space-y-0.5 text-sm text-gray-700">
                 <p>Assunto: <span class="font-bold uppercase">${escapeHTML(item.subject || 'Não informado')}</span></p>
                 <p>Agendado: <span class="font-bold">${item.scheduledTime || '--:--'}</span></p>
@@ -283,7 +348,10 @@ export const UIService = {
                 <button data-id="${item.id}" class="check-in-btn bg-green-500 text-white font-bold py-2.5 rounded-lg text-xs">Marcar Chegada</button>
                 <button data-id="${item.id}" class="faltou-btn bg-yellow-500 text-white font-bold py-2.5 rounded-lg text-xs">Faltou</button>
                 <button data-id="${item.id}" class="edit-assisted-btn col-span-2 bg-slate-500 text-white font-bold py-2.5 rounded-lg text-xs">Editar Dados</button>
-            </div>`;
+            </div>
+            <!-- Botão Voltar para Pauta (quando aplicável) -->
+            <button data-id="${item.id}" class="return-to-pauta-btn w-full mt-2 bg-gray-200 text-gray-700 font-bold py-2 rounded-lg text-xs hover:bg-gray-300">← Voltar para Pauta</button>
+        `;
         return card;
     },
 
@@ -317,16 +385,26 @@ export const UIService = {
             ? `<button data-id="${item.id}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg text-sm w-full">Atender</button>`
             : `<button data-id="${item.id}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg text-sm w-full">Atender</button>`;
 
+        const scheduledBadge = this.renderScheduledTimeBadge(item);
+        const priorityBadge = this.renderPriorityBadge(item.priority);
+
         card.innerHTML = `
             <div class="absolute -left-2 -top-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white">${index + 1}</div>
             <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600">🗑️</button>
-            <p class="font-bold text-lg text-gray-800 mb-1">${escapeHTML(item.name)}</p>
+            <div class="flex items-center flex-wrap pr-6">
+                <p class="font-bold text-lg text-gray-800 mb-1">${escapeHTML(item.name)}</p>
+                ${scheduledBadge}
+                ${priorityBadge}
+            </div>
             <p class="text-xs text-gray-600">Assunto: <strong>${escapeHTML(item.subject)}</strong></p>
             <div class="mt-4 grid grid-cols-2 gap-2">
                 ${atenderButton}
                 <button data-id="${item.id}" class="priority-btn bg-red-500 text-white font-semibold py-2 rounded-lg text-xs">Prioridade</button>
             </div>
-            <button data-id="${item.id}" class="view-details-btn text-indigo-500 text-[11px] font-bold mt-2 w-full text-center underline">Ver Detalhes</button>`;
+            <button data-id="${item.id}" class="view-details-btn text-indigo-500 text-[11px] font-bold mt-2 w-full text-center underline">Ver Detalhes</button>
+            <!-- Botão Voltar para Aguardando -->
+            <button data-id="${item.id}" class="return-to-aguardando-btn w-full mt-2 bg-gray-200 text-gray-700 font-bold py-1.5 rounded-lg text-[10px] hover:bg-gray-300">← Voltar p/ Aguardando</button>
+        `;
         return card;
     },
 
@@ -342,22 +420,32 @@ export const UIService = {
         const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
         const linkDireto = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&collaboratorName=${encodeURIComponent(userName)}`;
 
-        // ========================================================
-        // ETIQUETAS VISUAIS DE STATUS (A MÁGICA DA REVISÃO AQUI)
-        // ========================================================
+        const scheduledBadge = this.renderScheduledTimeBadge(item);
+
         let statusLabel = '';
+        let returnButton = '';
+        
         if (item.status === 'emRevisao') {
             statusLabel = `<span class="bg-purple-100 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded border border-purple-200">🔍 Em Revisão (Defensor)</span>`;
+            returnButton = `<button data-id="${item.id}" class="return-from-revisao-btn w-full mt-2 bg-gray-200 text-gray-700 font-bold py-2 rounded-lg text-xs hover:bg-gray-300">← Voltar p/ Aguardando</button>`;
         } else if (item.status === 'aguardandoCorrecao') {
             statusLabel = `<span class="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-0.5 rounded border border-red-200">✏️ Corrigir: ${escapeHTML(item.reviewMotivoDevolucao || '')}</span>`;
+            returnButton = `<button data-id="${item.id}" class="return-from-aguardando-correcao-btn w-full mt-2 bg-gray-200 text-gray-700 font-bold py-2 rounded-lg text-xs hover:bg-gray-300">← Voltar p/ Aguardando</button>`;
         } else if (item.status === 'aguardandoNumero') {
             statusLabel = `<span class="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-200">⏳ Aguardando Processo</span>`;
+            returnButton = `<button data-id="${item.id}" class="return-from-aguardando-numero-btn w-full mt-2 bg-gray-200 text-gray-700 font-bold py-2 rounded-lg text-xs hover:bg-gray-300">← Voltar p/ Aguardando</button>`;
+        } else {
+            // emAtendimento normal
+            returnButton = `<button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn w-full mt-2 bg-gray-200 text-gray-700 font-bold py-2 rounded-lg text-xs hover:bg-gray-300">← Voltar p/ Aguardando</button>`;
         }
 
         card.innerHTML = `
             <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500">🗑️</button>
 
-            <p class="font-bold text-xl text-gray-800">${index + 1}. ${escapeHTML(item.name || '')}</p>
+            <div class="flex items-center flex-wrap pr-6">
+                <p class="font-bold text-xl text-gray-800">${index + 1}. ${escapeHTML(item.name || '')}</p>
+                ${scheduledBadge}
+            </div>
             <p class="text-xs mt-1">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
             <p class="text-xs">Colaborador: ${escapeHTML(item.assignedCollaborator?.name || 'Não atribuído')}</p>
             
@@ -367,9 +455,7 @@ export const UIService = {
                 <button onclick="window.open('${linkDireto}', '_blank')" class="bg-blue-600 text-white font-bold py-3 rounded-lg text-sm shadow-md hover:bg-blue-700">
                     Abrir Painel de Atendimento
                 </button>
-                <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-200 text-gray-700 font-bold py-2 rounded-lg text-xs hover:bg-slate-300">
-                    Voltar p/ Aguardando
-                </button>
+                ${returnButton}
             </div>
         `;
         return card;
@@ -384,8 +470,13 @@ export const UIService = {
         const card = document.createElement('div');
         card.className = 'relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4';
         
+        const scheduledBadge = this.renderScheduledTimeBadge(item);
+        
         card.innerHTML = `
-            <p class="font-bold text-lg text-gray-800">${escapeHTML(item.name || '')}</p>
+            <div class="flex items-center flex-wrap">
+                <p class="font-bold text-lg text-gray-800">${escapeHTML(item.name || '')}</p>
+                ${scheduledBadge}
+            </div>
             <p class="text-xs mt-1 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
             ${item.processNumber ? `<p class="text-[10px] font-mono text-indigo-600 mt-1 bg-indigo-50 px-2 rounded w-fit">Processo Nº ${item.processNumber}</p>` : ''}
             
@@ -402,7 +493,16 @@ export const UIService = {
         if (container) items.forEach(item => {
             const card = document.createElement('div');
             card.className = 'relative bg-red-50 p-4 rounded-lg border border-red-100 mb-2 opacity-80';
-            card.innerHTML = `<p class="font-bold text-gray-700 text-sm">${escapeHTML(item.name)}</p><button data-id="${item.id}" class="return-to-pauta-from-faltoso-btn mt-2 w-full bg-white text-red-500 border border-red-200 py-1 rounded text-[9px] font-bold uppercase">Voltar p/ Pauta</button>`;
+            
+            const scheduledBadge = this.renderScheduledTimeBadge(item);
+            
+            card.innerHTML = `
+                <div class="flex items-center flex-wrap">
+                    <p class="font-bold text-gray-700 text-sm">${escapeHTML(item.name)}</p>
+                    ${scheduledBadge}
+                </div>
+                <button data-id="${item.id}" class="return-to-pauta-from-faltoso-btn mt-2 w-full bg-white text-red-500 border border-red-200 py-1 rounded text-[9px] font-bold uppercase">← Voltar p/ Pauta</button>
+            `;
             container.appendChild(card);
         });
     },
@@ -413,10 +513,19 @@ export const UIService = {
             const card = document.createElement('div');
             card.className = 'relative bg-cyan-50 p-4 rounded-lg border border-cyan-200 mb-2';
             const link = `./atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&collaboratorName=${encodeURIComponent(userName)}`;
+            
+            const scheduledBadge = this.renderScheduledTimeBadge(item);
+            
             card.innerHTML = `
-                <p class="font-bold text-gray-800 text-sm">${escapeHTML(item.name)}</p>
+                <div class="flex items-center flex-wrap">
+                    <p class="font-bold text-gray-800 text-sm">${escapeHTML(item.name)}</p>
+                    ${scheduledBadge}
+                </div>
                 <p class="text-[10px] text-cyan-700 font-bold uppercase mt-1">⚖️ Aguardando Distribuição</p>
-                <button onclick="window.open('${link}', '_blank')" class="w-full bg-cyan-600 text-white text-[10px] font-bold py-2 rounded mt-3 uppercase hover:bg-cyan-700">Protocolar Processo</button>
+                <div class="flex gap-2 mt-3">
+                    <button onclick="window.open('${link}', '_blank')" class="flex-1 bg-cyan-600 text-white text-[10px] font-bold py-2 rounded uppercase hover:bg-cyan-700">Protocolar Processo</button>
+                    <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn flex-1 bg-gray-200 text-gray-700 text-[10px] font-bold py-2 rounded hover:bg-gray-300">← Voltar</button>
+                </div>
             `;
             container.appendChild(card);
         });
