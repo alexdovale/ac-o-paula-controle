@@ -2427,6 +2427,152 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         document.getElementById('checklist-search-container').classList.add('hidden');
                     }
                 });
+
+                // ================================================
+                // HANDLERS PARA OS BOTÕES DE VOLTAR (todos os status)
+                // ================================================
+                
+                // Handler para voltar de atendido
+                document.getElementById('return-from-atendido-btn')?.addEventListener('click', async (e) => {
+                    const button = e.currentTarget;
+                    const card = button.closest('[data-id]');
+                    const assistedId = card?.getAttribute('data-id');
+                    
+                    if (assistedId) {
+                        const currentAssisted = this.allAssisted?.find(a => a.id === assistedId);
+                        let updateData = {
+                            status: 'aguardando',
+                            attendant: null,
+                            attendedTime: null,
+                            attendedBy: null,
+                            attendedAt: null,
+                            finalizadoPeloColaborador: false,
+                            isConfirmed: false,
+                            confirmationDetails: null,
+                            distributionStatus: 'pending'
+                        };
+                
+                        if (currentAssisted?.assignedCollaborator) {
+                            updateData.status = 'emAtendimento';
+                            updateData.attendant = currentAssisted.assignedCollaborator.name;
+                            updateData.distributionStatus = 'distributed';
+                        }
+                        
+                        await PautaService.updateStatus(
+                            this.db, 
+                            this.currentPauta.id, 
+                            assistedId, 
+                            updateData, 
+                            this.currentUserName
+                        );
+                        
+                        showNotification("Atendimento revertido para Aguardando", "info");
+                    }
+                });
+                
+                // Handler para voltar de em revisão
+                document.getElementById('return-from-revisao-btn')?.addEventListener('click', async (e) => {
+                    const button = e.currentTarget;
+                    const card = button.closest('[data-id]');
+                    const assistedId = card?.getAttribute('data-id');
+                    
+                    if (assistedId) {
+                        await PautaService.updateStatus(
+                            this.db, 
+                            this.currentPauta.id, 
+                            assistedId, 
+                            { status: 'aguardando' }, 
+                            this.currentUserName
+                        );
+                        showNotification("Revertido para Aguardando", "info");
+                    }
+                });
+                
+                // Handler para voltar de aguardando número
+                document.getElementById('return-from-aguardando-numero-btn')?.addEventListener('click', async (e) => {
+                    const button = e.currentTarget;
+                    const card = button.closest('[data-id]');
+                    const assistedId = card?.getAttribute('data-id');
+                    
+                    if (assistedId) {
+                        await PautaService.updateStatus(
+                            this.db, 
+                            this.currentPauta.id, 
+                            assistedId, 
+                            { status: 'aguardando' }, 
+                            this.currentUserName
+                        );
+                        showNotification("Revertido para Aguardando", "info");
+                    }
+                });
+                
+                // Handler para voltar de aguardando correção
+                document.getElementById('return-from-aguardando-correcao-btn')?.addEventListener('click', async (e) => {
+                    const button = e.currentTarget;
+                    const card = button.closest('[data-id]');
+                    const assistedId = card?.getAttribute('data-id');
+                    
+                    if (assistedId) {
+                        await PautaService.updateStatus(
+                            this.db, 
+                            this.currentPauta.id, 
+                            assistedId, 
+                            { status: 'aguardando' }, 
+                            this.currentUserName
+                        );
+                        showNotification("Revertido para Aguardando", "info");
+                    }
+                });
+                
+                // Handler para voltar de distribuído
+                document.getElementById('return-from-distribuido-btn')?.addEventListener('click', async (e) => {
+                    const button = e.currentTarget;
+                    const card = button.closest('[data-id]');
+                    const assistedId = card?.getAttribute('data-id');
+                    
+                    if (assistedId) {
+                        await PautaService.updateStatus(
+                            this.db, 
+                            this.currentPauta.id, 
+                            assistedId, 
+                            { status: 'aguardando' }, 
+                            this.currentUserName
+                        );
+                        showNotification("Revertido para Aguardando", "info");
+                    }
+                });
+                
+                // Handler para voltar de em atendimento para aguardando
+                document.getElementById('return-to-aguardando-from-emAtendimento-btn')?.addEventListener('click', async (e) => {
+                    const button = e.currentTarget;
+                    const card = button.closest('[data-id]');
+                    const assistedId = card?.getAttribute('data-id');
+                    
+                    if (assistedId) {
+                        const assisted = this.allAssisted?.find(a => a.id === assistedId);
+                        
+                        await PautaService.updateStatus(
+                            this.db, 
+                            this.currentPauta.id, 
+                            assistedId, 
+                            {
+                                status: 'aguardando',
+                                assignedCollaborator: null,
+                                delegatedBy: null,
+                                delegatedAt: null,
+                                inAttendanceTime: null,
+                                distributionStatus: null
+                            }, 
+                            this.currentUserName
+                        );
+                        
+                        if (assisted?.assignedCollaborator) {
+                            showNotification(`Delegação para ${assisted.assignedCollaborator.name} removida`, "info");
+                        } else {
+                            showNotification("Revertido para Aguardando", "info");
+                        }
+                    }
+                });
                 
                 // Funções auxiliares — lêem direto do DOM (mesmos IDs do detalhes.js)
                 function getReuDataFromForm() {
