@@ -57,6 +57,7 @@ export const PautaService = {
             if (excludeMenuId === null || menu.id !== excludeMenuId) {
                 menu.classList.add('hidden');
                 
+                // Atualizar botão toggle correspondente
                 const toggleId = menu.id.replace('quick-menu', 'quick-toggle');
                 const toggle = document.getElementById(toggleId);
                 if (toggle) {
@@ -79,54 +80,6 @@ export const PautaService = {
         
         this.actionCooldown.set(actionId, now);
         return true;
-    },
-
-    /**
-     * Retorna o horário formatado do agendamento
-     */
-    getFormattedScheduledTime(assisted) {
-        if (!assisted || assisted.type !== 'agendamento') return null;
-        if (!assisted.scheduledTime) return null;
-        
-        if (assisted.scheduledTime.match(/^\d{2}:\d{2}$/)) {
-            return assisted.scheduledTime;
-        }
-        
-        try {
-            const date = new Date(assisted.scheduledTime);
-            if (!isNaN(date.getTime())) {
-                return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            }
-        } catch (e) {}
-        
-        return assisted.scheduledTime;
-    },
-
-    /**
-     * Verifica se um assistido tem agendamento
-     */
-    hasScheduledTime(assisted) {
-        return assisted.type === 'agendamento' && assisted.scheduledTime;
-    },
-
-    /**
-     * Calcula minutos de atraso
-     */
-    calculateDelay(assisted) {
-        if (!assisted || assisted.type !== 'agendamento') return 0;
-        if (!assisted.scheduledTime || !assisted.arrivalTime) return 0;
-        
-        try {
-            const [schedHours, schedMins] = assisted.scheduledTime.split(':');
-            const arrivalDate = new Date(assisted.arrivalTime);
-            
-            const scheduledMinutes = parseInt(schedHours) * 60 + parseInt(schedMins);
-            const arrivalMinutes = arrivalDate.getHours() * 60 + arrivalDate.getMinutes();
-            
-            return Math.max(0, arrivalMinutes - scheduledMinutes);
-        } catch (e) {
-            return 0;
-        }
     },
 
     /**
@@ -229,12 +182,12 @@ export const PautaService = {
             status: hasArrived ? 'aguardando' : 'pauta',
             scheduledTime: scheduledTimeValue,
             arrivalTime: hasArrived && arrivalDate ? arrivalDate.toISOString() : null,
-            assignedCollaborator: null,
-            delegatedBy: null,
-            delegatedAt: null,
+            assignedCollaborator: null, // Colaborador para quem foi delegado
+            delegatedBy: null, // Quem delegou
+            delegatedAt: null, // Quando delegou
             inAttendanceTime: null,
-            attendedBy: null,
-            attendedAt: null,
+            attendedBy: null, // Quem realmente atendeu
+            attendedAt: null, // Quando atendeu
             finalizadoPeloColaborador: false,
             isConfirmed: false,
             confirmationDetails: null,
@@ -243,8 +196,9 @@ export const PautaService = {
             createdAt: new Date().toISOString(),
             lastActionBy: app.currentUserName || 'Sistema',
             lastActionTimestamp: new Date().toISOString(),
-            distributionStatus: null,
-            distributionHistory: []
+            // Informações de distribuição
+            distributionStatus: null, // 'pending', 'distributed', 'completed'
+            distributionHistory: [] // Histórico de distribuições
         };
 
         try {
@@ -256,6 +210,7 @@ export const PautaService = {
             
             console.log("Documento criado com sucesso! ID:", docRef.id);
             
+            // Registrar log de auditoria
             await logAction(
                 app.db,
                 app.auth,
@@ -279,6 +234,8 @@ export const PautaService = {
             
         } catch (error) {
             console.error("Erro detalhado ao adicionar:", error);
+            console.error("Código do erro:", error.code);
+            console.error("Mensagem:", error.message);
             
             let mensagem = "Erro ao adicionar assistido";
             if (error.code === 'permission-denied') {
@@ -303,6 +260,7 @@ export const PautaService = {
             console.log("Atualizando status:", updates);
             const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
             
+            // Buscar dados atuais para o log
             const docSnap = await getDoc(docRef);
             const currentData = docSnap.exists() ? docSnap.data() : {};
             
@@ -312,6 +270,7 @@ export const PautaService = {
                 lastActionTimestamp: new Date().toISOString()
             });
             
+            // Registrar log de auditoria
             const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados atualizados';
             await logAction(
                 db,
@@ -359,6 +318,7 @@ export const PautaService = {
                 distributionStatus: 'distributed'
             };
 
+            // Adicionar ao histórico de distribuição
             const distributionHistory = assisted.distributionHistory || [];
             distributionHistory.push({
                 type: 'delegation',
@@ -379,6 +339,7 @@ export const PautaService = {
 
             showNotification(`Atendimento delegado para ${collaboratorName}`, "success");
             
+            // Registrar log específico de delegação
             await logAction(
                 app.db,
                 app.auth,
@@ -422,11 +383,13 @@ export const PautaService = {
                 distributionStatus: 'completed'
             };
 
+            // Se tinha um colaborador delegado, registrar quem finalizou
             if (assisted.assignedCollaborator) {
                 updates.finalizedBy = app.currentUserName;
                 updates.finalizedAt = new Date().toISOString();
             }
 
+            // Adicionar demandas se houver
             if (demands && demands.length > 0) {
                 updates.demandas = {
                     descricoes: demands,
@@ -435,6 +398,7 @@ export const PautaService = {
                 };
             }
 
+            // Adicionar ao histórico
             const distributionHistory = assisted.distributionHistory || [];
             distributionHistory.push({
                 type: 'attendance',
@@ -458,6 +422,7 @@ export const PautaService = {
             
             showNotification(`Atendimento finalizado por ${quemAtendeu}${quemDelegou}`, "success");
             
+            // Registrar log específico de finalização
             await logAction(
                 app.db,
                 app.auth,
@@ -483,12 +448,14 @@ export const PautaService = {
         if (!pautaId || !assistedId) return;
         
         try {
+            // Buscar dados para o log
             const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
             const docSnap = await getDoc(docRef);
             const assistedData = docSnap.exists() ? docSnap.data() : { name: 'Desconhecido' };
             
             await deleteDoc(docRef);
             
+            // Registrar log de auditoria
             await logAction(
                 db,
                 window.app?.auth,
@@ -520,6 +487,7 @@ export const PautaService = {
             });
             await batch.commit();
             
+            // Registrar log de auditoria
             await logAction(
                 db,
                 window.app?.auth,
@@ -545,6 +513,7 @@ export const PautaService = {
         }
 
         try {
+            // Verificar se o usuário tem permissão (é dono ou admin)
             const pautaRef = doc(db, "pautas", pautaId);
             const pautaDoc = await getDoc(pautaRef);
             
@@ -561,6 +530,7 @@ export const PautaService = {
                 return false;
             }
             
+            // Verificar se é o dono ou admin
             const userDoc = await getDoc(doc(db, "users", user.uid));
             const userData = userDoc.data();
             const isAdmin = userData?.role === 'admin' || userData?.role === 'superadmin';
@@ -570,6 +540,7 @@ export const PautaService = {
                 return false;
             }
 
+            // APAGAR TODOS OS SUBDOCUMENTOS (attendances)
             const attendanceRef = collection(db, "pautas", pautaId, "attendances");
             const attendanceSnapshot = await getDocs(attendanceRef);
             
@@ -578,10 +549,12 @@ export const PautaService = {
                 batch.delete(doc.ref);
             });
             
+            // Apagar a pauta principal
             batch.delete(pautaRef);
             
             await batch.commit();
             
+            // Registrar no log de auditoria
             await logAction(
                 db,
                 auth,
@@ -611,6 +584,7 @@ export const PautaService = {
         const now = new Date();
         let pautasFiltradas = [...pautas];
         
+        // Aplicar filtro principal
         switch(filterType) {
             case 'my':
                 pautasFiltradas = pautasFiltradas.filter(p => p.owner === currentUserId);
@@ -623,7 +597,7 @@ export const PautaService = {
                 );
                 break;
                 
-            case 'active':
+            case 'active': // Pautas com prazo (não expiradas)
                 pautasFiltradas = pautasFiltradas.filter(p => {
                     if (!p.createdAt) return true;
                     const creationDate = new Date(p.createdAt);
@@ -633,7 +607,7 @@ export const PautaService = {
                 });
                 break;
                 
-            case 'expired':
+            case 'expired': // Pautas expiradas
                 pautasFiltradas = pautasFiltradas.filter(p => {
                     if (!p.createdAt) return false;
                     const creationDate = new Date(p.createdAt);
@@ -644,6 +618,7 @@ export const PautaService = {
                 break;
                 
             case 'periodo':
+                // Aplica filtros de período e tipo
                 if (filtrosAdicionais.dataInicial) {
                     const dataInicial = new Date(filtrosAdicionais.dataInicial);
                     pautasFiltradas = pautasFiltradas.filter(p => {
@@ -654,7 +629,7 @@ export const PautaService = {
                 
                 if (filtrosAdicionais.dataFinal) {
                     const dataFinal = new Date(filtrosAdicionais.dataFinal);
-                    dataFinal.setHours(23, 59, 59, 999);
+                    dataFinal.setHours(23, 59, 59, 999); // Final do dia
                     pautasFiltradas = pautasFiltradas.filter(p => {
                         if (!p.createdAt) return true;
                         return new Date(p.createdAt) <= dataFinal;
@@ -668,6 +643,7 @@ export const PautaService = {
                 
             case 'all':
             default:
+                // Mantém todas
                 break;
         }
         
@@ -711,6 +687,7 @@ export const PautaService = {
                 }
             }
 
+            // Registrar log de auditoria
             await logAction(
                 app.db,
                 app.auth,
@@ -755,153 +732,50 @@ export const PautaService = {
     },
 
     /**
-     * Ordena lista de aguardando conforme regras (CORRIGIDO)
+     * Ordena lista de aguardando conforme regras
      */
     sortAguardando(list, orderType) {
         if (!list?.length) return [];
         
-        // Se for ordenação manual, apenas ordena por índice
         if (orderType === 'manual') {
             return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
         }
         
-        // Se for ordenação por chegada, ordena por horário de chegada
         if (orderType === 'chegada') {
-            return [...list].sort((a, b) => {
-                const timeA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : 0;
-                const timeB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : 0;
-                return timeA - timeB;
-            });
+            return [...list].sort((a, b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
         }
-        
-        // ORDENAÇÃO PADRÃO DO SISTEMA (a mais justa)
+
         return [...list].sort((a, b) => {
-            // 1. PRIORIDADE LEGAL ABSOLUTA (URGENTE tem prioridade máxima)
-            const aIsUrgent = a.priority === 'URGENTE';
-            const bIsUrgent = b.priority === 'URGENTE';
-            
-            if (aIsUrgent && !bIsUrgent) return -1;
-            if (!aIsUrgent && bIsUrgent) return 1;
-            
-            // 2. AMBOS SÃO URGENTES OU NENHUM É URGENTE
-            // Agora aplicamos a regra de pontualidade vs atraso
-            
-            // Verificar se é agendado ou avulso
-            const aIsScheduled = a.type === 'agendamento' && a.scheduledTime;
-            const bIsScheduled = b.type === 'agendamento' && b.scheduledTime;
-            
-            // Caso 1: Ambos são avulsos (ordem de chegada)
-            if (!aIsScheduled && !bIsScheduled) {
-                const timeA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : 0;
-                const timeB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : 0;
-                return timeA - timeB;
-            }
-            
-            // Caso 2: Um é avulso e outro é agendado
-            if (!aIsScheduled && bIsScheduled) {
-                // Avulso vai para o final da fila de agendados do horário atual
-                return 1;
-            }
-            if (aIsScheduled && !bIsScheduled) {
-                return -1;
-            }
-            
-            // Caso 3: Ambos são agendados
-            // Converter horários para minutos desde meia-noite para facilitar comparação
-            const getTimeInMinutes = (timeStr) => {
-                if (!timeStr) return null;
-                const [hours, minutes] = timeStr.split(':');
-                return parseInt(hours) * 60 + parseInt(minutes);
-            };
-            
-            const scheduledA = getTimeInMinutes(a.scheduledTime);
-            const scheduledB = getTimeInMinutes(b.scheduledTime);
-            
-            // Obter horário de chegada em minutos
-            const getArrivalMinutes = (item) => {
-                if (!item.arrivalTime) return null;
-                const arrivalDate = new Date(item.arrivalTime);
-                return arrivalDate.getHours() * 60 + arrivalDate.getMinutes();
-            };
-            
-            const arrivalA = getArrivalMinutes(a);
-            const arrivalB = getArrivalMinutes(b);
-            
-            // Calcular atraso (minutos)
-            const delayA = (arrivalA !== null && scheduledA !== null) ? arrivalA - scheduledA : null;
-            const delayB = (arrivalB !== null && scheduledB !== null) ? arrivalB - scheduledB : null;
-            
-            // REGRA DO ATRASO GRAVE (> 30 minutos)
-            const isLateA = delayA !== null && delayA > 30;
-            const isLateB = delayB !== null && delayB > 30;
-            
-            // Se um atrasou grave e o outro não
-            if (isLateA && !isLateB) {
-                // O que atrasou perde a vez para o pontual do próximo horário
-                if (scheduledA > scheduledB) {
-                    return 1;
-                } else {
-                    return 1;
+            if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+            if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+
+            const getVirtualTime = (item) => {
+                if (item.type === 'avulso') return item.checkInOrder || 0;
+                if (!item.scheduledTime) return 0;
+
+                try {
+                    const scheduled = new Date(`1970-01-01T${item.scheduledTime}`).getTime();
+                    if (!item.arrivalTime) return scheduled;
+
+                    const arrival = new Date(item.arrivalTime);
+                    const arrivalHour = new Date(`1970-01-01T${arrival.getHours()}:${arrival.getMinutes()}`).getTime();
+                    const diff = (arrivalHour - scheduled) / 60000;
+
+                    if (diff > 30) return scheduled + (45 * 60 * 1000);
+                    if (diff > 0) return scheduled + (15 * 60 * 1000);
+                    return scheduled;
+                } catch (e) {
+                    return 0;
                 }
-            }
-            
-            if (!isLateA && isLateB) {
-                if (scheduledB > scheduledA) {
-                    return -1;
-                } else {
-                    return -1;
-                }
-            }
-            
-            // Se ambos atrasaram grave OU nenhum atrasou grave
-            // Comparar por horário agendado primeiro
-            if (scheduledA !== scheduledB) {
-                return scheduledA - scheduledB;
-            }
-            
-            // Mesmo horário agendado - desempate por horário de chegada (quem chegou primeiro)
-            if (arrivalA !== null && arrivalB !== null) {
-                return arrivalA - arrivalB;
-            }
-            
-            // Se um não tem horário de chegada (ainda não chegou), vai para o final
-            if (arrivalA === null && arrivalB !== null) return 1;
-            if (arrivalA !== null && arrivalB === null) return -1;
-            
-            // Último critério: ordem de check-in
+            };
+
+            const timeA = getVirtualTime(a);
+            const timeB = getVirtualTime(b);
+
+            if (timeA !== timeB) return timeA - timeB;
+
             return (a.checkInOrder || 0) - (b.checkInOrder || 0);
         });
-    },
-
-    /**
-     * Calcula a posição teórica de um assistido na fila (para debug)
-     */
-    calculateQueuePosition(assisted, allAguardando) {
-        if (!assisted || assisted.status !== 'aguardando') return null;
-        
-        const sorted = this.sortAguardando(allAguardando, 'padrao');
-        const position = sorted.findIndex(a => a.id === assisted.id);
-        
-        let reason = '';
-        if (assisted.priority === 'URGENTE') {
-            reason = 'Prioridade Legal (Urgente/80+)';
-        } else if (assisted.type === 'avulso') {
-            reason = 'Atendimento Avulso';
-        } else if (assisted.scheduledTime) {
-            const scheduled = assisted.scheduledTime;
-            const arrival = assisted.arrivalTime ? new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'Não chegou';
-            const delay = this.calculateDelay(assisted);
-            
-            if (delay > 30) {
-                reason = `Atraso Grave (${delay}min) - Agendado ${scheduled}`;
-            } else if (delay > 0) {
-                reason = `Atraso Leve (${delay}min) - Agendado ${scheduled}`;
-            } else {
-                reason = `Pontual - Agendado ${scheduled}, Chegou ${arrival}`;
-            }
-        }
-        
-        return { position: position + 1, total: sorted.length, reason };
     },
 
     /**
@@ -926,6 +800,7 @@ export const PautaService = {
         if (app.currentPautaData?.ordemAtendimento === 'manual' && !app.isPautaClosed) {
             if (window.sortableAguardando) window.sortableAguardando.destroy();
 
+            // Detectar se é mobile para ajustar comportamento
             const isMobile = this.isMobileDevice();
             
             window.sortableAguardando = new Sortable(el, {
@@ -1041,6 +916,7 @@ export const PautaService = {
             searchInput.value = '';
         }
         
+        // Reseta selecao anterior para que a validacao do confirm funcione corretamente
         window.selectedCollaboratorId = undefined;
         window.selectedCollaboratorName = undefined;
         
@@ -1183,12 +1059,57 @@ export const PautaService = {
 
         UIService.renderPautaFilters('filters-container', app.currentPautaFilter || 'all', async (filter) => {
             app.currentPautaFilter = filter;
-            await app.loadPautasWithFilter();
+            await this.loadPautasWithFilter(app);
         }, app);
 
-        app.loadPautasWithFilter();
+        this.loadPautasWithFilter(app);
 
         UIService.showScreen('pautaSelection');
+    },
+
+    /**
+     * Carrega pautas com filtro aplicado
+     */
+    async loadPautasWithFilter(app) {
+        const user = app.auth.currentUser;
+        if (!user) return;
+        
+        const pautasList = document.getElementById('pautas-list');
+        if (!pautasList) return;
+        
+        pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas...</p>';
+
+        try {
+            const q = query(
+                collection(app.db, "pautas"),
+                where("members", "array-contains", user.uid)
+            );
+            
+            const snapshot = await getDocs(q);
+            let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            const filtrosAdicionais = {};
+            
+            if (app.currentPautaFilter === 'periodo') {
+                filtrosAdicionais.dataInicial = document.getElementById('filter-data-inicial')?.value;
+                filtrosAdicionais.dataFinal = document.getElementById('filter-data-final')?.value;
+                filtrosAdicionais.tipo = document.getElementById('filter-tipo-pauta')?.value;
+            }
+            
+            const filteredPautas = this.filterPautas(
+                pautas, 
+                app.currentPautaFilter || 'all', 
+                user.uid, 
+                user.email,
+                filtrosAdicionais
+            );
+            
+            this.renderPautaCards(filteredPautas, user.uid, user.email, app);
+            
+        } catch (error) {
+            console.error("Erro ao carregar pautas:", error);
+            pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>';
+        }
     },
 
     /**
@@ -1271,7 +1192,78 @@ export const PautaService = {
     },
 
     /**
-     * Manipula ações dos cards (cliques em botões) - VERSÃO COMPLETA
+     * Cria card de pauta (legado, manter para compatibilidade)
+     */
+    createPautaCard(docSnap, isExpired, app) {
+        const pauta = docSnap.data();
+        const card = document.createElement('div');
+        card.className = "relative bg-white p-4 md:p-6 rounded-lg shadow-md flex flex-col justify-between h-full";
+
+        if (isExpired) {
+            card.classList.add('opacity-60', 'bg-gray-100', 'cursor-not-allowed');
+        } else {
+            card.classList.add('hover:shadow-xl', 'transition-shadow', 'cursor-pointer');
+        }
+
+        const deleteButton = document.createElement('button');
+        deleteButton.className = "absolute top-2 right-2 md:top-3 md:right-3 p-1 rounded-full text-gray-400 hover:text-red-600 transition-colors";
+        deleteButton.setAttribute('aria-label', 'Excluir pauta');
+        deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
+
+        deleteButton.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            if (confirm(`Tem certeza que deseja apagar a pauta "${pauta.name}"?`)) {
+                try {
+                    await deleteDoc(doc(app.db, "pautas", docSnap.id));
+                    
+                    await logAction(
+                        app.db,
+                        app.auth,
+                        app.currentUserName || 'Sistema',
+                        docSnap.id,
+                        'DELETE_PAUTA',
+                        `Apagou a pauta "${pauta.name}"`,
+                        docSnap.id
+                    );
+                    
+                    showNotification("Pauta excluída!");
+                } catch (error) {
+                    console.error("Erro ao excluir pauta:", error);
+                    showNotification("Erro ao excluir pauta", "error");
+                }
+            }
+        });
+
+        card.appendChild(deleteButton);
+
+        const creationDate = pauta.createdAt ? new Date(pauta.createdAt) : new Date();
+        const expirationDate = new Date(creationDate);
+        expirationDate.setDate(creationDate.getDate() + 7);
+
+        card.innerHTML += `
+            <div>
+                <h3 class="font-bold text-lg md:text-xl mb-1 md:mb-2 pr-6">${escapeHTML(pauta.name)}</h3>
+                <p class="text-xs md:text-sm text-gray-600">Membros: ${pauta.memberEmails?.length || 1}</p>
+            </div>
+            <div class="mt-3 md:mt-4 pt-2 border-t border-gray-200">
+                <p class="text-[10px] md:text-xs text-gray-500">Criada em: <strong>${creationDate.toLocaleDateString('pt-BR')}</strong></p>
+                <p class="text-[10px] md:text-xs ${isExpired ? 'text-gray-500' : 'text-red-600'}">
+                    ${isExpired ? 'Expirou em:' : 'Será eliminada em:'} <strong>${expirationDate.toLocaleDateString('pt-BR')}</strong>
+                </p>
+            </div>
+        `;
+
+        if (!isExpired) {
+            card.addEventListener('click', () => {
+                app.loadPauta(docSnap.id, pauta.name, pauta.type);
+            });
+        }
+
+        return card;
+    },
+
+    /**
+     * Manipula ações dos cards (cliques em botões) - VERSÃO OTIMIZADA
      */
     handleCardActions(e, app) {
         const button = e.target.closest('button');
@@ -1288,6 +1280,7 @@ export const PautaService = {
         // AÇÕES RÁPIDAS (MENU)
         // ================================================
         
+        // Toggle do menu de ações rápidas
         if (button.classList.contains('quick-action-toggle')) {
             e.stopPropagation();
             const menuId = `quick-menu-${id}`;
@@ -1298,20 +1291,26 @@ export const PautaService = {
                 return;
             }
             
+            // Fechar todos os outros menus
             this.closeAllQuickMenus(menuId);
             
+            // Toggle do menu atual
             const isHidden = menu.classList.contains('hidden');
             menu.classList.toggle('hidden');
             
+            // Atualizar atributos ARIA
             button.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
             button.setAttribute('aria-label', isHidden ? 'Fechar menu rápido' : 'Abrir menu rápido');
             
+            // Se abriu o menu, configurar para fechar ao clicar fora
             if (!menu.classList.contains('hidden')) {
+                // Focar no primeiro item para melhor acessibilidade
                 setTimeout(() => {
                     const firstItem = menu.querySelector('.quick-action-item');
                     if (firstItem) firstItem.focus();
                 }, 100);
                 
+                // Fechar ao clicar fora
                 setTimeout(() => {
                     const clickOutsideHandler = (e) => {
                         if (!menu.contains(e.target) && !button.contains(e.target)) {
@@ -1325,6 +1324,7 @@ export const PautaService = {
             }
         }
 
+        // Clique em uma ação rápida
         if (button.classList.contains('quick-action-item')) {
             e.stopPropagation();
             
@@ -1343,6 +1343,7 @@ export const PautaService = {
                 return;
             }
             
+            // Fechar o menu
             const menu = document.getElementById(`quick-menu-${id}`);
             if (menu) {
                 menu.classList.add('hidden');
@@ -1393,14 +1394,13 @@ export const PautaService = {
         // AÇÕES DE ATENDIMENTO
         // ================================================
         
+        // Check-in (Marcar Chegada)
         if (button.classList.contains('check-in-btn')) {
             console.log("Abrindo modal de chegada para:", id);
             window.assistedIdToHandle = id;
             const modal = document.getElementById('arrival-modal');
             if (modal) {
-                const now = new Date();
-                const currentTime = now.toTimeString().slice(0,5);
-                document.getElementById('arrival-time-input').value = currentTime;
+                document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5);
                 
                 if (isMobile) {
                     const timeInput = document.getElementById('arrival-time-input');
@@ -1411,11 +1411,13 @@ export const PautaService = {
             }
         }
 
+        // Faltou
         if (button.classList.contains('faltou-btn')) {
             console.log("Marcando como faltoso:", id);
             this.updateStatus(app.db, app.currentPauta.id, id, { status: 'faltoso' }, app.currentUserName);
         }
 
+        // Voltar para pauta
         if (button.classList.contains('return-to-pauta-btn')) {
             console.log("Voltando para pauta:", id);
             this.updateStatus(app.db, app.currentPauta.id, id, {
@@ -1429,6 +1431,7 @@ export const PautaService = {
             }, app.currentUserName);
         }
 
+        // Voltar de faltoso para pauta
         if (button.classList.contains('return-to-pauta-from-faltoso-btn')) {
             console.log("Revertendo faltoso para pauta:", id);
             this.updateStatus(app.db, app.currentPauta.id, id, {
@@ -1436,6 +1439,7 @@ export const PautaService = {
             }, app.currentUserName);
         }
 
+        // Voltar para aguardando
         if (button.classList.contains('return-to-aguardando-btn')) {
             console.log("Voltando para aguardando:", id);
             this.updateStatus(app.db, app.currentPauta.id, id, {
@@ -1445,6 +1449,7 @@ export const PautaService = {
             }, app.currentUserName);
         }
 
+        // Voltar de em atendimento para aguardando (quando tem delegação)
         if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) {
             console.log("Voltando de em atendimento para aguardando:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
@@ -1463,6 +1468,7 @@ export const PautaService = {
             }
         }
 
+        // Voltar de distribuição para aguardando
         if (button.classList.contains('return-to-aguardando-from-dist-btn')) {
             console.log("Voltando de distribuição para aguardando:", id);
             this.updateStatus(app.db, app.currentPauta.id, id, {
@@ -1471,58 +1477,7 @@ export const PautaService = {
             }, app.currentUserName);
         }
 
-        if (button.classList.contains('return-from-atendido-btn')) {
-            console.log("Revertendo atendido para aguardando/emAtendimento:", id);
-            const currentAssisted = app.allAssisted?.find(a => a.id === id);
-            let updateData = {
-                status: 'aguardando',
-                attendant: null,
-                attendedTime: null,
-                attendedBy: null,
-                attendedAt: null,
-                finalizadoPeloColaborador: false,
-                isConfirmed: false,
-                confirmationDetails: null,
-                distributionStatus: 'pending'
-            };
-
-            if (currentAssisted?.assignedCollaborator) {
-                updateData.status = 'emAtendimento';
-                updateData.attendant = currentAssisted.assignedCollaborator.name;
-                updateData.distributionStatus = 'distributed';
-            }
-            
-            this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
-        }
-
-        if (button.classList.contains('return-from-revisao-btn')) {
-            console.log("Revertendo de em revisão para aguardando:", id);
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardando'
-            }, app.currentUserName);
-        }
-
-        if (button.classList.contains('return-from-aguardando-numero-btn')) {
-            console.log("Revertendo de aguardando número para aguardando:", id);
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardando'
-            }, app.currentUserName);
-        }
-
-        if (button.classList.contains('return-from-aguardando-correcao-btn')) {
-            console.log("Revertendo de aguardando correção para aguardando:", id);
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardando'
-            }, app.currentUserName);
-        }
-
-        if (button.classList.contains('return-from-distribuido-btn')) {
-            console.log("Revertendo de distribuído para aguardando:", id);
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardando'
-            }, app.currentUserName);
-        }
-
+        // Deletar
         if (button.classList.contains('delete-btn')) {
             console.log("Deletando:", id);
             if (confirm("Tem certeza?")) {
@@ -1530,6 +1485,7 @@ export const PautaService = {
             }
         }
 
+        // Prioridade
         if (button.classList.contains('priority-btn')) {
             console.log("Prioridade:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
@@ -1551,6 +1507,7 @@ export const PautaService = {
             }
         }
 
+        // Atender (com delegação) - Selecionar colaborador para delegar
         if (button.classList.contains('select-collaborator-btn')) {
             console.log("Selecionando colaborador para delegar atendimento:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
@@ -1570,8 +1527,10 @@ export const PautaService = {
             if (modal) {
                 modal.classList.remove('hidden');
                 
-                const confirmBtn = document.getElementById('confirm-select-collaborator-btn');
+                // Configurar botão de confirmação para delegação
+                const confirmBtn = document.getElementById('confirm-select-collaborator');
                 if (confirmBtn) {
+                    // Remover listeners antigos
                     const newConfirmBtn = confirmBtn.cloneNode(true);
                     confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
                     
@@ -1585,6 +1544,7 @@ export const PautaService = {
                             );
                             modal.classList.add('hidden');
                         } else if (window.selectedCollaboratorId === 'null') {
+                            // Atender sem delegação
                             document.getElementById('attendant-modal')?.classList.remove('hidden');
                             this.preencherSelectColaboradores(app, 'attendant-select');
                             modal.classList.add('hidden');
@@ -1596,6 +1556,7 @@ export const PautaService = {
             }
         }
 
+        // Atender (direto) - Modal de atendimento direto
         if (button.classList.contains('attend-directly-from-aguardando-btn')) {
             console.log("Atendendo diretamente:", id);
             window.assistedIdToHandle = id;
@@ -1606,7 +1567,8 @@ export const PautaService = {
             if (modal) {
                 modal.classList.remove('hidden');
                 
-                const confirmBtn = document.getElementById('confirm-attendant-btn');
+                // Configurar botão de confirmação para atendimento direto
+                const confirmBtn = document.getElementById('confirm-attendant');
                 if (confirmBtn) {
                     const newConfirmBtn = confirmBtn.cloneNode(true);
                     confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
@@ -1624,6 +1586,7 @@ export const PautaService = {
             }
         }
 
+        // Delegar finalização (para colaboradores)
         if (button.classList.contains('delegate-finalization-btn')) {
             console.log("Delegando finalização:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
@@ -1641,14 +1604,16 @@ export const PautaService = {
             if (modal) {
                 modal.classList.remove('hidden');
                 
-                const confirmBtn = document.getElementById('send-delegate-email-btn');
+                // Configurar botão de confirmação para delegação de finalização
+                const confirmBtn = document.getElementById('confirm-delegate-email');
                 if (confirmBtn) {
                     const newConfirmBtn = confirmBtn.cloneNode(true);
                     confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
                     
                     newConfirmBtn.addEventListener('click', async () => {
-                        const email = document.getElementById('collaborator-email-input').value;
+                        const email = document.getElementById('delegate-email').value;
                         if (email) {
+                            // Aqui você pode implementar o envio de email
                             showNotification(`Notificação enviada para ${email}`, "success");
                             modal.classList.add('hidden');
                         } else {
@@ -1659,6 +1624,7 @@ export const PautaService = {
             }
         }
 
+        // Editar assistido
         if (button.classList.contains('edit-assisted-btn')) {
             console.log("Editando assistido:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
@@ -1672,6 +1638,7 @@ export const PautaService = {
             }
         }
 
+        // Editar atendente
         if (button.classList.contains('edit-attendant-btn')) {
             console.log("Editando atendente:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
@@ -1698,6 +1665,7 @@ export const PautaService = {
             }
         }
 
+        // Gerenciar demandas
         if (button.classList.contains('manage-demands-btn')) {
             console.log("Gerenciando demandas:", id);
             const assisted = app.allAssisted?.find(a => a.id === id);
@@ -1705,6 +1673,7 @@ export const PautaService = {
                 window.assistedIdToHandle = id;
                 document.getElementById('demands-assisted-name-modal').textContent = assisted.name || '';
                 
+                // Mostrar informações de quem atendeu/delegou
                 const infoDiv = document.createElement('div');
                 infoDiv.className = "mb-4 p-3 bg-gray-50 rounded-lg text-sm";
                 
@@ -1754,6 +1723,7 @@ export const PautaService = {
             }
         }
 
+        // Ver detalhes
         if (button.classList.contains('view-details-btn')) {
             console.log("Ver detalhes:", id);
             
@@ -1769,6 +1739,33 @@ export const PautaService = {
             }
         }
 
+        // Voltar de atendido para em atendimento/aguardando
+        if (button.classList.contains('return-from-atendido-btn')) {
+            console.log("Revertendo atendido:", id);
+            const currentAssisted = app.allAssisted?.find(a => a.id === id);
+            let updateData = {
+                status: 'aguardando',
+                attendant: null,
+                attendedTime: null,
+                attendedBy: null,
+                attendedAt: null,
+                finalizadoPeloColaborador: false,
+                isConfirmed: false,
+                confirmationDetails: null,
+                distributionStatus: 'pending'
+            };
+
+            // Se tinha delegação, manter o colaborador designado
+            if (currentAssisted?.assignedCollaborator) {
+                updateData.status = 'emAtendimento';
+                updateData.attendant = currentAssisted.assignedCollaborator.name;
+                updateData.distributionStatus = 'distributed';
+            }
+            
+            this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
+        }
+
+        // Confirmar atendido
         if (button.classList.contains('toggle-confirmed-atendido') || button.classList.contains('toggle-confirmed-faltoso')) {
             console.log("Toggle confirmado:", id);
             const currentAssisted = app.allAssisted?.find(a => a.id === id);
