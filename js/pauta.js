@@ -1,4 +1,4 @@
-// js/pauta.js
+// js/pauta.js - VERSÃO CORRIGIDA (checkInOrder adicionado)
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML } from './utils.js';
 import { UIService } from './ui.js';
@@ -142,6 +142,7 @@ export const PautaService = {
             assignedRoom = document.getElementById('manual-room-select')?.value;
         }
 
+        // ⭐ CORREÇÃO: Adicionar checkInOrder quando o assistido já chega
         const newAssisted = {
             name: name,
             cpf: cpfInput?.value.trim() || '',
@@ -150,12 +151,13 @@ export const PautaService = {
             status: hasArrived ? 'aguardando' : 'pauta',
             scheduledTime: scheduledTimeValue,
             arrivalTime: hasArrived && arrivalDate ? arrivalDate.toISOString() : null,
-            assignedCollaborator: null, // Colaborador para quem foi delegado
-            delegatedBy: null, // Quem delegou
-            delegatedAt: null, // Quando delegou
+            checkInOrder: hasArrived ? Date.now() : null, // ⭐ NOVO: timestamp da ordem de chegada
+            assignedCollaborator: null,
+            delegatedBy: null,
+            delegatedAt: null,
             inAttendanceTime: null,
-            attendedBy: null, // Quem realmente atendeu
-            attendedAt: null, // Quando atendeu
+            attendedBy: null,
+            attendedAt: null,
             finalizadoPeloColaborador: false,
             isConfirmed: false,
             confirmationDetails: null,
@@ -164,9 +166,8 @@ export const PautaService = {
             createdAt: new Date().toISOString(),
             lastActionBy: app.currentUserName || 'Sistema',
             lastActionTimestamp: new Date().toISOString(),
-            // Informações de distribuição
-            distributionStatus: null, // 'pending', 'distributed', 'completed'
-            distributionHistory: [] // Histórico de distribuições
+            distributionStatus: null,
+            distributionHistory: []
         };
 
         try {
@@ -178,7 +179,6 @@ export const PautaService = {
             
             console.log("Documento criado com sucesso! ID:", docRef.id);
             
-            // Registrar log de auditoria
             await logAction(
                 app.db,
                 app.auth,
@@ -219,7 +219,7 @@ export const PautaService = {
     },
 
     /**
-     * Atualiza status de um assistido
+     * Atualiza status de um assistido - VERSÃO CORRIGIDA
      */
     async updateStatus(db, pautaId, assistedId, updates, userName) {
         if (!pautaId || !assistedId) return;
@@ -228,17 +228,23 @@ export const PautaService = {
             console.log("Atualizando status:", updates);
             const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
             
-            // Buscar dados atuais para o log
             const docSnap = await getDoc(docRef);
             const currentData = docSnap.exists() ? docSnap.data() : {};
             
+            // ⭐ CORREÇÃO: Se estiver marcando chegada (status virando 'aguardando'), adicionar checkInOrder
+            const finalUpdates = { ...updates };
+            
+            if (updates.status === 'aguardando' && !currentData.checkInOrder) {
+                finalUpdates.checkInOrder = Date.now();
+                console.log("✅ checkInOrder definido durante updateStatus:", finalUpdates.checkInOrder);
+            }
+            
             await updateDoc(docRef, {
-                ...updates,
+                ...finalUpdates,
                 lastActionBy: userName || 'Sistema',
                 lastActionTimestamp: new Date().toISOString()
             });
             
-            // Registrar log de auditoria
             const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados atualizados';
             await logAction(
                 db,
@@ -286,7 +292,6 @@ export const PautaService = {
                 distributionStatus: 'distributed'
             };
 
-            // Adicionar ao histórico de distribuição
             const distributionHistory = assisted.distributionHistory || [];
             distributionHistory.push({
                 type: 'delegation',
@@ -307,7 +312,6 @@ export const PautaService = {
 
             showNotification(`Atendimento delegado para ${collaboratorName}`, "success");
             
-            // Registrar log específico de delegação
             await logAction(
                 app.db,
                 app.auth,
@@ -351,13 +355,11 @@ export const PautaService = {
                 distributionStatus: 'completed'
             };
 
-            // Se tinha um colaborador delegado, registrar quem finalizou
             if (assisted.assignedCollaborator) {
                 updates.finalizedBy = app.currentUserName;
                 updates.finalizedAt = new Date().toISOString();
             }
 
-            // Adicionar demandas se houver
             if (demands && demands.length > 0) {
                 updates.demandas = {
                     descricoes: demands,
@@ -366,7 +368,6 @@ export const PautaService = {
                 };
             }
 
-            // Adicionar ao histórico
             const distributionHistory = assisted.distributionHistory || [];
             distributionHistory.push({
                 type: 'attendance',
@@ -390,7 +391,6 @@ export const PautaService = {
             
             showNotification(`Atendimento finalizado por ${quemAtendeu}${quemDelegou}`, "success");
             
-            // Registrar log específico de finalização
             await logAction(
                 app.db,
                 app.auth,
@@ -416,14 +416,12 @@ export const PautaService = {
         if (!pautaId || !assistedId) return;
         
         try {
-            // Buscar dados para o log
             const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
             const docSnap = await getDoc(docRef);
             const assistedData = docSnap.exists() ? docSnap.data() : { name: 'Desconhecido' };
             
             await deleteDoc(docRef);
             
-            // Registrar log de auditoria
             await logAction(
                 db,
                 window.app?.auth,
@@ -455,7 +453,6 @@ export const PautaService = {
             });
             await batch.commit();
             
-            // Registrar log de auditoria
             await logAction(
                 db,
                 window.app?.auth,
@@ -481,7 +478,6 @@ export const PautaService = {
         }
 
         try {
-            // Verificar se o usuário tem permissão (é dono ou admin)
             const pautaRef = doc(db, "pautas", pautaId);
             const pautaDoc = await getDoc(pautaRef);
             
@@ -498,7 +494,6 @@ export const PautaService = {
                 return false;
             }
             
-            // Verificar se é o dono ou admin
             const userDoc = await getDoc(doc(db, "users", user.uid));
             const userData = userDoc.data();
             const isAdmin = userData?.role === 'admin' || userData?.role === 'superadmin';
@@ -508,7 +503,6 @@ export const PautaService = {
                 return false;
             }
 
-            // APAGAR TODOS OS SUBDOCUMENTOS (attendances)
             const attendanceRef = collection(db, "pautas", pautaId, "attendances");
             const attendanceSnapshot = await getDocs(attendanceRef);
             
@@ -517,12 +511,10 @@ export const PautaService = {
                 batch.delete(doc.ref);
             });
             
-            // Apagar a pauta principal
             batch.delete(pautaRef);
             
             await batch.commit();
             
-            // Registrar no log de auditoria
             await logAction(
                 db,
                 auth,
@@ -552,7 +544,6 @@ export const PautaService = {
         const now = new Date();
         let pautasFiltradas = [...pautas];
         
-        // Aplicar filtro principal
         switch(filterType) {
             case 'my':
                 pautasFiltradas = pautasFiltradas.filter(p => p.owner === currentUserId);
@@ -565,7 +556,7 @@ export const PautaService = {
                 );
                 break;
                 
-            case 'active': // Pautas com prazo (não expiradas)
+            case 'active':
                 pautasFiltradas = pautasFiltradas.filter(p => {
                     if (!p.createdAt) return true;
                     const creationDate = new Date(p.createdAt);
@@ -575,7 +566,7 @@ export const PautaService = {
                 });
                 break;
                 
-            case 'expired': // Pautas expiradas
+            case 'expired':
                 pautasFiltradas = pautasFiltradas.filter(p => {
                     if (!p.createdAt) return false;
                     const creationDate = new Date(p.createdAt);
@@ -586,7 +577,6 @@ export const PautaService = {
                 break;
                 
             case 'periodo':
-                // Aplica filtros de período e tipo
                 if (filtrosAdicionais.dataInicial) {
                     const dataInicial = new Date(filtrosAdicionais.dataInicial);
                     pautasFiltradas = pautasFiltradas.filter(p => {
@@ -597,7 +587,7 @@ export const PautaService = {
                 
                 if (filtrosAdicionais.dataFinal) {
                     const dataFinal = new Date(filtrosAdicionais.dataFinal);
-                    dataFinal.setHours(23, 59, 59, 999); // Final do dia
+                    dataFinal.setHours(23, 59, 59, 999);
                     pautasFiltradas = pautasFiltradas.filter(p => {
                         if (!p.createdAt) return true;
                         return new Date(p.createdAt) <= dataFinal;
@@ -611,7 +601,6 @@ export const PautaService = {
                 
             case 'all':
             default:
-                // Mantém todas
                 break;
         }
         
@@ -655,7 +644,6 @@ export const PautaService = {
                 }
             }
 
-            // Registrar log de auditoria
             await logAction(
                 app.db,
                 app.auth,
@@ -768,7 +756,6 @@ export const PautaService = {
         if (app.currentPautaData?.ordemAtendimento === 'manual' && !app.isPautaClosed) {
             if (window.sortableAguardando) window.sortableAguardando.destroy();
 
-            // Detectar se é mobile para ajustar comportamento
             const isMobile = this.isMobileDevice();
             
             window.sortableAguardando = new Sortable(el, {
@@ -884,7 +871,6 @@ export const PautaService = {
             searchInput.value = '';
         }
         
-        // Reseta selecao anterior para que a validacao do confirm funcione corretamente
         window.selectedCollaboratorId = undefined;
         window.selectedCollaboratorName = undefined;
         
@@ -1259,26 +1245,20 @@ export const PautaService = {
                 return;
             }
             
-            // Fechar todos os outros menus
             this.closeAllQuickMenus(menuId);
             
-            // Toggle do menu atual
             const isHidden = menu.classList.contains('hidden');
             menu.classList.toggle('hidden');
             
-            // Atualizar atributos ARIA
             button.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
             button.setAttribute('aria-label', isHidden ? 'Fechar menu rápido' : 'Abrir menu rápido');
             
-            // Se abriu o menu, configurar para fechar ao clicar fora
             if (!menu.classList.contains('hidden')) {
-                // Focar no primeiro item para melhor acessibilidade
                 setTimeout(() => {
                     const firstItem = menu.querySelector('.quick-action-item');
                     if (firstItem) firstItem.focus();
                 }, 100);
                 
-                // Fechar ao clicar fora
                 setTimeout(() => {
                     const clickOutsideHandler = (e) => {
                         if (!menu.contains(e.target) && !button.contains(e.target)) {
@@ -1311,7 +1291,6 @@ export const PautaService = {
                 return;
             }
             
-            // Fechar o menu
             const menu = document.getElementById(`quick-menu-${id}`);
             if (menu) {
                 menu.classList.add('hidden');
@@ -1495,10 +1474,8 @@ export const PautaService = {
             if (modal) {
                 modal.classList.remove('hidden');
                 
-                // Configurar botão de confirmação para delegação
                 const confirmBtn = document.getElementById('confirm-select-collaborator');
                 if (confirmBtn) {
-                    // Remover listeners antigos
                     const newConfirmBtn = confirmBtn.cloneNode(true);
                     confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
                     
@@ -1512,7 +1489,6 @@ export const PautaService = {
                             );
                             modal.classList.add('hidden');
                         } else if (window.selectedCollaboratorId === 'null') {
-                            // Atender sem delegação
                             document.getElementById('attendant-modal')?.classList.remove('hidden');
                             this.preencherSelectColaboradores(app, 'attendant-select');
                             modal.classList.add('hidden');
@@ -1535,7 +1511,6 @@ export const PautaService = {
             if (modal) {
                 modal.classList.remove('hidden');
                 
-                // Configurar botão de confirmação para atendimento direto
                 const confirmBtn = document.getElementById('confirm-attendant');
                 if (confirmBtn) {
                     const newConfirmBtn = confirmBtn.cloneNode(true);
@@ -1572,7 +1547,6 @@ export const PautaService = {
             if (modal) {
                 modal.classList.remove('hidden');
                 
-                // Configurar botão de confirmação para delegação de finalização
                 const confirmBtn = document.getElementById('confirm-delegate-email');
                 if (confirmBtn) {
                     const newConfirmBtn = confirmBtn.cloneNode(true);
@@ -1581,7 +1555,6 @@ export const PautaService = {
                     newConfirmBtn.addEventListener('click', async () => {
                         const email = document.getElementById('delegate-email').value;
                         if (email) {
-                            // Aqui você pode implementar o envio de email
                             showNotification(`Notificação enviada para ${email}`, "success");
                             modal.classList.add('hidden');
                         } else {
@@ -1641,7 +1614,6 @@ export const PautaService = {
                 window.assistedIdToHandle = id;
                 document.getElementById('demands-assisted-name-modal').textContent = assisted.name || '';
                 
-                // Mostrar informações de quem atendeu/delegou
                 const infoDiv = document.createElement('div');
                 infoDiv.className = "mb-4 p-3 bg-gray-50 rounded-lg text-sm";
                 
@@ -1723,7 +1695,6 @@ export const PautaService = {
                 distributionStatus: 'pending'
             };
 
-            // Se tinha delegação, manter o colaborador designado
             if (currentAssisted?.assignedCollaborator) {
                 updateData.status = 'emAtendimento';
                 updateData.attendant = currentAssisted.assignedCollaborator.name;
