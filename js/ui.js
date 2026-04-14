@@ -1,10 +1,9 @@
-
 // ui.js
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
 import { PautaService } from './pauta.js';
 
 export const UIService = {
-    showScreen(screenName) {-
+    showScreen(screenName) {
         document.getElementById('loading-container').classList.toggle('hidden', screenName !== 'loading');
         document.getElementById('login-container').classList.toggle('hidden', screenName !== 'login');
         document.getElementById('pauta-selection-container').classList.toggle('hidden', screenName !== 'pautaSelection');
@@ -503,146 +502,164 @@ export const UIService = {
         }
     },
 
-    // ui.js - Parte da função createAguardandoCard (localize e substitua)
     createAguardandoCard(item, currentPautaData, colaboradores, index) {
-    try {
-        if (!item || !item.id) return null;
+        try {
+            if (!item || !item.id) return null;
 
-        const card = document.createElement('div');
-        const priorityClass = PautaService.getPriorityClass(item.priority);
-        card.className = `relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
-        card.setAttribute('data-id', item.id);
+            const card = document.createElement('div');
+            const priorityClass = PautaService.getPriorityClass(item.priority);
+            card.className = `relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
+            card.setAttribute('data-id', item.id);
 
-        // === INDICADORES DE STATUS DO DOCUMENTO ===
-        let docStatusHtml = '';
-        if (item.selectedAction) {
-            let statusColor = 'bg-gray-100 text-gray-600';
-            let statusText = '📋 Selecionado';
-            let statusIcon = '📋';
-            
-            if (item.documentState === 'filling') { 
-                statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
-                statusText = '✏️ Preenchendo'; 
-                statusIcon = '✏️';
-            } else if (item.documentState === 'saved') { 
-                statusColor = 'bg-green-100 text-green-700 font-bold'; 
-                statusText = '✅ Salvo'; 
-                statusIcon = '✅';
-            } else if (item.documentState === 'pdf') { 
-                statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
-                statusText = '📄 PDF Emitido'; 
-                statusIcon = '📄';
-            }
-
-            docStatusHtml = `
-                <div class="mt-2 flex flex-col gap-1">
-                    <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
-                        <span>📂</span> 
-                        <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
-                        <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
-                    </span>
-                    <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
-                        <span>${statusIcon}</span>
-                        <span class="hidden xs:inline">${statusText}</span>
-                    </span>
-                </div>`;
-        }
-
-        // Tratar valores com fallbacks seguros
-        const nomeSeguro = item.name || 'Nome não informado';
-        const assuntoSeguro = item.subject || 'Assunto não informado';
-        const scheduledTimeSeguro = item.scheduledTime || '--:--';
-        const priorityReasonSeguro = item.priorityReason || '';
-
-        // Tratar arrivalTime
-        let arrivalText = 'Chegada: --:--';
-        if (item.arrivalTime) {
-            try {
-                const arrivalDate = new Date(item.arrivalTime);
-                if (!isNaN(arrivalDate)) {
-                    const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                    if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
-                        arrivalText = `Agendado: ${escapeHTML(scheduledTimeSeguro)} | Chegou: ${horaChegada}`;
-                    } else {
-                        arrivalText = `Chegada: ${horaChegada}`;
-                    }
+            // === INDICADORES DE STATUS DO DOCUMENTO ===
+            let docStatusHtml = '';
+            if (item.selectedAction) {
+                let statusColor = 'bg-gray-100 text-gray-600';
+                let statusText = '📋 Selecionado';
+                let statusIcon = '📋';
+                
+                if (item.documentState === 'filling') { 
+                    statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
+                    statusText = '✏️ Preenchendo'; 
+                    statusIcon = '✏️';
+                } else if (item.documentState === 'saved') { 
+                    statusColor = 'bg-green-100 text-green-700 font-bold'; 
+                    statusText = '✅ Salvo'; 
+                    statusIcon = '✅';
+                } else if (item.documentState === 'pdf') { 
+                    statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
+                    statusText = '📄 PDF Emitido'; 
+                    statusIcon = '📄';
                 }
-            } catch (e) {
-                console.warn("Erro ao formatar data:", e);
+
+                docStatusHtml = `
+                    <div class="mt-2 flex flex-col gap-1">
+                        <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
+                            <span>📂</span> 
+                            <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
+                            <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
+                        </span>
+                        <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
+                            <span>${statusIcon}</span>
+                            <span class="hidden xs:inline">${statusText}</span>
+                        </span>
+                    </div>`;
             }
-        }
 
-        // NÚMERO DA ORDEM
-        const numeroOrdem = index + 1;
-        const numeroBadge = `
-            <div class="absolute -left-2 -top-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
-                ${numeroOrdem}
-            </div>
-        `;
+            // Tratar valores com fallbacks seguros
+            const nomeSeguro = item.name || 'Nome não informado';
+            const assuntoSeguro = item.subject || 'Assunto não informado';
+            const scheduledTimeSeguro = item.scheduledTime || '--:--';
+            const priorityReasonSeguro = item.priorityReason || '';
 
-        // Botão de ação padrão (Atender)
-        const atenderButton = currentPautaData?.useDelegationFlow
-            ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`
-            : `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`;
+            // Tratar arrivalTime com o novo design de tags azuis
+            let timeInfoHtml = `<span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">Chegada: --:--</span>`;
+            if (item.arrivalTime) {
+                try {
+                    const arrivalDate = new Date(item.arrivalTime);
+                    if (!isNaN(arrivalDate)) {
+                        const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
+                            // NOVO DESIGN COM ÍCONES SVG INLINE PARA GARANTIR RENDERIZAÇÃO
+                            timeInfoHtml = `
+                                <div class="inline-flex items-center gap-2 bg-blue-50/80 border border-blue-100 text-blue-800 px-2 py-1 rounded text-[11px] shadow-sm w-max">
+                                    <div class="flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></svg>
+                                        <span>Agendado: <span class="font-semibold">${escapeHTML(scheduledTimeSeguro)}</span></span>
+                                    </div>
+                                    <div class="w-px h-3 bg-blue-200"></div>
+                                    <div class="flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+                                        <span>Chegou: <span class="font-bold">${horaChegada}</span></span>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            // CASO SEJA AVULSO (Apenas mostra a Chegada)
+                            timeInfoHtml = `
+                                <div class="inline-flex items-center gap-1.5 bg-blue-50/80 border border-blue-100 text-blue-800 px-2.5 py-1 rounded text-[11px] shadow-sm w-max">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+                                    <span>Chegada: <span class="font-bold">${horaChegada}</span></span>
+                                </div>
+                            `;
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Erro ao formatar data:", e);
+                }
+            }
 
-        // === BOTÃO DE AÇÕES (DROPDOWN) AO LADO DA LIXEIRA ===
-        const actionButtonsHTML = `
-            <div class="absolute top-2 right-10 flex items-center">
-                <div class="relative">
-                    <button data-id="${item.id}" class="quick-action-toggle text-gray-400 hover:text-blue-600 p-1 rounded-full transition-colors" title="Opções de atendimento">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
-                        </svg>
-                    </button>
-                    <div id="quick-menu-${item.id}" class="hidden absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 z-30 py-1">
-                        <button data-id="${item.id}" data-tipo="reagendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2">
-                            <span>🔄</span> Reagendar
+            // NÚMERO DA ORDEM
+            const numeroOrdem = index + 1;
+            const numeroBadge = `
+                <div class="absolute -left-2 -top-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
+                    ${numeroOrdem}
+                </div>
+            `;
+
+            // Botão de ação padrão (Atender)
+            const atenderButton = currentPautaData?.useDelegationFlow
+                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`
+                : `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`;
+
+            // === BOTÃO DE AÇÕES (DROPDOWN) AO LADO DA LIXEIRA ===
+            const actionButtonsHTML = `
+                <div class="absolute top-2 right-10 flex items-center">
+                    <div class="relative">
+                        <button data-id="${item.id}" class="quick-action-toggle text-gray-400 hover:text-blue-600 p-1 rounded-full transition-colors" title="Opções de atendimento">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
+                            </svg>
                         </button>
-                        <button data-id="${item.id}" data-tipo="agendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2">
-                            <span>📅</span> Agendar
-                        </button>
-                        <button data-id="${item.id}" data-tipo="consulta" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2">
-                            <span>🔍</span> Consulta
-                        </button>
-                        <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2">
-                            <span>⚙️</span> Outros
-                        </button>
+                        <div id="quick-menu-${item.id}" class="hidden absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 z-30 py-1">
+                            <button data-id="${item.id}" data-tipo="reagendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2">
+                                <span>🔄</span> Reagendar
+                            </button>
+                            <button data-id="${item.id}" data-tipo="agendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2">
+                                <span>📅</span> Agendar
+                            </button>
+                            <button data-id="${item.id}" data-tipo="consulta" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2">
+                                <span>🔍</span> Consulta
+                            </button>
+                            <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2">
+                                <span>⚙️</span> Outros
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `;
+            `;
 
-        card.innerHTML = `
-            ${numeroBadge}
-            ${actionButtonsHTML}
-            <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                </svg>
-            </button>
-            <div class="flex flex-col h-full">
-                ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
-                <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(nomeSeguro)}</p>
-                <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
-                <div class="flex flex-wrap gap-2 mb-1">
-                    <span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">${arrivalText}</span>
-                    ${item.room ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(item.room)}</span>` : ''}
-                </div>
-                ${docStatusHtml}
-                <div class="mt-4 grid grid-cols-2 gap-2">
-                    ${atenderButton}
-                    <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs">${item.priority === 'URGENTE' ? 'Urgente' : 'Prioridade'}</button>
-                    <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-semibold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase">Voltar</button>
-                </div>
-                <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
-            </div>`;
-        
-        return card;
+            card.innerHTML = `
+                ${numeroBadge}
+                ${actionButtonsHTML}
+                <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
+                    </svg>
+                </button>
+                <div class="flex flex-col h-full">
+                    ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
+                    <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(nomeSeguro)}</p>
+                    <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
+                    <div class="flex flex-wrap items-center gap-2 mb-2">
+                        ${timeInfoHtml}
+                        ${item.room ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(item.room)}</span>` : ''}
+                    </div>
+                    ${docStatusHtml}
+                    <div class="mt-4 grid grid-cols-2 gap-2">
+                        ${atenderButton}
+                        <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs">${item.priority === 'URGENTE' ? 'Urgente' : 'Prioridade'}</button>
+                        <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-semibold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase">Voltar</button>
+                    </div>
+                    <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
+                </div>`;
+            
+            return card;
         } catch (error) {
             console.error("Erro ao criar card de aguardando:", error, item);
-             return null;
-                }
-            },
+            return null;
+        }
+    },
     
     renderEmAtendimentoColumn(items, currentPautaData, pautaId, userName) {
         const container = document.getElementById('em-atendimento-list');
@@ -794,7 +811,7 @@ export const UIService = {
                 ${item.arquivoPdfConteudo ? `
                     <a href="${item.arquivoPdfConteudo}" download="${item.nomeArquivoPdf || 'protocolo.pdf'}" 
                        class="mb-4 flex items-center justify-center gap-2 w-full bg-blue-50 text-blue-600 font-bold py-2 rounded-lg md:py-2.5 md:rounded-xl text-[8px] md:text-[10px] uppercase border border-blue-100 hover:bg-blue-100 transition">
-                       📄 Baixar Protocolo
+                        📄 Baixar Protocolo
                     </a>
                 ` : ''}
 
