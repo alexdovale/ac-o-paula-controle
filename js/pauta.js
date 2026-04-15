@@ -1,4 +1,4 @@
-// js/pauta.js - VERSÃO CORRIGIDA (checkInOrder usa arrivalTime real)
+// js/pauta.js - VERSÃO COMPLETA E ATUALIZADA (com todas as funções originais e melhorias)
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML } from './utils.js';
 import { UIService } from './ui.js';
@@ -111,7 +111,7 @@ export const PautaService = {
 
         if (currentMode === 'agendamento') {
             const scheduledRadio = document.querySelector('input[name="is-scheduled"]:checked');
-            const arrivedRadio = document.querySelector('input[name="has-arrived"]:checked');
+            const arrivedRadio = document.querySelector('input[name="has-arrived']:checked');
             
             isScheduled = scheduledRadio?.value === 'yes';
             hasArrived = arrivedRadio?.value === 'yes';
@@ -142,7 +142,6 @@ export const PautaService = {
             assignedRoom = document.getElementById('manual-room-select')?.value;
         }
 
-        // ⭐ CORREÇÃO: checkInOrder usa o timestamp do arrivalTime real
         const newAssisted = {
             name: name,
             cpf: cpfInput?.value.trim() || '',
@@ -219,7 +218,7 @@ export const PautaService = {
     },
 
     /**
-     * Atualiza status de um assistido - VERSÃO CORRIGIDA (checkInOrder usa arrivalTime real)
+     * Atualiza status de um assistido - CENTRALIZA O REGISTRO DE ÚLTIMA AÇÃO
      */
     async updateStatus(db, pautaId, assistedId, updates, userName) {
         if (!pautaId || !assistedId) return;
@@ -231,9 +230,14 @@ export const PautaService = {
             const docSnap = await getDoc(docRef);
             const currentData = docSnap.exists() ? docSnap.data() : {};
             
-            const finalUpdates = { ...updates };
+            // ⭐ PADRONIZAÇÃO: Toda atualização grava quem fez e quando
+            const finalUpdates = { 
+                ...updates,
+                lastActionBy: userName || 'Sistema',
+                lastActionTimestamp: new Date().toISOString()
+            };
             
-            // ⭐ CORREÇÃO IMPORTANTE: Se estiver marcando chegada com arrivalTime
+            // Lógica de checkInOrder vinculada ao arrivalTime
             if (updates.status === 'aguardando' && updates.arrivalTime) {
                 const arrivalDate = new Date(updates.arrivalTime);
                 if (!isNaN(arrivalDate.getTime())) {
@@ -250,11 +254,7 @@ export const PautaService = {
                 console.log("✅ checkInOrder definido (sem arrivalTime):", finalUpdates.checkInOrder);
             }
             
-            await updateDoc(docRef, {
-                ...finalUpdates,
-                lastActionBy: userName || 'Sistema',
-                lastActionTimestamp: new Date().toISOString()
-            });
+            await updateDoc(docRef, finalUpdates);
             
             const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados atualizados';
             await logAction(
@@ -460,7 +460,12 @@ export const PautaService = {
             const batch = writeBatch(db);
             items.forEach((item, index) => {
                 const docRef = doc(db, "pautas", pautaId, "attendances", item.id);
-                batch.update(docRef, { manualIndex: index });
+                // ⭐ Melhoria: Garante que a última ação seja registrada na reordenação
+                batch.update(docRef, { 
+                    manualIndex: index,
+                    lastActionBy: userName || 'Sistema',
+                    lastActionTimestamp: new Date().toISOString()
+                });
             });
             await batch.commit();
             
@@ -788,7 +793,12 @@ export const PautaService = {
                     items.forEach((item, index) => {
                         const docId = item.getAttribute('data-id');
                         const docRef = doc(app.db, "pautas", app.currentPauta.id, "attendances", docId);
-                        batch.update(docRef, { manualIndex: index });
+                        // ⭐ Melhoria: Garante que a última ação seja registrada na reordenação por drag & drop
+                        batch.update(docRef, { 
+                            manualIndex: index,
+                            lastActionBy: app.currentUserName || 'Sistema',
+                            lastActionTimestamp: new Date().toISOString()
+                        });
                     });
 
                     try {
@@ -1369,9 +1379,10 @@ export const PautaService = {
             }
         }
 
-        // Faltou
+        // Faltou (Preserva scheduledTime e subject)
         if (button.classList.contains('faltou-btn')) {
             console.log("Marcando como faltoso:", id);
+            // Não limpamos scheduledTime ou subject aqui para que o card de faltosos os exiba.
             this.updateStatus(app.db, app.currentPauta.id, id, { status: 'faltoso' }, app.currentUserName);
         }
 
@@ -1386,6 +1397,7 @@ export const PautaService = {
                 inAttendanceTime: null,
                 room: null,
                 distributionStatus: null
+                // scheduledTime e subject são preservados
             }, app.currentUserName);
         }
 
@@ -1394,6 +1406,7 @@ export const PautaService = {
             console.log("Revertendo faltoso para pauta:", id);
             this.updateStatus(app.db, app.currentPauta.id, id, {
                 status: 'pauta'
+                // scheduledTime e subject são preservados
             }, app.currentUserName);
         }
 
