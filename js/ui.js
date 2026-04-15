@@ -1,4 +1,4 @@
-// ui.js
+// js/ui.js - VERSÃO COMPLETA E ATUALIZADA (com todas as funções originais e melhorias)
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
 import { PautaService } from './pauta.js';
 
@@ -167,7 +167,6 @@ export const UIService = {
 
     showAvulsoForm(app) {
         document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
-        document.getElementById('scheduled-time-wrapper').classList.add('hidden');
         document.getElementById('arrival-time-wrapper').classList.remove('hidden');
         document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
 
@@ -219,8 +218,9 @@ export const UIService = {
             }
         });
         
-        const actionButtons = document.querySelectorAll('.check-in-btn, .delegate-finalization-btn, .attend-directly-btn, .faltou-btn, .return-to-pauta-btn, .delete-btn, .priority-btn, .edit-assisted-btn, .edit-attendant-btn, .return-to-aguardando-btn, .manage-demands-btn, .toggle-confirmed-atendido, .toggle-confirmed-faltoso');
-        actionButtons.forEach(btn => {
+        // This targets the action buttons on the cards themselves
+        const cardActionButtons = document.querySelectorAll('.assisted-card button:not(.quick-action-toggle)'); // Exclude quick-action-toggle to allow menu opening
+        cardActionButtons.forEach(btn => {
             btn.disabled = isClosed;
         });
 
@@ -290,10 +290,16 @@ export const UIService = {
             const pautaList = document.getElementById('pauta-list');
             const aguardandoList = document.getElementById('aguardando-list');
             const atendidosList = document.getElementById('atendidos-list');
+            const emAtendimentoList = document.getElementById('em-atendimento-list'); // Ensure this is also cleared
+            const faltososList = document.getElementById('faltosos-list'); // Ensure this is also cleared
+            const distribuicaoList = document.getElementById('distribuicao-list'); // Ensure this is also cleared
             
             if (pautaList) pautaList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum agendamento</p>';
             if (aguardandoList) aguardandoList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém aguardando</p>';
+            if (emAtendimentoList) emAtendimentoList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém em atendimento</p>';
             if (atendidosList) atendidosList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum atendido</p>';
+            if (faltososList) faltososList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum faltoso</p>';
+            if (distribuicaoList) distribuicaoList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum aguardando distribuição</p>';
             
             this.updateCounters({
                 pauta: 0, aguardando: 0, emAtendimento: 0, atendidos: 0, faltosos: 0, distribuicao: 0
@@ -330,9 +336,9 @@ export const UIService = {
         });
 
         lists.pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
-        lists.atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime));
-        lists.faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
-        lists.emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
+        lists.atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime)); // Sort by attendedTime (latest first)
+        lists.faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00')); // Sort by scheduledTime (earliest first)
+        lists.emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime)); // Sort by inAttendanceTime (latest first)
         
         if (currentPautaData?.ordemAtendimento) {
             lists.aguardando = PautaService.sortAguardando(lists.aguardando, currentPautaData.ordemAtendimento);
@@ -346,11 +352,11 @@ export const UIService = {
         this.renderAguardandoColumn(lists.aguardando, currentPautaData, colaboradores);
         this.renderEmAtendimentoColumn(lists.emAtendimento, currentPautaData, app.currentPauta?.id, app.currentUserName);
         this.renderAtendidosColumn(lists.atendidos);
-        this.renderFaltososColumn(lists.faltosos);
+        this.renderFaltososColumn(lists.faltosos); // This will be updated
         this.renderDistribuicaoColumn(lists.distribuicao, app.currentPauta?.id, app.currentUserName);
 
         this.togglePautaLock(app);
-        setTimeout(() => PautaService.setupManualSort(app), 100);
+        setTimeout(() => PautaService.setupManualSort(app), 100); // Re-initialize SortableJS
         
         console.log("✅ Renderização concluída");
     },
@@ -412,6 +418,19 @@ export const UIService = {
         });
     },
 
+    // Helper para gerar o rodapé padrão de "Última ação por:"
+    _getStandardizedFooterHtml(item) {
+        const lastActionBy = escapeHTML(item.lastActionBy || 'Sistema');
+        const lastActionDate = item.lastActionTimestamp ?
+            new Date(item.lastActionTimestamp).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) :
+            '--/-- --:--';
+        return `
+            <div class="mt-3 pt-2 border-t border-gray-100 flex justify-end">
+                <p class="text-[10px] text-gray-400 italic">Última ação por: <b>${lastActionBy}</b> às ${lastActionDate}</p>
+            </div>
+        `;
+    },
+
     renderPautaColumn(items) {
         const container = document.getElementById('pauta-list');
         if (!container) return;
@@ -428,7 +447,9 @@ export const UIService = {
 
     createPautaCard(item) {
         const card = document.createElement('div');
-        card.className = 'relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3';
+        // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
+        card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3';
+        card.setAttribute('data-id', item.id);
         
         card.innerHTML = `
             <button data-id="${item.id}" class="delete-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 transition-colors">
@@ -458,11 +479,7 @@ export const UIService = {
                 </button>
             </div>
 
-            ${item.lastActionBy ? `
-                <div class="mt-3 pt-2 border-t border-gray-50 flex justify-end">
-                    <p class="text-[10px] text-gray-400 italic">Última ação por: <b>${escapeHTML(item.lastActionBy)}</b></p>
-                </div>
-            ` : ''}
+            ${this._getStandardizedFooterHtml(item)}
         `;
         return card;
     },
@@ -508,7 +525,8 @@ export const UIService = {
 
             const card = document.createElement('div');
             const priorityClass = PautaService.getPriorityClass(item.priority);
-            card.className = `relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
+            // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
+            card.className = `assisted-card relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
             card.setAttribute('data-id', item.id);
 
             // === INDICADORES DE STATUS DO DOCUMENTO ===
@@ -606,23 +624,29 @@ export const UIService = {
             const actionButtonsHTML = `
                 <div class="absolute top-2 right-10 flex items-center">
                     <div class="relative">
-                        <button data-id="${item.id}" class="quick-action-toggle text-gray-400 hover:text-blue-600 p-1 rounded-full transition-colors" title="Opções de atendimento">
+                        <button data-id="${item.id}" class="quick-action-toggle text-gray-400 hover:text-blue-600 p-1 rounded-full transition-colors" title="Opções de atendimento" aria-expanded="false" aria-controls="quick-menu-${item.id}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
                                 <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
                             </svg>
                         </button>
-                        <div id="quick-menu-${item.id}" class="hidden absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 z-30 py-1">
-                            <button data-id="${item.id}" data-tipo="reagendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2">
+                        <div id="quick-menu-${item.id}" class="quick-menu hidden absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 z-30 py-1" role="menu" aria-orientation="vertical" aria-labelledby="quick-toggle-${item.id}">
+                            <button data-id="${item.id}" data-tipo="reagendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2" role="menuitem">
                                 <span>🔄</span> Reagendar
                             </button>
-                            <button data-id="${item.id}" data-tipo="agendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2">
+                            <button data-id="${item.id}" data-tipo="agendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2" role="menuitem">
                                 <span>📅</span> Agendar
                             </button>
-                            <button data-id="${item.id}" data-tipo="consulta" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2">
+                            <button data-id="${item.id}" data-tipo="consulta" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2" role="menuitem">
                                 <span>🔍</span> Consulta
                             </button>
-                            <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2">
+                            <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem">
                                 <span>⚙️</span> Outros
+                            </button>
+                            <button data-id="${item.id}" class="edit-assisted-btn quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem">
+                                <span>✏️</span> Editar Assistido
+                            </button>
+                            <button data-id="${item.id}" class="view-details-btn quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem">
+                                <span>👁️</span> Ver Detalhes
                             </button>
                         </div>
                     </div>
@@ -652,7 +676,9 @@ export const UIService = {
                         <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-semibold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase">Voltar</button>
                     </div>
                     <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
-                </div>`;
+                </div>
+                ${this._getStandardizedFooterHtml(item)}
+                `;
             
             return card;
         } catch (error) {
@@ -679,7 +705,9 @@ export const UIService = {
     createEmAtendimentoCard(item, currentPautaData, pautaId, userName, index) {
         try {
             const card = document.createElement('div');
-            card.className = `relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
+            // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
+            card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
+            card.setAttribute('data-id', item.id);
             
             const startTime = item.inAttendanceTime ? 
                 new Date(item.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
@@ -713,7 +741,7 @@ export const UIService = {
                     </button>
                 </div>
 
-                ${item.lastActionBy ? `<p class="text-[8px] md:text-[10px] text-gray-400 mt-4 text-right uppercase">Última ação: <b>${escapeHTML(item.lastActionBy)}</b></p>` : ''}
+                ${this._getStandardizedFooterHtml(item)}
             `;
             return card;
         } catch (error) {
@@ -742,7 +770,9 @@ export const UIService = {
     createAtendidoCard(item) {
         try {
             const card = document.createElement('div');
-            card.className = 'relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4';
+            // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
+            card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4';
+            card.setAttribute('data-id', item.id);
             
             const arrivalT = item.arrivalTime ? 
                 new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
@@ -823,6 +853,7 @@ export const UIService = {
                         </button>
                     </div>
                 </div>
+                ${this._getStandardizedFooterHtml(item)}
             `;
             return card;
         } catch (error) {
@@ -842,11 +873,23 @@ export const UIService = {
 
         items.forEach(item => {
             const card = document.createElement('div');
-            card.className = 'relative bg-red-50 p-4 rounded-lg shadow-sm border border-red-100 mb-2 opacity-80';
+            // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
+            card.className = 'assisted-card relative bg-red-50 p-4 rounded-lg shadow-sm border border-red-100 mb-2 opacity-80';
+            card.setAttribute('data-id', item.id);
             card.innerHTML = `
                 <p class="font-bold text-gray-700 text-sm">${escapeHTML(item.name || '')}</p>
                 <p class="text-[9px] text-red-400 uppercase font-bold">Faltoso</p>
+                <!-- ⭐ Detalhes do faltoso: Assunto e Agendamento -->
+                <p class="text-xs text-gray-600 mt-1"><span class="font-semibold">Assunto:</span> ${escapeHTML(item.subject || 'Não informado')}</p>
+                ${item.scheduledTime ? `<p class="text-xs text-gray-600"><span class="font-semibold">Agendado:</span> ${item.scheduledTime}</p>` : ''}
+                
                 <button data-id="${item.id}" class="return-to-pauta-from-faltoso-btn mt-2 w-full bg-white text-red-500 border border-red-200 py-1 rounded text-[9px] font-bold uppercase hover:bg-red-50 transition">Voltar p/ Pauta</button>
+                <button data-id="${item.id}" class="toggle-confirmed-faltoso mt-2 w-full bg-white text-green-500 border border-green-200 py-1 rounded text-[9px] font-bold uppercase hover:bg-green-50 transition">
+                    ${item.isConfirmed ? '✅ Confirmar Ausência' : 'Confirmar Ausência'}
+                </button>
+                <button data-id="${item.id}" class="delete-btn mt-2 w-full bg-white text-gray-400 border border-gray-200 py-1 rounded text-[9px] font-bold uppercase hover:bg-gray-100 transition">Excluir</button>
+
+                ${this._getStandardizedFooterHtml(item)}
             `;
             container.appendChild(card);
         });
@@ -863,7 +906,9 @@ export const UIService = {
 
         items.forEach(item => {
             const card = document.createElement('div');
-            card.className = 'relative bg-cyan-50 p-4 rounded-lg shadow-sm border border-cyan-200 mb-2';
+            // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
+            card.className = 'assisted-card relative bg-cyan-50 p-4 rounded-lg shadow-sm border border-cyan-200 mb-2';
+            card.setAttribute('data-id', item.id);
             const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
             const linkExterno = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&collaboratorName=${encodeURIComponent(userName)}`;
 
@@ -874,6 +919,7 @@ export const UIService = {
                     <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white text-[10px] font-bold py-2 rounded hover:bg-cyan-700 uppercase shadow-sm">Painel de Protocolo</button>
                     <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-white text-gray-400 border border-gray-200 text-[9px] py-1 rounded uppercase">Reverter</button>
                 </div>
+                ${this._getStandardizedFooterHtml(item)}
             `;
             container.appendChild(card);
         });
