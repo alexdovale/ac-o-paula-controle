@@ -1,4 +1,4 @@
-// js/colaboradores.js - VERSÃO MOBILE + FILTRO ATA (Defensores, Servidores, Coordenadores, CRC) - CORRIGIDO e com ORDENAÇÃO VERIFICADA
+// js/colaboradores.js - VERSÃO MOBILE + FILTRO ATA (Defensores, Servidores, Coordenadores, CRC) - COM LOGS DE DEBUG
 import { 
     collection, 
     onSnapshot, 
@@ -34,7 +34,6 @@ const CollaboratorService = {
             if (snap.exists()) {
                 const dados = snap.data();
                 
-                // Adicionando verificações de existência antes de atribuir valor
                 const nameInput = document.getElementById('collaborator-name-modal');
                 if (nameInput) nameInput.value = dados.nome || '';
                 
@@ -53,11 +52,14 @@ const CollaboratorService = {
                 const rTransp = document.querySelector(`input[name="transporte-colaborador"][value="${dados.transporte || 'Meios Próprios'}"]`);
                 if (rTransp) rTransp.checked = true;
 
-                this.configurarLogicaCargo();
+                this.configurarLogicaCargo(); // Reconfigura o label "Matrícula/ID"
                 showNotification("Dados recuperados da base master! ✅");
+            } else {
+                showNotification("Nenhum colaborador encontrado na base master com este identificador.", "info");
             }
         } catch (e) {
             console.error("Erro ao buscar na base master:", e);
+            showNotification("Erro ao buscar na base master.", "error");
         }
     },
 
@@ -120,7 +122,6 @@ const CollaboratorService = {
         if (!select) return;
 
         try {
-            // Correção: app.currentPauta?.id para app.currentPauta && app.currentPauta.id
             if (!app || !app.currentPauta || !app.currentPauta.id) {
                 console.error("App ou pauta não definidos para carregar defensores.");
                 return;
@@ -161,16 +162,16 @@ const CollaboratorService = {
         this.resetForm();
         this.updateTeamSelect();
         this.configurarLogicaCargo();
-        this.configurarEventoBusca(app);
+        
+        // ⭐ CHAMADA PRINCIPAL PARA CONFIGURAR OS EVENTOS DE BUSCA ⭐
+        this.configurarEventoBusca(app); 
         
         this.adicionarBotaoOrdenacao();
         
-        // Correção: app.currentPauta?.id para app.currentPauta && app.currentPauta.id
         if (app && app.currentPauta && app.currentPauta.id) {
             this.setupListener(app, app.currentPauta.id);
         }
         
-        // Ajustar para mobile: scroll suave
         setTimeout(() => {
             modal.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
@@ -197,16 +198,38 @@ const CollaboratorService = {
         if (modal) modal.classList.add('hidden');
     },
 
+    // ⭐ FUNÇÃO CONFIGURAR EVENTO DE BUSCA COM LOGS DE DEBUG ⭐
     configurarEventoBusca(app) {
-        const inputId = document.getElementById('collaborator-identificador-modal');
-        if (!inputId) return;
+        const inputIdentificador = document.getElementById('collaborator-identificador-modal');
+        const buscarBtn = document.getElementById('buscar-master-btn');
+    
+        console.log("--- DEBUG: configurarEventoBusca ---");
+        console.log("Elemento 'collaborator-identificador-modal' encontrado?", !!inputIdentificador, inputIdentificador);
+        console.log("Elemento 'buscar-master-btn' encontrado?", !!buscarBtn, buscarBtn);
 
-        inputId.onblur = () => {
-            // Correção: !this.editId && inputId.value para garantir que inputId não é null
-            if (!this.editId && inputId.value) { 
-                this.buscarColaboradorMaster(app, inputId.value);
-            }
-        };
+        if (inputIdentificador) {
+            inputIdentificador.onblur = () => {
+                console.log("Evento 'onblur' do campo identificador acionado.");
+                if (!this.editId && inputIdentificador.value) {
+                    this.buscarColaboradorMaster(app, inputIdentificador.value);
+                }
+            };
+        }
+    
+        if (buscarBtn && inputIdentificador) { // Certifica-se de que ambos existem
+            buscarBtn.onclick = () => {
+                console.log("Botão 'Buscar no Banco' clicado."); // ⭐ Log quando o botão é clicado
+                if (!this.editId && inputIdentificador.value) {
+                    this.buscarColaboradorMaster(app, inputIdentificador.value);
+                } else if (!inputIdentificador.value) {
+                    showNotification("Por favor, digite o identificador para buscar.", "warning");
+                }
+            };
+            console.log("Evento 'onclick' adicionado ao botão 'Buscar no Banco'.");
+        } else {
+            console.warn("AVISO: Não foi possível configurar eventos de busca. Verifique se os IDs dos elementos HTML estão corretos e se o HTML foi carregado antes do script.");
+        }
+        console.log("--- FIM DEBUG: configurarEventoBusca ---");
     },
 
     configurarLogicaCargo() {
@@ -220,7 +243,7 @@ const CollaboratorService = {
         };
 
         cargoSelect.onchange = atualizarLabel;
-        atualizarLabel();
+        atualizarLabel(); // Chama na inicialização para garantir o label correto
     },
 
     updateTeamSelect(selectedValue = '1') {
@@ -235,19 +258,16 @@ const CollaboratorService = {
         select.innerHTML = html;
 
         select.onchange = (e) => {
-            // Correção: e.target?.value para e.target.value (já que e.target é um HTMLElement aqui)
             if (e.target.value === 'ADD_NEW') {
                 const novo = prompt("Digite o nome do novo grupo/setor:");
                 if (novo && novo.trim()) {
                     const opt = new Option(novo, novo, true, true);
-                    // Correção: select.firstChild para verificar se existe
                     if (select.firstChild) {
                         select.add(opt, select.firstChild);
                     } else {
-                        select.add(opt); // Se não há firstChild, apenas adiciona
+                        select.add(opt); 
                     }
                     select.value = novo;
-                    // Adicionar aos permitidos para aparecer na ata
                     if (!this.gruposPermitidosAta.includes(novo)) {
                         this.gruposPermitidosAta.push(novo);
                     }
@@ -260,13 +280,11 @@ const CollaboratorService = {
     // 5. SALVAR (PAUTA + MASTER)
     // ========================================================
     async saveCollaborator(app) {
-        // Correção: app.currentPauta?.id para app.currentPauta && app.currentPauta.id
         if (!app || !app.currentPauta || !app.currentPauta.id) {
             showNotification("Nenhuma pauta selecionada", "error");
             return;
         }
 
-        // Correções: Adicionando verificações de nulidade para todos os `document.getElementById`
         const nameInput = document.getElementById('collaborator-name-modal');
         const nome = nameInput ? nameInput.value : '';
 
@@ -280,26 +298,26 @@ const CollaboratorService = {
         const equipe = teamSelect ? teamSelect.value : '';
 
         const phoneInput = document.getElementById('collaborator-phone-modal');
-        const telefone = phoneInput ? phoneInput.value : ''; // Correção: ?.value
+        const telefone = phoneInput ? phoneInput.value : '';
 
         const emailInput = document.getElementById('collaborator-email-modal');
-        const email = emailInput ? emailInput.value : ''; // Correção: ?.value
+        const email = emailInput ? emailInput.value : '';
         
         const transporteRadio = document.querySelector('input[name="transporte-colaborador"]:checked');
-        const transporte = transporteRadio ? transporteRadio.value : ''; // Correção: ?.value
+        const transporte = transporteRadio ? transporteRadio.value : '';
 
         if (!nome || !identificador) {
             showNotification("Preencha Nome e Matrícula/ID", "error");
             return;
         }
 
-        const tipo_id = (cargo === "Defensor(a)") ? "Matrícula" : "ID";
+        const tipo_id = (cargo === "Defensor(a)") ? "Matrícula" : "ID"; 
 
         const data = {
             nome,
             cargo,
             identificador,
-            tipo_id,
+            tipo_id, 
             equipe,
             telefone,
             email,
@@ -318,7 +336,7 @@ const CollaboratorService = {
                 showNotification("Membro adicionado!");
             }
             
-            await this.salvarNaBaseMaster(app, data);
+            await this.salvarNaBaseMaster(app, data); 
             this.resetForm();
         } catch (error) {
             console.error("Erro ao salvar:", error);
@@ -337,7 +355,6 @@ const CollaboratorService = {
     // 6. LISTENER E TABELA (COM ORDENAÇÃO E DESIGN MOBILE)
     // ========================================================
     setupListener(app, pautaId) {
-        // Correção: app?.db para app && app.db
         if (!pautaId || !app || !app.db) return; 
         
         console.log("📋 Configurando listener para pauta:", pautaId);
@@ -359,7 +376,6 @@ const CollaboratorService = {
 
     salvarNoLocalStorage(app) {
         try {
-            // Correção: app?.colaboradores para app && app.colaboradores
             if (app && app.colaboradores) { 
                 localStorage.setItem('sigap_colaboradores', JSON.stringify(app.colaboradores));
             }
@@ -403,7 +419,7 @@ const CollaboratorService = {
             
             const isDefensor = colab.cargo === 'Defensor(a)';
             const nomeClass = isDefensor ? 'font-bold text-blue-700' : 'font-bold text-gray-800';
-            const labelTipo = colab.tipo_id || (isDefensor ? 'Matrícula' : 'ID');
+            const labelTipo = colab.tipo_id || (isDefensor ? 'Matrícula' : 'ID'); // Usa tipo_id salvo, senão infere
             
             // Layout responsivo para mobile
             row.innerHTML = `
@@ -433,7 +449,6 @@ const CollaboratorService = {
         });
 
         const totalSpan = document.getElementById('total-participants-count');
-        // Correção: app.colaboradores?.length para app.colaboradores && app.colaboradores.length
         if (totalSpan) totalSpan.textContent = (app.colaboradores && app.colaboradores.length) || 0; 
         
         const selfSpan = document.getElementById('self-transport-count');
@@ -449,13 +464,11 @@ const CollaboratorService = {
     // 7. GERAR ATA (APENAS GRUPOS PERMITIDOS)
     // ========================================================
     gerarAta(app) {
-        // Correção: app.colaboradores?.length para app.colaboradores && app.colaboradores.length
         if (!app || !app.colaboradores || app.colaboradores.length === 0) {
             showNotification("Nenhum colaborador cadastrado", "error");
             return null;
         }
 
-        // Aplicar filtro: apenas grupos permitidos
         const colaboradoresFiltrados = this.filtrarParaAta(app.colaboradores);
         
         if (colaboradoresFiltrados.length === 0) {
@@ -463,13 +476,11 @@ const CollaboratorService = {
             return null;
         }
 
-        // Ordenar por grupo e nome
         const ordenados = [...colaboradoresFiltrados].sort((a, b) => {
             const grupoA = a.equipe || '';
             const grupoB = b.equipe || '';
             if (grupoA !== grupoB) return grupoA.localeCompare(grupoB);
             
-            // Defensores primeiro dentro do grupo
             const isDefensorA = (a.cargo === 'Defensor(a)') ? 0 : 1;
             const isDefensorB = (b.cargo === 'Defensor(a)') ? 0 : 1;
             if (isDefensorA !== isDefensorB) {
@@ -489,7 +500,8 @@ const CollaboratorService = {
                             <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Cargo</th>
                             <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Equipe</th>
                             <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Presente</th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Horário</th>
+                            <th style="1px solid #ddd; padding: 8px; text-align: center;">Horário</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Identificador</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -499,15 +511,17 @@ const CollaboratorService = {
         ordenados.forEach(colab => {
             const grupoAtual = colab.equipe || 'Sem Grupo';
             if (ultimoGrupo !== grupoAtual) {
+                ultimoGrupo = grupoAtual;
                 ataHTML += `
                     <tr style="background-color: #e5e7eb;">
-                        <td colspan="5" style="border: 1px solid #ddd; padding: 6px; font-weight: bold;">
+                        <td colspan="6" style="border: 1px solid #ddd; padding: 6px; font-weight: bold;">
                             📁 ${escapeHTML(grupoAtual)}
                         </td>
                     </tr>
                 `;
-                ultimoGrupo = grupoAtual;
             }
+
+            const identificadorText = colab.identificador ? `${colab.tipo_id || 'ID'}: ${colab.identificador}` : 'N/A';
 
             ataHTML += `
                 <tr>
@@ -518,6 +532,7 @@ const CollaboratorService = {
                         ${colab.presente ? '✓' : ''}
                     </td>
                     <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${colab.horario || '--:--'}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px; text-align: left;">${escapeHTML(identificadorText)}</td>
                 </tr>
             `;
         });
@@ -539,7 +554,6 @@ const CollaboratorService = {
             checkbox.onchange = async (e) => {
                 const docId = e.target.dataset.id;
                 const presente = e.target.checked;
-                // Correção: app.currentPauta?.id para app.currentPauta && app.currentPauta.id
                 if (app && app.currentPauta && app.currentPauta.id) {
                     await this.togglePresence(app, docId, presente);
                 }
@@ -549,7 +563,6 @@ const CollaboratorService = {
         document.querySelectorAll('#collaborators-modal .edit-collaborator-btn').forEach(btn => {
             btn.onclick = async (e) => {
                 const docId = e.currentTarget.dataset.id;
-                // Correção: app.currentPauta?.id para app.currentPauta && app.currentPauta.id
                 if (app && app.currentPauta && app.currentPauta.id) {
                     await this.editCollaborator(app, docId);
                 }
@@ -560,7 +573,6 @@ const CollaboratorService = {
             btn.onclick = (e) => {
                 const docId = e.currentTarget.dataset.id;
                 if (confirm("Remover este membro?")) {
-                    // Correção: app.currentPauta?.id para app.currentPauta && app.currentPauta.id
                     if (app && app.currentPauta && app.currentPauta.id) {
                         this.deleteCollaborator(app, docId);
                     }
@@ -570,7 +582,6 @@ const CollaboratorService = {
     },
 
     async togglePresence(app, id, presente) {
-        // Correção: app.currentPauta?.id para app.currentPauta && app.currentPauta.id
         if (!app || !app.currentPauta || !app.currentPauta.id) return;
         try {
             const ref = doc(app.db, "pautas", app.currentPauta.id, "collaborators", id);
@@ -582,7 +593,6 @@ const CollaboratorService = {
     },
 
     async editCollaborator(app, id) {
-        // Correção: app.currentPauta?.id para app.currentPauta && app.currentPauta.id
         if (!app || !app.currentPauta || !app.currentPauta.id) return;
         try {
             const ref = doc(app.db, "pautas", app.currentPauta.id, "collaborators", id);
@@ -592,7 +602,6 @@ const CollaboratorService = {
                 const c = snap.data();
                 this.editId = id;
                 
-                // Adicionando verificações de existência antes de atribuir valor
                 const nameInput = document.getElementById('collaborator-name-modal');
                 if (nameInput) nameInput.value = c.nome || '';
                 
@@ -614,7 +623,7 @@ const CollaboratorService = {
                 const rTransp = document.querySelector(`input[name="transporte-colaborador"][value="${c.transporte || 'Meios Próprios'}"]`);
                 if (rTransp) rTransp.checked = true;
 
-                this.configurarLogicaCargo();
+                this.configurarLogicaCargo(); // Reconfigura o label "Matrícula/ID"
                 const addBtn = document.getElementById('add-collaborator-btn-modal');
                 if (addBtn) addBtn.textContent = "Atualizar Membro";
             }
@@ -624,7 +633,6 @@ const CollaboratorService = {
     },
 
     async deleteCollaborator(app, id) {
-        // Correção: app.currentPauta?.id para app.currentPauta && app.currentPauta.id
         if (!app || !app.currentPauta || !app.currentPauta.id) return;
         try {
             const ref = doc(app.db, "pautas", app.currentPauta.id, "collaborators", id);
@@ -637,7 +645,6 @@ const CollaboratorService = {
 
     async clearAll(app) {
         if (!confirm("Tem certeza que deseja apagar TODOS os membros?")) return;
-        // Correção: app.currentPauta?.id para app.currentPauta && app.currentPauta.id
         if (!app || !app.currentPauta || !app.currentPauta.id) return;
         
         try {
@@ -673,7 +680,7 @@ const CollaboratorService = {
         const transpDefault = document.querySelector('input[name="transporte-colaborador"][value="Meios Próprios"]');
         if (transpDefault) transpDefault.checked = true;
         
-        this.configurarLogicaCargo();
+        this.configurarLogicaCargo(); // Garante que o label Matrícula/ID volte ao padrão ou ao do cargo inicial
     }
 };
 
