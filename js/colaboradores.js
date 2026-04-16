@@ -1,4 +1,4 @@
-// js/colaboradores.js - VERSÃO MOBILE + FILTRO ATA (Defensores, Servidores, Coordenadores, CRC) - COM LOGS DE DEBUG
+// js/colaboradores.js - VERSÃO MOBILE + FILTRO ATA (Defensores, Servidores, Coordenadores, CRC) - COM LOGS DE DIAGNÓSTICO
 import { 
     collection, 
     onSnapshot, 
@@ -25,7 +25,10 @@ const CollaboratorService = {
     // 1. AUTO-PREENCHIMENTO (BUSCA NA BASE MASTER)
     // ========================================================
     async buscarColaboradorMaster(app, identificador) {
-        if (!identificador || identificador.length < 3) return;
+        if (!identificador || identificador.length < 3) {
+            console.log("Buscar Master: Identificador vazio ou muito curto.");
+            return;
+        }
 
         try {
             const masterRef = doc(app.db, "colaboradores_gerais", identificador);
@@ -54,8 +57,10 @@ const CollaboratorService = {
 
                 this.configurarLogicaCargo(); // Reconfigura o label "Matrícula/ID"
                 showNotification("Dados recuperados da base master! ✅");
+                console.log("Buscar Master: Dados encontrados e formulário preenchido.");
             } else {
                 showNotification("Nenhum colaborador encontrado na base master com este identificador.", "info");
+                console.log("Buscar Master: Nenhum dado encontrado para o identificador:", identificador);
             }
         } catch (e) {
             console.error("Erro ao buscar na base master:", e);
@@ -163,6 +168,10 @@ const CollaboratorService = {
         this.updateTeamSelect();
         this.configurarLogicaCargo();
         
+        // --- LOG DE DIAGNÓSTICO CRÍTICO: Conteúdo do modal ANTES de configurar eventos ---
+        console.log("DEBUG: Conteúdo HTML do modal de colaboradores (após remove hidden):", modal.innerHTML.substring(0, 500) + "..."); // Limita o output
+        // --- FIM LOG DE DIAGNÓSTICO ---
+
         // ⭐ CHAMADA PRINCIPAL PARA CONFIGURAR OS EVENTOS DE BUSCA ⭐
         this.configurarEventoBusca(app); 
         
@@ -209,16 +218,18 @@ const CollaboratorService = {
 
         if (inputIdentificador) {
             inputIdentificador.onblur = () => {
-                console.log("Evento 'onblur' do campo identificador acionado.");
+                console.log("Evento 'onblur' do campo identificador acionado. Valor:", inputIdentificador.value);
                 if (!this.editId && inputIdentificador.value) {
                     this.buscarColaboradorMaster(app, inputIdentificador.value);
                 }
             };
+        } else {
+            console.warn("AVISO: Campo 'collaborator-identificador-modal' não encontrado para evento 'onblur'.");
         }
     
         if (buscarBtn && inputIdentificador) { // Certifica-se de que ambos existem
             buscarBtn.onclick = () => {
-                console.log("Botão 'Buscar no Banco' clicado."); // ⭐ Log quando o botão é clicado
+                console.log("Botão 'Buscar no Banco' clicado. Valor do identificador:", inputIdentificador.value); // ⭐ Log quando o botão é clicado
                 if (!this.editId && inputIdentificador.value) {
                     this.buscarColaboradorMaster(app, inputIdentificador.value);
                 } else if (!inputIdentificador.value) {
@@ -227,7 +238,7 @@ const CollaboratorService = {
             };
             console.log("Evento 'onclick' adicionado ao botão 'Buscar no Banco'.");
         } else {
-            console.warn("AVISO: Não foi possível configurar eventos de busca. Verifique se os IDs dos elementos HTML estão corretos e se o HTML foi carregado antes do script.");
+            console.warn("AVISO: Botão 'buscar-master-btn' e/ou Campo 'collaborator-identificador-modal' não encontrados. Eventos de busca não configurados.");
         }
         console.log("--- FIM DEBUG: configurarEventoBusca ---");
     },
@@ -254,7 +265,7 @@ const CollaboratorService = {
             `<option value="${g}" ${selectedValue === g ? 'selected' : ''}>${isNaN(g) ? g : 'Equipe ' + g}</option>`
         ).join('');
         
-        html += `<option value="ADD_NEW">+ Adicionar outro...</option>`;
+        html += `<option value="ADD_NEW">+ Adicionar outro...\u200b</option>`; // Adicionado zero-width space para garantir que a opção é única
         select.innerHTML = html;
 
         select.onchange = (e) => {
@@ -286,22 +297,22 @@ const CollaboratorService = {
         }
 
         const nameInput = document.getElementById('collaborator-name-modal');
-        const nome = nameInput ? nameInput.value : '';
+        const nome = nameInput ? nameInput.value.trim() : '';
 
         const roleSelect = document.getElementById('collaborator-role-modal');
         const cargo = roleSelect ? roleSelect.value : '';
 
         const identificadorInput = document.getElementById('collaborator-identificador-modal');
-        const identificador = identificadorInput ? identificadorInput.value : '';
+        const identificador = identificadorInput ? identificadorInput.value.trim() : '';
 
         const teamSelect = document.getElementById('collaborator-team-modal');
         const equipe = teamSelect ? teamSelect.value : '';
 
         const phoneInput = document.getElementById('collaborator-phone-modal');
-        const telefone = phoneInput ? phoneInput.value : '';
+        const telefone = phoneInput ? phoneInput.value.trim() : '';
 
         const emailInput = document.getElementById('collaborator-email-modal');
-        const email = emailInput ? emailInput.value : '';
+        const email = emailInput ? emailInput.value.trim() : '';
         
         const transporteRadio = document.querySelector('input[name="transporte-colaborador"]:checked');
         const transporte = transporteRadio ? transporteRadio.value : '';
@@ -349,6 +360,7 @@ const CollaboratorService = {
         if (!chave) return;
         const masterRef = doc(app.db, "colaboradores_gerais", chave);
         await setDoc(masterRef, data, { merge: true });
+        console.log("Salvo/Atualizado na base master 'colaboradores_gerais':", chave);
     },
 
     // ========================================================
@@ -500,7 +512,7 @@ const CollaboratorService = {
                             <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Cargo</th>
                             <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Equipe</th>
                             <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Presente</th>
-                            <th style="1px solid #ddd; padding: 8px; text-align: center;">Horário</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Horário</th>
                             <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Identificador</th>
                         </tr>
                     </thead>
