@@ -829,6 +829,21 @@
                                 </select>
                             </div>
                         </div>
+                        <!-- ⭐ NOVO BLOCO A SER INSERIDO AQUI ⭐ -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div class="md:col-span-3">
+                                <label id="label-identificador-modal" class="text-[9px] font-black text-gray-500 uppercase">Matrícula/ID</label>
+                                <div class="mt-1 flex rounded-lg shadow-sm border border-gray-300">
+                                    <input type="text" id="collaborator-identificador-modal" placeholder="Matrícula ou ID" required 
+                                           class="flex-1 block w-full rounded-l-lg focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 bg-white outline-none">
+                                    <button type="button" id="buscar-master-btn" 
+                                            class="inline-flex items-center px-4 py-2 border-l border-gray-300 bg-gray-50 text-sm font-medium text-gray-700 rounded-r-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                        Buscar no Banco
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- ⭐ FIM DO NOVO BLOCO ⭐ -->
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                             <div class="md:col-span-1">
                                 <label class="text-[9px] font-black text-gray-500 uppercase">WhatsApp</label>
