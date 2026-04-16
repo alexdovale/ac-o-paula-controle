@@ -386,7 +386,7 @@ export const PDFService = {
             docPDF.text(`Data: ${new Date().toLocaleString('pt-BR')}`, 40, 55);
             docPDF.text(`Total: ${atendidos.length} assistidos | Assuntos totais: ${totalAssuntos}`, 40, 68);
 
-            const head = [["#", "Nome", "Agendado", "Chegou", "Chamado", "Duração", "Assunto", "Atendente", "Status"]];
+            const head = [["#", "Nome", "Agendado", "Chegou", "Chamado", "Duração", "Assunto", "Atendente", "Validado Verde"]];
 
             const body = atendidos.map((item, index) => {
                 const arrivalDate = getSafeDate(item.arrivalTime);
