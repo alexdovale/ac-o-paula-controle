@@ -712,10 +712,11 @@ export const PautaService = {
      * 
      * Prioridade de ordenação:
      * 1. URGENTE (sempre primeiro)
-     * 2. Para agendamentos com atraso > 0: usa arrivalHour (chegada)
-     * 3. Para agendamentos pontuais ou adiantados (atraso <= 0): usa scheduledTime
-     * 4. Para avulsos: usa checkInOrder
-     * 5. DESEMPATE FINAL: checkInOrder (ordem de marcação de chegada)
+     * 2. Horário virtual:
+     *    - Pontual/adiantado: usa horário agendado
+     *    - Atrasado: usa horário de chegada
+     * 3. Desempate: pontual/adiantado vem antes de atrasado
+     * 4. Último desempate: ordem de marcação (checkInOrder)
      */
     sortAguardando(list, orderType) {
         if (!list || !list.length) return [];
@@ -733,61 +734,54 @@ export const PautaService = {
             if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
             if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
 
-            // Função para obter o timestamp de ordenação
-            const getSortingTime = (item) => {
-                // Caso 1: Atendimento avulso
+            // Função para obter o tempo virtual e se está atrasado
+            const getVirtualTimeAndDelay = (item) => {
                 if (item.type === 'avulso') {
-                    return item.checkInOrder || 0;
+                    return { time: item.checkInOrder || 0, isLate: false };
                 }
                 
-                // Caso 2: Atendimento agendado
-                if (item.type === 'agendamento') {
-                    // Se não tem horário agendado, usa checkInOrder como fallback
-                    if (!item.scheduledTime) {
-                        return item.checkInOrder || 0;
-                    }
-                    
+                if (item.type === 'agendamento' && item.scheduledTime) {
                     try {
                         const scheduled = new Date(`1970-01-01T${item.scheduledTime}`).getTime();
-                        
-                        // Se não chegou ainda, usa horário agendado
                         if (!item.arrivalTime) {
-                            return scheduled;
+                            // Ainda não chegou: considera pontual (usa agendado)
+                            return { time: scheduled, isLate: false };
                         }
                         
                         const arrival = new Date(item.arrivalTime);
                         const arrivalHour = new Date(`1970-01-01T${arrival.getHours().toString().padStart(2, '0')}:${arrival.getMinutes().toString().padStart(2, '0')}`).getTime();
-                        
                         const diffMinutes = (arrivalHour - scheduled) / (1000 * 60);
                         
                         if (diffMinutes <= 0) {
-                            // Chegou pontual ou adiantado: ordena pelo horário agendado
-                            return scheduled;
+                            // Pontual ou adiantado: usa horário agendado
+                            return { time: scheduled, isLate: false };
                         } else {
-                            // Chegou atrasado: ordena pelo horário de chegada
-                            return arrivalHour;
+                            // Atrasado: usa horário de chegada
+                            return { time: arrivalHour, isLate: true };
                         }
                     } catch (e) {
                         console.error("Erro ao calcular tempo de ordenação:", e, "para item:", item);
-                        return item.checkInOrder || 0;
+                        return { time: item.checkInOrder || 0, isLate: false };
                     }
                 }
                 
-                // Fallback: usa checkInOrder
-                return item.checkInOrder || 0;
+                return { time: item.checkInOrder || 0, isLate: false };
             };
             
-            const timeA = getSortingTime(a);
-            const timeB = getSortingTime(b);
+            const { time: timeA, isLate: lateA } = getVirtualTimeAndDelay(a);
+            const { time: timeB, isLate: lateB } = getVirtualTimeAndDelay(b);
             
             // Primeiro critério: tempo virtual
             if (timeA !== timeB) return timeA - timeB;
             
-            // CRITÉRIO DE DESEMPATE: ordem de marcação de chegada (checkInOrder)
-            // Isso resolve exatamente o seu caso: C, A, B na ordem de quem marcou primeiro
+            // Segundo critério: quem não está atrasado (pontual/adiantado) vem antes
+            if (lateA !== lateB) {
+                return lateA ? 1 : -1;  // false (pontual) vem antes
+            }
+            
+            // Terceiro critério: ordem de marcação de chegada (checkInOrder)
             const checkInA = a.checkInOrder || 0;
             const checkInB = b.checkInOrder || 0;
-            
             return checkInA - checkInB;
         });
     },
