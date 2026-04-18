@@ -111,7 +111,7 @@ export const PautaService = {
 
         if (currentMode === 'agendamento') {
             const scheduledRadio = document.querySelector('input[name="is-scheduled"]:checked');
-            const arrivedRadio = document.querySelector('input[name="has-arrived"]:checked');
+            const arrivedRadio = document.querySelector('input[name="has-arrived']:checked');
             
             isScheduled = (scheduledRadio && scheduledRadio.value === 'yes');
             hasArrived = (arrivedRadio && arrivedRadio.value === 'yes');
@@ -732,11 +732,12 @@ export const PautaService = {
      * Prioridade de ordenação:
      * 1. URGENTE (sempre primeiro)
      * 2. Horário virtual:
-     *    - Pontual/adiantado: usa horário agendado
+     *    - Adiantado: usa horário de chegada.
+     *    - Pontual: usa horário agendado.
      *    - Atrasado: usa horário de chegada.
-     * 3. Desempate:
-     *    - Primeiro, pontual/adiantado vem antes de atrasado (mesmo horário virtual).
-     *    - Depois, ordem de marcação de chegada (checkInOrder) – quem marcou primeiro fica na frente.
+     * 3. Desempate por "lateness":
+     *    - Não atrasado (adiantado/pontual) vem antes de atrasado (mesmo horário virtual).
+     * 4. Desempate final: ordem de marcação de chegada (checkInOrder) – quem marcou primeiro fica na frente.
      */
     sortAguardando(list, orderType) {
         if (!list || !list.length) return [];
@@ -767,13 +768,14 @@ export const PautaService = {
                     const arrival = new Date(item.arrivalTime);
                     // Pega apenas hora e minuto da chegada na data de referência 1970-01-01
                     const arrivalHour = new Date(`1970-01-01T${arrival.getHours().toString().padStart(2,'0')}:${arrival.getMinutes().toString().padStart(2,'0')}`).getTime();
-                    const diff = arrivalHour - scheduled;
-                    if (diff <= 0) {
-                        // Pontual ou adiantado
-                        return { time: scheduled, isLate: false };
-                    } else {
-                        // Atrasado: usa horário de chegada para o tempo virtual
-                        return { time: arrivalHour, isLate: true };
+                    const diff = arrivalHour - scheduled; // Diferença em minutos (chegada - agendado)
+
+                    if (diff < 0) { // Chegou adiantado
+                        return { time: arrivalHour, isLate: false }; // Tempo virtual é o tempo de chegada (menor = primeiro)
+                    } else if (diff === 0) { // Chegou pontual
+                        return { time: scheduled, isLate: false }; // Tempo virtual é o tempo agendado
+                    } else { // Chegou atrasado (diff > 0)
+                        return { time: arrivalHour, isLate: true }; // Tempo virtual é o tempo de chegada, e marca como atrasado
                     }
                 } catch(e) {
                     console.error("Erro ao calcular virtualTime para agendamento:", e, "para item:", item);
@@ -793,17 +795,17 @@ export const PautaService = {
             const va = getVirtual(a);
             const vb = getVirtual(b);
             
-            // 2. Comparar tempo virtual
+            // 2. Comparar tempo virtual (agora adiantados terão um tempo menor que pontuais/atrasados)
             if (va.time !== vb.time) return va.time - vb.time;
             
             // 3. Desempate: Se mesmo tempo virtual, priorizar quem não está atrasado
-            // (Ex: D (pontual) vs C (atrasado), ambos com virtual 09:30. D vem antes.)
+            // (Isso lida com o caso de atrasados vs. pontuais com o mesmo virtualTime de chegada/agendamento)
             if (va.isLate !== vb.isLate) {
                 return va.isLate ? 1 : -1; // Quem é isLate vem depois
             }
             
             // 4. Desempate final: ordem de marcação de chegada (checkInOrder)
-            // (Ex: B, C, A, todos pontuais e no mesmo horário. B foi marcado primeiro, então B vem antes de C, que vem antes de A.)
+            // (Isso lida com casos onde tudo acima é igual, ex: vários pontuais marcados em sequência)
             return (a.checkInOrder || 0) - (b.checkInOrder || 0);
         });
     },
