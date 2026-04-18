@@ -133,7 +133,7 @@ export const PautaService = {
             if (timeInput && timeInput.value) {
                 const [hours, minutes] = timeInput.value.split(':');
                 arrivalDate = new Date();
-                arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0); // Set hours and minutes, preserve current date and milliseconds
             }
         }
 
@@ -151,7 +151,8 @@ export const PautaService = {
             status: hasArrived ? 'aguardando' : 'pauta',
             scheduledTime: scheduledTimeValue,
             arrivalTime: hasArrived && arrivalDate ? arrivalDate.toISOString() : null,
-            checkInOrder: hasArrived && arrivalDate ? arrivalDate.getTime() : null,
+            // For initial add, checkInOrder directly takes the unique timestamp from arrivalDate (which includes milliseconds)
+            checkInOrder: hasArrived && arrivalDate ? arrivalDate.getTime() : null, 
             assignedCollaborator: null,
             delegatedBy: null,
             delegatedAt: null,
@@ -238,22 +239,40 @@ export const PautaService = {
                 lastActionTimestamp: new Date().toISOString()
             };
             
-            // Lógica de checkInOrder vinculada ao arrivalTime
-            if (updates.status === 'aguardando' && updates.arrivalTime) {
-                const arrivalDate = new Date(updates.arrivalTime);
-                if (!isNaN(arrivalDate.getTime())) {
-                    finalUpdates.checkInOrder = arrivalDate.getTime();
-                    console.log("✅ checkInOrder definido usando arrivalTime:", arrivalDate.getTime(), "->", arrivalDate.toLocaleTimeString());
-                } else if (!currentData.checkInOrder) {
-                    finalUpdates.checkInOrder = Date.now();
-                    console.log("⚠️ checkInOrder definido como fallback:", finalUpdates.checkInOrder);
+            // --- LÓGICA MODIFICADA PARA checkInOrder ---
+            if (updates.status === 'aguardando') {
+                // Ao mudar para 'aguardando', sempre garantimos que o checkInOrder reflete
+                // o momento EXATO em que esta ação foi registrada, para desempate preciso.
+                // Isso sobrescreve qualquer `checkInOrder` menos preciso que venha via `arrivalTime` (HH:MM).
+                if (!updates.checkInOrder) { // Se `checkInOrder` não foi explicitamente fornecido nos `updates`
+                    finalUpdates.checkInOrder = Date.now(); 
+                    console.log("✅ checkInOrder definido para 'aguardando' como Date.now() para desempate:", finalUpdates.checkInOrder);
+                } else {
+                    finalUpdates.checkInOrder = updates.checkInOrder; // Usa o que foi passado explicitamente (ex: de um CSV)
                 }
-            } 
-            // Se não tem arrivalTime mas está virando aguardando
-            else if (updates.status === 'aguardando' && !currentData.checkInOrder) {
-                finalUpdates.checkInOrder = Date.now();
-                console.log("✅ checkInOrder definido (sem arrivalTime):", finalUpdates.checkInOrder);
+                
+                // Se `arrivalTime` é fornecido, valida e garante que seja um ISO string consistente.
+                if (updates.arrivalTime) {
+                    const arrivalDate = new Date(updates.arrivalTime);
+                    if (isNaN(arrivalDate.getTime())) {
+                        console.warn("⚠️ arrivalTime fornecido é inválido:", updates.arrivalTime);
+                        finalUpdates.arrivalTime = null; // Limpa arrivalTime inválido
+                    } else {
+                        finalUpdates.arrivalTime = arrivalDate.toISOString(); // Garante formato ISO string
+                    }
+                }
+            } else if (updates.status === 'pauta') {
+                // Se o status volta para 'pauta', `checkInOrder` e `arrivalTime` não são mais relevantes.
+                finalUpdates.checkInOrder = null;
+                finalUpdates.arrivalTime = null;
+            } else if (updates.status !== 'aguardando' && updates.status !== 'pauta') {
+                 // Para outros status, se `checkInOrder` foi passado, mantém. Caso contrário, mantém o existente.
+                 // Nenhuma mudança automática de `checkInOrder` se não for `aguardando` ou `pauta`.
+                 if (!updates.checkInOrder && currentData.checkInOrder) {
+                     finalUpdates.checkInOrder = currentData.checkInOrder;
+                 }
             }
+            // --- FIM DA LÓGICA MODIFICADA ---
             
             await updateDoc(docRef, finalUpdates);
             
@@ -714,9 +733,10 @@ export const PautaService = {
      * 1. URGENTE (sempre primeiro)
      * 2. Horário virtual:
      *    - Pontual/adiantado: usa horário agendado
-     *    - Atrasado: usa horário de chegada
-     * 3. Desempate: pontual/adiantado vem antes de atrasado
-     * 4. Último desempate: ordem de marcação (checkInOrder)
+     *    - Atrasado: usa horário de chegada.
+     * 3. Desempate:
+     *    - Primeiro, pontual/adiantado vem antes de atrasado (mesmo horário virtual).
+     *    - Depois, ordem de marcação de chegada (checkInOrder) – quem marcou primeiro fica na frente.
      */
     sortAguardando(list, orderType) {
         if (!list || !list.length) return [];
@@ -731,7 +751,7 @@ export const PautaService = {
 
         // Função auxiliar para obter tempo virtual e se é atrasado
         const getVirtual = (item) => {
-            // Avulso: usa checkInOrder
+            // Avulso: usa checkInOrder como tempo base, e não é considerado atrasado para este desempate.
             if (item.type === 'avulso') {
                 return { time: item.checkInOrder || 0, isLate: false };
             }
@@ -745,40 +765,45 @@ export const PautaService = {
                         return { time: scheduled, isLate: false };
                     }
                     const arrival = new Date(item.arrivalTime);
+                    // Pega apenas hora e minuto da chegada na data de referência 1970-01-01
                     const arrivalHour = new Date(`1970-01-01T${arrival.getHours().toString().padStart(2,'0')}:${arrival.getMinutes().toString().padStart(2,'0')}`).getTime();
                     const diff = arrivalHour - scheduled;
                     if (diff <= 0) {
                         // Pontual ou adiantado
                         return { time: scheduled, isLate: false };
                     } else {
-                        // Atrasado: usa horário de chegada
+                        // Atrasado: usa horário de chegada para o tempo virtual
                         return { time: arrivalHour, isLate: true };
                     }
                 } catch(e) {
-                    return { time: item.checkInOrder || 0, isLate: false };
+                    console.error("Erro ao calcular virtualTime para agendamento:", e, "para item:", item);
+                    // Fallback para checkInOrder em caso de erro no cálculo do agendamento
+                    return { time: item.checkInOrder || 0, isLate: false }; 
                 }
             }
-            // Fallback
+            // Fallback para qualquer outro tipo não tratado ou dados incompletos
             return { time: item.checkInOrder || 0, isLate: false };
         };
         
         return [...list].sort((a, b) => {
-            // Prioridade URGENTE
+            // 1. Prioridade URGENTE
             if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
             if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
             
             const va = getVirtual(a);
             const vb = getVirtual(b);
             
-            // Comparar tempo virtual
+            // 2. Comparar tempo virtual
             if (va.time !== vb.time) return va.time - vb.time;
             
-            // Se mesmo tempo, priorizar quem não está atrasado
+            // 3. Desempate: Se mesmo tempo virtual, priorizar quem não está atrasado
+            // (Ex: D (pontual) vs C (atrasado), ambos com virtual 09:30. D vem antes.)
             if (va.isLate !== vb.isLate) {
-                return va.isLate ? 1 : -1;
+                return va.isLate ? 1 : -1; // Quem é isLate vem depois
             }
             
-            // Desempate final: ordem de marcação (checkInOrder)
+            // 4. Desempate final: ordem de marcação de chegada (checkInOrder)
+            // (Ex: B, C, A, todos pontuais e no mesmo horário. B foi marcado primeiro, então B vem antes de C, que vem antes de A.)
             return (a.checkInOrder || 0) - (b.checkInOrder || 0);
         });
     },
