@@ -1859,60 +1859,56 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 document.getElementById('confirm-create-pauta-final-btn')?.addEventListener('click', async () => {
                     const pautaName = document.getElementById('create-pauta-name-input').value.trim();
                     const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
-                    const ordemAtendimento = document.querySelector('input[name="ordemAtendimento"]:checked')?.value;
-                    const useDelegationFlow = document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true';
-                    const useDistributionFlow = document.getElementById('check-use-distribution')?.checked || false;
+                    const orgaoId = document.getElementById('select-orgao-integracao').value; // PEGA O ÓRGÃO
                     const user = this.auth.currentUser;
                     
-                    if (!user) {
-                        showNotification("Você precisa estar logado.", "error");
-                        return;
-                    }
-                    
-                    if (pautaType === 'multisala' && this.customRoomsList.length === 0) {
-                        showNotification("Adicione pelo menos uma sala.", "error");
+                    if (!pautaName) {
+                        showNotification("O nome da pauta não pode ser vazio.", "error");
                         return;
                     }
                 
                     try {
-                        // PRIMEIRO: Criar a pauta e guardar a referência
+                        // 1. Cria a estrutura da Pauta
                         const pautaRef = await addDoc(collection(this.db, "pautas"), {
                             name: pautaName,
                             type: pautaType,
-                            ordemAtendimento: ordemAtendimento,
-                            useDelegationFlow: useDelegationFlow,
-                            useDistributionFlow: useDistributionFlow,
                             owner: user.uid,
-                            ownerEmail: user.email,
                             members: [user.uid],
                             memberEmails: [user.email],
                             isClosed: false,
                             createdAt: new Date().toISOString(),
-                            rooms: pautaType === 'multisala' ? [...this.customRoomsList] : []
+                            ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || 'padrao'
                         });
-                        
-                        // SEGUNDO: Registrar o log de auditoria
-                        await logAction(
-                            this.db,
-                            this.auth,
-                            this.currentUserName || user.email,
-                            pautaRef.id,
-                            'CREATE_PAUTA',
-                            `Criou a pauta "${pautaName}" do tipo ${pautaType}`,
-                            pautaRef.id
-                        );
-                        
-                        showNotification("Pauta criada com sucesso!");
-                        
+                
+                        // 2. O PULO DO GATO: Se selecionou órgão, busca os nomes via Mock
+                        if (orgaoId) {
+                            showNotification("Sincronizando com base de dados Solar/Verde...", "info");
+                            
+                            // Chama a função que criamos no api_integration.js
+                            const assistidosOficiais = await ApiIntegration.buscarDadosPautaOficial(orgaoId);
+                            
+                            // Grava os nomes na pauta recém-criada
+                            for (const ast of assistidosOficiais) {
+                                await PautaService.addAssistedManual(this, {
+                                    ...ast,
+                                    status: 'pauta',
+                                    externalId: `INT-${orgaoId}-${Date.now()}-${Math.random()}` // Evita duplicados
+                                });
+                            }
+                            showNotification(`Integração concluída: ${assistidosOficiais.length} assistidos importados.`);
+                        } else {
+                            showNotification("Pauta criada com sucesso!");
+                        }
+                
+                        // 3. Limpa e fecha modais
                         document.getElementById('create-pauta-name-input').value = '';
+                        document.getElementById('select-orgao-integracao').value = '';
                         document.getElementById('delegation-flow-modal').classList.add('hidden');
                         
-                        if (this.auth.currentUser) {
-                            this.showPautaSelectionScreen();
-                        }
+                        this.showPautaSelectionScreen();
                         
                     } catch (error) {
-                        console.error("Erro ao criar pauta:", error);
+                        console.error("Erro ao criar pauta com integração:", error);
                         showNotification("Erro ao criar pauta.", "error");
                     }
                 });
