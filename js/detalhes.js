@@ -1,42 +1,13 @@
 /**
  * ========================================================
  * DETALHES.JS - SIGAP
- * Módulo de Checklist e Documentos
- * Versão: 5.0 (Réu como Único Item - COM TESTE)
- * ========================================================
- * 
- * Este módulo gerencia:
- * ✅ Checklist de documentos por ação
- * ✅ Planilha de gastos para ações de alimentos
- * ✅ Dados do réu como UM ÚNICO ITEM no checklist
- * ✅ Integração com PDFService
- * ✅ Salvamento no Firestore
- * 
+ * Módulo de Detalhes do Assistido e Checklist de Documentos
  * ========================================================
  */
-
-// ========================================================
-// TESTE DE VERSÃO - APAGUE ESTA LINHA DEPOIS DE TESTAR
-// ========================================================
-window.detalhesJsVersion = "5.0 - RÉU EM ÚNICO ITEM";
-console.log("%c🚀 detalhes.js versão 5.0 CARREGADO!", "color: green; font-size: 16px; font-weight: bold");
-console.log("%c✅ Se você está vendo esta mensagem, o arquivo novo está funcionando!", "color: blue; font-size: 14px");
-
-// ========================================================
-// TESTE VISUAL - MOSTRA UM ALERTA PARA CONFIRMAR
-// ========================================================
-setTimeout(() => {
-    console.log("%c🔍 VERIFIQUE O CHECKLIST DO RÉU:", "color: orange; font-size: 14px");
-    console.log("%c   Deve aparecer APENAS UM checkbox: '📋 DADOS DO RÉU (Endereço completo e Dados de trabalho)'", "color: orange");
-}, 500);
 
 import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification } from './utils.js';
 import { PDFService } from './pdfService.js';
-
-
-
-
 
 /* ========================================================
    1. CONSTANTES E CONFIGURAÇÕES
@@ -144,9 +115,6 @@ const ACTIONS_WITH_WORK_INFO = [
     'uniao_estavel_reconhecimento_dissolucao',
     'investigacao_paternidade'
 ];
-
-
-
 
 
 /* ========================================================
@@ -290,9 +258,6 @@ export const documentsData = {
 };
 
 
-
-
-
 /* ========================================================
    3. ESTADO GLOBAL
    ======================================================== */
@@ -302,9 +267,6 @@ let currentPautaId = null;         // ID da pauta atual
 let db = null;                     // Instância do Firestore
 let allAssisted = [];              // Lista de todos os assistidos
 let currentChecklistAction = null; // Ação atual do checklist
-
-
-
 
 
 /* ========================================================
@@ -350,9 +312,6 @@ function parseCurrency(s) {
 }
 
 
-
-
-
 /* ========================================================
    5. FUNÇÕES DO CHECKLIST
    ======================================================== */
@@ -395,6 +354,9 @@ function updateSelectedCounter() {
         counterEl.textContent = `${totalChecked} itens selecionados`;
     }
     
+    // O estado 'filling' deve ser definido se qualquer item estiver marcado,
+    // não apenas se o contador for maior que 0. Isso garante que a pauta
+    // seja marcada como "em preenchimento" se um checkbox for marcado.
     if (totalChecked > 0) {
         updateDocumentState('filling');
     }
@@ -494,9 +456,9 @@ function renderChecklist(actionKey) {
     const titleEl = getEl('checklist-title');
     if (titleEl) titleEl.textContent = data.title;
     
-    // Mostra cabeçalho e busca
-    const headerEl = getEl('document-checklist-view-header');
-    if (headerEl) headerEl.classList.remove('hidden');
+    // Mostra cabeçalho de ações do checklist e busca
+    const checklistHeaderActions = getEl('document-checklist-view-header'); // Header com PDF/Mudar/Salvar
+    if (checklistHeaderActions) checklistHeaderActions.classList.remove('hidden');
     
     const searchEl = getEl('checklist-search-container');
     if (searchEl) searchEl.classList.remove('hidden');
@@ -608,7 +570,8 @@ function addExpenseButton(containerEl, saved) {
     `;
     containerEl.appendChild(expenseButton);
     
-    if (saved?.expenseData && Object.values(saved.expenseData).some(v => v && v !== 'R$ 0,00')) {
+    // Se já existem dados de gastos salvos, exibe a tabela e esconde o botão
+    if (saved?.expenseData && Object.values(saved.expenseData).some(v => v && v !== 'R$ 0,00' && v !== 'R$ 0,00')) {
         expenseButton.style.display = 'none';
         let expenseContainer = document.getElementById('expense-table-container');
         if (!expenseContainer) {
@@ -644,6 +607,9 @@ function setupCheckboxEvents(containerEl) {
             const anyChecked = containerEl.querySelectorAll('.doc-checkbox:checked').length > 0;
             if (anyChecked) {
                 updateDocumentState('filling');
+            } else if (!anyChecked && !document.getElementById('check-reu-unico')?.checked && !document.getElementById('check-exibir-gastos')?.checked) {
+                // Se nada mais está marcado, e os campos do réu e gastos também não, volta para 'selected' ou null
+                updateDocumentState('selected'); // Ou 'null' se desejar limpar completamente o estado
             }
         });
     });
@@ -663,12 +629,10 @@ function setupCheckboxEvents(containerEl) {
             }
             expenseContainer.innerHTML = '';
             expenseContainer.appendChild(renderExpenseTable());
+            updateSelectedCounter(); // Atualiza o contador após adicionar a tabela
         });
     }, 100);
 }
-
-
-
 
 
 /* ========================================================
@@ -1060,9 +1024,6 @@ function initReuSaveButton() {
 }
 
 
-
-
-
 /* ========================================================
    7. PLANILHA DE GASTOS
    ======================================================== */
@@ -1156,12 +1117,10 @@ function initExpenseTableEvents(div) {
             
             const expenseButton = document.getElementById('expense-button-container');
             if (expenseButton) expenseButton.style.display = 'block';
+            updateSelectedCounter(); // Atualiza o contador após fechar a tabela
         });
     }, 100);
 }
-
-
-
 
 
 /* ========================================================
@@ -1310,9 +1269,6 @@ function fillExpenseData(d) {
 }
 
 
-
-
-
 /* ========================================================
    9. FUNÇÕES DE AÇÃO (PDF, SALVAR, RESET)
    ======================================================== */
@@ -1329,7 +1285,7 @@ async function handlePdf() {
         console.log("=".repeat(50));
         
         // Dados básicos
-        const assistedName = getEl('documents-assisted-name')?.textContent || 'Assistido';
+        const assistedName = getEl('assisted-details-name')?.textContent || 'Assistido'; // <-- RENOMEADO
         const actionTitle = getEl('checklist-title')?.textContent || '';
         
         // Documentos marcados
@@ -1556,7 +1512,7 @@ async function handleSave(closeModal = true) {
         
         if (closeModal) {
             showNotification("Dados salvos com sucesso!");
-            getEl('documents-modal').classList.add('hidden');
+            closeAssistedDetailsModal(); // Usa a nova função para fechar o modal
         }
         
         if (window.app && typeof window.app.refreshAssistedList === 'function') {
@@ -1570,7 +1526,7 @@ async function handleSave(closeModal = true) {
 }
 
 /**
- * 9.6 Reseta o checklist
+ * 9.6 Reseta o checklist (Mudar de assunto)
  */
 async function handleReset() {
     if (!confirm("Isso apagará o checklist e o réu. Deseja mudar de assunto?")) return;
@@ -1594,19 +1550,32 @@ async function handleReset() {
 }
 
 /**
- * 9.7 Volta para seleção de ação
+ * 9.7 Volta para seleção de ação (dentro do modal de detalhes)
  */
 function handleBack() {
     getEl('document-checklist-view')?.classList.add('hidden');
-    getEl('document-checklist-view-header')?.classList.add('hidden');
+    getEl('document-checklist-view')?.classList.remove('flex'); // Remove flex para garantir que não ocupe espaço
+    getEl('document-checklist-view-header')?.classList.add('hidden'); // Esconde header específico do checklist
     getEl('checklist-search-container')?.classList.add('hidden');
-    getEl('document-action-selection')?.classList.remove('hidden');
-    getEl('address-editor-container')?.classList.add('hidden');
+    getEl('address-editor-container')?.classList.add('hidden'); // Esconde formulário do réu
+    getEl('document-action-selection')?.classList.remove('hidden'); // Mostra seleção de assunto
+    
+    // O header principal do modal de detalhes do assistido (assisted-details-modal-header)
+    // permanece visível, pois ele contém o nome do assistido e o botão de fechar.
 }
 
-
-
-
+/**
+ * 9.8 Fecha o modal de detalhes do assistido e limpa o estado.
+ */
+function closeAssistedDetailsModal() {
+    getEl('assisted-details-modal').classList.add('hidden');
+    // Reinicia o estado para que a próxima abertura seja "limpa"
+    currentAssistedId = null;
+    currentPautaId = null;
+    currentChecklistAction = null;
+    window._lastOpenedAssistedId = null; // Limpa o assistido aberto
+    handleBack(); // Retorna para a seleção de assunto, limpando a visualização interna
+}
 
 /* ========================================================
    10. FUNÇÃO DE DIAGNÓSTICO
@@ -1635,9 +1604,6 @@ window.diagnosticarPDF = function() {
 };
 
 
-
-
-
 /* ========================================================
    11. EXPORTS E INICIALIZAÇÃO
    ======================================================== */
@@ -1650,6 +1616,13 @@ export function setupDetailsModal(config) {
     console.log("⚙️ setupDetailsModal chamado", config);
     db = config.db;
 
+    // Listener para o botão de fechar do modal principal de detalhes
+    const closeBtn = getEl('close-assisted-details-modal-btn');
+    if (closeBtn) {
+        closeBtn.onclick = closeAssistedDetailsModal;
+    }
+
+    // Listeners para os botões de ação do checklist (dentro do header específico do checklist)
     getEl('back-to-action-selection-btn').onclick = handleBack;
     getEl('save-checklist-btn').onclick = handleSave;
     getEl('print-checklist-btn').onclick = handlePdf;
@@ -1660,15 +1633,18 @@ export function setupDetailsModal(config) {
         searchInput.oninput = (e) => {
             const term = normalizeLocal(e.target.value);
             document.querySelectorAll('label.checklist-row').forEach(row => {
-                const text = normalizeLocal(row.textContent);
-                row.closest('div').style.display = text.includes(term) ? 'block' : 'none';
+                const parentDiv = row.closest('div.flex.flex-col.border-b'); // Procura o div que engloba o checkbox e os radios
+                if (parentDiv) {
+                    const text = normalizeLocal(row.textContent);
+                    parentDiv.style.display = text.includes(term) ? 'block' : 'none';
+                }
             });
         };
     }
 }
 
 /**
- * 11.2 Abre o modal de detalhes
+ * 11.2 Abre o modal de detalhes do assistido
  * @param {Object} config - Configuração com IDs e dados
  */
 export async function openDetailsModal(config) {
@@ -1686,7 +1662,7 @@ export async function openDetailsModal(config) {
     allAssisted = config.allAssisted || [];
     db = config.db || window.app?.db;
     
-    // Busca dados atualizados
+    // Busca dados atualizados do assistido
     try {
         if (db && currentPautaId && currentAssistedId) {
             const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
@@ -1712,24 +1688,24 @@ export async function openDetailsModal(config) {
         return;
     }
     
-    getEl('documents-assisted-name').textContent = assisted.name;
+    getEl('assisted-details-name').textContent = assisted.name; // <-- RENOMEADO
     
     const selectionArea = getEl('document-action-selection');
     const checklistView = getEl('document-checklist-view');
-    const checklistHeader = getEl('document-checklist-view-header');
+    const checklistHeaderActions = getEl('document-checklist-view-header'); // Header com PDF/Mudar/Salvar
     const searchContainer = getEl('checklist-search-container');
     const reuContainer = getEl('address-editor-container');
 
     // Se o modal já está aberto para o mesmo assistido E já tem checklist renderizado,
     // apenas reabre sem rerenderizar (preserva o estado atual dos campos)
-    const modalAberto = !getEl('documents-modal')?.classList.contains('hidden');
+    const modalAberto = !getEl('assisted-details-modal')?.classList.contains('hidden'); // <-- RENOMEADO
     const mesmoAssistido = window._lastOpenedAssistedId === currentAssistedId;
     const checklistJaRenderizado = currentChecklistAction && 
         !checklistView?.classList.contains('hidden');
 
     if (modalAberto && mesmoAssistido && checklistJaRenderizado) {
         console.log("♻️ Mesmo assistido — reabrindo sem rerenderizar");
-        getEl('documents-modal')?.classList.remove('hidden');
+        getEl('assisted-details-modal')?.classList.remove('hidden'); // <-- RENOMEADO
         return;
     }
 
@@ -1741,14 +1717,12 @@ export async function openDetailsModal(config) {
         console.log("✅ Checklist encontrado! Carregando:", assisted.documentChecklist.action);
         
         currentChecklistAction = assisted.documentChecklist.action;
-        renderChecklist(assisted.documentChecklist.action);
+        renderChecklist(assisted.documentChecklist.action); // Esta função já gerencia a visibilidade dos elementos internos
         
         selectionArea?.classList.add('hidden');
         checklistView?.classList.remove('hidden');
-        checklistView?.classList.add('flex');
-        checklistHeader?.classList.remove('hidden');
-        searchContainer?.classList.remove('hidden');
-        
+        checklistView?.classList.add('flex'); // Garante que a view do checklist esteja visível
+
         const titleEl = getEl('checklist-title');
         if (titleEl && documentsData[assisted.documentChecklist.action]) {
             titleEl.textContent = documentsData[assisted.documentChecklist.action].title;
@@ -1768,17 +1742,21 @@ export async function openDetailsModal(config) {
         // Mostra seleção de assunto
         console.log("❌ Nenhum checklist encontrado. Mostrando seleção de assuntos.");
         
+        // Esconde todos os elementos específicos do checklist
         checklistView?.classList.add('hidden');
         checklistView?.classList.remove('flex');
-        checklistHeader?.classList.add('hidden');
+        checklistHeaderActions?.classList.add('hidden'); // Esconde o header de ações do checklist
         searchContainer?.classList.add('hidden');
-        reuContainer?.classList.add('hidden');
+        reuContainer?.classList.add('hidden'); // Garante que o formulário do réu esteja escondido
+        
+        // Mostra a área de seleção de assunto
         selectionArea?.classList.remove('hidden');
         
         renderSubjectSelection(selectionArea);
     }
     
-    getEl('documents-modal')?.classList.remove('hidden');
+    // Finalmente, mostra o modal principal de detalhes
+    getEl('assisted-details-modal')?.classList.remove('hidden'); // <-- RENOMEADO
 }
 
 /**
@@ -1843,9 +1821,6 @@ function renderSubjectSelection(selectionArea) {
     renderFilteredSubjects();
     searchInput.addEventListener('input', (e) => renderFilteredSubjects(e.target.value));
 }
-
-
-
 
 
 /* ========================================================
