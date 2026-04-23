@@ -440,6 +440,9 @@ export const PautaService = {
         }
     },
 
+    /**
+     * Identifica o próximo assistido da fila 'aguardando' e abre o modal de seleção/finalização.
+     */
     async callNextAssisted(app) {
         if (!app || !app.currentPauta || !app.currentPauta.id) {
             showNotification("Nenhuma pauta selecionada!", "error");
@@ -478,8 +481,8 @@ export const PautaService = {
         }
 
         // Preenche a lista de colaboradores no modal de seleção
-        if (typeof this.preencherListaColaboradoresModal === 'function') {
-            this.preencherListaColaboradoresModal(app);
+        if (typeof PautaService.preencherListaColaboradoresModal === 'function') { // Use PautaService aqui
+            PautaService.preencherListaColaboradoresModal(app);
         } else {
             console.error("preencherListaColaboradoresModal não encontrada. Verifique o pauta.js.");
         }
@@ -495,81 +498,7 @@ export const PautaService = {
         }
         
         // Não é necessário logar a ação AQUI, pois o log será feito quando o modal for confirmado.
-    },
-
-        const useDelegationFlow = app.currentPautaData?.useDelegationFlow;
-        const targetStatus = useDelegationFlow ? 'emAtendimento' : 'atendido';
-        let updates = {
-            status: targetStatus,
-            lastActionBy: app.currentUserName,
-            lastActionTimestamp: new Date().toISOString()
-        };
-
-        let notificationMessage = '';
-        let logDescription = '';
-
-        if (useDelegationFlow) {
-            // Se usa delegação, o próximo assistido vai para "emAtendimento"
-            // e é atribuído ao usuário atual que clicou no botão "Chamar Próximo".
-            updates.assignedCollaborator = {
-                id: app.auth.currentUser.uid,
-                name: app.currentUserName,
-                delegatedBy: app.currentUserName,
-                delegatedAt: new Date().toISOString()
-            };
-            updates.inAttendanceTime = new Date().toISOString();
-            updates.distributionStatus = 'distributed'; // Assume que já foi distribuído para o atendente
-
-            notificationMessage = `Assistido "${nextAssisted.name}" encaminhado para seu atendimento.`;
-            logDescription = `Chamou ${nextAssisted.name} para atendimento (delegado para ${app.currentUserName})`;
-
-            const distributionHistory = nextAssisted.distributionHistory || [];
-            distributionHistory.push({
-                type: 'delegation',
-                from: app.currentUserName,
-                to: app.currentUserName, // Delegado para si mesmo neste contexto
-                timestamp: new Date().toISOString(),
-                action: 'called_next'
-            });
-            updates.distributionHistory = distributionHistory;
-
-        } else {
-            // Se não usa delegação, o próximo assistido vai direto para "atendido"
-            // e o usuário atual é marcado como quem o atendeu.
-            updates.attendedBy = app.currentUserName;
-            updates.attendedAt = new Date().toISOString();
-            updates.inAttendanceTime = new Date().toISOString(); // Marca o início do atendimento
-            updates.finalizadoPeloColaborador = true;
-            updates.distributionStatus = 'completed'; // Assumindo que atendimento direto é completado
-
-            notificationMessage = `Assistido "${nextAssisted.name}" marcado como atendido.`;
-            logDescription = `Chamou e atendeu ${nextAssisted.name} (atendimento direto)`;
-
-            const distributionHistory = nextAssisted.distributionHistory || [];
-            distributionHistory.push({
-                type: 'attendance',
-                attendedBy: app.currentUserName,
-                timestamp: new Date().toISOString(),
-                action: 'called_next_and_completed'
-            });
-            updates.distributionHistory = distributionHistory;
-        }
-
-        try {
-            await this.updateStatus(
-                app.db,
-                app.currentPauta.id,
-                nextAssisted.id,
-                updates,
-                app.currentUserName
-            );
-            showNotification(notificationMessage, "success");
-            await logAction(app.db, app.auth, app.currentUserName, app.currentPauta.id, 'CALL_NEXT_ASSISTED', logDescription, nextAssisted.id);
-        } catch (error) {
-            console.error("Erro ao chamar próximo assistido:", error);
-            showNotification("Erro ao chamar próximo assistido.", "error");
-        }
-    },
+    }, // <-- ESTA VÍRGULA É CRUCIAL PARA SEPARAR OS MÉTODOS DO OBJETO
 
     /**
      * Remove um assistido
@@ -629,7 +558,7 @@ export const PautaService = {
                 'Fila reordenada manualmente'
             );
             
-            showNotification("Fila reordenada!");
+            showNotification("Fila Reordenada!");
         } catch (error) {
             console.error("Erro ao reordenar:", error);
             showNotification("Erro ao reordenar", "error");
@@ -845,12 +774,11 @@ export const PautaService = {
         try {
             const scheduled = new Date(`1970-01-01T${assisted.scheduledTime}`);
             const arrival = new Date(assisted.arrivalTime);
-            const arrivalTime = new Date(`1970-01-01T${arrival.toTimeString().slice(0, 5)}`);
+            const arrivalTime = new Date(`1970-01-01T${arrival.getHours().toString().padStart(2,'0')}:${arrival.getMinutes().toString().padStart(2,'0')}`).getTime();
+            const diff = arrivalTime - scheduled; // Diferença em minutos (chegada - agendado)
 
-            const diffMinutes = (arrivalTime - scheduled) / (1000 * 60);
-
-            if (diffMinutes <= 0) return 'Máxima';
-            if (diffMinutes <= 20) return 'Média';
+            if (diff <= 0) return 'Máxima';
+            if (diff <= 20) return 'Média';
             return 'Mínima';
         } catch (e) {
             return 'Média';
@@ -1189,7 +1117,7 @@ export const PautaService = {
                 div.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        div.click();
+                        optionNaoAtribuir.click();
                     }
                 });
                 
@@ -1505,7 +1433,6 @@ export const PautaService = {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             
             if (!assisted) {
-                console.error(`Assistido com ID ${id} não encontrado`);
                 showNotification("Erro: Assistido não encontrado", "error");
                 return;
             }
