@@ -1256,45 +1256,24 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </div>
 
    <!-- Modal de Detalhes -->
-    <div id="assisted-details-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-0 sm:p-4">
+    <div id="documents-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-0 sm:p-4">
         <div class="bg-white shadow-2xl w-full max-w-4xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;">
-            <!-- O CABEÇALHO GERAL DO MODAL (ESTE É O MAIS IMPORTANTE AGORA) -->
-            <div id="assisted-details-modal-header" class="flex justify-between items-center p-3 sm:p-4 border-b bg-gray-50 shrink-0 sm:rounded-t-xl">
+            <div class="flex justify-between items-center p-3 sm:p-4 border-b bg-gray-50 shrink-0 sm:rounded-t-xl">
                 <h2 class="text-xs sm:text-lg font-bold text-gray-800 truncate pr-2">
-                    <!-- ESTE É O SPAN QUE ESTÁ CAUSANDO O ERRO SE ESTIVER FALTANDO OU COM ID ERRADO -->
-                    <span id="assisted-details-name" class="text-green-600 uppercase"></span>
+                    <span id="documents-assisted-name" class="text-green-600 uppercase"></span>
                 </h2>
-                <!-- ESTE É O BOTÃO DE FECHAR O MODAL -->
-                <button id="close-assisted-details-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl p-1 leading-none">&times;</button>
+                <button id="close-documents-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl p-1 leading-none">&times;</button>
             </div>
-
-            <!-- WRAPPER PARA TODO O CONTEÚDO PRINCIPAL DO MODAL (seleção de assunto, checklist, etc.) -->
-            <div id="assisted-details-content-wrapper" class="flex-grow overflow-y-auto p-3 sm:p-6 bg-white scrollable-content">
-                <!-- O conteúdo antigo que estava dentro do documents-modal deve vir aqui -->
-                <!-- Por exemplo: -->
-                <div id="document-checklist-view-header" class="hidden p-2 bg-white border-b flex flex-col gap-2 shrink-0">
-                    <div class="flex items-center gap-2 w-full">
-                        <button id="back-to-action-selection-btn" class="bg-gray-100 border border-gray-300 text-gray-700 font-bold p-2 rounded-lg text-xs shrink-0 active:bg-gray-200">
-                            &larr;
-                        </button>
-                        <div class="flex flex-col min-w-0">
-                            <h3 id="checklist-title" class="text-[10px] font-black text-gray-500 uppercase truncate leading-none mb-1"></h3>
-                            <span id="checklist-counter" class="text-[9px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full w-max">
-                                0 itens selecionados
-                            </span>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-3 gap-1.5 w-full">
-                        <button id="print-checklist-btn" class="bg-red-600 text-white font-bold py-2.5 rounded-lg text-[10px] uppercase shadow-sm active:bg-red-700 transition-colors">PDF</button>
-                        <button id="reset-checklist-btn" class="bg-amber-500 text-white font-bold py-2.5 rounded-lg text-[10px] uppercase shadow-sm active:bg-amber-600 transition-colors">Mudar</button>
-                        <button id="save-checklist-btn" class="bg-green-600 text-white font-bold py-2.5 rounded-lg text-[10px] uppercase shadow-lg active:bg-green-700 transition-colors">Salvar</button>
-                    </div>
-                </div>
-        
-                <div id="checklist-search-container" class="hidden p-2 bg-gray-50 border-b shrink-0">
-                    <input type="search" id="checklist-search" placeholder="Pesquisar documento..." class="w-full p-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500">
-                </div>
-        
+    
+            <div id="document-checklist-view-header" class="hidden p-2 bg-white border-b flex flex-col gap-2 shrink-0">
+                <!-- ... conteúdo do header do checklist ... -->
+            </div>
+    
+            <div id="checklist-search-container" class="hidden p-2 bg-gray-50 border-b shrink-0">
+                <!-- ... input de busca ... -->
+            </div>
+    
+            <div class="flex-grow overflow-y-auto p-3 sm:p-6 bg-white scrollable-content">
                 <div id="document-action-selection"></div>
                 <div id="document-checklist-view" class="hidden flex-col">
                     <div id="checklist-container" class="space-y-1"></div>
