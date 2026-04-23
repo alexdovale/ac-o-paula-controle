@@ -440,6 +440,101 @@ export const PautaService = {
         }
     },
 
+    async callNextAssisted(app) {
+        if (!app || !app.currentPauta || !app.currentPauta.id) {
+            showNotification("Nenhuma pauta selecionada!", "error");
+            return;
+        }
+
+        const aguardandoList = app.allAssisted.filter(a => a.status === 'aguardando');
+        if (aguardandoList.length === 0) {
+            showNotification("A fila de aguardando está vazia.", "info");
+            return;
+        }
+
+        // Ordena a lista para encontrar o "próximo"
+        const orderedList = this.sortAguardando(aguardandoList, app.currentPautaData.ordemAtendimento);
+        const nextAssisted = orderedList[0];
+
+        if (!nextAssisted) {
+            showNotification("Não foi possível identificar o próximo assistido.", "error");
+            return;
+        }
+
+        const useDelegationFlow = app.currentPautaData?.useDelegationFlow;
+        const targetStatus = useDelegationFlow ? 'emAtendimento' : 'atendido';
+        let updates = {
+            status: targetStatus,
+            lastActionBy: app.currentUserName,
+            lastActionTimestamp: new Date().toISOString()
+        };
+
+        let notificationMessage = '';
+        let logDescription = '';
+
+        if (useDelegationFlow) {
+            // Se usa delegação, o próximo assistido vai para "emAtendimento"
+            // e é atribuído ao usuário atual que clicou no botão "Chamar Próximo".
+            updates.assignedCollaborator = {
+                id: app.auth.currentUser.uid,
+                name: app.currentUserName,
+                delegatedBy: app.currentUserName,
+                delegatedAt: new Date().toISOString()
+            };
+            updates.inAttendanceTime = new Date().toISOString();
+            updates.distributionStatus = 'distributed'; // Assume que já foi distribuído para o atendente
+
+            notificationMessage = `Assistido "${nextAssisted.name}" encaminhado para seu atendimento.`;
+            logDescription = `Chamou ${nextAssisted.name} para atendimento (delegado para ${app.currentUserName})`;
+
+            const distributionHistory = nextAssisted.distributionHistory || [];
+            distributionHistory.push({
+                type: 'delegation',
+                from: app.currentUserName,
+                to: app.currentUserName, // Delegado para si mesmo neste contexto
+                timestamp: new Date().toISOString(),
+                action: 'called_next'
+            });
+            updates.distributionHistory = distributionHistory;
+
+        } else {
+            // Se não usa delegação, o próximo assistido vai direto para "atendido"
+            // e o usuário atual é marcado como quem o atendeu.
+            updates.attendedBy = app.currentUserName;
+            updates.attendedAt = new Date().toISOString();
+            updates.inAttendanceTime = new Date().toISOString(); // Marca o início do atendimento
+            updates.finalizadoPeloColaborador = true;
+            updates.distributionStatus = 'completed'; // Assumindo que atendimento direto é completado
+
+            notificationMessage = `Assistido "${nextAssisted.name}" marcado como atendido.`;
+            logDescription = `Chamou e atendeu ${nextAssisted.name} (atendimento direto)`;
+
+            const distributionHistory = nextAssisted.distributionHistory || [];
+            distributionHistory.push({
+                type: 'attendance',
+                attendedBy: app.currentUserName,
+                timestamp: new Date().toISOString(),
+                action: 'called_next_and_completed'
+            });
+            updates.distributionHistory = distributionHistory;
+        }
+
+        try {
+            await this.updateStatus(
+                app.db,
+                app.currentPauta.id,
+                nextAssisted.id,
+                updates,
+                app.currentUserName
+            );
+            showNotification(notificationMessage, "success");
+            await logAction(app.db, app.auth, app.currentUserName, app.currentPauta.id, 'CALL_NEXT_ASSISTED', logDescription, nextAssisted.id);
+        } catch (error) {
+            console.error("Erro ao chamar próximo assistido:", error);
+            showNotification("Erro ao chamar próximo assistido.", "error");
+        }
+    },
+
     /**
      * Remove um assistido
      */
