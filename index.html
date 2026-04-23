@@ -1256,35 +1256,63 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     </div>
 
    <!-- Modal de Detalhes do Assistido -->
-<div id="assisted-details-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-0 sm:p-4">
-    <div class="bg-white shadow-2xl w-full max-w-4xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;">
-        <!-- ESTE É O CABEÇALHO DO MODAL. Ele deve ter o ID assisted-details-modal-header -->
-        <div id="assisted-details-modal-header" class="flex justify-between items-center p-3 sm:p-4 border-b bg-gray-50 shrink-0 sm:rounded-t-xl">
-            <h2 class="text-xs sm:text-lg font-bold text-gray-800 truncate pr-2">
-                <!-- ESTE É O SPAN QUE ESTÁ CAUSANDO O ERRO. Ele DEVE ter o ID assisted-details-name -->
-                <span id="assisted-details-name" class="text-green-600 uppercase"></span>
-            </h2>
-            <!-- ESTE É O BOTÃO DE FECHAR. Ele DEVE ter o ID close-assisted-details-modal-btn -->
-            <button id="close-assisted-details-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl p-1 leading-none">&times;</button>
-        </div>
+    <div id="assisted-details-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-0 sm:p-4">
+        <div class="bg-white shadow-2xl w-full max-w-4xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;">
+            
+            <!-- 1. CABEÇALHO GERAL DO MODAL (com o nome do assistido e botão de fechar) -->
+            <div id="assisted-details-modal-header" class="flex justify-between items-center p-3 sm:p-4 border-b bg-gray-50 shrink-0 sm:rounded-t-xl">
+                <h2 class="text-xs sm:text-lg font-bold text-gray-800 truncate pr-2">
+                    <span id="assisted-details-name" class="text-green-600 uppercase"></span>
+                </h2>
+                <button id="close-assisted-details-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl p-1 leading-none">&times;</button>
+            </div>
 
-        <!-- TODO O CONTEÚDO RESTANTE DO MODAL VEM AQUI DENTRO, DENTRO DE UM WRAPPER -->
-        <div id="assisted-details-content-wrapper" class="flex-grow overflow-y-auto p-3 sm:p-6 bg-white scrollable-content">
-            <!-- O conteúdo do checklist e seleção de ação... -->
-            <div id="document-checklist-view-header" class="hidden p-2 bg-white border-b flex flex-col gap-2 shrink-0">
-                <!-- ... seu conteúdo ... -->
-            </div>
-            <div id="checklist-search-container" class="hidden p-2 bg-gray-50 border-b shrink-0">
-                <!-- ... seu conteúdo ... -->
-            </div>
-            <div id="document-action-selection"></div>
-            <div id="document-checklist-view" class="hidden flex-col">
-                <div id="checklist-container" class="space-y-1"></div>
-                <div id="address-editor-container" class="mt-8 border-t pt-6 mb-10"></div>
-            </div>
+            <!-- 2. WRAPPER PARA TODO O CONTEÚDO SCROLLABLE INTERNO (seleção de assunto, checklist, etc.) -->
+            <div id="assisted-details-content-wrapper" class="flex-grow overflow-y-auto p-3 sm:p-6 bg-white scrollable-content">
+                
+                <!-- ÁREA DE SELEÇÃO DE ASSUNTO (Inicialmente visível se não houver checklist salvo) -->
+                <div id="document-action-selection">
+                    <!-- Conteúdo será renderizado por renderSubjectSelection() -->
+                </div>
+
+                <!-- ÁREA DE VISUALIZAÇÃO DO CHECKLIST (Inicialmente oculta) -->
+                <div id="document-checklist-view" class="hidden flex-col">
+                    
+                    <!-- HEADER ESPECÍFICO DO CHECKLIST (com os botões PDF, Mudar, Salvar, título e contador) -->
+                    <div id="document-checklist-view-header-actions" class="p-2 bg-white border-b flex flex-col gap-2 shrink-0">
+                        <div class="flex items-center gap-2 w-full">
+                            <button id="back-to-action-selection-btn" class="bg-gray-100 border border-gray-300 text-gray-700 font-bold p-2 rounded-lg text-xs shrink-0 active:bg-gray-200">
+                                &larr;
+                            </button>
+                            <div class="flex flex-col min-w-0">
+                                <h3 id="checklist-title" class="text-[10px] font-black text-gray-500 uppercase truncate leading-none mb-1"></h3>
+                                <span id="checklist-counter" class="text-[9px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full w-max">
+                                    0 itens selecionados
+                                </span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-1.5 w-full">
+                            <button id="print-checklist-btn" class="bg-red-600 text-white font-bold py-2.5 rounded-lg text-[10px] uppercase shadow-sm active:bg-red-700 transition-colors">PDF</button>
+                            <button id="reset-checklist-btn" class="bg-amber-500 text-white font-bold py-2.5 rounded-lg text-[10px] uppercase shadow-sm active:bg-amber-600 transition-colors">Mudar</button>
+                            <button id="save-checklist-btn" class="bg-green-600 text-white font-bold py-2.5 rounded-lg text-[10px] uppercase shadow-lg active:bg-green-700 transition-colors">Salvar</button>
+                        </div>
+                    </div>
+            
+                    <!-- BARRA DE BUSCA ESPECÍFICA DO CHECKLIST -->
+                    <div id="checklist-search-container" class="p-2 bg-gray-50 border-b shrink-0">
+                        <input type="search" id="checklist-search" placeholder="Pesquisar documento..." class="w-full p-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+            
+                    <!-- CONTAINER DOS ITENS DO CHECKLIST -->
+                    <div id="checklist-container" class="space-y-1 p-2"></div>
+                    
+                    <!-- CONTAINER DO FORMULÁRIO DO RÉU -->
+                    <div id="address-editor-container" class="mt-8 border-t pt-6 mb-10"></div>
+                </div>
+                
+            </div> <!-- FIM assisted-details-content-wrapper -->
         </div>
     </div>
-</div>
     
     <!-- Modal de Anotações -->
     <div id="notes-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
