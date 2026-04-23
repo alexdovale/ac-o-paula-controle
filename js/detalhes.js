@@ -231,7 +231,8 @@ export const documentsData = {
         title: 'Curatela (Interdição)',
         sections: [
             { title: 'Base e Renda (Curador)', docs: COMMON_DOCS_FULL },
-            { title: 'Do Curatelando', docs: ['RG e CPF', 'Certidão Nascimento/Casamento', 'Renda (INSS)', 'Laudo Médico (CID)'] }
+            { title: 'Do Curatelando', docs: ['RG e CPF', 'Certidão Nascimento/Casamento', 'Renda (INSS)', 'Laudo Médico (CID)'] },
+            { title: 'Específicos', docs: ['Laudo Médico (CID)'] } // Adicionado para consistência
         ]
     },
     retificacao_registro_civil: {
@@ -456,12 +457,9 @@ function renderChecklist(actionKey) {
     const titleEl = getEl('checklist-title');
     if (titleEl) titleEl.textContent = data.title;
     
-    // Mostra cabeçalho de ações do checklist e busca
-    const checklistHeaderActions = getEl('document-checklist-view-header'); // Header com PDF/Mudar/Salvar
-    if (checklistHeaderActions) checklistHeaderActions.classList.remove('hidden');
-    
-    const searchEl = getEl('checklist-search-container');
-    if (searchEl) searchEl.classList.remove('hidden');
+    // Mostra o header específico do checklist com os botões de ação e busca
+    getEl('document-checklist-view-header-actions')?.classList.remove('hidden');
+    getEl('checklist-search-container')?.classList.remove('hidden');
     
     containerEl.innerHTML = ''; 
 
@@ -943,8 +941,8 @@ function renderReuSaveButton() {
  * 6.7 Inicializa checkbox único do réu
  */
 function initReuUnicoCheckbox() {
-    const checkUnico = document.getElementById('check-reu-unico');
-    const contentCompleto = document.getElementById('content-reu-completo');
+    const checkUnico = getEl('check-reu-unico');
+    const contentCompleto = getEl('content-reu-completo'); // Usando getEl
     
     if (checkUnico && contentCompleto) {
         checkUnico.addEventListener('change', function() {
@@ -963,7 +961,7 @@ function initReuUnicoCheckbox() {
  */
 function initCepSearch() {
     const cepInp = getEl('cep-reu');
-    const buscarBtn = document.getElementById('buscar-cep-reu-btn');
+    const buscarBtn = getEl('buscar-cep-reu-btn'); // Usando getEl
     
     async function buscarCEP(cep, tipo = 'residencial') {
         const val = cep.replace(/\D/g, '');
@@ -1000,7 +998,7 @@ function initCepSearch() {
         cepInp.addEventListener('blur', () => buscarCEP(cepInp.value, 'residencial'));
     }
 
-    const buscarComercialBtn = document.getElementById('buscar-cep-comercial-reu-btn');
+    const buscarComercialBtn = getEl('buscar-cep-comercial-reu-btn'); // Usando getEl
     const cepComercial = getEl('cep-comercial-reu');
     
     if (buscarComercialBtn && cepComercial) {
@@ -1013,7 +1011,7 @@ function initCepSearch() {
  * 6.9 Inicializa botão salvar do réu
  */
 function initReuSaveButton() {
-    const salvarBtn = document.getElementById('salvar-reu-btn');
+    const salvarBtn = getEl('salvar-reu-btn'); // Usando getEl
     if (salvarBtn) {
         salvarBtn.addEventListener('click', () => {
             const event = new CustomEvent('reuSalvo', { detail: getReuDataFromForm() });
@@ -1112,10 +1110,10 @@ function initExpenseTableEvents(div) {
     // Botão fechar
     setTimeout(() => {
         div.querySelector('#fechar-gastos')?.addEventListener('click', () => {
-            const container = document.getElementById('expense-table-container');
+            const container = getEl('expense-table-container'); // Usando getEl
             if (container) container.innerHTML = '';
             
-            const expenseButton = document.getElementById('expense-button-container');
+            const expenseButton = getEl('expense-button-container'); // Usando getEl
             if (expenseButton) expenseButton.style.display = 'block';
             updateSelectedCounter(); // Atualiza o contador após fechar a tabela
         });
@@ -1232,7 +1230,7 @@ function fillReuData(d) {
  * @param {Object} d - Dados do réu
  */
 function updateReuVisibility(d) {
-    const contentCompleto = document.getElementById('content-reu-completo');
+    const contentCompleto = getEl('content-reu-completo'); // Usando getEl
     
     if (contentCompleto) {
         contentCompleto.style.display = d.checkReuUnico ? 'block' : 'none';
@@ -1253,10 +1251,10 @@ function fillExpenseData(d) {
         if (el && d[cat.id]) el.value = d[cat.id];
     });
     
-    const checkGastos = getEl('check-exibir-gastos');
+    const checkGastos = getEl('check-exibir-gastos'); // Usando getEl
     if (checkGastos && d.checkExibirGastos !== undefined) {
         checkGastos.checked = d.checkExibirGastos;
-        const contentGastos = document.getElementById('content-planilha-gastos');
+        const contentGastos = getEl('content-planilha-gastos'); // Usando getEl
         if (contentGastos) contentGastos.style.display = d.checkExibirGastos ? 'block' : 'none';
     }
     
@@ -1285,7 +1283,7 @@ async function handlePdf() {
         console.log("=".repeat(50));
         
         // Dados básicos
-        const assistedName = getEl('assisted-details-name')?.textContent || 'Assistido'; // <-- RENOMEADO
+        const assistedName = getEl('assisted-details-name')?.textContent || 'Assistido';
         const actionTitle = getEl('checklist-title')?.textContent || '';
         
         // Documentos marcados
@@ -1544,8 +1542,10 @@ async function handleReset() {
         window._lastOpenedAssistedId = null;
         currentChecklistAction = null;
         handleBack();
+        showNotification("Checklist resetado. Selecione um novo assunto.", "info");
     } catch (e) {
-        console.error(e);
+        console.error("Erro ao resetar checklist:", e);
+        showNotification("Erro ao resetar checklist: " + e.message, "error");
     }
 }
 
@@ -1555,7 +1555,7 @@ async function handleReset() {
 function handleBack() {
     getEl('document-checklist-view')?.classList.add('hidden');
     getEl('document-checklist-view')?.classList.remove('flex'); // Remove flex para garantir que não ocupe espaço
-    getEl('document-checklist-view-header')?.classList.add('hidden'); // Esconde header específico do checklist
+    getEl('document-checklist-view-header-actions')?.classList.add('hidden'); // Esconde header específico do checklist
     getEl('checklist-search-container')?.classList.add('hidden');
     getEl('address-editor-container')?.classList.add('hidden'); // Esconde formulário do réu
     getEl('document-action-selection')?.classList.remove('hidden'); // Mostra seleção de assunto
@@ -1623,6 +1623,7 @@ export function setupDetailsModal(config) {
     }
 
     // Listeners para os botões de ação do checklist (dentro do header específico do checklist)
+    // Garanta que estes IDs existam no seu HTML dentro do #document-checklist-view-header-actions
     getEl('back-to-action-selection-btn').onclick = handleBack;
     getEl('save-checklist-btn').onclick = handleSave;
     getEl('print-checklist-btn').onclick = handlePdf;
@@ -1688,24 +1689,32 @@ export async function openDetailsModal(config) {
         return;
     }
     
-    getEl('assisted-details-name').textContent = assisted.name; // <-- RENOMEADO
+    // AQUI O ERRO OCORRE: getEl('assisted-details-name') pode ser null se o HTML não foi atualizado.
+    const assistedDetailsNameEl = getEl('assisted-details-name');
+    if (assistedDetailsNameEl) {
+        assistedDetailsNameEl.textContent = assisted.name;
+    } else {
+        console.error("Elemento 'assisted-details-name' não encontrado no DOM. Verifique o HTML.");
+        // Você pode querer retornar ou mostrar uma notificação aqui,
+        // mas vamos continuar para tentar abrir o modal mesmo sem o nome no título.
+    }
     
     const selectionArea = getEl('document-action-selection');
     const checklistView = getEl('document-checklist-view');
-    const checklistHeaderActions = getEl('document-checklist-view-header'); // Header com PDF/Mudar/Salvar
+    const checklistHeaderActions = getEl('document-checklist-view-header-actions'); // Novo ID
     const searchContainer = getEl('checklist-search-container');
     const reuContainer = getEl('address-editor-container');
 
     // Se o modal já está aberto para o mesmo assistido E já tem checklist renderizado,
     // apenas reabre sem rerenderizar (preserva o estado atual dos campos)
-    const modalAberto = !getEl('assisted-details-modal')?.classList.contains('hidden'); // <-- RENOMEADO
+    const modalAberto = !getEl('assisted-details-modal')?.classList.contains('hidden');
     const mesmoAssistido = window._lastOpenedAssistedId === currentAssistedId;
     const checklistJaRenderizado = currentChecklistAction && 
         !checklistView?.classList.contains('hidden');
 
     if (modalAberto && mesmoAssistido && checklistJaRenderizado) {
         console.log("♻️ Mesmo assistido — reabrindo sem rerenderizar");
-        getEl('assisted-details-modal')?.classList.remove('hidden'); // <-- RENOMEADO
+        getEl('assisted-details-modal')?.classList.remove('hidden');
         return;
     }
 
@@ -1722,21 +1731,6 @@ export async function openDetailsModal(config) {
         selectionArea?.classList.add('hidden');
         checklistView?.classList.remove('hidden');
         checklistView?.classList.add('flex'); // Garante que a view do checklist esteja visível
-
-        const titleEl = getEl('checklist-title');
-        if (titleEl && documentsData[assisted.documentChecklist.action]) {
-            titleEl.textContent = documentsData[assisted.documentChecklist.action].title;
-        }
-        
-        if (assisted.documentChecklist.reuData) {
-            setTimeout(() => fillReuData(assisted.documentChecklist.reuData), 300);
-        }
-        
-        if (assisted.documentChecklist.expenseData) {
-            setTimeout(() => fillExpenseData(assisted.documentChecklist.expenseData), 300);
-        }
-        
-        setTimeout(checkReuVisibility, 400);
         
     } else {
         // Mostra seleção de assunto
@@ -1756,7 +1750,7 @@ export async function openDetailsModal(config) {
     }
     
     // Finalmente, mostra o modal principal de detalhes
-    getEl('assisted-details-modal')?.classList.remove('hidden'); // <-- RENOMEADO
+    getEl('assisted-details-modal')?.classList.remove('hidden');
 }
 
 /**
