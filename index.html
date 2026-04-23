@@ -1255,33 +1255,36 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         </div>
     </div>
 
-   <!-- Modal de Detalhes -->
-    <div id="documents-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-0 sm:p-4">
-        <div class="bg-white shadow-2xl w-full max-w-4xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;">
-            <div class="flex justify-between items-center p-3 sm:p-4 border-b bg-gray-50 shrink-0 sm:rounded-t-xl">
-                <h2 class="text-xs sm:text-lg font-bold text-gray-800 truncate pr-2">
-                    <span id="documents-assisted-name" class="text-green-600 uppercase"></span>
-                </h2>
-                <button id="close-documents-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl p-1 leading-none">&times;</button>
-            </div>
-    
+   <!-- Modal de Detalhes do Assistido -->
+<div id="assisted-details-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-0 sm:p-4">
+    <div class="bg-white shadow-2xl w-full max-w-4xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;">
+        <!-- ESTE É O CABEÇALHO DO MODAL. Ele deve ter o ID assisted-details-modal-header -->
+        <div id="assisted-details-modal-header" class="flex justify-between items-center p-3 sm:p-4 border-b bg-gray-50 shrink-0 sm:rounded-t-xl">
+            <h2 class="text-xs sm:text-lg font-bold text-gray-800 truncate pr-2">
+                <!-- ESTE É O SPAN QUE ESTÁ CAUSANDO O ERRO. Ele DEVE ter o ID assisted-details-name -->
+                <span id="assisted-details-name" class="text-green-600 uppercase"></span>
+            </h2>
+            <!-- ESTE É O BOTÃO DE FECHAR. Ele DEVE ter o ID close-assisted-details-modal-btn -->
+            <button id="close-assisted-details-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl p-1 leading-none">&times;</button>
+        </div>
+
+        <!-- TODO O CONTEÚDO RESTANTE DO MODAL VEM AQUI DENTRO, DENTRO DE UM WRAPPER -->
+        <div id="assisted-details-content-wrapper" class="flex-grow overflow-y-auto p-3 sm:p-6 bg-white scrollable-content">
+            <!-- O conteúdo do checklist e seleção de ação... -->
             <div id="document-checklist-view-header" class="hidden p-2 bg-white border-b flex flex-col gap-2 shrink-0">
-                <!-- ... conteúdo do header do checklist ... -->
+                <!-- ... seu conteúdo ... -->
             </div>
-    
             <div id="checklist-search-container" class="hidden p-2 bg-gray-50 border-b shrink-0">
-                <!-- ... input de busca ... -->
+                <!-- ... seu conteúdo ... -->
             </div>
-    
-            <div class="flex-grow overflow-y-auto p-3 sm:p-6 bg-white scrollable-content">
-                <div id="document-action-selection"></div>
-                <div id="document-checklist-view" class="hidden flex-col">
-                    <div id="checklist-container" class="space-y-1"></div>
-                    <div id="address-editor-container" class="mt-8 border-t pt-6 mb-10"></div>
-                </div>
+            <div id="document-action-selection"></div>
+            <div id="document-checklist-view" class="hidden flex-col">
+                <div id="checklist-container" class="space-y-1"></div>
+                <div id="address-editor-container" class="mt-8 border-t pt-6 mb-10"></div>
             </div>
         </div>
     </div>
+</div>
     
     <!-- Modal de Anotações -->
     <div id="notes-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
