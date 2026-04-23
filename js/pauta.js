@@ -461,6 +461,42 @@ export const PautaService = {
             return;
         }
 
+        // Define as variáveis globais para o modal de seleção de colaborador/finalização
+        window.assistedIdToHandle = nextAssisted.id;
+        window.assistedNameToHandle = nextAssisted.name || '';
+        
+        // Determina o tipo de ação para o modal.
+        // Se usar fluxo de delegação, a ação será 'delegar'.
+        // Se não usar, a ação será 'atender_direto'.
+        // Isso será usado para ajustar o comportamento do modal de seleção.
+        window.assistedTipoAcao = app.currentPautaData?.useDelegationFlow ? 'delegar' : 'atender_direto';
+        
+        // Preenche o nome do assistido no modal
+        const assistedToAttendNameEl = document.getElementById('assisted-to-attend-name');
+        if (assistedToAttendNameEl) {
+            assistedToAttendNameEl.textContent = nextAssisted.name;
+        }
+
+        // Preenche a lista de colaboradores no modal de seleção
+        if (typeof this.preencherListaColaboradoresModal === 'function') {
+            this.preencherListaColaboradoresModal(app);
+        } else {
+            console.error("preencherListaColaboradoresModal não encontrada. Verifique o pauta.js.");
+        }
+
+        // Abre o modal de seleção de colaborador/finalização
+        const selectCollaboratorModal = document.getElementById('select-collaborator-modal');
+        if (selectCollaboratorModal) {
+            selectCollaboratorModal.classList.remove('hidden');
+            showNotification(`Próximo: "${nextAssisted.name}". Selecione o atendente.`, "info");
+        } else {
+            console.error("Modal 'select-collaborator-modal' não encontrado.");
+            showNotification("Erro ao abrir seleção de atendente. Tente novamente.", "error");
+        }
+        
+        // Não é necessário logar a ação AQUI, pois o log será feito quando o modal for confirmado.
+    },
+
         const useDelegationFlow = app.currentPautaData?.useDelegationFlow;
         const targetStatus = useDelegationFlow ? 'emAtendimento' : 'atendido';
         let updates = {
