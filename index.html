@@ -1656,6 +1656,11 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     if (btn) btn.addEventListener('click', () => AuthService.logout(this.auth));
                 });
 
+                // Listener para o botão "Chamar Próximo Assistido"
+                document.getElementById('call-next-assisted-btn')?.addEventListener('click', () => {
+                    PautaService.callNextAssisted(this);
+                });
+
 
                 // ================================================
                 // BOTÃO GERAR ATA SOCIAL - COM MODAL PERSONALIZADO
