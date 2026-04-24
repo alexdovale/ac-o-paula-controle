@@ -509,6 +509,7 @@ export const PautaService = {
         if (selectCollaboratorModal) {
             selectCollaboratorModal.classList.remove('hidden');
             showNotification(`Próximo: "${nextAssisted.name}". Selecione o atendente.`, "info");
+            playSound('chime'); // Avisa que o próximo foi identificado/chamado para o modal
         } else {
             console.error("Modal 'select-collaborator-modal' não encontrado.");
             showNotification("Erro ao abrir seleção de atendente. Tente novamente.", "error");
