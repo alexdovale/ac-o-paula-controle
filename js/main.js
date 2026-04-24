@@ -15,7 +15,7 @@ import { NotesService } from './notes.js?v=20260313';
 import { StatisticsService } from './estatisticas.js?v=20260313';
 import { PDFService } from './pdfService.js?v=novo_pdf_v2';
 import { EmailService } from './emailService.js?v=20260313';
-import { escapeHTML, showNotification, normalizeText, copyToClipboard, formatTime } from './utils.js?v=20260313';
+import { escapeHTML, showNotification, normalizeText, copyToClipboard, formatTime, playSound } from './utils.js?v=20260313';
 import { setupDetailsModal, openDetailsModal } from './detalhes.js';
 import { subjectTree, flatSubjects } from './assuntos.js';
 import { showConfirmModal } from './confirmModal.js';
@@ -95,6 +95,7 @@ class SIGAPApp {
         window.addEventListener('online', () => {
             document.getElementById('offline-indicator').classList.add('hidden');
             showNotification("Conexão restabelecida!", "success");
+            playSound('notification');
         });
     }
 
@@ -404,8 +405,10 @@ class SIGAPApp {
                         });
                     }
                     showNotification(`Integração concluída: ${assistidosOficiais.length} assistidos importados.`);
+                    playSound('success'); // Som ao importar com sucesso
                 } else {
                     showNotification("Pauta criada com sucesso!");
+                    playSound('success'); // Som ao criar com sucesso
                 }
         
                 // 3. Limpa e fecha modais
@@ -496,6 +499,7 @@ class SIGAPApp {
                 await updateDoc(pautaRef, { isPublic: isPublic });
                 this.currentPautaData.isPublic = isPublic;
                 showNotification(isPublic ? "Link público ativado." : "Link público desativado.");
+                playSound('notification');
             } catch (error) {
                 console.error(error);
                 showNotification("Erro ao atualizar status.", "error");
@@ -508,6 +512,7 @@ class SIGAPApp {
             input.select();
             navigator.clipboard.writeText(input.value);
             showNotification("Link copiado!", "info");
+            playSound('notification');
         });
 
         // Ocultar sobrenomes
@@ -518,6 +523,7 @@ class SIGAPApp {
                 await updateDoc(pautaRef, { maskNames: mask });
                 this.currentPautaData.maskNames = mask;
                 showNotification("Configuração de privacidade atualizada.");
+                playSound('notification');
             } catch (error) {
                 showNotification("Erro ao salvar configuração.", "error");
             }
@@ -630,6 +636,7 @@ class SIGAPApp {
                 }
                 
                 showNotification("Configurações atualizadas com sucesso!");
+                playSound('success');
                 document.getElementById('edit-pauta-config-modal').classList.add('hidden');
                 
             } catch (error) {
@@ -824,6 +831,7 @@ class SIGAPApp {
             document.getElementById('priority-reason-input').value = '';
             document.getElementById('priority-reason-modal')?.classList.add('hidden');
             showNotification("Prioridade Ativada!");
+            playSound('success');
         });
 
         // Cancelar prioridade
@@ -877,6 +885,7 @@ class SIGAPApp {
                     documentState: 'saved'
                 });
                 showNotification("Checklist salvo com sucesso!");
+                playSound('success');
                 document.getElementById('documents-modal').classList.add('hidden');
             } catch (error) {
                 console.error("Erro ao salvar checklist:", error);
@@ -934,6 +943,7 @@ class SIGAPApp {
 
                 if (resultado) {
                     showNotification("PDF gerado com sucesso!");
+                    playSound('success');
                 } else {
                     showNotification("Erro ao gerar PDF", "error");
                 }
@@ -1343,6 +1353,7 @@ class SIGAPApp {
             await batch.commit();
             
             showNotification("Pauta zerada com sucesso.", "success");
+            playSound('success');
             document.getElementById('reset-confirm-modal')?.classList.add('hidden');
         });
 
@@ -1360,6 +1371,7 @@ class SIGAPApp {
                 await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { name: newName });
                 document.getElementById('pauta-title').textContent = newName;
                 showNotification("Nome da pauta atualizado.");
+                playSound('success');
                 document.getElementById('edit-pauta-modal')?.classList.add('hidden');
             } else {
                 showNotification("O nome não pode ser vazio.", "error");
@@ -1399,6 +1411,7 @@ class SIGAPApp {
                 UIService.togglePautaLock(this);
 
                 showNotification(`Pauta ${isReopen ? 'reaberta' : 'fechada'} com sucesso.`);
+                playSound('success');
                 document.getElementById('close-pauta-modal')?.classList.add('hidden');
                 
             } catch (error) {
@@ -1492,6 +1505,7 @@ class SIGAPApp {
                             });
                             
                             showNotification(`Membro ${email} removido`);
+                            playSound('notification');
                             
                             if (typeof ModalService?.openMembersModal === 'function') {
                                 await ModalService.openMembersModal(this);
@@ -1806,6 +1820,7 @@ class SIGAPApp {
             );
             
             if (success) {
+                playSound('success'); // Som ao deletar a pauta
                 await this.loadPautasWithFilter();
             }
         } catch (error) {
