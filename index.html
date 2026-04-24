@@ -100,6 +100,28 @@
             animation: spin 1s linear infinite;
             margin: 0 auto;
         }
+
+        /* ... outros estilos ... */
+
+        /* Estilo para o efeito de mudança no contador */
+        .count-pulse {
+            animation: pulse-bg 1s forwards; /* Aplica a animação */
+        }
+
+        @keyframes pulse-bg {
+            0% {
+                background-color: #a7f3d0; /* Verde claro */
+                transform: scale(1);
+            }
+            50% {
+                background-color: #34d399; /* Verde mais vibrante */
+                transform: scale(1.1);
+            }
+            100% {
+                background-color: #e2e8f0; /* Volta à cor original do bg-gray-200 */
+                transform: scale(1);
+            }
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
