@@ -1,8 +1,9 @@
 // js/pauta.js - VERSÃO COMPLETA E ATUALIZADA (com todas as funções originais e melhorias para compatibilidade e nova lógica de ordenação)
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { showNotification, normalizeText, escapeHTML } from './utils.js';
+import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
 import { logAction } from './admin.js';
+
 
 export const PautaService = {
     currentListeners: new Map(),
@@ -191,6 +192,7 @@ export const PautaService = {
             );
             
             showNotification("Assistido adicionado com sucesso!");
+            playSound('notification');
             
             if (nameInput) nameInput.value = '';
             if (cpfInput) cpfInput.value = '';
