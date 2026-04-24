@@ -290,6 +290,21 @@ export const PautaService = {
             );
             
             console.log("Status atualizado com sucesso!");
+
+            if (updates.status === 'aguardando' && currentData.status !== 'aguardando') {
+                playSound('chime'); // Alguém acabou de chegar/entrar na fila
+            } else if (updates.status === 'emAtendimento' && currentData.status !== 'emAtendimento') {
+                playSound('chime'); // Alguém foi chamado/delegado
+            } else if (updates.status === 'atendido' && currentData.status !== 'atendido') {
+                playSound('success'); // Atendimento finalizado
+            } else if (finalUpdates.documentState === 'saved' && currentData.documentState !== 'saved') {
+                // Se o checklist foi salvo
+                playSound('success');
+            }
+            show
+                Notification(mensagem, "success"); // A notificação existente
+
+    
         } catch (error) {
             console.error("Erro ao atualizar status:", error);
             showNotification("Erro ao atualizar", "error");
