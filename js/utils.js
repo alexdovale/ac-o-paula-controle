@@ -48,10 +48,32 @@ export const showNotification = (message, type = 'success') => {
 };
 
 /**
- * Formatação de horários (HH:mm)
- * @param {Object|string} timeStamp - Timestamp do Firebase ou string ISO
- * @returns {string} Horário formatado ou 'N/A'
+ * Toca um som de notificação.
+ * @param {string} type - Tipo de som ('notification', 'success', 'error', 'chime').
  */
+export function playSound(type = 'notification') {
+    let audioPath = '';
+    switch (type) {
+        case 'success':
+            audioPath = './assets/sounds/success.mp3'; // Crie este arquivo
+            break;
+        case 'error':
+            audioPath = './assets/sounds/error.mp3';   // Crie este arquivo
+            break;
+        case 'chime': // Para quando alguém é chamado
+            audioPath = './assets/sounds/chime.mp3';   // Crie este arquivo
+            break;
+        case 'notification':
+        default:
+            audioPath = './assets/sounds/notification.mp3'; // Crie este arquivo
+            break;
+    }
+
+    const audio = new Audio(audioPath);
+    audio.volume = 0.5; // Ajuste o volume se necessário
+    audio.play().catch(e => console.warn("Falha ao reproduzir som:", e));
+}
+
 export const formatTime = (timeStamp) => {
     if (!timeStamp) return 'N/A';
     
