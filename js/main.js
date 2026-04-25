@@ -40,6 +40,8 @@ class SIGAPApp {
         this.unsubscribeFromAttendances = null;
         this.unsubscribeFromCollaborators = null;
         this.currentPautaFilter = 'all'; // Estado do filtro
+        this.userPreferences = {}; // Campo para armazenar as preferências do usuário
+
         
         this.init();
     }
