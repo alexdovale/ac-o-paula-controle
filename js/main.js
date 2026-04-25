@@ -7,7 +7,7 @@ import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com
 
 import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
-import { PautaService } from './pauta.js'; // Ajustado para remover o cache buster, se precisar de cache buster, adicione-o aqui
+import { PautaService } from './pauta.js';
 import { UIService } from './ui.js';
 import CollaboratorService from './colaboradores.js';        
 import { ModalService } from './modal.js?v=20260313';
@@ -69,15 +69,11 @@ class SIGAPApp {
     }
 
     setupOfflinePersistence() {
-        // Não tenta ativar persistência se já estiver em conflito
         try {
             enableIndexedDbPersistence(this.db).catch((err) => {
                 if (err.code == 'failed-precondition') {
-                    // Múltiplas abas abertas - podemos ignorar ou mostrar aviso
                     console.warn('⚠️ Persistência desativada: Múltiplas abas abertas.');
                     console.warn('O sistema funcionará normalmente, mas sem cache offline.');
-                    
-                    // Opcional: Mostrar notificação para o usuário
                     showNotification(
                         'Múltiplas abas detectadas. Feche outras abas para ativar o modo offline.',
                         'warning'
@@ -90,7 +86,6 @@ class SIGAPApp {
             console.log("Erro ao ativar persistência:", e);
         }
     
-        // Listeners de conexão (continuam funcionando)
         window.addEventListener('offline', () => {
             document.getElementById('offline-indicator').classList.remove('hidden');
         });
@@ -155,8 +150,40 @@ class SIGAPApp {
 
         // Botão "Voltar para Pautas" no Dashboard
         document.getElementById('dashboard-back-to-pautas-btn')?.addEventListener('click', () => {
-            this.showPautaSelectionScreen(); // Usa a função existente para voltar
+            this.showPautaSelectionScreen();
         });        
+
+        // ================================================
+        // NOVO: LISTENERS PARA CUSTOMIZAÇÃO DE COLUNAS
+        // ================================================
+        const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
+        const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
+        const toggleEmAtendimento = document.getElementById('toggle-em-atendimento');
+        const toggleDistribuicao = document.getElementById('toggle-distribuicao');
+        const toggleFaltosos = document.getElementById('toggle-faltosos');
+
+        if (pautaSettingsToggle && pautaSettingsPanel) {
+            pautaSettingsToggle.addEventListener('click', (e) => {
+                e.stopPropagation(); // Impede que o clique se propague para o document e feche imediatamente
+                pautaSettingsPanel.classList.toggle('hidden');
+                // Preenche os checkboxes com o estado atual das colunas ao abrir o painel
+                if (!pautaSettingsPanel.classList.contains('hidden')) {
+                    this.loadColumnPreferences();
+                }
+            });
+
+            // Fecha o painel de configurações se clicar fora dele
+            document.addEventListener('click', (e) => {
+                if (pautaSettingsPanel && !pautaSettingsPanel.contains(e.target) && !pautaSettingsToggle.contains(e.target)) {
+                    pautaSettingsPanel.classList.add('hidden');
+                }
+            });
+        }
+
+        // Listeners para os checkboxes de toggle
+        toggleEmAtendimento?.addEventListener('change', () => this.saveColumnPreferences());
+        toggleDistribuicao?.addEventListener('change', () => this.saveColumnPreferences());
+        toggleFaltosos?.addEventListener('change', () => this.saveColumnPreferences());
 
 
         // ================================================
@@ -240,8 +267,6 @@ class SIGAPApp {
             document.getElementById('ata-social-modal').classList.add('hidden');
         });
         
-
-        // --- MANTENHA O RESTANTE DO CÓDIGO ABAIXO COMO ESTÁ ---
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.quick-action-toggle') && !e.target.closest('[id^="quick-menu-"]')) {
                 document.querySelectorAll('[id^="quick-menu-"]').forEach(menu => {
@@ -417,11 +442,9 @@ class SIGAPApp {
                             externalId: `INT-${orgaoId}-${Date.now()}-${Math.random()}` // Evita duplicados
                         });
                     }
-                    showNotification(`Integração concluída: ${assistidosOficiais.length} assistidos importados.`);
-                    playSound('success'); // Som ao importar com sucesso
+                    showNotification(`Integração concluída: ${assistidosOficiais.length} assistidos importados.`, 'success');
                 } else {
-                    showNotification("Pauta criada com sucesso!");
-                    playSound('success'); // Som ao criar com sucesso
+                    showNotification("Pauta criada com sucesso!", 'success');
                 }
         
                 // 3. Limpa e fecha modais
@@ -511,8 +534,7 @@ class SIGAPApp {
                 const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
                 await updateDoc(pautaRef, { isPublic: isPublic });
                 this.currentPautaData.isPublic = isPublic;
-                showNotification(isPublic ? "Link público ativado." : "Link público desativado.");
-                playSound('notification');
+                showNotification(isPublic ? "Link público ativado." : "Link público desativado.", "success");
             } catch (error) {
                 console.error(error);
                 showNotification("Erro ao atualizar status.", "error");
@@ -525,7 +547,6 @@ class SIGAPApp {
             input.select();
             navigator.clipboard.writeText(input.value);
             showNotification("Link copiado!", "info");
-            playSound('notification');
         });
 
         // Ocultar sobrenomes
@@ -535,8 +556,7 @@ class SIGAPApp {
                 const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
                 await updateDoc(pautaRef, { maskNames: mask });
                 this.currentPautaData.maskNames = mask;
-                showNotification("Configuração de privacidade atualizada.");
-                playSound('notification');
+                showNotification("Configuração de privacidade atualizada.", "success");
             } catch (error) {
                 showNotification("Erro ao salvar configuração.", "error");
             }
@@ -632,24 +652,10 @@ class SIGAPApp {
                 this.currentPautaData.useDelegationFlow = newDelegation;
                 this.currentPautaData.useDistributionFlow = newDistribution;
                 
-                // Atualizar colunas visíveis
-                const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-                const distColumn = document.getElementById('distribuicao-column');
+                // Re-aplica as preferências de coluna considerando as novas configurações da pauta
+                this.loadColumnPreferences();
                 
-                if (newDelegation) {
-                    emAtendimentoColumn?.classList.remove('hidden');
-                } else {
-                    emAtendimentoColumn?.classList.add('hidden');
-                }
-                
-                if (newDistribution) {
-                    distColumn?.classList.remove('hidden');
-                } else {
-                    distColumn?.classList.add('hidden');
-                }
-                
-                showNotification("Configurações atualizadas com sucesso!");
-                playSound('success');
+                showNotification("Configurações atualizadas com sucesso!", "success");
                 document.getElementById('edit-pauta-config-modal').classList.add('hidden');
                 
             } catch (error) {
@@ -679,7 +685,7 @@ class SIGAPApp {
 
         document.getElementById('close-pauta-btn')?.addEventListener('click', () => {
             document.getElementById('close-modal-title').textContent = 'Fechar Pauta';
-            document.getElementById('close-modal-message').textContent = 'Para fechar esta pauta, confirme sua senha.';
+            document.getElementById('close-modal-message').textContent = 'Para fechar esta pauta, confirme sua senha. Nenhum membro poderá fazer alterações até que você a reabra.';
             document.getElementById('close-pauta-password').value = '';
             document.getElementById('confirm-close-pauta-btn').textContent = 'Confirmar';
             document.getElementById('close-pauta-modal').classList.remove('hidden');
@@ -691,6 +697,54 @@ class SIGAPApp {
             document.getElementById('close-pauta-password').value = '';
             document.getElementById('confirm-close-pauta-btn').textContent = 'Reabrir';
             document.getElementById('close-pauta-modal').classList.remove('hidden');
+        });
+
+        // ======================================================================
+        // ⭐ NOVO: NOTIFICAÇÃO MELHORADA PARA FECHAR/REABRIR PAUTA ⭐
+        // ======================================================================
+        document.getElementById('confirm-close-pauta-btn')?.addEventListener('click', async () => {
+            const password = document.getElementById('close-pauta-password')?.value;
+            const errorDiv = document.getElementById('close-auth-error');
+            if (errorDiv) errorDiv.classList.add('hidden');
+
+            const isReopen = document.getElementById('confirm-close-pauta-btn')?.textContent.includes('Reabrir');
+            const user = this.auth.currentUser;
+            
+            if (!user || user.uid !== this.currentPautaOwnerId) {
+                showNotification("Você não tem permissão para esta ação.", "error");
+                document.getElementById('close-pauta-modal')?.classList.add('hidden');
+                return;
+            }
+
+            try {
+                const credential = EmailAuthProvider.credential(user.email, password);
+                await reauthenticateWithCredential(user, credential);
+                
+                const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                await updateDoc(pautaRef, { isClosed: !isReopen });
+                
+                this.isPautaClosed = !isReopen;
+                UIService.togglePautaLock(this);
+
+                showNotification(
+                    `Pauta ${isReopen ? 'reaberta' : 'fechada'} com sucesso.`, 
+                    'success', 
+                    5000 
+                );
+                document.getElementById('close-pauta-modal')?.classList.add('hidden');
+                
+            } catch (error) {
+                console.error("Authentication failed:", error);
+                if (errorDiv) {
+                    errorDiv.textContent = 'Senha incorreta. Tente novamente.';
+                    errorDiv.classList.remove('hidden');
+                }
+                showNotification("Falha na autenticação.", "error");
+            }
+        });
+
+        document.getElementById('cancel-close-pauta-btn')?.addEventListener('click', () => {
+            document.getElementById('close-pauta-modal')?.classList.add('hidden');
         });
 
         document.getElementById('reset-all-btn')?.addEventListener('click', () => {
@@ -843,8 +897,7 @@ class SIGAPApp {
             document.querySelectorAll('.p-chip').forEach(c => c.classList.remove('selected'));
             document.getElementById('priority-reason-input').value = '';
             document.getElementById('priority-reason-modal')?.classList.add('hidden');
-            showNotification("Prioridade Ativada!");
-            playSound('success');
+            showNotification("Prioridade Ativada!", "success");
         });
 
         // Cancelar prioridade
@@ -897,8 +950,7 @@ class SIGAPApp {
                     documentChecklist: checklistData,
                     documentState: 'saved'
                 });
-                showNotification("Checklist salvo com sucesso!");
-                playSound('success');
+                showNotification("Checklist salvo com sucesso!", "success");
                 document.getElementById('documents-modal').classList.add('hidden');
             } catch (error) {
                 console.error("Erro ao salvar checklist:", error);
@@ -955,8 +1007,7 @@ class SIGAPApp {
                 );
 
                 if (resultado) {
-                    showNotification("PDF gerado com sucesso!");
-                    playSound('success');
+                    showNotification("PDF gerado com sucesso!", "success");
                 } else {
                     showNotification("Erro ao gerar PDF", "error");
                 }
@@ -1053,7 +1104,7 @@ class SIGAPApp {
             );
             
             document.getElementById('attendant-modal')?.classList.add('hidden');
-            showNotification(novoStatus === 'atendido' ? "Atendimento finalizado!" : "Enviado para Distribuição ⚖️");
+            showNotification(novoStatus === 'atendido' ? "Atendimento finalizado!" : "Enviado para Distribuição ⚖️", "success");
         });
 
         // Cancelar atendimento
@@ -1089,7 +1140,7 @@ class SIGAPApp {
             );
             
             document.getElementById('edit-attendant-modal')?.classList.add('hidden');
-            showNotification("Atendente atualizado com sucesso!");
+            showNotification("Atendente atualizado com sucesso!", "success");
         });
 
         // Cancelar edição de atendente
@@ -1162,9 +1213,9 @@ class SIGAPApp {
                 let collaboratorData = null;
                 if (collaboratorName) {
                     collaboratorData = { id: collaboratorId, name: collaboratorName };
-                    showNotification(`${window.assistedNameToHandle} atribuído a ${collaboratorName}.`);
+                    showNotification(`${window.assistedNameToHandle} atribuído a ${collaboratorName}.`, "success");
                 } else {
-                    showNotification(`${window.assistedNameToHandle} movido para 'Em Atendimento' sem colaborador atribuído.`);
+                    showNotification(`${window.assistedNameToHandle} movido para 'Em Atendimento' sem colaborador atribuído.`, "success");
                 }
 
                 await PautaService.updateStatus(
@@ -1178,7 +1229,7 @@ class SIGAPApp {
                     },
                     this.currentUserName
                 );
-                showNotification(`${window.assistedNameToHandle} delegado para ${collaboratorName || 'ninguém (aguardando atribuição)'}.`, "success"); // Feedback mais claro
+                showNotification(`${window.assistedNameToHandle} delegado para ${collaboratorName || 'ninguém (aguardando atribuição)'}.`, "success"); 
 
             }
             
@@ -1335,7 +1386,7 @@ class SIGAPApp {
                 this.currentUserName
             );
             
-            showNotification("Demandas salvas com sucesso!");
+            showNotification("Demandas salvas com sucesso!", "success");
             document.getElementById('demands-modal')?.classList.add('hidden');
         });
 
@@ -1366,7 +1417,6 @@ class SIGAPApp {
             await batch.commit();
             
             showNotification("Pauta zerada com sucesso.", "success");
-            playSound('success');
             document.getElementById('reset-confirm-modal')?.classList.add('hidden');
         });
 
@@ -1383,8 +1433,7 @@ class SIGAPApp {
             if (newName && this.currentPauta?.id) {
                 await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { name: newName });
                 document.getElementById('pauta-title').textContent = newName;
-                showNotification("Nome da pauta atualizado.");
-                playSound('success');
+                showNotification("Nome da pauta atualizado.", "success");
                 document.getElementById('edit-pauta-modal')?.classList.add('hidden');
             } else {
                 showNotification("O nome não pode ser vazio.", "error");
@@ -1393,51 +1442,6 @@ class SIGAPApp {
 
         document.getElementById('cancel-edit-pauta-btn')?.addEventListener('click', () => {
             document.getElementById('edit-pauta-modal')?.classList.add('hidden');
-        });
-
-        // ================================================
-        // LISTENERS DO MODAL DE FECHAR/REABRIR PAUTA
-        // ================================================
-
-        document.getElementById('confirm-close-pauta-btn')?.addEventListener('click', async () => {
-            const password = document.getElementById('close-pauta-password')?.value;
-            const errorDiv = document.getElementById('close-auth-error');
-            if (errorDiv) errorDiv.classList.add('hidden');
-
-            const isReopen = document.getElementById('confirm-close-pauta-btn')?.textContent.includes('Reabrir');
-            const user = this.auth.currentUser;
-            
-            if (!user || user.uid !== this.currentPautaOwnerId) {
-                showNotification("Você não tem permissão para esta ação.", "error");
-                document.getElementById('close-pauta-modal')?.classList.add('hidden');
-                return;
-            }
-
-            try {
-                const credential = EmailAuthProvider.credential(user.email, password);
-                await reauthenticateWithCredential(user, credential);
-                
-                const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
-                await updateDoc(pautaRef, { isClosed: !isReopen });
-                
-                this.isPautaClosed = !isReopen;
-                UIService.togglePautaLock(this);
-
-                showNotification(`Pauta ${isReopen ? 'reaberta' : 'fechada'} com sucesso.`);
-                playSound('success');
-                document.getElementById('close-pauta-modal')?.classList.add('hidden');
-                
-            } catch (error) {
-                console.error("Authentication failed:", error);
-                if (errorDiv) {
-                    errorDiv.textContent = 'Senha incorreta. Tente novamente.';
-                    errorDiv.classList.remove('hidden');
-                }
-            }
-        });
-
-        document.getElementById('cancel-close-pauta-btn')?.addEventListener('click', () => {
-            document.getElementById('close-pauta-modal')?.classList.add('hidden');
         });
 
         // ================================================
@@ -1517,8 +1521,7 @@ class SIGAPApp {
                                 memberEmails: arrayRemove(email)
                             });
                             
-                            showNotification(`Membro ${email} removido`);
-                            playSound('notification');
+                            showNotification(`Membro ${email} removido`, "success");
                             
                             if (typeof ModalService?.openMembersModal === 'function') {
                                 await ModalService.openMembersModal(this);
@@ -1537,6 +1540,100 @@ class SIGAPApp {
         // ================================================
         
         this.setupAdminPanel();
+    }
+
+    // ================================================
+    // NOVO: MÉTODOS PARA GERENCIAR VISIBILIDADE DAS COLUNAS
+    // ================================================
+
+    /**
+     * Salva as preferências de visibilidade das colunas no localStorage.
+     */
+    saveColumnPreferences() {
+        const preferences = {
+            showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
+            showDistribuicao: document.getElementById('toggle-distribuicao')?.checked || false,
+            showFaltosos: document.getElementById('toggle-faltosos')?.checked || false,
+        };
+        localStorage.setItem('sigap_column_preferences', JSON.stringify(preferences));
+        this.applyColumnPreferences(preferences);
+    }
+
+    /**
+     * Carrega as preferências de visibilidade das colunas do localStorage
+     * e aplica à interface, atualizando os checkboxes no painel.
+     */
+    loadColumnPreferences() {
+        const savedPreferences = localStorage.getItem('sigap_column_preferences');
+        let preferences = {
+            showEmAtendimento: true, // Padrão
+            showDistribuicao: true,  // Padrão
+            showFaltosos: false,     // Padrão
+        };
+        if (savedPreferences) {
+            preferences = JSON.parse(savedPreferences);
+        }
+
+        // Atualiza os checkboxes no painel de configurações
+        const chkEmAtendimento = document.getElementById('toggle-em-atendimento');
+        const chkDistribuicao = document.getElementById('toggle-distribuicao');
+        const chkFaltosos = document.getElementById('toggle-faltosos');
+        
+        if(chkEmAtendimento) chkEmAtendimento.checked = preferences.showEmAtendimento;
+        if(chkDistribuicao) chkDistribuicao.checked = preferences.showDistribuicao;
+        if(chkFaltosos) chkFaltosos.checked = preferences.showFaltosos;
+        
+        this.applyColumnPreferences(preferences);
+    }
+
+    /**
+     * Aplica as preferências de visibilidade às colunas HTML.
+     * @param {object} preferences - Objeto com as preferências de visibilidade.
+     */
+    applyColumnPreferences(preferences) {
+        // Obter o tipo da pauta atual para aplicar regras específicas
+        const pautaType = this.currentPautaData?.type;
+        const useDelegationFlow = this.currentPautaData?.useDelegationFlow;
+        const useDistributionFlow = this.currentPautaData?.useDistributionFlow;
+
+        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
+        const distribuicaoColumn = document.getElementById('distribuicao-column');
+        const faltososColumn = document.getElementById('faltosos-column');
+
+        // Em Atendimento (coluna "Delegar")
+        if (emAtendimentoColumn) {
+            // Se a pauta usa delegação, mas a preferência do usuário é esconder, esconde.
+            // Se a pauta NÃO usa delegação, SEMPRE esconde (a preferência do usuário não anula a regra da pauta).
+            if (useDelegationFlow && preferences.showEmAtendimento) {
+                emAtendimentoColumn.classList.remove('hidden');
+            } else {
+                emAtendimentoColumn.classList.add('hidden');
+            }
+        }
+
+        // Distribuição
+        if (distribuicaoColumn) {
+            // Se a pauta usa fluxo de distribuição, mas a preferência do usuário é esconder, esconde.
+            // Se a pauta NÃO usa fluxo de distribuição, SEMPRE esconde.
+            if (useDistributionFlow && preferences.showDistribuicao) {
+                distribuicaoColumn.classList.remove('hidden');
+            } else {
+                distribuicaoColumn.classList.add('hidden');
+            }
+        }
+        
+        // Faltosos
+        if (faltososColumn) {
+            // A coluna de Faltosos só é relevante para pautas agendadas
+            // E se o botão "Ver Faltosos" não estiver ativo (pois ele substitui Pauta pela coluna Faltosos)
+            const pautaColumn = document.getElementById('pauta-column');
+
+            if (pautaType === 'agendado' && preferences.showFaltosos && pautaColumn && !pautaColumn.classList.contains('hidden')) {
+                 faltososColumn.classList.remove('hidden');
+            } else {
+                faltososColumn.classList.add('hidden');
+            }
+        }
     }
 
     renderCustomRooms() {
@@ -1719,20 +1816,8 @@ class SIGAPApp {
                 
                 UIService.togglePautaLock(this);
 
-                const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-                const distColumn = document.getElementById('distribuicao-column');
-                
-                if (this.currentPautaData.useDelegationFlow) {
-                    emAtendimentoColumn?.classList.remove('hidden');
-                } else {
-                    emAtendimentoColumn?.classList.add('hidden');
-                }
-
-                if (this.currentPautaData.useDistributionFlow) {
-                    distColumn?.classList.remove('hidden');
-                } else {
-                    distColumn?.classList.add('hidden');
-                }
+                // Aplica as preferências de coluna e as regras da pauta atual
+                this.loadColumnPreferences();
             }
 
             this.setupRealtimeListener(pautaId);
@@ -1760,6 +1845,10 @@ class SIGAPApp {
         }, this);
         
         await this.loadPautasWithFilter();
+
+        // Aplica as preferências de coluna também na tela de seleção,
+        // para garantir que tudo fique consistente ao carregar uma pauta.
+        this.loadColumnPreferences();
     }
 
     async loadPautasWithFilter() {
