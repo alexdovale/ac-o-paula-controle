@@ -56,6 +56,8 @@ class SIGAPApp {
             this.db = getFirestore(app);
             this.auth = getAuth(app);
 
+            DashboardService.init(this);
+
             await this.setupOfflinePersistence();
             this.setupEventListeners();
             this.setupAuthListener();
@@ -145,6 +147,16 @@ class SIGAPApp {
         document.getElementById('call-next-assisted-btn')?.addEventListener('click', () => {
             PautaService.callNextAssisted(this);
         });
+
+         // Botão para ver o Dashboard
+        document.getElementById('view-dashboard-btn')?.addEventListener('click', () => {
+            DashboardService.showDashboardScreen();
+        });
+
+        // Botão "Voltar para Pautas" no Dashboard
+        document.getElementById('dashboard-back-to-pautas-btn')?.addEventListener('click', () => {
+            this.showPautaSelectionScreen(); // Usa a função existente para voltar
+        });        
 
 
         // ================================================
