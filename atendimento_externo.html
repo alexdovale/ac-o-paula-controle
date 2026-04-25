@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Atendimento - SIGAP</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        /* A classe .tab-active agora só adiciona a borda e cor, o font-bold é removido para ser adicionado via JS */
         .tab-active { border-bottom: 3px solid #16a34a; color: #16a34a; font-weight: bold; }
     </style>
 </head>
@@ -21,8 +23,9 @@
 
         <!-- Abas -->
         <div class="flex border-b bg-gray-50">
-            <button onclick="mudarAba('encerramento')" id="tab-btn-encerramento" class="flex-1 p-3 text-[10px] uppercase tab-active">Encerramento / Fluxo</button>
-            <button onclick="mudarAba('historico')" id="tab-btn-historico" class="flex-1 p-3 text-[10px] uppercase text-gray-400 font-bold">Histórico</button>
+            <!-- Os onclicks foram removidos daqui, pois serão adicionados via JS -->
+            <button id="tab-btn-encerramento" class="flex-1 p-3 text-[10px] uppercase tab-active">Encerramento / Fluxo</button>
+            <button id="tab-btn-historico" class="flex-1 p-3 text-[10px] uppercase text-gray-400 font-bold">Histórico</button>
         </div>
 
         <div class="p-6">
@@ -33,17 +36,18 @@
                 <div id="area-colaborador" class="hidden space-y-6">
                     <h3 class="text-xs font-bold text-gray-500 uppercase">Como deseja finalizar?</h3>
                     <div class="grid grid-cols-1 gap-3">
-                        <button onclick="escolherFluxo('direto')" id="btn-fluxo-direto" class="p-4 border-2 rounded-xl text-left transition border-gray-200 hover:bg-green-50">
+                        <!-- Os onclicks foram removidos daqui, pois serão adicionados via JS -->
+                        <button id="btn-fluxo-direto" class="p-4 border-2 rounded-xl text-left transition border-gray-200 hover:bg-green-50">
                             <span class="block font-bold text-gray-800 text-sm">✅ Finalizar Atendimento</span>
                             <span class="text-[10px] text-gray-500">Concluir sem necessidade de revisão ou protocolo.</span>
                         </button>
                         
-                        <button onclick="escolherFluxo('distribuicao')" id="btn-fluxo-dist" class="hidden p-4 border-2 rounded-xl text-left transition border-gray-200 hover:bg-cyan-50">
+                        <button id="btn-fluxo-dist" class="hidden p-4 border-2 rounded-xl text-left transition border-gray-200 hover:bg-cyan-50">
                             <span class="block font-bold text-gray-800 text-sm">⚖️ Fila de Distribuição</span>
                             <span class="text-[10px] text-gray-500">Mandar para a fila de processos que precisam de protocolo.</span>
                         </button>
 
-                        <button onclick="escolherFluxo('revisao')" id="btn-fluxo-rev" class="hidden p-4 border-2 rounded-xl text-left transition border-gray-200 hover:bg-purple-50">
+                        <button id="btn-fluxo-rev" class="hidden p-4 border-2 rounded-xl text-left transition border-gray-200 hover:bg-purple-50">
                             <span class="block font-bold text-gray-800 text-sm">🔍 Enviar p/ Defensor (Revisão)</span>
                             <span class="text-[10px] text-gray-500">O Defensor aprovará e distribuirá o processo.</span>
                         </button>
@@ -61,6 +65,7 @@
                         </div>
                     </div>
 
+                    <!-- O onclick foi removido daqui, pois será adicionado via JS -->
                     <button id="btn-finalizar" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg uppercase tracking-wide active:scale-95 transition-all mt-4">Confirmar e Seguir</button>
                 </div>
 
@@ -83,6 +88,7 @@
                     </div>
 
                     <div class="grid grid-cols-2 gap-3 pt-4 border-t">
+                        <!-- Os onclicks foram removidos daqui, pois serão adicionados via JS -->
                         <button id="btn-aprovar" class="bg-green-600 text-white font-black py-3.5 rounded-xl uppercase text-xs shadow hover:bg-green-700">Aprovar e Protocolar</button>
                         <button id="btn-devolver" class="bg-orange-500 text-white font-black py-3.5 rounded-xl uppercase text-xs shadow hover:bg-orange-600">Devolver p/ Correção</button>
                     </div>
@@ -97,164 +103,12 @@
         </div>
     </div>
 
-    <!-- Script Principal -->
+    <!-- Script Principal para esta página -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        const firebaseConfig = { /* INSIRA SUA CONFIGURAÇÃO DO FIREBASE AQUI */ };
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        const params = new URLSearchParams(window.location.search);
-        const pId = params.get('pautaId');
-        const aId = params.get('assistidoId');
-        const myName = params.get('collaboratorName');
-        let fluxoEscolhido = 'direto';
-
-        // Lógica de Abas
-        window.mudarAba = (aba) => {
-            document.getElementById('aba-encerramento').classList.add('hidden');
-            document.getElementById('aba-historico').classList.add('hidden');
-            document.getElementById('tab-btn-encerramento').className = "flex-1 py-3 text-[10px] uppercase text-gray-400 font-bold";
-            document.getElementById('tab-btn-historico').className = "flex-1 py-3 text-[10px] uppercase text-gray-400 font-bold";
-            
-            document.getElementById(`aba-${aba}`).classList.remove('hidden');
-            document.getElementById(`tab-btn-${aba}`).className = "flex-1 py-3 text-[10px] uppercase tab-active";
-        };
-
-        // Lógica de Botões do Colaborador
-        window.escolherFluxo = (fluxo) => {
-            fluxoEscolhido = fluxo;
-            document.getElementById('config-revisao').classList.toggle('hidden', fluxo !== 'revisao');
-            
-            document.getElementById('btn-fluxo-direto').className = fluxo === 'direto' ? 'p-4 border-2 rounded-xl text-left border-green-500 bg-green-50' : 'p-4 border-2 rounded-xl text-left border-gray-200';
-            document.getElementById('btn-fluxo-dist').className = fluxo === 'distribuicao' ? 'p-4 border-2 rounded-xl text-left border-cyan-500 bg-cyan-50' : 'p-4 border-2 rounded-xl text-left border-gray-200';
-            document.getElementById('btn-fluxo-rev').className = fluxo === 'revisao' ? 'p-4 border-2 rounded-xl text-left border-purple-500 bg-purple-50' : 'p-4 border-2 rounded-xl text-left border-gray-200';
-        };
-
-        async function init() {
-            const pautaSnap = await getDoc(doc(db, "pautas", pId));
-            const pautaData = pautaSnap.data();
-            const snap = await getDoc(doc(db, "pautas", pId, "attendances", aId));
-            const data = snap.data();
-
-            document.getElementById('assistido-nome').textContent = data.name;
-            document.getElementById('assistido-assunto').textContent = data.subject || 'Sem assunto';
-
-            // Verifica as configurações da Pauta para liberar os botões
-            if (pautaData.useDistributionFlow) {
-                document.getElementById('btn-fluxo-dist').classList.remove('hidden');
-            }
-            if (pautaData.useReviewFlow) {
-                document.getElementById('btn-fluxo-rev').classList.remove('hidden');
-                
-                // Carrega defensores no Select
-                const q = query(collection(db, "pautas", pId, "collaborators"), where("cargo", "==", "Defensor(a)"));
-                const colabs = await getDocs(q);
-                const select = document.getElementById('select-defensor');
-                colabs.forEach(d => {
-                    const opt = document.createElement('option');
-                    opt.value = d.data().nome; opt.textContent = d.data().nome; select.appendChild(opt);
-                });
-            }
-
-            // MÁGICA: Se for status de revisão, a tela vira o PAINEL DO DEFENSOR
-            if (data.status === 'emRevisao') {
-                document.getElementById('header-bg').className = "bg-purple-600 p-5 text-white";
-                document.getElementById('area-colaborador').classList.add('hidden');
-                document.getElementById('area-defensor').classList.remove('hidden');
-                document.getElementById('input-motivo').value = '';
-            } else if (data.status === 'aguardandoCorrecao') {
-                document.getElementById('header-bg').className = "bg-red-600 p-5 text-white";
-                document.getElementById('area-colaborador').classList.remove('hidden');
-                document.getElementById('area-defensor').classList.add('hidden');
-                alert(`ATENÇÃO: Este processo foi devolvido. Motivo: ${data.reviewMotivoDevolucao}`);
-            } else {
-                document.getElementById('area-colaborador').classList.remove('hidden');
-            }
-
-            // Histórico
-            const histCont = document.getElementById('lista-historico');
-            if (data.history && data.history.length > 0) {
-                [...data.history].reverse().forEach(h => {
-                    histCont.innerHTML += `
-                        <div class="bg-gray-50 border p-3 rounded-lg text-xs">
-                            <b class="text-blue-600">${h.action}</b>
-                            <p class="text-[9px] text-gray-500 mb-1">${new Date(h.at).toLocaleString('pt-BR')}</p>
-                            ${h.msg ? `<p class="italic text-gray-700">"${h.msg}"</p>` : ''}
-                        </div>`;
-                });
-            } else {
-                histCont.innerHTML = "<p class='text-xs text-gray-400'>Nenhum histórico registrado.</p>";
-            }
-        }
-
-        // AÇÕES DO COLABORADOR
-        document.getElementById('btn-finalizar').onclick = async () => {
-            const updates = {};
-            
-            if (fluxoEscolhido === 'direto') {
-                updates.status = 'atendido';
-            } else if (fluxoEscolhido === 'distribuicao') {
-                updates.status = 'aguardandoDistribuicao';
-            } else if (fluxoEscolhido === 'revisao') {
-                updates.status = 'emRevisao';
-                updates.reviewData = {
-                    sentBy: myName,
-                    defensor: document.getElementById('select-defensor').value,
-                    notes: document.getElementById('notas-revisao').value
-                };
-            }
-            
-            updates.history = arrayUnion({
-                action: `MARCADO COMO ${updates.status.toUpperCase()}`,
-                by: myName,
-                at: new Date().toISOString()
-            });
-
-            await updateDoc(doc(db, "pautas", pId, "attendances", aId), updates);
-            alert("Processo encaminhado com sucesso!");
-            window.close();
-        };
-
-        // AÇÕES DO DEFENSOR
-        document.getElementById('btn-aprovar').onclick = async () => {
-            const numero = document.getElementById('input-processo').value;
-            const status = numero ? 'distribuido' : 'aguardandoNumero';
-            
-            await updateDoc(doc(db, "pautas", pId, "attendances", aId), {
-                status: status,
-                processNumber: numero || null,
-                history: arrayUnion({
-                    action: numero ? 'APROVADO_E_DISTRIBUIDO' : 'APROVADO_SEM_NUMERO',
-                    by: myName,
-                    at: new Date().toISOString()
-                })
-            });
-            alert("Aprovado com sucesso!");
-            window.close();
-        };
-
-        document.getElementById('btn-devolver').onclick = async () => {
-            const motivo = document.getElementById('input-motivo').value;
-            if (!motivo) return alert("Descreva o motivo da devolução!");
-
-            await updateDoc(doc(db, "pautas", pId, "attendances", aId), {
-                status: 'aguardandoCorrecao',
-                reviewMotivoDevolucao: motivo,
-                history: arrayUnion({
-                    action: 'DEVOLVIDO_PARA_CORRECAO',
-                    msg: motivo,
-                    by: myName,
-                    at: new Date().toISOString()
-                })
-            });
-            alert("Processo devolvido para correção.");
-            window.close();
-        };
-
-        init();
+        import { AtendimentoExternoService } from './js/atendimentoExternoService.js';
+        document.addEventListener('DOMContentLoaded', () => {
+            AtendimentoExternoService.init();
+        });
     </script>
 </body>
 </html>
