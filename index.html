@@ -201,6 +201,10 @@
             <button id="view-dashboard-btn" class="w-full sm:w-auto bg-purple-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-purple-700 transition shadow-md">
                 Ver Dashboard
             </button>
+            <!-- NOVO BOTÃO: Meu Perfil -->
+            <button id="open-user-preferences-btn" class="ml-4 bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700 transition shadow-md">
+                Meu Perfil
+            </button>
         </div>
         
         <div id="invitations-container" class="hidden mb-8">
@@ -1379,6 +1383,39 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                     <div id="address-editor-container" class="mt-8 border-t pt-6 mb-10 px-2 sm:px-4"></div>
                 </div>
                 
+            </div>
+        </div>
+    </div>
+
+    <!-- NOVO: Modal de Preferências do Usuário -->
+    <div id="user-preferences-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Minhas Preferências</h2>
+            
+            <div class="space-y-4 mb-6">
+                <!-- Informações do Usuário (apenas leitura) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                    <input type="text" id="pref-user-name" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700" readonly>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="pref-user-email" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700" readonly>
+                </div>
+    
+                <!-- Preferências (configuráveis) -->
+                <div class="pt-4 border-t border-gray-200">
+                    <h3 class="font-semibold text-gray-700 mb-3">Notificações</h3>
+                    <label class="flex items-center space-x-3 cursor-pointer">
+                        <input type="checkbox" id="pref-toggle-sounds" class="h-5 w-5 text-green-600 focus:ring-green-500 rounded">
+                        <span class="text-gray-800 font-medium">Ativar Sons de Notificação</span>
+                    </label>
+                </div>
+            </div>
+    
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-user-preferences-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="save-user-preferences-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar Preferências</button>
             </div>
         </div>
     </div>
