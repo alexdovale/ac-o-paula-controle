@@ -8,6 +8,7 @@ export const UIService = {
         document.getElementById('login-container').classList.toggle('hidden', screenName !== 'login');
         document.getElementById('pauta-selection-container').classList.toggle('hidden', screenName !== 'pautaSelection');
         document.getElementById('app-container').classList.toggle('hidden', screenName !== 'app');
+        document.getElementById('dashboard-container').classList.toggle('hidden', screenName !== 'dashboard'); // <--- ADICIONADO
     },
 
     /**
