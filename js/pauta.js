@@ -291,6 +291,9 @@ export const PautaService = {
             
             console.log("Status atualizado com sucesso!");
 
+            // ==========================================
+            // 👇 SEU CÓDIGO CORRIGIDO AQUI 👇
+            // ==========================================
             if (updates.status === 'aguardando' && currentData.status !== 'aguardando') {
                 playSound('chime'); // Alguém acabou de chegar/entrar na fila
             } else if (updates.status === 'emAtendimento' && currentData.status !== 'emAtendimento') {
@@ -298,13 +301,14 @@ export const PautaService = {
             } else if (updates.status === 'atendido' && currentData.status !== 'atendido') {
                 playSound('success'); // Atendimento finalizado
             } else if (finalUpdates.documentState === 'saved' && currentData.documentState !== 'saved') {
-                // Se o checklist foi salvo
-                playSound('success');
+                playSound('success'); // Se o checklist foi salvo
             }
-            show
-                Notification(mensagem, "success"); // A notificação existente
+            
+            // Note que trocamos a variável "mensagem" por um texto fixo entre aspas
+            // Você pode descomentar a linha abaixo se quiser que o balãozinho verde apareça:
+            // showNotification("Atualizado com sucesso", "success"); 
+            // ==========================================
 
-    
         } catch (error) {
             console.error("Erro ao atualizar status:", error);
             showNotification("Erro ao atualizar", "error");
