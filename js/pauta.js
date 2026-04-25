@@ -1,64 +1,38 @@
-// js/pauta.js - VERSÃO COMPLETA E ATUALIZADA (com todas as funções originais e melhorias para compatibilidade e nova lógica de ordenação)
+// js/pauta.js - VERSÃO CONSOLIDADA E ORGANIZADA
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
 import { logAction } from './admin.js';
 
-
 export const PautaService = {
     currentListeners: new Map(),
-    
-    // Mapa para controle de cooldown de ações
     actionCooldown: new Map(),
 
-    /**
-     * Utilitário para verificar se é mobile
-     */
     isMobileDevice() {
         return window.innerWidth <= 768;
     },
 
-    /**
-     * Utilitário para fechar todos os menus rápidos
-     */
     closeAllQuickMenus(excludeMenuId = null) {
         document.querySelectorAll('[id^="quick-menu-"]').forEach(menu => {
             if (excludeMenuId === null || menu.id !== excludeMenuId) {
                 menu.classList.add('hidden');
-                
-                // Atualizar botão toggle correspondente
                 const toggleId = menu.id.replace('quick-menu', 'quick-toggle');
                 const toggle = document.getElementById(toggleId);
-                if (toggle) {
-                    toggle.setAttribute('aria-expanded', 'false');
-                }
+                if (toggle) toggle.setAttribute('aria-expanded', 'false');
             }
         });
     },
 
-    /**
-     * Utilitário para verificar cooldown de ações
-     */
     canPerformAction(actionId, cooldownMs = 500) {
         const lastAction = this.actionCooldown.get(actionId);
         const now = Date.now();
-        
-        if (lastAction && now - lastAction < cooldownMs) {
-            return false;
-        }
-        
+        if (lastAction && now - lastAction < cooldownMs) return false;
         this.actionCooldown.set(actionId, now);
         return true;
     },
 
-    /**
-     * Configura listener em tempo real para atendimentos
-     */
     setupAttendancesListener(db, pautaId, callback) {
-        if (this.currentListeners.has(pautaId)) {
-            this.currentListeners.get(pautaId)();
-        }
-
+        if (this.currentListeners.has(pautaId)) this.currentListeners.get(pautaId)();
         const attendanceRef = collection(db, "pautas", pautaId, "attendances");
         const unsubscribe = onSnapshot(attendanceRef, (snapshot) => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -67,252 +41,65 @@ export const PautaService = {
             console.error("Erro no listener:", error);
             showNotification("Erro ao carregar dados em tempo real", "error");
         });
-
         this.currentListeners.set(pautaId, unsubscribe);
         return unsubscribe;
     },
 
     /**
-     * Adiciona um novo assistido
-     */
-    async addAssisted(app) {
-        console.log("=== addAssisted iniciado ===");
-        
-        if (!app) {
-            console.error("App não definido");
-            showNotification("Erro interno: app não definido", "error");
-            return;
-        }
-
-        if (!app.currentPauta || !app.currentPauta.id) {
-            console.error("Nenhuma pauta selecionada");
-            showNotification("Selecione uma pauta primeiro", "error");
-            return;
-        }
-
-        const nameInput = document.getElementById('assisted-name');
-        const cpfInput = document.getElementById('assisted-cpf');
-        const subjectInput = document.getElementById('assisted-subject');
-        
-        if (!nameInput) {
-            showNotification("Campo de nome não encontrado", "error");
-            return;
-        }
-        
-        const name = nameInput.value.trim();
-        if (!name) {
-            showNotification("O nome é obrigatório.", "error");
-            return;
-        }
-
-        const tabAgendamento = document.getElementById('tab-agendamento');
-        const currentMode = (tabAgendamento && tabAgendamento.classList.contains('tab-active')) ? 'agendamento' : 'avulso';
-        
-        let isScheduled, hasArrived, scheduledTimeValue;
-
-        if (currentMode === 'agendamento') {
-            const scheduledRadio = document.querySelector('input[name="is-scheduled"]:checked');
-            const arrivedRadio = document.querySelector('input[name="has-arrived"]:checked');
-            
-            isScheduled = (scheduledRadio && scheduledRadio.value === 'yes');
-            hasArrived = (arrivedRadio && arrivedRadio.value === 'yes');
-            scheduledTimeValue = (isScheduled && document.getElementById('scheduled-time')) ? document.getElementById('scheduled-time').value : null;
-            
-            if (isScheduled && !scheduledTimeValue && !hasArrived) {
-                showNotification("Por favor, informe o horário agendado.", "error");
-                return;
-            }
-        } else {
-            isScheduled = false;
-            hasArrived = true;
-            scheduledTimeValue = null;
-        }
-
-        let arrivalDate = null;
-        if (hasArrived) {
-            const timeInput = document.getElementById('arrival-time');
-            if (timeInput && timeInput.value) {
-                const [hours, minutes] = timeInput.value.split(':');
-                arrivalDate = new Date();
-                arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0); // Set hours and minutes, preserve current date and milliseconds
-            }
-        }
-
-        let assignedRoom = null;
-        if (currentMode === 'avulso' && app.currentPautaData && app.currentPautaData.type === 'multisala') {
-            const manualRoomSelect = document.getElementById('manual-room-select');
-            assignedRoom = (manualRoomSelect && manualRoomSelect.value) ? manualRoomSelect.value : null;
-        }
-
-        const newAssisted = {
-            name: name,
-            cpf: (cpfInput && cpfInput.value.trim()) || '',
-            subject: (subjectInput && subjectInput.value.trim()) || 'Não informado',
-            type: currentMode,
-            status: hasArrived ? 'aguardando' : 'pauta',
-            scheduledTime: scheduledTimeValue,
-            arrivalTime: hasArrived && arrivalDate ? arrivalDate.toISOString() : null,
-            // For initial add, checkInOrder directly takes the unique timestamp from arrivalDate (which includes milliseconds)
-            checkInOrder: hasArrived && arrivalDate ? arrivalDate.getTime() : null, 
-            assignedCollaborator: null,
-            delegatedBy: null,
-            delegatedAt: null,
-            inAttendanceTime: null,
-            attendedBy: null,
-            attendedAt: null,
-            finalizadoPeloColaborador: false,
-            isConfirmed: false,
-            confirmationDetails: null,
-            room: assignedRoom,
-            manualIndex: Date.now(),
-            createdAt: new Date().toISOString(),
-            lastActionBy: app.currentUserName || 'Sistema',
-            lastActionTimestamp: new Date().toISOString(),
-            distributionStatus: null,
-            distributionHistory: []
-        };
-
-        try {
-            console.log("Tentando salvar no Firestore...");
-            console.log("Pauta ID:", app.currentPauta.id);
-            
-            const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
-            const docRef = await addDoc(attendanceRef, newAssisted);
-            
-            console.log("Documento criado com sucesso! ID:", docRef.id);
-            
-            await logAction(
-                app.db,
-                app.auth,
-                app.currentUserName || 'Sistema',
-                app.currentPauta.id,
-                'ADD_ASSISTED',
-                `Adicionou assistido: ${name}`,
-                docRef.id
-            );
-            
-            showNotification("Assistido adicionado com sucesso!");
-            playSound('notification');
-            
-            if (nameInput) nameInput.value = '';
-            if (cpfInput) cpfInput.value = '';
-            if (subjectInput) subjectInput.value = '';
-            
-            if (document.getElementById('scheduled-time-wrapper')) document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-            if (document.getElementById('arrival-time-wrapper')) document.getElementById('arrival-time-wrapper').classList.add('hidden');
-            
-            nameInput.focus();
-            
-        } catch (error) {
-            console.error("Erro detalhado ao adicionar:", error);
-            console.error("Código do erro:", error.code);
-            console.error("Mensagem:", error.message);
-            
-            let mensagem = "Erro ao adicionar assistido";
-            if (error.code === 'permission-denied') {
-                mensagem = "Permissão negada. Verifique as regras do Firestore.";
-            } else if (error.code === 'unavailable') {
-                mensagem = "Serviço indisponível. Verifique sua conexão.";
-            } else if (error.message) {
-                mensagem = error.message;
-            }
-            
-            showNotification(mensagem, "error");
-        }
-    },
-
-    /**
-     * Atualiza status de um assistido - CENTRALIZA O REGISTRO DE ÚLTIMA AÇÃO
+     * ATUALIZADA: updateStatus com Notificação Interativa e Lógica de Fila
      */
     async updateStatus(db, pautaId, assistedId, updates, userName) {
         if (!pautaId || !assistedId) return;
         
         try {
-            console.log("Atualizando status:", updates);
             const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
-            
             const docSnap = await getDoc(docRef);
             const currentData = docSnap.exists() ? docSnap.data() : {};
             
-            // ⭐ PADRONIZAÇÃO: Toda atualização grava quem fez e quando
             const finalUpdates = { 
                 ...updates,
                 lastActionBy: userName || 'Sistema',
                 lastActionTimestamp: new Date().toISOString()
             };
             
-            // --- LÓGICA PARA checkInOrder ---
+            // Lógica de checkInOrder para ordenação precisa
             if (updates.status === 'aguardando') {
-                // Ao mudar para 'aguardando', sempre garantimos que o checkInOrder reflete
-                // o momento EXATO em que esta ação foi registrada, para desempate preciso.
-                // Isso sobrescreve qualquer `checkInOrder` menos preciso que venha via `arrivalTime` (HH:MM).
-                if (!updates.checkInOrder) { // Se `checkInOrder` não foi explicitamente fornecido nos `updates`
+                if (!updates.checkInOrder) {
                     finalUpdates.checkInOrder = Date.now(); 
-                    console.log("✅ checkInOrder definido para 'aguardando' como Date.now() para desempate:", finalUpdates.checkInOrder);
-                } else {
-                    finalUpdates.checkInOrder = updates.checkInOrder; // Usa o que foi passado explicitamente (ex: de um CSV)
                 }
-                
-                // Se `arrivalTime` é fornecido, valida e garante que seja um ISO string consistente.
                 if (updates.arrivalTime) {
                     const arrivalDate = new Date(updates.arrivalTime);
-                    if (isNaN(arrivalDate.getTime())) {
-                        console.warn("⚠️ arrivalTime fornecido é inválido:", updates.arrivalTime);
-                        finalUpdates.arrivalTime = null; // Limpa arrivalTime inválido
-                    } else {
-                        finalUpdates.arrivalTime = arrivalDate.toISOString(); // Garante formato ISO string
-                    }
+                    finalUpdates.arrivalTime = isNaN(arrivalDate.getTime()) ? null : arrivalDate.toISOString();
                 }
             } else if (updates.status === 'pauta') {
-                // Se o status volta para 'pauta', `checkInOrder` e `arrivalTime` não são mais relevantes.
                 finalUpdates.checkInOrder = null;
                 finalUpdates.arrivalTime = null;
-            } else if (updates.status !== 'aguardando' && updates.status !== 'pauta') {
-                 // Para outros status, se `checkInOrder` foi passado, mantém. Caso contrário, mantém o existente.
-                 // Nenhuma mudança automática de `checkInOrder` se não for `aguardando` ou `pauta`.
-                 if (!updates.checkInOrder && currentData.checkInOrder) {
-                     finalUpdates.checkInOrder = currentData.checkInOrder;
-                 }
+            } else {
+                if (!updates.checkInOrder && currentData.checkInOrder) {
+                    finalUpdates.checkInOrder = currentData.checkInOrder;
+                }
             }
-            // --- FIM DA LÓGICA DE checkInOrder ---
             
             await updateDoc(docRef, finalUpdates);
             
             const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados atualizados';
-            await logAction(
-                db,
-                window.app && window.app.auth,
-                userName || 'Sistema',
-                pautaId,
-                'UPDATE_ASSISTED',
-                `${action} - ${currentData.name || 'Assistido'}`,
-                assistedId
-            );
+            await logAction(db, window.app?.auth, userName || 'Sistema', pautaId, 'UPDATE_ASSISTED', `${action} - ${currentData.name || 'Assistido'}`, assistedId);
             
-            console.log("Status atualizado com sucesso!");
-
-                       // ======================================================================
-            // ⭐ NOVO: NOTIFICAÇÃO INTERATIVA PARA "AGUARDANDO" ⭐
-            // ======================================================================
+            // ⭐ NOTIFICAÇÃO INTERATIVA PARA FILA DE ESPERA
             if (updates.status === 'aguardando' && currentData.status !== 'aguardando') {
-                // Recuperar o nome do assistido (se não estiver nos updates)
-                const currentAssisted = window.app.allAssisted.find(a => a.id === assistedId) || { name: 'Assistido Desconhecido' };
-                const name = currentAssisted.name || currentData.name; // Prioriza o nome do app.allAssisted se disponível
+                const currentAssisted = window.app.allAssisted.find(a => a.id === assistedId) || { name: 'Assistido' };
+                const name = currentAssisted.name || currentData.name;
                 
                 showNotification(
                     `"${name}" entrou na fila de espera!`,
                     'info',
-                    10000, // Duração maior, pois tem botões de ação
+                    10000,
                     [
                         {
                             label: "Chamar Próximo",
                             callback: () => {
-                                // Redireciona para a lógica de chamar o próximo.
-                                // Precisamos garantir que a instância do app esteja disponível.
-                                if (window.app && typeof window.app.PautaService.callNextAssisted === 'function') {
+                                if (window.app?.PautaService?.callNextAssisted) {
                                     window.app.PautaService.callNextAssisted(window.app);
-                                } else {
-                                    showNotification("Erro ao chamar próximo. Recarregue a página.", "error");
                                 }
                             }
                         },
@@ -321,24 +108,16 @@ export const PautaService = {
                             callback: () => {
                                 if (window.openDetailsModal) {
                                     window.openDetailsModal({
-                                        assistedId: assistedId,
-                                        pautaId: pautaId,
-                                        allAssisted: window.app.allAssisted,
-                                        db: window.app.db // Passa o db para o detalhes.js
+                                        assistedId, pautaId, allAssisted: window.app.allAssisted, db: window.app.db
                                     });
-                                } else {
-                                    showNotification("Erro ao abrir detalhes. Recarregue a página.", "error");
                                 }
                             }
                         }
                     ]
                 );
             } else {
-                // Notificação padrão para outras atualizações
-                showNotification(action, "success"); // A notificação existente para outras ações
+                showNotification(action, "success");
             }
-            // ======================================================================
-
         } catch (error) {
             console.error("Erro ao atualizar status:", error);
             showNotification("Erro ao atualizar", "error");
