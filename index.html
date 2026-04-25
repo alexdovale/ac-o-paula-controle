@@ -299,6 +299,32 @@
                 </div>
             </div>
 
+<!-- NOVO: Botão de Configurações da Pauta -->
+                        <div class="relative ml-2 sm:ml-4 shrink-0"> 
+                            <button id="pauta-settings-toggle" class="z-10 flex items-center justify-center p-2.5 text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors duration-200" title="Configurações da Pauta">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-settings"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 6.2 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 4.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V15z"></path></svg>
+                            </button>
+                            <div id="pauta-settings-panel" class="hidden absolute top-full right-0 mt-2 w-48 p-3 bg-white rounded-lg shadow-xl border border-gray-200 z-30 space-y-2">
+                                <p class="text-xs font-bold text-gray-500 uppercase mb-2">Mostrar Colunas:</p>
+                                <label class="flex items-center text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                    <input type="checkbox" id="toggle-em-atendimento" class="h-4 w-4 text-blue-600 rounded">
+                                    <span class="ml-2">Em Atendimento</span>
+                                </label>
+                                <label class="flex items-center text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                    <input type="checkbox" id="toggle-distribuicao" class="h-4 w-4 text-cyan-600 rounded">
+                                    <span class="ml-2">Distribuição</span>
+                                </label>
+                                <label class="flex items-center text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                    <input type="checkbox" id="toggle-faltosos" class="h-4 w-4 text-purple-600 rounded">
+                                    <span class="ml-2">Faltosos</span>
+                                </label>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            
             <div id="closed-pauta-alert" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4 text-sm" role="alert">
                 <p class="font-bold">Pauta Fechada</p>
                 <p>Esta pauta está fechada para novas edições. Apenas o criador pode reabri-la.</p>
