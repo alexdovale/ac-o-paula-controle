@@ -291,30 +291,59 @@ export const PautaService = {
             
             console.log("Status atualizado com sucesso!");
 
-            // ==========================================
-            // 👇 SEU CÓDIGO CORRIGIDO AQUI 👇
-            // ==========================================
+                       // ======================================================================
+            // ⭐ NOVO: NOTIFICAÇÃO INTERATIVA PARA "AGUARDANDO" ⭐
+            // ======================================================================
             if (updates.status === 'aguardando' && currentData.status !== 'aguardando') {
-                playSound('chime'); // Alguém acabou de chegar/entrar na fila
-            } else if (updates.status === 'emAtendimento' && currentData.status !== 'emAtendimento') {
-                playSound('chime'); // Alguém foi chamado/delegado
-            } else if (updates.status === 'atendido' && currentData.status !== 'atendido') {
-                playSound('success'); // Atendimento finalizado
-            } else if (finalUpdates.documentState === 'saved' && currentData.documentState !== 'saved') {
-                playSound('success'); // Se o checklist foi salvo
+                // Recuperar o nome do assistido (se não estiver nos updates)
+                const currentAssisted = window.app.allAssisted.find(a => a.id === assistedId) || { name: 'Assistido Desconhecido' };
+                const name = currentAssisted.name || currentData.name; // Prioriza o nome do app.allAssisted se disponível
+                
+                showNotification(
+                    `"${name}" entrou na fila de espera!`,
+                    'info',
+                    10000, // Duração maior, pois tem botões de ação
+                    [
+                        {
+                            label: "Chamar Próximo",
+                            callback: () => {
+                                // Redireciona para a lógica de chamar o próximo.
+                                // Precisamos garantir que a instância do app esteja disponível.
+                                if (window.app && typeof window.app.PautaService.callNextAssisted === 'function') {
+                                    window.app.PautaService.callNextAssisted(window.app);
+                                } else {
+                                    showNotification("Erro ao chamar próximo. Recarregue a página.", "error");
+                                }
+                            }
+                        },
+                        {
+                            label: "Ver Detalhes",
+                            callback: () => {
+                                if (window.openDetailsModal) {
+                                    window.openDetailsModal({
+                                        assistedId: assistedId,
+                                        pautaId: pautaId,
+                                        allAssisted: window.app.allAssisted,
+                                        db: window.app.db // Passa o db para o detalhes.js
+                                    });
+                                } else {
+                                    showNotification("Erro ao abrir detalhes. Recarregue a página.", "error");
+                                }
+                            }
+                        }
+                    ]
+                );
+            } else {
+                // Notificação padrão para outras atualizações
+                showNotification(action, "success"); // A notificação existente para outras ações
             }
-            
-            // Note que trocamos a variável "mensagem" por um texto fixo entre aspas
-            // Você pode descomentar a linha abaixo se quiser que o balãozinho verde apareça:
-            // showNotification("Atualizado com sucesso", "success"); 
-            // ==========================================
+            // ======================================================================
 
         } catch (error) {
             console.error("Erro ao atualizar status:", error);
             showNotification("Erro ao atualizar", "error");
         }
     },
-
     /**
      * Delegar atendimento para um colaborador
      */
