@@ -103,6 +103,7 @@ class SIGAPApp {
         onAuthStateChanged(this.auth, async (user) => {
             if (user) {
                 await AuthService.handleAuthState(this, user);
+                await this.loadUserPreferences(); // <--- CARREGA AS PREFERÊNCIAS AQUI
             } else {
                 UIService.showScreen('login');
                 document.getElementById('admin-panel-btn')?.classList.add('hidden');
@@ -1538,10 +1539,123 @@ class SIGAPApp {
         });
 
         // ================================================
+        // NOVO: LISTENERS PARA PREFERÊNCIAS DO USUÁRIO
+        // ================================================
+        document.getElementById('open-user-preferences-btn')?.addEventListener('click', () => {
+            this.openUserPreferencesModal();
+        });
+
+        document.getElementById('cancel-user-preferences-btn')?.addEventListener('click', () => {
+            document.getElementById('user-preferences-modal').classList.add('hidden');
+        });
+
+        document.getElementById('save-user-preferences-btn')?.addEventListener('click', async () => {
+            await this.saveUserPreferences();
+        });
+
+        // ================================================
         // CONFIGURAÇÃO DO PAINEL ADMIN
         // ================================================
         
         this.setupAdminPanel();
+    }
+
+    // ================================================
+    // NOVOS: MÉTODOS PARA GERENCIAR PREFERÊNCIAS DO USUÁRIO
+    // ================================================
+
+    /**
+     * Carrega as preferências do usuário do Firestore.
+     */
+    async loadUserPreferences() {
+        if (!this.auth?.currentUser || !this.db) {
+            this.userPreferences = {}; // Reseta se não houver usuário
+            return;
+        }
+
+        const userDocRef = doc(this.db, "users", this.auth.currentUser.uid);
+        try {
+            const docSnap = await getDoc(userDocRef);
+            if (docSnap.exists()) {
+                const userData = docSnap.data();
+                this.userPreferences = userData.preferences || { enableSounds: true }; // Define padrão se não existir
+                console.log("⚙️ Preferências do usuário carregadas:", this.userPreferences);
+            } else {
+                this.userPreferences = { enableSounds: true }; // Padrão se o documento não existir
+                console.log("⚙️ Documento de preferências do usuário não encontrado. Usando padrões.");
+            }
+        } catch (error) {
+            console.error("Erro ao carregar preferências do usuário:", error);
+            this.userPreferences = { enableSounds: true }; // Fallback em caso de erro
+            showNotification("Erro ao carregar suas preferências.", "error");
+        }
+        this.applyUserPreferences(); // Aplica imediatamente após carregar
+    }
+
+    /**
+     * Salva as preferências do usuário no Firestore.
+     */
+    async saveUserPreferences() {
+        if (!this.auth?.currentUser || !this.db) {
+            showNotification("Você precisa estar logado para salvar preferências.", "error");
+            return;
+        }
+
+        // Coleta as preferências do formulário
+        const enableSounds = document.getElementById('pref-toggle-sounds')?.checked || false;
+        
+        this.userPreferences = {
+            enableSounds: enableSounds
+            // Adicione outras preferências aqui conforme a interface for crescendo
+        };
+
+        const userDocRef = doc(this.db, "users", this.auth.currentUser.uid);
+        try {
+            await updateDoc(userDocRef, {
+                preferences: this.userPreferences,
+                lastPreferenceUpdate: new Date().toISOString() // Opcional: registrar última atualização
+            }, { merge: true }); // Usar merge para não apagar outros dados do usuário
+            
+            this.applyUserPreferences(); // Aplica as novas preferências imediatamente
+            document.getElementById('user-preferences-modal').classList.add('hidden');
+            showNotification("Preferências salvas com sucesso!", "success");
+            console.log("⚙️ Preferências do usuário salvas:", this.userPreferences);
+        } catch (error) {
+            console.error("Erro ao salvar preferências do usuário:", error);
+            showNotification("Erro ao salvar suas preferências.", "error");
+        }
+    }
+
+    /**
+     * Abre o modal de preferências e preenche com os dados atuais.
+     */
+    async openUserPreferencesModal() {
+        if (!this.auth?.currentUser) {
+            showNotification("Você precisa estar logado para ver suas preferências.", "error");
+            return;
+        }
+
+        // Preenche os dados de usuário
+        document.getElementById('pref-user-name').value = this.currentUserName || 'Não informado';
+        document.getElementById('pref-user-email').value = this.auth.currentUser.email || 'Não informado';
+
+        // Carrega as preferências e preenche o checkbox
+        await this.loadUserPreferences(); // Garante que as preferências mais recentes estão carregadas
+        document.getElementById('pref-toggle-sounds').checked = this.userPreferences.enableSounds || false;
+
+        document.getElementById('user-preferences-modal').classList.remove('hidden');
+    }
+
+    /**
+     * Aplica as preferências carregadas ou salvas.
+     * Esta função será chamada para controlar o comportamento do sistema.
+     */
+    applyUserPreferences() {
+        // Exemplo: Controlar se os sons de notificação devem ser reproduzidos
+        // O playSound precisará verificar esta preferência.
+        console.log("⚙️ Aplicando preferências do usuário:", this.userPreferences);
+        // Não é necessário fazer nada específico aqui AGORA,
+        // mas a função playSound precisará ler this.userPreferences.enableSounds.
     }
 
     // ================================================
@@ -1969,7 +2083,7 @@ class SIGAPApp {
 }
 
 // ========================================================
-// EXPORTS ADICIONAIS E GLOBAIS (MOVIDOS DO FINAL DO INDEX.HTML)
+// EXPORTS ADICIONAIS E GLOBAIS
 // ========================================================
 
 window.showNotification = showNotification;
@@ -2027,7 +2141,7 @@ console.log("🔍 Verificando métodos:", {
 });
 
 // ================================================
-// EVENTO DE CEP (MOVIDO DO FINAL DO INDEX.HTML)
+// EVENTO DE CEP
 // ================================================
 document.addEventListener('blur', async (e) => {
     if (e.target.id === 'cep-reu') {
@@ -2053,7 +2167,7 @@ document.addEventListener('blur', async (e) => {
 }, true);
 
 // ================================================
-// Script para o toggle da explicação da ordem de atendimento (MOVIDO DO FINAL DO INDEX.HTML)
+// Script para o toggle da explicação da ordem de atendimento
 // ================================================
 document.addEventListener('DOMContentLoaded', function() {
     const toggleBtn = document.getElementById('toggle-logic-btn-padrao');
