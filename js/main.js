@@ -17,6 +17,7 @@ import { PDFService } from './pdfService.js?v=novo_pdf_v2';
 import { EmailService } from './emailService.js?v=20260313';
 import { escapeHTML, showNotification, normalizeText, copyToClipboard, formatTime, playSound } from './utils.js?v=20260313';
 import { setupDetailsModal, openDetailsModal } from './detalhes.js';
+import { DashboardService } from './dashboardService.js';
 import { subjectTree, flatSubjects } from './assuntos.js';
 import { showConfirmModal } from './confirmModal.js';
 import { logAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser, loadAuditLogs, exportAuditLogsPDF, loadDashboardData, populateUserFilter } from './admin.js';
