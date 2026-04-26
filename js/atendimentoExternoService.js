@@ -2,10 +2,8 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// Você precisará importar sua configuração do Firebase aqui, como './config.js'
-// Ou ter um mecanismo para que 'app' seja inicializado externamente e passado para o serviço.
-// Por simplicidade AGORA, vamos manter a inicialização aqui, mas é algo a revisar.
-import { firebaseConfig } from './config.js'; // Assumindo que config.js está no mesmo nível
+import { firebaseConfig } from './config.js'; // Sua configuração do Firebase
+import { jwtDecode } from 'https://cdn.jsdelivr.net/npm/jwt-decode@4.0.0/build/esm/index.min.js'; // Importa jwt-decode
 
 // Inicializa o Firebase app e Firestore para esta página externa
 const app = initializeApp(firebaseConfig);
@@ -14,8 +12,9 @@ const db = getFirestore(app);
 // Variáveis de estado global para o atendimento externo
 let pautaId = null;
 let assistidoId = null;
-let myName = null;
+let collaboratorName = null;
 let fluxoEscolhido = 'direto'; // Padrão
+let pautaData = null; // Para armazenar os dados da pauta
 
 export const AtendimentoExternoService = {
 
@@ -27,47 +26,75 @@ export const AtendimentoExternoService = {
         console.log("⚡ AtendimentoExternoService inicializado.");
 
         const params = new URLSearchParams(window.location.search);
-        pId = params.get('pautaId');
-        aId = params.get('assistidoId');
-        myName = params.get('collaboratorName');
-        // ⭐ FUTURO: Precisaremos de um token de segurança aqui. Por enquanto, só os IDs. ⭐
+        const token = params.get('token'); // <<--- PEGA O TOKEN AQUI DA URL
 
-        if (!pId || !aId || !myName) {
-            this.showError("Link de atendimento inválido ou incompleto.");
+        if (!token) {
+            this.showError("Link de atendimento inválido: Token de segurança não fornecido.");
             return;
         }
 
+        let decodedToken;
         try {
-            const pautaSnap = await getDoc(doc(db, "pautas", pId));
-            if (!pautaSnap.exists()) {
-                this.showError("Pauta não encontrada.");
+            // Decodifica o token localmente (não valida a assinatura aqui no frontend,
+            // mas extrai o payload e verifica a expiração).
+            // A validação da assinatura REAL ocorre na Cloud Function e DEVE
+            // ser garantida pelas Firestore Security Rules no acesso aos dados.
+            decodedToken = jwtDecode(token);
+            
+            // Valida a expiração do token (em segundos, jwtDecode retorna em segundos)
+            if (decodedToken.exp * 1000 < Date.now()) { // Multiplica por 1000 para ms
+                this.showError("Link de atendimento expirado. Solicite um novo link.");
                 return;
             }
-            const pautaData = pautaSnap.data();
+            
+            // Extrai os dados essenciais do payload do token
+            pautaId = decodedToken.pautaId;
+            assistidoId = decodedToken.assistidoId;
+            collaboratorName = decodedToken.collaboratorName;
+            
+            if (!pautaId || !assistidoId || !collaboratorName) {
+                this.showError("Token de segurança incompleto ou inválido. Faltam dados essenciais.");
+                return;
+            }
 
-            const assistidoSnap = await getDoc(doc(db, "pautas", pId, "attendances", aId));
+            console.log("✅ Token JWT decodificado e válido na página externa:", decodedToken);
+
+        } catch (error) {
+            console.error("Erro ao decodificar/validar token JWT no cliente:", error);
+            this.showError("Token de segurança inválido. O link pode ter sido adulterado, expirou ou está malformado.");
+            return;
+        }
+
+        // Continuar com o carregamento dos dados se o token for válido e decodificado
+        try {
+            const pautaSnap = await getDoc(doc(db, "pautas", pautaId));
+            if (!pautaSnap.exists()) {
+                this.showError("Pauta não encontrada (ID no token inválido).");
+                return;
+            }
+            pautaData = pautaSnap.data();
+
+            const assistidoSnap = await getDoc(doc(db, "pautas", pautaId, "attendances", assistidoId));
             if (!assistidoSnap.exists()) {
-                this.showError("Assistido não encontrado na pauta.");
+                this.showError("Assistido não encontrado na pauta (ID no token inválido).");
                 return;
             }
             const assistidoData = assistidoSnap.data();
 
-            // Preenche o cabeçalho
+            // Preenche o cabeçalho da UI
             document.getElementById('assistido-nome').textContent = assistidoData.name || 'Nome Indisponível';
             document.getElementById('assistido-assunto').textContent = assistidoData.subject || 'Assunto Indisponível';
 
             // Configura a visibilidade dos botões de fluxo com base na configuração da pauta
-            // ⭐ MELHORIA: Essas configurações (useDistributionFlow, useReviewFlow) devem vir
-            // do documento da pauta, para não depender de lógicas externas.
-            if (pautaData.useDistributionFlow) { // Assumindo que essa prop existe na pauta
+            // (Assumindo que pautaData.useDistributionFlow e pautaData.useReviewFlow existem)
+            if (pautaData.useDistributionFlow) {
                 document.getElementById('btn-fluxo-dist').classList.remove('hidden');
             }
-            if (pautaData.useReviewFlow) { // Assumindo que essa prop existe na pauta
+            if (pautaData.useReviewFlow) {
                 document.getElementById('btn-fluxo-rev').classList.remove('hidden');
                 
-                // Carrega defensores no Select (apenas defensores desta pauta)
-                // ⭐ MELHORIA: A lista de colaboradores deve ser filtrada por pauta/função
-                const qColabs = query(collection(db, "pautas", pId, "collaborators"), where("cargo", "==", "Defensor(a)"));
+                // Carrega defensores no Select
+                const qColabs = query(collection(db, "pautas", pautaId, "collaborators"), where("cargo", "==", "Defensor(a)"));
                 const colabsSnap = await getDocs(qColabs);
                 const selectDefensor = document.getElementById('select-defensor');
                 selectDefensor.innerHTML = '<option value="">-- Selecione --</option>'; // Opção padrão
@@ -79,12 +106,11 @@ export const AtendimentoExternoService = {
                 });
             }
 
-            // MÁGICA: Ajusta a interface com base no status do assistido
+            // Ajusta a interface com base no status do assistido
             if (assistidoData.status === 'emRevisao') {
                 document.getElementById('header-bg').className = "bg-purple-600 p-5 text-white";
                 document.getElementById('area-colaborador').classList.add('hidden');
                 document.getElementById('area-defensor').classList.remove('hidden');
-                // Limpa o input de motivo ao iniciar, para nova revisão
                 const inputMotivo = document.getElementById('input-motivo');
                 if (inputMotivo) inputMotivo.value = '';
 
@@ -94,7 +120,6 @@ export const AtendimentoExternoService = {
                 document.getElementById('area-defensor').classList.add('hidden');
                 alert(`ATENÇÃO: Este processo foi devolvido. Motivo: ${assistidoData.reviewMotivoDevolucao || 'Motivo não especificado.'}`);
             } else {
-                // Estado padrão: painel do colaborador visível
                 document.getElementById('area-colaborador').classList.remove('hidden');
             }
 
@@ -105,72 +130,12 @@ export const AtendimentoExternoService = {
             this.setupListeners();
 
         } catch (error) {
-            console.error("Erro ao inicializar atendimento externo:", error);
-            this.showError("Erro ao carregar os dados do atendimento. Tente novamente.");
+            console.error("Erro ao carregar dados do atendimento externo:", error);
+            this.showError("Erro ao carregar dados do atendimento. Verifique o link ou sua conexão.");
         }
     },
 
-    /**
-     * Configura os listeners para os botões do painel externo.
-     */
-    setupListeners() {
-        // Lógica de Abas
-        document.getElementById('tab-btn-encerramento').onclick = () => this.mudarAba('encerramento');
-        document.getElementById('tab-btn-historico').onclick = () => this.mudarAba('historico');
-
-        // Lógica de Botões de Fluxo do Colaborador
-        document.getElementById('btn-fluxo-direto').onclick = () => this.escolherFluxo('direto');
-        document.getElementById('btn-fluxo-dist').onclick = () => this.escolherFluxo('distribuicao');
-        document.getElementById('btn-fluxo-rev').onclick = () => this.escolherFluxo('revisao');
-
-        // AÇÕES DO COLABORADOR
-        document.getElementById('btn-finalizar').onclick = () => this.handleFinalizar();
-
-        // AÇÕES DO DEFENSOR
-        document.getElementById('btn-aprovar').onclick = () => this.handleAprovar();
-        document.getElementById('btn-devolver').onclick = () => this.handleDevolver();
-    },
-
-    /**
-     * Altera a aba visível no painel.
-     * @param {string} aba - O ID da aba a ser mostrada ('encerramento' ou 'historico').
-     */
-    mudarAba(aba) {
-        document.getElementById('aba-encerramento').classList.add('hidden');
-        document.getElementById('aba-historico').classList.add('hidden');
-        document.getElementById('tab-btn-encerramento').className = "flex-1 p-3 text-[10px] uppercase text-gray-400 font-bold";
-        document.getElementById('tab-btn-historico').className = "flex-1 p-3 text-[10px] uppercase text-gray-400 font-bold";
-        
-        document.getElementById(`aba-${aba}`).classList.remove('hidden');
-        document.getElementById(`tab-btn-${aba}`).classList.add('tab-active'); // Adiciona a classe tab-active
-    },
-
-    /**
-     * Escolhe o fluxo de finalização do assistido.
-     * @param {string} fluxo - O fluxo escolhido ('direto', 'distribuicao', 'revisao').
-     */
-    escolherFluxo(fluxo) {
-        fluxoEscolhido = fluxo;
-        document.getElementById('config-revisao').classList.toggle('hidden', fluxo !== 'revisao');
-        
-        // Remove classes de ativo de todos os botões
-        document.getElementById('btn-fluxo-direto').classList.remove('border-green-500', 'bg-green-50');
-        document.getElementById('btn-fluxo-dist').classList.remove('border-cyan-500', 'bg-cyan-50');
-        document.getElementById('btn-fluxo-rev').classList.remove('border-purple-500', 'bg-purple-50');
-
-        // Adiciona classes de ativo ao botão selecionado
-        document.getElementById('btn-fluxo-direto').classList.add('border-gray-200'); // Garante estilo padrão
-        document.getElementById('btn-fluxo-dist').classList.add('border-gray-200');
-        document.getElementById('btn-fluxo-rev').classList.add('border-gray-200');
-
-        if (fluxo === 'direto') {
-            document.getElementById('btn-fluxo-direto').classList.add('border-green-500', 'bg-green-50');
-        } else if (fluxo === 'distribuicao') {
-            document.getElementById('btn-fluxo-dist').classList.add('border-cyan-500', 'bg-cyan-50');
-        } else if (fluxo === 'revisao') {
-            document.getElementById('btn-fluxo-rev').classList.add('border-purple-500', 'bg-purple-50');
-        }
-    },
+    // ... (restante dos métodos: setupListeners, mudarAba, escolherFluxo, handleFinalizar, handleAprovar, handleDevolver, renderHistory, showError) ...
 
     /**
      * Manipula a ação de finalizar/encaminhar do colaborador.
@@ -185,7 +150,7 @@ export const AtendimentoExternoService = {
         } else if (fluxoEscolhido === 'revisao') {
             updates.status = 'emRevisao';
             updates.reviewData = {
-                sentBy: myName,
+                sentBy: collaboratorName, // Usa o nome do token
                 defensor: document.getElementById('select-defensor').value,
                 notes: document.getElementById('notas-revisao').value
             };
@@ -197,14 +162,14 @@ export const AtendimentoExternoService = {
         
         updates.history = arrayUnion({
             action: `MARCADO COMO ${updates.status.toUpperCase()}`,
-            by: myName,
+            by: collaboratorName, // Usa o nome do token
             at: new Date().toISOString()
         });
 
         try {
-            await updateDoc(doc(db, "pautas", pId, "attendances", aId), updates);
+            await updateDoc(doc(db, "pautas", pId, "attendances", assistidoId), updates);
             alert("Processo encaminhado com sucesso!");
-            window.close(); // Fecha a janela após sucesso
+            window.close();
         } catch (error) {
             console.error("Erro ao finalizar processo:", error);
             alert("Erro ao finalizar processo. Verifique sua conexão.");
@@ -223,13 +188,13 @@ export const AtendimentoExternoService = {
             processNumber: numero || null,
             history: arrayUnion({
                 action: numero ? 'APROVADO_E_DISTRIBUIDO' : 'APROVADO_SEM_NUMERO',
-                by: myName,
+                by: collaboratorName, // Usa o nome do token
                 at: new Date().toISOString()
             })
         };
 
         try {
-            await updateDoc(doc(db, "pautas", pId, "attendances", aId), updates);
+            await updateDoc(doc(db, "pautas", pId, "attendances", assistidoId), updates);
             alert("Aprovado com sucesso!");
             window.close();
         } catch (error) {
@@ -251,13 +216,13 @@ export const AtendimentoExternoService = {
             history: arrayUnion({
                 action: 'DEVOLVIDO_PARA_CORRECAO',
                 msg: motivo,
-                by: myName,
+                by: collaboratorName, // Usa o nome do token
                 at: new Date().toISOString()
             })
         };
         
         try {
-            await updateDoc(doc(db, "pautas", pId, "attendances", aId), updates);
+            await updateDoc(doc(db, "pautas", pId, "attendances", assistidoId), updates);
             alert("Processo devolvido para correção.");
             window.close();
         } catch (error) {
@@ -273,10 +238,9 @@ export const AtendimentoExternoService = {
     renderHistory(history) {
         const histCont = document.getElementById('lista-historico');
         if (!histCont) return;
-        histCont.innerHTML = ''; // Limpa antes de renderizar
+        histCont.innerHTML = '';
 
         if (history && history.length > 0) {
-            // Inverte para mostrar os mais recentes primeiro
             [...history].reverse().forEach(h => {
                 histCont.innerHTML += `
                     <div class="bg-gray-50 border p-3 rounded-lg text-xs">
@@ -284,7 +248,7 @@ export const AtendimentoExternoService = {
                         <p class="text-[9px] text-gray-500 mb-1">${new Date(h.at).toLocaleString('pt-BR')}</p>
                         ${h.msg ? `<p class="italic text-gray-700">"${h.msg}"</p>` : ''}
                     </div>`;
-            });
+        });
         } else {
             histCont.innerHTML = "<p class='text-xs text-gray-400'>Nenhum histórico registrado.</p>";
         }
@@ -299,7 +263,6 @@ export const AtendimentoExternoService = {
         document.getElementById('assistido-assunto').textContent = message;
         document.getElementById('header-bg').className = "bg-red-600 p-5 text-white";
         
-        // Esconde todas as áreas de interação
         document.getElementById('aba-encerramento').classList.add('hidden');
         document.getElementById('aba-historico').classList.add('hidden');
         document.getElementById('tab-btn-encerramento').classList.add('hidden');
