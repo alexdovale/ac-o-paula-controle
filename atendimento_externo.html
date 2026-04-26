@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Atendimento - SIGAP</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/jwt-decode@4.0.0/build/esm/index.min.js"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
@@ -15,28 +17,22 @@
 <body class="p-2 md:p-6 min-h-screen flex justify-center items-start pt-10">
 
     <div class="w-full max-w-2xl bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col">
-        <!-- Header -->
         <div id="header-bg" class="bg-blue-600 p-5 text-white">
             <h1 id="assistido-nome" class="font-black text-xl uppercase truncate">CARREGANDO...</h1>
             <p id="assistido-assunto" class="text-xs opacity-90 truncate mt-1">Aguarde...</p>
         </div>
 
-        <!-- Abas -->
         <div class="flex border-b bg-gray-50">
-            <!-- Os onclicks foram removidos daqui, pois serão adicionados via JS -->
             <button id="tab-btn-encerramento" class="flex-1 p-3 text-[10px] uppercase tab-active">Encerramento / Fluxo</button>
             <button id="tab-btn-historico" class="flex-1 p-3 text-[10px] uppercase text-gray-400 font-bold">Histórico</button>
         </div>
 
         <div class="p-6">
-            <!-- ABA: ENCERRAMENTO E FLUXO -->
             <div id="aba-encerramento">
                 
-                <!-- ÁREA DO COLABORADOR -->
                 <div id="area-colaborador" class="hidden space-y-6">
                     <h3 class="text-xs font-bold text-gray-500 uppercase">Como deseja finalizar?</h3>
                     <div class="grid grid-cols-1 gap-3">
-                        <!-- Os onclicks foram removidos daqui, pois serão adicionados via JS -->
                         <button id="btn-fluxo-direto" class="p-4 border-2 rounded-xl text-left transition border-gray-200 hover:bg-green-50">
                             <span class="block font-bold text-gray-800 text-sm">✅ Finalizar Atendimento</span>
                             <span class="text-[10px] text-gray-500">Concluir sem necessidade de revisão ou protocolo.</span>
@@ -53,7 +49,6 @@
                         </button>
                     </div>
 
-                    <!-- Configurações de Revisão -->
                     <div id="config-revisao" class="hidden bg-purple-50 p-4 rounded-xl border border-purple-100 space-y-4">
                         <div>
                             <label class="block text-[10px] font-bold text-purple-600 uppercase mb-1">Defensor Responsável</label>
@@ -65,11 +60,9 @@
                         </div>
                     </div>
 
-                    <!-- O onclick foi removido daqui, pois será adicionado via JS -->
                     <button id="btn-finalizar" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg uppercase tracking-wide active:scale-95 transition-all mt-4">Confirmar e Seguir</button>
                 </div>
 
-                <!-- ÁREA DO DEFENSOR -->
                 <div id="area-defensor" class="hidden space-y-6">
                     <div class="bg-purple-50 p-4 rounded-xl border border-purple-200">
                         <h3 class="text-sm font-bold text-purple-800 mb-1">Processo em Revisão</h3>
@@ -88,7 +81,6 @@
                     </div>
 
                     <div class="grid grid-cols-2 gap-3 pt-4 border-t">
-                        <!-- Os onclicks foram removidos daqui, pois serão adicionados via JS -->
                         <button id="btn-aprovar" class="bg-green-600 text-white font-black py-3.5 rounded-xl uppercase text-xs shadow hover:bg-green-700">Aprovar e Protocolar</button>
                         <button id="btn-devolver" class="bg-orange-500 text-white font-black py-3.5 rounded-xl uppercase text-xs shadow hover:bg-orange-600">Devolver p/ Correção</button>
                     </div>
@@ -96,14 +88,12 @@
 
             </div>
 
-            <!-- ABA HISTÓRICO -->
             <div id="aba-historico" class="hidden">
                 <div id="lista-historico" class="space-y-3"></div>
             </div>
         </div>
     </div>
 
-    <!-- Script Principal para esta página -->
     <script type="module">
         import { AtendimentoExternoService } from './js/atendimentoExternoService.js';
         document.addEventListener('DOMContentLoaded', () => {
