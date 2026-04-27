@@ -46,6 +46,49 @@ export const PautaService = {
     },
 
     /**
+     * NOVO: Adiciona um novo assistido à pauta.
+     */
+    async addAssisted(db, pautaId, assistedData, userName) {
+        if (!pautaId || !assistedData || !userName) {
+            showNotification("Dados incompletos para adicionar assistido.", "error");
+            return false;
+        }
+
+        try {
+            // Garante que o status padrão seja 'pauta' se não for fornecido
+            const newAssisted = {
+                ...assistedData,
+                status: assistedData.status || 'pauta', 
+                createdAt: new Date().toISOString(),
+                lastActionBy: userName,
+                lastActionTimestamp: new Date().toISOString(),
+                distributionHistory: []
+            };
+
+            const attendanceRef = collection(db, "pautas", pautaId, "attendances");
+            const docRef = await addDoc(attendanceRef, newAssisted);
+
+            await logAction(
+                db,
+                window.app && window.app.auth, // Assume que 'app' e 'auth' estão no escopo global ou em 'window.app'
+                userName,
+                pautaId,
+                'ADD_ASSISTED',
+                `Adicionou assistido: ${assistedData.name || 'Novo Assistido'}`,
+                docRef.id
+            );
+
+            showNotification(`Assistido "${assistedData.name || 'Novo Assistido'}" adicionado com sucesso!`, "success");
+            return true;
+
+        } catch (error) {
+            console.error("Erro ao adicionar assistido:", error);
+            showNotification("Erro ao adicionar assistido: " + error.message, "error");
+            return false;
+        }
+    },
+
+    /**
      * ATUALIZADA: updateStatus com Notificação Interativa e Lógica de Fila
      */
     async updateStatus(db, pautaId, assistedId, updates, userName) {
@@ -328,7 +371,7 @@ export const PautaService = {
         }
         
         // Não é necessário logar a ação AQUI, pois o log será feito quando o modal for confirmado.
-    }, // <-- ESTA VÍRGULA É CRUCIAL PARA SEPARAR OS MÉTODOS DO OBJETO
+    }, 
 
     /**
      * Remove um assistido
@@ -554,32 +597,24 @@ export const PautaService = {
 
             let successCount = 0;
             for (const assistido of assistidos) {
-                try {
-                    const newAssisted = {
-                        ...assistido,
-                        type: 'agendamento',
-                        status: 'pauta',
-                        createdAt: new Date().toISOString(),
-                        lastActionBy: app.currentUserName || 'Sistema',
-                        lastActionTimestamp: new Date().toISOString(),
-                        distributionHistory: []
-                    };
-                    
-                    const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
-                    await addDoc(attendanceRef, newAssisted);
-                    successCount++;
-                } catch (e) {
-                    console.error("Erro ao importar item:", e);
-                }
+                // Reutilizando a nova função addAssisted
+                const added = await this.addAssisted(
+                    app.db,
+                    app.currentPauta.id,
+                    { ...assistido, type: 'agendamento' }, // CSVs geralmente são agendamentos
+                    app.currentUserName || 'Sistema'
+                );
+                if (added) successCount++;
             }
 
-            await logAction(
+            await logAction( // Este log agora é redundante se cada addAssisted já loga, considere remover.
                 app.db,
                 app.auth,
                 app.currentUserName || 'Sistema',
                 app.currentPauta.id,
                 'IMPORT_CSV',
-                `Importou ${successCount} de ${assistidos.length} registros via CSV`
+                `Importou ${successCount} de ${assistidos.length} registros via CSV`,
+                null // Não há um assistido específico para este log global de importação
             );
 
             showNotification(`${successCount} de ${assistidos.length} registros importados!`);
@@ -947,7 +982,8 @@ export const PautaService = {
                 div.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        optionNaoAtribuir.click();
+                        // Aqui, use 'div.click()' para simular o clique no próprio elemento
+                        div.click(); 
                     }
                 });
                 
