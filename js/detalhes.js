@@ -1732,6 +1732,10 @@ export async function openDetailsModal(config) {
         checklistView?.classList.remove('hidden');
         checklistView?.classList.add('flex'); // Garante que a view do checklist esteja visível
         
+        // CORREÇÃO: Garante exibição do cabeçalho de ações e de busca diretamente
+        checklistHeaderActions?.classList.remove('hidden');
+        searchContainer?.classList.remove('hidden');
+        
     } else {
         // Mostra seleção de assunto
         console.log("❌ Nenhum checklist encontrado. Mostrando seleção de assuntos.");
@@ -1805,6 +1809,11 @@ function renderSubjectSelection(selectionArea) {
                 selectionArea.classList.add('hidden');
                 getEl('document-checklist-view').classList.remove('hidden');
                 getEl('document-checklist-view').classList.add('flex');
+                
+                // CORREÇÃO: Transição forçada e imediata de todos os elementos
+                getEl('document-checklist-view-header-actions')?.classList.remove('hidden');
+                getEl('checklist-search-container')?.classList.remove('hidden');
+                
                 updateDocumentState('selected');
             };
             
