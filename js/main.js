@@ -971,7 +971,7 @@ class SIGAPApp {
                     documentState: 'saved'
                 });
                 showNotification("Checklist salvo com sucesso!", "success");
-                document.getElementById('documents-modal').classList.add('hidden');
+                document.getElementById('documents-modal')?.classList.add('hidden');
             } catch (error) {
                 console.error("Erro ao salvar checklist:", error);
                 showNotification("Erro ao salvar checklist", "error");
