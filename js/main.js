@@ -1,7 +1,5 @@
 // js/main.js
 
-
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -65,6 +63,9 @@ class SIGAPApp {
             await this.setupOfflinePersistence();
             this.setupEventListeners();
             this.setupAuthListener();
+            
+            // Inicializa o detalhes.js
+            setupDetailsModal({ db: this.db });
             
         } catch (error) {
             console.error("Erro na inicialização:", error);
@@ -936,34 +937,32 @@ class SIGAPApp {
             }
         });
         
-        // Botão Salvar Checklist
+        // --- CORREÇÃO NO SALVAR CHECKLIST ---
         document.getElementById('save-checklist-btn')?.addEventListener('click', async () => {
             console.log("💾 Salvar checklist clicado");
             
-            if (!window.assistedIdToHandle && !window.currentAssistedId) {
+            const assistedId = window.assistedIdToHandle || window.currentAssistedId;
+            if (!assistedId) {
                 showNotification("Erro: assistido não identificado", "error");
                 return;
             }
             
-            const assistedId = window.assistedIdToHandle || window.currentAssistedId;
             const container = document.getElementById('checklist-container');
-            
             const checkedItems = Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => ({
                 id: cb.id,
                 text: cb.closest('label').querySelector('span').textContent,
                 type: document.querySelector(`input[name="type-${cb.id}"]:checked`)?.value || 'Físico'
             }));
-        
+
+            // Coletando dados do formulário (funções globais do detalhes.js)
             const checklistData = {
+                action: window.currentChecklistAction, // Variável global do detalhes.js
                 checkedIds: checkedItems.map(item => item.id),
-                docTypes: checkedItems.reduce((acc, item) => {
-                    acc[item.id] = item.type;
-                    return acc;
-                }, {}),
-                reuData: getReuDataFromForm(),
-                expenseData: getExpenseDataFromForm()
+                docTypes: checkedItems.reduce((acc, item) => { acc[item.id] = item.type; return acc; }, {}),
+                reuData: window.getReuDataFromForm ? window.getReuDataFromForm() : {},
+                expenseData: window.getExpenseDataFromForm ? window.getExpenseDataFromForm() : {}
             };
-        
+
             try {
                 await updateDoc(doc(this.db, "pautas", this.currentPauta.id, "attendances", assistedId), {
                     documentChecklist: checklistData,
@@ -971,12 +970,17 @@ class SIGAPApp {
                 });
                 showNotification("Checklist salvo com sucesso!", "success");
                 
-                // Modificação: o modal não fecha automaticamente para podermos continuar visualizando o checklist
-                // document.getElementById('documents-modal')?.classList.add('hidden');
+                // IMPORTANTE: Não fechamos o modal e nem mudamos de aba para o usuário ver que salvou e continuar ali.
+                console.log("✅ Checklist salvo e mantido na tela.");
             } catch (error) {
-                console.error("Erro ao salvar checklist:", error);
+                console.error("Erro ao salvar:", error);
                 showNotification("Erro ao salvar checklist", "error");
             }
+        });
+
+        // Botão Fechar Modal (X)
+        document.getElementById('close-assisted-details-modal-btn')?.addEventListener('click', () => {
+            document.getElementById('assisted-details-modal').classList.add('hidden');
         });
         
         // Botão PDF
