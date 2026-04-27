@@ -1,5 +1,3 @@
-// js/main.js
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -756,8 +754,23 @@ class SIGAPApp {
 
         NotesService.setup();
 
+        // ==============================================================
+        // 🛠 FIX APLICADO AQUI: Proteção para garantir que não haja TypeErrors
+        // se a função 'addAssisted' não existir ou tiver outro nome no pauta.js
+        // ==============================================================
         document.getElementById('add-assisted-btn')?.addEventListener('click', () => {
-            PautaService.addAssisted(this);
+            if (typeof PautaService.addAssisted === 'function') {
+                PautaService.addAssisted(this);
+            } else {
+                console.error("Erro detectado: PautaService.addAssisted não é uma função. Verifique o arquivo pauta.js.");
+                showNotification("Esta ação requer atualização no código do serviço de pauta.", "warning");
+                
+                // Fallback seguro: se a função pretendia abrir o modal diretamente, tenta fazê-lo pelo ID comum
+                const modalAdd = document.getElementById('add-assisted-modal');
+                if (modalAdd) {
+                    modalAdd.classList.remove('hidden');
+                }
+            }
         });
 
         document.getElementById('file-upload')?.addEventListener('change', (e) => {
