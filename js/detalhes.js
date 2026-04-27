@@ -942,7 +942,7 @@ function renderReuSaveButton() {
  */
 function initReuUnicoCheckbox() {
     const checkUnico = getEl('check-reu-unico');
-    const contentCompleto = getEl('content-reu-completo'); // Usando getEl
+    const contentCompleto = getEl('content-reu-completo'); 
     
     if (checkUnico && contentCompleto) {
         checkUnico.addEventListener('change', function() {
@@ -961,7 +961,7 @@ function initReuUnicoCheckbox() {
  */
 function initCepSearch() {
     const cepInp = getEl('cep-reu');
-    const buscarBtn = getEl('buscar-cep-reu-btn'); // Usando getEl
+    const buscarBtn = getEl('buscar-cep-reu-btn'); 
     
     async function buscarCEP(cep, tipo = 'residencial') {
         const val = cep.replace(/\D/g, '');
@@ -998,7 +998,7 @@ function initCepSearch() {
         cepInp.addEventListener('blur', () => buscarCEP(cepInp.value, 'residencial'));
     }
 
-    const buscarComercialBtn = getEl('buscar-cep-comercial-reu-btn'); // Usando getEl
+    const buscarComercialBtn = getEl('buscar-cep-comercial-reu-btn'); 
     const cepComercial = getEl('cep-comercial-reu');
     
     if (buscarComercialBtn && cepComercial) {
@@ -1011,7 +1011,7 @@ function initCepSearch() {
  * 6.9 Inicializa botão salvar do réu
  */
 function initReuSaveButton() {
-    const salvarBtn = getEl('salvar-reu-btn'); // Usando getEl
+    const salvarBtn = getEl('salvar-reu-btn'); 
     if (salvarBtn) {
         salvarBtn.addEventListener('click', () => {
             const event = new CustomEvent('reuSalvo', { detail: getReuDataFromForm() });
@@ -1110,10 +1110,10 @@ function initExpenseTableEvents(div) {
     // Botão fechar
     setTimeout(() => {
         div.querySelector('#fechar-gastos')?.addEventListener('click', () => {
-            const container = getEl('expense-table-container'); // Usando getEl
+            const container = getEl('expense-table-container'); 
             if (container) container.innerHTML = '';
             
-            const expenseButton = getEl('expense-button-container'); // Usando getEl
+            const expenseButton = getEl('expense-button-container'); 
             if (expenseButton) expenseButton.style.display = 'block';
             updateSelectedCounter(); // Atualiza o contador após fechar a tabela
         });
@@ -1230,7 +1230,7 @@ function fillReuData(d) {
  * @param {Object} d - Dados do réu
  */
 function updateReuVisibility(d) {
-    const contentCompleto = getEl('content-reu-completo'); // Usando getEl
+    const contentCompleto = getEl('content-reu-completo'); 
     
     if (contentCompleto) {
         contentCompleto.style.display = d.checkReuUnico ? 'block' : 'none';
@@ -1251,10 +1251,10 @@ function fillExpenseData(d) {
         if (el && d[cat.id]) el.value = d[cat.id];
     });
     
-    const checkGastos = getEl('check-exibir-gastos'); // Usando getEl
+    const checkGastos = getEl('check-exibir-gastos'); 
     if (checkGastos && d.checkExibirGastos !== undefined) {
         checkGastos.checked = d.checkExibirGastos;
-        const contentGastos = getEl('content-planilha-gastos'); // Usando getEl
+        const contentGastos = getEl('content-planilha-gastos'); 
         if (contentGastos) contentGastos.style.display = d.checkExibirGastos ? 'block' : 'none';
     }
     
@@ -1554,14 +1554,11 @@ async function handleReset() {
  */
 function handleBack() {
     getEl('document-checklist-view')?.classList.add('hidden');
-    getEl('document-checklist-view')?.classList.remove('flex'); // Remove flex para garantir que não ocupe espaço
-    getEl('document-checklist-view-header-actions')?.classList.add('hidden'); // Esconde header específico do checklist
+    getEl('document-checklist-view')?.classList.remove('flex'); 
+    getEl('document-checklist-view-header-actions')?.classList.add('hidden'); 
     getEl('checklist-search-container')?.classList.add('hidden');
-    getEl('address-editor-container')?.classList.add('hidden'); // Esconde formulário do réu
-    getEl('document-action-selection')?.classList.remove('hidden'); // Mostra seleção de assunto
-    
-    // O header principal do modal de detalhes do assistido (assisted-details-modal-header)
-    // permanece visível, pois ele contém o nome do assistido e o botão de fechar.
+    getEl('address-editor-container')?.classList.add('hidden'); 
+    getEl('document-action-selection')?.classList.remove('hidden'); 
 }
 
 /**
@@ -1569,12 +1566,11 @@ function handleBack() {
  */
 function closeAssistedDetailsModal() {
     getEl('assisted-details-modal').classList.add('hidden');
-    // Reinicia o estado para que a próxima abertura seja "limpa"
     currentAssistedId = null;
     currentPautaId = null;
     currentChecklistAction = null;
-    window._lastOpenedAssistedId = null; // Limpa o assistido aberto
-    handleBack(); // Retorna para a seleção de assunto, limpando a visualização interna
+    window._lastOpenedAssistedId = null; 
+    handleBack(); 
 }
 
 /* ========================================================
@@ -1616,14 +1612,11 @@ export function setupDetailsModal(config) {
     console.log("⚙️ setupDetailsModal chamado", config);
     db = config.db;
 
-    // Listener para o botão de fechar do modal principal de detalhes
     const closeBtn = getEl('close-assisted-details-modal-btn');
     if (closeBtn) {
         closeBtn.onclick = closeAssistedDetailsModal;
     }
 
-    // Listeners para os botões de ação do checklist (dentro do header específico do checklist)
-    // Garanta que estes IDs existam no seu HTML dentro do #document-checklist-view-header-actions
     getEl('back-to-action-selection-btn').onclick = handleBack;
     getEl('save-checklist-btn').onclick = handleSave;
     getEl('print-checklist-btn').onclick = handlePdf;
@@ -1634,7 +1627,7 @@ export function setupDetailsModal(config) {
         searchInput.oninput = (e) => {
             const term = normalizeLocal(e.target.value);
             document.querySelectorAll('label.checklist-row').forEach(row => {
-                const parentDiv = row.closest('div.flex.flex-col.border-b'); // Procura o div que engloba o checkbox e os radios
+                const parentDiv = row.closest('div.flex.flex-col.border-b'); 
                 if (parentDiv) {
                     const text = normalizeLocal(row.textContent);
                     parentDiv.style.display = text.includes(term) ? 'block' : 'none';
@@ -1663,7 +1656,7 @@ export async function openDetailsModal(config) {
     allAssisted = config.allAssisted || [];
     db = config.db || window.app?.db;
     
-    // Busca dados atualizados do assistido
+    // Busca dados atualizados do assistido direto do Firebase
     try {
         if (db && currentPautaId && currentAssistedId) {
             const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
@@ -1689,28 +1682,20 @@ export async function openDetailsModal(config) {
         return;
     }
     
-    // AQUI O ERRO OCORRE: getEl('assisted-details-name') pode ser null se o HTML não foi atualizado.
     const assistedDetailsNameEl = getEl('assisted-details-name');
     if (assistedDetailsNameEl) {
         assistedDetailsNameEl.textContent = assisted.name;
-    } else {
-        console.error("Elemento 'assisted-details-name' não encontrado no DOM. Verifique o HTML.");
-        // Você pode querer retornar ou mostrar uma notificação aqui,
-        // mas vamos continuar para tentar abrir o modal mesmo sem o nome no título.
     }
     
     const selectionArea = getEl('document-action-selection');
     const checklistView = getEl('document-checklist-view');
-    const checklistHeaderActions = getEl('document-checklist-view-header-actions'); // Novo ID
+    const checklistHeaderActions = getEl('document-checklist-view-header-actions');
     const searchContainer = getEl('checklist-search-container');
     const reuContainer = getEl('address-editor-container');
 
-    // Se o modal já está aberto para o mesmo assistido E já tem checklist renderizado,
-    // apenas reabre sem rerenderizar (preserva o estado atual dos campos)
     const modalAberto = !getEl('assisted-details-modal')?.classList.contains('hidden');
     const mesmoAssistido = window._lastOpenedAssistedId === currentAssistedId;
-    const checklistJaRenderizado = currentChecklistAction && 
-        !checklistView?.classList.contains('hidden');
+    const checklistJaRenderizado = currentChecklistAction && !checklistView?.classList.contains('hidden');
 
     if (modalAberto && mesmoAssistido && checklistJaRenderizado) {
         console.log("♻️ Mesmo assistido — reabrindo sem rerenderizar");
@@ -1718,42 +1703,36 @@ export async function openDetailsModal(config) {
         return;
     }
 
-    // Guarda qual assistido está aberto
     window._lastOpenedAssistedId = currentAssistedId;
     
+    // === NOVA LÓGICA DE PERSISTÊNCIA INSERIDA AQUI ===
     if (assisted.documentChecklist && assisted.documentChecklist.action) {
-        // Carrega checklist salvo
         console.log("✅ Checklist encontrado! Carregando:", assisted.documentChecklist.action);
         
         currentChecklistAction = assisted.documentChecklist.action;
-        renderChecklist(assisted.documentChecklist.action); // Esta função já gerencia a visibilidade dos elementos internos
         
         selectionArea?.classList.add('hidden');
         checklistView?.classList.remove('hidden');
-        checklistView?.classList.add('flex'); // Garante que a view do checklist esteja visível
+        checklistView?.classList.add('flex'); 
         
-        // CORREÇÃO: Garante exibição do cabeçalho de ações e de busca diretamente
         checklistHeaderActions?.classList.remove('hidden');
         searchContainer?.classList.remove('hidden');
         
+        renderChecklist(assisted.documentChecklist.action);
+        
     } else {
-        // Mostra seleção de assunto
         console.log("❌ Nenhum checklist encontrado. Mostrando seleção de assuntos.");
         
-        // Esconde todos os elementos específicos do checklist
         checklistView?.classList.add('hidden');
         checklistView?.classList.remove('flex');
-        checklistHeaderActions?.classList.add('hidden'); // Esconde o header de ações do checklist
+        checklistHeaderActions?.classList.add('hidden');
         searchContainer?.classList.add('hidden');
-        reuContainer?.classList.add('hidden'); // Garante que o formulário do réu esteja escondido
+        reuContainer?.classList.add('hidden'); 
         
-        // Mostra a área de seleção de assunto
         selectionArea?.classList.remove('hidden');
-        
         renderSubjectSelection(selectionArea);
     }
     
-    // Finalmente, mostra o modal principal de detalhes
     getEl('assisted-details-modal')?.classList.remove('hidden');
 }
 
@@ -1764,6 +1743,7 @@ export async function openDetailsModal(config) {
 function renderSubjectSelection(selectionArea) {
     if (!selectionArea) return;
     
+    // Mantemos a interface visual rica do projeto
     selectionArea.innerHTML = `
         <div class="p-2 sm:p-4">
             <div class="mb-4">
@@ -1803,18 +1783,31 @@ function renderSubjectSelection(selectionArea) {
             btn.className = "text-left p-3 sm:p-4 bg-white border-2 border-gray-100 hover:border-green-500 rounded-xl transition-all shadow-sm group text-sm sm:text-base";
             btn.innerHTML = `<span class="font-bold text-gray-700 uppercase text-[10px] sm:text-xs tracking-tighter">${title}</span>`;
             
-            btn.onclick = (e) => {
+            btn.onclick = async (e) => {
                 e.preventDefault();
+
+                // === NOVA LÓGICA DE PERSISTÊNCIA INSERIDA AQUI ===
+                // 1. Grava IMEDIATAMENTE no banco de dados que este assunto foi escolhido
+                try {
+                    await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), {
+                        "documentChecklist.action": key,
+                        documentState: 'filling'
+                    });
+                    console.log(`💾 Assunto salvo no banco: ${key}`);
+                } catch (err) {
+                    console.error("Erro ao salvar o assunto selecionado:", err);
+                }
+
+                // 2. Troca a visualização e renderiza
+                currentChecklistAction = key;
                 renderChecklist(key);
+                
                 selectionArea.classList.add('hidden');
                 getEl('document-checklist-view').classList.remove('hidden');
                 getEl('document-checklist-view').classList.add('flex');
                 
-                // CORREÇÃO: Transição forçada e imediata de todos os elementos
                 getEl('document-checklist-view-header-actions')?.classList.remove('hidden');
                 getEl('checklist-search-container')?.classList.remove('hidden');
-                
-                updateDocumentState('selected');
             };
             
             grid.appendChild(btn);
