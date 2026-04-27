@@ -438,6 +438,7 @@ function checkReuVisibility() {
 function renderChecklist(actionKey) {
     console.log("📋 Renderizando checklist para:", actionKey);
     currentChecklistAction = actionKey;
+    window.currentChecklistAction = actionKey; // <--- ADICIONADO AQUI: Torna a ação global
     const data = documentsData[actionKey];
     if (!data) {
         console.error("Ação não encontrada:", actionKey);
@@ -1800,6 +1801,7 @@ function renderSubjectSelection(selectionArea) {
 
                 // 2. Troca a visualização e renderiza
                 currentChecklistAction = key;
+                window.currentChecklistAction = key; // <--- ADICIONADO AQUI: Torna global para o main.js não dar erro
                 renderChecklist(key);
                 
                 selectionArea.classList.add('hidden');
