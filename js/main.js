@@ -931,10 +931,9 @@ class SIGAPApp {
         
         // Botão Voltar
         document.getElementById('back-to-action-selection-btn')?.addEventListener('click', () => {
-            document.getElementById('document-checklist-view').classList.add('hidden');
-            document.getElementById('document-action-selection').classList.remove('hidden');
-            document.getElementById('document-checklist-view-header').classList.add('hidden');
-            document.getElementById('checklist-search-container').classList.add('hidden');
+            if (typeof window.switchToActionSelectionView === 'function') {
+                window.switchToActionSelectionView();
+            }
         });
         
         // Botão Salvar Checklist
@@ -971,7 +970,9 @@ class SIGAPApp {
                     documentState: 'saved'
                 });
                 showNotification("Checklist salvo com sucesso!", "success");
-                document.getElementById('documents-modal')?.classList.add('hidden');
+                
+                // Modificação: o modal não fecha automaticamente para podermos continuar visualizando o checklist
+                // document.getElementById('documents-modal')?.classList.add('hidden');
             } catch (error) {
                 console.error("Erro ao salvar checklist:", error);
                 showNotification("Erro ao salvar checklist", "error");
@@ -1040,10 +1041,9 @@ class SIGAPApp {
         // Botão Mudar (Reset)
         document.getElementById('reset-checklist-btn')?.addEventListener('click', () => {
             if (confirm("Deseja mudar de assunto? Isso apagará o checklist atual.")) {
-                document.getElementById('document-checklist-view').classList.add('hidden');
-                document.getElementById('document-action-selection').classList.remove('hidden');
-                document.getElementById('document-checklist-view-header').classList.add('hidden');
-                document.getElementById('checklist-search-container').classList.add('hidden');
+                if (typeof window.switchToActionSelectionView === 'function') {
+                    window.switchToActionSelectionView();
+                }
             }
         });
         
@@ -2105,6 +2105,24 @@ class SIGAPApp {
 
 window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
+
+// ========================================================
+// FUNÇÕES GLOBAIS DE CONTROLE DE TELA DO CHECKLIST
+// (Você pode utilizar essas chamadas direto do seu detalhes.js)
+// ========================================================
+window.switchToChecklistView = function() {
+    document.getElementById('document-action-selection')?.classList.add('hidden');
+    document.getElementById('document-checklist-view')?.classList.remove('hidden');
+    document.getElementById('document-checklist-view-header')?.classList.remove('hidden');
+    document.getElementById('checklist-search-container')?.classList.remove('hidden');
+};
+
+window.switchToActionSelectionView = function() {
+    document.getElementById('document-checklist-view')?.classList.add('hidden');
+    document.getElementById('document-action-selection')?.classList.remove('hidden');
+    document.getElementById('document-checklist-view-header')?.classList.add('hidden');
+    document.getElementById('checklist-search-container')?.classList.add('hidden');
+};
 
 // Adiciona a função de ordenação ao escopo global (window)
 window.sortColaboradores = function(criterio) {
