@@ -1389,36 +1389,73 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
 
     <!-- NOVO: Modal de Preferências do Usuário -->
     <div id="user-preferences-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-            <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Minhas Preferências</h2>
-            
-            <div class="space-y-4 mb-6">
-                <!-- Informações do Usuário (apenas leitura) -->
+    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-lg max-h-[95vh] overflow-y-auto">
+        <h2 class="text-xl sm:text-2xl font-bold mb-6 text-center text-gray-800 border-b pb-4">Minhas Preferências</h2>
+        
+        <div class="space-y-6 mb-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-                    <input type="text" id="pref-user-name" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700" readonly>
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-1">Nome</label>
+                    <input type="text" id="pref-user-name" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 text-sm" readonly>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" id="pref-user-email" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700" readonly>
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-1">Email</label>
+                    <input type="email" id="pref-user-email" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 text-sm" readonly>
                 </div>
-    
-                <!-- Preferências (configuráveis) -->
-                <div class="pt-4 border-t border-gray-200">
-                    <h3 class="font-semibold text-gray-700 mb-3">Notificações</h3>
-                    <label class="flex items-center space-x-3 cursor-pointer">
-                        <input type="checkbox" id="pref-toggle-sounds" class="h-5 w-5 text-green-600 focus:ring-green-500 rounded">
-                        <span class="text-gray-800 font-medium">Ativar Sons de Notificação</span>
+            </div>
+
+            <div class="pt-4 border-t border-gray-100">
+                <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2">🔊 Sons de Notificação</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
+                        <input type="checkbox" id="pref-enable-sounds-success" class="h-4 w-4 text-green-600 rounded">
+                        <span class="ml-3 text-sm text-gray-700">Sucesso</span>
+                    </label>
+                    <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
+                        <input type="checkbox" id="pref-enable-sounds-error" class="h-4 w-4 text-red-600 rounded">
+                        <span class="ml-3 text-sm text-gray-700">Erro</span>
+                    </label>
+                    <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
+                        <input type="checkbox" id="pref-enable-sounds-info" class="h-4 w-4 text-blue-600 rounded">
+                        <span class="ml-3 text-sm text-gray-700">Informativo</span>
+                    </label>
+                    <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
+                        <input type="checkbox" id="pref-enable-sounds-warning" class="h-4 w-4 text-orange-600 rounded">
+                        <span class="ml-3 text-sm text-gray-700">Aviso</span>
                     </label>
                 </div>
             </div>
-    
-            <div class="flex justify-end space-x-4">
-                <button id="cancel-user-preferences-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
-                <button id="save-user-preferences-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Salvar Preferências</button>
+
+            <div class="pt-4 border-t border-gray-100">
+                <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2">💬 Mensagens na Tela (Toasts)</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
+                        <input type="checkbox" id="pref-show-toasts-success" class="h-4 w-4 text-green-600 rounded">
+                        <span class="ml-3 text-sm text-gray-700">Mostrar Sucesso</span>
+                    </label>
+                    <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
+                        <input type="checkbox" id="pref-show-toasts-error" class="h-4 w-4 text-red-600 rounded">
+                        <span class="ml-3 text-sm text-gray-700">Mostrar Erros</span>
+                    </label>
+                    <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
+                        <input type="checkbox" id="pref-show-toasts-info" class="h-4 w-4 text-blue-600 rounded">
+                        <span class="ml-3 text-sm text-gray-700">Mostrar Informações</span>
+                    </label>
+                    <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
+                        <input type="checkbox" id="pref-show-toasts-warning" class="h-4 w-4 text-orange-600 rounded">
+                        <span class="ml-3 text-sm text-gray-700">Mostrar Avisos</span>
+                    </label>
+                </div>
             </div>
         </div>
+
+        <div class="flex flex-col sm:flex-row justify-end gap-3 border-t pt-6">
+            <button id="cancel-user-preferences-btn" class="w-full sm:w-auto bg-gray-200 text-gray-700 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-300 transition">Cancelar</button>
+            <button id="save-user-preferences-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-green-700 shadow-md transition">Salvar Alterações</button>
+        </div>
     </div>
+</div>
+
     
     <!-- Modal de Anotações -->
     <div id="notes-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center p-2">
