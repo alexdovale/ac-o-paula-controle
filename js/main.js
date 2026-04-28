@@ -1660,31 +1660,43 @@ class SIGAPApp {
         }
     }
 
-    async openUserPreferencesModal() {
+        async openUserPreferencesModal() {
         if (!this.auth?.currentUser) {
             showNotification("Você precisa estar logado para ver suas preferências.", "error");
             playSound('error');
             return;
         }
 
-        document.getElementById('pref-user-name').value = this.currentUserName || 'Não informado';
-        document.getElementById('pref-user-email').value = this.auth.currentUser.email || 'Não informado';
+        // Use o operador ?. ou verifique a existência antes de atribuir
+        const nameInput = document.getElementById('pref-user-name');
+        if (nameInput) nameInput.value = this.currentUserName || 'Não informado';
+        
+        const emailInput = document.getElementById('pref-user-email');
+        if (emailInput) emailInput.value = this.auth.currentUser.email || 'Não informado';
 
-        // Carrega as preferências e preenche TODOS os checkboxes
         await this.loadUserPreferences(); 
 
-        document.getElementById('pref-enable-sounds-success').checked = this.userPreferences.enableSoundsSuccess || false;
-        document.getElementById('pref-enable-sounds-error').checked = this.userPreferences.enableSoundsError || false;
-        document.getElementById('pref-enable-sounds-info').checked = this.userPreferences.enableSoundsInfo || false;
-        document.getElementById('pref-enable-sounds-warning').checked = this.userPreferences.enableSoundsWarning || false;
+        // Função auxiliar para evitar repetição e erros de 'null'
+        const setChecked = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.checked = value;
+        };
 
-        document.getElementById('pref-show-toasts-success').checked = this.userPreferences.showToastsSuccess || false;
-        document.getElementById('pref-show-toasts-error').checked = this.userPreferences.showToastsError || false;
-        document.getElementById('pref-show-toasts-info').checked = this.userPreferences.showToastsInfo || false;
-        document.getElementById('pref-show-toasts-warning').checked = this.userPreferences.showToastsWarning || false;
+        // Sons
+        setChecked('pref-enable-sounds-success', this.userPreferences.enableSoundsSuccess || false);
+        setChecked('pref-enable-sounds-error', this.userPreferences.enableSoundsError || false);
+        setChecked('pref-enable-sounds-info', this.userPreferences.enableSoundsInfo || false);
+        setChecked('pref-enable-sounds-warning', this.userPreferences.enableSoundsWarning || false);
 
-        document.getElementById('user-preferences-modal').classList.remove('hidden');
+        // Toasts
+        setChecked('pref-show-toasts-success', this.userPreferences.showToastsSuccess || false);
+        setChecked('pref-show-toasts-error', this.userPreferences.showToastsError || false);
+        setChecked('pref-show-toasts-info', this.userPreferences.showToastsInfo || false);
+        setChecked('pref-show-toasts-warning', this.userPreferences.showToastsWarning || false);
+
+        document.getElementById('user-preferences-modal')?.classList.remove('hidden');
     }
+
 
     /**
      * Aplica as preferências carregadas ou salvas.
