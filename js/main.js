@@ -1588,9 +1588,12 @@ class SIGAPApp {
     /**
      * Carrega as preferências do usuário do Firestore.
      */
+
+
     async loadUserPreferences() {
         if (!this.auth?.currentUser || !this.db) {
-            this.userPreferences = {}; // Reseta se não houver usuário
+            // Define padrões se não houver usuário autenticado
+            this.userPreferences = this.getDefaultNotificationPreferences(); 
             return;
         }
 
@@ -1599,70 +1602,86 @@ class SIGAPApp {
             const docSnap = await getDoc(userDocRef);
             if (docSnap.exists()) {
                 const userData = docSnap.data();
-                this.userPreferences = userData.preferences || { enableSounds: true }; // Define padrão se não existir
+                // Carrega as preferências salvas ou usa os padrões
+                this.userPreferences = userData.preferences || this.getDefaultNotificationPreferences(); 
                 console.log("⚙️ Preferências do usuário carregadas:", this.userPreferences);
             } else {
-                this.userPreferences = { enableSounds: true }; // Padrão se o documento não existir
+                // Padrão se o documento do usuário não existir ou não tiver preferências
+                this.userPreferences = this.getDefaultNotificationPreferences(); 
                 console.log("⚙️ Documento de preferências do usuário não encontrado. Usando padrões.");
             }
         } catch (error) {
             console.error("Erro ao carregar preferências do usuário:", error);
-            this.userPreferences = { enableSounds: true }; // Fallback em caso de erro
+            this.userPreferences = this.getDefaultNotificationPreferences(); // Fallback em caso de erro
             showNotification("Erro ao carregar suas preferências.", "error");
+            playSound('error');
         }
         this.applyUserPreferences(); // Aplica imediatamente após carregar
     }
 
-    /**
-     * Salva as preferências do usuário no Firestore.
-     */
     async saveUserPreferences() {
         if (!this.auth?.currentUser || !this.db) {
             showNotification("Você precisa estar logado para salvar preferências.", "error");
+            playSound('error');
             return;
         }
 
-        // Coleta as preferências do formulário
-        const enableSounds = document.getElementById('pref-toggle-sounds')?.checked || false;
-        
+        // Coleta TODAS as preferências do formulário
         this.userPreferences = {
-            enableSounds: enableSounds
-            // Adicione outras preferências aqui conforme a interface for crescendo
+            // Sons
+            enableSoundsSuccess: document.getElementById('pref-enable-sounds-success')?.checked || false,
+            enableSoundsError: document.getElementById('pref-enable-sounds-error')?.checked || false,
+            enableSoundsInfo: document.getElementById('pref-enable-sounds-info')?.checked || false, // Inclui chime
+            enableSoundsWarning: document.getElementById('pref-enable-sounds-warning')?.checked || false,
+
+            // Mensagens na Tela (Toasts)
+            showToastsSuccess: document.getElementById('pref-show-toasts-success')?.checked || false,
+            showToastsError: document.getElementById('pref-show-toasts-error')?.checked || false,
+            showToastsInfo: document.getElementById('pref-show-toasts-info')?.checked || false,
+            showToastsWarning: document.getElementById('pref-show-toasts-warning')?.checked || false,
         };
 
         const userDocRef = doc(this.db, "users", this.auth.currentUser.uid);
         try {
             await updateDoc(userDocRef, {
                 preferences: this.userPreferences,
-                lastPreferenceUpdate: new Date().toISOString() // Opcional: registrar última atualização
-            }, { merge: true }); // Usar merge para não apagar outros dados do usuário
+                lastPreferenceUpdate: new Date().toISOString()
+            }, { merge: true });
             
-            this.applyUserPreferences(); // Aplica as novas preferências imediatamente
+            this.applyUserPreferences();
             document.getElementById('user-preferences-modal').classList.add('hidden');
-            showNotification("Preferências salvas com sucesso!", "success");
+            showNotification("Preferências salvas com sucesso!", 'success');
+            playSound('success');
             console.log("⚙️ Preferências do usuário salvas:", this.userPreferences);
         } catch (error) {
             console.error("Erro ao salvar preferências do usuário:", error);
             showNotification("Erro ao salvar suas preferências.", "error");
+            playSound('error');
         }
     }
 
-    /**
-     * Abre o modal de preferências e preenche com os dados atuais.
-     */
     async openUserPreferencesModal() {
         if (!this.auth?.currentUser) {
             showNotification("Você precisa estar logado para ver suas preferências.", "error");
+            playSound('error');
             return;
         }
 
-        // Preenche os dados de usuário
         document.getElementById('pref-user-name').value = this.currentUserName || 'Não informado';
         document.getElementById('pref-user-email').value = this.auth.currentUser.email || 'Não informado';
 
-        // Carrega as preferências e preenche o checkbox
-        await this.loadUserPreferences(); // Garante que as preferências mais recentes estão carregadas
-        document.getElementById('pref-toggle-sounds').checked = this.userPreferences.enableSounds || false;
+        // Carrega as preferências e preenche TODOS os checkboxes
+        await this.loadUserPreferences(); 
+
+        document.getElementById('pref-enable-sounds-success').checked = this.userPreferences.enableSoundsSuccess || false;
+        document.getElementById('pref-enable-sounds-error').checked = this.userPreferences.enableSoundsError || false;
+        document.getElementById('pref-enable-sounds-info').checked = this.userPreferences.enableSoundsInfo || false;
+        document.getElementById('pref-enable-sounds-warning').checked = this.userPreferences.enableSoundsWarning || false;
+
+        document.getElementById('pref-show-toasts-success').checked = this.userPreferences.showToastsSuccess || false;
+        document.getElementById('pref-show-toasts-error').checked = this.userPreferences.showToastsError || false;
+        document.getElementById('pref-show-toasts-info').checked = this.userPreferences.showToastsInfo || false;
+        document.getElementById('pref-show-toasts-warning').checked = this.userPreferences.showToastsWarning || false;
 
         document.getElementById('user-preferences-modal').classList.remove('hidden');
     }
@@ -1670,13 +1689,28 @@ class SIGAPApp {
     /**
      * Aplica as preferências carregadas ou salvas.
      * Esta função será chamada para controlar o comportamento do sistema.
+     * Por enquanto, apenas loga e a função playSound/showNotification fará a verificação real.
      */
     applyUserPreferences() {
-        // Exemplo: Controlar se os sons de notificação devem ser reproduzidos
-        // O playSound precisará verificar esta preferência.
         console.log("⚙️ Aplicando preferências do usuário:", this.userPreferences);
-        // Não é necessário fazer nada específico aqui AGORA,
-        // mas a função playSound precisará ler this.userPreferences.enableSounds.
+    }
+
+    /**
+     * Retorna as preferências padrão de notificação.
+     */
+    getDefaultNotificationPreferences() {
+        return {
+            // Sons: todos ativados por padrão
+            enableSoundsSuccess: true,
+            enableSoundsError: true,
+            enableSoundsInfo: true,
+            enableSoundsWarning: true,
+            // Toasts: todos ativados por padrão
+            showToastsSuccess: true,
+            showToastsError: true,
+            showToastsInfo: true,
+            showToastsWarning: true,
+        };
     }
 
     // ================================================
