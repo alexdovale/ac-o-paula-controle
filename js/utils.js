@@ -17,10 +17,20 @@ export const escapeHTML = (str) => {
 };
 
 /**
- * Toca um som de notificação.
- * @param {string} type - Tipo de som ('notification', 'success', 'error', 'chime').
+ * Toca um som de notificação baseado nas preferências do usuário.
+ * @param {string} type - Tipo de som ('notification', 'success', 'error', 'chime', 'info', 'warning').
  */
 export function playSound(type = 'notification') {
+    // ⭐ Verificação de Preferências
+    const preferenceKey = `enableSounds${type.charAt(0).toUpperCase() + type.slice(1)}`;
+    const finalPreferenceKey = (type === 'chime' || type === 'notification' || type === 'info') 
+        ? 'enableSoundsInfo' 
+        : preferenceKey;
+
+    if (window.app && window.app.userPreferences && window.app.userPreferences[finalPreferenceKey] === false) {
+        return; // Não toca o som se desativado
+    }
+
     let audioPath = '';
     switch (type) {
         case 'success':
@@ -30,8 +40,10 @@ export function playSound(type = 'notification') {
             audioPath = './assets/sounds/error.mp3';   
             break;
         case 'chime': 
+        case 'info':
             audioPath = './assets/sounds/chime.mp3';   
             break;
+        case 'warning':
         case 'notification':
         default:
             audioPath = './assets/sounds/notification.mp3'; 
@@ -39,8 +51,8 @@ export function playSound(type = 'notification') {
     }
 
     const audio = new Audio(audioPath);
-    audio.volume = 0.5; // Ajuste o volume se necessário
-    audio.play().catch(e => console.warn("Falha ao reproduzir som (pode necessitar de interação prévia do usuário):", e));
+    audio.volume = 0.5;
+    audio.play().catch(e => console.warn(`Falha ao reproduzir som '${type}':`, e));
 }
 
 /**
@@ -54,29 +66,33 @@ const closeNotification = (notification) => {
         if (notification.parentElement) {
             notification.remove();
         }
-    });
+    }, { once: true });
 };
 
 /**
- * Exibe uma notificação estilo toast, totalmente responsiva.
+ * Exibe uma notificação estilo toast, totalmente responsiva, respeitando as preferências.
  * @param {string} message - A mensagem a ser exibida.
  * @param {'success'|'error'|'info'|'warning'} type - O tipo da notificação (afeta a cor).
  * @param {number} [duration=5000] - Duração em milissegundos. Padrão 5000ms.
  * @param {Array<Object>} [actions] - Array de ações { label: string, callback: Function }.
  */
 export function showNotification(message, type = 'info', duration = 5000, actions = []) {
+    // ⭐ Verificação de Preferências para o Toast
+    const preferenceKey = `showToasts${type.charAt(0).toUpperCase() + type.slice(1)}`;
+    if (window.app && window.app.userPreferences && window.app.userPreferences[preferenceKey] === false) {
+        return; // Aborta a exibição se o usuário desativou nas configs
+    }
+
     let notificationContainer = document.getElementById('notification-container');
     
     if (!notificationContainer) {
         notificationContainer = document.createElement('div');
         notificationContainer.id = 'notification-container';
-        // No mobile fica 100% da largura na parte de baixo, no desktop fica no canto inferior direito
         notificationContainer.className = 'fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-[9999] flex flex-col items-end space-y-2 pointer-events-none';
         document.body.appendChild(notificationContainer);
     }
 
     const notification = document.createElement('div');
-    // Layout flexível: coluna no celular (texto em cima, botões embaixo) e linha no desktop
     notification.className = 'w-full sm:w-auto max-w-sm p-4 rounded-lg shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between text-white transition-all duration-300 transform translate-x-full opacity-0 pointer-events-auto gap-3';
 
     let bgColor = '';
@@ -86,27 +102,26 @@ export function showNotification(message, type = 'info', duration = 5000, action
         case 'success':
             bgColor = 'bg-green-600';
             textColorClass = 'text-green-700';
-            if (actions.length === 0) playSound('success'); 
             break;
         case 'error':
             bgColor = 'bg-red-600';
             textColorClass = 'text-red-700';
-            if (actions.length === 0) playSound('error'); 
             break;
         case 'warning':
             bgColor = 'bg-orange-500';
             textColorClass = 'text-orange-700';
-            if (actions.length === 0) playSound('notification'); 
             break;
         case 'info':
         default:
             bgColor = 'bg-blue-600';
             textColorClass = 'text-blue-700';
-            if (actions.length === 0) playSound('notification'); 
             break;
     }
 
     notification.classList.add(bgColor);
+    
+    // Toca o som (a função playSound já faz a própria verificação de preferência de som)
+    playSound(type);
 
     // Texto da Mensagem
     const msgElement = document.createElement('p');
@@ -139,12 +154,12 @@ export function showNotification(message, type = 'info', duration = 5000, action
 
     notificationContainer.appendChild(notification);
 
-    // Força reflow para garantir que a animação CSS ocorra
+    // Força reflow
     void notification.offsetWidth;
     notification.classList.remove('translate-x-full', 'opacity-0');
     notification.classList.add('translate-x-0', 'opacity-100');
 
-    // Se não houver botões de ação, desaparece automaticamente após a duração
+    // Auto-close apenas se não houver botões
     if (!actions || actions.length === 0) {
         setTimeout(() => {
             closeNotification(notification);
@@ -154,42 +169,26 @@ export function showNotification(message, type = 'info', duration = 5000, action
 
 export const formatTime = (timeStamp) => {
     if (!timeStamp) return 'N/A';
-    
     let date;
     if (timeStamp?.seconds) {
-        // É um Timestamp do Firebase
         date = new Date(timeStamp.seconds * 1000);
     } else {
-        // É uma string ISO
         date = new Date(timeStamp);
     }
-    
     if (isNaN(date)) return 'N/A';
-    
-    return date.toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-    });
+    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 };
 
 /**
- * Normalizar texto para busca (remove acentos, espaços e converte para minúsculas)
- * @param {string} str - Texto a ser normalizado
- * @returns {string} Texto normalizado
+ * Normalizar texto para busca
  */
 export const normalizeText = (str) => {
     if (!str) return '';
-    return String(str)
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") // Remove acentos
-        .toLowerCase()
-        .trim();
+    return String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 };
 
 /**
  * Copiar texto para o clipboard
- * @param {string} text - Texto a ser copiado
- * @param {string} successMsg - Mensagem de sucesso
  */
 export const copyToClipboard = async (text, successMsg = 'Copiado!') => {
     try {
@@ -202,9 +201,7 @@ export const copyToClipboard = async (text, successMsg = 'Copiado!') => {
 };
 
 /**
- * Formatar CPF (___.___.___-__)
- * @param {string} cpf - CPF sem formatação
- * @returns {string} CPF formatado
+ * Formatar CPF
  */
 export const formatCPF = (cpf) => {
     if (!cpf) return '';
@@ -214,9 +211,7 @@ export const formatCPF = (cpf) => {
 };
 
 /**
- * Validar se é um email válido
- * @param {string} email - Email a ser validado
- * @returns {boolean} True se for válido
+ * Validar email
  */
 export const isValidEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -224,10 +219,7 @@ export const isValidEmail = (email) => {
 };
 
 /**
- * Debounce para evitar chamadas excessivas
- * @param {Function} func - Função a ser executada
- * @param {number} wait - Tempo de espera em ms
- * @returns {Function} Função com debounce
+ * Debounce
  */
 export const debounce = (func, wait) => {
     let timeout;
@@ -241,45 +233,20 @@ export const debounce = (func, wait) => {
     };
 };
 
-/**
- * Gerar ID único simples
- * @returns {string} ID único
- */
-export const generateId = () => {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2);
-};
+export const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
 
-/**
- * Truncar texto com limite de caracteres
- * @param {string} text - Texto a ser truncado
- * @param {number} limit - Limite de caracteres
- * @returns {string} Texto truncado
- */
 export const truncateText = (text, limit = 50) => {
     if (!text) return '';
     const str = String(text);
-    if (str.length <= limit) return str;
-    return str.substring(0, limit) + '...';
+    return str.length <= limit ? str : str.substring(0, limit) + '...';
 };
 
-/**
- * Converter data para formato brasileiro
- * @param {string|Date} date - Data a ser formatada
- * @returns {string} Data no formato dd/mm/aaaa
- */
 export const formatDateBR = (date) => {
     if (!date) return '';
     const d = new Date(date);
-    if (isNaN(d)) return '';
-    return d.toLocaleDateString('pt-BR');
+    return isNaN(d) ? '' : d.toLocaleDateString('pt-BR');
 };
 
-/**
- * Calcular diferença em minutos entre duas datas
- * @param {string|Date} start - Data inicial
- * @param {string|Date} end - Data final
- * @returns {number} Diferença em minutos
- */
 export const diffInMinutes = (start, end) => {
     const startDate = new Date(start);
     const endDate = new Date(end);
@@ -287,74 +254,34 @@ export const diffInMinutes = (start, end) => {
     return Math.round((endDate - startDate) / (1000 * 60));
 };
 
-/**
- * Obter cor baseada no status de prioridade
- * @param {string} priority - Prioridade do atendimento
- * @returns {string} Classe CSS da prioridade
- */
 export const getPriorityColor = (priority) => {
-    const colors = {
-        'URGENTE': 'red',
-        'Máxima': 'green',
-        'Média': 'orange',
-        'Mínima': 'gray'
-    };
+    const colors = { 'URGENTE': 'red', 'Máxima': 'green', 'Média': 'orange', 'Mínima': 'gray' };
     return colors[priority] || 'gray';
 };
 
-/**
- * Capitalizar primeira letra de cada palavra
- * @param {string} str - Texto a ser capitalizado
- * @returns {string} Texto capitalizado
- */
 export const capitalize = (str) => {
     if (!str) return '';
     return String(str).replace(/\b\w/g, l => l.toUpperCase());
 };
 
-/**
- * Remover caracteres especiais de CPF/CNPJ
- * @param {string} value - Valor com formatação
- * @returns {string} Valor sem formatação
- */
 export const unformat = (value) => {
     if (!value) return '';
     return String(value).replace(/[^\d]/g, '');
 };
 
-/**
- * Verificar se objeto está vazio
- * @param {Object} obj - Objeto a ser verificado
- * @returns {boolean} True se estiver vazio
- */
 export const isEmpty = (obj) => {
     return obj && Object.keys(obj).length === 0 && obj.constructor === Object;
 };
 
-/**
- * Agrupar array por chave
- * @param {Array} array - Array a ser agrupado
- * @param {string} key - Chave para agrupamento
- * @returns {Object} Objeto agrupado
- */
 export const groupBy = (array, key) => {
     return array.reduce((result, item) => {
         const groupKey = item[key];
-        if (!result[groupKey]) {
-            result[groupKey] = [];
-        }
+        if (!result[groupKey]) result[groupKey] = [];
         result[groupKey].push(item);
         return result;
     }, {});
 };
 
-/**
- * Ordenar array por data
- * @param {Array} array - Array a ser ordenado
- * @param {string} dateField - Campo de data
- * @param {boolean} ascending - Ordem crescente?
- * @returns {Array} Array ordenado
- */
 export const sortByDate = (array, dateField = 'createdAt', ascending = false) => {
     return [...array].sort((a, b) => {
         const dateA = new Date(a[dateField] || 0);
