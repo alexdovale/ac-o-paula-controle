@@ -138,18 +138,18 @@ export const AuthService = {
             if (userDoc.exists()) {
                 const userData = userDoc.data();
                 
-                // ⭐ A CORREÇÃO PRINCIPAL ESTÁ AQUI: Preencher o currentUser globalmente!
-                // Se isso não for feito, o applyRoleBasedUI() do main.js vai esconder os botões.
                 app.currentUser = userData;
                 app.currentUserName = userData.name || user.email;
 
-                // Mostrar botão admin se for admin/superadmin
+                // Mostrar botão admin azul central se for admin/superadmin
                 const btnAdmin = document.getElementById('admin-panel-btn');
-                const btnAdminMain = document.getElementById('admin-btn-main');
                 const isAdmin = userData.role === 'admin' || userData.role === 'superadmin';
                 
                 if (btnAdmin) btnAdmin.classList.toggle('hidden', !isAdmin);
-                if (btnAdminMain) btnAdminMain.classList.toggle('hidden', !isAdmin);
+                
+                // Força o botão amarelo (duplicado no HTML) a ficar sempre oculto
+                const btnAdminMain = document.getElementById('admin-btn-main');
+                if (btnAdminMain) btnAdminMain.classList.add('hidden');
 
                 if (userData.status === 'approved') {
                     // Usuário aprovado - carregar última pauta ou mostrar seleção
