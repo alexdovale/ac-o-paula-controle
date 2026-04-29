@@ -39,7 +39,6 @@ class SIGAPApp {
         this.unsubscribeFromCollaborators = null;
         this.currentPautaFilter = 'all'; // Estado do filtro
         //this.userPreferences = {}; // Campo para armazenar as preferências do usuário
-
         
         this.init();
     }
@@ -1177,25 +1176,18 @@ class SIGAPApp {
 
         // Confirmar seleção de colaborador
         document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
-            // pauta.js seta window.selectedCollaboratorId e window.selectedCollaboratorName ao clicar num item
-            // 'null' (string) = "Não atribuir"; undefined = nada selecionado ainda
             const collaboratorId = window.selectedCollaboratorId;
             const collaboratorName = window.selectedCollaboratorName || null;
 
-            // Ações rápidas: Reagendar, Agendar, Consulta, Outros
-            // Devem finalizar o atendimento direto (status: 'atendido')
             const acoesRapidas = ['reagendar', 'agendar', 'consulta', 'outros'];
             const isAcaoRapida = acoesRapidas.includes(window.assistedTipoAcao);
 
-            // Para ações rápidas: se nada selecionado, usa o usuário logado
-            // Para fluxo normal: exige seleção
-            if (!isAcaoRapida && collaboratorId === undefined) { // Garante que algo foi selecionado para delegação/atendimento direto
+            if (!isAcaoRapida && collaboratorId === undefined) { 
                 showNotification("Selecione um colaborador ou 'Não atribuir'.", "warning");
                 return;
             }
 
             if (isAcaoRapida) {
-                // Finaliza direto como atendido, registrando quem atendeu e o tipo de ação
                 const tipoDescricao = window.assistedTipoDescricao || window.assistedTipoAcao || 'Ação rápida';
                 const atendenteFinal = collaboratorName || this.currentUserName;
 
@@ -1221,18 +1213,18 @@ class SIGAPApp {
 
                 showNotification(`${window.assistedNameToHandle} marcado como atendido por ${atendenteFinal} (${tipoDescricao}).`, "success");
 
-            } else if (window.assistedTipoAcao === 'atender_direto') { // ⭐ NOVA LÓGICA PARA 'ATENDER DIRETO'
-                const atendenteFinal = collaboratorName || this.currentUserName; // Pode ser 'Não atribuir' ou um nome
+            } else if (window.assistedTipoAcao === 'atender_direto') {
+                const atendenteFinal = collaboratorName || this.currentUserName;
 
                 await PautaService.finishAttendance(
-                    this, // Passa a instância do app
+                    this, 
                     window.assistedIdToHandle,
-                    atendenteFinal, // Atendente pode ser null/nome
-                    [] // Sem demandas por enquanto para atendimento direto
+                    atendenteFinal, 
+                    [] 
                 );
                 showNotification(`${window.assistedNameToHandle} marcado como atendido por ${atendenteFinal}.`, "success");
 
-            } else { // Lógica existente para delegação normal
+            } else { 
                 let collaboratorData = null;
                 if (collaboratorName) {
                     collaboratorData = { id: collaboratorId, name: collaboratorName };
@@ -1253,11 +1245,9 @@ class SIGAPApp {
                     this.currentUserName
                 );
                 showNotification(`${window.assistedNameToHandle} delegado para ${collaboratorName || 'ninguém (aguardando atribuição)'}.`, "success"); 
-
             }
             
             document.getElementById('select-collaborator-modal')?.classList.add('hidden');
-            // Limpa as variáveis globais após a ação
             window.assistedIdToHandle = null;
             window.assistedNameToHandle = null;
             window.assistedTipoAcao = null;
@@ -1583,11 +1573,7 @@ class SIGAPApp {
         // Listener para o botão "Painel do Administrador" na tela de seleção de pautas
         if (adminPanelBtnPautaSelection && adminModal) {
             adminPanelBtnPautaSelection.addEventListener('click', () => {
-                adminModal.classList.remove('hidden'); // <<--- GARANTA QUE ESTA LINHA ESTÁ REMOVENDO 'hidden'
-                // Aqui você também chamaria a lógica para carregar os dados do painel, se já existir
-                // Por exemplo: loadUsersList(this.db);
-                //               populateUserFilter(this.db);
-                // Isso já está sendo feito no método `setupAdminPanel`
+                adminModal.classList.remove('hidden');
                 this.setupAdminPanel(); // Chama setupAdminPanel para carregar dados do admin.js
             });
         }
@@ -1595,7 +1581,7 @@ class SIGAPApp {
         // Listener para o botão "Painel do Admin" no header principal (se você tiver este)
         if (adminPanelBtnMain && adminModal) {
             adminPanelBtnMain.addEventListener('click', () => {
-                adminModal.classList.remove('hidden'); // <<--- GARANTA QUE ESTA LINHA ESTÁ REMOVENDO 'hidden'
+                adminModal.classList.remove('hidden');
                 this.setupAdminPanel();
             });
         }
@@ -1608,26 +1594,18 @@ class SIGAPApp {
             const adminPanelToggle = document.getElementById('pauta-settings-toggle'); // O botão que abre o PAINEL de SETTINGS da pauta
             const adminActionsToggle = document.getElementById('actions-toggle'); // O botão que abre o PAINEL de AÇÕES
 
-            // Se o clique foi dentro do modal de admin OU no botão de toggle do admin, NÃO FAÇA NADA
-            // (Com segurança contra null caso os toggles não estejam na tela atual)
             if (adminModal && (
                 adminModal.contains(e.target) || 
                 (adminPanelToggle && adminPanelToggle.contains(e.target)) || 
                 (adminActionsToggle && adminActionsToggle.contains(e.target))
             )) {
-                // Se o clique foi em um dos elementos que DEVEM manter o modal aberto, ignora o fechamento
-                // Poderia haver outros menus aqui que deveriam ser fechados
-                // Mas para simplificar: se o clique foi DENTRO do modal de admin OU no seu toggle, apenas ignora o fechamento.
                 return; 
             }
 
-            // Se o clique foi FORA de tudo isso, então fecha o modal de admin
             if (adminModal && !adminModal.classList.contains('hidden')) {
                 adminModal.classList.add('hidden');
-                // Resetar estado visual do toggle (seta/ícone)
                 const adminArrow = document.getElementById('actions-arrow');
                 if (adminArrow) adminArrow.classList.remove('rotate-180');
-                // Você pode precisar fazer o mesmo para o toggle das configurações da pauta se ele também usa um ícone que muda
             }
         });
 
@@ -1642,14 +1620,8 @@ class SIGAPApp {
     // NOVOS: MÉTODOS PARA GERENCIAR PREFERÊNCIAS DO USUÁRIO
     // ================================================
 
-    /**
-     * Carrega as preferências do usuário do Firestore.
-     */
-
-
     async loadUserPreferences() {
         if (!this.auth?.currentUser || !this.db) {
-            // Define padrões se não houver usuário autenticado
             this.userPreferences = this.getDefaultNotificationPreferences(); 
             return;
         }
@@ -1659,11 +1631,9 @@ class SIGAPApp {
             const docSnap = await getDoc(userDocRef);
             if (docSnap.exists()) {
                 const userData = docSnap.data();
-                // Carrega as preferências salvas ou usa os padrões
                 this.userPreferences = userData.preferences || this.getDefaultNotificationPreferences(); 
                 console.log("⚙️ Preferências do usuário carregadas:", this.userPreferences);
             } else {
-                // Padrão se o documento do usuário não existir ou não tiver preferências
                 this.userPreferences = this.getDefaultNotificationPreferences(); 
                 console.log("⚙️ Documento de preferências do usuário não encontrado. Usando padrões.");
             }
@@ -1688,7 +1658,7 @@ class SIGAPApp {
             // Sons
             enableSoundsSuccess: document.getElementById('pref-enable-sounds-success')?.checked || false,
             enableSoundsError: document.getElementById('pref-enable-sounds-error')?.checked || false,
-            enableSoundsInfo: document.getElementById('pref-enable-sounds-info')?.checked || false, // Inclui chime
+            enableSoundsInfo: document.getElementById('pref-enable-sounds-info')?.checked || false,
             enableSoundsWarning: document.getElementById('pref-enable-sounds-warning')?.checked || false,
 
             // Mensagens na Tela (Toasts)
@@ -1717,14 +1687,13 @@ class SIGAPApp {
         }
     }
 
-        async openUserPreferencesModal() {
+    async openUserPreferencesModal() {
         if (!this.auth?.currentUser) {
             showNotification("Você precisa estar logado para ver suas preferências.", "error");
             playSound('error');
             return;
         }
 
-        // Use o operador ?. ou verifique a existência antes de atribuir
         const nameInput = document.getElementById('pref-user-name');
         if (nameInput) nameInput.value = this.currentUserName || 'Não informado';
         
@@ -1733,7 +1702,6 @@ class SIGAPApp {
 
         await this.loadUserPreferences(); 
 
-        // Função auxiliar para evitar repetição e erros de 'null'
         const setChecked = (id, value) => {
             const el = document.getElementById(id);
             if (el) el.checked = value;
@@ -1754,27 +1722,16 @@ class SIGAPApp {
         document.getElementById('user-preferences-modal')?.classList.remove('hidden');
     }
 
-
-    /**
-     * Aplica as preferências carregadas ou salvas.
-     * Esta função será chamada para controlar o comportamento do sistema.
-     * Por enquanto, apenas loga e a função playSound/showNotification fará a verificação real.
-     */
     applyUserPreferences() {
         console.log("⚙️ Aplicando preferências do usuário:", this.userPreferences);
     }
 
-    /**
-     * Retorna as preferências padrão de notificação.
-     */
     getDefaultNotificationPreferences() {
         return {
-            // Sons: todos ativados por padrão
             enableSoundsSuccess: true,
             enableSoundsError: true,
             enableSoundsInfo: true,
             enableSoundsWarning: true,
-            // Toasts: todos ativados por padrão
             showToastsSuccess: true,
             showToastsError: true,
             showToastsInfo: true,
@@ -1786,9 +1743,6 @@ class SIGAPApp {
     // NOVO: MÉTODOS PARA GERENCIAR VISIBILIDADE DAS COLUNAS
     // ================================================
 
-    /**
-     * Salva as preferências de visibilidade das colunas no localStorage.
-     */
     saveColumnPreferences() {
         const preferences = {
             showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
@@ -1799,22 +1753,17 @@ class SIGAPApp {
         this.applyColumnPreferences(preferences);
     }
 
-    /**
-     * Carrega as preferências de visibilidade das colunas do localStorage
-     * e aplica à interface, atualizando os checkboxes no painel.
-     */
     loadColumnPreferences() {
         const savedPreferences = localStorage.getItem('sigap_column_preferences');
         let preferences = {
-            showEmAtendimento: true, // Padrão
-            showDistribuicao: true,  // Padrão
-            showFaltosos: false,     // Padrão
+            showEmAtendimento: true,
+            showDistribuicao: true,  
+            showFaltosos: false,     
         };
         if (savedPreferences) {
             preferences = JSON.parse(savedPreferences);
         }
 
-        // Atualiza os checkboxes no painel de configurações
         const chkEmAtendimento = document.getElementById('toggle-em-atendimento');
         const chkDistribuicao = document.getElementById('toggle-distribuicao');
         const chkFaltosos = document.getElementById('toggle-faltosos');
@@ -1826,12 +1775,7 @@ class SIGAPApp {
         this.applyColumnPreferences(preferences);
     }
 
-    /**
-     * Aplica as preferências de visibilidade às colunas HTML.
-     * @param {object} preferences - Objeto com as preferências de visibilidade.
-     */
     applyColumnPreferences(preferences) {
-        // Obter o tipo da pauta atual para aplicar regras específicas
         const pautaType = this.currentPautaData?.type;
         const useDelegationFlow = this.currentPautaData?.useDelegationFlow;
         const useDistributionFlow = this.currentPautaData?.useDistributionFlow;
@@ -1842,8 +1786,6 @@ class SIGAPApp {
 
         // Em Atendimento (coluna "Delegar")
         if (emAtendimentoColumn) {
-            // Se a pauta usa delegação, mas a preferência do usuário é esconder, esconde.
-            // Se a pauta NÃO usa delegação, SEMPRE esconde (a preferência do usuário não anula a regra da pauta).
             if (useDelegationFlow && preferences.showEmAtendimento) {
                 emAtendimentoColumn.classList.remove('hidden');
             } else {
@@ -1853,8 +1795,6 @@ class SIGAPApp {
 
         // Distribuição
         if (distribuicaoColumn) {
-            // Se a pauta usa fluxo de distribuição, mas a preferência do usuário é esconder, esconde.
-            // Se a pauta NÃO usa fluxo de distribuição, SEMPRE esconde.
             if (useDistributionFlow && preferences.showDistribuicao) {
                 distribuicaoColumn.classList.remove('hidden');
             } else {
@@ -1864,8 +1804,6 @@ class SIGAPApp {
         
         // Faltosos
         if (faltososColumn) {
-            // A coluna de Faltosos só é relevante para pautas agendadas
-            // E se o botão "Ver Faltosos" não estiver ativo (pois ele substitui Pauta pela coluna Faltosos)
             const pautaColumn = document.getElementById('pauta-column');
 
             if (pautaType === 'agendado' && preferences.showFaltosos && pautaColumn && !pautaColumn.classList.contains('hidden')) {
@@ -1962,9 +1900,6 @@ class SIGAPApp {
         const adminModal = document.getElementById('admin-modal');
         
         if (btnAdmin && adminModal) {
-            // A lógica de abrir o modal agora é tratada nos listeners do setupEventListeners()
-            // e vai chamar this.setupAdminPanel(), então o onclick original não é mais necessário aqui
-            // mas mantemos as chamadas de loadUsersList e populateUserFilter 
             loadUsersList(this.db);
             populateUserFilter(this.db);
         }
@@ -2055,11 +1990,7 @@ class SIGAPApp {
                 this.isPautaClosed = this.currentPautaData.isClosed || false;
                 
                 UIService.togglePautaLock(this);
-
-                // Aplica as preferências de coluna e as regras da pauta atual
                 this.loadColumnPreferences();
-                
-                // Aplica as permissões baseadas em perfil após carregar a pauta
                 this.applyRoleBasedUI();
             }
 
@@ -2088,9 +2019,6 @@ class SIGAPApp {
         }, this);
         
         await this.loadPautasWithFilter();
-
-        // Aplica as preferências de coluna também na tela de seleção,
-        // para garantir que tudo fique consistente ao carregar uma pauta.
         this.loadColumnPreferences();
     }
 
@@ -2165,7 +2093,7 @@ class SIGAPApp {
             );
             
             if (success) {
-                playSound('success'); // Som ao deletar a pauta
+                playSound('success');
                 await this.loadPautasWithFilter();
             }
         } catch (error) {
@@ -2209,21 +2137,21 @@ class SIGAPApp {
     }
 
     applyRoleBasedUI() {
-        const currentUserRole = this.currentUser?.role; // 'user', 'admin', 'superadmin', 'apoio'
+        const currentUser = this.currentUser;
+        const currentUserRole = currentUser?.role; // 'user', 'admin', 'superadmin', 'apoio'
         const isAuthenticated = this.auth?.currentUser != null;
-        const isUserApproved = this.currentUser?.status === 'approved'; // Verifica se o usuário está aprovado
+        const isUserApproved = currentUser?.status === 'approved'; // Verifica se o usuário está aprovado
         
         // Painel do Admin e Botão no menu principal (apenas para Admin/Superadmin)
         const adminPanelBtnMain = document.getElementById('admin-btn-main');
         const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
         
-        // ⭐ AJUSTE AQUI: Acesso ao Painel do Admin e botões de gerenciamento de pauta
         const canAccessAdminPanel = (currentUserRole === 'admin' || currentUserRole === 'superadmin') && isAuthenticated && isUserApproved;
         
         if (adminPanelBtnMain) adminPanelBtnMain.classList.toggle('hidden', !canAccessAdminPanel);
         if (adminPanelBtnPautaSelection) adminPanelBtnPautaSelection.classList.toggle('hidden', !canAccessAdminPanel);
 
-        // Botões de Ação na Pauta Principal (Ex: fechar, reabrir, zerar, gerenciar membros/colaboradores)
+        // --- Controle de Visibilidade/Habilitação de Elementos de UI ---
         const closePautaBtn = document.getElementById('close-pauta-btn');
         const reopenPautaBtn = document.getElementById('reopen-pauta-btn');
         const resetAllBtn = document.getElementById('reset-all-btn');
@@ -2231,7 +2159,7 @@ class SIGAPApp {
         const manageCollaboratorsBtn = document.getElementById('manage-collaborators-btn');
         const viewStatsBtn = document.getElementById('view-stats-btn');
 
-        // ⭐ AJUSTE AQUI: Usuários normais e de Apoio PRECISAM estar aprovados para gerenciar pautas
+        // Permissões para ações de gerenciamento da pauta
         const canManagePauta = (isUserApproved && (currentUserRole === 'user' || currentUserRole === 'apoio')) || currentUserRole === 'admin' || currentUserRole === 'superadmin';
         
         if (closePautaBtn) closePautaBtn.classList.toggle('hidden', !canManagePauta);
@@ -2240,12 +2168,12 @@ class SIGAPApp {
         if (manageMembersBtn) manageMembersBtn.classList.toggle('hidden', !canManagePauta);
         if (manageCollaboratorsBtn) manageCollaboratorsBtn.classList.toggle('hidden', !canManagePauta);
         
-        // Botão de Estatísticas/Dashboard (apenas Admin/Superadmin e aprovado)
         if (viewStatsBtn) viewStatsBtn.classList.toggle('hidden', !canAccessAdminPanel);
 
-
-        // Lógica específica para o perfil Apoio na tela da pauta (que é o que está sendo chamado)
-        const isApoio = currentUserRole === 'apoio';
+        // ================================================
+        // LÓGICA ESPECÍFICA PARA O PERFIL APOIO NA TELA DA PAUTA
+        // ================================================
+        const isApoio = currentUserRole === 'apoio'; 
         const addAssistedBtn = document.getElementById('add-assisted-btn');
         const fileUpload = document.getElementById('file-upload');
         const btnSyncVerde = document.getElementById('btn-sync-verde');
@@ -2254,7 +2182,6 @@ class SIGAPApp {
         if (fileUpload) fileUpload.disabled = isApoio;
         if (btnSyncVerde) btnSyncVerde.disabled = isApoio;
         
-        // AQUI É ONDE SEUS BOTÕES DOS CARDS SÃO RENDERIZADOS, entao renderAssistedLists é chamado.
         if (typeof UIService !== 'undefined' && typeof UIService.renderAssistedLists === 'function') {
             UIService.renderAssistedLists(this); 
         }
@@ -2272,7 +2199,6 @@ window.openDetailsModal = openDetailsModal;
 
 // ========================================================
 // FUNÇÕES GLOBAIS DE CONTROLE DE TELA DO CHECKLIST
-// (Você pode utilizar essas chamadas direto do seu detalhes.js)
 // ========================================================
 window.switchToChecklistView = function() {
     document.getElementById('document-action-selection')?.classList.add('hidden');
@@ -2290,14 +2216,11 @@ window.switchToActionSelectionView = function() {
 
 // Adiciona a função de ordenação ao escopo global (window)
 window.sortColaboradores = function(criterio) {
-    // Verifica se a função existe no CollaboratorService e a chama
     if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.sortColaboradores === 'function') {
         CollaboratorService.sortColaboradores(window.app, criterio);
     } else {
-        // FALLBACK: Caso a função não exista no serviço, faz a ordenação básica aqui
         if (!window.app || !window.app.colaboradores) return;
         
-        // Alterna entre Crescente e Decrescente
         window._sortColabDir = window._sortColabDir === 'asc' ? 'desc' : 'asc';
         const direction = window._sortColabDir === 'asc' ? 1 : -1;
         
@@ -2309,7 +2232,6 @@ window.sortColaboradores = function(criterio) {
             return 0;
         });
         
-        // Renderiza a lista atualizada (chame a sua função de renderização exata aqui)
         if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.renderModalList === 'function') {
             CollaboratorService.renderModalList(window.app);
         } else if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.updateList === 'function') {
