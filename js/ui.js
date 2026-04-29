@@ -447,17 +447,23 @@ export const UIService = {
     },
 
     createPautaCard(item) {
+        const currentUserRole = window.app?.currentUser?.role;
+        const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
+        const canEdit = currentUserRole !== 'apoio'; // <<--- ALTERADO: 'basico' para 'apoio'
+        const isOwner = window.app?.auth?.currentUser?.uid === item.owner;
+
         const card = document.createElement('div');
         // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
         card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3';
         card.setAttribute('data-id', item.id);
         
         card.innerHTML = `
-            <button data-id="${item.id}" class="delete-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 transition-colors">
+            ${canDelete ? `
+            <button data-id="${item.id}" class="delete-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 transition-colors" ${isOwner ? '' : 'disabled'} title="Excluir (apenas criador)">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
                     <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
                 </svg>
-            </button>
+            </button>` : ''}
 
             <p class="font-bold text-xl text-gray-800 leading-tight pr-6">${escapeHTML(item.name || '').toUpperCase()}</p>
             
@@ -471,11 +477,11 @@ export const UIService = {
                     <button data-id="${item.id}" class="check-in-btn bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm">
                         Marcar Chegada
                     </button>
-                    <button data-id="${item.id}" class="faltou-btn bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm">
+                    <button data-id="${item.id}" class="faltou-btn bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm" ${canEdit ? '' : 'disabled'}>
                         Faltou
                     </button>
                 </div>
-                <button data-id="${item.id}" class="edit-assisted-btn w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm">
+                <button data-id="${item.id}" class="edit-assisted-btn w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm" ${canEdit ? '' : 'disabled'}>
                     Editar Dados
                 </button>
             </div>
@@ -523,6 +529,11 @@ export const UIService = {
     createAguardandoCard(item, currentPautaData, colaboradores, index) {
         try {
             if (!item || !item.id) return null;
+
+            const currentUserRole = window.app?.currentUser?.role;
+            const canEditPriority = currentUserRole === 'apoio' || currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
+            const canAttend = currentUserRole !== 'apoio';
+            const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
 
             const card = document.createElement('div');
             const priorityClass = PautaService.getPriorityClass(item.priority);
@@ -656,12 +667,13 @@ export const UIService = {
 
             card.innerHTML = `
                 ${numeroBadge}
-                ${actionButtonsHTML}
+                ${canAttend ? actionButtonsHTML : ''} 
+                ${canDelete ? `
                 <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
                     </svg>
-                </button>
+                </button>` : ''}
                 <div class="flex flex-col h-full">
                     ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
                     <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(nomeSeguro)}</p>
@@ -672,9 +684,9 @@ export const UIService = {
                     </div>
                     ${docStatusHtml}
                     <div class="mt-4 grid grid-cols-2 gap-2">
-                        ${atenderButton}
-                        <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs">${item.priority === 'URGENTE' ? 'Urgente' : 'Prioridade'}</button>
-                        <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-semibold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase">Voltar</button>
+                        ${canAttend ? atenderButton : '<button disabled class="w-full bg-gray-300 text-gray-700 font-semibold py-2 rounded-lg text-sm">Sem Permissão</button>'}
+                        <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs" ${canEditPriority ? '' : 'disabled'}>${item.priority === 'URGENTE' ? 'Urgência' : 'Prioridade'}</button>
+                        <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-semibold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase" ${canAttend ? '' : 'disabled'}>Voltar</button>
                     </div>
                     <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
                 </div>
@@ -705,6 +717,10 @@ export const UIService = {
 
     createEmAtendimentoCard(item, currentPautaData, pautaId, userName, index) {
         try {
+            const currentUserRole = window.app?.currentUser?.role;
+            const canDelegateOrFinalize = currentUserRole !== 'apoio';
+            const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
+
             const card = document.createElement('div');
             // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
             card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
@@ -717,11 +733,12 @@ export const UIService = {
             const linkDireto = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&collaboratorName=${encodeURIComponent(userName)}`;
 
             card.innerHTML = `
+                ${canDelete ? `
                 <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
                     </svg>
-                </button>
+                </button>` : ''}
 
                 <p class="font-bold text-xl md:text-2xl text-gray-800">${index + 1}. ${escapeHTML(item.name || '')}</p>
                 <p class="text-xs md:text-sm mt-1">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
@@ -730,14 +747,14 @@ export const UIService = {
 
                 <div class="mt-4 flex flex-col gap-2">
                     <div class="grid grid-cols-2 gap-2">
-                        <button data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(item.assignedCollaborator?.name || 'Não informado')}" class="delegate-finalization-btn bg-indigo-500 text-white font-bold py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm shadow-md transition active:scale-95">
+                        <button data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(item.assignedCollaborator?.name || 'Não informado')}" class="delegate-finalization-btn bg-indigo-500 text-white font-bold py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm shadow-md transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
                             Delegar
                         </button>
-                        <button onclick="window.open('${linkDireto}', '_blank')" class="bg-green-500 text-white font-bold py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm shadow-md transition active:scale-95">
+                        <button onclick="window.open('${linkDireto}', '_blank')" class="bg-green-500 text-white font-bold py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm shadow-md transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
                             Finalizar
                         </button>
                     </div>
-                    <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 text-white font-bold py-2 rounded-lg text-xs md:text-sm shadow-md transition active:scale-95">
+                    <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 text-white font-bold py-2 rounded-lg text-xs md:text-sm shadow-md transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
                         Voltar p/ Aguardando
                     </button>
                 </div>
@@ -770,6 +787,12 @@ export const UIService = {
 
     createAtendidoCard(item) {
         try {
+            const currentUserRole = window.app?.currentUser?.role;
+            const canManageDemandsOrEditAttendant = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
+            const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
+            const canRevert = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
+            const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
+
             const card = document.createElement('div');
             // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
             card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4';
@@ -799,7 +822,7 @@ export const UIService = {
             card.innerHTML = `
                 <div class="flex justify-between items-start">
                     <p class="font-bold text-lg md:text-xl text-gray-800">${escapeHTML(item.name || '')}</p>
-                    <button data-id="${item.id}" class="toggle-confirmed-atendido w-6 h-6 md:w-7 md:h-7 rounded-full border border-gray-200 flex items-center justify-center ${confirmButton} shadow-sm">
+                    <button data-id="${item.id}" class="toggle-confirmed-atendido w-6 h-6 md:w-7 md:h-7 rounded-full border border-gray-200 flex items-center justify-center ${confirmButton} shadow-sm" ${canToggleConfirmed ? '' : 'disabled'}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/>
                         </svg>
@@ -832,10 +855,10 @@ export const UIService = {
                 <div class="flex justify-between items-center text-[10px] md:text-xs mb-4">
                     <p class="text-gray-500">Por: <b class="text-gray-800">${escapeHTML(atendenteNome)}</b></p>
                     <div class="grid grid-cols-2 gap-x-2 md:gap-x-4 gap-y-1 md:gap-y-2 text-right">
-                        <button data-id="${item.id}" class="manage-demands-btn text-blue-500 font-bold hover:underline">Demandas</button>
-                        <button data-id="${item.id}" class="edit-assisted-btn text-slate-400 font-bold hover:underline">Dados</button>
-                        <button data-id="${item.id}" class="edit-attendant-btn text-green-600 font-bold hover:underline">Atendente</button>
-                        <button data-id="${item.id}" class="delete-btn text-red-500 font-bold hover:underline">Deletar</button>
+                        <button data-id="${item.id}" class="manage-demands-btn text-blue-500 font-bold hover:underline" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Demandas</button>
+                        <button data-id="${item.id}" class="edit-assisted-btn text-slate-400 font-bold hover:underline" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Dados</button>
+                        <button data-id="${item.id}" class="edit-attendant-btn text-green-600 font-bold hover:underline" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Atendente</button>
+                        <button data-id="${item.id}" class="delete-btn text-red-500 font-bold hover:underline" ${canDelete ? '' : 'disabled'}>Deletar</button>
                     </div>
                 </div>
 
@@ -849,7 +872,7 @@ export const UIService = {
                 <div class="pt-3 border-t">
                     <div class="flex flex-col sm:flex-row justify-between items-center gap-2 md:gap-3">
                         <p class="text-[7px] md:text-[9px] text-gray-400 uppercase italic">Última: ${escapeHTML(item.lastActionBy || 'Sistema')}</p>
-                        <button data-id="${item.id}" class="return-from-atendido-btn w-full sm:w-auto bg-orange-500 text-white font-black py-2 md:py-3 px-4 md:px-8 rounded-lg md:rounded-xl text-[8px] md:text-[10px] uppercase shadow-md active:scale-95 transition-all">
+                        <button data-id="${item.id}" class="return-from-atendido-btn w-full sm:w-auto bg-orange-500 text-white font-black py-2 md:py-3 px-4 md:px-8 rounded-lg md:rounded-xl text-[8px] md:text-[10px] uppercase shadow-md active:scale-95 transition-all" ${canRevert ? '' : 'disabled'}>
                             Voltar
                         </button>
                     </div>
@@ -873,6 +896,11 @@ export const UIService = {
         }
 
         items.forEach(item => {
+            const currentUserRole = window.app?.currentUser?.role;
+            const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
+            const canRevert = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
+            const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
+
             const card = document.createElement('div');
             // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
             card.className = 'assisted-card relative bg-red-50 p-4 rounded-lg shadow-sm border border-red-100 mb-2 opacity-80';
@@ -884,11 +912,11 @@ export const UIService = {
                 <p class="text-xs text-gray-600 mt-1"><span class="font-semibold">Assunto:</span> ${escapeHTML(item.subject || 'Não informado')}</p>
                 ${item.scheduledTime ? `<p class="text-xs text-gray-600"><span class="font-semibold">Agendado:</span> ${item.scheduledTime}</p>` : ''}
                 
-                <button data-id="${item.id}" class="return-to-pauta-from-faltoso-btn mt-2 w-full bg-white text-red-500 border border-red-200 py-1 rounded text-[9px] font-bold uppercase hover:bg-red-50 transition">Voltar p/ Pauta</button>
-                <button data-id="${item.id}" class="toggle-confirmed-faltoso mt-2 w-full bg-white text-green-500 border border-green-200 py-1 rounded text-[9px] font-bold uppercase hover:bg-green-50 transition">
+                <button data-id="${item.id}" class="return-to-pauta-from-faltoso-btn mt-2 w-full bg-white text-red-500 border border-red-200 py-1 rounded text-[9px] font-bold uppercase hover:bg-red-50 transition" ${canRevert ? '' : 'disabled'}>Voltar p/ Pauta</button>
+                <button data-id="${item.id}" class="toggle-confirmed-faltoso mt-2 w-full bg-white text-green-500 border border-green-200 py-1 rounded text-[9px] font-bold uppercase hover:bg-green-50 transition" ${canToggleConfirmed ? '' : 'disabled'}>
                     ${item.isConfirmed ? '✅ Confirmar Ausência' : 'Confirmar Ausência'}
                 </button>
-                <button data-id="${item.id}" class="delete-btn mt-2 w-full bg-white text-gray-400 border border-gray-200 py-1 rounded text-[9px] font-bold uppercase hover:bg-gray-100 transition">Excluir</button>
+                <button data-id="${item.id}" class="delete-btn mt-2 w-full bg-white text-gray-400 border border-gray-200 py-1 rounded text-[9px] font-bold uppercase hover:bg-gray-100 transition" ${canDelete ? '' : 'disabled'}>Excluir</button>
 
                 ${this._getStandardizedFooterHtml(item)}
             `;
@@ -906,6 +934,9 @@ export const UIService = {
         }
 
         items.forEach(item => {
+            const currentUserRole = window.app?.currentUser?.role;
+            const canManageDistribution = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
+
             const card = document.createElement('div');
             // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
             card.className = 'assisted-card relative bg-cyan-50 p-4 rounded-lg shadow-sm border border-cyan-200 mb-2';
@@ -917,8 +948,8 @@ export const UIService = {
                 <p class="font-bold text-gray-800 text-sm">${escapeHTML(item.name || '')}</p>
                 <p class="text-[10px] text-cyan-700 font-bold uppercase mt-1">⚖️ Aguardando Distribuição</p>
                 <div class="mt-3 space-y-2">
-                    <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white text-[10px] font-bold py-2 rounded hover:bg-cyan-700 uppercase shadow-sm">Painel de Protocolo</button>
-                    <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-white text-gray-400 border border-gray-200 text-[9px] py-1 rounded uppercase">Reverter</button>
+                    <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white text-[10px] font-bold py-2 rounded hover:bg-cyan-700 uppercase shadow-sm" ${canManageDistribution ? '' : 'disabled'}>Painel de Protocolo</button>
+                    <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-white text-gray-400 border border-gray-200 text-[9px] py-1 rounded uppercase" ${canManageDistribution ? '' : 'disabled'}>Reverter</button>
                 </div>
                 ${this._getStandardizedFooterHtml(item)}
             `;
