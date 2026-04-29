@@ -855,7 +855,7 @@ class SIGAPApp {
             await CollaboratorService.saveCollaborator(this, data);
         });
         
-        document.querySelectorAll('[id^="cancel-"], [id^="close-"]').forEach(btn => {
+        document.querySelectorAll('[id^="cancel-"], [id^="close"]').forEach(btn => {
             if (btn) {
                 btn.addEventListener('click', (e) => {
                     const modal = e.target.closest('.fixed');
@@ -1574,6 +1574,33 @@ class SIGAPApp {
         });
 
         // ================================================
+        // NOVO: LISTENERS PARA O PAINEL DO ADMINISTRADOR
+        // ================================================
+        const adminModal = document.getElementById('admin-modal');
+        const adminPanelBtnMain = document.getElementById('admin-btn-main'); // Botão no header da seleção de pautas
+        const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn'); // Botão na tela de seleção de pautas
+
+        // Listener para o botão "Painel do Administrador" na tela de seleção de pautas
+        if (adminPanelBtnPautaSelection && adminModal) {
+            adminPanelBtnPautaSelection.addEventListener('click', () => {
+                adminModal.classList.remove('hidden'); // <<--- GARANTA QUE ESTA LINHA ESTÁ REMOVENDO 'hidden'
+                // Aqui você também chamaria a lógica para carregar os dados do painel, se já existir
+                // Por exemplo: loadUsersList(this.db);
+                //               populateUserFilter(this.db);
+                // Isso já está sendo feito no método `setupAdminPanel`
+                this.setupAdminPanel(); // Chama setupAdminPanel para carregar dados do admin.js
+            });
+        }
+        
+        // Listener para o botão "Painel do Admin" no header principal (se você tiver este)
+        if (adminPanelBtnMain && adminModal) {
+            adminPanelBtnMain.addEventListener('click', () => {
+                adminModal.classList.remove('hidden'); // <<--- GARANTA QUE ESTA LINHA ESTÁ REMOVENDO 'hidden'
+                this.setupAdminPanel();
+            });
+        }
+
+        // ================================================
         // CONFIGURAÇÃO DO PAINEL ADMIN
         // ================================================
         
@@ -1904,11 +1931,11 @@ class SIGAPApp {
         const adminModal = document.getElementById('admin-modal');
         
         if (btnAdmin && adminModal) {
-            btnAdmin.onclick = () => {
-                adminModal.classList.remove('hidden');
-                loadUsersList(this.db);
-                populateUserFilter(this.db);
-            };
+            // A lógica de abrir o modal agora é tratada nos listeners do setupEventListeners()
+            // e vai chamar this.setupAdminPanel(), então o onclick original não é mais necessário aqui
+            // mas mantemos as chamadas de loadUsersList e populateUserFilter 
+            loadUsersList(this.db);
+            populateUserFilter(this.db);
         }
 
         document.getElementById('max-admin-btn')?.addEventListener('click', () => {
