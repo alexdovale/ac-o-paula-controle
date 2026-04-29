@@ -1,4 +1,3 @@
-// js/auth.js
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification } from './utils.js';
@@ -138,14 +137,19 @@ export const AuthService = {
 
             if (userDoc.exists()) {
                 const userData = userDoc.data();
+                
+                // ⭐ A CORREÇÃO PRINCIPAL ESTÁ AQUI: Preencher o currentUser globalmente!
+                // Se isso não for feito, o applyRoleBasedUI() do main.js vai esconder os botões.
+                app.currentUser = userData;
                 app.currentUserName = userData.name || user.email;
 
                 // Mostrar botão admin se for admin/superadmin
                 const btnAdmin = document.getElementById('admin-panel-btn');
-                if (btnAdmin) {
-                    const isAdmin = userData.role === 'admin' || userData.role === 'superadmin';
-                    btnAdmin.classList.toggle('hidden', !isAdmin);
-                }
+                const btnAdminMain = document.getElementById('admin-btn-main');
+                const isAdmin = userData.role === 'admin' || userData.role === 'superadmin';
+                
+                if (btnAdmin) btnAdmin.classList.toggle('hidden', !isAdmin);
+                if (btnAdminMain) btnAdminMain.classList.toggle('hidden', !isAdmin);
 
                 if (userData.status === 'approved') {
                     // Usuário aprovado - carregar última pauta ou mostrar seleção
