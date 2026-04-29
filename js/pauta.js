@@ -253,7 +253,9 @@ export const PautaService = {
         if (!pautaId || !assistedId) return;
         
         try {
+            console.log("Atualizando status:", updates);
             const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
+            
             const docSnap = await getDoc(docRef);
             const currentData = docSnap.exists() ? docSnap.data() : {};
             
@@ -263,23 +265,48 @@ export const PautaService = {
                 lastActionTimestamp: new Date().toISOString()
             };
             
-            // Lógica de checkInOrder para ordenação precisa
+            // --- LÓGICA CORRIGIDA PARA checkInOrder e arrivalTime ---
             if (updates.status === 'aguardando') {
                 if (!updates.checkInOrder) {
                     finalUpdates.checkInOrder = Date.now(); 
+                    console.log("✅ checkInOrder definido para 'aguardando' como Date.now() para desempate:", finalUpdates.checkInOrder);
+                } else {
+                    finalUpdates.checkInOrder = updates.checkInOrder;
                 }
-                if (updates.arrivalTime) {
+                
+                // ⭐⭐⭐ ESTE É O BLOCO CORRIGIDO PARA arrivalTime ⭐⭐⭐
+                if (updates.arrivalTime) { // Se `arrivalTime` foi fornecido nos updates
                     const arrivalDate = new Date(updates.arrivalTime);
-                    finalUpdates.arrivalTime = isNaN(arrivalDate.getTime()) ? null : arrivalDate.toISOString();
+                    if (isNaN(arrivalDate.getTime())) { // Se a data é inválida
+                        console.warn("⚠️ arrivalTime fornecido é inválido:", updates.arrivalTime);
+                        finalUpdates.arrivalTime = null; // Limpa arrivalTime inválido
+                        showNotification("Data/Hora de chegada inválida. Campo limpo.", "warning"); // Notifica o usuário
+                        playSound('warning');
+                    } else {
+                        finalUpdates.arrivalTime = arrivalDate.toISOString(); // Garante formato ISO string
+                    }
+                } else if (currentData.arrivalTime && updates.arrivalTime === null) {
+                    // Se updates.arrivalTime é explicitamente null (para remover), então remove
+                    finalUpdates.arrivalTime = null;
+                } else if (currentData.arrivalTime && !updates.arrivalTime) {
+                    // Se não foi fornecido nos updates, mas existe nos dados atuais, mantém
+                    finalUpdates.arrivalTime = currentData.arrivalTime;
                 }
+                // ⭐⭐⭐ FIM DO BLOCO CORRIGIDO PARA arrivalTime ⭐⭐⭐
+
             } else if (updates.status === 'pauta') {
                 finalUpdates.checkInOrder = null;
                 finalUpdates.arrivalTime = null;
-            } else {
-                if (!updates.checkInOrder && currentData.checkInOrder) {
-                    finalUpdates.checkInOrder = currentData.checkInOrder;
-                }
+            } else if (updates.status !== 'aguardando' && updates.status !== 'pauta') {
+                 if (!updates.checkInOrder && currentData.checkInOrder) {
+                     finalUpdates.checkInOrder = currentData.checkInOrder;
+                 }
+                 // Para outros status, se `arrivalTime` não foi explicitamente atualizado para null, mantém o existente.
+                 if (!updates.arrivalTime && currentData.arrivalTime) {
+                     finalUpdates.arrivalTime = currentData.arrivalTime;
+                 }
             }
+            // --- FIM DA LÓGICA DE checkInOrder e arrivalTime ---
             
             await updateDoc(docRef, finalUpdates);
             
