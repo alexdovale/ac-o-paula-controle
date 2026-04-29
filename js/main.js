@@ -1,5 +1,3 @@
-// js/main.js
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -107,6 +105,7 @@ class SIGAPApp {
             if (user) {
                 await AuthService.handleAuthState(this, user);
                 await this.loadUserPreferences(); // <--- CARREGA AS PREFERÊNCIAS AQUI
+                this.applyRoleBasedUI(); // <--- APLICA AS REGRAS DE UI DEPOIS DE CARREGAR USUÁRIO E PREFERÊNCIAS
             } else {
                 UIService.showScreen('login');
                 document.getElementById('admin-panel-btn')?.classList.add('hidden');
@@ -2001,6 +2000,9 @@ class SIGAPApp {
 
                 // Aplica as preferências de coluna e as regras da pauta atual
                 this.loadColumnPreferences();
+                
+                // Aplica as permissões baseadas em perfil após carregar a pauta
+                this.applyRoleBasedUI();
             }
 
             this.setupRealtimeListener(pautaId);
@@ -2146,6 +2148,42 @@ class SIGAPApp {
             console.error("Erro no listener:", error);
             showNotification("Erro ao carregar dados", "error");
         });
+    }
+
+    applyRoleBasedUI() {
+        const currentUserRole = this.currentUser?.role;
+        const isAuthenticated = this.auth?.currentUser != null;
+
+        const adminPanelBtn = document.getElementById('admin-panel-btn');
+        const adminBtnMain = document.getElementById('admin-btn-main');
+        const closePautaBtn = document.getElementById('close-pauta-btn');
+        const reopenPautaBtn = document.getElementById('reopen-pauta-btn');
+
+        // Permissão para painéis administrativos baseada em função "admin"
+        if (adminPanelBtn) adminPanelBtn.classList.toggle('hidden', currentUserRole !== 'admin');
+        if (adminBtnMain) adminBtnMain.classList.toggle('hidden', currentUserRole !== 'admin');
+
+        // ================================================
+        // LÓGICA ESPECÍFICA PARA O PERFIL APOIO NA TELA DA PAUTA
+        // ================================================
+        const isApoio = currentUserRole === 'apoio'; // <<--- ALTERADO: 'basico' para 'apoio'
+        const addAssistedBtn = document.getElementById('add-assisted-btn');
+        const fileUpload = document.getElementById('file-upload');
+        const btnSyncVerde = document.getElementById('btn-sync-verde');
+
+        // Campo de adicionar assistido (Apoio pode adicionar, desde que esteja logado)
+        if (addAssistedBtn) addAssistedBtn.disabled = !isAuthenticated; 
+        
+        // Upload de CSV e Sincronizar Verde (Apoio NÃO pode realizar upload/sync massivo)
+        if (fileUpload) fileUpload.disabled = isApoio; 
+        if (btnSyncVerde) btnSyncVerde.disabled = isApoio; 
+        
+        // Botões dos cards (são ajustados de forma mais fina pelo UIService se necessário)
+        if (typeof UIService !== 'undefined' && typeof UIService.renderAssistedLists === 'function') {
+            UIService.renderAssistedLists(this); 
+        }
+        
+        console.log("UI baseada no perfil aplicada. Perfil logado:", currentUserRole);
     }
 }
 
