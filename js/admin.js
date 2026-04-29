@@ -1,983 +1,920 @@
-// js/ui.js - VERSÃO COMPLETA E ATUALIZADA (com todas as funções originais e melhorias)
-import { escapeHTML, normalizeText, showNotification } from './utils.js';
-import { PautaService } from './pauta.js';
+// js/admin.js
+import { 
+    collection, addDoc, getDocs, updateDoc, deleteDoc, doc, 
+    query, orderBy, limit, where, writeBatch, Timestamp 
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { escapeHTML, showNotification } from './utils.js';
 
-export const UIService = {
-    showScreen(screenName) {
-        document.getElementById('loading-container').classList.toggle('hidden', screenName !== 'loading');
-        document.getElementById('login-container').classList.toggle('hidden', screenName !== 'login');
-        document.getElementById('pauta-selection-container').classList.toggle('hidden', screenName !== 'pautaSelection');
-        document.getElementById('app-container').classList.toggle('hidden', screenName !== 'app');
-        document.getElementById('dashboard-container').classList.toggle('hidden', screenName !== 'dashboard'); // <--- ADICIONADO
-    },
-
-    /**
-     * Renderiza os botões de filtro na tela de seleção de pautas
-     */
-    renderPautaFilters(containerId, activeFilter, onFilterChange, app) {
-        const container = document.getElementById(containerId);
-        if (!container) {
-            console.error(`Container ${containerId} não encontrado`);
+/**
+ * Grava uma ação no log de auditoria
+ */
+export const logAction = async (db, auth, userName, currentPautaId, actionType, details, targetId = null) => {
+    try {
+        if (!auth?.currentUser) {
+            console.warn("Tentativa de log sem usuário autenticado");
             return;
         }
         
-        // Verificar se os elementos de filtro de data já existem
-        let dateFiltersHTML = '';
-        if (activeFilter === 'periodo') {
-            dateFiltersHTML = `
-                <div class="flex flex-wrap gap-4 mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div class="flex-1 min-w-[200px]">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Data Inicial</label>
-                        <input type="date" id="filter-data-inicial" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
-                    </div>
-                    <div class="flex-1 min-w-[200px]">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Data Final</label>
-                        <input type="date" id="filter-data-final" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
-                    </div>
-                    <div class="flex-1 min-w-[200px]">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Pauta</label>
-                        <select id="filter-tipo-pauta" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
-                            <option value="todos">Todos os tipos</option>
-                            <option value="agendado">Agendado</option>
-                            <option value="avulso">Avulso</option>
-                            <option value="multisala">Multi-Salas</option>
-                        </select>
-                    </div>
-                    <div class="flex items-end">
-                        <button id="aplicar-filtro-periodo" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700 transition shadow-md">
-                            Aplicar Filtros
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
+        const logData = {
+            action: actionType || 'AÇÃO_DESCONHECIDA',
+            details: details || 'Sem detalhes',
+            targetId: targetId || null,
+            pautaId: currentPautaId || 'N/A',
+            userEmail: auth.currentUser.email || 'email@desconhecido',
+            userId: auth.currentUser.uid || 'uid_desconhecido',
+            userName: userName || auth.currentUser.email || 'Desconhecido',
+            timestamp: new Date().toISOString()
+        };
         
-        container.innerHTML = `
-            <div class="flex flex-wrap gap-2 mb-4 justify-center">
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'all' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="all">
-                    📋 Todas
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'active' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="active">
-                    ✅ Pautas com prazo
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'expired' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="expired">
-                    🔒 Pautas expiradas
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'my' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="my">
-                    👑 Criadas por mim
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'shared' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="shared">
-                    🤝 Compartilhadas
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'periodo' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="periodo">
-                    📅 Período
-                </button>
-            </div>
-            ${dateFiltersHTML}
-        `;
+        console.log("📝 Registrando log:", logData);
+        await addDoc(collection(db, "audit_logs"), logData);
+        console.log("✅ Log registrado com sucesso");
         
-        // Adicionar eventos aos botões
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const filter = btn.dataset.filter;
-                onFilterChange(filter);
-            });
-        });
+    } catch (error) { 
+        console.error("❌ Erro ao registrar log:", error); 
+    }
+};
+
+/**
+ * Carrega Usuários Pendentes e Aprovados com Seletor de Cargos
+ */
+export const loadUsersList = async (db) => {
+    try {
+        console.log("Carregando lista de usuários...");
+        const snapshot = await getDocs(collection(db, "users"));
+        const pendingList = document.getElementById('pending-users-list');
+        const approvedList = document.getElementById('approved-users-list');
         
-        // Adicionar evento ao botão de aplicar filtro de período
-        const btnAplicar = document.getElementById('aplicar-filtro-periodo');
-        if (btnAplicar) {
-            btnAplicar.addEventListener('click', () => {
-                if (app && typeof app.loadPautasWithFilter === 'function') {
-                    app.loadPautasWithFilter();
-                }
-            });
+        if(!pendingList || !approvedList) {
+            console.error("Elementos da lista de usuários não encontrados");
+            return;
         }
-    },
 
-    toggleAuthTabs(tab) {
-        const loginTab = document.getElementById('login-tab-btn');
-        const registerTab = document.getElementById('register-tab-btn');
-        const loginForm = document.getElementById('login-form');
-        const registerForm = document.getElementById('register-form');
+        pendingList.innerHTML = ''; 
+        approvedList.innerHTML = '';
 
-        if (tab === 'login') {
-            loginTab.classList.add('border-green-600', 'text-green-600');
-            loginTab.classList.remove('text-gray-500');
-            registerTab.classList.remove('border-green-600', 'text-green-600');
-            registerTab.classList.add('text-gray-500');
-            loginForm.classList.remove('hidden');
-            registerForm.classList.add('hidden');
-        } else {
-            registerTab.classList.add('border-green-600', 'text-green-600');
-            registerTab.classList.remove('text-gray-500');
-            loginTab.classList.remove('border-green-600', 'text-green-600');
-            loginTab.classList.add('text-gray-500');
-            registerForm.classList.remove('hidden');
-            loginForm.classList.add('hidden');
+        if (snapshot.empty) {
+            pendingList.innerHTML = '<p class="text-gray-400 text-xs text-center py-4">Nenhum usuário encontrado</p>';
+            approvedList.innerHTML = '<p class="text-gray-400 text-xs text-center py-4">Nenhum usuário encontrado</p>';
+            return;
         }
-    },
 
-    switchTab(tabName, app) {
-        const tabAgendamento = document.getElementById('tab-agendamento');
-        const tabAvulso = document.getElementById('tab-avulso');
-        const isScheduledContainer = document.getElementById('is-scheduled-container');
-        const formTitle = document.getElementById('form-title');
-        const pautaColumn = document.getElementById('pauta-column');
-        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-        const formContainer = document.getElementById('form-agendamento');
+        snapshot.forEach((docSnap) => {
+            try {
+                const user = docSnap.data();
+                const userId = docSnap.id;
+                
+                if (!user.email) return; // Pula usuários sem email
+                
+                const row = document.createElement('div');
+                row.className = "flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-white rounded border mb-2 shadow-sm gap-3";
+                
+                // Badge de status
+                const statusBadge = user.status === 'pending' 
+                    ? '<span class="bg-yellow-100 text-yellow-800 text-[8px] px-2 py-0.5 rounded-full ml-2">Pendente</span>'
+                    : user.role === 'suspended'
+                    ? '<span class="bg-red-100 text-red-800 text-[8px] px-2 py-0.5 rounded-full ml-2">Suspenso</span>'
+                    : '<span class="bg-green-100 text-green-800 text-[8px] px-2 py-0.5 rounded-full ml-2">Ativo</span>';
+                
+                const roleSelector = `
+                    <select id="role-select-${userId}" class="text-[10px] border rounded p-1 bg-gray-50 focus:ring-1 focus:ring-blue-500 outline-none">
+                        <option value="user" ${user.role === 'user' ? 'selected' : ''}>Usuário</option>
+                        <option value="apoio" ${user.role === 'apoio' ? 'selected' : ''}>Apoio</option>
+                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                        <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>Superadmin</option>
+                        <option value="suspended" ${user.role === 'suspended' ? 'selected' : ''}>⚠️ Suspenso</option>
+                    </select>
+                `;
 
-        formContainer.classList.remove('hidden');
-
-        if (tabName === 'agendamento') {
-            tabAgendamento.classList.add('tab-active');
-            tabAvulso.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700');
-            isScheduledContainer.classList.remove('hidden');
-            pautaColumn.classList.remove('hidden');
-            if (app.currentPautaData?.useDelegationFlow) {
-                emAtendimentoColumn.classList.remove('hidden');
-            } else {
-                emAtendimentoColumn.classList.add('hidden');
-            }
-            formTitle.textContent = "Adicionar Novo Agendamento";
-            this.showAgendamentoForm();
-        } else {
-            tabAvulso.classList.add('tab-active');
-            tabAgendamento.classList.remove('tab-active');
-            tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700');
-            isScheduledContainer.classList.add('hidden');
-            pautaColumn.classList.add('hidden');
-            if (app.currentPautaData?.useDelegationFlow) {
-                emAtendimentoColumn.classList.remove('hidden');
-            } else {
-                emAtendimentoColumn.classList.add('hidden');
-            }
-            formTitle.textContent = "Adicionar Atendimento Avulso";
-            this.showAvulsoForm(app);
-        }
-        this.renderAssistedLists(app);
-    },
-
-    showAgendamentoForm() {
-        document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
-        document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
-        document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-        document.getElementById('arrival-time-wrapper').classList.add('hidden');
-        document.getElementById('manual-room-wrapper').classList.add('hidden');
-    },
-
-    showAvulsoForm(app) {
-        document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
-        document.getElementById('arrival-time-wrapper').classList.remove('hidden');
-        document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
-
-        const manualRoomWrapper = document.getElementById('manual-room-wrapper');
-        const manualRoomSelect = document.getElementById('manual-room-select');
-        
-        if (app.currentPautaData?.type === 'multisala' && app.currentPautaData.rooms) {
-            manualRoomWrapper.classList.remove('hidden');
-            manualRoomSelect.innerHTML = '';
-            app.currentPautaData.rooms.forEach(room => {
-                const opt = document.createElement('option');
-                opt.value = room;
-                opt.textContent = room;
-                manualRoomSelect.appendChild(opt);
-            });
-        } else {
-            manualRoomWrapper.classList.add('hidden');
-        }
-    },
-
-    togglePautaLock(app) {
-        const isOwner = app.auth?.currentUser?.uid === app.currentPautaOwnerId;
-        const isClosed = app.isPautaClosed;
-
-        const buttonsToDisable = [
-            'form-agendamento', 'file-upload', 'add-assisted-btn',
-            'download-pdf-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento'
-        ];
-
-        buttonsToDisable.forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                if (isClosed) {
-                    element.classList.add('pointer-events-none', 'opacity-50');
-                    element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = true);
+                if (user.status === 'pending') {
+                    row.innerHTML = `
+                        <div class="text-xs flex-1">
+                            <p class="font-bold text-orange-600 flex items-center">
+                                PENDENTE: ${escapeHTML(user.name || 'Sem nome')}
+                                ${statusBadge}
+                            </p>
+                            <p class="text-gray-500">${escapeHTML(user.email)}</p>
+                        </div>
+                        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                            ${roleSelector}
+                            <button onclick="window.approveUser('${userId}')" class="bg-green-600 text-white px-3 py-1 rounded text-[10px] font-bold hover:bg-green-700 transition whitespace-nowrap">APROVAR</button>
+                            <button onclick="window.deleteUser('${userId}')" class="text-red-500 text-[10px] hover:underline whitespace-nowrap">REJEITAR</button>
+                        </div>`;
+                    pendingList.appendChild(row);
                 } else {
-                    element.classList.remove('pointer-events-none', 'opacity-50');
-                    element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = false);
+                    row.innerHTML = `
+                        <div class="text-xs flex-1">
+                            <p class="font-bold text-gray-800 flex items-center">
+                                ${escapeHTML(user.name || 'Sem nome')}
+                                ${statusBadge}
+                            </p>
+                            <p class="text-gray-500">${escapeHTML(user.email)}</p>
+                        </div>
+                        <div class="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+                            ${roleSelector}
+                            <button onclick="window.updateUserRole('${userId}')" class="bg-blue-500 text-white px-2 py-1 rounded text-[10px] hover:bg-blue-600 transition whitespace-nowrap" title="Salvar Alteração de Cargo">SALVAR</button>
+                            <button onclick="window.deleteUser('${userId}')" class="bg-gray-100 text-red-500 px-2 py-1 rounded text-[10px] hover:bg-red-50 transition whitespace-nowrap" title="Excluir Usuário">EXCLUIR</button>
+                        </div>`;
+                    approvedList.appendChild(row);
                 }
-            }
-        });
-
-        const actionPanelButtons = document.querySelectorAll('#actions-panel button');
-        actionPanelButtons.forEach(btn => {
-            if (btn.id === 'reopen-pauta-btn') {
-                btn.disabled = false;
-            } else {
-                btn.disabled = isClosed;
+            } catch (rowError) {
+                console.error("Erro ao processar usuário:", rowError);
             }
         });
         
-        // This targets the action buttons on the cards themselves
-        const cardActionButtons = document.querySelectorAll('.assisted-card button:not(.quick-action-toggle)'); // Exclude quick-action-toggle to allow menu opening
-        cardActionButtons.forEach(btn => {
-            btn.disabled = isClosed;
+        console.log("✅ Lista de usuários carregada");
+        
+    } catch (error) {
+        console.error("❌ Erro ao carregar usuários:", error);
+        showNotification("Erro ao carregar lista de usuários", "error");
+    }
+};
+
+/**
+ * Ações de Usuários (Aprovar, Atualizar, Deletar)
+ */
+export const approveUser = async (db, userId) => {
+    try {
+        const roleSelect = document.getElementById(`role-select-${userId}`);
+        const role = roleSelect ? roleSelect.value : 'user';
+        
+        await updateDoc(doc(db, "users", userId), { 
+            status: 'approved', 
+            role: role, 
+            approvedAt: new Date().toISOString() 
         });
+        showNotification("Usuário aprovado com sucesso!"); 
+        loadUsersList(db);
+    } catch (e) { 
+        console.error("Erro ao aprovar usuário:", e);
+        showNotification("Erro ao aprovar usuário.", "error"); 
+    }
+};
 
-        if (isClosed) {
-            document.getElementById('closed-pauta-alert').classList.remove('hidden');
-            document.getElementById('close-pauta-btn').classList.add('hidden');
-            document.getElementById('reopen-pauta-btn').classList.remove('hidden');
-        } else {
-            document.getElementById('closed-pauta-alert').classList.add('hidden');
-            document.getElementById('close-pauta-btn').classList.remove('hidden');
-            document.getElementById('reopen-pauta-btn').classList.add('hidden');
-        }
-
-        if (!isOwner) {
-            document.getElementById('close-pauta-btn').classList.add('hidden');
-            document.getElementById('reopen-pauta-btn').classList.add('hidden');
-        }
-    },
-
-    toggleFaltosos() {
-        const btn = document.getElementById('toggle-faltosos-btn');
-        const pautaColumn = document.getElementById('pauta-column');
-        const faltososColumn = document.getElementById('faltosos-column');
-
-        pautaColumn.classList.toggle('hidden');
-        faltososColumn.classList.toggle('hidden');
-
-        if (faltososColumn.classList.contains('hidden')) {
-            btn.textContent = 'Ver Faltosos';
-            btn.classList.remove('bg-blue-600');
-            btn.classList.add('bg-purple-600');
-        } else {
-            btn.textContent = 'Ver Pauta';
-            btn.classList.remove('bg-purple-600');
-            btn.classList.add('bg-blue-600');
-        }
-    },
-
-    toggleActionsPanel() {
-        const panel = document.getElementById('actions-panel');
-        const arrow = document.getElementById('actions-arrow');
+export const updateUserRole = async (db, userId) => {
+    try {
+        const roleSelect = document.getElementById(`role-select-${userId}`);
+        const role = roleSelect ? roleSelect.value : 'user';
         
-        panel.classList.toggle('opacity-0');
-        panel.classList.toggle('scale-95');
-        panel.classList.toggle('pointer-events-none');
-        arrow.classList.toggle('rotate-180');
-    },
-
-    renderAssistedLists(app) {
-        console.log("🎨 renderAssistedLists chamado");
-        
-        if (!app) {
-            console.error("App não definido");
-            return;
-        }
-        
-        const allAssisted = app.allAssisted || [];
-        const currentPautaData = app.currentPautaData;
-        const colaboradores = app.colaboradores || [];
-
-        console.log("allAssisted:", allAssisted.length, "itens");
-
-        if (allAssisted.length === 0) {
-            console.log("Nenhum assistido encontrado");
-            this.clearContainers();
-            
-            const pautaList = document.getElementById('pauta-list');
-            const aguardandoList = document.getElementById('aguardando-list');
-            const atendidosList = document.getElementById('atendidos-list');
-            const emAtendimentoList = document.getElementById('em-atendimento-list'); // Ensure this is also cleared
-            const faltososList = document.getElementById('faltosos-list'); // Ensure this is also cleared
-            const distribuicaoList = document.getElementById('distribuicao-list'); // Ensure this is also cleared
-            
-            if (pautaList) pautaList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum agendamento</p>';
-            if (aguardandoList) aguardandoList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém aguardando</p>';
-            if (emAtendimentoList) emAtendimentoList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém em atendimento</p>';
-            if (atendidosList) atendidosList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum atendido</p>';
-            if (faltososList) faltososList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum faltoso</p>';
-            if (distribuicaoList) distribuicaoList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum aguardando distribuição</p>';
-            
-            this.updateCounters({
-                pauta: 0, aguardando: 0, emAtendimento: 0, atendidos: 0, faltosos: 0, distribuicao: 0
-            });
-            return;
-        }
-
-        allAssisted.forEach(a => {
-            if (a.status === 'aguardando' && a.priority !== 'URGENTE') {
-                a.priority = PautaService.getPriorityLevel(a);
-            }
+        await updateDoc(doc(db, "users", userId), { 
+            role: role,
+            status: role === 'suspended' ? 'suspended' : 'approved'
         });
+        showNotification(`Cargo atualizado para ${role}!`); 
+        loadUsersList(db);
+    } catch (e) { 
+        console.error("Erro ao atualizar cargo:", e);
+        showNotification("Erro ao atualizar cargo.", "error"); 
+    }
+};
 
-        const tabAgendamento = document.getElementById('tab-agendamento');
-        const currentMode = tabAgendamento?.classList.contains('tab-active') ? 'agendamento' : 'avulso';
-        const searchTerms = this.getSearchTerms();
+export const deleteUser = async (db, userId) => {
+    if (!confirm("Tem certeza que deseja excluir este usuário?")) return;
+    
+    try {
+        await deleteDoc(doc(db, "users", userId));
+        showNotification("Usuário removido com sucesso."); 
+        loadUsersList(db);
+    } catch (e) { 
+        console.error("Erro ao remover usuário:", e);
+        showNotification("Erro ao remover usuário.", "error"); 
+    }
+};
 
-        const lists = {
-            pauta: allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && this.searchFilter(a, searchTerms.pauta)),
-            aguardando: allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && this.searchFilter(a, searchTerms.aguardando)),
-            emAtendimento: allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode && this.searchFilter(a, searchTerms.emAtendimento)),
-            atendidos: allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && this.searchFilter(a, searchTerms.atendidos)),
-            faltosos: allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento' && this.searchFilter(a, searchTerms.faltosos)),
-            distribuicao: allAssisted.filter(a => a.status === 'aguardandoDistribuicao' && this.searchFilter(a, searchTerms.distribuicao))
-        };
+// Tornar funções globais para acesso via onclick
+window.approveUser = (userId) => approveUser(window.app?.db, userId);
+window.updateUserRole = (userId) => updateUserRole(window.app?.db, userId);
+window.deleteUser = (userId) => deleteUser(window.app?.db, userId);
 
-        console.log("Listas filtradas:", {
-            pauta: lists.pauta.length,
-            aguardando: lists.aguardando.length,
-            emAtendimento: lists.emAtendimento.length,
-            atendidos: lists.atendidos.length,
-            faltosos: lists.faltosos.length,
-            distribuicao: lists.distribuicao.length
-        });
+/**
+ * ATUALIZA ESTATÍSTICAS DO PAINEL (Resumo de pautas ativas)
+ */
+export const updateAdminStats = async (db) => {
+    try {
+        const pautasAtivas = await getDocs(collection(db, "pautas"));
+        const statsElement = document.getElementById('stats-total-pautas');
+        if(statsElement) statsElement.textContent = pautasAtivas.size;
+    } catch (e) { 
+        console.error("Erro ao atualizar estatísticas:", e); 
+    }
+};
 
-        lists.pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
-        lists.atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime)); // Sort by attendedTime (latest first)
-        lists.faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00')); // Sort by scheduledTime (earliest first)
-        lists.emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime)); // Sort by inAttendanceTime (latest first)
+/**
+ * LIMPEZA LGPD COM SALVAMENTO DE BI (Observatório) - VERSÃO CORRIGIDA
+ */
+export const cleanupOldData = async (db) => {
+    if (!confirm("Isso apagará dados sensíveis de assistidos com mais de 7 dias. Os números de produtividade serão salvos anonimamente. Confirmar?")) return;
+
+    try {
+        const limitDate = new Date();
+        limitDate.setDate(limitDate.getDate() - 7);
+        console.log("🗑️ Apagando dados anteriores a:", limitDate.toISOString());
         
-        if (currentPautaData?.ordemAtendimento) {
-            lists.aguardando = PautaService.sortAguardando(lists.aguardando, currentPautaData.ordemAtendimento);
-        }
+        const pautas = await getDocs(collection(db, "pautas"));
+        let count = 0;
+        let statsCount = 0;
 
-        this.updateCounters(lists);
-        this.clearContainers();
+        for (const pautaDoc of pautas.docs) {
+            const pautaData = pautaDoc.data();
+            const attRef = collection(db, "pautas", pautaDoc.id, "attendances");
+            const q = query(attRef, where("createdAt", "<", limitDate.toISOString()));
+            const snapshot = await getDocs(q);
 
-        console.log("Renderizando colunas...");
-        this.renderPautaColumn(lists.pauta);
-        this.renderAguardandoColumn(lists.aguardando, currentPautaData, colaboradores);
-        this.renderEmAtendimentoColumn(lists.emAtendimento, currentPautaData, app.currentPauta?.id, app.currentUserName);
-        this.renderAtendidosColumn(lists.atendidos);
-        this.renderFaltososColumn(lists.faltosos); // This will be updated
-        this.renderDistribuicaoColumn(lists.distribuicao, app.currentPauta?.id, app.currentUserName);
-
-        this.togglePautaLock(app);
-        setTimeout(() => PautaService.setupManualSort(app), 100); // Re-initialize SortableJS
-        
-        console.log("✅ Renderização concluída");
-    },
-
-    getSearchTerms() {
-        return {
-            pauta: normalizeText(document.getElementById('pauta-search')?.value || ''),
-            aguardando: normalizeText(document.getElementById('aguardando-search')?.value || ''),
-            emAtendimento: normalizeText(document.getElementById('em-atendimento-search')?.value || ''),
-            atendidos: normalizeText(document.getElementById('atendidos-search')?.value || ''),
-            faltosos: normalizeText(document.getElementById('faltosos-search')?.value || ''),
-            distribuicao: normalizeText(document.getElementById('distribuicao-search')?.value || '')
-        };
-    },
-
-    searchFilter(assisted, term) {
-        if (!term) return true;
-        
-        const arrivalTimeFormatted = assisted.arrivalTime ? 
-            new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
-        
-        const attendantName = (typeof assisted.attendant === 'object' && assisted.attendant !== null) 
-                              ? assisted.attendant.name || assisted.attendant.nome || '' 
-                              : assisted.attendant || '';
-
-        return normalizeText(assisted.name).includes(term) ||
-               (assisted.cpf && normalizeText(assisted.cpf).includes(term)) ||
-               normalizeText(assisted.subject).includes(term) ||
-               (assisted.scheduledTime && assisted.scheduledTime.includes(term)) ||
-               (arrivalTimeFormatted && arrivalTimeFormatted.includes(term)) ||
-               (attendantName && normalizeText(attendantName).includes(term)) ||
-               (assisted.assignedCollaborator?.name && normalizeText(assisted.assignedCollaborator.name).includes(term));
-    },
-
-    updateCounters(lists) {
-        const pautaCount = document.getElementById('pauta-count');
-        const aguardandoCount = document.getElementById('aguardando-count');
-        const emAtendimentoCount = document.getElementById('em-atendimento-count');
-        const atendidosCount = document.getElementById('atendidos-count');
-        const faltososCount = document.getElementById('faltosos-count');
-        const distribuicaoCount = document.getElementById('distribuicao-count');
-        
-        if (pautaCount) pautaCount.textContent = lists.pauta.length;
-        if (aguardandoCount) aguardandoCount.textContent = lists.aguardando.length;
-        if (emAtendimentoCount) emAtendimentoCount.textContent = lists.emAtendimento.length;
-        if (atendidosCount) atendidosCount.textContent = lists.atendidos.length;
-        if (faltososCount) faltososCount.textContent = lists.faltosos.length;
-        if (distribuicaoCount) distribuicaoCount.textContent = lists.distribuicao.length;
-    },
-
-    clearContainers() {
-        const containers = [
-            'pauta-list', 'aguardando-list', 'em-atendimento-list', 
-            'atendidos-list', 'faltosos-list', 'distribuicao-list'
-        ];
-        containers.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.innerHTML = '';
-        });
-    },
-
-    // Helper para gerar o rodapé padrão de "Última ação por:"
-    _getStandardizedFooterHtml(item) {
-        const lastActionBy = escapeHTML(item.lastActionBy || 'Sistema');
-        const lastActionDate = item.lastActionTimestamp ?
-            new Date(item.lastActionTimestamp).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) :
-            '--/-- --:--';
-        return `
-            <div class="mt-3 pt-2 border-t border-gray-100 flex justify-end">
-                <p class="text-[10px] text-gray-400 italic">Última ação por: <b>${lastActionBy}</b> às ${lastActionDate}</p>
-            </div>
-        `;
-    },
-
-    renderPautaColumn(items) {
-        const container = document.getElementById('pauta-list');
-        if (!container) return;
-
-        if (items.length === 0) {
-            container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum agendamento</p>';
-            return;
-        }
-
-        items.forEach(item => {
-            container.appendChild(this.createPautaCard(item));
-        });
-    },
-
-    createPautaCard(item) {
-        const currentUserRole = window.app?.currentUser?.role;
-        const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
-        const canEdit = currentUserRole !== 'apoio'; // <<--- ALTERADO: 'basico' para 'apoio'
-        const isOwner = window.app?.auth?.currentUser?.uid === item.owner;
-
-        const card = document.createElement('div');
-        // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
-        card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3';
-        card.setAttribute('data-id', item.id);
-        
-        card.innerHTML = `
-            ${canDelete ? `
-            <button data-id="${item.id}" class="delete-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 transition-colors" ${isOwner ? '' : 'disabled'} title="Excluir (apenas criador)">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                </svg>
-            </button>` : ''}
-
-            <p class="font-bold text-xl text-gray-800 leading-tight pr-6">${escapeHTML(item.name || '').toUpperCase()}</p>
-            
-            <div class="mt-2 space-y-0.5 text-sm text-gray-700">
-                <p>Assunto: <span class="font-bold uppercase">${escapeHTML(item.subject || 'Não informado')}</span></p>
-                <p>Agendado: <span class="font-bold">${item.scheduledTime || '--:--'}</span></p>
-            </div>
-
-            <div class="mt-4 space-y-2">
-                <div class="grid grid-cols-2 gap-2">
-                    <button data-id="${item.id}" class="check-in-btn bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm">
-                        Marcar Chegada
-                    </button>
-                    <button data-id="${item.id}" class="faltou-btn bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm" ${canEdit ? '' : 'disabled'}>
-                        Faltou
-                    </button>
-                </div>
-                <button data-id="${item.id}" class="edit-assisted-btn w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm" ${canEdit ? '' : 'disabled'}>
-                    Editar Dados
-                </button>
-            </div>
-
-            ${this._getStandardizedFooterHtml(item)}
-        `;
-        return card;
-    },
-
-    renderAguardandoColumn(items, currentPautaData, colaboradores) {
-        const container = document.getElementById('aguardando-list');
-        if (!container) return;
-
-        if (items.length === 0) {
-            container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém aguardando</p>';
-            return;
-        }
-
-        console.log("Renderizando aguardando:", items.length);
-        container.innerHTML = '';
-
-        if (currentPautaData?.type === 'multisala' && currentPautaData.rooms?.length > 0) {
-            currentPautaData.rooms.forEach(roomName => {
-                const peopleInRoom = items.filter(a => a.room === roomName);
-                if (peopleInRoom.length === 0) return;
+            if (!snapshot.empty) {
+                console.log(`📊 Processando pauta ${pautaData.name}: ${snapshot.size} registros`);
                 
-                const roomHeader = document.createElement('div');
-                roomHeader.className = "bg-blue-50 text-blue-800 font-black px-3 py-1.5 rounded mt-4 mb-2 text-[10px] uppercase flex justify-between border border-blue-100";
-                roomHeader.innerHTML = `<span>🏢 ${escapeHTML(roomName)}</span> <span>${peopleInRoom.length}</span>`;
-                container.appendChild(roomHeader);
-                
-                peopleInRoom.forEach((item, index) => {
-                    const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
-                    if (card) container.appendChild(card);
+                // CRIAR RESUMO AGREGADO (Sem nomes ou CPFs)
+                const stats = {
+                    pautaName: pautaData.name || 'Sem nome',
+                    creatorEmail: pautaData.ownerEmail || 'Desconhecido',
+                    creatorId: pautaData.owner || 'desconhecido',
+                    dataReferencia: limitDate.toISOString(),
+                    dataProcessamento: new Date().toISOString(),
+                    total: snapshot.size,
+                    atendidos: snapshot.docs.filter(d => d.data().status === 'atendido').length,
+                    faltosos: snapshot.docs.filter(d => d.data().status === 'faltoso').length,
+                    aguardando: snapshot.docs.filter(d => d.data().status === 'aguardando').length,
+                    assuntos: {},
+                    horarios: {}
+                };
+
+                // Contabiliza assuntos de forma anônima
+                snapshot.docs.forEach(d => {
+                    const data = d.data();
+                    const sub = data.subject || 'Não informado';
+                    stats.assuntos[sub] = (stats.assuntos[sub] || 0) + 1;
+                    
+                    // Contabiliza por horário
+                    if (data.scheduledTime) {
+                        stats.horarios[data.scheduledTime] = (stats.horarios[data.scheduledTime] || 0) + 1;
+                    }
                 });
-            });
+
+                // SALVA NO HISTÓRICO PERMANENTE
+                await addDoc(collection(db, "estatisticas_permanentes"), stats);
+                statsCount++;
+
+                // APAGA OS REGISTROS ORIGINAIS
+                const batch = writeBatch(db);
+                snapshot.docs.forEach(d => batch.delete(d.ref));
+                await batch.commit();
+                count += snapshot.size;
+            }
+        }
+        
+        if (count > 0) {
+            showNotification(`✅ Sucesso! ${count} registros limpos e ${statsCount} estatísticas salvas.`);
         } else {
-            items.forEach((item, index) => {
-                const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
-                if (card) container.appendChild(card);
+            showNotification("Nenhum registro antigo encontrado para limpeza.", "info");
+        }
+        
+    } catch (error) {
+        console.error("Erro na limpeza:", error);
+        showNotification("Erro ao executar limpeza: " + error.message, "error");
+    }
+};
+
+/**
+ * GERA DADOS DE TESTE PARA O BI (apenas para testes)
+ */
+export const generateTestData = async (db) => {
+    if (!confirm("Gerar dados de teste para o BI? Isso criará estatísticas falsas para teste.")) return;
+    
+    try {
+        const testData = [
+            {
+                pautaName: "Pauta Teste 1",
+                creatorEmail: "teste1@email.com",
+                dataReferencia: new Date(Date.now() - 10*24*60*60*1000).toISOString(), // 10 dias atrás
+                dataProcessamento: new Date().toISOString(),
+                total: 15,
+                atendidos: 10,
+                faltosos: 5,
+                aguardando: 0,
+                assuntos: {
+                    "Alimentos": 8,
+                    "Divórcio": 4,
+                    "Guarda": 3
+                },
+                horarios: {
+                    "09:00": 5,
+                    "10:00": 4,
+                    "11:00": 6
+                }
+            },
+            {
+                pautaName: "Pauta Teste 2",
+                creatorEmail: "teste2@email.com",
+                dataReferencia: new Date(Date.now() - 15*24*60*60*1000).toISOString(), // 15 dias atrás
+                dataProcessamento: new Date().toISOString(),
+                total: 20,
+                atendidos: 15,
+                faltosos: 5,
+                aguardando: 0,
+                assuntos: {
+                    "Alimentos": 10,
+                    "Investigação": 6,
+                    "Curatela": 4
+                },
+                horarios: {
+                    "08:00": 7,
+                    "09:00": 8,
+                    "10:00": 5
+                }
+            },
+            {
+                pautaName: "Pauta Teste 3",
+                creatorEmail: "teste3@email.com",
+                dataReferencia: new Date(Date.now() - 20*24*60*60*1000).toISOString(), // 20 dias atrás
+                dataProcessamento: new Date().toISOString(),
+                total: 8,
+                atendidos: 6,
+                faltosos: 2,
+                aguardando: 0,
+                assuntos: {
+                    "Alimentos": 3,
+                    "Divórcio": 3,
+                    "Curatela": 2
+                },
+                horarios: {
+                    "14:00": 4,
+                    "15:00": 4
+                }
+            }
+        ];
+        
+        for (const data of testData) {
+            await addDoc(collection(db, "estatisticas_permanentes"), data);
+        }
+        
+        showNotification("✅ Dados de teste gerados com sucesso!");
+        loadDashboardData(db);
+        
+    } catch (error) {
+        console.error("Erro ao gerar dados de teste:", error);
+        showNotification("Erro ao gerar dados de teste", "error");
+    }
+};
+
+/**
+ * CARREGA OS FILTROS DE LOG (Usuários e Ações)
+ */
+export const loadLogFilters = async (db) => {
+    try {
+        // Carregar usuários para o filtro
+        const userSelect = document.getElementById('filter-log-user');
+        if (userSelect) {
+            const usersSnap = await getDocs(collection(db, "users"));
+            userSelect.innerHTML = '<option value="all">Todos os usuários</option>';
+            usersSnap.forEach(doc => {
+                const user = doc.data();
+                if (user.email) {
+                    const option = document.createElement('option');
+                    option.value = user.email;
+                    option.textContent = user.name || user.email;
+                    userSelect.appendChild(option);
+                }
             });
         }
-    },
+        
+        // Carregar tipos de ação para o filtro (buscando dos logs)
+        const actionSelect = document.getElementById('filter-log-action');
+        if (actionSelect) {
+            const logsSnap = await getDocs(collection(db, "audit_logs"));
+            const actions = new Set();
+            logsSnap.forEach(doc => {
+                const action = doc.data().action;
+                if (action) actions.add(action);
+            });
+            
+            actionSelect.innerHTML = '<option value="all">Todas as ações</option>';
+            Array.from(actions).sort().forEach(action => {
+                const option = document.createElement('option');
+                option.value = action;
+                option.textContent = action;
+                actionSelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error("Erro ao carregar filtros:", error);
+    }
+};
 
-    createAguardandoCard(item, currentPautaData, colaboradores, index) {
-        try {
-            if (!item || !item.id) return null;
+/**
+ * BUSCA E EXIBE OS LOGS DE AUDITORIA COM FILTROS
+ */
+export const loadAuditLogs = async (db) => {
+    console.log("🔍 Iniciando carregamento dos logs de auditoria...");
+    
+    const logsContainer = document.getElementById('audit-logs-container');
+    const tableBody = document.getElementById('audit-logs-table-body');
+    const pdfBtn = document.getElementById('export-audit-pdf-btn');
+    const filterSection = document.getElementById('audit-filters-section');
+    
+    if (!logsContainer || !tableBody) {
+        console.error("❌ Elementos de log não encontrados:", {
+            container: !!logsContainer,
+            body: !!tableBody
+        });
+        showNotification("Erro: elementos da interface não encontrados", "error");
+        return;
+    }
 
-            const currentUserRole = window.app?.currentUser?.role;
-            const canEditPriority = currentUserRole === 'apoio' || currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            const canAttend = currentUserRole !== 'apoio';
-            const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
+    // Mostrar seção de filtros se existir
+    if (filterSection) {
+        filterSection.classList.remove('hidden');
+    }
 
-            const card = document.createElement('div');
-            const priorityClass = PautaService.getPriorityClass(item.priority);
-            // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
-            card.className = `assisted-card relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
-            card.setAttribute('data-id', item.id);
+    // Mostra loading
+    logsContainer.classList.remove('hidden');
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><div class="loader-small"></div><p class="text-xs text-gray-400 mt-2">Carregando histórico...</p></td></tr>';
+    
+    if (pdfBtn) pdfBtn.classList.add('hidden');
 
-            // === INDICADORES DE STATUS DO DOCUMENTO ===
-            let docStatusHtml = '';
-            if (item.selectedAction) {
-                let statusColor = 'bg-gray-100 text-gray-600';
-                let statusText = '📋 Selecionado';
-                let statusIcon = '📋';
+    try {
+        // Verificar conexão com Firestore
+        if (!db) {
+            throw new Error("Database não inicializado");
+        }
+
+        // Construir query com filtros
+        const logsRef = collection(db, "audit_logs");
+        
+        // Aplicar filtros
+        let constraints = [];
+        
+        // Filtro de usuário
+        const userFilter = document.getElementById('filter-log-user')?.value;
+        if (userFilter && userFilter !== 'all') {
+            constraints.push(where("userEmail", "==", userFilter));
+        }
+        
+        // Filtro de ação
+        const actionFilter = document.getElementById('filter-log-action')?.value;
+        if (actionFilter && actionFilter !== 'all') {
+            constraints.push(where("action", "==", actionFilter));
+        }
+        
+        // Filtro de data início
+        const startDate = document.getElementById('filter-log-start')?.value;
+        if (startDate) {
+            constraints.push(where("timestamp", ">=", startDate));
+        }
+        
+        // Filtro de data fim
+        const endDate = document.getElementById('filter-log-end')?.value;
+        if (endDate) {
+            constraints.push(where("timestamp", "<=", endDate + "T23:59:59"));
+        }
+        
+        console.log("📊 Filtros aplicados:", {
+            user: userFilter,
+            action: actionFilter,
+            start: startDate,
+            end: endDate
+        });
+        
+        // Montar query
+        let q;
+        if (constraints.length > 0) {
+            q = query(logsRef, ...constraints, orderBy("timestamp", "desc"), limit(200));
+        } else {
+            q = query(logsRef, orderBy("timestamp", "desc"), limit(200));
+        }
+        
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400 text-xs">Nenhum registro encontrado com os filtros selecionados.</td></tr>';
+            return;
+        }
+
+        tableBody.innerHTML = '';
+        if (pdfBtn) pdfBtn.classList.remove('hidden');
+
+        let rowCount = 0;
+
+        snapshot.forEach((docSnap) => {
+            try {
+                const log = docSnap.data();
                 
-                if (item.documentState === 'filling') { 
-                    statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
-                    statusText = '✏️ Preenchendo'; 
-                    statusIcon = '✏️';
-                } else if (item.documentState === 'saved') { 
-                    statusColor = 'bg-green-100 text-green-700 font-bold'; 
-                    statusText = '✅ Salvo'; 
-                    statusIcon = '✅';
-                } else if (item.documentState === 'pdf') { 
-                    statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
-                    statusText = '📄 PDF Emitido'; 
-                    statusIcon = '📄';
+                // Validar dados obrigatórios
+                if (!log.timestamp) {
+                    console.warn("Log sem timestamp ignorado:", docSnap.id);
+                    return;
                 }
-
-                docStatusHtml = `
-                    <div class="mt-2 flex flex-col gap-1">
-                        <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
-                            <span>📂</span> 
-                            <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
-                            <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
-                        </span>
-                        <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
-                            <span>${statusIcon}</span>
-                            <span class="hidden xs:inline">${statusText}</span>
-                        </span>
-                    </div>`;
-            }
-
-            // Tratar valores com fallbacks seguros
-            const nomeSeguro = item.name || 'Nome não informado';
-            const assuntoSeguro = item.subject || 'Assunto não informado';
-            const scheduledTimeSeguro = item.scheduledTime || '--:--';
-            const priorityReasonSeguro = item.priorityReason || '';
-
-            // Tratar arrivalTime com o novo design de tags azuis
-            let timeInfoHtml = `<span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">Chegada: --:--</span>`;
-            if (item.arrivalTime) {
+                
+                // Formata a data com segurança
+                let formattedDate = 'Data inválida';
                 try {
-                    const arrivalDate = new Date(item.arrivalTime);
-                    if (!isNaN(arrivalDate)) {
-                        const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                        if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
-                            // NOVO DESIGN COM ÍCONES SVG INLINE PARA GARANTIR RENDERIZAÇÃO
-                            timeInfoHtml = `
-                                <div class="inline-flex items-center gap-2 bg-blue-50/80 border border-blue-100 text-blue-800 px-2 py-1 rounded text-[11px] shadow-sm w-max">
-                                    <div class="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></svg>
-                                        <span>Agendado: <span class="font-semibold">${escapeHTML(scheduledTimeSeguro)}</span></span>
-                                    </div>
-                                    <div class="w-px h-3 bg-blue-200"></div>
-                                    <div class="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
-                                        <span>Chegou: <span class="font-bold">${horaChegada}</span></span>
-                                    </div>
-                                </div>
-                            `;
-                        } else {
-                            // CASO SEJA AVULSO (Apenas mostra a Chegada)
-                            timeInfoHtml = `
-                                <div class="inline-flex items-center gap-1.5 bg-blue-50/80 border border-blue-100 text-blue-800 px-2.5 py-1 rounded text-[11px] shadow-sm w-max">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
-                                    <span>Chegada: <span class="font-bold">${horaChegada}</span></span>
-                                </div>
-                            `;
-                        }
+                    const date = new Date(log.timestamp);
+                    if (!isNaN(date.getTime())) {
+                        formattedDate = date.toLocaleString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                        });
                     }
                 } catch (e) {
                     console.warn("Erro ao formatar data:", e);
                 }
-            }
-
-            // NÚMERO DA ORDEM
-            const numeroOrdem = index + 1;
-            const numeroBadge = `
-                <div class="absolute -left-2 -top-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
-                    ${numeroOrdem}
-                </div>
-            `;
-
-            // Botão de ação padrão (Atender)
-            const atenderButton = currentPautaData?.useDelegationFlow
-                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`
-                : `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`;
-
-            // === BOTÃO DE AÇÕES (DROPDOWN) AO LADO DA LIXEIRA ===
-            const actionButtonsHTML = `
-                <div class="absolute top-2 right-10 flex items-center">
-                    <div class="relative">
-                        <button data-id="${item.id}" class="quick-action-toggle text-gray-400 hover:text-blue-600 p-1 rounded-full transition-colors" title="Opções de atendimento" aria-expanded="false" aria-controls="quick-menu-${item.id}">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
-                            </svg>
-                        </button>
-                        <div id="quick-menu-${item.id}" class="quick-menu hidden absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 z-30 py-1" role="menu" aria-orientation="vertical" aria-labelledby="quick-toggle-${item.id}">
-                            <button data-id="${item.id}" data-tipo="reagendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2" role="menuitem">
-                                <span>🔄</span> Reagendar
-                            </button>
-                            <button data-id="${item.id}" data-tipo="agendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2" role="menuitem">
-                                <span>📅</span> Agendar
-                            </button>
-                            <button data-id="${item.id}" data-tipo="consulta" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2" role="menuitem">
-                                <span>🔍</span> Consulta
-                            </button>
-                            <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem">
-                                <span>⚙️</span> Outros
-                            </button>
-                            <button data-id="${item.id}" class="edit-assisted-btn quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem">
-                                <span>✏️</span> Editar Assistido
-                            </button>
-                            <button data-id="${item.id}" class="view-details-btn quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem">
-                                <span>👁️</span> Ver Detalhes
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            card.innerHTML = `
-                ${numeroBadge}
-                ${canAttend ? actionButtonsHTML : ''} 
-                ${canDelete ? `
-                <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                    </svg>
-                </button>` : ''}
-                <div class="flex flex-col h-full">
-                    ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
-                    <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(nomeSeguro)}</p>
-                    <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
-                    <div class="flex flex-wrap items-center gap-2 mb-2">
-                        ${timeInfoHtml}
-                        ${item.room ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(item.room)}</span>` : ''}
-                    </div>
-                    ${docStatusHtml}
-                    <div class="mt-4 grid grid-cols-2 gap-2">
-                        ${canAttend ? atenderButton : '<button disabled class="w-full bg-gray-300 text-gray-700 font-semibold py-2 rounded-lg text-sm">Sem Permissão</button>'}
-                        <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs" ${canEditPriority ? '' : 'disabled'}>${item.priority === 'URGENTE' ? 'Urgência' : 'Prioridade'}</button>
-                        <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-semibold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase" ${canAttend ? '' : 'disabled'}>Voltar</button>
-                    </div>
-                    <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
-                </div>
-                ${this._getStandardizedFooterHtml(item)}
-                `;
-            
-            return card;
-        } catch (error) {
-            console.error("Erro ao criar card de aguardando:", error, item);
-            return null;
-        }
-    },
-    
-    renderEmAtendimentoColumn(items, currentPautaData, pautaId, userName) {
-        const container = document.getElementById('em-atendimento-list');
-        if (!container) return;
-
-        if (items.length === 0) {
-            container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém em atendimento</p>';
-            return;
-        }
-
-        items.forEach((item, index) => {
-            const card = this.createEmAtendimentoCard(item, currentPautaData, pautaId, userName, index);
-            if (card) container.appendChild(card);
-        });
-    },
-
-    createEmAtendimentoCard(item, currentPautaData, pautaId, userName, index) {
-        try {
-            const currentUserRole = window.app?.currentUser?.role;
-            const canDelegateOrFinalize = currentUserRole !== 'apoio';
-            const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
-
-            const card = document.createElement('div');
-            // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
-            card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
-            card.setAttribute('data-id', item.id);
-            
-            const startTime = item.inAttendanceTime ? 
-                new Date(item.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-            
-            const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-            const linkDireto = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&collaboratorName=${encodeURIComponent(userName)}`;
-
-            card.innerHTML = `
-                ${canDelete ? `
-                <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                    </svg>
-                </button>` : ''}
-
-                <p class="font-bold text-xl md:text-2xl text-gray-800">${index + 1}. ${escapeHTML(item.name || '')}</p>
-                <p class="text-xs md:text-sm mt-1">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
-                <p class="text-xs md:text-sm">Colaborador: ${escapeHTML(item.assignedCollaborator?.name || 'Não atribuído')}</p>
-                <p class="text-xs md:text-sm text-gray-400">Início: ${startTime}</p>
-
-                <div class="mt-4 flex flex-col gap-2">
-                    <div class="grid grid-cols-2 gap-2">
-                        <button data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(item.assignedCollaborator?.name || 'Não informado')}" class="delegate-finalization-btn bg-indigo-500 text-white font-bold py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm shadow-md transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
-                            Delegar
-                        </button>
-                        <button onclick="window.open('${linkDireto}', '_blank')" class="bg-green-500 text-white font-bold py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm shadow-md transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
-                            Finalizar
-                        </button>
-                    </div>
-                    <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 text-white font-bold py-2 rounded-lg text-xs md:text-sm shadow-md transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
-                        Voltar p/ Aguardando
-                    </button>
-                </div>
-
-                ${this._getStandardizedFooterHtml(item)}
-            `;
-            return card;
-        } catch (error) {
-            console.error("Erro ao criar card de em atendimento:", error, item);
-            return null;
-        }
-    },
-
-    renderAtendidosColumn(items) {
-        const container = document.getElementById('atendidos-list');
-        if (!container) return;
-
-        if (items.length === 0) {
-            container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum atendido</p>';
-            return;
-        }
-
-        container.innerHTML = '';
-        items.forEach(item => {
-            if (!item) return;
-            const card = this.createAtendidoCard(item);
-            if (card) container.appendChild(card);
-        });
-    },
-
-    createAtendidoCard(item) {
-        try {
-            const currentUserRole = window.app?.currentUser?.role;
-            const canManageDemandsOrEditAttendant = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            const canRevert = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-
-            const card = document.createElement('div');
-            // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
-            card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4';
-            card.setAttribute('data-id', item.id);
-            
-            const arrivalT = item.arrivalTime ? 
-                new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
-            const attendedT = item.attendedTime ? 
-                new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-            
-            let atendenteNome = 'Não informado';
-            // attendedBy = ações rápidas | attendant = fluxo normal
-            const atendenteRaw = item.attendedBy || item.attendant;
-            if (atendenteRaw) {
-                if (typeof atendenteRaw === 'object') {
-                    atendenteNome = atendenteRaw.nome || atendenteRaw.name || 'Não informado';
-                } else {
-                    atendenteNome = atendenteRaw;
+                
+                const row = document.createElement('tr');
+                row.className = "border-b hover:bg-gray-50 transition-colors";
+                
+                // Define cor baseada na ação
+                let actionColor = 'bg-purple-100 text-purple-700';
+                const action = (log.action || '').toLowerCase();
+                if (action.includes('delete') || action.includes('apagou') || action.includes('remove')) {
+                    actionColor = 'bg-red-100 text-red-700';
+                } else if (action.includes('create') || action.includes('criou') || action.includes('add')) {
+                    actionColor = 'bg-green-100 text-green-700';
+                } else if (action.includes('update') || action.includes('edit') || action.includes('atualiz')) {
+                    actionColor = 'bg-blue-100 text-blue-700';
                 }
-            }
-
-            // Indicador de confirmação (responsivo)
-            const confirmButton = item.isConfirmed 
-                ? 'bg-green-500 border-green-500 text-white' 
-                : 'bg-slate-100 text-slate-300';
-
-            card.innerHTML = `
-                <div class="flex justify-between items-start">
-                    <p class="font-bold text-lg md:text-xl text-gray-800">${escapeHTML(item.name || '')}</p>
-                    <button data-id="${item.id}" class="toggle-confirmed-atendido w-6 h-6 md:w-7 md:h-7 rounded-full border border-gray-200 flex items-center justify-center ${confirmButton} shadow-sm" ${canToggleConfirmed ? '' : 'disabled'}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/>
-                        </svg>
-                    </button>
-                </div>
                 
-                <p class="text-xs md:text-sm mt-1 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
+                // Escapar HTML para segurança
+                const safeUserName = escapeHTML(log.userName || log.userEmail || 'Desconhecido');
+                const safeUserEmail = escapeHTML(log.userEmail || '');
+                const safeAction = escapeHTML(log.action || 'AÇÃO');
+                const safeDetails = escapeHTML(log.details || '-');
+                const safePautaId = log.pautaId && log.pautaId !== 'N/A' ? 
+                    `<div class="text-[8px] text-gray-400 mt-1">Pauta: ${escapeHTML(log.pautaId.substring(0,8))}...</div>` : '';
                 
-                ${item.tipoAcaoRapida ? (() => {
-                    const acaoCfg = {
-                        'Reagendamento':       { icon: '🔄', bg: '#fffbeb', border: '#f59e0b', text: '#92400e', label: 'REAGENDADO' },
-                        'Agendamento':         { icon: '📅', bg: '#ecfdf5', border: '#10b981', text: '#065f46', label: 'AGENDADO' },
-                        'Consulta Processual': { icon: '🔍', bg: '#f5f3ff', border: '#8b5cf6', text: '#4c1d95', label: 'CONSULTA' },
-                        'Outros Assuntos':     { icon: '⚙️', bg: '#f0f9ff', border: '#0ea5e9', text: '#0c4a6e', label: 'OUTROS' }
-                    }[item.tipoAcaoRapida] || { icon: '⚡', bg: '#f0fdf4', border: '#22c55e', text: '#14532d', label: item.tipoAcaoRapida };
-                    return `<div class="mt-1 mb-2">
-                        <span style="background:${acaoCfg.bg};border:1.5px solid ${acaoCfg.border};color:${acaoCfg.text}" 
-                              class="inline-flex items-center gap-1 text-[10px] md:text-xs font-black px-2 py-1 rounded-lg">
-                            ${acaoCfg.icon} ${acaoCfg.label}
+                row.innerHTML = `
+                    <td class="px-3 py-2 whitespace-nowrap text-[10px] text-gray-600">${escapeHTML(formattedDate)}</td>
+                    <td class="px-3 py-2">
+                        <p class="font-bold text-gray-800 text-[11px]">${safeUserName}</p>
+                        <p class="text-[9px] text-gray-400">${safeUserEmail}</p>
+                    </td>
+                    <td class="px-3 py-2 text-center">
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold ${actionColor} uppercase">
+                            ${safeAction}
                         </span>
-                    </div>`;
-                })() : ''}
+                    </td>
+                    <td class="px-3 py-2 text-[10px] text-gray-600">
+                        <div class="max-w-xs truncate" title="${safeDetails}">
+                            ${safeDetails}
+                        </div>
+                        ${safePautaId}
+                    </td>
+                `;
+                tableBody.appendChild(row);
+                rowCount++;
                 
-                <div class="grid grid-cols-3 gap-1 md:gap-2 text-center border-t border-b py-2 md:py-3 my-2 md:my-3 text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-wider">
-                    <div>Agendado:<br><span class="text-gray-600">${item.scheduledTime || 'N/A'}</span></div>
-                    <div>Chegou:<br><span class="text-gray-600">${arrivalT}</span></div>
-                    <div>Finalizado:<br><span class="text-gray-600">${attendedT}</span></div>
-                </div>
-
-                <div class="flex justify-between items-center text-[10px] md:text-xs mb-4">
-                    <p class="text-gray-500">Por: <b class="text-gray-800">${escapeHTML(atendenteNome)}</b></p>
-                    <div class="grid grid-cols-2 gap-x-2 md:gap-x-4 gap-y-1 md:gap-y-2 text-right">
-                        <button data-id="${item.id}" class="manage-demands-btn text-blue-500 font-bold hover:underline" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Demandas</button>
-                        <button data-id="${item.id}" class="edit-assisted-btn text-slate-400 font-bold hover:underline" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Dados</button>
-                        <button data-id="${item.id}" class="edit-attendant-btn text-green-600 font-bold hover:underline" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Atendente</button>
-                        <button data-id="${item.id}" class="delete-btn text-red-500 font-bold hover:underline" ${canDelete ? '' : 'disabled'}>Deletar</button>
-                    </div>
-                </div>
-
-                ${item.arquivoPdfConteudo ? `
-                    <a href="${item.arquivoPdfConteudo}" download="${item.nomeArquivoPdf || 'protocolo.pdf'}" 
-                       class="mb-4 flex items-center justify-center gap-2 w-full bg-blue-50 text-blue-600 font-bold py-2 rounded-lg md:py-2.5 md:rounded-xl text-[8px] md:text-[10px] uppercase border border-blue-100 hover:bg-blue-100 transition">
-                        📄 Baixar Protocolo
-                    </a>
-                ` : ''}
-
-                <div class="pt-3 border-t">
-                    <div class="flex flex-col sm:flex-row justify-between items-center gap-2 md:gap-3">
-                        <p class="text-[7px] md:text-[9px] text-gray-400 uppercase italic">Última: ${escapeHTML(item.lastActionBy || 'Sistema')}</p>
-                        <button data-id="${item.id}" class="return-from-atendido-btn w-full sm:w-auto bg-orange-500 text-white font-black py-2 md:py-3 px-4 md:px-8 rounded-lg md:rounded-xl text-[8px] md:text-[10px] uppercase shadow-md active:scale-95 transition-all" ${canRevert ? '' : 'disabled'}>
-                            Voltar
-                        </button>
-                    </div>
-                </div>
-                ${this._getStandardizedFooterHtml(item)}
-            `;
-            return card;
-        } catch (error) {
-            console.error("Erro ao criar card de atendido:", error, item);
-            return null;
-        }
-    },
-
-    renderFaltososColumn(items) {
-        const container = document.getElementById('faltosos-list');
-        if (!container) return;
-
-        if (items.length === 0) {
-            container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum faltoso</p>';
-            return;
-        }
-
-        items.forEach(item => {
-            const currentUserRole = window.app?.currentUser?.role;
-            const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            const canRevert = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-
-            const card = document.createElement('div');
-            // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
-            card.className = 'assisted-card relative bg-red-50 p-4 rounded-lg shadow-sm border border-red-100 mb-2 opacity-80';
-            card.setAttribute('data-id', item.id);
-            card.innerHTML = `
-                <p class="font-bold text-gray-700 text-sm">${escapeHTML(item.name || '')}</p>
-                <p class="text-[9px] text-red-400 uppercase font-bold">Faltoso</p>
-                <!-- ⭐ Detalhes do faltoso: Assunto e Agendamento -->
-                <p class="text-xs text-gray-600 mt-1"><span class="font-semibold">Assunto:</span> ${escapeHTML(item.subject || 'Não informado')}</p>
-                ${item.scheduledTime ? `<p class="text-xs text-gray-600"><span class="font-semibold">Agendado:</span> ${item.scheduledTime}</p>` : ''}
-                
-                <button data-id="${item.id}" class="return-to-pauta-from-faltoso-btn mt-2 w-full bg-white text-red-500 border border-red-200 py-1 rounded text-[9px] font-bold uppercase hover:bg-red-50 transition" ${canRevert ? '' : 'disabled'}>Voltar p/ Pauta</button>
-                <button data-id="${item.id}" class="toggle-confirmed-faltoso mt-2 w-full bg-white text-green-500 border border-green-200 py-1 rounded text-[9px] font-bold uppercase hover:bg-green-50 transition" ${canToggleConfirmed ? '' : 'disabled'}>
-                    ${item.isConfirmed ? '✅ Confirmar Ausência' : 'Confirmar Ausência'}
-                </button>
-                <button data-id="${item.id}" class="delete-btn mt-2 w-full bg-white text-gray-400 border border-gray-200 py-1 rounded text-[9px] font-bold uppercase hover:bg-gray-100 transition" ${canDelete ? '' : 'disabled'}>Excluir</button>
-
-                ${this._getStandardizedFooterHtml(item)}
-            `;
-            container.appendChild(card);
-        });
-    },
-
-    renderDistribuicaoColumn(items, pautaId, userName) {
-        const container = document.getElementById('distribuicao-list');
-        if (!container) return;
-
-        if (items.length === 0) {
-            container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum aguardando distribuição</p>';
-            return;
-        }
-
-        items.forEach(item => {
-            const currentUserRole = window.app?.currentUser?.role;
-            const canManageDistribution = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-
-            const card = document.createElement('div');
-            // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
-            card.className = 'assisted-card relative bg-cyan-50 p-4 rounded-lg shadow-sm border border-cyan-200 mb-2';
-            card.setAttribute('data-id', item.id);
-            const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-            const linkExterno = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&collaboratorName=${encodeURIComponent(userName)}`;
-
-            card.innerHTML = `
-                <p class="font-bold text-gray-800 text-sm">${escapeHTML(item.name || '')}</p>
-                <p class="text-[10px] text-cyan-700 font-bold uppercase mt-1">⚖️ Aguardando Distribuição</p>
-                <div class="mt-3 space-y-2">
-                    <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white text-[10px] font-bold py-2 rounded hover:bg-cyan-700 uppercase shadow-sm" ${canManageDistribution ? '' : 'disabled'}>Painel de Protocolo</button>
-                    <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-white text-gray-400 border border-gray-200 text-[9px] py-1 rounded uppercase" ${canManageDistribution ? '' : 'disabled'}>Reverter</button>
-                </div>
-                ${this._getStandardizedFooterHtml(item)}
-            `;
-            container.appendChild(card);
-        });
-    },
-
-    setupFooterModals() {
-        const bindModal = (btnId, modalId, closeIds) => {
-            const btn = document.getElementById(btnId);
-            const modal = document.getElementById(modalId);
-            
-            if (btn && modal) {
-                btn.onclick = () => modal.classList.remove('hidden');
-                
-                closeIds.forEach(id => {
-                    const closeBtn = document.getElementById(id);
-                    if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
-                });
-
-                modal.onclick = (e) => {
-                    if (e.target === modal) modal.classList.add('hidden');
-                };
+            } catch (rowError) {
+                console.error("Erro ao processar linha do log:", rowError, docSnap.id);
             }
-        };
+        });
 
-        bindModal('privacy-btn-footer', 'privacy-policy-modal', ['close-policy-modal-btn-x', 'close-policy-modal-btn']);
-        bindModal('manual-btn-footer', 'manual-modal', ['close-manual-modal-x', 'close-manual-modal-btn']);
-        bindModal('terms-btn-footer', 'terms-modal', ['close-terms-modal-x', 'close-terms-modal-btn']);
+        // Se não adicionou nenhuma linha
+        if (rowCount === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400 text-xs">Nenhum log válido encontrado.</td></tr>';
+        } else {
+            console.log(`✅ ${rowCount} logs carregados com sucesso`);
+        }
+
+    } catch (error) {
+        console.error("❌ Erro detalhado ao carregar logs:", error);
+        
+        // Mensagem de erro mais específica
+        let errorMessage = "Erro ao carregar registros.";
+        if (error.code === 'permission-denied') {
+            errorMessage = "Permissão negada. Você precisa ser admin.";
+        } else if (error.code === 'not-found') {
+            errorMessage = "Coleção de logs não encontrada.";
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500 text-xs">
+            ❌ ${errorMessage}<br>
+            <span class="text-[8px] text-gray-400 mt-2 block">Verifique o console (F12) para mais detalhes</span>
+        </td></tr>`;
     }
 };
+
+/**
+ * GERA PDF DOS LOGS COM FILTROS
+ */
+export const exportAuditLogsPDF = async (db) => {
+    showNotification("Gerando PDF...", "info");
+    
+    try {
+        // Verificar se jsPDF está disponível
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            throw new Error("Biblioteca jsPDF não carregada");
+        }
+        
+        const { jsPDF } = window.jspdf;
+        const docPDF = new jsPDF({ orientation: 'landscape' });
+
+        // Aplicar mesmos filtros do loadAuditLogs
+        const logsRef = collection(db, "audit_logs");
+        let constraints = [];
+        
+        const userFilter = document.getElementById('filter-log-user')?.value;
+        if (userFilter && userFilter !== 'all') {
+            constraints.push(where("userEmail", "==", userFilter));
+        }
+        
+        const actionFilter = document.getElementById('filter-log-action')?.value;
+        if (actionFilter && actionFilter !== 'all') {
+            constraints.push(where("action", "==", actionFilter));
+        }
+        
+        const startDate = document.getElementById('filter-log-start')?.value;
+        if (startDate) {
+            constraints.push(where("timestamp", ">=", startDate));
+        }
+        
+        const endDate = document.getElementById('filter-log-end')?.value;
+        if (endDate) {
+            constraints.push(where("timestamp", "<=", endDate + "T23:59:59"));
+        }
+        
+        let q;
+        if (constraints.length > 0) {
+            q = query(logsRef, ...constraints, orderBy("timestamp", "desc"), limit(500));
+        } else {
+            q = query(logsRef, orderBy("timestamp", "desc"), limit(500));
+        }
+        
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            showNotification("Nenhum log para exportar", "info");
+            return;
+        }
+
+        // Título
+        docPDF.setFontSize(18);
+        docPDF.setTextColor(126, 34, 206);
+        docPDF.text("Relatório de Auditoria e Segurança - SIGAP", 14, 20);
+        
+        docPDF.setFontSize(10);
+        docPDF.setTextColor(100, 100, 100);
+        docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
+        docPDF.text(`Total de registros: ${snapshot.size}`, 14, 34);
+        
+        // Adicionar informações dos filtros aplicados
+        let yOffset = 40;
+        if (userFilter && userFilter !== 'all') {
+            docPDF.text(`Filtro usuário: ${userFilter}`, 14, yOffset);
+            yOffset += 6;
+        }
+        if (actionFilter && actionFilter !== 'all') {
+            docPDF.text(`Filtro ação: ${actionFilter}`, 14, yOffset);
+            yOffset += 6;
+        }
+        if (startDate) {
+            docPDF.text(`Período: ${startDate} até ${endDate || 'hoje'}`, 14, yOffset);
+            yOffset += 6;
+        }
+
+        // Preparar dados para a tabela
+        const head = [['Data/Hora', 'Usuário', 'Ação', 'Detalhes', 'Pauta ID']];
+        const body = [];
+
+        snapshot.docs.forEach(docSnap => {
+            try {
+                const log = docSnap.data();
+                let dateStr = '';
+                try {
+                    if (log.timestamp) {
+                        dateStr = new Date(log.timestamp).toLocaleString('pt-BR');
+                    }
+                } catch (e) {
+                    dateStr = 'Data inválida';
+                }
+                
+                body.push([
+                    dateStr,
+                    `${log.userName || log.userEmail || 'Desconhecido'}`,
+                    log.action || '-',
+                    log.details || '-',
+                    log.pautaId || 'N/A'
+                ]);
+            } catch (e) {
+                console.warn("Erro ao processar log para PDF:", e);
+            }
+        });
+
+        docPDF.autoTable({
+            head: head,
+            body: body,
+            startY: yOffset + 5,
+            theme: 'striped',
+            headStyles: { 
+                fillColor: [126, 34, 206],
+                fontSize: 8,
+                halign: 'center'
+            },
+            styles: { 
+                fontSize: 7,
+                cellPadding: 2
+            },
+            columnStyles: {
+                0: { cellWidth: 35 },
+                1: { cellWidth: 40 },
+                2: { cellWidth: 30 },
+                3: { cellWidth: 'auto' },
+                4: { cellWidth: 30 }
+            }
+        });
+
+        const filename = `auditoria_sigap_${new Date().toISOString().slice(0,10)}.pdf`;
+        docPDF.save(filename);
+        
+        showNotification("PDF gerado com sucesso!");
+        
+    } catch (error) {
+        console.error("Erro ao gerar PDF:", error);
+        showNotification("Erro ao gerar PDF: " + error.message, "error");
+    }
+};
+
+/**
+ * CARREGA O DASHBOARD DE BI (OBSERVATÓRIO) - VERSÃO CORRIGIDA
+ */
+export const loadDashboardData = async (db) => {
+    const start = document.getElementById('stats-filter-start')?.value;
+    const end = document.getElementById('stats-filter-end')?.value;
+    const userFilter = document.getElementById('stats-filter-user')?.value;
+    const resultsArea = document.getElementById('dashboard-results');
+
+    if (!resultsArea) {
+        console.error("Elemento dashboard-results não encontrado");
+        return;
+    }
+    
+    resultsArea.classList.remove('hidden');
+    resultsArea.innerHTML = '<div class="text-center py-8"><div class="loader-small mx-auto"></div><p class="text-gray-600 mt-2">Carregando dados...</p></div>';
+
+    try {
+        // Buscar dados
+        const snapshot = await getDocs(collection(db, "estatisticas_permanentes"));
+        
+        console.log("📊 Total de documentos na coleção:", snapshot.size);
+        
+        if (snapshot.empty) {
+            resultsArea.innerHTML = `
+                <div class="text-center py-12">
+                    <p class="text-gray-500 mb-2">Nenhum dado estatístico encontrado.</p>
+                    <p class="text-xs text-gray-400 mb-4">Execute a limpeza de 7 dias para gerar dados ou use o botão abaixo para gerar dados de teste.</p>
+                    <button id="generate-test-data-btn" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-purple-700">
+                        Gerar Dados de Teste
+                    </button>
+                </div>
+            `;
+            
+            // Adicionar evento ao botão de teste
+            document.getElementById('generate-test-data-btn')?.addEventListener('click', () => {
+                generateTestData(db);
+            });
+            
+            return;
+        }
+        
+        let filteredData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        
+        console.log("📊 Dados brutos:", filteredData);
+
+        // Filtro de Data
+        if (start) {
+            filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia >= start);
+        }
+        if (end) {
+            filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia <= end + "T23:59:59");
+        }
+        
+        // Filtro por Criador
+        if (userFilter && userFilter !== 'all') {
+            filteredData = filteredData.filter(d => d.creatorEmail === userFilter);
+        }
+
+        console.log("📊 Dados após filtros:", filteredData);
+
+        if (filteredData.length === 0) {
+            resultsArea.innerHTML = '<div class="text-center py-8 text-gray-400">Nenhum dado encontrado com os filtros selecionados.</div>';
+            return;
+        }
+
+        // Consolidação dos Cálculos
+        let totalGeral = 0;
+        let totalAtendidos = 0;
+        let totalFaltosos = 0;
+        let mapAssuntos = {};
+        let mapUsers = {};
+
+        filteredData.forEach(d => {
+            totalGeral += d.total || 0;
+            totalAtendidos += d.atendidos || 0;
+            totalFaltosos += d.faltosos || 0;
+            
+            // Soma assuntos entre documentos
+            if (d.assuntos) {
+                for (let [key, val] of Object.entries(d.assuntos)) {
+                    mapAssuntos[key] = (mapAssuntos[key] || 0) + val;
+                }
+            } else {
+                // Se não tiver assuntos, adiciona um genérico
+                mapAssuntos['Não especificado'] = (mapAssuntos['Não especificado'] || 0) + (d.total || 0);
+            }
+
+            // Soma produtividade por usuário
+            const userKey = d.creatorEmail || 'Desconhecido';
+            mapUsers[userKey] = (mapUsers[userKey] || 0) + (d.atendidos || 0);
+        });
+
+        console.log("📊 Dados consolidados:", {
+            totalGeral,
+            totalAtendidos,
+            totalFaltosos,
+            mapAssuntos,
+            mapUsers
+        });
+
+        // Atualização da Interface (Cards Superiores)
+        const dashTotalGeral = document.getElementById('dash-total-geral');
+        const dashTotalAtendidos = document.getElementById('dash-total-atendidos');
+        const dashTaxaFalta = document.getElementById('dash-taxa-falta');
+        
+        if (dashTotalGeral) dashTotalGeral.textContent = totalGeral;
+        if (dashTotalAtendidos) dashTotalAtendidos.textContent = totalAtendidos;
+        
+        const taxa = totalGeral > 0 ? ((totalFaltosos / totalGeral) * 100).toFixed(1) : 0;
+        if (dashTaxaFalta) dashTaxaFalta.textContent = taxa + "%";
+
+        // Renderização de Listas (Ranking)
+        const renderRanking = (elementId, dataMap) => {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            
+            const sorted = Object.entries(dataMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            
+            if (sorted.length === 0) {
+                el.innerHTML = '<p class="text-center text-gray-400 py-4 text-xs">Sem dados para o filtro.</p>';
+                return;
+            }
+
+            el.innerHTML = sorted.map(([name, count]) => `
+                <div class="flex justify-between items-center border-b pb-1 text-xs">
+                    <span class="truncate pr-2" title="${escapeHTML(name)}">${escapeHTML(name)}</span>
+                    <span class="font-bold text-green-700">${count}</span>
+                </div>
+            `).join('');
+        };
+
+        renderRanking('dash-subjects-list', mapAssuntos);
+        renderRanking('dash-users-list', mapUsers);
+        
+        showNotification("Dashboard atualizado!");
+
+    } catch (error) {
+        console.error("Dashboard Error:", error);
+        resultsArea.innerHTML = `<div class="text-center py-8 text-red-500">Erro ao carregar dados: ${error.message}</div>`;
+    }
+};
+
+/**
+ * ALIMENTA O FILTRO DE USUÁRIOS DO DASHBOARD
+ */
+export const populateUserFilter = async (db) => {
+    const select = document.getElementById('stats-filter-user');
+    if (!select) return;
+    
+    try {
+        const snapshot = await getDocs(collection(db, "users"));
+        select.innerHTML = '<option value="all">Todos os Usuários</option>';
+        
+        snapshot.forEach(d => {
+            const user = d.data();
+            if (user.email) {
+                const option = document.createElement('option');
+                option.value = user.email;
+                option.textContent = user.name || user.email;
+                select.appendChild(option);
+            }
+        });
+        
+        console.log("✅ Filtro de usuários carregado");
+        
+    } catch (e) { 
+        console.error("Erro ao carregar filtro de usuários:", e); 
+    }
+};
+
+// Tornar funções globais para acesso via onclick
+window.cleanupOldData = () => cleanupOldData(window.app?.db);
+window.loadAuditLogs = () => loadAuditLogs(window.app?.db);
+window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
+window.loadDashboardData = () => loadDashboardData(window.app?.db);
+window.populateUserFilter = () => populateUserFilter(window.app?.db);
+window.loadLogFilters = () => loadLogFilters(window.app?.db);
+window.generateTestData = () => generateTestData(window.app?.db);
+
+console.log("✅ Módulo admin.js carregado com sucesso");
