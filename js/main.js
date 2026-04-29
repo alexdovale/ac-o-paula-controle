@@ -2151,39 +2151,57 @@ class SIGAPApp {
     }
 
     applyRoleBasedUI() {
-        const currentUserRole = this.currentUser?.role;
+        const currentUserRole = this.currentUser?.role; // 'user', 'admin', 'superadmin', 'apoio'
         const isAuthenticated = this.auth?.currentUser != null;
+        const isUserApproved = this.currentUser?.status === 'approved'; // Verifica se o usuário está aprovado
+        
+        // Painel do Admin e Botão no menu principal (apenas para Admin/Superadmin)
+        const adminPanelBtnMain = document.getElementById('admin-btn-main');
+        const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
+        
+        // ⭐ AJUSTE AQUI: Acesso ao Painel do Admin e botões de gerenciamento de pauta
+        const canAccessAdminPanel = (currentUserRole === 'admin' || currentUserRole === 'superadmin') && isAuthenticated && isUserApproved;
+        
+        if (adminPanelBtnMain) adminPanelBtnMain.classList.toggle('hidden', !canAccessAdminPanel);
+        if (adminPanelBtnPautaSelection) adminPanelBtnPautaSelection.classList.toggle('hidden', !canAccessAdminPanel);
 
-        const adminPanelBtn = document.getElementById('admin-panel-btn');
-        const adminBtnMain = document.getElementById('admin-btn-main');
+        // Botões de Ação na Pauta Principal (Ex: fechar, reabrir, zerar, gerenciar membros/colaboradores)
         const closePautaBtn = document.getElementById('close-pauta-btn');
         const reopenPautaBtn = document.getElementById('reopen-pauta-btn');
+        const resetAllBtn = document.getElementById('reset-all-btn');
+        const manageMembersBtn = document.getElementById('manage-members-btn');
+        const manageCollaboratorsBtn = document.getElementById('manage-collaborators-btn');
+        const viewStatsBtn = document.getElementById('view-stats-btn');
 
-        // Permissão para painéis administrativos baseada em função "admin"
-        if (adminPanelBtn) adminPanelBtn.classList.toggle('hidden', currentUserRole !== 'admin');
-        if (adminBtnMain) adminBtnMain.classList.toggle('hidden', currentUserRole !== 'admin');
+        // ⭐ AJUSTE AQUI: Usuários normais e de Apoio PRECISAM estar aprovados para gerenciar pautas
+        const canManagePauta = (isUserApproved && (currentUserRole === 'user' || currentUserRole === 'apoio')) || currentUserRole === 'admin' || currentUserRole === 'superadmin';
+        
+        if (closePautaBtn) closePautaBtn.classList.toggle('hidden', !canManagePauta);
+        if (reopenPautaBtn) reopenPautaBtn.classList.toggle('hidden', !canManagePauta);
+        if (resetAllBtn) resetAllBtn.classList.toggle('hidden', !canManagePauta);
+        if (manageMembersBtn) manageMembersBtn.classList.toggle('hidden', !canManagePauta);
+        if (manageCollaboratorsBtn) manageCollaboratorsBtn.classList.toggle('hidden', !canManagePauta);
+        
+        // Botão de Estatísticas/Dashboard (apenas Admin/Superadmin e aprovado)
+        if (viewStatsBtn) viewStatsBtn.classList.toggle('hidden', !canAccessAdminPanel);
 
-        // ================================================
-        // LÓGICA ESPECÍFICA PARA O PERFIL APOIO NA TELA DA PAUTA
-        // ================================================
-        const isApoio = currentUserRole === 'apoio'; // <<--- ALTERADO: 'basico' para 'apoio'
+
+        // Lógica específica para o perfil Apoio na tela da pauta (que é o que está sendo chamado)
+        const isApoio = currentUserRole === 'apoio';
         const addAssistedBtn = document.getElementById('add-assisted-btn');
         const fileUpload = document.getElementById('file-upload');
         const btnSyncVerde = document.getElementById('btn-sync-verde');
 
-        // Campo de adicionar assistido (Apoio pode adicionar, desde que esteja logado)
         if (addAssistedBtn) addAssistedBtn.disabled = !isAuthenticated; 
+        if (fileUpload) fileUpload.disabled = isApoio;
+        if (btnSyncVerde) btnSyncVerde.disabled = isApoio;
         
-        // Upload de CSV e Sincronizar Verde (Apoio NÃO pode realizar upload/sync massivo)
-        if (fileUpload) fileUpload.disabled = isApoio; 
-        if (btnSyncVerde) btnSyncVerde.disabled = isApoio; 
-        
-        // Botões dos cards (são ajustados de forma mais fina pelo UIService se necessário)
+        // AQUI É ONDE SEUS BOTÕES DOS CARDS SÃO RENDERIZADOS, entao renderAssistedLists é chamado.
         if (typeof UIService !== 'undefined' && typeof UIService.renderAssistedLists === 'function') {
             UIService.renderAssistedLists(this); 
         }
         
-        console.log("UI baseada no perfil aplicada. Perfil logado:", currentUserRole);
+        console.log("UI baseada no perfil aplicada. Perfil:", currentUserRole, "Aprovado:", isUserApproved);
     }
 }
 
