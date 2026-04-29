@@ -5,7 +5,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
-// Armazena instâncias dos gráficos para destruí-las antes de recriar (evita bugs do Chart.js)
+// Armazena instâncias dos gráficos para destruí-las antes de recriar
 let chartInstances = {};
 
 /**
@@ -136,9 +136,255 @@ window.approveUser = (userId) => approveUser(window.app?.db, userId);
 window.updateUserRole = (userId) => updateUserRole(window.app?.db, userId);
 window.deleteUser = (userId) => deleteUser(window.app?.db, userId);
 
+
+// =========================================================================
+// MÓDULO DE AUDITORIA, FILTROS E ERROS
+// =========================================================================
+
 /**
- * LIMPEZA LGPD COM SALVAMENTO DE BI AVANÇADO
+ * CARREGA OS FILTROS DE LOG (Usuários e Ações)
  */
+export const loadLogFilters = async (db) => {
+    try {
+        const userSelect = document.getElementById('filter-log-user');
+        const actionSelect = document.getElementById('filter-log-action');
+        
+        if (userSelect) {
+            const usersSnap = await getDocs(collection(db, "users"));
+            userSelect.innerHTML = '<option value="all">Todos os usuários</option>';
+            usersSnap.forEach(doc => {
+                const user = doc.data();
+                if (user.email) {
+                    const option = document.createElement('option');
+                    option.value = user.email;
+                    option.textContent = user.name || user.email;
+                    userSelect.appendChild(option);
+                }
+            });
+        }
+        
+        if (actionSelect) {
+            const logsSnap = await getDocs(collection(db, "audit_logs"));
+            const actions = new Set();
+            logsSnap.forEach(doc => {
+                const action = doc.data().action;
+                if (action) actions.add(action);
+            });
+            
+            actionSelect.innerHTML = '<option value="all">Todas as ações</option>';
+            Array.from(actions).sort().forEach(action => {
+                const option = document.createElement('option');
+                option.value = action;
+                option.textContent = action;
+                actionSelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error("Erro ao carregar filtros de log:", error);
+    }
+};
+
+/**
+ * BUSCA E EXIBE OS LOGS DE AUDITORIA COM FILTROS
+ */
+export const loadAuditLogs = async (db) => {
+    const logsContainer = document.getElementById('audit-logs-container');
+    const tableBody = document.getElementById('audit-logs-table-body');
+    const pdfBtn = document.getElementById('export-audit-pdf-btn');
+    const filterSection = document.getElementById('audit-filters-section');
+    
+    if (!logsContainer || !tableBody) return;
+
+    if (filterSection) filterSection.classList.remove('hidden');
+    logsContainer.classList.remove('hidden');
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><div class="loader-small mx-auto"></div><p class="text-xs text-gray-400 mt-2">Buscando histórico e erros...</p></td></tr>';
+    
+    if (pdfBtn) pdfBtn.classList.add('hidden');
+
+    try {
+        // Certifica que os filtros existem, senao os carrega
+        if (document.getElementById('filter-log-user')?.options.length <= 1) {
+            await loadLogFilters(db);
+        }
+
+        const logsRef = collection(db, "audit_logs");
+        let constraints = [];
+        
+        const userFilter = document.getElementById('filter-log-user')?.value;
+        const actionFilter = document.getElementById('filter-log-action')?.value;
+        const startDate = document.getElementById('filter-log-start')?.value;
+        const endDate = document.getElementById('filter-log-end')?.value;
+
+        if (userFilter && userFilter !== 'all') constraints.push(where("userEmail", "==", userFilter));
+        if (actionFilter && actionFilter !== 'all') constraints.push(where("action", "==", actionFilter));
+        if (startDate) constraints.push(where("timestamp", ">=", startDate));
+        if (endDate) constraints.push(where("timestamp", "<=", endDate + "T23:59:59"));
+        
+        let q = constraints.length > 0 
+            ? query(logsRef, ...constraints, orderBy("timestamp", "desc"), limit(200))
+            : query(logsRef, orderBy("timestamp", "desc"), limit(200));
+        
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400 text-xs">Nenhum registro encontrado para estes filtros.</td></tr>';
+            return;
+        }
+
+        tableBody.innerHTML = '';
+        if (pdfBtn) pdfBtn.classList.remove('hidden');
+
+        snapshot.forEach((docSnap) => {
+            const log = docSnap.data();
+            if (!log.timestamp) return;
+            
+            let formattedDate = 'Data inválida';
+            try {
+                const date = new Date(log.timestamp);
+                if (!isNaN(date.getTime())) {
+                    formattedDate = date.toLocaleString('pt-BR', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit'
+                    });
+                }
+            } catch (e) {}
+            
+            const row = document.createElement('tr');
+            row.className = "border-b hover:bg-gray-50 transition-colors";
+            
+            // ⭐ AQUI FAZEMOS A CLASSIFICAÇÃO DE CORES (INCLUINDO ERROS) ⭐
+            let actionColor = 'bg-purple-100 text-purple-700 border border-purple-200';
+            const action = (log.action || '').toLowerCase();
+            
+            if (action.includes('erro') || action.includes('error') || action.includes('falha')) {
+                actionColor = 'bg-red-600 text-white border border-red-700 font-black animate-pulse'; // Destaque máximo para erros
+            } else if (action.includes('delete') || action.includes('apagou') || action.includes('remove')) {
+                actionColor = 'bg-red-100 text-red-700 border border-red-200';
+            } else if (action.includes('create') || action.includes('criou') || action.includes('add')) {
+                actionColor = 'bg-green-100 text-green-700 border border-green-200';
+            } else if (action.includes('update') || action.includes('edit') || action.includes('atualiz')) {
+                actionColor = 'bg-blue-100 text-blue-700 border border-blue-200';
+            }
+            
+            const safeUserName = escapeHTML(log.userName || log.userEmail || 'Desconhecido');
+            const safeAction = escapeHTML(log.action || 'AÇÃO');
+            const safeDetails = escapeHTML(log.details || '-');
+            const pautaInfo = log.pautaId && log.pautaId !== 'N/A' ? `<br><span class="text-[8px] text-gray-400">Pauta: ${escapeHTML(log.pautaId.substring(0,8))}</span>` : '';
+            
+            row.innerHTML = `
+                <td class="px-3 py-2 whitespace-nowrap text-[10px] text-gray-600">${escapeHTML(formattedDate)}</td>
+                <td class="px-3 py-2">
+                    <p class="font-bold text-gray-800 text-[11px]">${safeUserName}</p>
+                </td>
+                <td class="px-3 py-2 text-center">
+                    <span class="px-2 py-0.5 rounded text-[9px] ${actionColor} uppercase shadow-sm">${safeAction}</span>
+                </td>
+                <td class="px-3 py-2 text-[10px] text-gray-600 max-w-xs break-words">
+                    ${safeDetails} ${pautaInfo}
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+    } catch (error) {
+        console.error("❌ Erro detalhado ao carregar logs:", error);
+        
+        let errorMessage = "Erro ao carregar registros.";
+        if (error.code === 'permission-denied') errorMessage = "Permissão negada. Você precisa ser admin.";
+        else if (error.code === 'failed-precondition') errorMessage = "O Firebase exige a criação de um Índice (Index) para combinar esses filtros. Verifique o console.";
+        else if (error.message) errorMessage = error.message;
+        
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500 text-xs font-bold border border-red-200 bg-red-50">
+            ❌ ${errorMessage}
+        </td></tr>`;
+    }
+};
+
+/**
+ * GERA PDF DOS LOGS COM FILTROS
+ */
+export const exportAuditLogsPDF = async (db) => {
+    showNotification("Gerando PDF da Auditoria...", "info");
+    
+    try {
+        if (!window.jspdf || !window.jspdf.jsPDF) throw new Error("Biblioteca jsPDF não carregada");
+        
+        const { jsPDF } = window.jspdf;
+        const docPDF = new jsPDF({ orientation: 'landscape' });
+
+        const logsRef = collection(db, "audit_logs");
+        let constraints = [];
+        
+        const userFilter = document.getElementById('filter-log-user')?.value;
+        const actionFilter = document.getElementById('filter-log-action')?.value;
+        const startDate = document.getElementById('filter-log-start')?.value;
+        const endDate = document.getElementById('filter-log-end')?.value;
+
+        if (userFilter && userFilter !== 'all') constraints.push(where("userEmail", "==", userFilter));
+        if (actionFilter && actionFilter !== 'all') constraints.push(where("action", "==", actionFilter));
+        if (startDate) constraints.push(where("timestamp", ">=", startDate));
+        if (endDate) constraints.push(where("timestamp", "<=", endDate + "T23:59:59"));
+        
+        let q = constraints.length > 0 
+            ? query(logsRef, ...constraints, orderBy("timestamp", "desc"), limit(500))
+            : query(logsRef, orderBy("timestamp", "desc"), limit(500));
+        
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            showNotification("Nenhum log para exportar nestas datas.", "warning");
+            return;
+        }
+
+        docPDF.setFontSize(18); docPDF.setTextColor(126, 34, 206);
+        docPDF.text("Relatorio de Auditoria, Erros e Seguranca - SIGAP", 14, 20);
+        
+        docPDF.setFontSize(10); docPDF.setTextColor(100, 100, 100);
+        docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
+        docPDF.text(`Total de registros processados: ${snapshot.size}`, 14, 34);
+        
+        let yOffset = 40;
+        if (userFilter && userFilter !== 'all') { docPDF.text(`Filtro Usuario: ${userFilter}`, 14, yOffset); yOffset += 6; }
+        if (actionFilter && actionFilter !== 'all') { docPDF.text(`Filtro Acao: ${actionFilter}`, 14, yOffset); yOffset += 6; }
+        if (startDate) { docPDF.text(`Periodo: ${startDate} ate ${endDate || 'hoje'}`, 14, yOffset); yOffset += 6; }
+
+        const head = [['Data/Hora', 'Usuario', 'Acao', 'Detalhes']];
+        const body = [];
+
+        snapshot.docs.forEach(docSnap => {
+            const log = docSnap.data();
+            let dateStr = log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : 'Invalida';
+            body.push([
+                dateStr,
+                `${log.userName || log.userEmail || 'Desconhecido'}`,
+                log.action || '-',
+                log.details || '-'
+            ]);
+        });
+
+        docPDF.autoTable({
+            head: head,
+            body: body,
+            startY: yOffset + 5,
+            theme: 'striped',
+            headStyles: { fillColor: [126, 34, 206], fontSize: 8, halign: 'center' },
+            styles: { fontSize: 7, cellPadding: 2 },
+            columnStyles: { 0: { cellWidth: 35 }, 1: { cellWidth: 45 }, 2: { cellWidth: 35 }, 3: { cellWidth: 'auto' } }
+        });
+
+        docPDF.save(`Auditoria_SIGAP_${new Date().toISOString().slice(0,10)}.pdf`);
+        showNotification("PDF gerado com sucesso!");
+        
+    } catch (error) {
+        console.error("Erro ao gerar PDF:", error);
+        showNotification("Erro ao gerar PDF: " + error.message, "error");
+    }
+};
+
+// =========================================================================
+// MÓDULO DE LIMPEZA E BI (OBSERVATÓRIO)
+// =========================================================================
+
 export const cleanupOldData = async (db) => {
     if (!confirm("Isso apagará dados com mais de 7 dias e gerará estatísticas. Confirmar?")) return;
 
@@ -170,24 +416,15 @@ export const cleanupOldData = async (db) => {
 
                 snapshot.docs.forEach(d => {
                     const data = d.data();
-                    
-                    // Assuntos
                     const sub = data.subject || 'Não informado';
                     stats.assuntos[sub] = (stats.assuntos[sub] || 0) + 1;
-                    
-                    // Horários e Salas
                     if (data.scheduledTime) stats.horarios[data.scheduledTime] = (stats.horarios[data.scheduledTime] || 0) + 1;
                     if (data.room) stats.salas[data.room] = (stats.salas[data.room] || 0) + 1;
-                    
-                    // Prioridades
                     if (data.priority) stats.prioridades[data.priority] = (stats.prioridades[data.priority] || 0) + 1;
                     
-                    // Tempo de Espera
                     if (data.arrivalTime && data.inAttendanceTime) {
-                        const arrival = new Date(data.arrivalTime);
-                        const attend = new Date(data.inAttendanceTime);
-                        const diffMins = Math.round((attend - arrival) / 60000);
-                        if (diffMins >= 0 && diffMins < 600) { // Limite de sanidade (10h)
+                        const diffMins = Math.round((new Date(data.inAttendanceTime) - new Date(data.arrivalTime)) / 60000);
+                        if (diffMins >= 0 && diffMins < 600) { 
                             stats.tempoEsperaTotalMinutos += diffMins;
                             stats.countTempoEspera++;
                         }
@@ -207,17 +444,12 @@ export const cleanupOldData = async (db) => {
     } catch (error) { showNotification("Erro: " + error.message, "error"); }
 };
 
-/**
- * GERA DADOS DE TESTE PARA O BI (COMPLETO)
- */
 export const generateTestData = async (db) => {
     if (!confirm("Gerar dados de teste super turbinados para o BI?")) return;
-    
     try {
         const testData = [];
         const assuntosPool = ["Divórcio", "Alimentos", "Guarda", "Curatela", "Inventário"];
         const salasPool = ["Vara de Família", "1ª Vara Cível", "Triagem"];
-        const prioridadesPool = ["Idoso (60+)", "Urgência Médica", "Gestante", "Comum"];
 
         for(let i=0; i<5; i++) {
             let totalDias = Math.floor(Math.random() * 20) + 10;
@@ -239,17 +471,12 @@ export const generateTestData = async (db) => {
                 prioridades: { "Idoso (60+)": 4, "Comum": 16 }
             });
         }
-        
         for (const data of testData) { await addDoc(collection(db, "estatisticas_permanentes"), data); }
-        
         showNotification("✅ Dados gerados com sucesso!");
         loadDashboardData(db);
     } catch (error) { showNotification("Erro ao gerar dados", "error"); }
 };
 
-/**
- * CARREGA O DASHBOARD DE BI (OBSERVATÓRIO) COM GRÁFICOS
- */
 export const loadDashboardData = async (db) => {
     const start = document.getElementById('stats-filter-start')?.value;
     const end = document.getElementById('stats-filter-end')?.value;
@@ -263,16 +490,12 @@ export const loadDashboardData = async (db) => {
 
     try {
         const snapshot = await getDocs(collection(db, "estatisticas_permanentes"));
-        
         if (snapshot.empty) {
             resultsArea.innerHTML = `
                 <div class="text-center py-12">
                     <p class="text-gray-500 mb-2">Nenhum dado estatístico consolidado ainda.</p>
-                    <button id="generate-test-data-btn" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold mt-4 shadow-md">
-                        Gerar Dados de Teste
-                    </button>
-                </div>
-            `;
+                    <button id="generate-test-data-btn" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold mt-4 shadow-md">Gerar Dados de Teste</button>
+                </div>`;
             document.getElementById('generate-test-data-btn')?.addEventListener('click', () => generateTestData(db));
             return;
         }
@@ -288,17 +511,13 @@ export const loadDashboardData = async (db) => {
             return;
         }
 
-        // Execução dos Cálculos Agregados
         let totalGeral = 0; let totalAtendidos = 0; let totalFaltosos = 0;
         let mapAssuntos = {}; let mapUsers = {}; let mapHorarios = {}; let mapPrioridades = {};
         let totalEsperaMins = 0; let countEspera = 0;
 
         filteredData.forEach(d => {
-            totalGeral += d.total || 0;
-            totalAtendidos += d.atendidos || 0;
-            totalFaltosos += d.faltosos || 0;
-            totalEsperaMins += d.tempoEsperaTotalMinutos || 0;
-            countEspera += d.countTempoEspera || 0;
+            totalGeral += d.total || 0; totalAtendidos += d.atendidos || 0; totalFaltosos += d.faltosos || 0;
+            totalEsperaMins += d.tempoEsperaTotalMinutos || 0; countEspera += d.countTempoEspera || 0;
             
             if (d.assuntos) for (let [k, v] of Object.entries(d.assuntos)) mapAssuntos[k] = (mapAssuntos[k] || 0) + v;
             if (d.horarios) for (let [k, v] of Object.entries(d.horarios)) mapHorarios[k] = (mapHorarios[k] || 0) + v;
@@ -311,64 +530,34 @@ export const loadDashboardData = async (db) => {
         const taxa = totalGeral > 0 ? ((totalFaltosos / totalGeral) * 100).toFixed(1) : 0;
         const tempoMedio = countEspera > 0 ? Math.round(totalEsperaMins / countEspera) : 0;
 
-        // INJEÇÃO DO HTML DO PAINEL EXECUTIVO
         resultsArea.innerHTML = `
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                <div class="p-4 bg-blue-50 rounded-lg text-center border border-blue-100 shadow-sm">
-                    <p class="text-[9px] sm:text-[10px] text-blue-600 font-bold uppercase">Demandado</p>
-                    <h4 class="text-xl sm:text-2xl font-black text-blue-800">${totalGeral}</h4>
-                </div>
-                <div class="p-4 bg-green-50 rounded-lg text-center border border-green-100 shadow-sm">
-                    <p class="text-[9px] sm:text-[10px] text-green-600 font-bold uppercase">Atendidos</p>
-                    <h4 class="text-xl sm:text-2xl font-black text-green-800">${totalAtendidos}</h4>
-                </div>
-                <div class="p-4 bg-orange-50 rounded-lg text-center border border-orange-100 shadow-sm">
-                    <p class="text-[9px] sm:text-[10px] text-orange-600 font-bold uppercase">Absenteísmo</p>
-                    <h4 class="text-xl sm:text-2xl font-black text-orange-800">${taxa}%</h4>
-                </div>
-                <div class="p-4 bg-purple-50 rounded-lg text-center border border-purple-100 shadow-sm">
-                    <p class="text-[9px] sm:text-[10px] text-purple-600 font-bold uppercase">Espera Média</p>
-                    <h4 class="text-xl sm:text-2xl font-black text-purple-800">${tempoMedio} <span class="text-xs font-normal">min</span></h4>
-                </div>
+                <div class="p-4 bg-blue-50 rounded-lg text-center border border-blue-100 shadow-sm"><p class="text-[9px] text-blue-600 font-bold uppercase">Demandado</p><h4 class="text-xl sm:text-2xl font-black text-blue-800">${totalGeral}</h4></div>
+                <div class="p-4 bg-green-50 rounded-lg text-center border border-green-100 shadow-sm"><p class="text-[9px] text-green-600 font-bold uppercase">Atendidos</p><h4 class="text-xl sm:text-2xl font-black text-green-800">${totalAtendidos}</h4></div>
+                <div class="p-4 bg-orange-50 rounded-lg text-center border border-orange-100 shadow-sm"><p class="text-[9px] text-orange-600 font-bold uppercase">Absenteísmo</p><h4 class="text-xl sm:text-2xl font-black text-orange-800">${taxa}%</h4></div>
+                <div class="p-4 bg-purple-50 rounded-lg text-center border border-purple-100 shadow-sm"><p class="text-[9px] text-purple-600 font-bold uppercase">Espera Média</p><h4 class="text-xl sm:text-2xl font-black text-purple-800">${tempoMedio} <span class="text-xs font-normal">min</span></h4></div>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6">
-                <div class="border rounded-lg p-4 bg-white shadow-sm">
-                    <h5 class="text-[10px] sm:text-xs font-bold mb-4 uppercase text-gray-500">Picos de Horário</h5>
-                    <div class="relative h-48 w-full"><canvas id="chart-horarios"></canvas></div>
-                </div>
-                <div class="border rounded-lg p-4 bg-white shadow-sm">
-                    <h5 class="text-[10px] sm:text-xs font-bold mb-4 uppercase text-gray-500">Perfil Legal (Prioridades)</h5>
-                    <div class="relative h-48 w-full flex justify-center"><canvas id="chart-prioridades"></canvas></div>
-                </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="border rounded-lg p-4 bg-white shadow-sm"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500">Picos de Horário</h5><div class="relative h-48 w-full"><canvas id="chart-horarios"></canvas></div></div>
+                <div class="border rounded-lg p-4 bg-white shadow-sm"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500">Perfil Legal (Prioridades)</h5><div class="relative h-48 w-full flex justify-center"><canvas id="chart-prioridades"></canvas></div></div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mt-6">
-                <div class="border rounded-lg p-4 bg-white shadow-sm">
-                    <h5 class="text-[10px] sm:text-xs font-bold mb-4 uppercase text-gray-500 border-b pb-2">Top Assuntos</h5>
-                    <div id="dash-subjects-list" class="space-y-2 text-xs"></div>
-                </div>
-                <div class="border rounded-lg p-4 bg-white shadow-sm">
-                    <h5 class="text-[10px] sm:text-xs font-bold mb-4 uppercase text-gray-500 border-b pb-2">Produtividade por Usuário</h5>
-                    <div id="dash-users-list" class="space-y-2 text-xs"></div>
-                </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                <div class="border rounded-lg p-4 bg-white shadow-sm"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500 border-b pb-2">Top Assuntos</h5><div id="dash-subjects-list" class="space-y-2 text-xs"></div></div>
+                <div class="border rounded-lg p-4 bg-white shadow-sm"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500 border-b pb-2">Produtividade por Usuário</h5><div id="dash-users-list" class="space-y-2 text-xs"></div></div>
             </div>
             
             <div class="flex justify-end gap-3 mt-6 border-t pt-4">
-                 <button id="export-csv-btn" class="bg-emerald-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-emerald-700 shadow-md text-sm transition">
-                     Baixar Excel (CSV)
-                 </button>
-                 <button id="export-bi-pdf-btn" class="bg-red-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-red-700 shadow-md text-sm transition">
-                     Baixar PDF
-                 </button>
+                 <button id="export-csv-btn" class="bg-emerald-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-emerald-700 shadow-md text-sm transition">Baixar Excel (CSV)</button>
+                 <button id="export-bi-pdf-btn" class="bg-red-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-red-700 shadow-md text-sm transition">Baixar PDF</button>
             </div>
         `;
 
-        // Renderização de Listas
         const renderRanking = (elementId, dataMap) => {
             const el = document.getElementById(elementId);
             const sorted = Object.entries(dataMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
-            if (sorted.length === 0) { el.innerHTML = '<p class="text-center text-gray-400 py-4 text-xs">Sem dados processados.</p>'; return; }
+            if (sorted.length === 0) { el.innerHTML = '<p class="text-center text-gray-400 py-4 text-xs">Sem dados.</p>'; return; }
             el.innerHTML = sorted.map(([name, count]) => `
                 <div class="flex justify-between items-center border-b border-dashed border-gray-200 pb-1 pt-1 hover:bg-gray-50">
                     <span class="truncate pr-2 font-medium text-gray-700">${escapeHTML(name)}</span>
@@ -379,147 +568,83 @@ export const loadDashboardData = async (db) => {
         renderRanking('dash-subjects-list', mapAssuntos);
         renderRanking('dash-users-list', mapUsers);
 
-        // Renderização de Gráficos (Chart.js)
         if (window.Chart) {
-            // Destrói instâncias anteriores se existirem
-            ['chart-horarios', 'chart-prioridades'].forEach(id => {
-                if (chartInstances[id]) chartInstances[id].destroy();
-            });
-
-            // Gráfico de Linha (Horários)
+            ['chart-horarios', 'chart-prioridades'].forEach(id => { if (chartInstances[id]) chartInstances[id].destroy(); });
             const ctxHorarios = document.getElementById('chart-horarios').getContext('2d');
             const horSorted = Object.entries(mapHorarios).sort((a,b) => a[0].localeCompare(b[0]));
             chartInstances['chart-horarios'] = new Chart(ctxHorarios, {
-                type: 'line',
-                data: {
-                    labels: horSorted.map(i => i[0]),
-                    datasets: [{
-                        label: 'Volume de Chegada',
-                        data: horSorted.map(i => i[1]),
-                        borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.2)',
-                        tension: 0.3, fill: true
-                    }]
-                },
+                type: 'line', data: { labels: horSorted.map(i => i[0]), datasets: [{ label: 'Volume', data: horSorted.map(i => i[1]), borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.2)', tension: 0.3, fill: true }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
-
-            // Gráfico de Pizza/Doughnut (Prioridades)
             const ctxPrio = document.getElementById('chart-prioridades').getContext('2d');
             const prioSorted = Object.entries(mapPrioridades);
             chartInstances['chart-prioridades'] = new Chart(ctxPrio, {
-                type: 'doughnut',
-                data: {
-                    labels: prioSorted.map(i => i[0]),
-                    datasets: [{
-                        data: prioSorted.map(i => i[1]),
-                        backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#64748b']
-                    }]
-                },
+                type: 'doughnut', data: { labels: prioSorted.map(i => i[0]), datasets: [{ data: prioSorted.map(i => i[1]), backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#64748b'] }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels:{boxWidth:10, font:{size:10}} } } }
             });
         }
 
-        // Eventos dos Botões de Exportação
         document.getElementById('export-bi-pdf-btn')?.addEventListener('click', () => exportBIDashboardPDF(totalGeral, totalAtendidos, taxa, tempoMedio, mapAssuntos));
         document.getElementById('export-csv-btn')?.addEventListener('click', () => exportCSV(totalGeral, totalAtendidos, taxa, tempoMedio, mapAssuntos, mapHorarios));
 
         showNotification("Painel Executivo atualizado!", "success");
 
     } catch (error) {
-        console.error("Dashboard Error:", error);
         resultsArea.innerHTML = `<div class="text-center py-8 text-red-500 font-bold">Erro: ${error.message}</div>`;
     }
 };
 
-/**
- * EXPORTA DADOS PARA EXCEL (CSV)
- */
 const exportCSV = (totalGeral, totalAtendidos, taxa, tempoMedio, mapAssuntos, mapHorarios) => {
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "RELATORIO EXECUTIVO - SIGAP\n\n";
-    
-    // Resumo
-    csvContent += "METRICA;VALOR\n";
-    csvContent += `Total Demandado;${totalGeral}\n`;
-    csvContent += `Total Atendido;${totalAtendidos}\n`;
-    csvContent += `Taxa Absenteismo;${taxa}%\n`;
-    csvContent += `Tempo Medio Espera (min);${tempoMedio}\n\n`;
-    
-    // Assuntos
-    csvContent += "ASSUNTO;QUANTIDADE\n";
+    let csvContent = "data:text/csv;charset=utf-8,RELATORIO EXECUTIVO - SIGAP\n\nMETRICA;VALOR\n";
+    csvContent += `Total Demandado;${totalGeral}\nTotal Atendido;${totalAtendidos}\nTaxa Absenteismo;${taxa}%\nTempo Medio Espera (min);${tempoMedio}\n\nASSUNTO;QUANTIDADE\n`;
     Object.entries(mapAssuntos).sort((a,b)=>b[1]-a[1]).forEach(([k,v]) => { csvContent += `${k};${v}\n`; });
-    csvContent += "\n";
-
-    // Horários
-    csvContent += "HORARIO;VOLUME\n";
+    csvContent += "\nHORARIO;VOLUME\n";
     Object.entries(mapHorarios).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([k,v]) => { csvContent += `${k};${v}\n`; });
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
     link.setAttribute("download", `Relatorio_BI_SIGAP_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
 };
 
-/**
- * EXPORTA O PDF DO RELATÓRIO DO BI
- */
 export const exportBIDashboardPDF = (totalGeral, totalAtendidos, taxaFalta, tempoMedio, mapAssuntos) => {
     try {
-        if (!window.jspdf || !window.jspdf.jsPDF) throw new Error("Biblioteca jsPDF não carregada");
         const docPDF = new window.jspdf.jsPDF();
-        
-        docPDF.setFontSize(18); docPDF.setTextColor(22, 163, 74); 
-        docPDF.text("Relatorio Executivo de BI - SIGAP", 14, 20);
-        
-        docPDF.setFontSize(10); docPDF.setTextColor(100, 100, 100);
-        docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
-        
-        docPDF.setFontSize(14); docPDF.setTextColor(0, 0, 0);
-        docPDF.text("Resumo Geral", 14, 45);
-        
+        docPDF.setFontSize(18); docPDF.setTextColor(22, 163, 74); docPDF.text("Relatorio Executivo de BI - SIGAP", 14, 20);
+        docPDF.setFontSize(10); docPDF.setTextColor(100, 100, 100); docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
+        docPDF.setFontSize(14); docPDF.setTextColor(0, 0, 0); docPDF.text("Resumo Geral", 14, 45);
         docPDF.setFontSize(11); docPDF.setTextColor(50, 50, 50);
-        docPDF.text(`Total Demandado: ${totalGeral}`, 14, 55);
-        docPDF.text(`Atendimentos Efetivos: ${totalAtendidos}`, 14, 62);
-        docPDF.text(`Taxa de Faltas (Absenteismo): ${taxaFalta}`, 14, 69);
-        docPDF.text(`Tempo Medio de Espera: ${tempoMedio} min`, 14, 76);
-        
-        docPDF.setFontSize(14); docPDF.setTextColor(0, 0, 0);
-        docPDF.text("Principais Demandas", 14, 90);
-        
+        docPDF.text(`Total Demandado: ${totalGeral}`, 14, 55); docPDF.text(`Atendimentos Efetivos: ${totalAtendidos}`, 14, 62);
+        docPDF.text(`Taxa de Faltas: ${taxaFalta}`, 14, 69); docPDF.text(`Tempo Medio de Espera: ${tempoMedio} min`, 14, 76);
+        docPDF.setFontSize(14); docPDF.setTextColor(0, 0, 0); docPDF.text("Principais Demandas", 14, 90);
         let y = 100; docPDF.setFontSize(10); docPDF.setTextColor(80, 80, 80);
-        const sorted = Object.entries(mapAssuntos).sort((a,b) => b[1] - a[1]).slice(0,10);
-        sorted.forEach(([k,v]) => { docPDF.text(`${k}: ${v} atendimentos`, 14, y); y += 7; });
-        
+        Object.entries(mapAssuntos).sort((a,b) => b[1] - a[1]).slice(0,10).forEach(([k,v]) => { docPDF.text(`${k}: ${v} atendimentos`, 14, y); y += 7; });
         docPDF.save(`Relatorio_BI_SIGAP_${new Date().toISOString().slice(0,10)}.pdf`);
     } catch(e) { showNotification("Erro ao gerar PDF", "error"); }
 };
 
-/**
- * ALIMENTA O FILTRO DE USUÁRIOS
- */
 export const populateUserFilter = async (db) => {
     const select = document.getElementById('stats-filter-user');
     if (!select) return;
     try {
         const snapshot = await getDocs(collection(db, "users"));
         select.innerHTML = '<option value="all">Todos os Usuários</option>';
-        snapshot.forEach(d => {
-            const user = d.data();
-            if (user.email) select.appendChild(new Option(user.name || user.email, user.email));
-        });
-    } catch (e) { console.error(e); }
+        snapshot.forEach(d => { if (d.data().email) select.appendChild(new Option(d.data().name || d.data().email, d.data().email)); });
+    } catch (e) {}
 };
 
-export const loadAuditLogs = async (db) => {}; // Simplificado para economizar espaço
-export const exportAuditLogsPDF = async (db) => {}; // Simplificado para economizar espaço
-export const loadLogFilters = async (db) => {}; // Simplificado para economizar espaço
+// Listeners dinâmicos
+document.getElementById('filter-log-user')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
+document.getElementById('filter-log-action')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
+document.getElementById('filter-log-start')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
+document.getElementById('filter-log-end')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
 
 // Globais
 window.cleanupOldData = () => cleanupOldData(window.app?.db);
 window.loadDashboardData = () => loadDashboardData(window.app?.db);
 window.populateUserFilter = () => populateUserFilter(window.app?.db);
 window.generateTestData = () => generateTestData(window.app?.db);
-console.log("✅ Módulo admin.js carregado (BI Avançado)");
+window.loadAuditLogs = () => loadAuditLogs(window.app?.db);
+window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
+console.log("✅ Módulo admin.js carregado com sucesso (Auditoria e BI Completos)");
