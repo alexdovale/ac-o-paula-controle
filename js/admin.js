@@ -79,6 +79,7 @@ export const loadUsersList = async (db) => {
                 const roleSelector = `
                     <select id="role-select-${userId}" class="text-[10px] border rounded p-1 bg-gray-50 focus:ring-1 focus:ring-blue-500 outline-none">
                         <option value="user" ${user.role === 'user' ? 'selected' : ''}>Usuário</option>
+                        <option value="apoio" ${user.role === 'apoio' ? 'selected' : ''}>Apoio</option>
                         <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
                         <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>Superadmin</option>
                         <option value="suspended" ${user.role === 'suspended' ? 'selected' : ''}>⚠️ Suspenso</option>
