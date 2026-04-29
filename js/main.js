@@ -1589,22 +1589,64 @@ class SIGAPApp {
         // ================================================
         // FECHAR MODAL ADMIN E PAINÉIS AO CLICAR FORA
         // ================================================
+        // --- Listener Global para Fechar Menus/Modais ---
+        // Este listener é adicionado para fechar menus dropdown e modais quando se clica fora deles.
         document.addEventListener('click', (e) => {
+            // Se o admin modal está aberto, precisamos garantir que cliques dentro dele ou nos botões
+            // que o controlam não o fechem imediatamente.
+            
             const adminModal = document.getElementById('admin-modal');
-            const adminPanelToggle = document.getElementById('pauta-settings-toggle'); // O botão que abre o PAINEL de SETTINGS da pauta
-            const adminActionsToggle = document.getElementById('actions-toggle'); // O botão que abre o PAINEL de AÇÕES
+            const adminPanelToggle = document.getElementById('pauta-settings-toggle'); // Botão que abre o painel de SETTINGS da pauta
+            const adminActionsToggle = document.getElementById('actions-toggle');     // Botão que abre o painel de AÇÕES
+            const adminPanelBtn = document.getElementById('admin-panel-btn');         // Botão que abre o MODAL do admin (na tela de seleção)
+            const adminBtnMain = document.getElementById('admin-btn-main');           // Botão alternativo no header principal
 
-            if (adminModal && (
-                adminModal.contains(e.target) || 
-                (adminPanelToggle && adminPanelToggle.contains(e.target)) || 
-                (adminActionsToggle && adminActionsToggle.contains(e.target))
-            )) {
-                return; 
+            // --- Lógica para NÃO fechar o modal do Admin ---
+            // Se o modal do admin está aberto E o clique ocorreu:
+            // 1. Dentro do próprio modal admin (`adminModal.contains(e.target)`)
+            // 2. No botão que abre as Configurações da Pauta (`adminPanelToggle.contains(e.target)`)
+            // 3. No botão que abre as Ações do Card (`adminActionsToggle.contains(e.target)`)
+            // 4. No botão principal que abre o Modal Admin (`adminPanelBtn.contains(e.target)`)
+            // 5. OU no botão alternativo principal (`adminBtnMain.contains(e.target)`)
+            // Então, PARE a execução para que ele não feche.
+            if (
+                (adminModal && adminModal.contains(e.target)) ||
+                (adminPanelToggle && adminPanelToggle.contains(e.target)) ||
+                (adminActionsToggle && adminActionsToggle.contains(e.target)) ||
+                (adminPanelBtn && adminPanelBtn.contains(e.target)) ||
+                (adminBtnMain && adminBtnMain.contains(e.target))
+            ) {
+                console.log("Clique ignorado: dentro do modal admin ou nos seus toggles/botões.");
+                return; // Não faz nada, o modal não fecha
             }
 
+            // --- Lógica para fechar OUTROS menus/modais ---
+            // Aqui você pode adicionar a lógica para fechar outros elementos
+            // como o painel de ações (`actions-panel`) e o painel de configurações (`pauta-settings-panel`).
+            // Certifique-se de que ESSES elementos TAMBÉM usem `e.stopPropagation()` ou tenham suas próprias lógicas de fechamento
+            // para não interferirem com o modal do admin.
+
+            // Exemplo de como fechar outros menus (ajuste os IDs conforme seu HTML):
+            const actionsPanel = document.getElementById('actions-panel');
+            const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
+
+            if (actionsPanel && !actionsPanel.classList.contains('hidden') && !actionsPanel.contains(e.target) && !document.getElementById('actions-toggle')?.contains(e.target)) {
+                actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+            }
+            if (pautaSettingsPanel && !pautaSettingsPanel.classList.contains('hidden') && pautaSettingsToggle && !pautaSettingsToggle.contains(e.target)) {
+                 pautaSettingsPanel.classList.add('hidden');
+                 // Resetar estado visual do toggle (seta/ícone) do pauta-settings-toggle
+                 const pautaSettingsArrow = document.getElementById('pauta-settings-arrow'); // Assumindo que você tem um ID assim
+                 if (pautaSettingsArrow) pautaSettingsArrow.classList.remove('rotate-180');
+            }
+
+            // Se o admin modal estava aberto e o clique NÃO FOI em nenhum dos elementos acima (incluindo o admin modal/toggle)
+            // Então feche o admin modal.
             if (adminModal && !adminModal.classList.contains('hidden')) {
                 adminModal.classList.add('hidden');
-                const adminArrow = document.getElementById('actions-arrow');
+                // Resetar estado visual do toggle (seta/ícone) do admin
+                const adminArrow = document.getElementById('actions-arrow'); // Este ID pode estar errado, verifique o ícone do admin toggle
                 if (adminArrow) adminArrow.classList.remove('rotate-180');
             }
         });
