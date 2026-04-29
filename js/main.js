@@ -1601,6 +1601,37 @@ class SIGAPApp {
         }
 
         // ================================================
+        // FECHAR MODAL ADMIN E PAINÉIS AO CLICAR FORA
+        // ================================================
+        document.addEventListener('click', (e) => {
+            const adminModal = document.getElementById('admin-modal');
+            const adminPanelToggle = document.getElementById('pauta-settings-toggle'); // O botão que abre o PAINEL de SETTINGS da pauta
+            const adminActionsToggle = document.getElementById('actions-toggle'); // O botão que abre o PAINEL de AÇÕES
+
+            // Se o clique foi dentro do modal de admin OU no botão de toggle do admin, NÃO FAÇA NADA
+            // (Com segurança contra null caso os toggles não estejam na tela atual)
+            if (adminModal && (
+                adminModal.contains(e.target) || 
+                (adminPanelToggle && adminPanelToggle.contains(e.target)) || 
+                (adminActionsToggle && adminActionsToggle.contains(e.target))
+            )) {
+                // Se o clique foi em um dos elementos que DEVEM manter o modal aberto, ignora o fechamento
+                // Poderia haver outros menus aqui que deveriam ser fechados
+                // Mas para simplificar: se o clique foi DENTRO do modal de admin OU no seu toggle, apenas ignora o fechamento.
+                return; 
+            }
+
+            // Se o clique foi FORA de tudo isso, então fecha o modal de admin
+            if (adminModal && !adminModal.classList.contains('hidden')) {
+                adminModal.classList.add('hidden');
+                // Resetar estado visual do toggle (seta/ícone)
+                const adminArrow = document.getElementById('actions-arrow');
+                if (adminArrow) adminArrow.classList.remove('rotate-180');
+                // Você pode precisar fazer o mesmo para o toggle das configurações da pauta se ele também usa um ícone que muda
+            }
+        });
+
+        // ================================================
         // CONFIGURAÇÃO DO PAINEL ADMIN
         // ================================================
         
