@@ -181,7 +181,7 @@ export const deleteUser = async (db, userId) => {
     }
 };
 
-// Tornar funções globais para acesso via onclick
+// Tornar funções globais para acesso via onclick na lista de usuários
 window.approveUser = (userId) => approveUser(window.app?.db, userId);
 window.updateUserRole = (userId) => updateUserRole(window.app?.db, userId);
 window.deleteUser = (userId) => deleteUser(window.app?.db, userId);
@@ -200,7 +200,7 @@ export const updateAdminStats = async (db) => {
 };
 
 /**
- * LIMPEZA LGPD COM SALVAMENTO DE BI (Observatório) - VERSÃO CORRIGIDA
+ * LIMPEZA LGPD COM SALVAMENTO DE BI (Observatório)
  */
 export const cleanupOldData = async (db) => {
     if (!confirm("Isso apagará dados sensíveis de assistidos com mais de 7 dias. Os números de produtividade serão salvos anonimamente. Confirmar?")) return;
@@ -291,16 +291,8 @@ export const generateTestData = async (db) => {
                 atendidos: 10,
                 faltosos: 5,
                 aguardando: 0,
-                assuntos: {
-                    "Alimentos": 8,
-                    "Divórcio": 4,
-                    "Guarda": 3
-                },
-                horarios: {
-                    "09:00": 5,
-                    "10:00": 4,
-                    "11:00": 6
-                }
+                assuntos: { "Alimentos": 8, "Divórcio": 4, "Guarda": 3 },
+                horarios: { "09:00": 5, "10:00": 4, "11:00": 6 }
             },
             {
                 pautaName: "Pauta Teste 2",
@@ -311,16 +303,8 @@ export const generateTestData = async (db) => {
                 atendidos: 15,
                 faltosos: 5,
                 aguardando: 0,
-                assuntos: {
-                    "Alimentos": 10,
-                    "Investigação": 6,
-                    "Curatela": 4
-                },
-                horarios: {
-                    "08:00": 7,
-                    "09:00": 8,
-                    "10:00": 5
-                }
+                assuntos: { "Alimentos": 10, "Investigação": 6, "Curatela": 4 },
+                horarios: { "08:00": 7, "09:00": 8, "10:00": 5 }
             },
             {
                 pautaName: "Pauta Teste 3",
@@ -331,15 +315,8 @@ export const generateTestData = async (db) => {
                 atendidos: 6,
                 faltosos: 2,
                 aguardando: 0,
-                assuntos: {
-                    "Alimentos": 3,
-                    "Divórcio": 3,
-                    "Curatela": 2
-                },
-                horarios: {
-                    "14:00": 4,
-                    "15:00": 4
-                }
+                assuntos: { "Alimentos": 3, "Divórcio": 3, "Curatela": 2 },
+                horarios: { "14:00": 4, "15:00": 4 }
             }
         ];
         
@@ -377,7 +354,7 @@ export const loadLogFilters = async (db) => {
             });
         }
         
-        // Carregar tipos de ação para o filtro (buscando dos logs)
+        // Carregar tipos de ação para o filtro
         const actionSelect = document.getElementById('filter-log-action');
         if (actionSelect) {
             const logsSnap = await getDocs(collection(db, "audit_logs"));
@@ -412,75 +389,38 @@ export const loadAuditLogs = async (db) => {
     const filterSection = document.getElementById('audit-filters-section');
     
     if (!logsContainer || !tableBody) {
-        console.error("❌ Elementos de log não encontrados:", {
-            container: !!logsContainer,
-            body: !!tableBody
-        });
         showNotification("Erro: elementos da interface não encontrados", "error");
         return;
     }
 
-    // Mostrar seção de filtros se existir
-    if (filterSection) {
-        filterSection.classList.remove('hidden');
-    }
+    if (filterSection) filterSection.classList.remove('hidden');
 
-    // Mostra loading
     logsContainer.classList.remove('hidden');
-    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><div class="loader-small"></div><p class="text-xs text-gray-400 mt-2">Carregando histórico...</p></td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><div class="loader-small mx-auto"></div><p class="text-xs text-gray-400 mt-2">Carregando histórico...</p></td></tr>';
     
     if (pdfBtn) pdfBtn.classList.add('hidden');
 
     try {
-        // Verificar conexão com Firestore
-        if (!db) {
-            throw new Error("Database não inicializado");
-        }
+        if (!db) throw new Error("Database não inicializado");
 
-        // Construir query com filtros
         const logsRef = collection(db, "audit_logs");
-        
-        // Aplicar filtros
         let constraints = [];
         
-        // Filtro de usuário
         const userFilter = document.getElementById('filter-log-user')?.value;
-        if (userFilter && userFilter !== 'all') {
-            constraints.push(where("userEmail", "==", userFilter));
-        }
+        if (userFilter && userFilter !== 'all') constraints.push(where("userEmail", "==", userFilter));
         
-        // Filtro de ação
         const actionFilter = document.getElementById('filter-log-action')?.value;
-        if (actionFilter && actionFilter !== 'all') {
-            constraints.push(where("action", "==", actionFilter));
-        }
+        if (actionFilter && actionFilter !== 'all') constraints.push(where("action", "==", actionFilter));
         
-        // Filtro de data início
         const startDate = document.getElementById('filter-log-start')?.value;
-        if (startDate) {
-            constraints.push(where("timestamp", ">=", startDate));
-        }
+        if (startDate) constraints.push(where("timestamp", ">=", startDate));
         
-        // Filtro de data fim
         const endDate = document.getElementById('filter-log-end')?.value;
-        if (endDate) {
-            constraints.push(where("timestamp", "<=", endDate + "T23:59:59"));
-        }
+        if (endDate) constraints.push(where("timestamp", "<=", endDate + "T23:59:59"));
         
-        console.log("📊 Filtros aplicados:", {
-            user: userFilter,
-            action: actionFilter,
-            start: startDate,
-            end: endDate
-        });
-        
-        // Montar query
-        let q;
-        if (constraints.length > 0) {
-            q = query(logsRef, ...constraints, orderBy("timestamp", "desc"), limit(200));
-        } else {
-            q = query(logsRef, orderBy("timestamp", "desc"), limit(200));
-        }
+        let q = constraints.length > 0 
+            ? query(logsRef, ...constraints, orderBy("timestamp", "desc"), limit(200))
+            : query(logsRef, orderBy("timestamp", "desc"), limit(200));
         
         const snapshot = await getDocs(q);
 
@@ -498,34 +438,22 @@ export const loadAuditLogs = async (db) => {
             try {
                 const log = docSnap.data();
                 
-                // Validar dados obrigatórios
-                if (!log.timestamp) {
-                    console.warn("Log sem timestamp ignorado:", docSnap.id);
-                    return;
-                }
+                if (!log.timestamp) return;
                 
-                // Formata a data com segurança
                 let formattedDate = 'Data inválida';
                 try {
                     const date = new Date(log.timestamp);
                     if (!isNaN(date.getTime())) {
                         formattedDate = date.toLocaleString('pt-BR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
+                            day: '2-digit', month: '2-digit', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit', second: '2-digit'
                         });
                     }
-                } catch (e) {
-                    console.warn("Erro ao formatar data:", e);
-                }
+                } catch (e) { }
                 
                 const row = document.createElement('tr');
                 row.className = "border-b hover:bg-gray-50 transition-colors";
                 
-                // Define cor baseada na ação
                 let actionColor = 'bg-purple-100 text-purple-700';
                 const action = (log.action || '').toLowerCase();
                 if (action.includes('delete') || action.includes('apagou') || action.includes('remove')) {
@@ -536,7 +464,6 @@ export const loadAuditLogs = async (db) => {
                     actionColor = 'bg-blue-100 text-blue-700';
                 }
                 
-                // Escapar HTML para segurança
                 const safeUserName = escapeHTML(log.userName || log.userEmail || 'Desconhecido');
                 const safeUserEmail = escapeHTML(log.userEmail || '');
                 const safeAction = escapeHTML(log.action || 'AÇÃO');
@@ -556,39 +483,27 @@ export const loadAuditLogs = async (db) => {
                         </span>
                     </td>
                     <td class="px-3 py-2 text-[10px] text-gray-600">
-                        <div class="max-w-xs truncate" title="${safeDetails}">
-                            ${safeDetails}
-                        </div>
+                        <div class="max-w-xs truncate" title="${safeDetails}">${safeDetails}</div>
                         ${safePautaId}
                     </td>
                 `;
                 tableBody.appendChild(row);
                 rowCount++;
                 
-            } catch (rowError) {
-                console.error("Erro ao processar linha do log:", rowError, docSnap.id);
-            }
+            } catch (rowError) { }
         });
 
-        // Se não adicionou nenhuma linha
         if (rowCount === 0) {
             tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400 text-xs">Nenhum log válido encontrado.</td></tr>';
-        } else {
-            console.log(`✅ ${rowCount} logs carregados com sucesso`);
         }
 
     } catch (error) {
         console.error("❌ Erro detalhado ao carregar logs:", error);
         
-        // Mensagem de erro mais específica
         let errorMessage = "Erro ao carregar registros.";
-        if (error.code === 'permission-denied') {
-            errorMessage = "Permissão negada. Você precisa ser admin.";
-        } else if (error.code === 'not-found') {
-            errorMessage = "Coleção de logs não encontrada.";
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
+        if (error.code === 'permission-denied') errorMessage = "Permissão negada. Você precisa ser admin.";
+        else if (error.code === 'not-found') errorMessage = "Coleção de logs não encontrada.";
+        else if (error.message) errorMessage = error.message;
         
         tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500 text-xs">
             ❌ ${errorMessage}<br>
@@ -604,44 +519,29 @@ export const exportAuditLogsPDF = async (db) => {
     showNotification("Gerando PDF...", "info");
     
     try {
-        // Verificar se jsPDF está disponível
-        if (!window.jspdf || !window.jspdf.jsPDF) {
-            throw new Error("Biblioteca jsPDF não carregada");
-        }
+        if (!window.jspdf || !window.jspdf.jsPDF) throw new Error("Biblioteca jsPDF não carregada");
         
         const { jsPDF } = window.jspdf;
         const docPDF = new jsPDF({ orientation: 'landscape' });
 
-        // Aplicar mesmos filtros do loadAuditLogs
         const logsRef = collection(db, "audit_logs");
         let constraints = [];
         
         const userFilter = document.getElementById('filter-log-user')?.value;
-        if (userFilter && userFilter !== 'all') {
-            constraints.push(where("userEmail", "==", userFilter));
-        }
+        if (userFilter && userFilter !== 'all') constraints.push(where("userEmail", "==", userFilter));
         
         const actionFilter = document.getElementById('filter-log-action')?.value;
-        if (actionFilter && actionFilter !== 'all') {
-            constraints.push(where("action", "==", actionFilter));
-        }
+        if (actionFilter && actionFilter !== 'all') constraints.push(where("action", "==", actionFilter));
         
         const startDate = document.getElementById('filter-log-start')?.value;
-        if (startDate) {
-            constraints.push(where("timestamp", ">=", startDate));
-        }
+        if (startDate) constraints.push(where("timestamp", ">=", startDate));
         
         const endDate = document.getElementById('filter-log-end')?.value;
-        if (endDate) {
-            constraints.push(where("timestamp", "<=", endDate + "T23:59:59"));
-        }
+        if (endDate) constraints.push(where("timestamp", "<=", endDate + "T23:59:59"));
         
-        let q;
-        if (constraints.length > 0) {
-            q = query(logsRef, ...constraints, orderBy("timestamp", "desc"), limit(500));
-        } else {
-            q = query(logsRef, orderBy("timestamp", "desc"), limit(500));
-        }
+        let q = constraints.length > 0 
+            ? query(logsRef, ...constraints, orderBy("timestamp", "desc"), limit(500))
+            : query(logsRef, orderBy("timestamp", "desc"), limit(500));
         
         const snapshot = await getDocs(q);
 
@@ -650,7 +550,6 @@ export const exportAuditLogsPDF = async (db) => {
             return;
         }
 
-        // Título
         docPDF.setFontSize(18);
         docPDF.setTextColor(126, 34, 206);
         docPDF.text("Relatório de Auditoria e Segurança - SIGAP", 14, 20);
@@ -660,7 +559,6 @@ export const exportAuditLogsPDF = async (db) => {
         docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
         docPDF.text(`Total de registros: ${snapshot.size}`, 14, 34);
         
-        // Adicionar informações dos filtros aplicados
         let yOffset = 40;
         if (userFilter && userFilter !== 'all') {
             docPDF.text(`Filtro usuário: ${userFilter}`, 14, yOffset);
@@ -675,7 +573,6 @@ export const exportAuditLogsPDF = async (db) => {
             yOffset += 6;
         }
 
-        // Preparar dados para a tabela
         const head = [['Data/Hora', 'Usuário', 'Ação', 'Detalhes', 'Pauta ID']];
         const body = [];
 
@@ -684,9 +581,7 @@ export const exportAuditLogsPDF = async (db) => {
                 const log = docSnap.data();
                 let dateStr = '';
                 try {
-                    if (log.timestamp) {
-                        dateStr = new Date(log.timestamp).toLocaleString('pt-BR');
-                    }
+                    if (log.timestamp) dateStr = new Date(log.timestamp).toLocaleString('pt-BR');
                 } catch (e) {
                     dateStr = 'Data inválida';
                 }
@@ -698,9 +593,7 @@ export const exportAuditLogsPDF = async (db) => {
                     log.details || '-',
                     log.pautaId || 'N/A'
                 ]);
-            } catch (e) {
-                console.warn("Erro ao processar log para PDF:", e);
-            }
+            } catch (e) { }
         });
 
         docPDF.autoTable({
@@ -708,175 +601,18 @@ export const exportAuditLogsPDF = async (db) => {
             body: body,
             startY: yOffset + 5,
             theme: 'striped',
-            headStyles: { 
-                fillColor: [126, 34, 206],
-                fontSize: 8,
-                halign: 'center'
-            },
-            styles: { 
-                fontSize: 7,
-                cellPadding: 2
-            },
-            columnStyles: {
-                0: { cellWidth: 35 },
-                1: { cellWidth: 40 },
-                2: { cellWidth: 30 },
-                3: { cellWidth: 'auto' },
-                4: { cellWidth: 30 }
-            }
+            headStyles: { fillColor: [126, 34, 206], fontSize: 8, halign: 'center' },
+            styles: { fontSize: 7, cellPadding: 2 },
+            columnStyles: { 0: { cellWidth: 35 }, 1: { cellWidth: 40 }, 2: { cellWidth: 30 }, 3: { cellWidth: 'auto' }, 4: { cellWidth: 30 } }
         });
 
         const filename = `auditoria_sigap_${new Date().toISOString().slice(0,10)}.pdf`;
         docPDF.save(filename);
-        
         showNotification("PDF gerado com sucesso!");
         
     } catch (error) {
         console.error("Erro ao gerar PDF:", error);
         showNotification("Erro ao gerar PDF: " + error.message, "error");
-    }
-};
-
-/**
- * CARREGA O DASHBOARD DE BI (OBSERVATÓRIO) - VERSÃO CORRIGIDA
- */
-export const loadDashboardData = async (db) => {
-    const start = document.getElementById('stats-filter-start')?.value;
-    const end = document.getElementById('stats-filter-end')?.value;
-    const userFilter = document.getElementById('stats-filter-user')?.value;
-    const resultsArea = document.getElementById('dashboard-results');
-
-    if (!resultsArea) {
-        console.error("Elemento dashboard-results não encontrado");
-        return;
-    }
-    
-    resultsArea.classList.remove('hidden');
-    resultsArea.innerHTML = '<div class="text-center py-8"><div class="loader-small mx-auto"></div><p class="text-gray-600 mt-2">Carregando dados...</p></div>';
-
-    try {
-        // Buscar dados
-        const snapshot = await getDocs(collection(db, "estatisticas_permanentes"));
-        
-        console.log("📊 Total de documentos na coleção:", snapshot.size);
-        
-        if (snapshot.empty) {
-            resultsArea.innerHTML = `
-                <div class="text-center py-12">
-                    <p class="text-gray-500 mb-2">Nenhum dado estatístico encontrado.</p>
-                    <p class="text-xs text-gray-400 mb-4">Execute a limpeza de 7 dias para gerar dados ou use o botão abaixo para gerar dados de teste.</p>
-                    <button id="generate-test-data-btn" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-purple-700">
-                        Gerar Dados de Teste
-                    </button>
-                </div>
-            `;
-            
-            // Adicionar evento ao botão de teste
-            document.getElementById('generate-test-data-btn')?.addEventListener('click', () => {
-                generateTestData(db);
-            });
-            
-            return;
-        }
-        
-        let filteredData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        
-        console.log("📊 Dados brutos:", filteredData);
-
-        // Filtro de Data
-        if (start) {
-            filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia >= start);
-        }
-        if (end) {
-            filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia <= end + "T23:59:59");
-        }
-        
-        // Filtro por Criador
-        if (userFilter && userFilter !== 'all') {
-            filteredData = filteredData.filter(d => d.creatorEmail === userFilter);
-        }
-
-        console.log("📊 Dados após filtros:", filteredData);
-
-        if (filteredData.length === 0) {
-            resultsArea.innerHTML = '<div class="text-center py-8 text-gray-400">Nenhum dado encontrado com os filtros selecionados.</div>';
-            return;
-        }
-
-        // Consolidação dos Cálculos
-        let totalGeral = 0;
-        let totalAtendidos = 0;
-        let totalFaltosos = 0;
-        let mapAssuntos = {};
-        let mapUsers = {};
-
-        filteredData.forEach(d => {
-            totalGeral += d.total || 0;
-            totalAtendidos += d.atendidos || 0;
-            totalFaltosos += d.faltosos || 0;
-            
-            // Soma assuntos entre documentos
-            if (d.assuntos) {
-                for (let [key, val] of Object.entries(d.assuntos)) {
-                    mapAssuntos[key] = (mapAssuntos[key] || 0) + val;
-                }
-            } else {
-                // Se não tiver assuntos, adiciona um genérico
-                mapAssuntos['Não especificado'] = (mapAssuntos['Não especificado'] || 0) + (d.total || 0);
-            }
-
-            // Soma produtividade por usuário
-            const userKey = d.creatorEmail || 'Desconhecido';
-            mapUsers[userKey] = (mapUsers[userKey] || 0) + (d.atendidos || 0);
-        });
-
-        console.log("📊 Dados consolidados:", {
-            totalGeral,
-            totalAtendidos,
-            totalFaltosos,
-            mapAssuntos,
-            mapUsers
-        });
-
-        // Atualização da Interface (Cards Superiores)
-        const dashTotalGeral = document.getElementById('dash-total-geral');
-        const dashTotalAtendidos = document.getElementById('dash-total-atendidos');
-        const dashTaxaFalta = document.getElementById('dash-taxa-falta');
-        
-        if (dashTotalGeral) dashTotalGeral.textContent = totalGeral;
-        if (dashTotalAtendidos) dashTotalAtendidos.textContent = totalAtendidos;
-        
-        const taxa = totalGeral > 0 ? ((totalFaltosos / totalGeral) * 100).toFixed(1) : 0;
-        if (dashTaxaFalta) dashTaxaFalta.textContent = taxa + "%";
-
-        // Renderização de Listas (Ranking)
-        const renderRanking = (elementId, dataMap) => {
-            const el = document.getElementById(elementId);
-            if (!el) return;
-            
-            const sorted = Object.entries(dataMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
-            
-            if (sorted.length === 0) {
-                el.innerHTML = '<p class="text-center text-gray-400 py-4 text-xs">Sem dados para o filtro.</p>';
-                return;
-            }
-
-            el.innerHTML = sorted.map(([name, count]) => `
-                <div class="flex justify-between items-center border-b pb-1 text-xs">
-                    <span class="truncate pr-2" title="${escapeHTML(name)}">${escapeHTML(name)}</span>
-                    <span class="font-bold text-green-700">${count}</span>
-                </div>
-            `).join('');
-        };
-
-        renderRanking('dash-subjects-list', mapAssuntos);
-        renderRanking('dash-users-list', mapUsers);
-        
-        showNotification("Dashboard atualizado!");
-
-    } catch (error) {
-        console.error("Dashboard Error:", error);
-        resultsArea.innerHTML = `<div class="text-center py-8 text-red-500">Erro ao carregar dados: ${error.message}</div>`;
     }
 };
 
@@ -900,15 +636,242 @@ export const populateUserFilter = async (db) => {
                 select.appendChild(option);
             }
         });
-        
         console.log("✅ Filtro de usuários carregado");
-        
     } catch (e) { 
         console.error("Erro ao carregar filtro de usuários:", e); 
     }
 };
 
-// Tornar funções globais para acesso via onclick
+/**
+ * CARREGA O DASHBOARD DE BI (OBSERVATÓRIO) - CORRIGIDO
+ */
+export const loadDashboardData = async (db) => {
+    const start = document.getElementById('stats-filter-start')?.value;
+    const end = document.getElementById('stats-filter-end')?.value;
+    const userFilter = document.getElementById('stats-filter-user')?.value;
+    const resultsArea = document.getElementById('dashboard-results');
+
+    if (!resultsArea) return;
+    
+    resultsArea.classList.remove('hidden');
+    resultsArea.innerHTML = '<div class="text-center py-8"><div class="loader-small mx-auto"></div><p class="text-gray-600 mt-2">Processando Análise de Dados...</p></div>';
+
+    try {
+        const snapshot = await getDocs(collection(db, "estatisticas_permanentes"));
+        
+        if (snapshot.empty) {
+            resultsArea.innerHTML = `
+                <div class="text-center py-12">
+                    <p class="text-gray-500 mb-2">Nenhum dado estatístico consolidado ainda.</p>
+                    <p class="text-xs text-gray-400 mb-4">Os dados vêm da limpeza de pautas antigas. Para testar o painel, clique abaixo.</p>
+                    <button id="generate-test-data-btn" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-purple-700">
+                        Gerar Dados de Teste
+                    </button>
+                </div>
+            `;
+            // Ativa o botão de teste
+            document.getElementById('generate-test-data-btn')?.addEventListener('click', () => {
+                generateTestData(db);
+            });
+            return;
+        }
+        
+        let filteredData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // Aplicação dos Filtros
+        if (start) {
+            filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia >= start);
+        }
+        if (end) {
+            filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia <= end + "T23:59:59");
+        }
+        if (userFilter && userFilter !== 'all') {
+            filteredData = filteredData.filter(d => d.creatorEmail === userFilter);
+        }
+
+        if (filteredData.length === 0) {
+            resultsArea.innerHTML = '<div class="text-center py-8 text-gray-500 font-semibold">Nenhum dado encontrado para as datas ou filtros selecionados.</div>';
+            return;
+        }
+
+        // Reconstrói a estrutura HTML inteira do BI com os Dados
+        resultsArea.innerHTML = `
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                <div class="p-4 bg-blue-50 rounded-lg text-center border border-blue-100">
+                    <p class="text-[10px] sm:text-xs text-blue-600 font-bold uppercase">Total de Assistidos</p>
+                    <h4 id="dash-total-geral" class="text-2xl sm:text-3xl font-black text-blue-800">0</h4>
+                </div>
+                <div class="p-4 bg-green-50 rounded-lg text-center border border-green-100">
+                    <p class="text-[10px] sm:text-xs text-green-600 font-bold uppercase">Efetivamente Atendidos</p>
+                    <h4 id="dash-total-atendidos" class="text-2xl sm:text-3xl font-black text-green-800">0</h4>
+                </div>
+                <div class="p-4 bg-orange-50 rounded-lg text-center border border-orange-100">
+                    <p class="text-[10px] sm:text-xs text-orange-600 font-bold uppercase">Taxa de Absenteísmo (Faltas)</p>
+                    <h4 id="dash-taxa-falta" class="text-2xl sm:text-3xl font-black text-orange-800">0%</h4>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mt-6">
+                <div class="border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
+                    <h5 class="text-[10px] sm:text-xs font-bold mb-4 uppercase text-gray-500 border-b pb-2">Top 5 Assuntos (Demandas)</h5>
+                    <div id="dash-subjects-list" class="space-y-2 text-xs"></div>
+                </div>
+                <div class="border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
+                    <h5 class="text-[10px] sm:text-xs font-bold mb-4 uppercase text-gray-500 border-b pb-2">Volume por Criador</h5>
+                    <div id="dash-users-list" class="space-y-2 text-xs"></div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end mt-4">
+                 <button id="export-bi-pdf-btn" class="bg-red-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-red-700 shadow-md text-sm flex items-center gap-2 transition">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf-fill" viewBox="0 0 16 16"><path d="M5.523 12.424c.14-.082.293-.162.459-.238a7.878 7.878 0 0 1-.45.606c-.28.337-.498.516-.635.572a.266.266 0 0 1-.298-.06.2.2 0 0 1-.034-.236c.038-.11.238-.34.958-.644.205-.086.417-.174.629-.266zm..."></path><path fill-rule="evenodd" d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0zM9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1zM4.5 9a.5.5 0 0 1 0-1h7a.5.5 0 0 1 0 1h-7zM4 10.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm.5 2.5a.5.5 0 0 1 0-1h4a.5.5 0 0 1 0 1h-4z"/></svg>
+                     Baixar Relatório (PDF)
+                 </button>
+            </div>
+        `;
+
+        // Evento para gerar o novo PDF
+        document.getElementById('export-bi-pdf-btn')?.addEventListener('click', () => {
+            exportBIDashboardPDF();
+        });
+
+        // Execução dos Cálculos
+        let totalGeral = 0;
+        let totalAtendidos = 0;
+        let totalFaltosos = 0;
+        let mapAssuntos = {};
+        let mapUsers = {};
+
+        filteredData.forEach(d => {
+            totalGeral += d.total || 0;
+            totalAtendidos += d.atendidos || 0;
+            totalFaltosos += d.faltosos || 0;
+            
+            if (d.assuntos) {
+                for (let [key, val] of Object.entries(d.assuntos)) {
+                    mapAssuntos[key] = (mapAssuntos[key] || 0) + val;
+                }
+            }
+            const userKey = d.creatorEmail || 'Desconhecido';
+            mapUsers[userKey] = (mapUsers[userKey] || 0) + (d.atendidos || 0);
+        });
+
+        // Atualização dos Números na Tela
+        document.getElementById('dash-total-geral').textContent = totalGeral;
+        document.getElementById('dash-total-atendidos').textContent = totalAtendidos;
+        const taxa = totalGeral > 0 ? ((totalFaltosos / totalGeral) * 100).toFixed(1) : 0;
+        document.getElementById('dash-taxa-falta').textContent = taxa + "%";
+
+        // Criação das Listas (Rankings)
+        const renderRanking = (elementId, dataMap) => {
+            const el = document.getElementById(elementId);
+            const sorted = Object.entries(dataMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            
+            if (sorted.length === 0) {
+                el.innerHTML = '<p class="text-center text-gray-400 py-4 text-xs">Sem dados processados.</p>';
+                return;
+            }
+            
+            el.innerHTML = sorted.map(([name, count]) => `
+                <div class="flex justify-between items-center border-b border-dashed border-gray-200 pb-1.5 pt-1.5 text-xs hover:bg-gray-50">
+                    <span class="truncate pr-2 font-medium text-gray-700" title="${escapeHTML(name)}">${escapeHTML(name)}</span>
+                    <span class="font-bold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-md">${count}</span>
+                </div>
+            `).join('');
+        };
+
+        renderRanking('dash-subjects-list', mapAssuntos);
+        renderRanking('dash-users-list', mapUsers);
+        
+        showNotification("Relatório gerado na tela com sucesso!", "success");
+
+    } catch (error) {
+        console.error("Dashboard Error:", error);
+        resultsArea.innerHTML = `<div class="text-center py-8 text-red-500 font-bold">Erro ao carregar dados: ${error.message}</div>`;
+    }
+};
+
+/**
+ * GERA O PDF DO RELATÓRIO DO BI
+ */
+export const exportBIDashboardPDF = () => {
+    showNotification("Gerando PDF do Relatório...", "info");
+    try {
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            throw new Error("Biblioteca jsPDF não carregada");
+        }
+        const { jsPDF } = window.jspdf;
+        const docPDF = new jsPDF();
+        
+        const start = document.getElementById('stats-filter-start')?.value;
+        const end = document.getElementById('stats-filter-end')?.value;
+        const userSelect = document.getElementById('stats-filter-user');
+        const userFilter = userSelect ? userSelect.options[userSelect.selectedIndex].text : '';
+        
+        const totalGeral = document.getElementById('dash-total-geral')?.textContent || '0';
+        const totalAtendidos = document.getElementById('dash-total-atendidos')?.textContent || '0';
+        const taxaFalta = document.getElementById('dash-taxa-falta')?.textContent || '0%';
+        
+        // Título e Cabeçalho
+        docPDF.setFontSize(18);
+        docPDF.setTextColor(22, 163, 74); 
+        docPDF.text("Relatório de BI e Produtividade - SIGAP", 14, 20);
+        
+        docPDF.setFontSize(10);
+        docPDF.setTextColor(100, 100, 100);
+        docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
+        
+        let yFilter = 34;
+        if(start || end) {
+            docPDF.text(`Período analisado: ${start || 'Todo o histórico'} até ${end || 'hoje'}`, 14, yFilter);
+            yFilter += 6;
+        }
+        if(userFilter && userFilter !== 'Todos os Usuários') {
+            docPDF.text(`Filtro de Criador: ${userFilter}`, 14, yFilter);
+        }
+        
+        // Seção Resumo Geral
+        docPDF.setFontSize(14);
+        docPDF.setTextColor(0, 0, 0);
+        docPDF.text("Resumo Geral", 14, 50);
+        
+        docPDF.setFontSize(11);
+        docPDF.setTextColor(50, 50, 50);
+        docPDF.text(`Total Agendado / Demandado: ${totalGeral}`, 14, 60);
+        docPDF.text(`Atendimentos Efetivos: ${totalAtendidos}`, 14, 67);
+        docPDF.text(`Taxa de Faltas (Absenteísmo): ${taxaFalta}`, 14, 74);
+        
+        // Seção Assuntos
+        docPDF.setFontSize(14);
+        docPDF.setTextColor(0, 0, 0);
+        docPDF.text("Top Assuntos (Demandas)", 14, 90);
+        
+        const assuntosNodes = document.querySelectorAll('#dash-subjects-list .flex');
+        let y = 100;
+        docPDF.setFontSize(10);
+        docPDF.setTextColor(80, 80, 80);
+        
+        if(assuntosNodes.length === 0) {
+            docPDF.text("Nenhum dado registrado.", 14, y);
+        } else {
+            assuntosNodes.forEach(node => {
+                const nome = node.children[0].textContent;
+                const valor = node.children[1].textContent;
+                docPDF.text(`${nome}: ${valor} atendimentos`, 14, y);
+                y += 7;
+            });
+        }
+        
+        const filename = `Relatorio_BI_SIGAP_${new Date().toISOString().slice(0,10)}.pdf`;
+        docPDF.save(filename);
+        
+    } catch(e) {
+        console.error(e);
+        showNotification("Erro ao gerar PDF", "error");
+    }
+};
+
+// Tornar funções globais para acesso via onclick no HTML (Mantenha sempre no final)
 window.cleanupOldData = () => cleanupOldData(window.app?.db);
 window.loadAuditLogs = () => loadAuditLogs(window.app?.db);
 window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
@@ -916,5 +879,6 @@ window.loadDashboardData = () => loadDashboardData(window.app?.db);
 window.populateUserFilter = () => populateUserFilter(window.app?.db);
 window.loadLogFilters = () => loadLogFilters(window.app?.db);
 window.generateTestData = () => generateTestData(window.app?.db);
+window.exportBIDashboardPDF = exportBIDashboardPDF; // Adicionado aos exports globais
 
 console.log("✅ Módulo admin.js carregado com sucesso");
