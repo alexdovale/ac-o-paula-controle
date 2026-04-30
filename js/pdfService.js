@@ -440,14 +440,14 @@ export const PDFService = {
     },
     
     /**
-     * GERA O RELATÓRIO DE FALTOSOS COM STATUS DE VALIDAÇÃO (VERDE)
+     * GERA O RELATÓRIO DE FALTOSOS (HISTÓRICO DE AUSÊNCIA + ASSUNTO + VALIDAÇÃO)
      */
     generateFaltososPDF(pautaName, faltosos) {
         try {
             const { jsPDF } = window.jspdf;
-            const docPDF = new jspdf.jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+            const docPDF = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
-            // Título em Roxo
+            // Título em Roxo (Identidade de Faltosos)
             docPDF.setFontSize(18);
             docPDF.setTextColor(126, 34, 206); 
             docPDF.text(`Relatório de Faltosos - ${pautaName}`, 40, 40);
@@ -457,8 +457,8 @@ export const PDFService = {
             docPDF.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, 55);
             docPDF.text(`Total de Ausências: ${faltosos.length}`, 40, 68);
 
-            // Cabeçalho incluindo a validação no sistema Verde
-            const head = [["#", "Nome do Assistido", "Horário Agendado", "Falta Marcada às", "Lançado no Verde"]];
+            // Cabeçalho atualizado com ASSUNTO
+            const head = [["#", "Nome do Assistido", "Agendado", "Assunto", "Falta às", "Verde"]];
 
             const body = faltosos.map((item, index) => {
                 const logTime = getSafeDate(item.lastActionTimestamp);
@@ -468,8 +468,9 @@ export const PDFService = {
                     index + 1,
                     cleanString(item.name).toUpperCase(),
                     item.scheduledTime || (item.type === 'avulso' ? 'Avulso' : '---'),
+                    cleanString(item.subject).toUpperCase(), // ASSUNTO ADICIONADO AQUI
                     faltaStr,
-                    item.isConfirmed ? "SIM (Lançado)" : "NÃO (Pendente)" // Mantém a questão do botão validado
+                    item.isConfirmed ? "OK" : "PEND"
                 ];
             });
 
@@ -479,12 +480,21 @@ export const PDFService = {
                 startY: 85,
                 theme: 'grid',
                 headStyles: { fillColor: [126, 34, 206] }, 
-                styles: { fontSize: 8.5, cellPadding: 6, halign: 'center', valign: 'middle' },
+                styles: { fontSize: 8, cellPadding: 5, halign: 'center', valign: 'middle', overflow: 'linebreak' },
                 columnStyles: { 
-                    1: { halign: 'left', cellWidth: 160 },
-                    4: { fontStyle: 'bold' } // Destaque para a coluna de validação
+                    1: { halign: 'left', cellWidth: 140 }, // Nome
+                    3: { halign: 'left', cellWidth: 160 }, // Assunto (maior largura para o texto)
+                    5: { fontStyle: 'bold' }               // Status Verde
                 }
             });
+
+            // Rodapé de segurança
+            const pageCount = docPDF.internal.getNumberOfPages();
+            for(let i = 1; i <= pageCount; i++) {
+                docPDF.setPage(i);
+                docPDF.setFontSize(7);
+                docPDF.text(`SIGAP - Sistema de Gerenciamento de Pauta | Página ${i} de ${pageCount}`, 40, 820);
+            }
 
             docPDF.save(`faltosos_${pautaName.replace(/\s+/g, '_')}.pdf`);
             return true;
