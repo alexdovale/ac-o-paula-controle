@@ -8,8 +8,11 @@
 // ⭐ IMPORTAÇÃO ESTÁTICA DO PautaService ⭐
 // Garante que PautaService esteja disponível quando ApiIntegration for carregado.
 // Use o cache buster se ainda houver problemas com cache.
-import { PautaService } from './pauta.js?v=202604262100';
-import { showNotification, playSound } from './utils.js'; 
+//import { PautaService } from './pauta.js?v=202604262100';
+import { PautaService } from './pauta.js';
+import { showNotification, playSound } from './utils.js';
+
+
 
 const ApiIntegration = {
     // Simulação de URL da Defensoria
