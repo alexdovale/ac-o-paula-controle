@@ -439,17 +439,17 @@ export const PDFService = {
         }
     },
     
-        /**
-     * GERA O RELATÓRIO DE FALTOSOS (HISTÓRICO DE AUSÊNCIA)
+    /**
+     * GERA O RELATÓRIO DE FALTOSOS COM STATUS DE VALIDAÇÃO (VERDE)
      */
     generateFaltososPDF(pautaName, faltosos) {
         try {
             const { jsPDF } = window.jspdf;
-            const docPDF = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+            const docPDF = new jspdf.jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
-            // Título em Roxo (Padrão Faltosos)
+            // Título em Roxo
             docPDF.setFontSize(18);
-            docPDF.setTextColor(126, 34, 206); // Roxo
+            docPDF.setTextColor(126, 34, 206); 
             docPDF.text(`Relatório de Faltosos - ${pautaName}`, 40, 40);
 
             docPDF.setFontSize(10);
@@ -457,11 +457,10 @@ export const PDFService = {
             docPDF.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, 55);
             docPDF.text(`Total de Ausências: ${faltosos.length}`, 40, 68);
 
-            // Cabeçalho focado em comprovação
-            const head = [["#", "Nome do Assistido", "Horário Agendado", "Assunto", "Falta Marcada às"]];
+            // Cabeçalho incluindo a validação no sistema Verde
+            const head = [["#", "Nome do Assistido", "Horário Agendado", "Falta Marcada às", "Lançado no Verde"]];
 
             const body = faltosos.map((item, index) => {
-                // Pega a hora que o status mudou para 'faltoso'
                 const logTime = getSafeDate(item.lastActionTimestamp);
                 const faltaStr = logTime ? logTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
 
@@ -469,8 +468,8 @@ export const PDFService = {
                     index + 1,
                     cleanString(item.name).toUpperCase(),
                     item.scheduledTime || (item.type === 'avulso' ? 'Avulso' : '---'),
-                    cleanString(item.subject),
-                    faltaStr
+                    faltaStr,
+                    item.isConfirmed ? "SIM (Lançado)" : "NÃO (Pendente)" // Mantém a questão do botão validado
                 ];
             });
 
@@ -479,18 +478,13 @@ export const PDFService = {
                 body: body,
                 startY: 85,
                 theme: 'grid',
-                headStyles: { fillColor: [126, 34, 206] }, // Cabeçalho Roxo
-                styles: { fontSize: 9, cellPadding: 6, halign: 'center', valign: 'middle' },
-                columnStyles: { 1: { halign: 'left', cellWidth: 180 } }
+                headStyles: { fillColor: [126, 34, 206] }, 
+                styles: { fontSize: 8.5, cellPadding: 6, halign: 'center', valign: 'middle' },
+                columnStyles: { 
+                    1: { halign: 'left', cellWidth: 160 },
+                    4: { fontStyle: 'bold' } // Destaque para a coluna de validação
+                }
             });
-
-            // Rodapé de segurança
-            const pageCount = docPDF.internal.getNumberOfPages();
-            for(let i = 1; i <= pageCount; i++) {
-                docPDF.setPage(i);
-                docPDF.setFontSize(8);
-                docPDF.text(`Documento gerado pelo SIGAP - Comprovação de Pauta`, 40, 820);
-            }
 
             docPDF.save(`faltosos_${pautaName.replace(/\s+/g, '_')}.pdf`);
             return true;
@@ -499,7 +493,6 @@ export const PDFService = {
             return false;
         }
     },
-
 
     /**
      * GERA PDF DO CHECKLIST
