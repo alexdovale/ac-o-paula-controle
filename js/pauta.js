@@ -805,37 +805,46 @@ export const PautaService = {
         }
     },
 
-    /**
-     * Calcula nível de prioridade
+        /**
+     * Calcula o nível de prioridade visual (Cores do Card)
+     * Baseado na urgência e na pontualidade.
      */
     getPriorityLevel(assisted) {
         if (!assisted || assisted.status !== 'aguardando') return 'N/A';
+        
+        // 1. Urgência Crítica (Vermelho)
         if (assisted.priority === 'URGENTE') return 'URGENTE';
 
-        if (assisted.type === 'avulso') return 'Média';
+        // 2. Agendados: Verifica se é pontual ou atrasado
+        if (assisted.type === 'agendamento' && assisted.scheduledTime && assisted.arrivalTime) {
+            try {
+                const [h, m] = assisted.scheduledTime.split(':').map(Number);
+                const agendado = new Date();
+                agendado.setHours(h, m, 0, 0);
 
-        if (!assisted.scheduledTime || !assisted.arrivalTime) return 'Média';
+                const chegada = new Date(assisted.arrivalTime);
+                const diffMinutos = (chegada - agendado) / (1000 * 60);
 
-        try {
-            const scheduled = new Date(`1970-01-01T${assisted.scheduledTime}`);
-            const arrival = new Date(assisted.arrivalTime);
-            const arrivalTime = new Date(`1970-01-01T${arrival.getHours().toString().padStart(2,'0')}:${arrival.getMinutes().toString().padStart(2,'0')}`).getTime();
-            const diff = arrivalTime - scheduled;
-
-            if (diff <= 0) return 'Máxima';
-            if (diff <= 20) return 'Média';
-            return 'Mínima';
-        } catch (e) {
-            return 'Média';
+                if (diffMinutos <= 5) return 'Máxima'; // Pontual ou adiantado (Verde)
+                if (diffMinutos <= 30) return 'Média'; // Atraso leve (Laranja)
+                return 'Mínima'; // Atraso grave (Cinza/Padrão)
+            } catch (e) {
+                return 'Média';
+            }
         }
+
+        // 3. Avulsos ou sem horário (Laranja por padrão)
+        return 'Média';
     },
 
     /**
-     * Ordena lista de aguardando conforme regras
+     * ORDENAÇÃO MESTRA: O "Cérebro" do SIGAP
+     * Prioridade Legal > Horário Marcado > Ordem de Chegada
      */
     sortAguardando(list, orderType) {
         if (!list || !list.length) return [];
         
+        // Respeita a vontade do usuário se ele escolheu manual ou chegada simples
         if (orderType === 'manual') {
             return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
         }
@@ -844,64 +853,44 @@ export const PautaService = {
             return [...list].sort((a, b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
         }
 
-        const getVirtual = (item) => {
-            if (item.type === 'avulso') {
-                return { time: item.checkInOrder || 0, isLate: false };
-            }
-            
-            if (item.type === 'agendamento' && item.scheduledTime) {
-                try {
-                    const scheduled = new Date(`1970-01-01T${item.scheduledTime}`).getTime();
-                    if (!item.arrivalTime) {
-                        return { time: scheduled, isLate: false };
-                    }
-                    const arrival = new Date(item.arrivalTime);
-                    const arrivalHour = new Date(`1970-01-01T${arrival.getHours().toString().padStart(2,'0')}:${arrival.getMinutes().toString().padStart(2,'0')}`).getTime();
-                    const diff = arrivalHour - scheduled;
-
-                    if (diff < 0) {
-                        return { time: arrivalHour, isLate: false };
-                    } else if (diff === 0) {
-                        return { time: scheduled, isLate: false };
-                    } else {
-                        return { time: arrivalHour, isLate: true };
-                    }
-                } catch(e) {
-                    console.error("Erro ao calcular virtualTime para agendamento:", e, "para item:", item);
-                    return { time: item.checkInOrder || 0, isLate: false }; 
-                }
-            }
-            return { time: item.checkInOrder || 0, isLate: false };
-        };
-        
+        // LÓGICA PADRÃO (A mais justa para a Defensoria)
         return [...list].sort((a, b) => {
+            // CAMADA 1: LEI (Urgência marcada no modal)
             if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
             if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-            
-            const va = getVirtual(a);
-            const vb = getVirtual(b);
-            
-            if (va.time !== vb.time) return va.time - vb.time;
-            
-            if (va.isLate !== vb.isLate) {
-                return va.isLate ? 1 : -1;
+
+            // CAMADA 2: TIPO (Agendados passam na frente de Avulsos no mesmo bloco)
+            if (a.type === 'agendamento' && b.type === 'avulso') return -1;
+            if (a.type === 'avulso' && b.type === 'agendamento') return 1;
+
+            // CAMADA 3: HORÁRIO MARCADO (scheduledTime)
+            if (a.scheduledTime && b.scheduledTime) {
+                if (a.scheduledTime !== b.scheduledTime) {
+                    return a.scheduledTime.localeCompare(b.scheduledTime);
+                }
             }
+
+            // CAMADA 4: DESEMPATE FINAL (Quem sentou na cadeira primeiro)
+            const arrivalA = a.checkInOrder || 0;
+            const arrivalB = b.checkInOrder || 0;
             
-            return (a.checkInOrder || 0) - (b.checkInOrder || 0);
+            return arrivalA - arrivalB;
         });
     },
 
     /**
-     * Retorna classe CSS para prioridade
+     * Retorna a classe CSS correta para a borda do card
      */
     getPriorityClass(priority) {
-        return {
-            'URGENTE': 'priority-urgente',
-            'Máxima': 'priority-maxima',
-            'Média': 'priority-media',
-            'Mínima': 'priority-minima'
-        }[priority] || '';
+        const classes = {
+            'URGENTE': 'priority-urgente', // Vermelho
+            'Máxima': 'priority-maxima',   // Verde
+            'Média': 'priority-media',     // Laranja
+            'Mínima': 'priority-minima'    // Cinza
+        };
+        return classes[priority] || '';
     },
+
 
     /**
      * Configura ordenação manual com SortableJS
