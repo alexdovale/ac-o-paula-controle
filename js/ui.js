@@ -895,68 +895,71 @@ export const UIService = {
             return;
         }
 
-        container.innerHTML = ''; // Limpa antes de renderizar
+        container.innerHTML = '';
         items.forEach(item => {
             const currentUserRole = window.app?.currentUser?.role;
             const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canRevert = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
 
-            // Pega a cor da borda baseada na prioridade original dele (Idoso, Urgente, etc)
+            const card = document.createElement('div');
+            // Identificador de prioridade igual aos outros cards
             const priorityClass = PautaService.getPriorityClass(PautaService.getPriorityLevel(item));
             const isConfirmed = item.isConfirmed || false;
 
-            const card = document.createElement('div');
-            card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm border-l-4 ${priorityClass} mb-3 transition-all hover:shadow-md opacity-90`;
+            card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4 opacity-90';
             card.setAttribute('data-id', item.id);
-            
+
+            // Cores do botão de confirmação baseadas no status
+            const confirmButtonClass = isConfirmed 
+                ? 'bg-green-500 border-green-500 text-white' 
+                : 'bg-slate-100 text-slate-300';
+
             card.innerHTML = `
-                <div class="flex justify-between items-start mb-2">
-                    <div class="flex flex-col">
-                        <h4 class="font-bold text-gray-800 text-sm uppercase leading-tight pr-6">${escapeHTML(item.name || '')}</h4>
-                        <span class="text-[9px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded mt-1 w-max border border-purple-100">🚫 FALTOSO</span>
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="font-bold text-lg md:text-xl text-gray-800 leading-tight">${escapeHTML(item.name || '').toUpperCase()}</p>
+                        <span class="text-[9px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded mt-1 border border-purple-100 inline-block uppercase">🚫 Faltoso</span>
                     </div>
                     
-                    <!-- BOTÃO VALIDADO NO VERDE (Padrão com Atendidos) -->
-                    <button data-id="${item.id}" 
-                            class="toggle-confirmed-faltoso flex-shrink-0 w-7 h-7 rounded-full border flex items-center justify-center transition-all ${isConfirmed ? 'bg-green-500 border-green-500 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-300'}" 
-                            ${canToggleConfirmed ? '' : 'disabled'}
-                            title="${isConfirmed ? 'Confirmado no Verde' : 'Marcar como lançado no Verde'}">
+                    <!-- BOTÃO VALIDADO VERDE (IDÊNTICO AO ATENDIDO) -->
+                    <button data-id="${item.id}" class="toggle-confirmed-faltoso w-6 h-6 md:w-7 md:h-7 rounded-full border border-gray-200 flex items-center justify-center ${confirmButtonClass} shadow-sm transition-all" ${canToggleConfirmed ? '' : 'disabled'} title="Lançar falta no Verde">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/>
                         </svg>
                     </button>
                 </div>
-
-                <div class="grid grid-cols-2 gap-2 text-[10px] text-gray-500 mb-2 bg-gray-50 p-2 rounded-lg">
-                    <p><b>📅 Agendado:</b> ${item.scheduledTime || '---'}</p>
-                    <p><b>📋 Tipo:</b> ${item.type === 'agendamento' ? 'Calendário' : 'Avulso'}</p>
+                
+                <p class="text-xs md:text-sm mt-2 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
+                
+                <!-- GRID DE HORÁRIOS PADRONIZADO -->
+                <div class="grid grid-cols-2 gap-2 text-center border-t border-b py-2 my-3 text-[9px] md:text-[10px] text-gray-400 uppercase font-bold tracking-wider">
+                    <div class="border-r">Agendado:<br><span class="text-gray-600">${item.scheduledTime || '---'}</span></div>
+                    <div>Falta marcada às:<br><span class="text-gray-600">${item.lastActionTimestamp ? new Date(item.lastActionTimestamp).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--'}</span></div>
                 </div>
 
-                <p class="text-[11px] text-gray-600 mb-3 px-1">
-                    <b>Assunto:</b> ${escapeHTML(item.subject || 'Não informado')}
-                </p>
-
-                <div class="flex flex-col gap-2 pt-2 border-t border-gray-100">
-                    <div class="flex justify-between items-center">
-                        <span class="text-[9px] text-gray-400 italic">Falta marcada às: ${item.lastActionTimestamp ? new Date(item.lastActionTimestamp).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--'}</span>
-                        
-                        <div class="flex gap-2">
-                            <button data-id="${item.id}" class="return-to-pauta-from-faltoso-btn bg-blue-50 hover:bg-blue-100 text-blue-600 p-1.5 rounded-lg transition-colors border border-blue-100" title="Voltar para Pauta" ${canRevert ? '' : 'disabled'}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.425 2.374a.25.25 0 0 0 0 .384l2.166 2.032a.25.25 0 0 0 .41-.192z"/></svg>
-                            </button>
-                            <button data-id="${item.id}" class="delete-btn bg-red-50 hover:bg-red-100 text-red-600 p-1.5 rounded-lg transition-colors border border-red-100" title="Excluir Permanentemente" ${canDelete ? '' : 'disabled'}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
-                            </button>
-                        </div>
+                <div class="flex justify-between items-center text-[10px] md:text-xs mb-4">
+                    <p class="text-gray-400 italic">Status: <span class="${isConfirmed ? 'text-green-600' : 'text-amber-600'} font-bold">${isConfirmed ? 'Lançado no Verde' : 'Pendente no Verde'}</span></p>
+                    <div class="flex gap-3">
+                        <button data-id="${item.id}" class="edit-assisted-btn text-slate-400 font-bold hover:underline" ${canRevert ? '' : 'disabled'}>Dados</button>
+                        <button data-id="${item.id}" class="delete-btn text-red-500 font-bold hover:underline" ${canDelete ? '' : 'disabled'}>Deletar</button>
                     </div>
-                    ${this._getStandardizedFooterHtml(item)}
                 </div>
+
+                <div class="pt-3 border-t">
+                    <div class="flex flex-col sm:flex-row justify-end items-center gap-2">
+                        <button data-id="${item.id}" class="return-to-pauta-from-faltoso-btn w-full sm:w-auto bg-orange-500 text-white font-black py-2 px-6 rounded-lg text-[9px] md:text-[10px] uppercase shadow-md active:scale-95 transition-all" ${canRevert ? '' : 'disabled'}>
+                            Reativar Assistido
+                        </button>
+                    </div>
+                </div>
+
+                ${this._getStandardizedFooterHtml(item)}
             `;
             container.appendChild(card);
         });
     },
-
+    
     renderDistribuicaoColumn(items, pautaId, userName) {
         const container = document.getElementById('distribuicao-list');
         if (!container) return;
