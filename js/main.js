@@ -796,22 +796,16 @@ class SIGAPApp {
             PDFService.generateAtendidosPDF(this.currentPauta?.name || 'Pauta', atendidos);
         });
 
-        // Localize este trecho no seu main.js e substitua:
-document.getElementById('download-faltosos-pdf-btn')?.addEventListener('click', () => {
-    const faltosos = this.allAssisted.filter(a => a.status === 'faltoso');
-    
-    if (faltosos.length === 0) {
-        showNotification("Não há assistidos na lista de faltosos para gerar o PDF.", "info");
-        return;
-    }
-
-    // Chamando a nova função especializada que adicionamos no PDFService
-    PDFService.generateFaltososPDF(this.currentPauta?.name || 'Pauta', faltosos);
-    
-    showNotification("Relatório de Faltosos gerado com sucesso!", "success");
-});
-
-            PDFService.generateAtendidosPDF(`${this.currentPauta?.name || 'Pauta'} (FALTOSOS)`, faltosos);
+        document.getElementById('download-faltosos-pdf-btn')?.addEventListener('click', () => {
+            const faltosos = this.allAssisted.filter(a => a.status === 'faltoso');
+            
+            if (faltosos.length === 0) {
+                showNotification("Nenhum faltoso registrado para gerar o PDF.", "info");
+                return;
+            }
+        
+            // Agora usamos a função correta que criamos, com layout roxo e auditoria
+            PDFService.generateFaltososPDF(this.currentPauta?.name || 'Pauta', faltosos);
         });
 
         document.getElementById('download-collaborators-pdf-modal')?.addEventListener('click', () => {
