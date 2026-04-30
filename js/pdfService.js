@@ -438,6 +438,68 @@ export const PDFService = {
             return false;
         }
     },
+    
+        /**
+     * GERA O RELATÓRIO DE FALTOSOS (HISTÓRICO DE AUSÊNCIA)
+     */
+    generateFaltososPDF(pautaName, faltosos) {
+        try {
+            const { jsPDF } = window.jspdf;
+            const docPDF = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+
+            // Título em Roxo (Padrão Faltosos)
+            docPDF.setFontSize(18);
+            docPDF.setTextColor(126, 34, 206); // Roxo
+            docPDF.text(`Relatório de Faltosos - ${pautaName}`, 40, 40);
+
+            docPDF.setFontSize(10);
+            docPDF.setTextColor(100);
+            docPDF.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, 55);
+            docPDF.text(`Total de Ausências: ${faltosos.length}`, 40, 68);
+
+            // Cabeçalho focado em comprovação
+            const head = [["#", "Nome do Assistido", "Horário Agendado", "Assunto", "Falta Marcada às"]];
+
+            const body = faltosos.map((item, index) => {
+                // Pega a hora que o status mudou para 'faltoso'
+                const logTime = getSafeDate(item.lastActionTimestamp);
+                const faltaStr = logTime ? logTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
+
+                return [
+                    index + 1,
+                    cleanString(item.name).toUpperCase(),
+                    item.scheduledTime || (item.type === 'avulso' ? 'Avulso' : '---'),
+                    cleanString(item.subject),
+                    faltaStr
+                ];
+            });
+
+            docPDF.autoTable({
+                head: head,
+                body: body,
+                startY: 85,
+                theme: 'grid',
+                headStyles: { fillColor: [126, 34, 206] }, // Cabeçalho Roxo
+                styles: { fontSize: 9, cellPadding: 6, halign: 'center', valign: 'middle' },
+                columnStyles: { 1: { halign: 'left', cellWidth: 180 } }
+            });
+
+            // Rodapé de segurança
+            const pageCount = docPDF.internal.getNumberOfPages();
+            for(let i = 1; i <= pageCount; i++) {
+                docPDF.setPage(i);
+                docPDF.setFontSize(8);
+                docPDF.text(`Documento gerado pelo SIGAP - Comprovação de Pauta`, 40, 820);
+            }
+
+            docPDF.save(`faltosos_${pautaName.replace(/\s+/g, '_')}.pdf`);
+            return true;
+        } catch (error) {
+            console.error("Erro PDF Faltosos:", error);
+            return false;
+        }
+    },
+
 
     /**
      * GERA PDF DO CHECKLIST
@@ -705,6 +767,11 @@ export const generateCollaboratorsPDF = (pautaName, colaboradores, selectedCols)
 export const generateStatisticsPDF = (pautaName, statsData) => {
     return PDFService.generateStatisticsPDF(pautaName, statsData);
 };
+
+export const generateFaltososPDF = (pautaName, faltosos) => {
+    return PDFService.generateFaltososPDF(pautaName, faltosos);
+};
+
 
 window.PDFService = PDFService;
 
