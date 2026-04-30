@@ -1,4 +1,3 @@
-// js/admin.js
 import { 
     collection, addDoc, getDocs, updateDoc, deleteDoc, doc, 
     query, orderBy, limit, where, writeBatch, Timestamp 
@@ -141,9 +140,6 @@ window.deleteUser = (userId) => deleteUser(window.app?.db, userId);
 // MÓDULO DE AUDITORIA, FILTROS E ERROS
 // =========================================================================
 
-/**
- * CARREGA OS FILTROS DE LOG (Usuários e Ações)
- */
 export const loadLogFilters = async (db) => {
     try {
         const userSelect = document.getElementById('filter-log-user');
@@ -184,9 +180,6 @@ export const loadLogFilters = async (db) => {
     }
 };
 
-/**
- * BUSCA E EXIBE OS LOGS DE AUDITORIA COM FILTROS
- */
 export const loadAuditLogs = async (db) => {
     const logsContainer = document.getElementById('audit-logs-container');
     const tableBody = document.getElementById('audit-logs-table-body');
@@ -202,7 +195,6 @@ export const loadAuditLogs = async (db) => {
     if (pdfBtn) pdfBtn.classList.add('hidden');
 
     try {
-        // Certifica que os filtros existem, senao os carrega
         if (document.getElementById('filter-log-user')?.options.length <= 1) {
             await loadLogFilters(db);
         }
@@ -252,12 +244,11 @@ export const loadAuditLogs = async (db) => {
             const row = document.createElement('tr');
             row.className = "border-b hover:bg-gray-50 transition-colors";
             
-            // ⭐ AQUI FAZEMOS A CLASSIFICAÇÃO DE CORES (INCLUINDO ERROS) ⭐
             let actionColor = 'bg-purple-100 text-purple-700 border border-purple-200';
             const action = (log.action || '').toLowerCase();
             
             if (action.includes('erro') || action.includes('error') || action.includes('falha')) {
-                actionColor = 'bg-red-600 text-white border border-red-700 font-black animate-pulse'; // Destaque máximo para erros
+                actionColor = 'bg-red-600 text-white border border-red-700 font-black animate-pulse';
             } else if (action.includes('delete') || action.includes('apagou') || action.includes('remove')) {
                 actionColor = 'bg-red-100 text-red-700 border border-red-200';
             } else if (action.includes('create') || action.includes('criou') || action.includes('add')) {
@@ -300,9 +291,6 @@ export const loadAuditLogs = async (db) => {
     }
 };
 
-/**
- * GERA PDF DOS LOGS COM FILTROS
- */
 export const exportAuditLogsPDF = async (db) => {
     showNotification("Gerando PDF da Auditoria...", "info");
     
@@ -570,16 +558,51 @@ export const loadDashboardData = async (db) => {
 
         if (window.Chart) {
             ['chart-horarios', 'chart-prioridades'].forEach(id => { if (chartInstances[id]) chartInstances[id].destroy(); });
+            
+            // Lógica robusta para Picos de Horários (Fallback se estiver vazio)
             const ctxHorarios = document.getElementById('chart-horarios').getContext('2d');
-            const horSorted = Object.entries(mapHorarios).sort((a,b) => a[0].localeCompare(b[0]));
+            let horSorted = Object.entries(mapHorarios).sort((a,b) => a[0].localeCompare(b[0]));
+            if (horSorted.length === 0) horSorted = [["Não informado", 0]]; // Corrige gráfico vazio
+
             chartInstances['chart-horarios'] = new Chart(ctxHorarios, {
-                type: 'line', data: { labels: horSorted.map(i => i[0]), datasets: [{ label: 'Volume', data: horSorted.map(i => i[1]), borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.2)', tension: 0.3, fill: true }] },
+                type: 'line', 
+                data: { 
+                    labels: horSorted.map(i => i[0]), 
+                    datasets: [{ 
+                        label: 'Volume', 
+                        data: horSorted.map(i => i[1]), 
+                        borderColor: '#8b5cf6', 
+                        backgroundColor: 'rgba(139, 92, 246, 0.2)', 
+                        tension: 0.3, 
+                        fill: true 
+                    }] 
+                },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
+
+            // Lógica robusta para Prioridades (Fallback se estiver vazio)
             const ctxPrio = document.getElementById('chart-prioridades').getContext('2d');
             const prioSorted = Object.entries(mapPrioridades);
+            
+            let prioLabels = prioSorted.map(i => i[0]);
+            let prioData = prioSorted.map(i => i[1]);
+            let prioColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#64748b'];
+
+            if (prioSorted.length === 0) {
+                prioLabels = ["Não informado"];
+                prioData = [1];
+                prioColors = ['#e2e8f0']; // Cinza claro neutro
+            }
+
             chartInstances['chart-prioridades'] = new Chart(ctxPrio, {
-                type: 'doughnut', data: { labels: prioSorted.map(i => i[0]), datasets: [{ data: prioSorted.map(i => i[1]), backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#64748b'] }] },
+                type: 'doughnut', 
+                data: { 
+                    labels: prioLabels, 
+                    datasets: [{ 
+                        data: prioData, 
+                        backgroundColor: prioColors 
+                    }] 
+                },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels:{boxWidth:10, font:{size:10}} } } }
             });
         }
