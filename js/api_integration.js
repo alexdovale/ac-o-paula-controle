@@ -1,7 +1,14 @@
+// js/api_integration.js
+
 /**
  * SIGAP - Módulo de Integração (API & Mocks)
  * Este arquivo deve ser carregado no index.html ANTES do script principal.
  */
+
+// ⭐ IMPORTAÇÃO ESTÁTICA DO PautaService ⭐
+// Garante que PautaService esteja disponível quando ApiIntegration for carregado.
+// Use o cache buster se ainda houver problemas com cache.
+import { PautaService } from './pauta.js?v=202604262100'; // <<--- ADICIONADA AQUI
 
 const ApiIntegration = {
     // Simulação de URL da Defensoria
@@ -58,10 +65,12 @@ const ApiIntegration = {
             ];
 
             // Acessa o PautaService que foi exportado no pauta.js
-            // Como usamos type="module", precisamos garantir que o PautaService está acessível
-            const { PautaService } = await import('./pauta.js');
+            // Como usamos import estático, PautaService já deve estar acessível.
+            // Não precisamos mais do `await import('./pauta.js');` aqui.
+            // Se houver problemas com o cache, você pode adicionar o cache buster no import estático também.
 
             for (const assistido of pautaFake) {
+                // Chama o método addAssistedManual que já existe no PautaService
                 await PautaService.addAssistedManual(appInstance, {
                     ...assistido,
                     status: 'pauta'
@@ -70,9 +79,12 @@ const ApiIntegration = {
 
             if (window.showNotification) {
                 showNotification("Sincronização concluída com sucesso!", "success");
+                playSound('success'); // Adicionado som para feedback
             }
         } catch (error) {
             console.error("❌ Erro na integração:", error);
+            showNotification("Erro durante a sincronização.", "error");
+            playSound('error');
         } finally {
             this._toggleLoading(false);
         }
