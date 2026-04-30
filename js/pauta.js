@@ -1004,6 +1004,7 @@ export const PautaService = {
 
     /**
      * Preenche a lista de colaboradores no modal de seleção com busca
+     * ATUALIZADO: Suporte para seleção "Não atribuir" permitindo o uso sem colaboradores cadastrados
      */
     preencherListaColaboradoresModal(app) {
         const container = document.getElementById('collaborator-selection-list');
@@ -1013,15 +1014,13 @@ export const PautaService = {
         
         if (searchInput) searchInput.value = '';
         
-        window.selectedCollaboratorId = undefined;
-        window.selectedCollaboratorName = undefined;
+        // Define 'null' (Não atribuir) como padrão inicial. Isso permite
+        // clicar diretamente em "Confirmar Seleção" sem escolher ativamente.
+        window.selectedCollaboratorId = 'null';
+        window.selectedCollaboratorName = null;
         
-        if (!app.colaboradores || app.colaboradores.length === 0) {
-            container.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhum colaborador cadastrado.</p>';
-            return;
-        }
-        
-        const colaboradoresOrdenados = [...app.colaboradores].sort((a, b) => 
+        const colaboradores = app.colaboradores || [];
+        const colaboradoresOrdenados = [...colaboradores].sort((a, b) => 
             a.nome.localeCompare(b.nome)
         );
         
@@ -1038,13 +1037,20 @@ export const PautaService = {
                   )
                 : colaboradoresOrdenados;
             
+            // Sempre renderiza a opção "Não atribuir", independentemente de existirem colaboradores
             if (!filtro) {
                 const optionNaoAtribuir = document.createElement('div');
-                optionNaoAtribuir.className = "p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer transition-all mb-2";
+                const isSelected = window.selectedCollaboratorId === 'null';
+                
+                optionNaoAtribuir.className = isSelected 
+                    ? "p-3 border rounded-lg bg-blue-100 border-blue-500 border-2 cursor-pointer transition-all mb-2"
+                    : "p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer transition-all mb-2";
+                
                 optionNaoAtribuir.setAttribute('data-colaborador-id', 'null');
                 optionNaoAtribuir.setAttribute('data-colaborador-nome', '');
                 optionNaoAtribuir.setAttribute('role', 'option');
                 optionNaoAtribuir.setAttribute('tabindex', '0');
+                optionNaoAtribuir.setAttribute('aria-selected', isSelected ? 'true' : 'false');
                 optionNaoAtribuir.innerHTML = `
                     <div class="flex items-center gap-3">
                         <div class="w-5 h-5 rounded-full bg-gray-400 flex items-center justify-center text-white text-xs">🚫</div>
@@ -1057,9 +1063,14 @@ export const PautaService = {
                 
                 optionNaoAtribuir.addEventListener('click', () => {
                     document.querySelectorAll('#collaborator-selection-list > div').forEach(div => {
-                        div.classList.remove('bg-blue-100', 'border-blue-500');
+                        div.classList.remove('bg-blue-100', 'border-blue-500', 'border-2');
+                        if (div.getAttribute('data-colaborador-id') === 'null') {
+                            div.classList.add('bg-gray-50');
+                        }
                         div.setAttribute('aria-selected', 'false');
                     });
+                    
+                    optionNaoAtribuir.classList.remove('bg-gray-50');
                     optionNaoAtribuir.classList.add('bg-blue-100', 'border-blue-500', 'border-2');
                     optionNaoAtribuir.setAttribute('aria-selected', 'true');
                     
@@ -1079,19 +1090,26 @@ export const PautaService = {
             
             if (colaboradoresFiltrados.length === 0) {
                 const msg = document.createElement('p');
-                msg.className = "text-gray-500 text-center py-4 text-sm";
-                msg.textContent = "Nenhum colaborador encontrado com este filtro.";
+                msg.className = "text-gray-500 text-center py-4 text-sm mt-2";
+                msg.textContent = colaboradores.length === 0 
+                    ? "Nenhum colaborador cadastrado no sistema." 
+                    : "Nenhum colaborador encontrado com este filtro.";
                 container.appendChild(msg);
                 return;
             }
             
             colaboradoresFiltrados.forEach(collab => {
                 const div = document.createElement('div');
-                div.className = "p-3 border rounded-lg hover:bg-blue-50 cursor-pointer transition-all mb-2";
+                const isSelected = window.selectedCollaboratorId === (collab.id || collab.nome);
+                
+                div.className = isSelected 
+                    ? "p-3 border rounded-lg bg-blue-100 border-blue-500 border-2 cursor-pointer transition-all mb-2"
+                    : "p-3 border rounded-lg hover:bg-blue-50 cursor-pointer transition-all mb-2";
                 div.setAttribute('data-colaborador-id', collab.id || collab.nome);
                 div.setAttribute('data-colaborador-nome', collab.nome);
                 div.setAttribute('role', 'option');
                 div.setAttribute('tabindex', '0');
+                div.setAttribute('aria-selected', isSelected ? 'true' : 'false');
                 div.innerHTML = `
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
@@ -1107,8 +1125,12 @@ export const PautaService = {
                 div.addEventListener('click', () => {
                     document.querySelectorAll('#collaborator-selection-list > div').forEach(d => {
                         d.classList.remove('bg-blue-100', 'border-blue-500', 'border-2');
+                        if (d.getAttribute('data-colaborador-id') === 'null') {
+                            d.classList.add('bg-gray-50');
+                        }
                         d.setAttribute('aria-selected', 'false');
                     });
+                    
                     div.classList.add('bg-blue-100', 'border-blue-500', 'border-2');
                     div.setAttribute('aria-selected', 'true');
                     
