@@ -30,6 +30,7 @@ export const EmailService = {
         // 1. Gerar o JWT via Cloud Function
         let token;
         try {
+            console.log("🕵️ DADOS INDO PARA A NUVEM:", { pautaId, assistedId, nomeColaborador });
             const result = await generateExternalAccessJwt({ pautaId, assistedId, collaboratorName: nomeColaborador });
             token = result.data.token; 
             if (!token) {
