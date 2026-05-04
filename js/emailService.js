@@ -26,7 +26,7 @@ export const EmailService = {
 
         let token;
         try {
-            // Enviando com os nomes exatos que o backend espera
+            // Chamada corrigida para o backend
             const result = await generateExternalAccessJwt({ 
                 pautaId: pautaId, 
                 assistedId: assistedId, 
@@ -54,9 +54,8 @@ export const EmailService = {
         };
 
         try {
-            // 🚀 AQUI ESTÃO OS SEUS IDs DO EMAILJS
-            // Se o seu service ID for diferente de 'service_pauta', ajuste abaixo:
-            await emailjs.send('service_pauta', 'template_jslp9ny', templateParams);
+            // 🚀 IDs OFICIAIS APLICADOS:
+            await emailjs.send('service_r1nxe6a', 'template_jslp9ny', templateParams);
             
             showNotification(`E-mail enviado para ${emailDestino}!`, "success");
             return true;
