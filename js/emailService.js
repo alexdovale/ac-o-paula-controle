@@ -1,6 +1,5 @@
 // js/emailService.js
 
-// Importa as funções necessárias do Firebase Functions, App e Auth
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"; 
@@ -21,42 +20,31 @@ export const EmailService = {
         }
 
         if (!auth.currentUser) {
-            console.error("Tentativa de gerar link sem usuário logado no frontend.");
-            showNotification("Sessão não identificada. Por favor, atualize a página ou faça login novamente.", "error");
-            throw new Error("Usuário não autenticado no frontend.");
+            showNotification("Sessão expirada. Refaça o login.", "error");
+            throw new Error("Usuário não autenticado.");
         }
 
-        // 1. Gerar o JWT via Cloud Function
         let token;
         try {
-            // Ajuste aqui: garantindo que os nomes das propriedades batam com o destructuring do backend
-            const payload = { 
+            // Enviando com os nomes exatos que o backend espera
+            const result = await generateExternalAccessJwt({ 
                 pautaId: pautaId, 
                 assistedId: assistedId, 
                 collaboratorName: nomeColaborador 
-            };
-
-            console.log("🕵️ DADOS INDO PARA A NUVEM:", payload);
-
-            const result = await generateExternalAccessJwt(payload);
+            });
+            
             token = result.data.token; 
-
-            if (!token) {
-                throw new Error("Token de segurança não foi gerado pela Cloud Function.");
-            }
-            showNotification("Token de segurança gerado com sucesso.", "info");
+            if (!token) throw new Error("Token não gerado.");
+            
         } catch (error) {
-            console.error("Erro ao gerar token de acesso externo:", error);
-            const errorMessage = error.details?.message || error.message || "Erro desconhecido.";
-            showNotification(`Falha ao gerar link seguro: ${errorMessage}`, "error");
+            console.error("Erro na Cloud Function:", error);
+            showNotification("Erro ao gerar link seguro.", "error");
             throw error; 
         }
 
-        // 2. Construir o URL com o token
         const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
         const urlFinal = `${baseUrl}/atendimento_externo.html?token=${token}`; 
 
-        // 3. Preparar os dados para o EmailJS
         const templateParams = {
             to_email: emailDestino,
             to_name: nomeColaborador,
@@ -65,16 +53,16 @@ export const EmailService = {
             delegation_link: urlFinal
         };
 
-        // 4. Enviar o email via EmailJS
         try {
-            // Lembre-se de conferir seus IDs no painel do EmailJS
-            await emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams);
-            showNotification(`Link de delegação enviado para ${emailDestino}.`, "success");
-            console.log("Email de delegação enviado:", urlFinal);
+            // 🚀 AQUI ESTÃO OS SEUS IDs DO EMAILJS
+            // Se o seu service ID for diferente de 'service_pauta', ajuste abaixo:
+            await emailjs.send('service_pauta', 'template_jslp9ny', templateParams);
+            
+            showNotification(`E-mail enviado para ${emailDestino}!`, "success");
             return true;
         } catch (error) {
-            console.error("Erro ao enviar e-mail de delegação:", error);
-            showNotification("Falha no envio do e-mail de delegação.", "error");
+            console.error("Erro no EmailJS:", error);
+            showNotification("Falha ao disparar e-mail via EmailJS.", "error");
             throw error;
         }
     }
