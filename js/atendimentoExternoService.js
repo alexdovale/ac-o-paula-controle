@@ -35,19 +35,13 @@ export const AtendimentoExternoService = {
 
         let decodedToken;
         try {
-            // Decodifica o token localmente (não valida a assinatura aqui no frontend,
-            // mas extrai o payload e verifica a expiração).
-            // A validação da assinatura REAL ocorre na Cloud Function e DEVE
-            // ser garantida pelas Firestore Security Rules no acesso aos dados.
             decodedToken = jwtDecode(token);
             
-            // Valida a expiração do token (em segundos, jwtDecode retorna em segundos)
-            if (decodedToken.exp * 1000 < Date.now()) { // Multiplica por 1000 para ms
+            if (decodedToken.exp * 1000 < Date.now()) { 
                 this.showError("Link de atendimento expirado. Solicite um novo link.");
                 return;
             }
             
-            // Extrai os dados essenciais do payload do token
             pautaId = decodedToken.pautaId;
             assistidoId = decodedToken.assistidoId;
             collaboratorName = decodedToken.collaboratorName;
@@ -65,7 +59,6 @@ export const AtendimentoExternoService = {
             return;
         }
 
-        // Continuar com o carregamento dos dados se o token for válido e decodificado
         try {
             const pautaSnap = await getDoc(doc(db, "pautas", pautaId));
             if (!pautaSnap.exists()) {
@@ -81,23 +74,19 @@ export const AtendimentoExternoService = {
             }
             const assistidoData = assistidoSnap.data();
 
-            // Preenche o cabeçalho da UI
             document.getElementById('assistido-nome').textContent = assistidoData.name || 'Nome Indisponível';
             document.getElementById('assistido-assunto').textContent = assistidoData.subject || 'Assunto Indisponível';
 
-            // Configura a visibilidade dos botões de fluxo com base na configuração da pauta
-            // (Assumindo que pautaData.useDistributionFlow e pautaData.useReviewFlow existem)
             if (pautaData.useDistributionFlow) {
                 document.getElementById('btn-fluxo-dist').classList.remove('hidden');
             }
             if (pautaData.useReviewFlow) {
                 document.getElementById('btn-fluxo-rev').classList.remove('hidden');
                 
-                // Carrega defensores no Select
                 const qColabs = query(collection(db, "pautas", pautaId, "collaborators"), where("cargo", "==", "Defensor(a)"));
                 const colabsSnap = await getDocs(qColabs);
                 const selectDefensor = document.getElementById('select-defensor');
-                selectDefensor.innerHTML = '<option value="">-- Selecione --</option>'; // Opção padrão
+                selectDefensor.innerHTML = '<option value="">-- Selecione --</option>'; 
                 colabsSnap.forEach(d => {
                     const opt = document.createElement('option');
                     opt.value = d.data().nome; 
@@ -106,7 +95,6 @@ export const AtendimentoExternoService = {
                 });
             }
 
-            // Ajusta a interface com base no status do assistido
             if (assistidoData.status === 'emRevisao') {
                 document.getElementById('header-bg').className = "bg-purple-600 p-5 text-white";
                 document.getElementById('area-colaborador').classList.add('hidden');
@@ -123,10 +111,7 @@ export const AtendimentoExternoService = {
                 document.getElementById('area-colaborador').classList.remove('hidden');
             }
 
-            // Renderiza Histórico
             this.renderHistory(assistidoData.history || []);
-
-            // Configura os listeners dos botões após o init
             this.setupListeners();
 
         } catch (error) {
@@ -135,7 +120,95 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ... (restante dos métodos: setupListeners, mudarAba, escolherFluxo, handleFinalizar, handleAprovar, handleDevolver, renderHistory, showError) ...
+    /**
+     * Configura os eventos de clique (listeners) da interface.
+     */
+    setupListeners() {
+        document.getElementById('tab-btn-encerramento').addEventListener('click', () => this.mudarAba('encerramento'));
+        document.getElementById('tab-btn-historico').addEventListener('click', () => this.mudarAba('historico'));
+
+        const btnDireto = document.getElementById('btn-fluxo-direto');
+        const btnDist = document.getElementById('btn-fluxo-dist');
+        const btnRev = document.getElementById('btn-fluxo-rev');
+
+        if(btnDireto) btnDireto.addEventListener('click', () => this.escolherFluxo('direto'));
+        if(btnDist) btnDist.addEventListener('click', () => this.escolherFluxo('distribuicao'));
+        if(btnRev) btnRev.addEventListener('click', () => this.escolherFluxo('revisao'));
+
+        const btnFinalizar = document.getElementById('btn-finalizar');
+        const btnAprovar = document.getElementById('btn-aprovar');
+        const btnDevolver = document.getElementById('btn-devolver');
+
+        if(btnFinalizar) btnFinalizar.addEventListener('click', () => this.handleFinalizar());
+        if(btnAprovar) btnAprovar.addEventListener('click', () => this.handleAprovar());
+        if(btnDevolver) btnDevolver.addEventListener('click', () => this.handleDevolver());
+        
+        this.escolherFluxo('direto');
+    },
+
+    /**
+     * Alterna a visualização entre a aba de Encerramento e o Histórico.
+     */
+    mudarAba(aba) {
+        const btnEncerramento = document.getElementById('tab-btn-encerramento');
+        const btnHistorico = document.getElementById('tab-btn-historico');
+        const abaEncerramento = document.getElementById('aba-encerramento');
+        const abaHistorico = document.getElementById('aba-historico');
+
+        if (aba === 'encerramento') {
+            abaEncerramento.classList.remove('hidden');
+            abaHistorico.classList.add('hidden');
+            
+            btnEncerramento.classList.add('tab-active');
+            btnEncerramento.classList.remove('text-gray-400');
+            
+            btnHistorico.classList.remove('tab-active');
+            btnHistorico.classList.add('text-gray-400');
+        } else {
+            abaHistorico.classList.remove('hidden');
+            abaEncerramento.classList.add('hidden');
+            
+            btnHistorico.classList.add('tab-active');
+            btnHistorico.classList.remove('text-gray-400');
+            
+            btnEncerramento.classList.remove('tab-active');
+            btnEncerramento.classList.add('text-gray-400');
+        }
+    },
+
+    /**
+     * Gerencia qual opção de encerramento o colaborador clicou.
+     */
+    escolherFluxo(fluxo) {
+        fluxoEscolhido = fluxo;
+        
+        const botoes = {
+            'direto': document.getElementById('btn-fluxo-direto'),
+            'distribuicao': document.getElementById('btn-fluxo-dist'),
+            'revisao': document.getElementById('btn-fluxo-rev')
+        };
+
+        Object.values(botoes).forEach(btn => {
+            if(btn) {
+                btn.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50');
+                btn.classList.add('border-gray-200');
+            }
+        });
+
+        if (botoes[fluxo]) {
+            botoes[fluxo].classList.remove('border-gray-200');
+            botoes[fluxo].classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
+        }
+
+        const configRev = document.getElementById('config-revisao');
+        if (configRev) {
+            if (fluxo === 'revisao') {
+                configRev.classList.remove('hidden');
+            } else {
+                configRev.classList.add('hidden');
+            }
+        }
+    },
 
     /**
      * Manipula a ação de finalizar/encaminhar do colaborador.
@@ -150,7 +223,7 @@ export const AtendimentoExternoService = {
         } else if (fluxoEscolhido === 'revisao') {
             updates.status = 'emRevisao';
             updates.reviewData = {
-                sentBy: collaboratorName, // Usa o nome do token
+                sentBy: collaboratorName, 
                 defensor: document.getElementById('select-defensor').value,
                 notes: document.getElementById('notas-revisao').value
             };
@@ -162,12 +235,12 @@ export const AtendimentoExternoService = {
         
         updates.history = arrayUnion({
             action: `MARCADO COMO ${updates.status.toUpperCase()}`,
-            by: collaboratorName, // Usa o nome do token
+            by: collaboratorName, 
             at: new Date().toISOString()
         });
 
         try {
-            await updateDoc(doc(db, "pautas", pId, "attendances", assistidoId), updates);
+            await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), updates);
             alert("Processo encaminhado com sucesso!");
             window.close();
         } catch (error) {
@@ -188,13 +261,13 @@ export const AtendimentoExternoService = {
             processNumber: numero || null,
             history: arrayUnion({
                 action: numero ? 'APROVADO_E_DISTRIBUIDO' : 'APROVADO_SEM_NUMERO',
-                by: collaboratorName, // Usa o nome do token
+                by: collaboratorName, 
                 at: new Date().toISOString()
             })
         };
 
         try {
-            await updateDoc(doc(db, "pautas", pId, "attendances", assistidoId), updates);
+            await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), updates);
             alert("Aprovado com sucesso!");
             window.close();
         } catch (error) {
@@ -216,13 +289,13 @@ export const AtendimentoExternoService = {
             history: arrayUnion({
                 action: 'DEVOLVIDO_PARA_CORRECAO',
                 msg: motivo,
-                by: collaboratorName, // Usa o nome do token
+                by: collaboratorName, 
                 at: new Date().toISOString()
             })
         };
         
         try {
-            await updateDoc(doc(db, "pautas", pId, "attendances", assistidoId), updates);
+            await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), updates);
             alert("Processo devolvido para correção.");
             window.close();
         } catch (error) {
@@ -233,7 +306,6 @@ export const AtendimentoExternoService = {
 
     /**
      * Renderiza o histórico de ações do assistido.
-     * @param {Array} history - Array de objetos de histórico.
      */
     renderHistory(history) {
         const histCont = document.getElementById('lista-historico');
@@ -248,7 +320,7 @@ export const AtendimentoExternoService = {
                         <p class="text-[9px] text-gray-500 mb-1">${new Date(h.at).toLocaleString('pt-BR')}</p>
                         ${h.msg ? `<p class="italic text-gray-700">"${h.msg}"</p>` : ''}
                     </div>`;
-        });
+            });
         } else {
             histCont.innerHTML = "<p class='text-xs text-gray-400'>Nenhum histórico registrado.</p>";
         }
@@ -256,7 +328,6 @@ export const AtendimentoExternoService = {
 
     /**
      * Exibe uma mensagem de erro e desabilita a interface.
-     * @param {string} message - A mensagem de erro.
      */
     showError(message) {
         document.getElementById('assistido-nome').textContent = "ERRO!";
