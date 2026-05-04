@@ -3,12 +3,12 @@
 // Importa as funções necessárias do Firebase Functions, App e Auth
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"; // <-- ADICIONADO: Importação do Auth
+import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"; 
 import { firebaseConfig } from './config.js'; 
 import { showNotification } from './utils.js'; 
 
 const firebaseApp = window.app?.firebaseApp || initializeApp(firebaseConfig);
-const auth = getAuth(firebaseApp); // <-- ADICIONADO: Força o Firebase a carregar a sessão ativa
+const auth = getAuth(firebaseApp); 
 const functions = getFunctions(firebaseApp);
 
 const generateExternalAccessJwt = httpsCallable(functions, 'generateExternalAccessJwt');
@@ -20,7 +20,6 @@ export const EmailService = {
             throw new Error("Missing email, pautaId, or assistedId for delegation email.");
         }
 
-        // <-- ADICIONADO: Trava para garantir que o frontend sabe que você está logado
         if (!auth.currentUser) {
             console.error("Tentativa de gerar link sem usuário logado no frontend.");
             showNotification("Sessão não identificada. Por favor, atualize a página ou faça login novamente.", "error");
@@ -30,9 +29,18 @@ export const EmailService = {
         // 1. Gerar o JWT via Cloud Function
         let token;
         try {
-            console.log("🕵️ DADOS INDO PARA A NUVEM:", { pautaId, assistedId, nomeColaborador });
-            const result = await generateExternalAccessJwt({ pautaId, assistedId, collaboratorName: nomeColaborador });
+            // Ajuste aqui: garantindo que os nomes das propriedades batam com o destructuring do backend
+            const payload = { 
+                pautaId: pautaId, 
+                assistedId: assistedId, 
+                collaboratorName: nomeColaborador 
+            };
+
+            console.log("🕵️ DADOS INDO PARA A NUVEM:", payload);
+
+            const result = await generateExternalAccessJwt(payload);
             token = result.data.token; 
+
             if (!token) {
                 throw new Error("Token de segurança não foi gerado pela Cloud Function.");
             }
@@ -59,15 +67,14 @@ export const EmailService = {
 
         // 4. Enviar o email via EmailJS
         try {
-            // ATENÇÃO: Lembre-se de substituir 'YOUR_SERVICE_ID' e 'YOUR_TEMPLATE_ID' 
-            // pelas suas chaves reais do painel do EmailJS antes de testar!
+            // Lembre-se de conferir seus IDs no painel do EmailJS
             await emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams);
             showNotification(`Link de delegação enviado para ${emailDestino}.`, "success");
             console.log("Email de delegação enviado:", urlFinal);
             return true;
         } catch (error) {
             console.error("Erro ao enviar e-mail de delegação:", error);
-            showNotification("Falha no envio do e-mail de delegação. Verifique as configurações do EmailJS.", "error");
+            showNotification("Falha no envio do e-mail de delegação.", "error");
             throw error;
         }
     }
