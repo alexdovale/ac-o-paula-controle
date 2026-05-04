@@ -356,79 +356,41 @@ export const PautaService = {
      * Delegar atendimento para um colaborador
      * ATUALIZADO: Agora chama o serviço de e-mail corretamente
      */
-    async delegateAttendance(app, assistedId, collaboratorName, collaboratorId) {
-        if (!app || !app.currentPauta || !app.currentPauta.id || !assistedId || !collaboratorName) {
-            showNotification("Dados incompletos para delegação", "error");
+        async delegateAttendance(app, assistedId, collaboratorName, collaboratorId) {
+        if (!assistedId || !collaboratorName) {
+            showNotification("Selecione um colaborador!", "error");
             return false;
         }
 
         try {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === assistedId);
-            if (!assisted) {
-                showNotification("Assistido não encontrado", "error");
-                return false;
+            const assisted = app.allAssisted.find(a => a.id === assistedId);
+            const colab = app.colaboradores.find(c => c.id === collaboratorId || c.nome === collaboratorName);
+
+            // 1. Atualiza o status no Firebase primeiro
+            await this.updateStatus(app.db, app.currentPauta.id, assistedId, {
+                status: 'emAtendimento',
+                assignedCollaborator: { id: collaboratorId, name: collaboratorName }
+            }, app.currentUserName);
+
+            // 2. Chama o serviço de e-mail com a ordem exata de parâmetros
+            if (colab && colab.email) {
+                await EmailService.sendDelegationEmail(
+                    colab.email,          // emailDestino
+                    collaboratorName,     // nomeColaborador
+                    assisted.name,        // nomeAssistido
+                    app.currentUserName,  // quemDelegou
+                    app.currentPauta.id,  // pautaId
+                    assistedId            // assistedId
+                );
             }
 
-            // 1. Prepara a atualização do Banco de Dados
-            const updates = {
-                assignedCollaborator: {
-                    id: collaboratorId,
-                    name: collaboratorName,
-                    delegatedBy: app.currentUserName,
-                    delegatedAt: new Date().toISOString()
-                },
-                delegatedBy: app.currentUserName,
-                delegatedAt: new Date().toISOString(),
-                status: (app.currentPautaData && app.currentPautaData.useDelegationFlow) ? 'emAtendimento' : 'aguardando',
-                distributionStatus: 'distributed'
-            };
-
-            const distributionHistory = assisted.distributionHistory || [];
-            distributionHistory.push({
-                type: 'delegation',
-                from: app.currentUserName,
-                to: collaboratorName,
-                timestamp: new Date().toISOString(),
-                action: 'delegated'
-            });
-            updates.distributionHistory = distributionHistory;
-
-            // 2. Atualiza o Firestore
-            await this.updateStatus(app.db, app.currentPauta.id, assistedId, updates, app.currentUserName);
-
-            // 3. 🚀 DISPARA O E-MAIL (Aqui estava o vácuo!)
-            // Importante: Verifique se o EmailService está importado no topo do arquivo ou use window.EmailService
-            if (window.EmailService && window.EmailService.sendDelegationEmail) {
-                try {
-                    // Pegamos o e-mail do colaborador na lista do app
-                    const colabInfo = app.colaboradores.find(c => c.id === collaboratorId || c.nome === collaboratorName);
-                    const emailDestino = colabInfo ? colabInfo.email : null;
-
-                    if (emailDestino) {
-                        await window.EmailService.sendDelegationEmail(
-                            emailDestino,
-                            collaboratorName,
-                            assisted.name,
-                            app.currentUserName,
-                            app.currentPauta.id,
-                            assistedId // <-- Enviando como assistedId (exatamente como o backend espera)
-                        );
-                    } else {
-                        console.warn("Colaborador sem e-mail cadastrado. Link não enviado.");
-                    }
-                } catch (eError) {
-                    console.error("Erro ao disparar e-mail pós-delegação:", eError);
-                }
-            }
-
-            showNotification(`Atendimento delegado para ${collaboratorName}`, "success");
             return true;
         } catch (error) {
-            console.error("Erro ao delegar atendimento:", error);
-            showNotification("Erro ao delegar atendimento", "error");
+            console.error("Erro na delegação:", error);
             return false;
         }
-    },
+    }
+
 
 
     /**
