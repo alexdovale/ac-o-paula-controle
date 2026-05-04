@@ -389,7 +389,7 @@ export const PautaService = {
             console.error("Erro na delegação:", error);
             return false;
         }
-    }
+    },
 
 
 
