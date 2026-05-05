@@ -6,78 +6,76 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth
 import { firebaseConfig } from './config.js';
 import { showNotification } from './utils.js';
 
-// Inicialização do Firebase
+// Inicialização
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const functions = getFunctions(firebaseApp);
 
-// Referência para a Cloud Function
 const generateExternalAccessJwt = httpsCallable(functions, 'generateExternalAccessJwt');
 
 export const EmailService = {
-    /**
-     * Envia um e-mail de delegação gerando um link seguro via JWT.
-     */
     async sendDelegationEmail(emailDestino, nomeColaborador, nomeAssistido, quemDelegou, pautaId, assistedId) {
         
-        // Log de Depuração para conferir os dados antes do envio
-        console.log("🚀 Enviando para Cloud Function:", { 
-            pautaId, 
-            assistedId, 
-            nomeColaborador 
-        });
-
-        // Validação básica no frontend para evitar chamadas desnecessárias
+        // Validação de segurança básica no frontend
         if (!emailDestino || !pautaId || !assistedId || !nomeColaborador) {
-            showNotification("Dados insuficientes para gerar o link. Verifique os campos.", "error");
-            console.error("❌ Erro: Campos obrigatórios ausentes.");
+            console.error("❌ Campos ausentes:", { emailDestino, pautaId, assistedId, nomeColaborador });
+            showNotification("Dados incompletos para enviar o link.", "error");
             return false;
         }
 
+        // 1. Gerar o JWT via Cloud Function
+        let token;
         try {
-            // Chamada à Cloud Function - Mapeando os nomes das chaves para o Backend
-            const result = await generateExternalAccessJwt({ 
+            // 👇 AQUI ESTÁ O INCREMENTO QUE VOCÊ CITOU:
+            const dadosParaEnvio = { 
                 pautaId: pautaId, 
                 assistedId: assistedId, 
-                collaboratorName: nomeColaborador // O backend espera 'collaboratorName'
-            });
-
-            // Extração do Token gerado
-            const token = result.data.token;
-            
-            // Construção da URL de atendimento externo
-            const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
-            const urlFinal = `${baseUrl}/atendimento_externo.html?token=${token}`;
-
-            // Parâmetros para o EmailJS
-            const templateParams = {
-                to_email: emailDestino,
-                to_name: nomeColaborador,
-                from_name: quemDelegou,
-                assisted_name: nomeAssistido,
-                delegation_link: urlFinal
+                collaboratorName: nomeColaborador // Mapeando para o nome que o backend exige
             };
 
-            // Disparo do e-mail via EmailJS
-            // Nota: Os IDs de serviço e template já estão com os seus valores reais fornecidos
-            await emailjs.send('service_r1nxe6a', 'template_jslp9ny', templateParams);
+            console.log("🚀 Enviando dados corrigidos para a Nuvem:", dadosParaEnvio);
+
+            const result = await generateExternalAccessJwt(dadosParaEnvio);
             
-            showNotification("E-mail enviado com sucesso!", "success");
-            console.log("✅ Delegação concluída com sucesso para:", emailDestino);
+            token = result.data.token; 
             
-            return true;
+            if (!token) {
+                throw new Error("Token de segurança não foi gerado pela Cloud Function.");
+            }
+            
+            console.log("✅ Token gerado com sucesso!");
 
         } catch (error) {
-            // Tratamento de erros (incluindo erros retornados pela Cloud Function)
-            console.error("❌ Erro detalhado no EmailService:", error);
-            
-            const msgErro = error.details?.message || error.message || "Erro desconhecido.";
-            showNotification(`Falha: ${msgErro}`, "error");
-            
+            console.error("❌ Erro ao gerar token:", error);
+            const errorMessage = error.details?.message || error.message || "Erro desconhecido.";
+            showNotification(`Falha ao gerar link seguro: ${errorMessage}`, "error");
+            throw error; 
+        }
+
+        // 2. Construir o URL com o token
+        const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
+        const urlFinal = `${baseUrl}/atendimento_externo.html?token=${token}`; 
+
+        // 3. Preparar e enviar via EmailJS
+        const templateParams = {
+            to_email: emailDestino,
+            to_name: nomeColaborador,
+            from_name: quemDelegou,
+            assisted_name: nomeAssistido,
+            delegation_link: urlFinal
+        };
+
+        try {
+            // Usando seus IDs reais: service_r1nxe6a e template_jslp9ny
+            await emailjs.send('service_r1nxe6a', 'template_jslp9ny', templateParams);
+            showNotification("E-mail de delegação enviado!", "success");
+            return true;
+        } catch (error) {
+            console.error("❌ Erro EmailJS:", error);
+            showNotification("Falha no envio do e-mail.", "error");
             throw error;
         }
     }
 };
 
-// Exporta para o escopo global para facilitar o acesso por outros scripts legados
 window.EmailService = EmailService;
