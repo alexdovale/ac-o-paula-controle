@@ -6,7 +6,7 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth
 import { firebaseConfig } from './config.js';
 import { showNotification } from './utils.js';
 
-// Inicialização
+// Inicialização robusta do Firebase
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const functions = getFunctions(firebaseApp);
@@ -16,47 +16,41 @@ const generateExternalAccessJwt = httpsCallable(functions, 'generateExternalAcce
 export const EmailService = {
     async sendDelegationEmail(emailDestino, nomeColaborador, nomeAssistido, quemDelegou, pautaId, assistedId) {
         
-        // Validação de segurança básica no frontend
+        // Verificação pré-vôo: garante que nada chegue undefined na nuvem
         if (!emailDestino || !pautaId || !assistedId || !nomeColaborador) {
-            console.error("❌ Campos ausentes:", { emailDestino, pautaId, assistedId, nomeColaborador });
-            showNotification("Dados incompletos para enviar o link.", "error");
+            console.error("❌ Erro: Dados insuficientes.", { pautaId, assistedId, nomeColaborador });
+            showNotification("Dados incompletos no formulário.", "error");
             return false;
         }
 
         // 1. Gerar o JWT via Cloud Function
         let token;
         try {
-            // 👇 AQUI ESTÁ O INCREMENTO QUE VOCÊ CITOU:
+            // MAPEAMENTO CRÍTICO: O backend exige 'collaboratorName' e 'assistedId'
             const dadosParaEnvio = { 
                 pautaId: pautaId, 
-                assistedId: assistedId, 
-                collaboratorName: nomeColaborador // Mapeando para o nome que o backend exige
+                assistedId: assistedId, // Verifique se no pauta.js você está passando o ID correto
+                collaboratorName: nomeColaborador 
             };
 
-            console.log("🚀 Enviando dados corrigidos para a Nuvem:", dadosParaEnvio);
+            console.log("🚀 Enviando para Cloud Function:", dadosParaEnvio);
 
             const result = await generateExternalAccessJwt(dadosParaEnvio);
-            
             token = result.data.token; 
             
-            if (!token) {
-                throw new Error("Token de segurança não foi gerado pela Cloud Function.");
-            }
-            
-            console.log("✅ Token gerado com sucesso!");
+            if (!token) throw new Error("Token não retornado pelo servidor.");
 
         } catch (error) {
-            console.error("❌ Erro ao gerar token:", error);
-            const errorMessage = error.details?.message || error.message || "Erro desconhecido.";
-            showNotification(`Falha ao gerar link seguro: ${errorMessage}`, "error");
+            console.error("❌ Erro na geração do Token:", error);
+            const msg = error.details?.message || error.message || "Erro de comunicação.";
+            showNotification(`Falha ao gerar link: ${msg}`, "error");
             throw error; 
         }
 
-        // 2. Construir o URL com o token
+        // 2. Montagem da URL e Envio via EmailJS
         const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
         const urlFinal = `${baseUrl}/atendimento_externo.html?token=${token}`; 
 
-        // 3. Preparar e enviar via EmailJS
         const templateParams = {
             to_email: emailDestino,
             to_name: nomeColaborador,
@@ -66,13 +60,13 @@ export const EmailService = {
         };
 
         try {
-            // Usando seus IDs reais: service_r1nxe6a e template_jslp9ny
+            // Utilizando suas credenciais de produção do EmailJS
             await emailjs.send('service_r1nxe6a', 'template_jslp9ny', templateParams);
-            showNotification("E-mail de delegação enviado!", "success");
+            showNotification("E-mail enviado com sucesso!", "success");
             return true;
         } catch (error) {
-            console.error("❌ Erro EmailJS:", error);
-            showNotification("Falha no envio do e-mail.", "error");
+            console.error("❌ Erro no EmailJS:", error);
+            showNotification("O link foi gerado, mas o e-mail falhou.", "error");
             throw error;
         }
     }
