@@ -352,41 +352,64 @@ export const PautaService = {
         }
     },
 
-        /**
+     /**
      * Delegar atendimento para um colaborador
-     * ATUALIZADO: Agora chama o serviço de e-mail corretamente
+     * ATUALIZADO: Correção de mapeamento de IDs e nomes para o EmailService
      */
-        async delegateAttendance(app, assistedId, collaboratorName, collaboratorId) {
+    async delegateAttendance(app, assistedId, collaboratorName, collaboratorId) {
+        // Validação inicial
         if (!assistedId || !collaboratorName) {
             showNotification("Selecione um colaborador!", "error");
             return false;
         }
 
         try {
+            // Encontra o assistido e o colaborador nos dados locais do app
             const assisted = app.allAssisted.find(a => a.id === assistedId);
             const colab = app.colaboradores.find(c => c.id === collaboratorId || c.nome === collaboratorName);
 
+            if (!assisted) {
+                showNotification("Erro: Assistido não encontrado no sistema.", "error");
+                return false;
+            }
+
+            console.log("📨 Preparando delegação:", {
+                assistido: assisted.name,
+                id: assistedId,
+                para: collaboratorName
+            });
+
             // 1. Atualiza o status no Firebase primeiro
+            // Isso garante que no painel do SIGAP o assistido já mude de cor na hora
             await this.updateStatus(app.db, app.currentPauta.id, assistedId, {
                 status: 'emAtendimento',
-                assignedCollaborator: { id: collaboratorId, name: collaboratorName }
+                assignedCollaborator: { id: collaboratorId || 'manual', name: collaboratorName },
+                delegatedBy: app.currentUserName,
+                delegatedAt: new Date().toISOString()
             }, app.currentUserName);
 
-            // 2. Chama o serviço de e-mail com a ordem exata de parâmetros
+            // 2. Dispara o E-mail com o link seguro (JWT)
+            // IMPORTANTE: Passamos o assistedId (string) e o nome correto
             if (colab && colab.email) {
+                showNotification(`Gerando link seguro para ${collaboratorName}...`, "info");
+                
                 await EmailService.sendDelegationEmail(
                     colab.email,          // emailDestino
-                    collaboratorName,     // nomeColaborador
-                    assisted.name,        // nomeAssistido
+                    collaboratorName,      // nomeColaborador
+                    assisted.name,         // nomeAssistido
                     app.currentUserName,  // quemDelegou
                     app.currentPauta.id,  // pautaId
-                    assistedId            // assistedId
+                    assistedId            // assistedId (ID do documento)
                 );
+            } else {
+                console.warn("⚠️ Colaborador sem e-mail cadastrado. Status atualizado apenas no painel.");
+                showNotification("Colaborador sem e-mail. Link não enviado.", "warning");
             }
 
             return true;
         } catch (error) {
-            console.error("Erro na delegação:", error);
+            console.error("❌ Erro crítico na delegação:", error);
+            showNotification("Falha ao delegar. Verifique o console.", "error");
             return false;
         }
     },
