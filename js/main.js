@@ -1,3 +1,4 @@
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -63,10 +64,39 @@ class SIGAPApp {
             
             // Inicializa o detalhes.js
             setupDetailsModal({ db: this.db });
+
+            // Carrega os textos externos dos modais de LGPD, Manual e Termos
+            this.loadExternalModalsContent();
             
         } catch (error) {
             console.error("Erro na inicialização:", error);
             showNotification("Erro ao iniciar o sistema", "error");
+        }
+    }
+
+    async loadExternalModalsContent() {
+        // Mapeia onde o texto deve ser injetado e de onde deve vir
+        const modalsToLoad = [
+            { selector: '#policy-content', url: './politica.html' },
+            { selector: '#manual-modal .scrollable-content', url: './manual.html' },
+            { selector: '#terms-modal .scrollable-content', url: './termos.html' }
+        ];
+
+        for (const item of modalsToLoad) {
+            try {
+                const response = await fetch(item.url);
+                if (response.ok) {
+                    const html = await response.text();
+                    const container = document.querySelector(item.selector);
+                    if (container) {
+                        container.innerHTML = html; // Substitui o texto pelo HTML externo
+                    }
+                } else {
+                    console.warn(`Arquivo não encontrado (local): ${item.url}. Usando os textos padrão embutidos.`);
+                }
+            } catch (error) {
+                console.error(`Erro ao tentar buscar ${item.url}:`, error);
+            }
         }
     }
 
@@ -2355,4 +2385,4 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-});
+    });
