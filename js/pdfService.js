@@ -680,7 +680,7 @@ export const PDFService = {
     },
 
     /**
-     * GERA LISTA DE COLABORADORES ORDENADA
+     * GERA LISTA DE COLABORADORES ORDENADA E AGRUPADA POR EQUIPE
      */
     generateCollaboratorsPDF(pautaName, colaboradores, selectedCols = ['nome', 'cargo', 'equipe', 'transporte']) {
         try {
@@ -721,9 +721,29 @@ export const PDFService = {
             });
 
             const header = [selectedCols.map(key => colMap[key] ? colMap[key].label : key)];
-            const tableData = sortedColaboradores.map(c =>
-                selectedCols.map(key => colMap[key] ? colMap[key].getData(c) : 'N/A')
-            );
+            
+            // CONSTRUINDO A TABELA COM AGRUPAMENTO
+            const tableData = [];
+            let currentEquipe = null;
+
+            sortedColaboradores.forEach(c => {
+                const equipeAtual = c.equipe ? `Equipe ${c.equipe}` : 'Sem Equipe';
+                
+                // Se a equipe mudou, insere uma linha de cabeçalho do grupo
+                if (equipeAtual !== currentEquipe) {
+                    currentEquipe = equipeAtual;
+                    tableData.push([
+                        {
+                            content: `📁 ${equipeAtual.toUpperCase()}`,
+                            colSpan: selectedCols.length,
+                            styles: { fillColor: [229, 231, 235], textColor: [55, 65, 81], fontStyle: 'bold', halign: 'left' } 
+                        }
+                    ]);
+                }
+                
+                // Insere os dados do colaborador
+                tableData.push(selectedCols.map(key => colMap[key] ? colMap[key].getData(c) : 'N/A'));
+            });
 
             docPDF.setFontSize(16);
             docPDF.setTextColor(22, 163, 74); // Verde SIGAP
@@ -736,7 +756,7 @@ export const PDFService = {
                 startY: 55,
                 theme: 'striped',
                 headStyles: { fillColor: [22, 163, 74] }, // Verde SIGAP
-                styles: { fontSize: 9, halign: 'center' }
+                styles: { fontSize: 9, halign: 'center', valign: 'middle' }
             });
 
             docPDF.save(`equipe_${pautaName.replace(/\s+/g, '_')}.pdf`);
