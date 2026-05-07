@@ -1,4 +1,4 @@
-// js/pdfService.js - VERSÃO FINAL CORRIGIDA (Texto limitado + Logo 106x25mm + Cores Verdes)
+// js/pdfService.js - VERSÃO FINAL CORRIGIDA (Texto limitado + Logo 106x25mm + Cores Verdes + Ordenação)
 
 /**
  * Utilitários de limpeza e formatação
@@ -104,9 +104,17 @@ export const PDFService = {
             
             let currentY = 55 + (splitIntro.length * 4.5);
 
+            // Ordena os colaboradores antes de separar (Equipe > Nome)
+            const sortedColaboradores = [...colaboradores].sort((a, b) => {
+                const eqA = a.equipe || '';
+                const eqB = b.equipe || '';
+                if (eqA !== eqB) return eqA.localeCompare(eqB);
+                return (a.nome || '').localeCompare(b.nome || '');
+            });
+
             // Filtrar por cargo
-            const defensores = colaboradores.filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'));
-            const servidores = colaboradores.filter(c => c.cargo && !c.cargo.toLowerCase().includes('defensor'));
+            const defensores = sortedColaboradores.filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'));
+            const servidores = sortedColaboradores.filter(c => c.cargo && !c.cargo.toLowerCase().includes('defensor'));
 
             // CONFIGURAÇÃO DE LARGURAS (ASSINATURA É A MAIOR)
             const larguraNome = 65;
@@ -274,8 +282,16 @@ export const PDFService = {
             
             let currentY = 55 + (splitIntro.length * 4.5);
 
-            const defensores = colaboradores.filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'));
-            const servidores = colaboradores.filter(c => c.cargo && !c.cargo.toLowerCase().includes('defensor'));
+            // Ordena os colaboradores antes de separar (Equipe > Nome)
+            const sortedColaboradores = [...colaboradores].sort((a, b) => {
+                const eqA = a.equipe || '';
+                const eqB = b.equipe || '';
+                if (eqA !== eqB) return eqA.localeCompare(eqB);
+                return (a.nome || '').localeCompare(b.nome || '');
+            });
+
+            const defensores = sortedColaboradores.filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'));
+            const servidores = sortedColaboradores.filter(c => c.cargo && !c.cargo.toLowerCase().includes('defensor'));
 
             const larguraNome = 65;
             const larguraIdentificador = 30;
@@ -664,7 +680,7 @@ export const PDFService = {
     },
 
     /**
-     * GERA LISTA DE COLABORADORES
+     * GERA LISTA DE COLABORADORES ORDENADA
      */
     generateCollaboratorsPDF(pautaName, colaboradores, selectedCols = ['nome', 'cargo', 'equipe', 'transporte']) {
         try {
@@ -683,8 +699,29 @@ export const PDFService = {
                 }}
             };
 
+            // APENAS GARANTINDO A ORDENAÇÃO EXATA: EQUIPE -> CARGO -> NOME
+            const sortedColaboradores = [...colaboradores].sort((a, b) => {
+                const equipeA = a.equipe || 'Sem Equipe';
+                const equipeB = b.equipe || 'Sem Equipe';
+                if (equipeA !== equipeB) return equipeA.localeCompare(equipeB);
+
+                const getCargoWeight = (cargo) => {
+                    const c = (cargo || '').toLowerCase();
+                    if (c.includes('defensor')) return 1;
+                    if (c.includes('servidor')) return 2;
+                    return 3;
+                };
+
+                const weightA = getCargoWeight(a.cargo);
+                const weightB = getCargoWeight(b.cargo);
+                
+                if (weightA !== weightB) return weightA - weightB;
+                
+                return (a.nome || '').localeCompare(b.nome || '');
+            });
+
             const header = [selectedCols.map(key => colMap[key] ? colMap[key].label : key)];
-            const tableData = colaboradores.map(c =>
+            const tableData = sortedColaboradores.map(c =>
                 selectedCols.map(key => colMap[key] ? colMap[key].getData(c) : 'N/A')
             );
 
