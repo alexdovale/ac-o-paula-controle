@@ -45,10 +45,52 @@ export const PautaService = {
         return unsubscribe;
     },
 
-    /**
-     * Adiciona um novo assistido (nenhum campo obrigatório para agilizar o atendimento).
-     * Lê diretamente dos campos da UI (DOM).
-     */
+    // ⭐ NOVO: Função para preencher os Selects de Sala na Interface
+    populateRoomSelects(app) {
+        if (!app.currentPautaData) return;
+        
+        const isMulti = app.currentPautaData.type === 'multisala';
+        const rooms = app.customRoomsList || [];
+
+        // 1. Select do Formulário Principal (Adicionar Assistido)
+        const manualWrapper = document.getElementById('manual-room-wrapper');
+        const manualSelect = document.getElementById('manual-room-select');
+        if (manualWrapper && manualSelect) {
+            if (isMulti && rooms.length > 0) {
+                manualWrapper.classList.remove('hidden');
+                manualSelect.innerHTML = '<option value="">-- Selecione a Sala --</option>';
+                rooms.forEach(r => manualSelect.innerHTML += `<option value="${escapeHTML(r)}">${escapeHTML(r)}</option>`);
+            } else {
+                manualWrapper.classList.add('hidden');
+            }
+        }
+
+        // 2. Select do Modal de Chegada (Arrival)
+        const arrivalContainer = document.getElementById('arrival-room-container');
+        const arrivalSelect = document.getElementById('arrival-room-select');
+        if (arrivalContainer && arrivalSelect) {
+            if (isMulti && rooms.length > 0) {
+                arrivalContainer.classList.remove('hidden');
+                arrivalSelect.innerHTML = '<option value="">-- Selecione a Sala --</option>';
+                rooms.forEach(r => arrivalSelect.innerHTML += `<option value="${escapeHTML(r)}">${escapeHTML(r)}</option>`);
+            } else {
+                arrivalContainer.classList.add('hidden');
+            }
+        }
+
+        // 3. Select do Modal de Edição de Assistido
+        const editSelect = document.getElementById('edit-room-select');
+        if (editSelect) {
+            if (isMulti && rooms.length > 0) {
+                editSelect.parentElement.classList.remove('hidden');
+                editSelect.innerHTML = '<option value="">-- Sem sala definida --</option>';
+                rooms.forEach(r => editSelect.innerHTML += `<option value="${escapeHTML(r)}">${escapeHTML(r)}</option>`);
+            } else {
+                editSelect.parentElement.classList.add('hidden');
+            }
+        }
+    },
+
     async addAssisted(app) {
         console.log("=== addAssisted iniciado ===");
         
@@ -70,15 +112,12 @@ export const PautaService = {
         const cpfInput = document.getElementById('assisted-cpf');
         const subjectInput = document.getElementById('assisted-subject');
         
-        // Se por algum motivo os elementos HTML não existirem, ainda é um erro interno
         if (!nameInput || !cpfInput || !subjectInput) { 
             showNotification("Erro interno: Campos de formulário não encontrados no HTML.", "error");
             playSound('error');
             return;
         }
         
-        // NENHUMA VALIDAÇÃO 'return' AQUI PARA AGILIZAR.
-        // Os valores são trimados e, se vazios, serão strings vazias ou 'Não informado'.
         const name = nameInput.value.trim();
         const subject = subjectInput.value.trim(); 
 
@@ -95,15 +134,14 @@ export const PautaService = {
             hasArrived = (arrivedRadio && arrivedRadio.value === 'yes');
             scheduledTimeValue = (isScheduled && document.getElementById('scheduled-time')) ? document.getElementById('scheduled-time').value : null;
             
-            // Aqui, a validação do horário agendado ainda faz sentido, pois 'isScheduled' implica um horário.
             if (isScheduled && !scheduledTimeValue && !hasArrived) {
                 showNotification("Por favor, informe o horário agendado ou marque como 'já chegou'.", "error");
                 playSound('error');
                 return;
             }
-        } else { // Modo avulso
+        } else {
             isScheduled = false;
-            hasArrived = true; // No avulso, assume que já chegou
+            hasArrived = true; 
             scheduledTimeValue = null;
         }
 
@@ -115,21 +153,23 @@ export const PautaService = {
                 arrivalDate = new Date();
                 arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
             } else {
-                // Se marcou 'já chegou' mas não informou horário, usa o horário atual
                 arrivalDate = new Date();
             }
         }
 
+        // ⭐ CORREÇÃO DA SALA NO ATO DA CRIAÇÃO
         let assignedRoom = null;
-        if (currentMode === 'avulso' && app.currentPautaData && app.currentPautaData.type === 'multisala') {
+        if (app.currentPautaData && app.currentPautaData.type === 'multisala') {
             const manualRoomSelect = document.getElementById('manual-room-select');
-            assignedRoom = (manualRoomSelect && manualRoomSelect.value) ? manualRoomSelect.value : null;
+            if (manualRoomSelect && !manualRoomSelect.closest('.hidden')) {
+                assignedRoom = manualRoomSelect.value || null;
+            }
         }
 
         const newAssisted = {
-            name: name || 'Assistido sem nome', // Garante um nome padrão se o campo estiver vazio
+            name: name || 'Assistido sem nome', 
             cpf: (cpfInput && cpfInput.value.trim()) || '',
-            subject: subject || 'Não informado', // Garante um assunto padrão se o campo estiver vazio
+            subject: subject || 'Não informado', 
             type: currentMode,
             status: hasArrived ? 'aguardando' : 'pauta',
             scheduledTime: scheduledTimeValue,
@@ -144,7 +184,7 @@ export const PautaService = {
             finalizadoPeloColaborador: false,
             isConfirmed: false,
             confirmationDetails: null,
-            room: assignedRoom,
+            room: assignedRoom, // SALVA A SALA AQUI
             manualIndex: Date.now(),
             createdAt: new Date().toISOString(),
             lastActionBy: app.currentUserName || 'Sistema',
@@ -158,15 +198,13 @@ export const PautaService = {
             const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
             const docRef = await addDoc(attendanceRef, newAssisted);
             
-            console.log("Documento criado com sucesso! ID:", docRef.id);
-            
             await logAction(
                 app.db,
                 app.auth,
                 app.currentUserName || 'Sistema',
                 app.currentPauta.id,
                 'ADD_ASSISTED',
-                `Adicionou assistido: ${newAssisted.name}`, // Usa o nome que foi salvo (pode ser o padrão)
+                `Adicionou assistido: ${newAssisted.name}`,
                 docRef.id
             );
             
@@ -177,19 +215,20 @@ export const PautaService = {
             if (nameInput) nameInput.value = '';
             if (cpfInput) cpfInput.value = '';
             if (subjectInput) subjectInput.value = '';
+            const manualRoomSelect = document.getElementById('manual-room-select');
+            if (manualRoomSelect) manualRoomSelect.value = '';
             
-            // Esconde wrappers de horário se for agendamento (mantém a lógica UI)
             if (currentMode === 'agendamento') {
                 if (document.getElementById('scheduled-time-wrapper')) document.getElementById('scheduled-time-wrapper').classList.add('hidden');
                 if (document.getElementById('arrival-time-wrapper')) document.getElementById('arrival-time-wrapper').classList.add('hidden');
-                document.querySelector('input[name="is-scheduled"][value="no"]').checked = true; // Reseta para 'Não' agendado
-                document.querySelector('input[name="has-arrived"][value="no"]').checked = true;     // Reseta para 'Não' chegou
-            } else { // Modo avulso, mantem o tempo atual e ja chegou
+                document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
+                document.querySelector('input[name="has-arrived"][value="no"]').checked = true; 
+            } else {
                 if (document.getElementById('arrival-time-wrapper')) document.getElementById('arrival-time-wrapper').classList.remove('hidden');
                 document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
             }
             
-            nameInput.focus(); // Foca no nome para próxima adição
+            nameInput.focus();
             
         } catch (error) {
             console.error("Erro detalhado ao adicionar:", error);
@@ -204,9 +243,6 @@ export const PautaService = {
         }
     },
 
-    /**
-     * Adiciona assistidos via programação (Usado pelo upload de CSV)
-     */
     async addAssistedProgrammatic(db, pautaId, assistedData, userName) {
         if (!pautaId || !assistedData || !userName) {
             showNotification("Dados incompletos para adicionar assistido.", "error");
@@ -246,9 +282,6 @@ export const PautaService = {
         }
     },
 
-    /**
-     * ATUALIZADA: updateStatus com Notificação Interativa e Lógica de Fila
-     */
     async updateStatus(db, pautaId, assistedId, updates, userName) {
         if (!pautaId || !assistedId) return;
         
@@ -265,34 +298,28 @@ export const PautaService = {
                 lastActionTimestamp: new Date().toISOString()
             };
             
-            // --- LÓGICA CORRIGIDA PARA checkInOrder e arrivalTime ---
             if (updates.status === 'aguardando') {
                 if (!updates.checkInOrder) {
                     finalUpdates.checkInOrder = Date.now(); 
-                    console.log("✅ checkInOrder definido para 'aguardando' como Date.now() para desempate:", finalUpdates.checkInOrder);
                 } else {
                     finalUpdates.checkInOrder = updates.checkInOrder;
                 }
                 
-                // ⭐⭐⭐ ESTE É O BLOCO CORRIGIDO PARA arrivalTime ⭐⭐⭐
-                if (updates.arrivalTime) { // Se `arrivalTime` foi fornecido nos updates
+                if (updates.arrivalTime) { 
                     const arrivalDate = new Date(updates.arrivalTime);
-                    if (isNaN(arrivalDate.getTime())) { // Se a data é inválida
+                    if (isNaN(arrivalDate.getTime())) {
                         console.warn("⚠️ arrivalTime fornecido é inválido:", updates.arrivalTime);
-                        finalUpdates.arrivalTime = null; // Limpa arrivalTime inválido
-                        showNotification("Data/Hora de chegada inválida. Campo limpo.", "warning"); // Notifica o usuário
+                        finalUpdates.arrivalTime = null;
+                        showNotification("Data/Hora de chegada inválida. Campo limpo.", "warning");
                         playSound('warning');
                     } else {
-                        finalUpdates.arrivalTime = arrivalDate.toISOString(); // Garante formato ISO string
+                        finalUpdates.arrivalTime = arrivalDate.toISOString();
                     }
                 } else if (currentData.arrivalTime && updates.arrivalTime === null) {
-                    // Se updates.arrivalTime é explicitamente null (para remover), então remove
                     finalUpdates.arrivalTime = null;
                 } else if (currentData.arrivalTime && !updates.arrivalTime) {
-                    // Se não foi fornecido nos updates, mas existe nos dados atuais, mantém
                     finalUpdates.arrivalTime = currentData.arrivalTime;
                 }
-                // ⭐⭐⭐ FIM DO BLOCO CORRIGIDO PARA arrivalTime ⭐⭐⭐
 
             } else if (updates.status === 'pauta') {
                 finalUpdates.checkInOrder = null;
@@ -301,19 +328,16 @@ export const PautaService = {
                  if (!updates.checkInOrder && currentData.checkInOrder) {
                      finalUpdates.checkInOrder = currentData.checkInOrder;
                  }
-                 // Para outros status, se `arrivalTime` não foi explicitamente atualizado para null, mantém o existente.
                  if (!updates.arrivalTime && currentData.arrivalTime) {
                      finalUpdates.arrivalTime = currentData.arrivalTime;
                  }
             }
-            // --- FIM DA LÓGICA DE checkInOrder e arrivalTime ---
             
             await updateDoc(docRef, finalUpdates);
             
             const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados atualizados';
             await logAction(db, window.app?.auth, userName || 'Sistema', pautaId, 'UPDATE_ASSISTED', `${action} - ${currentData.name || 'Assistido'}`, assistedId);
             
-            // ⭐ NOTIFICAÇÃO INTERATIVA PARA FILA DE ESPERA
             if (updates.status === 'aguardando' && currentData.status !== 'aguardando') {
                 const currentAssisted = window.app.allAssisted.find(a => a.id === assistedId) || { name: 'Assistido' };
                 const name = currentAssisted.name || currentData.name;
@@ -352,19 +376,13 @@ export const PautaService = {
         }
     },
 
-     /**
-     * Delegar atendimento para um colaborador
-     * ATUALIZADO: Correção de mapeamento de IDs e nomes para o EmailService
-     */
     async delegateAttendance(app, assistedId, collaboratorName, collaboratorId) {
-        // Validação inicial
         if (!assistedId || !collaboratorName) {
             showNotification("Selecione um colaborador!", "error");
             return false;
         }
 
         try {
-            // Encontra o assistido e o colaborador nos dados locais do app
             const assisted = app.allAssisted.find(a => a.id === assistedId);
             const colab = app.colaboradores.find(c => c.id === collaboratorId || c.nome === collaboratorName);
 
@@ -379,8 +397,6 @@ export const PautaService = {
                 para: collaboratorName
             });
 
-            // 1. Atualiza o status no Firebase primeiro
-            // Isso garante que no painel do SIGAP o assistido já mude de cor na hora
             await this.updateStatus(app.db, app.currentPauta.id, assistedId, {
                 status: 'emAtendimento',
                 assignedCollaborator: { id: collaboratorId || 'manual', name: collaboratorName },
@@ -388,18 +404,16 @@ export const PautaService = {
                 delegatedAt: new Date().toISOString()
             }, app.currentUserName);
 
-            // 2. Dispara o E-mail com o link seguro (JWT)
-            // IMPORTANTE: Passamos o assistedId (string) e o nome correto
             if (colab && colab.email) {
                 showNotification(`Gerando link seguro para ${collaboratorName}...`, "info");
                 
                 await EmailService.sendDelegationEmail(
-                    colab.email,          // emailDestino
-                    collaboratorName,      // nomeColaborador
-                    assisted.name,         // nomeAssistido
-                    app.currentUserName,  // quemDelegou
-                    app.currentPauta.id,  // pautaId
-                    assistedId            // assistedId (ID do documento)
+                    colab.email,          
+                    collaboratorName,      
+                    assisted.name,         
+                    app.currentUserName,  
+                    app.currentPauta.id,  
+                    assistedId            
                 );
             } else {
                 console.warn("⚠️ Colaborador sem e-mail cadastrado. Status atualizado apenas no painel.");
@@ -414,11 +428,6 @@ export const PautaService = {
         }
     },
 
-
-
-    /**
-     * Finalizar atendimento (marcar como atendido)
-     */
     async finishAttendance(app, assistedId, attendedBy, demands = []) {
         if (!app || !app.currentPauta || !app.currentPauta.id || !assistedId) {
             showNotification("Dados incompletos para finalizar atendimento", "error");
@@ -495,9 +504,6 @@ export const PautaService = {
         }
     },
 
-    /**
-     * Identifica o próximo assistido da fila 'aguardando' e abre o modal de seleção/finalização.
-     */
     async callNextAssisted(app) {
         if (!app || !app.currentPauta || !app.currentPauta.id) {
             showNotification("Nenhuma pauta selecionada!", "error");
@@ -510,7 +516,6 @@ export const PautaService = {
             return;
         }
 
-        // Ordena a lista para encontrar o "próximo"
         const orderedList = this.sortAguardando(aguardandoList, app.currentPautaData.ordemAtendimento);
         const nextAssisted = orderedList[0];
 
@@ -519,41 +524,30 @@ export const PautaService = {
             return;
         }
 
-        // Define as variáveis globais para o modal de seleção de colaborador/finalização
         window.assistedIdToHandle = nextAssisted.id;
         window.assistedNameToHandle = nextAssisted.name || '';
         
-        // Determina o tipo de ação para o modal.
         window.assistedTipoAcao = app.currentPautaData?.useDelegationFlow ? 'delegar' : 'atender_direto';
         
-        // Preenche o nome do assistido no modal
         const assistedToAttendNameEl = document.getElementById('assisted-to-attend-name');
         if (assistedToAttendNameEl) {
             assistedToAttendNameEl.textContent = nextAssisted.name;
         }
 
-        // Preenche a lista de colaboradores no modal de seleção
         if (typeof PautaService.preencherListaColaboradoresModal === 'function') {
             PautaService.preencherListaColaboradoresModal(app);
-        } else {
-            console.error("preencherListaColaboradoresModal não encontrada. Verifique o pauta.js.");
         }
 
-        // Abre o modal de seleção de colaborador/finalização
         const selectCollaboratorModal = document.getElementById('select-collaborator-modal');
         if (selectCollaboratorModal) {
             selectCollaboratorModal.classList.remove('hidden');
             showNotification(`Próximo: "${nextAssisted.name}". Selecione o atendente.`, "info");
             playSound('chime');
         } else {
-            console.error("Modal 'select-collaborator-modal' não encontrado.");
             showNotification("Erro ao abrir seleção de atendente. Tente novamente.", "error");
         }
     }, 
 
-    /**
-     * Remove um assistido
-     */
     async deleteAssisted(db, pautaId, assistedId, userName) {
         if (!pautaId || !assistedId) return;
         
@@ -581,9 +575,6 @@ export const PautaService = {
         }
     },
 
-    /**
-     * Reordena a fila manualmente
-     */
     async reorderQueue(db, pautaId, items, userName) {
         if (!pautaId || !items || !items.length) return;
         
@@ -615,9 +606,6 @@ export const PautaService = {
         }
     },
 
-    /**
-     * Apaga uma pauta completa (com todos os subdocumentos)
-     */
     async deletePauta(db, auth, pautaId, pautaName, userName) {
         if (!confirm(`Tem certeza que deseja apagar a pauta "${pautaName}"?\n\nEsta ação não pode ser desfeita!`)) {
             return false;
@@ -681,9 +669,6 @@ export const PautaService = {
         }
     },
 
-    /**
-     * Filtra pautas por tipo (para a tela de seleção)
-     */
     filterPautas(pautas, filterType, currentUserId, currentUserEmail, filtrosAdicionais = {}) {
         if (!pautas || !Array.isArray(pautas)) return [];
         
@@ -756,9 +741,6 @@ export const PautaService = {
         return pautasFiltradas;
     },
 
-    /**
-     * Processa upload de arquivo CSV
-     */
     async handleCSVUpload(event, app) {
         const file = event.target.files[0];
         if (!file) return;
@@ -774,7 +756,6 @@ export const PautaService = {
 
             let successCount = 0;
             for (const assistido of assistidos) {
-                // Utilizando a função programática para o CSV para não quebrar a lógica anterior
                 const added = await this.addAssistedProgrammatic(
                     app.db,
                     app.currentPauta.id,
@@ -802,17 +783,11 @@ export const PautaService = {
         }
     },
 
-        /**
-     * Calcula o nível de prioridade visual (Cores do Card)
-     * Baseado na urgência e na pontualidade.
-     */
     getPriorityLevel(assisted) {
         if (!assisted || assisted.status !== 'aguardando') return 'N/A';
         
-        // 1. Urgência Crítica (Vermelho)
         if (assisted.priority === 'URGENTE') return 'URGENTE';
 
-        // 2. Agendados: Verifica se é pontual ou atrasado
         if (assisted.type === 'agendamento' && assisted.scheduledTime && assisted.arrivalTime) {
             try {
                 const [h, m] = assisted.scheduledTime.split(':').map(Number);
@@ -822,26 +797,19 @@ export const PautaService = {
                 const chegada = new Date(assisted.arrivalTime);
                 const diffMinutos = (chegada - agendado) / (1000 * 60);
 
-                if (diffMinutos <= 5) return 'Máxima'; // Pontual ou adiantado (Verde)
-                if (diffMinutos <= 30) return 'Média'; // Atraso leve (Laranja)
-                return 'Mínima'; // Atraso grave (Cinza/Padrão)
+                if (diffMinutos <= 5) return 'Máxima'; 
+                if (diffMinutos <= 30) return 'Média'; 
+                return 'Mínima'; 
             } catch (e) {
                 return 'Média';
             }
         }
-
-        // 3. Avulsos ou sem horário (Laranja por padrão)
         return 'Média';
     },
 
-    /**
-     * ORDENAÇÃO MESTRA: O "Cérebro" do SIGAP
-     * Prioridade Legal > Horário Marcado > Ordem de Chegada
-     */
     sortAguardando(list, orderType) {
         if (!list || !list.length) return [];
         
-        // Respeita a vontade do usuário se ele escolheu manual ou chegada simples
         if (orderType === 'manual') {
             return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
         }
@@ -850,24 +818,19 @@ export const PautaService = {
             return [...list].sort((a, b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
         }
 
-        // LÓGICA PADRÃO (A mais justa para a Defensoria)
         return [...list].sort((a, b) => {
-            // CAMADA 1: LEI (Urgência marcada no modal)
             if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
             if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
 
-            // CAMADA 2: TIPO (Agendados passam na frente de Avulsos no mesmo bloco)
             if (a.type === 'agendamento' && b.type === 'avulso') return -1;
             if (a.type === 'avulso' && b.type === 'agendamento') return 1;
 
-            // CAMADA 3: HORÁRIO MARCADO (scheduledTime)
             if (a.scheduledTime && b.scheduledTime) {
                 if (a.scheduledTime !== b.scheduledTime) {
                     return a.scheduledTime.localeCompare(b.scheduledTime);
                 }
             }
 
-            // CAMADA 4: DESEMPATE FINAL (Quem sentou na cadeira primeiro)
             const arrivalA = a.checkInOrder || 0;
             const arrivalB = b.checkInOrder || 0;
             
@@ -875,23 +838,16 @@ export const PautaService = {
         });
     },
 
-    /**
-     * Retorna a classe CSS correta para a borda do card
-     */
     getPriorityClass(priority) {
         const classes = {
-            'URGENTE': 'priority-urgente', // Vermelho
-            'Máxima': 'priority-maxima',   // Verde
-            'Média': 'priority-media',     // Laranja
-            'Mínima': 'priority-minima'    // Cinza
+            'URGENTE': 'priority-urgente', 
+            'Máxima': 'priority-maxima',   
+            'Média': 'priority-media',     
+            'Mínima': 'priority-minima'    
         };
         return classes[priority] || '';
     },
 
-
-    /**
-     * Configura ordenação manual com SortableJS
-     */
     setupManualSort(app) {
         const el = document.getElementById('aguardando-list');
         if (!el) return;
@@ -949,9 +905,6 @@ export const PautaService = {
         }
     },
 
-    /**
-     * Preenche o select com os nomes dos colaboradores
-     */
     preencherSelectColaboradores(app, selectId = 'attendant-select') {
         const select = document.getElementById(selectId);
         if (!select) {
@@ -999,10 +952,6 @@ export const PautaService = {
         }
     },
 
-    /**
-     * Preenche a lista de colaboradores no modal de seleção com busca
-     * ATUALIZADO: Suporte para seleção "Não atribuir" permitindo o uso sem colaboradores cadastrados
-     */
     preencherListaColaboradoresModal(app) {
         const container = document.getElementById('collaborator-selection-list');
         const searchInput = document.getElementById('collaborator-search-input');
@@ -1011,8 +960,6 @@ export const PautaService = {
         
         if (searchInput) searchInput.value = '';
         
-        // Define 'null' (Não atribuir) como padrão inicial. Isso permite
-        // clicar diretamente em "Confirmar Seleção" sem escolher ativamente.
         window.selectedCollaboratorId = 'null';
         window.selectedCollaboratorName = null;
         
@@ -1034,7 +981,6 @@ export const PautaService = {
                   )
                 : colaboradoresOrdenados;
             
-            // Sempre renderiza a opção "Não atribuir", independentemente de existirem colaboradores
             if (!filtro) {
                 const optionNaoAtribuir = document.createElement('div');
                 const isSelected = window.selectedCollaboratorId === 'null';
@@ -1162,9 +1108,6 @@ export const PautaService = {
         }
     },
 
-    /**
-     * Exibe tela de seleção de pautas (responsiva com filtros)
-     */
     showPautaSelectionScreen(app) {
         if (!app || !app.auth || !app.auth.currentUser) {
             showNotification("Usuário não autenticado", "error");
@@ -1184,9 +1127,6 @@ export const PautaService = {
         UIService.showScreen('pautaSelection');
     },
 
-    /**
-     * Carrega pautas com filtro aplicado
-     */
     async loadPautasWithFilter(app) {
         const user = app.auth.currentUser;
         if (!user) return;
@@ -1234,9 +1174,6 @@ export const PautaService = {
         }
     },
 
-    /**
-     * Renderiza cards de pauta na tela de seleção
-     */
     renderPautaCards(pautas, currentUserId, currentUserEmail, app) {
         const container = document.getElementById('pautas-list');
         if (!container) return;
@@ -1313,9 +1250,6 @@ export const PautaService = {
         }).join('');
     },
 
-    /**
-     * Manipula ações dos cards (cliques em botões)
-     */
     handleCardActions(e, app) {
         const button = e.target.closest('button');
         if (!button) return;
@@ -1325,10 +1259,6 @@ export const PautaService = {
 
         const isMobile = this.isMobileDevice();
 
-        // ================================================
-        // AÇÕES RÁPIDAS (MENU)
-        // ================================================
-        
         if (button.classList.contains('quick-action-toggle')) {
             e.stopPropagation();
             const menuId = `quick-menu-${id}`;
@@ -1351,8 +1281,8 @@ export const PautaService = {
                 }, 100);
                 
                 setTimeout(() => {
-                    const clickOutsideHandler = (e) => {
-                        if (!menu.contains(e.target) && !button.contains(e.target)) {
+                    const clickOutsideHandler = (evt) => {
+                        if (!menu.contains(evt.target) && !button.contains(evt.target)) {
                             menu.classList.add('hidden');
                             button.setAttribute('aria-expanded', 'false');
                             document.removeEventListener('click', clickOutsideHandler);
@@ -1417,10 +1347,6 @@ export const PautaService = {
             }
         }
 
-        // ================================================
-        // AÇÕES DE ATENDIMENTO
-        // ================================================
-        
         if (button.classList.contains('check-in-btn')) {
             window.assistedIdToHandle = id;
             const modal = document.getElementById('arrival-modal');
@@ -1617,6 +1543,7 @@ export const PautaService = {
             }
         }
 
+        // ⭐ NOVO: Ação de Editar Assistido (Agora puxando a Sala)
         if (button.classList.contains('edit-assisted-btn')) {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             if (assisted) {
@@ -1624,6 +1551,13 @@ export const PautaService = {
                 document.getElementById('edit-assisted-cpf').value = assisted.cpf || '';
                 document.getElementById('edit-assisted-subject').value = assisted.subject || '';
                 document.getElementById('edit-scheduled-time').value = assisted.scheduledTime || '';
+                
+                // ⭐ Puxa a sala salva para o modal
+                const editRoomSelect = document.getElementById('edit-room-select');
+                if (editRoomSelect) {
+                    editRoomSelect.value = assisted.room || '';
+                }
+
                 window.assistedIdToHandle = id;
                 if (document.getElementById('edit-assisted-modal')) document.getElementById('edit-assisted-modal').classList.remove('hidden');
             }
@@ -1746,9 +1680,6 @@ export const PautaService = {
         }
     },
 
-    /**
-     * Atualiza a lista de assistidos (para refresh após salvar/gerar PDF)
-     */
     refreshAssistedList(app) {
         if (!app || !app.currentPauta || !app.currentPauta.id) return;
         
@@ -1759,9 +1690,6 @@ export const PautaService = {
         }
     },
     
-    /**
-     * Carrega a lista de assistidos manualmente
-     */
     async loadAssistedList(app) {
         if (!app || !app.currentPauta || !app.currentPauta.id) return;
         
@@ -1774,5 +1702,5 @@ export const PautaService = {
         } catch (error) {
             console.error("Erro ao carregar lista:", error);
         }
-    },
+    }
 };
