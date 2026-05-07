@@ -669,6 +669,114 @@ export const PautaService = {
         }
     },
 
+    /**
+     * NOVO: Renomeia as salas e atualiza todos os assistidos ligados a ela
+     */
+    async renameRooms(app, roomChanges) {
+        if(!roomChanges || roomChanges.length === 0) return;
+        
+        try {
+            const batch = writeBatch(app.db);
+            
+            // 1. Atualiza as salas na Pauta
+            let currentRooms = [...app.customRoomsList];
+            roomChanges.forEach(change => {
+                const idx = currentRooms.indexOf(change.oldName);
+                if(idx !== -1) currentRooms[idx] = change.newName;
+            });
+
+            const pautaRef = doc(app.db, "pautas", app.currentPauta.id);
+            batch.update(pautaRef, {
+                customRooms: currentRooms,
+                rooms: currentRooms // fallback
+            });
+
+            // 2. Atualiza a sala dos Assistidos que já estavam aguardando
+            app.allAssisted.forEach(assisted => {
+                if(assisted.room) {
+                    const change = roomChanges.find(c => c.oldName === assisted.room);
+                    if(change) {
+                        const attRef = doc(app.db, "pautas", app.currentPauta.id, "attendances", assisted.id);
+                        batch.update(attRef, { room: change.newName });
+                    }
+                }
+            });
+
+            await batch.commit();
+
+            // 3. Atualiza estado visual
+            app.customRoomsList = currentRooms;
+            if(app.currentPautaData) {
+                app.currentPautaData.customRooms = currentRooms;
+                app.currentPautaData.rooms = currentRooms;
+            }
+
+            await logAction(app.db, app.auth, app.currentUserName, app.currentPauta.id, 'RENAME_ROOMS', `Salas renomeadas: ${roomChanges.map(c => c.oldName + '->' + c.newName).join(', ')}`);
+            
+            showNotification("Salas renomeadas com sucesso!", "success");
+            this.populateRoomSelects(app);
+
+        } catch(e) {
+            console.error("Erro ao renomear salas:", e);
+            showNotification("Erro ao renomear salas", "error");
+        }
+    },
+
+    /**
+     * NOVO: Injeta caixas de pesquisa perfeitamente abaixo de cada sala no UI
+     */
+    injectRoomSearches(app) {
+        if (!app.currentPautaData || app.currentPautaData.type !== 'multisala') return;
+
+        const aguardandoList = document.getElementById('aguardando-list');
+        if (!aguardandoList) return;
+
+        app.customRoomsList.forEach(roomName => {
+            // Busca o cabeçalho gerado pelo UI
+            const allElements = Array.from(aguardandoList.querySelectorAll('*'));
+            const headerEl = allElements.find(el => 
+                el.children.length === 0 && 
+                el.textContent.trim() === roomName &&
+                (el.tagName.match(/^H[1-6]$/i) || el.classList.contains('font-bold'))
+            );
+
+            if (headerEl) {
+                const headerContainer = headerEl.parentElement;
+                
+                // Evita injetar se já existe
+                const searchClass = `search-sala-${normalizeText(roomName).replace(/[^a-zA-Z0-9]/g, '')}`;
+                if (!headerContainer.parentElement.querySelector(`.${searchClass}`)) {
+                    
+                    const searchBox = document.createElement('input');
+                    searchBox.type = 'search';
+                    searchBox.placeholder = `🔍 Pesquisar em ${roomName}...`;
+                    searchBox.className = `${searchClass} w-full mt-3 mb-2 p-2 border border-blue-200 rounded-lg text-xs bg-blue-50 focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder-blue-400 text-blue-800`;
+                    
+                    searchBox.addEventListener('input', (e) => {
+                        const term = e.target.value.toLowerCase();
+                        
+                        // Pega o contêiner de cards que está logo abaixo do título
+                        let cardsContainer = headerContainer.nextElementSibling;
+                        if (cardsContainer && cardsContainer.tagName !== 'DIV') {
+                            cardsContainer = headerContainer.parentElement.nextElementSibling;
+                        }
+
+                        if (cardsContainer) {
+                            const cards = cardsContainer.querySelectorAll('[data-id]');
+                            cards.forEach(card => {
+                                const text = card.textContent.toLowerCase();
+                                card.style.display = text.includes(term) ? '' : 'none';
+                            });
+                        }
+                    });
+
+                    // Insere logo após o contêiner do título
+                    headerContainer.insertAdjacentElement('afterend', searchBox);
+                }
+            }
+        });
+    },
+
     filterPautas(pautas, filterType, currentUserId, currentUserEmail, filtrosAdicionais = {}) {
         if (!pautas || !Array.isArray(pautas)) return [];
         
