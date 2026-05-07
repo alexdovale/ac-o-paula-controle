@@ -1,4 +1,4 @@
-// js/pdfService.js - VERSÃO FINAL CORRIGIDA (Texto limitado + Logo 106x25mm)
+// js/pdfService.js - VERSÃO FINAL CORRIGIDA (Texto limitado + Logo 106x25mm + Cores Verdes)
 
 /**
  * Utilitários de limpeza e formatação
@@ -175,8 +175,6 @@ export const PDFService = {
 
             // ====================================================
             // TABELA RODAPÉ
-            // TÍTULO: "ÓRGÃO DE ATENDIMENTO - AS"
-            // CONTEÚDO: VALOR INFORMADO VIA PARÂMETRO (ou NÃO INFORMADO)
             // ====================================================
             doc.autoTable({
                 startY: currentY,
@@ -377,7 +375,7 @@ export const PDFService = {
             const docPDF = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
 
             docPDF.setFontSize(18);
-            docPDF.setTextColor(22, 101, 52);
+            docPDF.setTextColor(22, 163, 74); // Verde SIGAP
             docPDF.text(`Relatório de Atendidos - ${pautaName}`, 40, 40);
 
             docPDF.setFontSize(10);
@@ -426,7 +424,7 @@ export const PDFService = {
                 body: body,
                 startY: 80,
                 theme: 'striped',
-                headStyles: { fillColor: [22, 163, 74] },
+                headStyles: { fillColor: [22, 163, 74] }, // Verde SIGAP
                 styles: { fontSize: 8, cellPadding: 4, halign: 'center' },
                 columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 110 }, 6: { cellWidth: 150 } }
             });
@@ -447,9 +445,9 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
-            // Título em Roxo (Identidade de Faltosos)
+            // Título
             docPDF.setFontSize(18);
-            docPDF.setTextColor(126, 34, 206); 
+            docPDF.setTextColor(22, 163, 74); // Verde SIGAP
             docPDF.text(`Relatório de Faltosos - ${pautaName}`, 40, 40);
 
             docPDF.setFontSize(10);
@@ -468,7 +466,7 @@ export const PDFService = {
                     index + 1,
                     cleanString(item.name).toUpperCase(),
                     item.scheduledTime || (item.type === 'avulso' ? 'Avulso' : '---'),
-                    cleanString(item.subject).toUpperCase(), // ASSUNTO ADICIONADO AQUI
+                    cleanString(item.subject).toUpperCase(), 
                     faltaStr,
                     item.isConfirmed ? "OK" : "PEND"
                 ];
@@ -479,11 +477,11 @@ export const PDFService = {
                 body: body,
                 startY: 85,
                 theme: 'grid',
-                headStyles: { fillColor: [126, 34, 206] }, 
+                headStyles: { fillColor: [22, 163, 74] }, // Verde SIGAP
                 styles: { fontSize: 8, cellPadding: 5, halign: 'center', valign: 'middle', overflow: 'linebreak' },
                 columnStyles: { 
                     1: { halign: 'left', cellWidth: 140 }, // Nome
-                    3: { halign: 'left', cellWidth: 160 }, // Assunto (maior largura para o texto)
+                    3: { halign: 'left', cellWidth: 160 }, // Assunto
                     5: { fontStyle: 'bold' }               // Status Verde
                 }
             });
@@ -517,7 +515,7 @@ export const PDFService = {
             const margin = 15;
 
             docPDF.setFontSize(18);
-            docPDF.setTextColor(22, 163, 74);
+            docPDF.setTextColor(22, 163, 74); // Verde SIGAP
             docPDF.setFont("helvetica", "bold");
             docPDF.text("SIGAP - CHECKLIST DE ATENDIMENTO", pageWidth / 2, y, { align: "center" });
             y += 8;
@@ -691,7 +689,7 @@ export const PDFService = {
             );
 
             docPDF.setFontSize(16);
-            docPDF.setTextColor(139, 92, 246);
+            docPDF.setTextColor(22, 163, 74); // Verde SIGAP
             docPDF.text("Lista de Presença da Equipe", 14, 25);
             docPDF.text(`Pauta: ${pautaName}`, 14, 40);
 
@@ -700,7 +698,7 @@ export const PDFService = {
                 body: tableData,
                 startY: 55,
                 theme: 'striped',
-                headStyles: { fillColor: [139, 92, 246] },
+                headStyles: { fillColor: [22, 163, 74] }, // Verde SIGAP
                 styles: { fontSize: 9, halign: 'center' }
             });
 
@@ -721,7 +719,7 @@ export const PDFService = {
             const doc = new jsPDF();
 
             doc.setFontSize(18);
-            doc.setTextColor(22, 101, 52);
+            doc.setTextColor(22, 101, 52); // Verde escuro SIGAP
             doc.text(`Estatísticas - ${pautaName}`, 14, 20);
 
             doc.setFontSize(10);
@@ -778,4 +776,4 @@ export const generateFaltososPDF = (pautaName, faltosos) => {
 
 window.PDFService = PDFService;
 
-console.log("✅ pdfService.js carregado - VERSÃO FINAL (Logo 106x25mm, Texto limitado)!");
+console.log("✅ pdfService.js carregado - VERSÃO FINAL (Logo 106x25mm, Texto limitado, Cores Verdes)!");
