@@ -415,14 +415,21 @@
                     
                     <div class="bg-white rounded-lg shadow-md flex flex-col h-[55vh] md:h-[65vh]">
                         <div class="p-3 sm:p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg shrink-0">
-                            <h3 class="text-lg sm:text-xl font-semibold text-gray-800 flex justify-between items-center">
-                               <span>⏳ Aguardando</span>
+                            <div class="flex justify-between items-center w-full mb-1">
+                                <h3 class="text-lg sm:text-xl font-semibold text-gray-800 flex items-center gap-2">
+                                   <span>⏳ Aguardando</span>
+                                   <button id="btn-manage-rooms" class="hidden text-blue-500 hover:text-blue-700 bg-blue-100 hover:bg-blue-200 p-1.5 rounded-lg transition-colors" title="Gerenciar Salas/Varas">
+                                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                           <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                       </svg>
+                                   </button>
+                                </h3>
                                 <span id="aguardando-count" class="text-sm font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
-                            </h3>
+                            </div>
                              <button id="call-next-assisted-btn" class="w-full mt-2 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition shadow-md text-sm sm:text-base">
                                 Chamar Próximo
                             </button>
-                            <input type="search" id="aguardando-search" placeholder="Pesquisar..." class="w-full mt-2 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                            <input type="search" id="aguardando-search" placeholder="Pesquisar em todos..." class="w-full mt-2 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                         </div>
                         <div id="aguardando-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content"></div>
                     </div>
@@ -1734,6 +1741,23 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
             <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 p-5 sm:p-6 border-t bg-gray-50 rounded-b-xl">
                 <button id="cancel-ata-modal-btn" class="w-full sm:w-auto bg-gray-300 text-gray-800 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400 transition">Cancelar</button>
                 <button id="confirm-ata-modal-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-green-700 transition">Gerar Ata</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Gerenciar Salas -->
+    <div id="manage-rooms-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+        <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] flex flex-col">
+            <h2 class="text-xl sm:text-2xl font-bold mb-4 text-gray-800">Gerenciar Salas / Varas</h2>
+            <p class="text-sm text-gray-600 mb-4 border-b pb-4">Altere o nome das salas existentes. Os assistidos que já aguardam nessas salas serão atualizados automaticamente.</p>
+
+            <div id="manage-rooms-list" class="space-y-2 overflow-y-auto pr-2 flex-grow mb-6 scrollable-content">
+                <!-- Inputs gerados via JS -->
+            </div>
+
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:space-x-4 shrink-0 border-t pt-4">
+                <button id="cancel-manage-rooms-btn" class="w-full sm:w-auto bg-gray-300 text-gray-800 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="save-manage-rooms-btn" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-blue-700">Salvar Alterações</button>
             </div>
         </div>
     </div>
