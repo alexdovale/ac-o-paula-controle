@@ -1,4 +1,4 @@
-// js/colaboradores.js - VERSÃO MOBILE + FILTRO ATA (Defensores, Servidores, Coordenadores, CRC) - COM LOGS DE DIAGNÓSTICO
+// js/colaboradores.js - VERSÃO MOBILE + FILTRO ATA E ORDENAÇÃO AVANÇADA (Defensor > Servidor)
 import { 
     collection, 
     onSnapshot, 
@@ -55,7 +55,7 @@ const CollaboratorService = {
                 const rTransp = document.querySelector(`input[name="transporte-colaborador"][value="${dados.transporte || 'Meios Próprios'}"]`);
                 if (rTransp) rTransp.checked = true;
 
-                this.configurarLogicaCargo(); // Reconfigura o label "Matrícula/ID"
+                this.configurarLogicaCargo(); 
                 showNotification("Dados recuperados da base master! ✅");
                 console.log("Buscar Master: Dados encontrados e formulário preenchido.");
             } else {
@@ -69,8 +69,7 @@ const CollaboratorService = {
     },
 
     // ========================================================
-    // 2. ORDENAÇÃO DA LISTA
-    // A lógica de ordenação por 'grupo' já coloca "Defensor(a)" primeiro
+    // 2. ORDENAÇÃO DA LISTA (Defensor > Servidor > Outros)
     // ========================================================
     ordenarColaboradores(colaboradores) {
         if (this.ordemAtual === 'nome') {
@@ -85,14 +84,22 @@ const CollaboratorService = {
                     return grupoA.localeCompare(grupoB); // 1. Ordena por equipe
                 }
                 
-                // 2. Dentro da mesma equipe, coloca Defensor(a) primeiro
-                const isDefensorA = (a.cargo === 'Defensor(a)') ? 0 : 1; // 0 para Defensor(a), 1 para outros
-                const isDefensorB = (b.cargo === 'Defensor(a)') ? 0 : 1;
-                if (isDefensorA !== isDefensorB) {
-                    return isDefensorA - isDefensorB; 
+                // 2. Lógica avançada de prioridade de Cargos
+                const getCargoWeight = (cargo) => {
+                    const c = (cargo || '').toLowerCase();
+                    if (c.includes('defensor')) return 1;
+                    if (c.includes('servidor')) return 2;
+                    return 3; // Estagiários, Residentes, etc.
+                };
+
+                const weightA = getCargoWeight(a.cargo);
+                const weightB = getCargoWeight(b.cargo);
+                
+                if (weightA !== weightB) {
+                    return weightA - weightB; 
                 }
                 
-                // 3. Dentro da mesma equipe e mesmo tipo de cargo (defensor/não-defensor), ordena por nome
+                // 3. Dentro da mesma equipe e mesmo cargo, ordena por nome
                 return (a.nome || '').localeCompare(b.nome || ''); 
             });
         }
@@ -168,13 +175,7 @@ const CollaboratorService = {
         this.updateTeamSelect();
         this.configurarLogicaCargo();
         
-        // --- LOG DE DIAGNÓSTICO CRÍTICO: Conteúdo do modal ANTES de configurar eventos ---
-        console.log("DEBUG: Conteúdo HTML do modal de colaboradores (após remove hidden):", modal.innerHTML.substring(0, 500) + "..."); // Limita o output
-        // --- FIM LOG DE DIAGNÓSTICO ---
-
-        // ⭐ CHAMADA PRINCIPAL PARA CONFIGURAR OS EVENTOS DE BUSCA ⭐
         this.configurarEventoBusca(app); 
-        
         this.adicionarBotaoOrdenacao();
         
         if (app && app.currentPauta && app.currentPauta.id) {
@@ -207,40 +208,27 @@ const CollaboratorService = {
         if (modal) modal.classList.add('hidden');
     },
 
-    // ⭐ FUNÇÃO CONFIGURAR EVENTO DE BUSCA COM LOGS DE DEBUG ⭐
     configurarEventoBusca(app) {
         const inputIdentificador = document.getElementById('collaborator-identificador-modal');
         const buscarBtn = document.getElementById('buscar-master-btn');
     
-        console.log("--- DEBUG: configurarEventoBusca ---");
-        console.log("Elemento 'collaborator-identificador-modal' encontrado?", !!inputIdentificador, inputIdentificador);
-        console.log("Elemento 'buscar-master-btn' encontrado?", !!buscarBtn, buscarBtn);
-
         if (inputIdentificador) {
             inputIdentificador.onblur = () => {
-                console.log("Evento 'onblur' do campo identificador acionado. Valor:", inputIdentificador.value);
                 if (!this.editId && inputIdentificador.value) {
                     this.buscarColaboradorMaster(app, inputIdentificador.value);
                 }
             };
-        } else {
-            console.warn("AVISO: Campo 'collaborator-identificador-modal' não encontrado para evento 'onblur'.");
         }
     
-        if (buscarBtn && inputIdentificador) { // Certifica-se de que ambos existem
+        if (buscarBtn && inputIdentificador) {
             buscarBtn.onclick = () => {
-                console.log("Botão 'Buscar no Banco' clicado. Valor do identificador:", inputIdentificador.value); // ⭐ Log quando o botão é clicado
                 if (!this.editId && inputIdentificador.value) {
                     this.buscarColaboradorMaster(app, inputIdentificador.value);
                 } else if (!inputIdentificador.value) {
                     showNotification("Por favor, digite o identificador para buscar.", "warning");
                 }
             };
-            console.log("Evento 'onclick' adicionado ao botão 'Buscar no Banco'.");
-        } else {
-            console.warn("AVISO: Botão 'buscar-master-btn' e/ou Campo 'collaborator-identificador-modal' não encontrados. Eventos de busca não configurados.");
         }
-        console.log("--- FIM DEBUG: configurarEventoBusca ---");
     },
 
     configurarLogicaCargo() {
@@ -254,7 +242,7 @@ const CollaboratorService = {
         };
 
         cargoSelect.onchange = atualizarLabel;
-        atualizarLabel(); // Chama na inicialização para garantir o label correto
+        atualizarLabel();
     },
 
     updateTeamSelect(selectedValue = '1') {
@@ -265,7 +253,7 @@ const CollaboratorService = {
             `<option value="${g}" ${selectedValue === g ? 'selected' : ''}>${isNaN(g) ? g : 'Equipe ' + g}</option>`
         ).join('');
         
-        html += `<option value="ADD_NEW">+ Adicionar outro...\u200b</option>`; // Adicionado zero-width space para garantir que a opção é única
+        html += `<option value="ADD_NEW">+ Adicionar outro...\u200b</option>`;
         select.innerHTML = html;
 
         select.onchange = (e) => {
@@ -360,7 +348,6 @@ const CollaboratorService = {
         if (!chave) return;
         const masterRef = doc(app.db, "colaboradores_gerais", chave);
         await setDoc(masterRef, data, { merge: true });
-        console.log("Salvo/Atualizado na base master 'colaboradores_gerais':", chave);
     },
 
     // ========================================================
@@ -368,8 +355,6 @@ const CollaboratorService = {
     // ========================================================
     setupListener(app, pautaId) {
         if (!pautaId || !app || !app.db) return; 
-        
-        console.log("📋 Configurando listener para pauta:", pautaId);
         
         if (this.currentListener) {
             this.currentListener();
@@ -396,7 +381,6 @@ const CollaboratorService = {
         }
     },
 
-    // Renderização com design responsivo mobile
     renderTable(app) {
         const tbody = document.querySelector('#collaborators-list-table-modal tbody');
         if (!tbody) return;
@@ -430,10 +414,10 @@ const CollaboratorService = {
             row.className = "border-b hover:bg-gray-50 text-sm";
             
             const isDefensor = colab.cargo === 'Defensor(a)';
-            const nomeClass = isDefensor ? 'font-bold text-blue-700' : 'font-bold text-gray-800';
-            const labelTipo = colab.tipo_id || (isDefensor ? 'Matrícula' : 'ID'); // Usa tipo_id salvo, senão infere
+            const isServidor = colab.cargo === 'Servidor(a)';
+            const nomeClass = isDefensor ? 'font-bold text-blue-700' : (isServidor ? 'font-bold text-green-700' : 'font-bold text-gray-800');
+            const labelTipo = colab.tipo_id || (isDefensor ? 'Matrícula' : 'ID');
             
-            // Layout responsivo para mobile
             row.innerHTML = `
                 <td class="p-2 md:p-3">
                     <div class="${nomeClass} text-sm md:text-base">${escapeHTML(colab.nome || '')}</div>
@@ -488,19 +472,7 @@ const CollaboratorService = {
             return null;
         }
 
-        const ordenados = [...colaboradoresFiltrados].sort((a, b) => {
-            const grupoA = a.equipe || '';
-            const grupoB = b.equipe || '';
-            if (grupoA !== grupoB) return grupoA.localeCompare(grupoB);
-            
-            const isDefensorA = (a.cargo === 'Defensor(a)') ? 0 : 1;
-            const isDefensorB = (b.cargo === 'Defensor(a)') ? 0 : 1;
-            if (isDefensorA !== isDefensorB) {
-                return isDefensorA - isDefensorB;
-            }
-
-            return (a.nome || '').localeCompare(b.nome || '');
-        });
+        const ordenados = this.ordenarColaboradores(colaboradoresFiltrados);
 
         let ataHTML = `
             <div style="font-family: Arial, sans-serif; max-width: 100%; overflow-x: auto;">
@@ -635,7 +607,7 @@ const CollaboratorService = {
                 const rTransp = document.querySelector(`input[name="transporte-colaborador"][value="${c.transporte || 'Meios Próprios'}"]`);
                 if (rTransp) rTransp.checked = true;
 
-                this.configurarLogicaCargo(); // Reconfigura o label "Matrícula/ID"
+                this.configurarLogicaCargo(); 
                 const addBtn = document.getElementById('add-collaborator-btn-modal');
                 if (addBtn) addBtn.textContent = "Atualizar Membro";
             }
@@ -692,15 +664,10 @@ const CollaboratorService = {
         const transpDefault = document.querySelector('input[name="transporte-colaborador"][value="Meios Próprios"]');
         if (transpDefault) transpDefault.checked = true;
         
-        this.configurarLogicaCargo(); // Garante que o label Matrícula/ID volte ao padrão ou ao do cargo inicial
+        this.configurarLogicaCargo(); 
     }
 };
 
-// ========================================================
-// EXPORTAÇÕES
-// ========================================================
 export default CollaboratorService;
 export { CollaboratorService };
 window.CollaboratorService = CollaboratorService;
-
-console.log("✅ colaboradores.js carregado (Mobile + Filtro ATA: Defensores, Servidores, Coordenadores, CRC)!");
