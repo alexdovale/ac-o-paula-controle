@@ -204,7 +204,7 @@ class SIGAPApp {
         toggleFaltosos?.addEventListener('change', () => this.saveColumnPreferences());
 
         // ================================================
-        // EDIÇÃO DE SALAS/VARAS MULTISALA
+        // EDIÇÃO DE SALAS/VARAS MULTISALA E BARRA DE BUSCA
         // ================================================
         document.getElementById('btn-manage-rooms')?.addEventListener('click', () => {
             const listContainer = document.getElementById('manage-rooms-list');
@@ -255,15 +255,18 @@ class SIGAPApp {
             }
 
             try {
-                // Atualiza as salas na pauta
-                await updateDoc(doc(this.db, "pautas", this.currentPauta.id), {
-                    customRooms: newRoomsList
+                const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                await updateDoc(pautaRef, {
+                    customRooms: newRoomsList,
+                    rooms: newRoomsList
                 });
                 
                 this.customRoomsList = newRoomsList;
-                if (this.currentPautaData) this.currentPautaData.customRooms = newRoomsList;
+                if (this.currentPautaData) {
+                    this.currentPautaData.customRooms = newRoomsList;
+                    this.currentPautaData.rooms = newRoomsList;
+                }
 
-                // Atualiza os assistidos que estavam nas salas antigas
                 if (roomChanges.length > 0) {
                     const batch = writeBatch(this.db);
                     let hasChanges = false;
@@ -285,9 +288,11 @@ class SIGAPApp {
                 document.getElementById('manage-rooms-modal')?.classList.add('hidden');
                 showNotification("Salas atualizadas com sucesso!", "success");
                 
-                // Re-renderiza a UI com os novos nomes
                 if (typeof UIService.renderAssistedLists === 'function') {
                     UIService.renderAssistedLists(this);
+                }
+                if (typeof PautaService.populateRoomSelects === 'function') {
+                    PautaService.populateRoomSelects(this);
                 }
                 
             } catch (error) {
@@ -296,7 +301,7 @@ class SIGAPApp {
             }
         });
 
-        // Delegação de eventos para as barras de pesquisa individuais das salas
+        // Event Delegation para buscas das salas individuais no 'Aguardando'
         document.getElementById('aguardando-list')?.addEventListener('input', (e) => {
             if (e.target.classList.contains('room-search-input')) {
                 const query = e.target.value.toLowerCase();
@@ -507,6 +512,7 @@ class SIGAPApp {
 
                 if (pautaType === 'multisala') {
                     novaPautaData.customRooms = this.customRoomsList;
+                    novaPautaData.rooms = this.customRoomsList; // Consistência
                 }
 
                 const pautaRef = await addDoc(collection(this.db, "pautas"), novaPautaData);
@@ -1822,6 +1828,8 @@ class SIGAPApp {
                 
                 if (this.currentPautaData.type === 'multisala' && this.currentPautaData.customRooms) {
                     this.customRoomsList = this.currentPautaData.customRooms;
+                } else if (this.currentPautaData.type === 'multisala' && this.currentPautaData.rooms) {
+                    this.customRoomsList = this.currentPautaData.rooms;
                 } else {
                     this.customRoomsList = [];
                 }
@@ -1841,7 +1849,9 @@ class SIGAPApp {
                 }
 
                 // Carrega as salas no Modal de Editar Assistido
-                PautaService.populateRoomSelects(this);
+                if (typeof PautaService.populateRoomSelects === 'function') {
+                    PautaService.populateRoomSelects(this);
+                }
             }
 
             this.setupRealtimeListener(pautaId);
@@ -1923,6 +1933,7 @@ class SIGAPApp {
             const snapshot = await getDocs(attendanceRef);
             this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             UIService.renderAssistedLists(this);
+            setTimeout(() => { if (typeof PautaService.injectRoomSearches === 'function') PautaService.injectRoomSearches(this); }, 150);
         } catch (error) {}
     }
 
@@ -1932,6 +1943,7 @@ class SIGAPApp {
         this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
             this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             UIService.renderAssistedLists(this);
+            setTimeout(() => { if (typeof PautaService.injectRoomSearches === 'function') PautaService.injectRoomSearches(this); }, 150);
         }, (error) => {
             showNotification("Erro ao carregar dados", "error");
         });
