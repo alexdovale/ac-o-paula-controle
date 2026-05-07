@@ -1,4 +1,3 @@
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -450,7 +449,7 @@ class SIGAPApp {
         
             try {
                 // 1. Cria a estrutura da Pauta
-                const pautaRef = await addDoc(collection(this.db, "pautas"), {
+                const novaPautaData = {
                     name: pautaName,
                     type: pautaType,
                     owner: user.uid,
@@ -459,7 +458,14 @@ class SIGAPApp {
                     isClosed: false,
                     createdAt: new Date().toISOString(),
                     ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || 'padrao'
-                });
+                };
+
+                // Se for multisala, salva as salas personalizadas no Firebase
+                if (pautaType === 'multisala') {
+                    novaPautaData.customRooms = this.customRoomsList;
+                }
+
+                const pautaRef = await addDoc(collection(this.db, "pautas"), novaPautaData);
         
                 // 2. O PULO DO GATO: Se selecionou órgão, busca os nomes via Mock
                 if (orgaoId) {
@@ -2068,6 +2074,13 @@ class SIGAPApp {
                 this.currentPautaOwnerId = this.currentPautaData.owner;
                 this.isPautaClosed = this.currentPautaData.isClosed || false;
                 
+                // Carrega a lista de salas se a pauta for multisala
+                if (this.currentPautaData.type === 'multisala' && this.currentPautaData.customRooms) {
+                    this.customRoomsList = this.currentPautaData.customRooms;
+                } else {
+                    this.customRoomsList = [];
+                }
+
                 UIService.togglePautaLock(this);
                 this.loadColumnPreferences();
                 this.applyRoleBasedUI();
@@ -2385,4 +2398,4 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    });
+});
