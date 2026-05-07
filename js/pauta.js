@@ -1,8 +1,9 @@
-// js/pauta.js - VERSÃO CONSOLIDADA E ORGANIZADA
+// js/pauta.js - VERSÃO COMPLETA E CONSOLIDADA
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
 import { logAction } from './admin.js';
+import { EmailService } from './emailService.js';
 
 export const PautaService = {
     currentListeners: new Map(),
@@ -45,64 +46,46 @@ export const PautaService = {
         return unsubscribe;
     },
 
-    // ⭐ NOVO: Função para preencher os Selects de Sala na Interface
+    injectRoomSearches(app) {
+        // Função mantida por segurança. A renderização das barras agora é feita nativamente pelo ui.js
+    },
+
     populateRoomSelects(app) {
-        if (!app.currentPautaData) return;
-        
-        const isMulti = app.currentPautaData.type === 'multisala';
-        const rooms = app.customRoomsList || [];
-
-        // 1. Select do Formulário Principal (Adicionar Assistido)
-        const manualWrapper = document.getElementById('manual-room-wrapper');
-        const manualSelect = document.getElementById('manual-room-select');
-        if (manualWrapper && manualSelect) {
-            if (isMulti && rooms.length > 0) {
-                manualWrapper.classList.remove('hidden');
-                manualSelect.innerHTML = '<option value="">-- Selecione a Sala --</option>';
-                rooms.forEach(r => manualSelect.innerHTML += `<option value="${escapeHTML(r)}">${escapeHTML(r)}</option>`);
-            } else {
-                manualWrapper.classList.add('hidden');
-            }
-        }
-
-        // 2. Select do Modal de Chegada (Arrival)
-        const arrivalContainer = document.getElementById('arrival-room-container');
         const arrivalSelect = document.getElementById('arrival-room-select');
-        if (arrivalContainer && arrivalSelect) {
-            if (isMulti && rooms.length > 0) {
-                arrivalContainer.classList.remove('hidden');
-                arrivalSelect.innerHTML = '<option value="">-- Selecione a Sala --</option>';
-                rooms.forEach(r => arrivalSelect.innerHTML += `<option value="${escapeHTML(r)}">${escapeHTML(r)}</option>`);
-            } else {
-                arrivalContainer.classList.add('hidden');
-            }
-        }
-
-        // 3. Select do Modal de Edição de Assistido
         const editSelect = document.getElementById('edit-room-select');
-        if (editSelect) {
-            if (isMulti && rooms.length > 0) {
-                editSelect.parentElement.classList.remove('hidden');
-                editSelect.innerHTML = '<option value="">-- Sem sala definida --</option>';
-                rooms.forEach(r => editSelect.innerHTML += `<option value="${escapeHTML(r)}">${escapeHTML(r)}</option>`);
-            } else {
-                editSelect.parentElement.classList.add('hidden');
+        const arrivalContainer = document.getElementById('arrival-room-container');
+        
+        const rooms = app.currentPautaData?.customRooms || app.currentPautaData?.rooms || [];
+
+        if (app.currentPautaData?.type === 'multisala' && rooms.length > 0) {
+            const optionsHtml = rooms.map(r => `<option value="${escapeHTML(r)}">${escapeHTML(r)}</option>`).join('');
+            
+            if (arrivalSelect) {
+                arrivalSelect.innerHTML = optionsHtml;
+                if (arrivalContainer) arrivalContainer.classList.remove('hidden');
             }
+            if (editSelect) {
+                editSelect.innerHTML = optionsHtml;
+                if (editSelect.parentElement) editSelect.parentElement.classList.remove('hidden');
+            }
+        } else {
+            if (arrivalContainer) arrivalContainer.classList.add('hidden');
+            if (editSelect && editSelect.parentElement) editSelect.parentElement.classList.add('hidden');
         }
     },
 
+    async addAssistedManual(app, assistedData) {
+        return this.addAssistedProgrammatic(app.db, app.currentPauta.id, assistedData, app.currentUserName || 'Sistema');
+    },
+
     async addAssisted(app) {
-        console.log("=== addAssisted iniciado ===");
-        
         if (!app) {
-            console.error("App não definido");
             showNotification("Erro interno: app não definido", "error");
             playSound('error');
             return;
         }
 
         if (!app.currentPauta || !app.currentPauta.id) {
-            console.error("Nenhuma pauta selecionada");
             showNotification("Selecione uma pauta primeiro", "error");
             playSound('error');
             return;
@@ -141,7 +124,7 @@ export const PautaService = {
             }
         } else {
             isScheduled = false;
-            hasArrived = true; 
+            hasArrived = true;
             scheduledTimeValue = null;
         }
 
@@ -157,19 +140,16 @@ export const PautaService = {
             }
         }
 
-        // ⭐ CORREÇÃO DA SALA NO ATO DA CRIAÇÃO
         let assignedRoom = null;
-        if (app.currentPautaData && app.currentPautaData.type === 'multisala') {
+        if (currentMode === 'avulso' && app.currentPautaData && app.currentPautaData.type === 'multisala') {
             const manualRoomSelect = document.getElementById('manual-room-select');
-            if (manualRoomSelect && !manualRoomSelect.closest('.hidden')) {
-                assignedRoom = manualRoomSelect.value || null;
-            }
+            assignedRoom = (manualRoomSelect && manualRoomSelect.value) ? manualRoomSelect.value : null;
         }
 
         const newAssisted = {
-            name: name || 'Assistido sem nome', 
+            name: name || 'Assistido sem nome',
             cpf: (cpfInput && cpfInput.value.trim()) || '',
-            subject: subject || 'Não informado', 
+            subject: subject || 'Não informado',
             type: currentMode,
             status: hasArrived ? 'aguardando' : 'pauta',
             scheduledTime: scheduledTimeValue,
@@ -184,7 +164,7 @@ export const PautaService = {
             finalizadoPeloColaborador: false,
             isConfirmed: false,
             confirmationDetails: null,
-            room: assignedRoom, // SALVA A SALA AQUI
+            room: assignedRoom,
             manualIndex: Date.now(),
             createdAt: new Date().toISOString(),
             lastActionBy: app.currentUserName || 'Sistema',
@@ -194,7 +174,6 @@ export const PautaService = {
         };
 
         try {
-            console.log("Tentando salvar no Firestore...");
             const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
             const docRef = await addDoc(attendanceRef, newAssisted);
             
@@ -211,18 +190,15 @@ export const PautaService = {
             showNotification(`Assistido "${newAssisted.name}" adicionado com sucesso!`, 'success');
             playSound('notification');
             
-            // Limpa os campos após adicionar
             if (nameInput) nameInput.value = '';
             if (cpfInput) cpfInput.value = '';
             if (subjectInput) subjectInput.value = '';
-            const manualRoomSelect = document.getElementById('manual-room-select');
-            if (manualRoomSelect) manualRoomSelect.value = '';
             
             if (currentMode === 'agendamento') {
                 if (document.getElementById('scheduled-time-wrapper')) document.getElementById('scheduled-time-wrapper').classList.add('hidden');
                 if (document.getElementById('arrival-time-wrapper')) document.getElementById('arrival-time-wrapper').classList.add('hidden');
                 document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
-                document.querySelector('input[name="has-arrived"][value="no"]').checked = true; 
+                document.querySelector('input[name="has-arrived"][value="no"]').checked = true;     
             } else {
                 if (document.getElementById('arrival-time-wrapper')) document.getElementById('arrival-time-wrapper').classList.remove('hidden');
                 document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
@@ -231,7 +207,6 @@ export const PautaService = {
             nameInput.focus();
             
         } catch (error) {
-            console.error("Erro detalhado ao adicionar:", error);
             let mensagem = "Erro ao adicionar assistido. Verifique sua conexão e permissões.";
             if (error.code === 'permission-denied') {
                 mensagem = "Permissão negada. Você não tem acesso para adicionar assistidos.";
@@ -286,9 +261,7 @@ export const PautaService = {
         if (!pautaId || !assistedId) return;
         
         try {
-            console.log("Atualizando status:", updates);
             const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
-            
             const docSnap = await getDoc(docRef);
             const currentData = docSnap.exists() ? docSnap.data() : {};
             
@@ -305,10 +278,9 @@ export const PautaService = {
                     finalUpdates.checkInOrder = updates.checkInOrder;
                 }
                 
-                if (updates.arrivalTime) { 
+                if (updates.arrivalTime) {
                     const arrivalDate = new Date(updates.arrivalTime);
                     if (isNaN(arrivalDate.getTime())) {
-                        console.warn("⚠️ arrivalTime fornecido é inválido:", updates.arrivalTime);
                         finalUpdates.arrivalTime = null;
                         showNotification("Data/Hora de chegada inválida. Campo limpo.", "warning");
                         playSound('warning');
@@ -338,6 +310,7 @@ export const PautaService = {
             const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados atualizados';
             await logAction(db, window.app?.auth, userName || 'Sistema', pautaId, 'UPDATE_ASSISTED', `${action} - ${currentData.name || 'Assistido'}`, assistedId);
             
+            // Notificação interativa quando entra na fila
             if (updates.status === 'aguardando' && currentData.status !== 'aguardando') {
                 const currentAssisted = window.app.allAssisted.find(a => a.id === assistedId) || { name: 'Assistido' };
                 const name = currentAssisted.name || currentData.name;
@@ -390,12 +363,6 @@ export const PautaService = {
                 showNotification("Erro: Assistido não encontrado no sistema.", "error");
                 return false;
             }
-
-            console.log("📨 Preparando delegação:", {
-                assistido: assisted.name,
-                id: assistedId,
-                para: collaboratorName
-            });
 
             await this.updateStatus(app.db, app.currentPauta.id, assistedId, {
                 status: 'emAtendimento',
@@ -529,13 +496,13 @@ export const PautaService = {
         
         window.assistedTipoAcao = app.currentPautaData?.useDelegationFlow ? 'delegar' : 'atender_direto';
         
-        const assistedToAttendNameEl = document.getElementById('assisted-to-attend-name');
-        if (assistedToAttendNameEl) {
-            assistedToAttendNameEl.textContent = nextAssisted.name;
+        const nameElement = document.getElementById('assisted-to-attend-name');
+        if (nameElement) {
+            nameElement.textContent = nextAssisted.name;
         }
 
-        if (typeof PautaService.preencherListaColaboradoresModal === 'function') {
-            PautaService.preencherListaColaboradoresModal(app);
+        if (typeof this.preencherListaColaboradoresModal === 'function') {
+            this.preencherListaColaboradoresModal(app);
         }
 
         const selectCollaboratorModal = document.getElementById('select-collaborator-modal');
@@ -543,8 +510,11 @@ export const PautaService = {
             selectCollaboratorModal.classList.remove('hidden');
             showNotification(`Próximo: "${nextAssisted.name}". Selecione o atendente.`, "info");
             playSound('chime');
-        } else {
-            showNotification("Erro ao abrir seleção de atendente. Tente novamente.", "error");
+            
+            setTimeout(() => {
+                const searchInput = document.getElementById('collaborator-search-input');
+                if (searchInput) searchInput.focus();
+            }, 100);
         }
     }, 
 
@@ -646,7 +616,6 @@ export const PautaService = {
             });
             
             batch.delete(pautaRef);
-            
             await batch.commit();
             
             await logAction(
@@ -667,114 +636,6 @@ export const PautaService = {
             showNotification("Erro ao apagar pauta: " + error.message, "error");
             return false;
         }
-    },
-
-    /**
-     * NOVO: Renomeia as salas e atualiza todos os assistidos ligados a ela
-     */
-    async renameRooms(app, roomChanges) {
-        if(!roomChanges || roomChanges.length === 0) return;
-        
-        try {
-            const batch = writeBatch(app.db);
-            
-            // 1. Atualiza as salas na Pauta
-            let currentRooms = [...app.customRoomsList];
-            roomChanges.forEach(change => {
-                const idx = currentRooms.indexOf(change.oldName);
-                if(idx !== -1) currentRooms[idx] = change.newName;
-            });
-
-            const pautaRef = doc(app.db, "pautas", app.currentPauta.id);
-            batch.update(pautaRef, {
-                customRooms: currentRooms,
-                rooms: currentRooms // fallback
-            });
-
-            // 2. Atualiza a sala dos Assistidos que já estavam aguardando
-            app.allAssisted.forEach(assisted => {
-                if(assisted.room) {
-                    const change = roomChanges.find(c => c.oldName === assisted.room);
-                    if(change) {
-                        const attRef = doc(app.db, "pautas", app.currentPauta.id, "attendances", assisted.id);
-                        batch.update(attRef, { room: change.newName });
-                    }
-                }
-            });
-
-            await batch.commit();
-
-            // 3. Atualiza estado visual
-            app.customRoomsList = currentRooms;
-            if(app.currentPautaData) {
-                app.currentPautaData.customRooms = currentRooms;
-                app.currentPautaData.rooms = currentRooms;
-            }
-
-            await logAction(app.db, app.auth, app.currentUserName, app.currentPauta.id, 'RENAME_ROOMS', `Salas renomeadas: ${roomChanges.map(c => c.oldName + '->' + c.newName).join(', ')}`);
-            
-            showNotification("Salas renomeadas com sucesso!", "success");
-            this.populateRoomSelects(app);
-
-        } catch(e) {
-            console.error("Erro ao renomear salas:", e);
-            showNotification("Erro ao renomear salas", "error");
-        }
-    },
-
-    /**
-     * NOVO: Injeta caixas de pesquisa perfeitamente abaixo de cada sala no UI
-     */
-    injectRoomSearches(app) {
-        if (!app.currentPautaData || app.currentPautaData.type !== 'multisala') return;
-
-        const aguardandoList = document.getElementById('aguardando-list');
-        if (!aguardandoList) return;
-
-        app.customRoomsList.forEach(roomName => {
-            // Busca o cabeçalho gerado pelo UI
-            const allElements = Array.from(aguardandoList.querySelectorAll('*'));
-            const headerEl = allElements.find(el => 
-                el.children.length === 0 && 
-                el.textContent.trim() === roomName &&
-                (el.tagName.match(/^H[1-6]$/i) || el.classList.contains('font-bold'))
-            );
-
-            if (headerEl) {
-                const headerContainer = headerEl.parentElement;
-                
-                // Evita injetar se já existe
-                const searchClass = `search-sala-${normalizeText(roomName).replace(/[^a-zA-Z0-9]/g, '')}`;
-                if (!headerContainer.parentElement.querySelector(`.${searchClass}`)) {
-                    
-                    const searchBox = document.createElement('input');
-                    searchBox.type = 'search';
-                    searchBox.placeholder = `🔍 Pesquisar em ${roomName}...`;
-                    searchBox.className = `${searchClass} w-full mt-3 mb-2 p-2 border border-blue-200 rounded-lg text-xs bg-blue-50 focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder-blue-400 text-blue-800`;
-                    
-                    searchBox.addEventListener('input', (e) => {
-                        const term = e.target.value.toLowerCase();
-                        
-                        // Pega o contêiner de cards que está logo abaixo do título
-                        let cardsContainer = headerContainer.nextElementSibling;
-                        if (cardsContainer && cardsContainer.tagName !== 'DIV') {
-                            cardsContainer = headerContainer.parentElement.nextElementSibling;
-                        }
-
-                        if (cardsContainer) {
-                            const cards = cardsContainer.querySelectorAll('[data-id]');
-                            cards.forEach(card => {
-                                const text = card.textContent.toLowerCase();
-                                card.style.display = text.includes(term) ? '' : 'none';
-                            });
-                        }
-                    });
-
-                    // Insere logo após o contêiner do título
-                    headerContainer.insertAdjacentElement('afterend', searchBox);
-                }
-            }
-        });
     },
 
     filterPautas(pautas, filterType, currentUserId, currentUserEmail, filtrosAdicionais = {}) {
@@ -912,6 +773,7 @@ export const PautaService = {
                 return 'Média';
             }
         }
+
         return 'Média';
     },
 
@@ -971,7 +833,7 @@ export const PautaService = {
                 chosenClass: 'ring-2',
                 dragClass: 'scale-95',
                 handle: '.relative',
-                filter: 'button, svg, p, span',
+                filter: 'button, svg, p, span, input', // Garante que a barra de pesquisa não dispare o drag
                 preventOnFilter: false,
                 forceFallback: isMobile,
                 fallbackClass: 'sortable-fallback',
@@ -1015,10 +877,7 @@ export const PautaService = {
 
     preencherSelectColaboradores(app, selectId = 'attendant-select') {
         const select = document.getElementById(selectId);
-        if (!select) {
-            console.error(`Select ${selectId} não encontrado`);
-            return;
-        }
+        if (!select) return;
         
         const valorAnterior = select.value;
         
@@ -1216,148 +1075,6 @@ export const PautaService = {
         }
     },
 
-    showPautaSelectionScreen(app) {
-        if (!app || !app.auth || !app.auth.currentUser) {
-            showNotification("Usuário não autenticado", "error");
-            return;
-        }
-
-        localStorage.removeItem('lastPautaId');
-        localStorage.removeItem('lastPautaType');
-
-        UIService.renderPautaFilters('filters-container', app.currentPautaFilter || 'all', async (filter) => {
-            app.currentPautaFilter = filter;
-            await this.loadPautasWithFilter(app);
-        }, app);
-
-        this.loadPautasWithFilter(app);
-
-        UIService.showScreen('pautaSelection');
-    },
-
-    async loadPautasWithFilter(app) {
-        const user = app.auth.currentUser;
-        if (!user) return;
-        
-        const pautasList = document.getElementById('pautas-list');
-        if (!pautasList) return;
-        
-        pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas...</p>';
-
-        try {
-            const q = query(
-                collection(app.db, "pautas"),
-                where("members", "array-contains", user.uid)
-            );
-            
-            const snapshot = await getDocs(q);
-            let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            const filtrosAdicionais = {};
-            
-            if (app.currentPautaFilter === 'periodo') {
-                const filterDataInicial = document.getElementById('filter-data-inicial');
-                filtrosAdicionais.dataInicial = filterDataInicial ? filterDataInicial.value : null;
-                
-                const filterDataFinal = document.getElementById('filter-data-final');
-                filtrosAdicionais.dataFinal = filterDataFinal ? filterDataFinal.value : null;
-                
-                const filterTipoPauta = document.getElementById('filter-tipo-pauta');
-                filtrosAdicionais.tipo = filterTipoPauta ? filterTipoPauta.value : null;
-            }
-            
-            const filteredPautas = this.filterPautas(
-                pautas, 
-                app.currentPautaFilter || 'all', 
-                user.uid, 
-                user.email,
-                filtrosAdicionais
-            );
-            
-            this.renderPautaCards(filteredPautas, user.uid, user.email, app);
-            
-        } catch (error) {
-            console.error("Erro ao carregar pautas:", error);
-            pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>';
-        }
-    },
-
-    renderPautaCards(pautas, currentUserId, currentUserEmail, app) {
-        const container = document.getElementById('pautas-list');
-        if (!container) return;
-        
-        if (pautas.length === 0) {
-            container.innerHTML = '<div class="col-span-full text-center py-12 bg-gray-50 rounded-lg"><p class="text-gray-500">Nenhuma pauta encontrada com este filtro.</p></div>';
-            return;
-        }
-
-        const now = new Date();
-        
-        container.innerHTML = pautas.map(pauta => {
-            const isOwner = pauta.owner === currentUserId;
-            
-            let isExpired = false;
-            let dataCriacao = 'Desconhecida';
-            let dataExpiracao = 'Desconhecida';
-            
-            if (pauta.createdAt) {
-                const creationDate = new Date(pauta.createdAt);
-                dataCriacao = creationDate.toLocaleDateString('pt-BR');
-                
-                const expirationDate = new Date(creationDate);
-                expirationDate.setDate(creationDate.getDate() + 7);
-                dataExpiracao = expirationDate.toLocaleDateString('pt-BR');
-                
-                if (now > expirationDate) {
-                    isExpired = true;
-                }
-            }
-            
-            const expiracaoTexto = isExpired ? 'Expirou em:' : 'Será eliminada em:';
-            const expiredClass = isExpired ? 'opacity-60 bg-gray-100' : '';
-            
-            return `
-            <div class="relative bg-white p-6 rounded-lg shadow-md flex flex-col justify-between h-full ${expiredClass} ${!isExpired ? 'hover:shadow-xl transition-shadow cursor-pointer' : 'cursor-not-allowed'}" 
-                 ${!isExpired ? `onclick="window.app.loadPauta('${pauta.id}', '${escapeHTML(pauta.name)}', '${pauta.type}')"` 
-                              : `onclick="showNotification('🔒 Esta pauta expirou e não pode ser acessada', 'error')"`}
-                 role="${!isExpired ? 'button' : 'presentation'}"
-                 tabindex="${!isExpired ? '0' : '-1'}"
-                 aria-label="${!isExpired ? `Abrir pauta ${pauta.name}` : `Pauta expirada ${pauta.name}`}">
-                
-                ${isOwner ? `
-                <button onclick="event.stopPropagation(); window.app.deletePauta('${pauta.id}', '${escapeHTML(pauta.name)}')" 
-                        class="absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:text-red-600 transition-colors z-10"
-                        title="Excluir pauta"
-                        aria-label="Excluir pauta ${pauta.name}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1  0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                </button>
-                ` : ''}
-                
-                <h3 class="font-bold text-xl text-gray-800 mb-2 pr-8" title="${escapeHTML(pauta.name)}">
-                    ${escapeHTML(pauta.name)}
-                </h3>
-                
-                <p class="text-sm text-gray-600 mb-4">
-                    Membros: <span class="font-semibold">${(pauta.memberEmails && pauta.memberEmails.length) || 1}</span>
-                </p>
-                
-                <div class="mt-4 pt-2 border-t border-gray-200">
-                    <p class="text-xs text-gray-500">
-                        Criada em: <span class="font-bold">${dataCriacao}</span>
-                    </p>
-                    <p class="text-xs ${isExpired ? 'text-gray-500' : 'text-red-600'}">
-                        ${expiracaoTexto} <span class="font-bold">${dataExpiracao}</span>
-                    </p>
-                </div>
-                
-                ${isOwner ? '<span class="absolute bottom-3 left-3 text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Criador</span>' : ''}
-            </div>
-            `;
-        }).join('');
-    },
-
     handleCardActions(e, app) {
         const button = e.target.closest('button');
         if (!button) return;
@@ -1389,8 +1106,8 @@ export const PautaService = {
                 }, 100);
                 
                 setTimeout(() => {
-                    const clickOutsideHandler = (evt) => {
-                        if (!menu.contains(evt.target) && !button.contains(evt.target)) {
+                    const clickOutsideHandler = (e) => {
+                        if (!menu.contains(e.target) && !button.contains(e.target)) {
                             menu.classList.add('hidden');
                             button.setAttribute('aria-expanded', 'false');
                             document.removeEventListener('click', clickOutsideHandler);
@@ -1554,67 +1271,43 @@ export const PautaService = {
             window.assistedIdToHandle = id;
             window.assistedNameToHandle = assisted.name || '';
             window.assistedTipoAcao = 'delegar';
-            document.getElementById('assisted-to-attend-name').textContent = assisted.name || '';
+            
+            const nameElement = document.getElementById('assisted-to-attend-name');
+            if (nameElement) nameElement.textContent = assisted.name || '';
             
             this.preencherListaColaboradoresModal(app);
             
             const modal = document.getElementById('select-collaborator-modal');
             if (modal) {
                 modal.classList.remove('hidden');
-                
-                const confirmBtn = document.getElementById('confirm-select-collaborator');
-                if (confirmBtn) {
-                    const newConfirmBtn = confirmBtn.cloneNode(true);
-                    if (confirmBtn.parentNode) {
-                        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-                    }
-                    
-                    newConfirmBtn.addEventListener('click', async () => {
-                        if (window.selectedCollaboratorId && window.selectedCollaboratorId !== 'null') {
-                            await this.delegateAttendance(
-                                app, 
-                                window.assistedIdToHandle, 
-                                window.selectedCollaboratorName, 
-                                window.selectedCollaboratorId
-                            );
-                            modal.classList.add('hidden');
-                        } else if (window.selectedCollaboratorId === 'null') {
-                            if (document.getElementById('attendant-modal')) document.getElementById('attendant-modal').classList.remove('hidden');
-                            this.preencherSelectColaboradores(app, 'attendant-select');
-                            modal.classList.add('hidden');
-                        } else {
-                            showNotification("Selecione um colaborador", "warning");
-                        }
-                    });
-                }
+                setTimeout(() => {
+                    const searchInput = document.getElementById('collaborator-search-input');
+                    if (searchInput) searchInput.focus();
+                }, 100);
             }
         }
 
+        // ⭐ NOVO: AÇÃO PARA O BOTÃO ATENDER DIRETO
         if (button.classList.contains('attend-directly-from-aguardando-btn')) {
-            window.assistedIdToHandle = id;
-            this.preencherSelectColaboradores(app, 'attendant-select');
+            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            if (!assisted) return;
             
-            const modal = document.getElementById('attendant-modal');
+            window.assistedIdToHandle = id;
+            window.assistedNameToHandle = assisted.name || '';
+            window.assistedTipoAcao = 'atender_direto'; 
+            
+            const nameElement = document.getElementById('assisted-to-attend-name');
+            if (nameElement) nameElement.textContent = assisted.name || '';
+            
+            this.preencherListaColaboradoresModal(app);
+            
+            const modal = document.getElementById('select-collaborator-modal');
             if (modal) {
                 modal.classList.remove('hidden');
-                
-                const confirmBtn = document.getElementById('confirm-attendant');
-                if (confirmBtn) {
-                    const newConfirmBtn = confirmBtn.cloneNode(true);
-                    if (confirmBtn.parentNode) {
-                        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-                    }
-                    
-                    newConfirmBtn.addEventListener('click', async () => {
-                        const attendant = document.getElementById('attendant-select').value;
-                        if (attendant) {
-                            await this.finishAttendance(app, window.assistedIdToHandle, attendant, []);
-                            modal.classList.add('hidden');
-                        } else {
-                            showNotification("Selecione um atendente", "warning");
-                        }
-                    });
-                }
+                setTimeout(() => {
+                    const searchInput = document.getElementById('collaborator-search-input');
+                    if (searchInput) searchInput.focus();
+                }, 100);
             }
         }
 
@@ -1630,28 +1323,9 @@ export const PautaService = {
             const modal = document.getElementById('delegate-email-modal');
             if (modal) {
                 modal.classList.remove('hidden');
-                
-                const confirmBtn = document.getElementById('confirm-delegate-email');
-                if (confirmBtn) {
-                    const newConfirmBtn = confirmBtn.cloneNode(true);
-                    if (confirmBtn.parentNode) {
-                        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-                    }
-                    
-                    newConfirmBtn.addEventListener('click', async () => {
-                        const email = document.getElementById('delegate-email').value;
-                        if (email) {
-                            showNotification(`Notificação enviada para ${email}`, "success");
-                            modal.classList.add('hidden');
-                        } else {
-                            showNotification("Informe um email", "warning");
-                        }
-                    });
-                }
             }
         }
 
-        // ⭐ NOVO: Ação de Editar Assistido (Agora puxando a Sala)
         if (button.classList.contains('edit-assisted-btn')) {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             if (assisted) {
@@ -1660,12 +1334,11 @@ export const PautaService = {
                 document.getElementById('edit-assisted-subject').value = assisted.subject || '';
                 document.getElementById('edit-scheduled-time').value = assisted.scheduledTime || '';
                 
-                // ⭐ Puxa a sala salva para o modal
-                const editRoomSelect = document.getElementById('edit-room-select');
-                if (editRoomSelect) {
-                    editRoomSelect.value = assisted.room || '';
+                const roomSelect = document.getElementById('edit-room-select');
+                if (roomSelect && assisted.room) {
+                    roomSelect.value = assisted.room;
                 }
-
+                
                 window.assistedIdToHandle = id;
                 if (document.getElementById('edit-assisted-modal')) document.getElementById('edit-assisted-modal').classList.remove('hidden');
             }
@@ -1785,30 +1458,6 @@ export const PautaService = {
             }, app.currentUserName);
             
             showNotification(`Status de Marcado Presença no Verde atualizado para ${newConfirmedState ? 'Confirmado' : 'Não Confirmado'}.`, 'info');
-        }
-    },
-
-    refreshAssistedList(app) {
-        if (!app || !app.currentPauta || !app.currentPauta.id) return;
-        
-        if (app.unsubscribeFromAttendances) {
-            console.log("🔄 Lista de assistidos será atualizada pelo listener");
-        } else {
-            this.loadAssistedList(app);
-        }
-    },
-    
-    async loadAssistedList(app) {
-        if (!app || !app.currentPauta || !app.currentPauta.id) return;
-        
-        try {
-            const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
-            const snapshot = await getDocs(attendanceRef);
-            app.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            UIService.renderAssistedLists(app);
-            console.log("✅ Lista de assistidos atualizada manualmente");
-        } catch (error) {
-            console.error("Erro ao carregar lista:", error);
         }
     }
 };
