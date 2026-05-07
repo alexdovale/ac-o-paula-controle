@@ -734,9 +734,14 @@ export const PDFService = {
                     currentEquipe = equipeAtual;
                     tableData.push([
                         {
-                            content: `📁 ${equipeAtual.toUpperCase()}`,
+                            content: equipeAtual.toUpperCase(), // REMOVIDO O EMOJI 📁 AQUI
                             colSpan: selectedCols.length,
-                            styles: { fillColor: [229, 231, 235], textColor: [55, 65, 81], fontStyle: 'bold', halign: 'left' } 
+                            styles: { 
+                                fillColor: [240, 253, 244], // Fundo verde claro (Tailwind green-50)
+                                textColor: [21, 128, 61],   // Texto verde mais forte (Tailwind green-700)
+                                fontStyle: 'bold', 
+                                halign: 'center'            // Fica mais limpo e centralizado no PDF
+                            } 
                         }
                     ]);
                 }
