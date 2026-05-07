@@ -8,7 +8,7 @@ export const UIService = {
         document.getElementById('login-container').classList.toggle('hidden', screenName !== 'login');
         document.getElementById('pauta-selection-container').classList.toggle('hidden', screenName !== 'pautaSelection');
         document.getElementById('app-container').classList.toggle('hidden', screenName !== 'app');
-        document.getElementById('dashboard-container').classList.toggle('hidden', screenName !== 'dashboard'); // <--- ADICIONADO
+        document.getElementById('dashboard-container').classList.toggle('hidden', screenName !== 'dashboard');
     },
 
     /**
@@ -139,7 +139,7 @@ export const UIService = {
             } else {
                 emAtendimentoColumn.classList.add('hidden');
             }
-            formTitle.textContent = "Adicionar Novo Agendamento";
+            if(formTitle) formTitle.textContent = "Adicionar Novo Agendamento";
             this.showAgendamentoForm();
         } else {
             tabAvulso.classList.add('tab-active');
@@ -152,7 +152,7 @@ export const UIService = {
             } else {
                 emAtendimentoColumn.classList.add('hidden');
             }
-            formTitle.textContent = "Adicionar Atendimento Avulso";
+            if(formTitle) formTitle.textContent = "Adicionar Atendimento Avulso";
             this.showAvulsoForm(app);
         }
         this.renderAssistedLists(app);
@@ -282,8 +282,6 @@ export const UIService = {
         const currentPautaData = app.currentPautaData;
         const colaboradores = app.colaboradores || [];
 
-        console.log("allAssisted:", allAssisted.length, "itens");
-
         if (allAssisted.length === 0) {
             console.log("Nenhum assistido encontrado");
             this.clearContainers();
@@ -291,9 +289,9 @@ export const UIService = {
             const pautaList = document.getElementById('pauta-list');
             const aguardandoList = document.getElementById('aguardando-list');
             const atendidosList = document.getElementById('atendidos-list');
-            const emAtendimentoList = document.getElementById('em-atendimento-list'); // Ensure this is also cleared
-            const faltososList = document.getElementById('faltosos-list'); // Ensure this is also cleared
-            const distribuicaoList = document.getElementById('distribuicao-list'); // Ensure this is also cleared
+            const emAtendimentoList = document.getElementById('em-atendimento-list');
+            const faltososList = document.getElementById('faltosos-list'); 
+            const distribuicaoList = document.getElementById('distribuicao-list'); 
             
             if (pautaList) pautaList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum agendamento</p>';
             if (aguardandoList) aguardandoList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém aguardando</p>';
@@ -327,19 +325,10 @@ export const UIService = {
             distribuicao: allAssisted.filter(a => a.status === 'aguardandoDistribuicao' && this.searchFilter(a, searchTerms.distribuicao))
         };
 
-        console.log("Listas filtradas:", {
-            pauta: lists.pauta.length,
-            aguardando: lists.aguardando.length,
-            emAtendimento: lists.emAtendimento.length,
-            atendidos: lists.atendidos.length,
-            faltosos: lists.faltosos.length,
-            distribuicao: lists.distribuicao.length
-        });
-
         lists.pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
-        lists.atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime)); // Sort by attendedTime (latest first)
-        lists.faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00')); // Sort by scheduledTime (earliest first)
-        lists.emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime)); // Sort by inAttendanceTime (latest first)
+        lists.atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime)); 
+        lists.faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00')); 
+        lists.emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime)); 
         
         if (currentPautaData?.ordemAtendimento) {
             lists.aguardando = PautaService.sortAguardando(lists.aguardando, currentPautaData.ordemAtendimento);
@@ -348,18 +337,15 @@ export const UIService = {
         this.updateCounters(lists);
         this.clearContainers();
 
-        console.log("Renderizando colunas...");
         this.renderPautaColumn(lists.pauta);
         this.renderAguardandoColumn(lists.aguardando, currentPautaData, colaboradores);
         this.renderEmAtendimentoColumn(lists.emAtendimento, currentPautaData, app.currentPauta?.id, app.currentUserName);
         this.renderAtendidosColumn(lists.atendidos);
-        this.renderFaltososColumn(lists.faltosos); // This will be updated
+        this.renderFaltososColumn(lists.faltosos); 
         this.renderDistribuicaoColumn(lists.distribuicao, app.currentPauta?.id, app.currentUserName);
 
         this.togglePautaLock(app);
-        setTimeout(() => PautaService.setupManualSort(app), 100); // Re-initialize SortableJS
-        
-        console.log("✅ Renderização concluída");
+        setTimeout(() => PautaService.setupManualSort(app), 100); 
     },
 
     getSearchTerms() {
@@ -449,7 +435,7 @@ export const UIService = {
     createPautaCard(item) {
         const currentUserRole = window.app?.currentUser?.role;
         const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
-        const canEdit = currentUserRole !== 'apoio'; // <<--- ALTERADO: 'basico' para 'apoio'
+        const canEdit = currentUserRole !== 'apoio'; 
         const isOwner = window.app?.auth?.currentUser?.uid === item.owner;
 
         const card = document.createElement('div');
@@ -491,6 +477,7 @@ export const UIService = {
         return card;
     },
 
+    // ATUALIZADO: Criação do Container de Multi-Salas e Barra de Pesquisa
     renderAguardandoColumn(items, currentPautaData, colaboradores) {
         const container = document.getElementById('aguardando-list');
         if (!container) return;
@@ -500,24 +487,68 @@ export const UIService = {
             return;
         }
 
-        console.log("Renderizando aguardando:", items.length);
         container.innerHTML = '';
 
         if (currentPautaData?.type === 'multisala' && currentPautaData.rooms?.length > 0) {
+            // Desenha as Salas definidas na Pauta
             currentPautaData.rooms.forEach(roomName => {
                 const peopleInRoom = items.filter(a => a.room === roomName);
                 if (peopleInRoom.length === 0) return;
                 
-                const roomHeader = document.createElement('div');
-                roomHeader.className = "bg-blue-50 text-blue-800 font-black px-3 py-1.5 rounded mt-4 mb-2 text-[10px] uppercase flex justify-between border border-blue-100";
-                roomHeader.innerHTML = `<span>🏢 ${escapeHTML(roomName)}</span> <span>${peopleInRoom.length}</span>`;
-                container.appendChild(roomHeader);
+                // Cria o Container da Sala
+                const roomGroup = document.createElement('div');
+                roomGroup.className = "mb-4 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 room-group-container shadow-sm";
+                
+                roomGroup.innerHTML = `
+                    <div class="bg-blue-100 p-2 border-b border-blue-200 flex flex-col gap-2">
+                        <div class="flex justify-between items-center px-1">
+                            <h4 class="font-bold text-blue-800 text-xs uppercase tracking-wider flex items-center gap-1">
+                                <span>🏢</span> ${escapeHTML(roomName)}
+                            </h4>
+                            <span class="bg-blue-200 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${peopleInRoom.length}</span>
+                        </div>
+                        <input type="search" placeholder="Pesquisar nesta sala..." class="room-search-input w-full p-1.5 text-xs border border-blue-200 rounded outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                    </div>
+                    <div class="p-2 space-y-2 room-cards-wrapper"></div>
+                `;
+                
+                const cardsWrapper = roomGroup.querySelector('.room-cards-wrapper');
                 
                 peopleInRoom.forEach((item, index) => {
                     const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
-                    if (card) container.appendChild(card);
+                    if (card) cardsWrapper.appendChild(card);
                 });
+                
+                container.appendChild(roomGroup);
             });
+
+            // Adiciona também os que estão sem sala designada, caso haja algum
+            const peopleNoRoom = items.filter(a => !a.room || !currentPautaData.rooms.includes(a.room));
+            if (peopleNoRoom.length > 0) {
+                const roomGroupNoRoom = document.createElement('div');
+                roomGroupNoRoom.className = "mb-4 border border-red-200 rounded-lg overflow-hidden bg-red-50 room-group-container shadow-sm";
+                
+                roomGroupNoRoom.innerHTML = `
+                    <div class="bg-red-100 p-2 border-b border-red-200 flex flex-col gap-2">
+                        <div class="flex justify-between items-center px-1">
+                            <h4 class="font-bold text-red-800 text-xs uppercase tracking-wider flex items-center gap-1">
+                                <span>⚠️</span> Sem Sala Definida
+                            </h4>
+                            <span class="bg-red-200 text-red-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${peopleNoRoom.length}</span>
+                        </div>
+                        <input type="search" placeholder="Pesquisar sem sala..." class="room-search-input w-full p-1.5 text-xs border border-red-200 rounded outline-none focus:ring-2 focus:ring-red-500 bg-white">
+                    </div>
+                    <div class="p-2 space-y-2 room-cards-wrapper"></div>
+                `;
+                
+                const cardsWrapperNoRoom = roomGroupNoRoom.querySelector('.room-cards-wrapper');
+                peopleNoRoom.forEach((item, index) => {
+                    const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
+                    if (card) cardsWrapperNoRoom.appendChild(card);
+                });
+                container.appendChild(roomGroupNoRoom);
+            }
+
         } else {
             items.forEach((item, index) => {
                 const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
@@ -680,7 +711,7 @@ export const UIService = {
                     <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
                     <div class="flex flex-wrap items-center gap-2 mb-2">
                         ${timeInfoHtml}
-                        ${item.room ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(item.room)}</span>` : ''}
+                        ${item.room && currentPautaData?.type !== 'multisala' ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(item.room)}</span>` : ''}
                     </div>
                     ${docStatusHtml}
                     <div class="mt-4 grid grid-cols-2 gap-2">
