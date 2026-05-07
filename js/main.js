@@ -2053,20 +2053,27 @@ class SIGAPApp {
                 this.currentPautaOwnerId = this.currentPautaData.owner;
                 this.isPautaClosed = this.currentPautaData.isClosed || false;
                 
-                // ⭐ CARREGA A LISTA DE SALAS DA PAUTA (INJETADO AQUI PARA MULTI-SALAS)
+                // Carrega a lista de salas se a pauta for multisala
                 if (this.currentPautaData.type === 'multisala' && this.currentPautaData.customRooms) {
                     this.customRoomsList = this.currentPautaData.customRooms;
-                } else if (this.currentPautaData.type === 'multisala' && this.currentPautaData.rooms) {
-                    this.customRoomsList = this.currentPautaData.rooms; // Fallback
                 } else {
                     this.customRoomsList = [];
+                }
+
+                // Oculta/Exibe Botão de Edição de Salas no Aguardando
+                const btnManageRooms = document.getElementById('btn-manage-rooms');
+                if (btnManageRooms) {
+                    if (this.currentPautaData.type === 'multisala') {
+                        btnManageRooms.classList.remove('hidden');
+                    } else {
+                        btnManageRooms.classList.add('hidden');
+                    }
                 }
 
                 UIService.togglePautaLock(this);
                 this.loadColumnPreferences();
                 this.applyRoleBasedUI();
-
-                // ⭐ PREENCHE AS LISTAS SUSPENSAS SE FOR MULTI-SALAS
+                
                 if (typeof PautaService.populateRoomSelects === 'function') {
                     PautaService.populateRoomSelects(this);
                 }
@@ -2196,6 +2203,8 @@ class SIGAPApp {
             const snapshot = await getDocs(attendanceRef);
             this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             UIService.renderAssistedLists(this);
+            // Injeta o Search Bar de multi-salas caso exista
+            setTimeout(() => PautaService.injectRoomSearches(this), 150);
         } catch (error) {
             console.error("Erro ao carregar lista:", error);
         }
@@ -2208,46 +2217,78 @@ class SIGAPApp {
         this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
             this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             UIService.renderAssistedLists(this);
+            // Injeta o Search Bar de multi-salas caso exista
+            setTimeout(() => PautaService.injectRoomSearches(this), 150);
         }, (error) => {
             console.error("Erro no listener:", error);
             showNotification("Erro ao carregar dados", "error");
         });
     }
+        document.body.addEventListener('click', (e) => {
+            PautaService.handleCardActions(e, this);
+        });
 
-    applyRoleBasedUI() {
-        const currentUser = this.currentUser;
-        const currentUserRole = currentUser?.role; // 'user', 'admin', 'superadmin', 'apoio'
-        const isAuthenticated = this.auth?.currentUser != null;
-        const isUserApproved = currentUser?.status === 'approved'; // Verifica se o usuário está aprovado
-        
-        // Painel do Admin e Botão no menu principal (apenas para Admin/Superadmin)
-        const adminPanelBtnMain = document.getElementById('admin-btn-main');
-        const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
-        
-        const canAccessAdminPanel = (currentUserRole === 'admin' || currentUserRole === 'superadmin') && isAuthenticated && isUserApproved;
-        
-        if (adminPanelBtnMain) adminPanelBtnMain.classList.toggle('hidden', !canAccessAdminPanel);
-        if (adminPanelBtnPautaSelection) adminPanelBtnPautaSelection.classList.toggle('hidden', !canAccessAdminPanel);
+        // ================================================
+        // NOVO: GERENCIAR SALAS (MULTISALAS) - RENAME
+        // ================================================
+        document.getElementById('btn-manage-rooms')?.addEventListener('click', () => {
+            const container = document.getElementById('manage-rooms-list');
+            if (!container) return;
+            
+            container.innerHTML = '';
 
-        // --- Controle de Visibilidade/Habilitação de Elementos de UI ---
-        const closePautaBtn = document.getElementById('close-pauta-btn');
-        const reopenPautaBtn = document.getElementById('reopen-pauta-btn');
-        const resetAllBtn = document.getElementById('reset-all-btn');
-        const manageMembersBtn = document.getElementById('manage-members-btn');
-        const manageCollaboratorsBtn = document.getElementById('manage-collaborators-btn');
-        const viewStatsBtn = document.getElementById('view-stats-btn');
+            if(this.customRoomsList.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-sm">Nenhuma sala cadastrada.</p>';
+            } else {
+                this.customRoomsList.forEach((room, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'flex flex-col mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200';
+                    div.innerHTML = `
+                        <label class="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Sala ${index + 1} (Atual: ${escapeHTML(room)})</label>
+                        <input type="text" class="room-edit-input p-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none" data-old-name="${escapeHTML(room)}" value="${escapeHTML(room)}">
+                    `;
+                    container.appendChild(div);
+                });
+            }
 
-        // Permissões para ações de gerenciamento da pauta
-        const canManagePauta = (isUserApproved && (currentUserRole === 'user' || currentUserRole === 'apoio')) || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-        
-        if (closePautaBtn) closePautaBtn.classList.toggle('hidden', !canManagePauta);
-        if (reopenPautaBtn) reopenPautaBtn.classList.toggle('hidden', !canManagePauta);
-        if (resetAllBtn) resetAllBtn.classList.toggle('hidden', !canManagePauta);
-        if (manageMembersBtn) manageMembersBtn.classList.toggle('hidden', !canManagePauta);
-        if (manageCollaboratorsBtn) manageCollaboratorsBtn.classList.toggle('hidden', !canManagePauta);
-        
-        if (viewStatsBtn) viewStatsBtn.classList.toggle('hidden', !canAccessAdminPanel);
+            document.getElementById('manage-rooms-modal').classList.remove('hidden');
+        });
 
+        document.getElementById('cancel-manage-rooms-btn')?.addEventListener('click', () => {
+            document.getElementById('manage-rooms-modal').classList.add('hidden');
+        });
+
+        document.getElementById('save-manage-rooms-btn')?.addEventListener('click', async () => {
+            const inputs = document.querySelectorAll('.room-edit-input');
+            const changes = [];
+
+            inputs.forEach(input => {
+                const oldName = input.dataset.oldName;
+                const newName = input.value.trim();
+                if(newName && newName !== oldName) {
+                    changes.push({ oldName, newName });
+                }
+            });
+
+            if(changes.length > 0) {
+                const btn = document.getElementById('save-manage-rooms-btn');
+                const originalText = btn.textContent;
+                btn.textContent = 'Salvando...';
+                btn.disabled = true;
+
+                await PautaService.renameRooms(this, changes);
+
+                btn.textContent = originalText;
+                btn.disabled = false;
+            } else {
+                showNotification("Nenhuma alteração detectada.", "info");
+            }
+
+            document.getElementById('manage-rooms-modal').classList.add('hidden');
+        });
+
+        // ================================================
+        // FORMULÁRIO DE COLABORADORES
         // ================================================
         // LÓGICA ESPECÍFICA PARA O PERFIL APOIO NA TELA DA PAUTA
         // ================================================
