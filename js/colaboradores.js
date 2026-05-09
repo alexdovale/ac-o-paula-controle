@@ -1,4 +1,4 @@
-// js/colaboradores.js - VERSÃO MOBILE + FILTRO ATA E ORDENAÇÃO AVANÇADA (Defensor > Servidor)
+// js/colaboradores.js - VERSÃO MOBILE + FILTRO ATA E ORDENAÇÃO AVANÇADA (SIGEP)
 import { 
     collection, 
     onSnapshot, 
@@ -18,53 +18,39 @@ import { escapeHTML, showNotification } from './utils.js';
 const CollaboratorService = {
     currentListener: null,
     editId: null,
-    ordemAtual: 'grupo', // Pode ser 'grupo' ou 'nome'
+    ordemAtual: 'grupo', 
     gruposPermitidosAta: ['1', '2', '3', '4', 'CRC', 'Coordenadores'],
 
     // ========================================================
     // 1. AUTO-PREENCHIMENTO (BUSCA NA BASE MASTER)
     // ========================================================
     async buscarColaboradorMaster(app, identificador) {
-        if (!identificador || identificador.length < 3) {
-            console.log("Buscar Master: Identificador vazio ou muito curto.");
-            return;
-        }
+        // Limpeza: Se colarem um link, pega apenas a última parte (ID)
+        const idLimpo = identificador.trim().split('/').pop();
+
+        if (!idLimpo || idLimpo.length < 3) return;
 
         try {
-            const masterRef = doc(app.db, "colaboradores_gerais", identificador);
+            const masterRef = doc(app.db, "colaboradores_gerais", idLimpo);
             const snap = await getDoc(masterRef);
 
             if (snap.exists()) {
                 const dados = snap.data();
                 
-                const nameInput = document.getElementById('collaborator-name-modal');
-                if (nameInput) nameInput.value = dados.nome || '';
-                
-                const roleSelect = document.getElementById('collaborator-role-modal');
-                if (roleSelect) roleSelect.value = dados.cargo || 'Defensor(a)';
-                
-                const teamSelect = document.getElementById('collaborator-team-modal');
-                if (teamSelect) teamSelect.value = dados.equipe || '1';
-                
-                const phoneInput = document.getElementById('collaborator-phone-modal');
-                if (phoneInput) phoneInput.value = dados.telefone || '';
-                
-                const emailInput = document.getElementById('collaborator-email-modal');
-                if (emailInput) emailInput.value = dados.email || '';
+                document.getElementById('collaborator-name-modal').value = dados.nome || '';
+                document.getElementById('collaborator-role-modal').value = dados.cargo || 'Defensor(a)';
+                document.getElementById('collaborator-team-modal').value = dados.equipe || '1';
+                document.getElementById('collaborator-phone-modal').value = dados.telefone || '';
+                document.getElementById('collaborator-email-modal').value = dados.email || '';
                 
                 const rTransp = document.querySelector(`input[name="transporte-colaborador"][value="${dados.transporte || 'Meios Próprios'}"]`);
                 if (rTransp) rTransp.checked = true;
 
                 this.configurarLogicaCargo(); 
-                showNotification("Dados recuperados da base master! ✅");
-                console.log("Buscar Master: Dados encontrados e formulário preenchido.");
-            } else {
-                showNotification("Nenhum colaborador encontrado na base master com este identificador.", "info");
-                console.log("Buscar Master: Nenhum dado encontrado para o identificador:", identificador);
+                showNotification("Dados recuperados da base master! ✅", "success");
             }
         } catch (e) {
-            console.error("Erro ao buscar na base master:", e);
-            showNotification("Erro ao buscar na base master.", "error");
+            console.error("Erro ao buscar master:", e);
         }
     },
 
@@ -73,176 +59,80 @@ const CollaboratorService = {
     // ========================================================
     ordenarColaboradores(colaboradores) {
         if (this.ordemAtual === 'nome') {
-            return [...colaboradores].sort((a, b) => {
-                return (a.nome || '').localeCompare(b.nome || '');
-            });
-        } else { // this.ordemAtual === 'grupo'
+            return [...colaboradores].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        } else {
             return [...colaboradores].sort((a, b) => {
                 const grupoA = a.equipe || '';
                 const grupoB = b.equipe || '';
-                if (grupoA !== grupoB) {
-                    return grupoA.localeCompare(grupoB); // 1. Ordena por equipe
-                }
+                if (grupoA !== grupoB) return grupoA.localeCompare(grupoB);
                 
-                // 2. Lógica avançada de prioridade de Cargos
                 const getCargoWeight = (cargo) => {
                     const c = (cargo || '').toLowerCase();
                     if (c.includes('defensor')) return 1;
                     if (c.includes('servidor')) return 2;
-                    return 3; // Estagiários, Residentes, etc.
+                    return 3;
                 };
 
                 const weightA = getCargoWeight(a.cargo);
                 const weightB = getCargoWeight(b.cargo);
                 
-                if (weightA !== weightB) {
-                    return weightA - weightB; 
-                }
-                
-                // 3. Dentro da mesma equipe e mesmo cargo, ordena por nome
+                if (weightA !== weightB) return weightA - weightB; 
                 return (a.nome || '').localeCompare(b.nome || ''); 
             });
         }
     },
 
-    // ========================================================
-    // 2.1 FILTRO PARA ATA (Apenas grupos permitidos)
-    // ========================================================
     filtrarParaAta(colaboradores) {
-        return colaboradores.filter(colab => {
-            const equipe = colab.equipe || '';
-            return this.gruposPermitidosAta.includes(equipe);
-        });
+        return colaboradores.filter(colab => this.gruposPermitidosAta.includes(colab.equipe || ''));
     },
 
     toggleOrdem() {
         this.ordemAtual = this.ordemAtual === 'grupo' ? 'nome' : 'grupo';
         const btn = document.getElementById('toggle-order-btn');
-        if (btn) {
-            btn.textContent = this.ordemAtual === 'grupo' ? '📁 Ordenar por Grupo' : '🔤 Ordenar por Nome';
-        }
-        if (window.app && window.app.colaboradores) {
-            this.renderTable(window.app);
-        }
+        if (btn) btn.textContent = this.ordemAtual === 'grupo' ? '📁 Ordenar por Grupo' : '🔤 Ordenar por Nome';
+        if (window.app) this.renderTable(window.app);
     },
 
     // ========================================================
-    // 3. FLUXO DE REVISÃO - CARREGAR DEFENSORES
-    // ========================================================
-    async loadDefensores(app, selectId) {
-        const select = document.getElementById(selectId);
-        if (!select) return;
-
-        try {
-            if (!app || !app.currentPauta || !app.currentPauta.id) {
-                console.error("App ou pauta não definidos para carregar defensores.");
-                return;
-            }
-            const ref = collection(app.db, "pautas", app.currentPauta.id, "collaborators");
-            const q = query(ref, where("cargo", "==", "Defensor(a)"));
-            const snap = await getDocs(q);
-            
-            select.innerHTML = '<option value="">Selecione o Defensor...</option>';
-            const defensores = [];
-            snap.forEach(doc => {
-                defensores.push({ id: doc.id, ...doc.data() });
-            });
-            
-            defensores.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
-            
-            defensores.forEach(c => {
-                select.innerHTML += `<option value="${escapeHTML(c.nome)}">${escapeHTML(c.nome)}</option>`;
-            });
-        } catch (e) {
-            console.error("Erro ao carregar defensores:", e);
-        }
-    },
-
-    // ========================================================
-    // 4. CONFIGURAÇÃO DO MODAL E EVENTOS (VERSÃO MOBILE)
+    // 3. FLUXO DE REVISÃO E UI (MOBILE)
     // ========================================================
     openModal(app) {
-        console.log("📋 Abrindo modal de colaboradores");
-        
         const modal = document.getElementById('collaborators-modal');
-        if (!modal) {
-            showNotification("Erro: Modal não encontrado", "error");
-            return;
-        }
+        if (!modal) return;
 
         modal.classList.remove('hidden');
         this.resetForm();
         this.updateTeamSelect();
         this.configurarLogicaCargo();
-        
-        this.configurarEventoBusca(app); 
         this.adicionarBotaoOrdenacao();
         
-        if (app && app.currentPauta && app.currentPauta.id) {
+        if (app?.currentPauta?.id) {
             this.setupListener(app, app.currentPauta.id);
         }
-        
-        setTimeout(() => {
-            modal.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
     },
 
     adicionarBotaoOrdenacao() {
+        if (document.getElementById('toggle-order-btn')) return;
         const container = document.querySelector('#collaborators-list-table-modal');
         if (!container) return;
         
-        if (document.getElementById('toggle-order-btn')) return;
-        
-        const header = container.querySelector('.flex.justify-between') || container;
         const btn = document.createElement('button');
         btn.id = 'toggle-order-btn';
-        btn.className = 'w-full md:w-auto bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded text-sm mb-2';
+        btn.className = 'w-full md:w-auto bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded text-sm mb-4 transition';
         btn.textContent = this.ordemAtual === 'grupo' ? '📁 Ordenar por Grupo' : '🔤 Ordenar por Nome';
         btn.onclick = () => this.toggleOrdem();
-        
-        header.appendChild(btn);
-    },
-
-    closeModal() {
-        const modal = document.getElementById('collaborators-modal');
-        if (modal) modal.classList.add('hidden');
-    },
-
-    configurarEventoBusca(app) {
-        const inputIdentificador = document.getElementById('collaborator-identificador-modal');
-        const buscarBtn = document.getElementById('buscar-master-btn');
-    
-        if (inputIdentificador) {
-            inputIdentificador.onblur = () => {
-                if (!this.editId && inputIdentificador.value) {
-                    this.buscarColaboradorMaster(app, inputIdentificador.value);
-                }
-            };
-        }
-    
-        if (buscarBtn && inputIdentificador) {
-            buscarBtn.onclick = () => {
-                if (!this.editId && inputIdentificador.value) {
-                    this.buscarColaboradorMaster(app, inputIdentificador.value);
-                } else if (!inputIdentificador.value) {
-                    showNotification("Por favor, digite o identificador para buscar.", "warning");
-                }
-            };
-        }
+        container.prepend(btn);
     },
 
     configurarLogicaCargo() {
         const cargoSelect = document.getElementById('collaborator-role-modal');
         const labelIdentificador = document.getElementById('label-identificador-modal');
-        
-        if (!cargoSelect || !labelIdentificador) return;
-
-        const atualizarLabel = () => {
+        if (cargoSelect && labelIdentificador) {
             labelIdentificador.textContent = (cargoSelect.value === "Defensor(a)") ? "Matrícula" : "ID";
-        };
-
-        cargoSelect.onchange = atualizarLabel;
-        atualizarLabel();
+            cargoSelect.onchange = () => {
+                labelIdentificador.textContent = (cargoSelect.value === "Defensor(a)") ? "Matrícula" : "ID";
+            };
+        }
     },
 
     updateTeamSelect(selectedValue = '1') {
@@ -253,421 +143,171 @@ const CollaboratorService = {
             `<option value="${g}" ${selectedValue === g ? 'selected' : ''}>${isNaN(g) ? g : 'Equipe ' + g}</option>`
         ).join('');
         
-        html += `<option value="ADD_NEW">+ Adicionar outro...\u200b</option>`;
+        html += `<option value="ADD_NEW">+ Adicionar outro...</option>`;
         select.innerHTML = html;
 
         select.onchange = (e) => {
             if (e.target.value === 'ADD_NEW') {
                 const novo = prompt("Digite o nome do novo grupo/setor:");
-                if (novo && novo.trim()) {
+                if (novo?.trim()) {
                     const opt = new Option(novo, novo, true, true);
-                    if (select.firstChild) {
-                        select.add(opt, select.firstChild);
-                    } else {
-                        select.add(opt); 
-                    }
-                    select.value = novo;
-                    if (!this.gruposPermitidosAta.includes(novo)) {
-                        this.gruposPermitidosAta.push(novo);
-                    }
+                    select.add(opt, select.firstChild);
+                    if (!this.gruposPermitidosAta.includes(novo)) this.gruposPermitidosAta.push(novo);
                 } else { select.value = '1'; }
             }
         };
     },
 
     // ========================================================
-    // 5. SALVAR (PAUTA + MASTER)
+    // 4. PERSISTÊNCIA (PAUTA + MASTER)
     // ========================================================
     async saveCollaborator(app) {
-        if (!app || !app.currentPauta || !app.currentPauta.id) {
-            showNotification("Nenhuma pauta selecionada", "error");
-            return;
-        }
+        if (!app?.currentPauta?.id) return;
 
-        const nameInput = document.getElementById('collaborator-name-modal');
-        const nome = nameInput ? nameInput.value.trim() : '';
+        const data = {
+            nome: document.getElementById('collaborator-name-modal')?.value.trim(),
+            cargo: document.getElementById('collaborator-role-modal')?.value,
+            identificador: document.getElementById('collaborator-identificador-modal')?.value.trim(),
+            equipe: document.getElementById('collaborator-team-modal')?.value,
+            telefone: document.getElementById('collaborator-phone-modal')?.value.trim(),
+            email: document.getElementById('collaborator-email-modal')?.value.trim(),
+            transporte: document.querySelector('input[name="transporte-colaborador"]:checked')?.value || 'Meios Próprios',
+            tipo_id: (document.getElementById('collaborator-role-modal')?.value === "Defensor(a)") ? "Matrícula" : "ID",
+            updatedAt: new Date().toISOString()
+        };
 
-        const roleSelect = document.getElementById('collaborator-role-modal');
-        const cargo = roleSelect ? roleSelect.value : '';
-
-        const identificadorInput = document.getElementById('collaborator-identificador-modal');
-        const identificador = identificadorInput ? identificadorInput.value.trim() : '';
-
-        const teamSelect = document.getElementById('collaborator-team-modal');
-        const equipe = teamSelect ? teamSelect.value : '';
-
-        const phoneInput = document.getElementById('collaborator-phone-modal');
-        const telefone = phoneInput ? phoneInput.value.trim() : '';
-
-        const emailInput = document.getElementById('collaborator-email-modal');
-        const email = emailInput ? emailInput.value.trim() : '';
-        
-        const transporteRadio = document.querySelector('input[name="transporte-colaborador"]:checked');
-        const transporte = transporteRadio ? transporteRadio.value : '';
-
-        if (!nome || !identificador) {
+        if (!data.nome || !data.identificador) {
             showNotification("Preencha Nome e Matrícula/ID", "error");
             return;
         }
 
-        const tipo_id = (cargo === "Defensor(a)") ? "Matrícula" : "ID"; 
-
-        const data = {
-            nome,
-            cargo,
-            identificador,
-            tipo_id, 
-            equipe,
-            telefone,
-            email,
-            transporte,
-            updatedAt: new Date()
-        };
-
         try {
             const colRef = collection(app.db, "pautas", app.currentPauta.id, "collaborators");
-            
             if (this.editId) {
                 await updateDoc(doc(colRef, this.editId), data);
-                showNotification("Membro atualizado!");
             } else {
                 await addDoc(colRef, { ...data, presente: false, horario: '--:--' });
-                showNotification("Membro adicionado!");
             }
+            // Salva na Base Master para auto-preenchimento futuro
+            await setDoc(doc(app.db, "colaboradores_gerais", data.identificador), data, { merge: true });
             
-            await this.salvarNaBaseMaster(app, data); 
+            showNotification("Dados salvos com sucesso!", "success");
             this.resetForm();
         } catch (error) {
-            console.error("Erro ao salvar:", error);
-            showNotification("Erro ao salvar membro", "error");
+            showNotification("Erro ao salvar.", "error");
         }
     },
 
-    async salvarNaBaseMaster(app, data) {
-        const chave = data.identificador;
-        if (!chave) return;
-        const masterRef = doc(app.db, "colaboradores_gerais", chave);
-        await setDoc(masterRef, data, { merge: true });
-    },
-
     // ========================================================
-    // 6. LISTENER E TABELA (COM ORDENAÇÃO E DESIGN MOBILE)
+    // 5. RENDERIZAÇÃO E EVENTOS
     // ========================================================
     setupListener(app, pautaId) {
-        if (!pautaId || !app || !app.db) return; 
-        
-        if (this.currentListener) {
-            this.currentListener();
-        }
-        
+        if (this.currentListener) this.currentListener();
         const ref = collection(app.db, "pautas", pautaId, "collaborators");
         this.currentListener = onSnapshot(ref, (snapshot) => {
-            const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            app.colaboradores = lista;
-            this.salvarNoLocalStorage(app);
+            app.colaboradores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             this.renderTable(app);
-        }, (error) => {
-            console.error("Erro no listener:", error);
         });
-    },
-
-    salvarNoLocalStorage(app) {
-        try {
-            if (app && app.colaboradores) { 
-                localStorage.setItem('sigap_colaboradores', JSON.stringify(app.colaboradores));
-            }
-        } catch (e) {
-            console.error("Erro ao salvar no localStorage:", e);
-        }
     },
 
     renderTable(app) {
         const tbody = document.querySelector('#collaborators-list-table-modal tbody');
         if (!tbody) return;
-
         tbody.innerHTML = '';
+        
         let selfT = 0, compT = 0;
-        
-        const colaboradoresOrdenados = this.ordenarColaboradores(app.colaboradores || []);
-        
+        const ordenados = this.ordenarColaboradores(app.colaboradores || []);
         let ultimoGrupo = '';
 
-        colaboradoresOrdenados.forEach(colab => {
-            if (colab.transporte === 'Meios Próprios') selfT++; 
-            else if (colab.transporte === 'Com a Empresa') compT++;
+        ordenados.forEach(colab => {
+            if (colab.transporte === 'Meios Próprios') selfT++; else compT++;
             
-            const grupoAtual = colab.equipe || 'Sem Grupo';
-            
-            if (this.ordemAtual === 'grupo' && ultimoGrupo !== grupoAtual) {
-                ultimoGrupo = grupoAtual;
-                const groupRow = document.createElement('tr');
-                groupRow.className = 'bg-gray-100';
-                groupRow.innerHTML = `
-                    <td colspan="5" class="p-2 font-bold text-gray-700">
-                        📁 ${escapeHTML(grupoAtual)}
-                    </td>
-                `;
-                tbody.appendChild(groupRow);
+            if (this.ordemAtual === 'grupo' && ultimoGrupo !== colab.equipe) {
+                ultimoGrupo = colab.equipe;
+                tbody.innerHTML += `<tr class="bg-gray-100"><td colspan="5" class="p-2 font-bold text-gray-600 text-xs uppercase">📁 Equipe ${escapeHTML(ultimoGrupo)}</td></tr>`;
             }
-            
+
+            const isDef = colab.cargo === 'Defensor(a)';
             const row = document.createElement('tr');
-            row.className = "border-b hover:bg-gray-50 text-sm";
-            
-            const isDefensor = colab.cargo === 'Defensor(a)';
-            const isServidor = colab.cargo === 'Servidor(a)';
-            const nomeClass = isDefensor ? 'font-bold text-blue-700' : (isServidor ? 'font-bold text-green-700' : 'font-bold text-gray-800');
-            const labelTipo = colab.tipo_id || (isDefensor ? 'Matrícula' : 'ID');
-            
+            row.className = "border-b hover:bg-gray-50 transition";
             row.innerHTML = `
-                <td class="p-2 md:p-3">
-                    <div class="${nomeClass} text-sm md:text-base">${escapeHTML(colab.nome || '')}</div>
-                    <div class="text-[9px] md:text-[10px] text-gray-500 uppercase">${labelTipo}: ${colab.identificador || ''}</div>
-                    <div class="block md:hidden text-xs mt-1">
-                        <span class="font-semibold">${escapeHTML(colab.cargo || 'N/A')}</span> | 
-                        <span class="text-blue-600">GRP: ${escapeHTML(colab.equipe || 'N/A')}</span>
-                    </div>
+                <td class="p-3">
+                    <div class="font-bold ${isDef ? 'text-blue-700' : 'text-gray-800'}">${escapeHTML(colab.nome)}</div>
+                    <div class="text-[10px] text-gray-400 uppercase">${colab.tipo_id}: ${colab.identificador}</div>
                 </td>
-                <td class="p-2 md:p-3 text-center">
-                    <input type="checkbox" class="checkin-checkbox w-5 h-5 md:w-5 md:h-5" 
-                           data-id="${colab.id}" ${colab.presente ? 'checked' : ''}>
+                <td class="p-3 text-center">
+                    <input type="checkbox" class="checkin-checkbox w-6 h-6" data-id="${colab.id}" ${colab.presente ? 'checked' : ''}>
                 </td>
-                <td class="p-2 md:p-3 hidden md:table-cell">
-                    <span class="text-xs font-semibold">${escapeHTML(colab.cargo || 'N/A')}</span><br>
-                    <span class="text-[10px] text-blue-600 font-bold">GRP: ${escapeHTML(colab.equipe || 'N/A')}</span>
-                </td>
-                <td class="p-2 md:p-3 text-center text-xs md:text-sm">${colab.horario || '--:--'}</td>
-                <td class="p-2 md:p-3 text-center">
-                    <button class="edit-collaborator-btn text-blue-500 mr-1 md:mr-2 text-sm md:text-base" data-id="${colab.id}">✏️</button>
-                    <button class="delete-collaborator-btn text-red-500 text-sm md:text-base" data-id="${colab.id}">🗑️</button>
+                <td class="p-3 hidden md:table-cell text-xs">${escapeHTML(colab.cargo)}</td>
+                <td class="p-3 text-center text-xs">${colab.horario || '--:--'}</td>
+                <td class="p-3 text-center">
+                    <button onclick="CollaboratorService.editCollaborator(window.app, '${colab.id}')" class="text-blue-500 p-1">✏️</button>
+                    <button onclick="CollaboratorService.deleteCollaborator(window.app, '${colab.id}')" class="text-red-500 p-1">🗑️</button>
                 </td>
             `;
             tbody.appendChild(row);
         });
 
-        const totalSpan = document.getElementById('total-participants-count');
-        if (totalSpan) totalSpan.textContent = (app.colaboradores && app.colaboradores.length) || 0; 
-        
-        const selfSpan = document.getElementById('self-transport-count');
-        if (selfSpan) selfSpan.textContent = selfT;
-        
-        const compSpan = document.getElementById('company-transport-count');
-        if (compSpan) compSpan.textContent = compT;
-
+        document.getElementById('total-participants-count').textContent = app.colaboradores.length;
+        document.getElementById('self-transport-count').textContent = selfT;
+        document.getElementById('company-transport-count').textContent = compT;
         this.addEventListeners(app);
     },
 
-    // ========================================================
-    // 7. GERAR ATA (APENAS GRUPOS PERMITIDOS)
-    // ========================================================
-    gerarAta(app) {
-        if (!app || !app.colaboradores || app.colaboradores.length === 0) {
-            showNotification("Nenhum colaborador cadastrado", "error");
-            return null;
-        }
-
-        const colaboradoresFiltrados = this.filtrarParaAta(app.colaboradores);
-        
-        if (colaboradoresFiltrados.length === 0) {
-            showNotification("Nenhum colaborador dos grupos permitidos (Defensores, Servidores, Coordenadores, CRC)", "error");
-            return null;
-        }
-
-        const ordenados = this.ordenarColaboradores(colaboradoresFiltrados);
-
-        let ataHTML = `
-            <div style="font-family: Arial, sans-serif; max-width: 100%; overflow-x: auto;">
-                <h3 style="text-align: center;">LISTA DE PRESENÇA</h3>
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                    <thead>
-                        <tr style="background-color: #f3f4f6;">
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Nome</th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Cargo</th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Equipe</th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Presente</th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Horário</th>
-                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Identificador</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-
-        let ultimoGrupo = '';
-        ordenados.forEach(colab => {
-            const grupoAtual = colab.equipe || 'Sem Grupo';
-            if (ultimoGrupo !== grupoAtual) {
-                ultimoGrupo = grupoAtual;
-                ataHTML += `
-                    <tr style="background-color: #e5e7eb;">
-                        <td colspan="6" style="border: 1px solid #ddd; padding: 6px; font-weight: bold;">
-                            📁 ${escapeHTML(grupoAtual)}
-                        </td>
-                    </tr>
-                `;
-            }
-
-            const identificadorText = colab.identificador ? `${colab.tipo_id || 'ID'}: ${colab.identificador}` : 'N/A';
-
-            ataHTML += `
-                <tr>
-                    <td style="border: 1px solid #ddd; padding: 6px;">${escapeHTML(colab.nome || '')}</td>
-                    <td style="border: 1px solid #ddd; padding: 6px;">${escapeHTML(colab.cargo || '')}</td>
-                    <td style="border: 1px solid #ddd; padding: 6px;">${escapeHTML(colab.equipe || '')}</td>
-                    <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">
-                        ${colab.presente ? '✓' : ''}
-                    </td>
-                    <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${colab.horario || '--:--'}</td>
-                    <td style="border: 1px solid #ddd; padding: 6px; text-align: left;">${escapeHTML(identificadorText)}</td>
-                </tr>
-            `;
-        });
-
-        ataHTML += `
-                    </tbody>
-                </table>
-                <p style="font-size: 10px; margin-top: 16px; text-align: center;">
-                    Documento gerado automaticamente pelo SIGAP
-                </p>
-            </div>
-        `;
-
-        return ataHTML;
-    },
-
     addEventListeners(app) {
-        document.querySelectorAll('#collaborators-modal .checkin-checkbox').forEach(checkbox => {
-            checkbox.onchange = async (e) => {
-                const docId = e.target.dataset.id;
-                const presente = e.target.checked;
-                if (app && app.currentPauta && app.currentPauta.id) {
-                    await this.togglePresence(app, docId, presente);
-                }
+        document.querySelectorAll('.checkin-checkbox').forEach(cb => {
+            cb.onchange = async (e) => {
+                const id = e.target.dataset.id;
+                const pres = e.target.checked;
+                const hor = pres ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                await updateDoc(doc(app.db, "pautas", app.currentPauta.id, "collaborators", id), { presente: pres, horario: hor });
             };
         });
-
-        document.querySelectorAll('#collaborators-modal .edit-collaborator-btn').forEach(btn => {
-            btn.onclick = async (e) => {
-                const docId = e.currentTarget.dataset.id;
-                if (app && app.currentPauta && app.currentPauta.id) {
-                    await this.editCollaborator(app, docId);
-                }
-            };
-        });
-
-        document.querySelectorAll('#collaborators-modal .delete-collaborator-btn').forEach(btn => {
-            btn.onclick = (e) => {
-                const docId = e.currentTarget.dataset.id;
-                if (confirm("Remover este membro?")) {
-                    if (app && app.currentPauta && app.currentPauta.id) {
-                        this.deleteCollaborator(app, docId);
-                    }
-                }
-            };
-        });
-    },
-
-    async togglePresence(app, id, presente) {
-        if (!app || !app.currentPauta || !app.currentPauta.id) return;
-        try {
-            const ref = doc(app.db, "pautas", app.currentPauta.id, "collaborators", id);
-            const horario = presente ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-            await updateDoc(ref, { presente, horario });
-        } catch (error) {
-            console.error("Erro ao marcar presença:", error);
-        }
     },
 
     async editCollaborator(app, id) {
-        if (!app || !app.currentPauta || !app.currentPauta.id) return;
-        try {
-            const ref = doc(app.db, "pautas", app.currentPauta.id, "collaborators", id);
-            const snap = await getDoc(ref);
-            
-            if (snap.exists()) {
-                const c = snap.data();
-                this.editId = id;
-                
-                const nameInput = document.getElementById('collaborator-name-modal');
-                if (nameInput) nameInput.value = c.nome || '';
-                
-                const roleSelect = document.getElementById('collaborator-role-modal');
-                if (roleSelect) roleSelect.value = c.cargo || 'Defensor(a)';
-                
-                const identificadorInput = document.getElementById('collaborator-identificador-modal');
-                if (identificadorInput) identificadorInput.value = c.identificador || '';
-                
-                const teamSelect = document.getElementById('collaborator-team-modal');
-                if (teamSelect) teamSelect.value = c.equipe || '1';
-                
-                const phoneInput = document.getElementById('collaborator-phone-modal');
-                if (phoneInput) phoneInput.value = c.telefone || '';
-                
-                const emailInput = document.getElementById('collaborator-email-modal');
-                if (emailInput) emailInput.value = c.email || '';
-                
-                const rTransp = document.querySelector(`input[name="transporte-colaborador"][value="${c.transporte || 'Meios Próprios'}"]`);
-                if (rTransp) rTransp.checked = true;
-
-                this.configurarLogicaCargo(); 
-                const addBtn = document.getElementById('add-collaborator-btn-modal');
-                if (addBtn) addBtn.textContent = "Atualizar Membro";
-            }
-        } catch (error) {
-            console.error("Erro ao editar:", error);
+        const snap = await getDoc(doc(app.db, "pautas", app.currentPauta.id, "collaborators", id));
+        if (snap.exists()) {
+            const c = snap.data();
+            this.editId = id;
+            document.getElementById('collaborator-name-modal').value = c.nome;
+            document.getElementById('collaborator-role-modal').value = c.cargo;
+            document.getElementById('collaborator-identificador-modal').value = c.identificador;
+            document.getElementById('collaborator-team-modal').value = c.equipe;
+            document.getElementById('add-collaborator-btn-modal').textContent = "Atualizar Membro";
+            this.configurarLogicaCargo();
         }
     },
 
     async deleteCollaborator(app, id) {
-        if (!app || !app.currentPauta || !app.currentPauta.id) return;
-        try {
-            const ref = doc(app.db, "pautas", app.currentPauta.id, "collaborators", id);
-            await deleteDoc(ref);
+        if (confirm("Remover este membro?")) {
+            await deleteDoc(doc(app.db, "pautas", app.currentPauta.id, "collaborators", id));
             showNotification("Membro removido!");
-        } catch (error) {
-            console.error("Erro ao deletar:", error);
         }
     },
 
-    async clearAll(app) {
-        if (!confirm("Tem certeza que deseja apagar TODOS os membros?")) return;
-        if (!app || !app.currentPauta || !app.currentPauta.id) return;
-        
-        try {
-            const ref = collection(app.db, "pautas", app.currentPauta.id, "collaborators");
-            const snapshot = await getDocs(ref);
-            
-            if (snapshot.empty) return;
+    gerarAta(app) {
+        const filtrados = this.filtrarParaAta(app.colaboradores);
+        if (filtrados.length === 0) return null;
 
-            const batch = writeBatch(app.db);
-            snapshot.docs.forEach(doc => batch.delete(doc.ref));
-            await batch.commit();
-            
-            showNotification("Lista limpa!");
-        } catch (error) {
-            console.error("Erro ao limpar lista:", error);
-        }
+        let html = `<div style="font-family: sans-serif;"><h3>LISTA DE PRESENÇA - SIGEP</h3><table border="1" style="width:100%; border-collapse: collapse;">`;
+        html += `<thead><tr><th>Nome</th><th>Cargo</th><th>Equipe</th><th>Horário</th></tr></thead><tbody>`;
+        
+        this.ordenarColaboradores(filtrados).forEach(c => {
+            html += `<tr><td>${c.nome}</td><td>${c.cargo}</td><td>${c.equipe}</td><td>${c.horario}</td></tr>`;
+        });
+        
+        html += `</tbody></table><p style="font-size:10px; text-align:center;">Gerado automaticamente pelo SIGEP</p></div>`;
+        return html;
     },
 
     resetForm() {
-        const form = document.getElementById('collaborator-form-modal');
-        if (form) form.reset();
+        document.getElementById('collaborator-form-modal')?.reset();
         this.editId = null;
-        
-        const btn = document.getElementById('add-collaborator-btn-modal');
-        if (btn) btn.textContent = "Salvar Membro";
-        
-        const teamSelect = document.getElementById('collaborator-team-modal');
-        if (teamSelect) teamSelect.value = '1';
-        
-        const cargoSelect = document.getElementById('collaborator-role-modal');
-        if (cargoSelect) cargoSelect.value = 'Defensor(a)';
-        
-        const transpDefault = document.querySelector('input[name="transporte-colaborador"][value="Meios Próprios"]');
-        if (transpDefault) transpDefault.checked = true;
-        
-        this.configurarLogicaCargo(); 
+        document.getElementById('add-collaborator-btn-modal').textContent = "Salvar Membro";
+        this.configurarLogicaCargo();
     }
 };
 
 export default CollaboratorService;
-export { CollaboratorService };
 window.CollaboratorService = CollaboratorService;
