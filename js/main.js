@@ -46,14 +46,12 @@ class SIGAPApp {
         try {
             const app = initializeApp(firebaseConfig);
             
-
-             /* // Bloco comentado temporariamente para testar erro de conexão
-initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
-    isTokenAutoRefreshEnabled: true
-}); 
-*/
- 
+             /* // Bloco comentado para evitar erro 401 de conexão com App Check
+            initializeAppCheck(app, {
+                provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
+                isTokenAutoRefreshEnabled: true
+            }); 
+            */
 
             this.db = getFirestore(app);
             this.auth = getAuth(app);
@@ -100,10 +98,11 @@ initializeAppCheck(app, {
 
     setupOfflinePersistence() {
         try {
-            enableIndexedDbPersistence(this.db).catch((err) => {
+            // CORREÇÃO: synchronizeTabs ativado para evitar corrupção do IndexedDB
+            enableIndexedDbPersistence(this.db, { synchronizeTabs: true }).catch((err) => {
                 if (err.code == 'failed-precondition') {
                     console.warn('⚠️ Persistência desativada: Múltiplas abas abertas.');
-                    showNotification('Múltiplas abas detectadas. Feche outras abas para ativar o modo offline.', 'warning');
+                    showNotification('Múltiplas abas detectadas. Feche outras abas para evitar erros no modo offline.', 'warning');
                 } else if (err.code == 'unimplemented') {
                     console.warn('⚠️ Navegador não suporta persistência offline.');
                 }
@@ -179,7 +178,7 @@ initializeAppCheck(app, {
         });        
 
         // ================================================
-        // NOVO: LISTENERS PARA CUSTOMIZAÇÃO DE COLUNAS
+        // CUSTOMIZAÇÃO DE COLUNAS
         // ================================================
         const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
         const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
@@ -305,7 +304,6 @@ initializeAppCheck(app, {
             }
         });
 
-        // Event Delegation para buscas das salas individuais no 'Aguardando'
         document.getElementById('aguardando-list')?.addEventListener('input', (e) => {
             if (e.target.classList.contains('room-search-input')) {
                 const query = e.target.value.toLowerCase();
