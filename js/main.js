@@ -22,7 +22,7 @@ import { logAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, 
 import { parsePautaCSV } from './csvHandler.js';
 import { getChecklistHTML } from './checklist.js';
 
-class SIGAPApp {
+class SIGAPApp { // MANTIDO COMO SIGAP
     constructor() {
         this.db = null;
         this.auth = null;
@@ -98,7 +98,6 @@ class SIGAPApp {
 
     setupOfflinePersistence() {
         try {
-            // CORREÇÃO: synchronizeTabs ativado para evitar corrupção do IndexedDB
             enableIndexedDbPersistence(this.db, { synchronizeTabs: true }).catch((err) => {
                 if (err.code == 'failed-precondition') {
                     console.warn('⚠️ Persistência desativada: Múltiplas abas abertas.');
@@ -137,7 +136,6 @@ class SIGAPApp {
     }
 
     setupEventListeners() {
-        // Login
         document.getElementById('login-form')?.addEventListener('submit', (e) => {
             e.preventDefault();
             AuthService.login(this);
@@ -177,9 +175,6 @@ class SIGAPApp {
             this.showPautaSelectionScreen();
         });        
 
-        // ================================================
-        // CUSTOMIZAÇÃO DE COLUNAS
-        // ================================================
         const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
         const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
         const toggleEmAtendimento = document.getElementById('toggle-em-atendimento');
@@ -206,9 +201,6 @@ class SIGAPApp {
         toggleDistribuicao?.addEventListener('change', () => this.saveColumnPreferences());
         toggleFaltosos?.addEventListener('change', () => this.saveColumnPreferences());
 
-        // ================================================
-        // EDIÇÃO DE SALAS/VARAS MULTISALA E BARRA DE BUSCA
-        // ================================================
         document.getElementById('btn-manage-rooms')?.addEventListener('click', () => {
             const listContainer = document.getElementById('manage-rooms-list');
             if (!listContainer) return;
@@ -318,9 +310,6 @@ class SIGAPApp {
             }
         });
 
-        // ================================================
-        // BOTÃO GERAR ATA SOCIAL
-        // ================================================
         document.getElementById('btn-gerar-ata-social')?.addEventListener('click', () => {
             if (!this.currentPauta) {
                 showNotification("Nenhuma pauta selecionada!", "error");
@@ -371,7 +360,6 @@ class SIGAPApp {
             }
         });
 
-        // FORMULÁRIO DE AGENDAMENTO
         document.querySelectorAll('input[name="is-scheduled"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 const wrapper = document.getElementById('scheduled-time-wrapper');
@@ -406,7 +394,6 @@ class SIGAPApp {
             document.getElementById('scheduled-time-wrapper').classList.add('hidden');
         });
 
-        // Botão Criar Pauta
         document.getElementById('create-pauta-btn')?.addEventListener('click', () => {
             document.getElementById('pauta-type-modal').classList.remove('hidden');
         });
@@ -569,7 +556,6 @@ class SIGAPApp {
 
         document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
         
-        // Compartilhar
         document.getElementById('share-pauta-btn')?.addEventListener('click', () => {
             const modal = document.getElementById('share-modal');
             if (modal) {
@@ -883,7 +869,6 @@ class SIGAPApp {
             PautaService.handleCardActions(e, this);
         });
 
-        // Colaboradores Form
         document.getElementById('collaborator-form-modal')?.addEventListener('submit', async (e) => {
             e.preventDefault();
             const nome = document.getElementById('collaborator-name-modal')?.value.trim();
@@ -911,7 +896,6 @@ class SIGAPApp {
             }
         });
 
-        // Prioridade
         document.querySelectorAll('.p-chip').forEach(chip => {
             chip.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -957,7 +941,6 @@ class SIGAPApp {
             document.getElementById('priority-reason-modal')?.classList.add('hidden');
         });
 
-        // Checklist
         document.getElementById('back-to-action-selection-btn')?.addEventListener('click', () => {
             if (typeof window.switchToActionSelectionView === 'function') {
                 window.switchToActionSelectionView();
@@ -1273,7 +1256,6 @@ class SIGAPApp {
                 scheduledTime: document.getElementById('edit-scheduled-time')?.value || null,
             };
             
-            // Adiciona a sala, caso o usuário tenha trocado a sala durante a edição
             const roomSelect = document.getElementById('edit-room-select');
             if (roomSelect && !roomSelect.parentElement.classList.contains('hidden')) {
                 updatedData.room = roomSelect.value || null;
@@ -1840,7 +1822,6 @@ class SIGAPApp {
                 this.loadColumnPreferences();
                 this.applyRoleBasedUI();
                 
-                // Ativa a edição de salas caso seja multisala
                 const btnManageRooms = document.getElementById('btn-manage-rooms');
                 if (btnManageRooms) {
                     if (this.currentPautaData.type === 'multisala') {
@@ -1850,7 +1831,6 @@ class SIGAPApp {
                     }
                 }
 
-                // Carrega as salas no Modal de Editar Assistido
                 if (typeof PautaService.populateRoomSelects === 'function') {
                     PautaService.populateRoomSelects(this);
                 }
@@ -1903,7 +1883,9 @@ class SIGAPApp {
             }
             
             const filteredPautas = PautaService.filterPautas(pautas, this.currentPautaFilter, user.uid, user.email, filtrosAdicionais);
-            PautaService.renderPautaCards(filteredPautas, user.uid, user.email, this);
+            
+            // CORREÇÃO CRÍTICA AQUI: A renderização acontece pelo UIService
+            UIService.renderPautaCards(filteredPautas, user.uid, user.email, this);
             
         } catch (error) {
             console.error("Erro ao carregar pautas:", error);
