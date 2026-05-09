@@ -1162,5 +1162,4 @@ export const UIService = {
             container.appendChild(card);
         });
     }
-    }
-};
+   
