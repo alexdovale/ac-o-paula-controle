@@ -1,4 +1,4 @@
-// js/ui.js - VERSÃO COMPLETA E ATUALIZADA (com todas as funções originais e melhorias)
+// js/ui.js - VERSÃO COMPLETA E ATUALIZADA
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
 import { PautaService } from './pauta.js';
 
@@ -219,8 +219,7 @@ export const UIService = {
             }
         });
         
-        // This targets the action buttons on the cards themselves
-        const cardActionButtons = document.querySelectorAll('.assisted-card button:not(.quick-action-toggle)'); // Exclude quick-action-toggle to allow menu opening
+        const cardActionButtons = document.querySelectorAll('.assisted-card button:not(.quick-action-toggle)');
         cardActionButtons.forEach(btn => {
             btn.disabled = isClosed;
         });
@@ -405,7 +404,6 @@ export const UIService = {
         });
     },
 
-    // Helper para gerar o rodapé padrão de "Última ação por:"
     _getStandardizedFooterHtml(item) {
         const lastActionBy = escapeHTML(item.lastActionBy || 'Sistema');
         const lastActionDate = item.lastActionTimestamp ?
@@ -439,7 +437,6 @@ export const UIService = {
         const isOwner = window.app?.auth?.currentUser?.uid === item.owner;
 
         const card = document.createElement('div');
-        // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
         card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3';
         card.setAttribute('data-id', item.id);
         
@@ -477,7 +474,6 @@ export const UIService = {
         return card;
     },
 
-    // ATUALIZADO: Criação do Container de Multi-Salas e Barra de Pesquisa
     renderAguardandoColumn(items, currentPautaData, colaboradores) {
         const container = document.getElementById('aguardando-list');
         if (!container) return;
@@ -490,12 +486,10 @@ export const UIService = {
         container.innerHTML = '';
 
         if (currentPautaData?.type === 'multisala' && currentPautaData.rooms?.length > 0) {
-            // Desenha as Salas definidas na Pauta
             currentPautaData.rooms.forEach(roomName => {
                 const peopleInRoom = items.filter(a => a.room === roomName);
                 if (peopleInRoom.length === 0) return;
                 
-                // Cria o Container da Sala
                 const roomGroup = document.createElement('div');
                 roomGroup.className = "mb-4 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 room-group-container shadow-sm";
                 
@@ -522,7 +516,6 @@ export const UIService = {
                 container.appendChild(roomGroup);
             });
 
-            // Adiciona também os que estão sem sala designada, caso haja algum
             const peopleNoRoom = items.filter(a => !a.room || !currentPautaData.rooms.includes(a.room));
             if (peopleNoRoom.length > 0) {
                 const roomGroupNoRoom = document.createElement('div');
@@ -568,11 +561,9 @@ export const UIService = {
 
             const card = document.createElement('div');
             const priorityClass = PautaService.getPriorityClass(item.priority);
-            // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
             card.className = `assisted-card relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
             card.setAttribute('data-id', item.id);
 
-            // === INDICADORES DE STATUS DO DOCUMENTO ===
             let docStatusHtml = '';
             if (item.selectedAction) {
                 let statusColor = 'bg-gray-100 text-gray-600';
@@ -607,13 +598,11 @@ export const UIService = {
                     </div>`;
             }
 
-            // Tratar valores com fallbacks seguros
             const nomeSeguro = item.name || 'Nome não informado';
             const assuntoSeguro = item.subject || 'Assunto não informado';
             const scheduledTimeSeguro = item.scheduledTime || '--:--';
             const priorityReasonSeguro = item.priorityReason || '';
 
-            // Tratar arrivalTime com o novo design de tags azuis
             let timeInfoHtml = `<span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">Chegada: --:--</span>`;
             if (item.arrivalTime) {
                 try {
@@ -621,7 +610,6 @@ export const UIService = {
                     if (!isNaN(arrivalDate)) {
                         const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                         if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
-                            // NOVO DESIGN COM ÍCONES SVG INLINE PARA GARANTIR RENDERIZAÇÃO
                             timeInfoHtml = `
                                 <div class="inline-flex items-center gap-2 bg-blue-50/80 border border-blue-100 text-blue-800 px-2 py-1 rounded text-[11px] shadow-sm w-max">
                                     <div class="flex items-center gap-1">
@@ -636,7 +624,6 @@ export const UIService = {
                                 </div>
                             `;
                         } else {
-                            // CASO SEJA AVULSO (Apenas mostra a Chegada)
                             timeInfoHtml = `
                                 <div class="inline-flex items-center gap-1.5 bg-blue-50/80 border border-blue-100 text-blue-800 px-2.5 py-1 rounded text-[11px] shadow-sm w-max">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
@@ -650,7 +637,6 @@ export const UIService = {
                 }
             }
 
-            // NÚMERO DA ORDEM
             const numeroOrdem = index + 1;
             const numeroBadge = `
                 <div class="absolute -left-2 -top-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
@@ -658,12 +644,10 @@ export const UIService = {
                 </div>
             `;
 
-            // Botão de ação padrão (Atender)
             const atenderButton = currentPautaData?.useDelegationFlow
                 ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`
                 : `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`;
 
-            // === BOTÃO DE AÇÕES (DROPDOWN) AO LADO DA LIXEIRA ===
             const actionButtonsHTML = `
                 <div class="absolute top-2 right-10 flex items-center">
                     <div class="relative">
@@ -722,7 +706,7 @@ export const UIService = {
                     <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
                 </div>
                 ${this._getStandardizedFooterHtml(item)}
-                `;
+            `;
             
             return card;
         } catch (error) {
@@ -753,7 +737,6 @@ export const UIService = {
             const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
 
             const card = document.createElement('div');
-            // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
             card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
             card.setAttribute('data-id', item.id);
             
@@ -825,7 +808,6 @@ export const UIService = {
             const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
 
             const card = document.createElement('div');
-            // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
             card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4';
             card.setAttribute('data-id', item.id);
             
@@ -835,7 +817,6 @@ export const UIService = {
                 new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
             
             let atendenteNome = 'Não informado';
-            // attendedBy = ações rápidas | attendant = fluxo normal
             const atendenteRaw = item.attendedBy || item.attendant;
             if (atendenteRaw) {
                 if (typeof atendenteRaw === 'object') {
@@ -845,7 +826,6 @@ export const UIService = {
                 }
             }
 
-            // Indicador de confirmação (responsivo)
             const confirmButton = item.isConfirmed 
                 ? 'bg-green-500 border-green-500 text-white' 
                 : 'bg-slate-100 text-slate-300';
@@ -934,14 +914,12 @@ export const UIService = {
             const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
 
             const card = document.createElement('div');
-            // Identificador de prioridade igual aos outros cards
             const priorityClass = PautaService.getPriorityClass(PautaService.getPriorityLevel(item));
             const isConfirmed = item.isConfirmed || false;
 
             card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4 opacity-90';
             card.setAttribute('data-id', item.id);
 
-            // Cores do botão de confirmação baseadas no status
             const confirmButtonClass = isConfirmed 
                 ? 'bg-green-500 border-green-500 text-white' 
                 : 'bg-slate-100 text-slate-300';
@@ -953,7 +931,6 @@ export const UIService = {
                         <span class="text-[9px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded mt-1 border border-purple-100 inline-block uppercase">🚫 Faltoso</span>
                     </div>
                     
-                    <!-- BOTÃO VALIDADO VERDE (IDÊNTICO AO ATENDIDO) -->
                     <button data-id="${item.id}" class="toggle-confirmed-faltoso w-6 h-6 md:w-7 md:h-7 rounded-full border border-gray-200 flex items-center justify-center ${confirmButtonClass} shadow-sm transition-all" ${canToggleConfirmed ? '' : 'disabled'} title="Lançar falta no Verde">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/>
@@ -963,7 +940,6 @@ export const UIService = {
                 
                 <p class="text-xs md:text-sm mt-2 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
                 
-                <!-- GRID DE HORÁRIOS PADRONIZADO -->
                 <div class="grid grid-cols-2 gap-2 text-center border-t border-b py-2 my-3 text-[9px] md:text-[10px] text-gray-400 uppercase font-bold tracking-wider">
                     <div class="border-r">Agendado:<br><span class="text-gray-600">${item.scheduledTime || '---'}</span></div>
                     <div>Falta marcada às:<br><span class="text-gray-600">${item.lastActionTimestamp ? new Date(item.lastActionTimestamp).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--'}</span></div>
@@ -1005,7 +981,6 @@ export const UIService = {
             const canManageDistribution = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
 
             const card = document.createElement('div');
-            // Adicionada classe 'assisted-card' e atributo 'data-id' para o listener global em renderAssistedLists
             card.className = 'assisted-card relative bg-cyan-50 p-4 rounded-lg shadow-sm border border-cyan-200 mb-2';
             card.setAttribute('data-id', item.id);
             const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
@@ -1042,8 +1017,6 @@ export const UIService = {
                 };
             }
         };
-
-        
 
         bindModal('privacy-btn-footer', 'privacy-policy-modal', ['close-policy-modal-btn-x', 'close-policy-modal-btn']);
         bindModal('manual-btn-footer', 'manual-modal', ['close-manual-modal-x', 'close-manual-modal-btn']);
@@ -1162,4 +1135,4 @@ export const UIService = {
             container.appendChild(card);
         });
     }
-   
+};
