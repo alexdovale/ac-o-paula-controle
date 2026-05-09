@@ -1,11 +1,12 @@
 /**
- * estatisticas.js - Versão Completa com PDF por Equipe baseado no cadastro
+ * estatisticas.js - Versão Completa e Corrigida
  * Funcionalidades:
  * - PDF por Equipe mostra TODOS os colaboradores da equipe (cadastro)
  * - Inclui quem não atendeu (mostra 0 atendimentos)
  * - Baseado nos dados de colaboradores da gestão
- * - NOVO: PDF por Grupo (apenas total do grupo + lista de membros)
- * - NOVO: Botão para ocultar/mostrar totais individuais
+ * - PDF por Grupo (apenas total do grupo + lista de membros)
+ * - Botão para ocultar/mostrar totais individuais
+ * - CONTAGEM CORRIGIDA cruzando os dados do atendimento com o banco de colaboradores.
  */
 
 // ========================================================
@@ -64,15 +65,11 @@ export const StatisticsService = {
         const faltosos = allAssisted.filter(a => a.status === 'faltoso');
 
         // ===== BUSCAR DADOS DOS COLABORADORES DO SISTEMA =====
-        // Tenta obter a lista de colaboradores do armazenamento global
         let todosColaboradores = [];
         
-        // Verificar se existe no window.app
         if (window.app && window.app.colaboradores) {
             todosColaboradores = window.app.colaboradores;
-        } 
-        // Verificar se existe no localStorage
-        else {
+        } else {
             const stored = localStorage.getItem('sigap_colaboradores');
             if (stored) {
                 try {
@@ -85,18 +82,22 @@ export const StatisticsService = {
         
         console.log("📋 Colaboradores carregados:", todosColaboradores.length);
 
-        // Organizar colaboradores por equipe
+        // Organizar colaboradores por equipe e criar mapa de busca rápida
         const colaboradoresPorEquipe = {};
+        const mapaNomeParaEquipe = {};
         
         todosColaboradores.forEach(col => {
             const equipe = col.equipe ? `Equipe ${col.equipe}` : 'Equipe Não Definida';
+            const nomeNormalizado = col.nome.trim();
+            
+            mapaNomeParaEquipe[nomeNormalizado] = equipe;
             
             if (!colaboradoresPorEquipe[equipe]) {
                 colaboradoresPorEquipe[equipe] = [];
             }
             
             colaboradoresPorEquipe[equipe].push({
-                nome: col.nome || 'Nome não informado',
+                nome: nomeNormalizado,
                 cargo: col.cargo || 'Sem cargo',
                 id: col.id
             });
@@ -125,14 +126,25 @@ export const StatisticsService = {
             };
         }
         
-        // Preencher com dados reais de atendimentos
+        // Preencher com dados reais de atendimentos (CORRIGIDO)
         atendidos.forEach(a => {
-            // attendedBy = ações rápidas | attendant = fluxo normal
             const rawAttendant = a.attendedBy || a.attendant;
-            const attendantIsObject = typeof rawAttendant === 'object' && rawAttendant !== null;
-            const attendantName = attendantIsObject ? (rawAttendant.nome || rawAttendant.name) : (rawAttendant || 'Não informado');
+            if (!rawAttendant) return;
+
+            let attendantName = '';
+            let groupName = '';
+
+            if (typeof rawAttendant === 'object') {
+                attendantName = (rawAttendant.nome || rawAttendant.name || '').trim();
+                groupName = rawAttendant.equipe ? `Equipe ${rawAttendant.equipe}` : '';
+            } else {
+                attendantName = String(rawAttendant).trim();
+            }
             
-            const groupName = attendantIsObject && rawAttendant.equipe ? `Equipe ${rawAttendant.equipe}` : 'Equipe Não Definida';
+            // Cruzamento de dados: Se a equipe não veio no atendimento, busca no cadastro
+            if (!groupName || groupName === 'Equipe undefined') {
+                groupName = mapaNomeParaEquipe[attendantName] || 'Equipe Não Definida';
+            }
 
             if (!statsByGroup[groupName]) {
                 statsByGroup[groupName] = { 
@@ -152,7 +164,7 @@ export const StatisticsService = {
                 nome: a.name || 'Não informado',
                 assunto: a.subject || 'Sem assunto',
                 atendente: safeAttendantName,
-                horario: a.attendedTime ? new Date(a.attendedTime.seconds * 1000).toLocaleString('pt-BR') : 'Não finalizado'
+                horario: a.attendedTime ? new Date(a.attendedTime.seconds ? a.attendedTime.seconds * 1000 : a.attendedTime).toLocaleString('pt-BR') : 'Não finalizado'
             });
         });
         
@@ -268,7 +280,6 @@ export const StatisticsService = {
             </div>` : '';
 
         // HTML do bloco de ações rápidas
-        // Cores fixas por tipo (Tailwind não suporta classes dinâmicas)
         const acoesRapidasCores = {
             'Reagendamento':       { icon: '🔄', bg: '#fffbeb', border: '#fcd34d', text: '#92400e' },
             'Agendamento':         { icon: '📅', bg: '#ecfdf5', border: '#6ee7b7', text: '#065f46' },
@@ -322,12 +333,10 @@ export const StatisticsService = {
             </div>
         ` : '';
 
-        // HTML para equipes com controle de visualização (agora com botão extra para ocultar totais)
+        // HTML para equipes com controle de visualização
         const groupsHTML = sortedGroups.map(({groupName, total, collaborators, todosColaboradores}, index) => {
-            // Combinar colaboradores que atenderam com os que não atenderam
             const colaboradoresCompletos = [];
             
-            // Primeiro, adicionar todos os colaboradores da equipe (do cadastro)
             todosColaboradores.forEach(col => {
                 const atendimentos = collaborators.find(c => c.name === col.nome)?.count || 0;
                 colaboradoresCompletos.push({
@@ -337,7 +346,6 @@ export const StatisticsService = {
                 });
             });
             
-            // Ordenar por quantidade de atendimentos (decrescente)
             colaboradoresCompletos.sort((a, b) => b.atendimentos - a.atendimentos);
             
             const collaboratorsRows = colaboradoresCompletos.map(({nome, atendimentos, cargo}) => `
@@ -389,7 +397,7 @@ export const StatisticsService = {
             `;
         }).join('');
 
-        // HTML dos botões de exportação - AGORA COM 4 BOTÕES
+        // HTML dos botões de exportação
         const botoesExportacaoHTML = `
             <div class="bg-white p-3 md:p-4 rounded-lg border mt-4">
                 <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-3">Exportar Relatórios</h3>
@@ -447,7 +455,6 @@ export const StatisticsService = {
                 </div>
                 
                 ${acoesRapidasHTML}
-
                 ${botoesExportacaoHTML}
 
                 ${sortedScheduledTimes.length > 0 ? `
@@ -576,9 +583,8 @@ export const StatisticsService = {
         
         content.innerHTML = html;
 
-        // ===== NOVAS FUNCIONALIDADES =====
+        // ===== EVENT LISTENERS DOS BOTÕES =====
         
-        // Botões para ocultar/mostrar totais individuais
         document.querySelectorAll('.hide-individual-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -589,48 +595,36 @@ export const StatisticsService = {
                 const isHidden = btn.textContent.includes('Mostrar');
                 
                 individuais.forEach(el => {
-                    if (isHidden) {
-                        el.style.display = 'table-cell';
-                    } else {
-                        el.style.display = 'none';
-                    }
+                    if (isHidden) el.style.display = 'table-cell';
+                    else el.style.display = 'none';
                 });
                 
                 if (header) {
-                    if (isHidden) {
-                        header.style.display = 'table-cell';
-                    } else {
-                        header.style.display = 'none';
-                    }
+                    if (isHidden) header.style.display = 'table-cell';
+                    else header.style.display = 'none';
                 }
                 
                 btn.textContent = isHidden ? '🔽 Ocultar individuais' : '👁️ Mostrar individuais';
             });
         });
 
-        // Adicionar funcionalidade de ocultar/mostrar detalhes (já existente)
         const toggleAllBtn = document.getElementById('toggle-all-groups-btn');
         if (toggleAllBtn) {
             toggleAllBtn.addEventListener('click', () => {
                 const isShowing = toggleAllBtn.textContent.includes('Ocultar');
                 
                 document.querySelectorAll('.collaborators-table').forEach(table => {
-                    if (table) {
-                        table.style.display = isShowing ? 'none' : 'table';
-                    }
+                    if (table) table.style.display = isShowing ? 'none' : 'table';
                 });
                 
                 document.querySelectorAll('.toggle-details-btn').forEach(btn => {
-                    if (btn) {
-                        btn.textContent = isShowing ? '🔽 Mostrar detalhes' : '🔽 Ocultar detalhes';
-                    }
+                    if (btn) btn.textContent = isShowing ? '🔽 Mostrar detalhes' : '🔽 Ocultar detalhes';
                 });
                 
                 toggleAllBtn.textContent = isShowing ? '🔽 Mostrar todos os detalhes' : '🔽 Ocultar todos os detalhes';
             });
         }
         
-        // Botões individuais por equipe
         document.querySelectorAll('.toggle-details-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -649,15 +643,12 @@ export const StatisticsService = {
             });
         });
 
-        // Configurar botões de exportar PDF
+        // Eventos dos Botões de PDF
         const exportBtn = document.getElementById('export-stats-pdf-btn');
         if (exportBtn) {
-            const newExportBtn = exportBtn.cloneNode(true);
-            exportBtn.parentNode.replaceChild(newExportBtn, exportBtn);
-            
-            newExportBtn.addEventListener('click', () => {
-                newExportBtn.textContent = 'Gerando PDF Resumo...';
-                newExportBtn.disabled = true;
+            exportBtn.addEventListener('click', () => {
+                exportBtn.textContent = 'Gerando PDF Resumo...';
+                exportBtn.disabled = true;
 
                 this.exportStatisticsToPDF(pautaName, {
                     agendadosCount: allAssisted.length,
@@ -674,69 +665,57 @@ export const StatisticsService = {
                     statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
                     statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
                 }).finally(() => {
-                    newExportBtn.textContent = '📊 PDF Resumo';
-                    newExportBtn.disabled = false;
+                    exportBtn.textContent = '📊 PDF Resumo';
+                    exportBtn.disabled = false;
                 });
             });
         }
 
-        // Botão para PDF por Equipe (já existente)
         const exportEquipesBtn = document.getElementById('export-equipes-pdf-btn');
         if (exportEquipesBtn) {
-            const newEquipesBtn = exportEquipesBtn.cloneNode(true);
-            exportEquipesBtn.parentNode.replaceChild(newEquipesBtn, exportEquipesBtn);
-            
-            newEquipesBtn.addEventListener('click', () => {
-                newEquipesBtn.textContent = 'Gerando PDF por Equipe...';
-                newEquipesBtn.disabled = true;
+            exportEquipesBtn.addEventListener('click', () => {
+                exportEquipesBtn.textContent = 'Gerando PDF por Equipe...';
+                exportEquipesBtn.disabled = true;
 
                 this.exportEquipesPDF(pautaName, {
                     statsByGroup,
                     sortedGroups,
                     totalGeral
                 }).finally(() => {
-                    newEquipesBtn.textContent = '👥 PDF por Equipe';
-                    newEquipesBtn.disabled = false;
+                    exportEquipesBtn.textContent = '👥 PDF Equipe';
+                    exportEquipesBtn.disabled = false;
                 });
             });
         }
 
-        // NOVO: Botão para PDF por Grupo (sem individuais)
         const exportGrupoBtn = document.getElementById('export-grupo-pdf-btn');
         if (exportGrupoBtn) {
-            const newGrupoBtn = exportGrupoBtn.cloneNode(true);
-            exportGrupoBtn.parentNode.replaceChild(newGrupoBtn, exportGrupoBtn);
-            
-            newGrupoBtn.addEventListener('click', () => {
-                newGrupoBtn.textContent = 'Gerando PDF por Grupo...';
-                newGrupoBtn.disabled = true;
+            exportGrupoBtn.addEventListener('click', () => {
+                exportGrupoBtn.textContent = 'Gerando PDF por Grupo...';
+                exportGrupoBtn.disabled = true;
 
                 this.exportGrupoPDF(pautaName, {
                     sortedGroups,
                     totalGeral
                 }).finally(() => {
-                    newGrupoBtn.textContent = '📋 PDF por Grupo';
-                    newGrupoBtn.disabled = false;
+                    exportGrupoBtn.textContent = '📋 PDF Grupo';
+                    exportGrupoBtn.disabled = false;
                 });
             });
         }
 
-        // Botão para PDF Detalhado
         const exportDetalhadoBtn = document.getElementById('export-stats-detalhado-btn');
         if (exportDetalhadoBtn) {
-            const newDetalhadoBtn = exportDetalhadoBtn.cloneNode(true);
-            exportDetalhadoBtn.parentNode.replaceChild(newDetalhadoBtn, exportDetalhadoBtn);
-            
-            newDetalhadoBtn.addEventListener('click', () => {
-                newDetalhadoBtn.textContent = 'Gerando PDF Detalhado...';
-                newDetalhadoBtn.disabled = true;
+            exportDetalhadoBtn.addEventListener('click', () => {
+                exportDetalhadoBtn.textContent = 'Gerando PDF Detalhado...';
+                exportDetalhadoBtn.disabled = true;
 
                 this.exportDetailedStatisticsPDF(pautaName, {
                     totalGeral,
                     sortedGroups
                 }).finally(() => {
-                    newDetalhadoBtn.textContent = '📖 PDF Detalhado';
-                    newDetalhadoBtn.disabled = false;
+                    exportDetalhadoBtn.textContent = '📖 PDF Detalhado';
+                    exportDetalhadoBtn.disabled = false;
                 });
             });
         }
@@ -777,14 +756,12 @@ export const StatisticsService = {
                 yPos = margin + 30;
             }
 
-            // Título da equipe
             doc.setFontSize(14);
             doc.setTextColor(0, 102, 204);
             doc.setFont("helvetica", "bold");
             doc.text(`${groupName} - TOTAL: ${total} atendimentos | Membros: ${todosColaboradores.length}`, margin, yPos);
             yPos += 20;
 
-            // Cabeçalho da tabela
             doc.setFillColor(240, 240, 240);
             doc.rect(margin, yPos - 12, pageWidth - (margin * 2), 20, 'F');
             
@@ -796,13 +773,11 @@ export const StatisticsService = {
             doc.text("Atendimentos", pageWidth - margin - 80, yPos);
             yPos += 15;
 
-            // Lista de colaboradores
             doc.setFontSize(9);
             doc.setFont("helvetica", "normal");
             doc.setTextColor(60, 60, 60);
 
             if (todosColaboradores && todosColaboradores.length > 0) {
-                // Ordenar por nome
                 const colaboradoresOrdenados = [...todosColaboradores].sort((a, b) => a.nome.localeCompare(b.nome));
                 
                 colaboradoresOrdenados.forEach((col) => {
@@ -810,7 +785,6 @@ export const StatisticsService = {
                         doc.addPage();
                         yPos = margin + 30;
                         
-                        // Repetir título na nova página
                         doc.setFontSize(12);
                         doc.setTextColor(0, 102, 204);
                         doc.setFont("helvetica", "bold");
@@ -820,7 +794,6 @@ export const StatisticsService = {
                         doc.setFontSize(9);
                     }
                     
-                    // Verificar quantos atendimentos este colaborador fez
                     const atendimentos = collaborators.find(c => c.name === col.nome)?.count || 0;
                     
                     doc.text(col.nome, margin + 10, yPos);
@@ -843,24 +816,19 @@ export const StatisticsService = {
             yPos += 15;
         });
 
-        // Rodapé
         const pageCount = doc.internal.getNumberOfPages();
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
             doc.setFontSize(8);
             doc.setTextColor(150);
-            doc.text(
-                `Página ${i} de ${pageCount}`,
-                pageWidth - margin - 50,
-                pageHeight - 20
-            );
+            doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin - 50, pageHeight - 20);
         }
 
         doc.save(`equipe_completa_${pautaName.replace(/\s+/g, '_')}.pdf`);
     },
 
     /**
-     * NOVO: Exporta PDF por Grupo (apenas total e lista de membros, sem individuais)
+     * Exporta PDF por Grupo (apenas total e lista de membros, sem individuais)
      */
     async exportGrupoPDF(pautaName, dados) {
         const { jsPDF } = window.jspdf;
@@ -870,7 +838,6 @@ export const StatisticsService = {
         const margin = 40;
         let yPos = margin + 30;
 
-        // Título
         doc.setFontSize(18);
         doc.setTextColor(22, 163, 74);
         doc.setFont("helvetica", "bold");
@@ -887,14 +854,12 @@ export const StatisticsService = {
         doc.text(`Total de Atendimentos: ${dados.totalGeral}`, margin, yPos);
         yPos += 25;
 
-        // Listar cada grupo
         dados.sortedGroups.forEach(({groupName, total, todosColaboradores}) => {
             if (yPos > pageHeight - 150) {
                 doc.addPage();
                 yPos = margin + 30;
             }
 
-            // Título do grupo
             doc.setFontSize(16);
             doc.setTextColor(0, 102, 204);
             doc.setFont("helvetica", "bold");
@@ -906,7 +871,6 @@ export const StatisticsService = {
             doc.text(`Total de Atendimentos: ${total}`, margin, yPos);
             yPos += 20;
 
-            // Lista de membros (apenas nomes)
             doc.setFontSize(11);
             doc.setTextColor(60, 60, 60);
             doc.setFont("helvetica", "bold");
@@ -917,20 +881,17 @@ export const StatisticsService = {
             doc.setFontSize(10);
 
             if (todosColaboradores && todosColaboradores.length > 0) {
-                // Ordenar por nome
                 const membrosOrdenados = [...todosColaboradores].sort((a, b) => a.nome.localeCompare(b.nome));
                 
-                // Listar em 2 colunas para economizar espaço
                 const col1X = margin + 10;
                 const col2X = margin + 250;
                 let col = 1;
                 
-                membrosOrdenados.forEach((membro, index) => {
+                membrosOrdenados.forEach((membro) => {
                     if (yPos > pageHeight - 40) {
                         doc.addPage();
                         yPos = margin + 30;
                         
-                        // Repetir título na nova página
                         doc.setFontSize(14);
                         doc.setTextColor(0, 102, 204);
                         doc.setFont("helvetica", "bold");
@@ -951,7 +912,7 @@ export const StatisticsService = {
                     }
                 });
                 
-                if (col === 2) yPos += 15; // Ajuste se última linha ficou na coluna 1
+                if (col === 2) yPos += 15; 
             } else {
                 doc.text("Nenhum colaborador cadastrado nesta equipe", margin + 10, yPos);
                 yPos += 15;
@@ -960,17 +921,12 @@ export const StatisticsService = {
             yPos += 20;
         });
 
-        // Rodapé
         const pageCount = doc.internal.getNumberOfPages();
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
             doc.setFontSize(8);
             doc.setTextColor(150);
-            doc.text(
-                `Página ${i} de ${pageCount}`,
-                pageWidth - margin - 50,
-                pageHeight - 20
-            );
+            doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin - 50, pageHeight - 20);
         }
 
         doc.save(`grupo_${pautaName.replace(/\s+/g, '_')}.pdf`);
@@ -987,7 +943,6 @@ export const StatisticsService = {
         const margin = 40;
         let yPos = margin + 30;
 
-        // Título
         doc.setFontSize(18);
         doc.setTextColor(22, 163, 74);
         doc.setFont("helvetica", "bold");
@@ -1004,21 +959,18 @@ export const StatisticsService = {
         doc.text(`Total de Atendimentos: ${detalhesData.totalGeral}`, margin, yPos);
         yPos += 25;
 
-        // Listar cada equipe com seus assistidos
         detalhesData.sortedGroups.forEach(({groupName, total, atendimentos}) => {
             if (yPos > pageHeight - 100) {
                 doc.addPage();
                 yPos = margin + 30;
             }
 
-            // Título da equipe
             doc.setFontSize(14);
             doc.setTextColor(0, 102, 204);
             doc.setFont("helvetica", "bold");
             doc.text(`${groupName} (${total} atendimentos)`, margin, yPos);
             yPos += 20;
 
-            // Listar assistidos
             doc.setFontSize(9);
             doc.setTextColor(60, 60, 60);
             doc.setFont("helvetica", "normal");
@@ -1029,7 +981,6 @@ export const StatisticsService = {
                         doc.addPage();
                         yPos = margin + 30;
                         
-                        // Repetir título da equipe na nova página
                         doc.setFontSize(12);
                         doc.setTextColor(0, 102, 204);
                         doc.setFont("helvetica", "bold");
@@ -1062,17 +1013,12 @@ export const StatisticsService = {
             yPos += 10;
         });
 
-        // Rodapé
         const pageCount = doc.internal.getNumberOfPages();
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
             doc.setFontSize(8);
             doc.setTextColor(150);
-            doc.text(
-                `Página ${i} de ${pageCount}`,
-                pageWidth - margin - 50,
-                pageHeight - 20
-            );
+            doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin - 50, pageHeight - 20);
         }
 
         doc.save(`detalhado_${pautaName.replace(/\s+/g, '_')}.pdf`);
@@ -1084,7 +1030,6 @@ export const StatisticsService = {
     async exportStatisticsToPDF(pautaName, statsData) {
         const { jsPDF } = window.jspdf;
         
-        // Verificar checkboxes
         const exportGeneral = document.getElementById('export-general')?.checked ?? true;
         const exportCollaborators = document.getElementById('export-collaborators')?.checked ?? true;
         const exportSubjects = document.getElementById('export-subjects')?.checked ?? true;
@@ -1110,14 +1055,12 @@ export const StatisticsService = {
             yPos += 25;
         };
 
-        // ===== 1. RESUMO GERAL =====
         if (exportGeneral) {
             addSectionTitle("Resumo Geral");
             
             const colWidth = (pageWidth - margin * 2) / 3;
             let startX = margin;
             
-            // Atendidos
             doc.setFillColor(220, 255, 220);
             doc.roundedRect(startX, yPos - 15, colWidth - 10, 60, 5, 5, 'F');
             doc.setFont("helvetica", "bold");
@@ -1128,7 +1071,6 @@ export const StatisticsService = {
             doc.setTextColor(0);
             doc.text("Atendidos", startX + (colWidth - 10)/2, yPos + 35, { align: 'center' });
             
-            // Faltosos
             startX += colWidth;
             doc.setFillColor(255, 220, 220);
             doc.roundedRect(startX, yPos - 15, colWidth - 10, 60, 5, 5, 'F');
@@ -1140,7 +1082,6 @@ export const StatisticsService = {
             doc.setTextColor(0);
             doc.text("Faltosos", startX + (colWidth - 10)/2, yPos + 35, { align: 'center' });
             
-            // Tempo Médio
             startX += colWidth;
             doc.setFillColor(220, 235, 255);
             doc.roundedRect(startX, yPos - 15, colWidth - 10, 60, 5, 5, 'F');
@@ -1156,7 +1097,6 @@ export const StatisticsService = {
             yPos += 70;
         }
 
-        // ===== 2. AÇÕES RÁPIDAS =====
         if (statsData.statsByAcaoRapida && statsData.totalAcoesRapidas > 0) {
             if (yPos > pageHeight - 80) { doc.addPage(); yPos = margin + 30; }
             addSectionTitle("Acoes Rapidas");
@@ -1180,7 +1120,6 @@ export const StatisticsService = {
             yPos = doc.lastAutoTable.finalY + 20;
         }
 
-        // ===== 3. ATENDIMENTOS POR COLABORADOR =====
         if (exportCollaborators && statsData.statsByGroup) {
             addSectionTitle("Atendimentos por Colaborador");
             
@@ -1206,7 +1145,6 @@ export const StatisticsService = {
             yPos = doc.lastAutoTable.finalY + 20;
         }
 
-        // ===== 3. ATENDIMENTOS POR EQUIPE =====
         if (exportCollaborators && statsData.statsByGroup) {
             if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
             addSectionTitle("Atendimentos por Equipe");
@@ -1227,7 +1165,6 @@ export const StatisticsService = {
             yPos = doc.lastAutoTable.finalY + 20;
         }
 
-        // ===== 4. AGENDADOS POR HORÁRIO =====
         if (exportScheduledTime && statsData.statsByScheduledTime && statsData.statsByScheduledTime.length > 0) {
             if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
             addSectionTitle("Agendados por Horário");
@@ -1247,7 +1184,6 @@ export const StatisticsService = {
             yPos = doc.lastAutoTable.finalY + 20;
         }
 
-        // ===== 5. ATENDIMENTOS POR HORÁRIO =====
         if (exportTimes && statsData.statsByTime && statsData.statsByTime.length > 0) {
             if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
             addSectionTitle("Atendimentos por Horário (Chegada)");
@@ -1267,7 +1203,6 @@ export const StatisticsService = {
             yPos = doc.lastAutoTable.finalY + 20;
         }
 
-        // ===== 6. FALTOSOS POR HORÁRIO =====
         if (exportAbsenteesTime && statsData.statsByTimeFaltosos && statsData.statsByTimeFaltosos.length > 0) {
             if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
             addSectionTitle("Faltosos por Horário");
@@ -1287,7 +1222,6 @@ export const StatisticsService = {
             yPos = doc.lastAutoTable.finalY + 20;
         }
 
-        // ===== 7. DEMANDAS POR ASSUNTO =====
         if (exportSubjects && statsData.statsBySubject && Object.keys(statsData.statsBySubject).length > 0) {
             if (yPos > pageHeight - 100) { doc.addPage(); yPos = margin + 30; }
             addSectionTitle("Demandas por Assunto");
@@ -1319,7 +1253,6 @@ export const StatisticsService = {
             });
         }
 
-        // Rodapé
         const pageCount = doc.internal.getNumberOfPages();
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
@@ -1351,4 +1284,4 @@ export const exportStatisticsToPDF = (pautaName, statsData) => {
 // Tornar global
 window.StatisticsService = StatisticsService;
 
-console.log("✅ estatisticas.js carregado com sucesso! Agora com 4 tipos de PDF e controle de totais individuais.");
+console.log("✅ estatisticas.js carregado com sucesso! Contagem corrigida com cruzamento de dados.");
