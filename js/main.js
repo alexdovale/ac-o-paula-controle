@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
+/* import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";*/
 
 import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
@@ -46,10 +46,14 @@ class SIGAPApp {
         try {
             const app = initializeApp(firebaseConfig);
             
-            initializeAppCheck(app, {
-                provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
-                isTokenAutoRefreshEnabled: true
-            });
+
+             /* // Bloco comentado temporariamente para testar erro de conexão
+initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
+    isTokenAutoRefreshEnabled: true
+}); 
+*/
+ 
 
             this.db = getFirestore(app);
             this.auth = getAuth(app);
