@@ -1055,7 +1055,7 @@ export const UIService = {
         if (!container) return;
 
         if (!pautas || pautas.length === 0) {
-            container.innerHTML = '<p class="col-span-full text-center py-8 text-gray-500">Nenhuma pauta encontrada.</p>';
+            container.innerHTML = '<p class="col-span-full text-center py-8 text-gray-500 font-medium">Nenhuma pauta encontrada.</p>';
             return;
         }
 
@@ -1078,76 +1078,89 @@ export const UIService = {
                 const now = new Date();
                 
                 if (now > expirationDate) {
-                    statusBadge = '<span class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow">Expirada</span>';
+                    statusBadge = '<span class="absolute -top-3 -right-3 bg-red-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md border-2 border-white z-20">Expirada</span>';
                 } else {
                     const daysLeft = Math.ceil((expirationDate - now) / (1000 * 60 * 60 * 24));
-                    statusBadge = `<span class="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow">${daysLeft} dias</span>`;
+                    statusBadge = `<span class="absolute -top-3 -right-3 bg-green-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md border-2 border-white z-20">${daysLeft} dias</span>`;
                 }
             }
 
             const card = document.createElement('div');
-            card.className = `relative bg-white p-5 rounded-xl shadow border hover:shadow-md transition-shadow cursor-pointer ${isClosed ? 'opacity-70' : ''}`;
+            // Classes atualizadas para centralizar conteúdo (flex flex-col items-center text-center)
+            card.className = `relative bg-white p-5 rounded-2xl shadow-sm border border-gray-200 hover:border-green-400 hover:shadow-md hover:-translate-y-1 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[160px] ${isClosed ? 'opacity-70' : ''}`;
             
             // Atributos de cor baseados no tipo
-            let typeColor = 'bg-blue-100 text-blue-800 border-blue-200';
+            let typeColor = 'bg-blue-50 text-blue-700 border-blue-200';
             let typeIcon = '📋';
             let typeName = 'Padrão';
             
             if (pauta.type === 'agendado') {
-                typeColor = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                typeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
                 typeIcon = '📅';
                 typeName = 'Agendado';
             } else if (pauta.type === 'avulso') {
-                typeColor = 'bg-amber-100 text-amber-800 border-amber-200';
+                typeColor = 'bg-amber-50 text-amber-700 border-amber-200';
                 typeIcon = '🚶';
                 typeName = 'Avulso';
             } else if (pauta.type === 'multisala') {
-                typeColor = 'bg-purple-100 text-purple-800 border-purple-200';
+                typeColor = 'bg-purple-50 text-purple-700 border-purple-200';
                 typeIcon = '🏢';
                 typeName = 'Multi-Salas';
             }
 
             card.innerHTML = `
                 ${statusBadge}
-                ${isClosed ? '<div class="absolute inset-0 bg-gray-50 bg-opacity-50 rounded-xl flex items-center justify-center z-10 pointer-events-none"><span class="bg-gray-800 text-white text-xs font-bold px-3 py-1 rounded uppercase tracking-wider">🔒 Fechada</span></div>' : ''}
+                ${isClosed ? '<div class="absolute inset-0 bg-gray-100 bg-opacity-70 rounded-2xl flex items-center justify-center z-10 pointer-events-none"><span class="bg-gray-800 text-white text-xs font-bold px-4 py-2 rounded-lg uppercase tracking-widest shadow-lg">🔒 Fechada</span></div>' : ''}
                 
-                <div class="flex justify-between items-start mb-3">
-                    <h3 class="font-bold text-lg text-gray-800 leading-tight pr-4">${escapeHTML(pauta.name)}</h3>
-                    ${isOwner ? '<span class="text-xl" title="Você é o criador">👑</span>' : '<span class="text-xl" title="Compartilhada com você">🤝</span>'}
+                ${isOwner ? `
+                <button class="delete-pauta-btn absolute top-3 left-3 text-gray-300 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-full transition-all z-20" title="Excluir Pauta">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
+                    </svg>
+                </button>` : ''}
+
+                <div class="text-3xl mb-2">
+                    ${isOwner ? '<span title="Você é o criador">👑</span>' : '<span title="Compartilhada com você">🤝</span>'}
                 </div>
                 
-                <div class="flex flex-wrap gap-2 mb-4">
-                    <span class="text-[10px] font-bold px-2 py-1 rounded border ${typeColor} flex items-center gap-1">
+                <h3 class="font-black text-xl text-gray-800 leading-tight mb-3 text-center uppercase tracking-wide px-4 w-full truncate" title="${escapeHTML(pauta.name)}">
+                    ${escapeHTML(pauta.name)}
+                </h3>
+                
+                <div class="flex flex-wrap justify-center items-center gap-2 mb-4">
+                    <span class="text-[10px] font-bold px-2 py-1 rounded border ${typeColor} flex items-center gap-1 shadow-sm">
                         ${typeIcon} ${typeName}
                     </span>
-                    <span class="text-[10px] font-bold px-2 py-1 rounded border bg-gray-100 text-gray-600 border-gray-200">
-                        👥 ${pauta.members ? pauta.members.length : 1} membro(s)
+                    <span class="text-[10px] font-bold px-2 py-1 rounded border bg-gray-50 text-gray-600 border-gray-200 shadow-sm">
+                        👥 ${pauta.members ? pauta.members.length : 1}
                     </span>
                 </div>
                 
-                <div class="mt-auto border-t pt-3 flex justify-between items-center">
-                    <span class="text-[10px] text-gray-400">Criada em: ${dataCriacaoStr}</span>
-                    <button class="open-pauta-btn bg-blue-600 text-white text-xs font-bold py-1.5 px-4 rounded hover:bg-blue-700 transition shadow-sm">
-                        Abrir
-                    </button>
+                <div class="mt-auto border-t border-gray-100 w-full pt-3 text-center">
+                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Criada em: ${dataCriacaoStr}</span>
                 </div>
             `;
 
-            // Evento para abrir a pauta
-            const openBtn = card.querySelector('.open-pauta-btn');
-            if (openBtn) {
-                openBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    app.loadPauta(pauta.id, pauta.name, pauta.type);
+            // EVENTO 1: Excluir a pauta (Se for o dono)
+            const deleteBtn = card.querySelector('.delete-pauta-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Impede que a pauta abra ao clicar na lixeira
+                    if (app && typeof app.deletePauta === 'function') {
+                        app.deletePauta(pauta.id, pauta.name);
+                    }
                 });
             }
 
-            // Clique no card também abre
+            // EVENTO 2: Abrir a pauta clicando em qualquer lugar do card
             card.addEventListener('click', () => {
-                app.loadPauta(pauta.id, pauta.name, pauta.type);
+                if (app && typeof app.loadPauta === 'function') {
+                    app.loadPauta(pauta.id, pauta.name, pauta.type);
+                }
             });
 
             container.appendChild(card);
         });
+    }
     }
 };
