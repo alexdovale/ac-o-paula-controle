@@ -1040,11 +1040,10 @@ renderPautaCards(pautas, userId, userEmail, app) {
         const isOwner = pauta.owner === userId;
         const isClosed = pauta.isClosed;
         
-        // Lógica de Datas e Expiração
+        // Lógica de Datas
         let dataCriacaoStr = '---';
         let dataExpiracaoStr = '';
         let isExpired = false;
-        let statusBadgeHtml = '';
 
         if (pauta.createdAt) {
             const creationDate = new Date(pauta.createdAt);
@@ -1056,17 +1055,11 @@ renderPautaCards(pautas, userId, userEmail, app) {
 
             const now = new Date();
             isExpired = now > expirationDate;
-
-            if (isExpired) {
-                statusBadgeHtml = `<p class="text-[10px] text-red-600 font-black mt-1 uppercase">🚫 Expirada em: ${dataExpiracaoStr}</p>`;
-            } else {
-                statusBadgeHtml = `<p class="text-[10px] text-amber-600 font-semibold mt-1">Eliminação em: ${dataExpiracaoStr}</p>`;
-            }
         }
 
         const card = document.createElement('div');
-        // Adicionada classe de cursor e opacidade para pautas expiradas
-        card.className = `relative bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex flex-col justify-between min-h-[220px] ${isExpired ? 'opacity-70 grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer'} ${isClosed ? 'opacity-60' : ''}`;
+        // Mantemos o estilo visual de "desativado" apenas com opacidade e grayscale
+        card.className = `relative bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex flex-col justify-between min-h-[220px] ${isExpired ? 'opacity-60 grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer'} ${isClosed ? 'opacity-60' : ''}`;
         
         card.innerHTML = `
             ${isOwner ? `
@@ -1076,13 +1069,6 @@ renderPautaCards(pautas, userId, userEmail, app) {
                 </svg>
             </button>` : ''}
 
-            ${isExpired ? `
-                <div class="absolute inset-y-0 right-0 w-1 bg-red-500 rounded-r-xl"></div>
-                <div class="absolute -right-2 top-1/2 -rotate-90 origin-right translate-y-[-50%] bg-red-500 text-white text-[7px] font-black px-2 py-0.5 rounded-t-md shadow-sm uppercase tracking-tighter z-10">
-                    Pauta Inacessível / Prazo Cumprido
-                </div>
-            ` : ''}
-
             <div>
                 <h3 class="font-bold text-xl text-gray-600 leading-tight uppercase mb-2 pr-8">
                     ${escapeHTML(pauta.name)}
@@ -1091,20 +1077,33 @@ renderPautaCards(pautas, userId, userEmail, app) {
             </div>
             
             <div class="pt-4 border-t border-gray-100">
-                <p class="text-[10px] text-gray-400 uppercase">Criada em: ${dataCriacaoStr}</p>
-                ${statusBadgeHtml}
+                <p class="text-[10px] text-gray-400 uppercase font-bold">Criada em: ${dataCriacaoStr}</p>
                 
-                <div class="mt-2 flex gap-2">
+                ${isExpired ? `
+                    <p class="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1">
+                        🚫 EXPIRADA EM: ${dataExpiracaoStr}
+                    </p>
+                ` : `
+                    <p class="text-[10px] text-amber-600 font-bold mt-1">
+                        ELIMINAÇÃO EM: ${dataExpiracaoStr}
+                    </p>
+                `}
+                
+                <div class="mt-3">
                     ${isOwner ? `
-                        <span class="bg-green-50 text-green-600 text-[9px] font-black px-2 py-0.5 rounded border border-green-100 uppercase">👑 Criador</span>
+                        <span class="bg-green-50 text-green-600 text-[9px] font-black px-2 py-1 rounded border border-green-100 uppercase flex items-center w-max gap-1">
+                            👑 Criador
+                        </span>
                     ` : `
-                        <span class="bg-blue-50 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded border border-blue-100 uppercase">🤝 Compartilhada</span>
+                        <span class="bg-blue-50 text-blue-600 text-[9px] font-black px-2 py-1 rounded border border-blue-100 uppercase flex items-center w-max gap-1">
+                            🤝 Compartilhada
+                        </span>
                     `}
                 </div>
             </div>
         `;
 
-        // Evento de Deletar
+        // Lógica de Deletar
         const deleteBtn = card.querySelector('.delete-pauta-btn');
         if (deleteBtn) {
             deleteBtn.onclick = (e) => {
@@ -1113,10 +1112,10 @@ renderPautaCards(pautas, userId, userEmail, app) {
             };
         }
 
-        // Evento de Clique no Card (Com a notificação igual às imagens que você mandou)
+        // Lógica de Clique e Notificação (Estilo Toast igual ao adicionar assistido)
         card.onclick = () => {
             if (isExpired) {
-                // Chama a notificação visual do sistema (estilo toast verde/vermelho)
+                // Notificação na parte inferior da tela
                 showNotification('Pauta inacessível devido o prazo cumprido!', 'error');
                 return;
             }
