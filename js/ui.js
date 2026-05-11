@@ -1065,7 +1065,7 @@ renderPautaCards(pautas, userId, userEmail, app) {
         }
 
         const card = document.createElement('div');
-        // Adicionada lógica de cursor-not-allowed se estiver expirada
+        // Adicionada classe de cursor e opacidade para pautas expiradas
         card.className = `relative bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex flex-col justify-between min-h-[220px] ${isExpired ? 'opacity-70 grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer'} ${isClosed ? 'opacity-60' : ''}`;
         
         card.innerHTML = `
@@ -1078,8 +1078,8 @@ renderPautaCards(pautas, userId, userEmail, app) {
 
             ${isExpired ? `
                 <div class="absolute inset-y-0 right-0 w-1 bg-red-500 rounded-r-xl"></div>
-                <div class="absolute -right-2 top-1/2 -rotate-90 origin-right translate-y-[-50%] bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-t-md shadow-sm uppercase tracking-tighter z-10">
-                    Inacessível / Prazo Cumprido
+                <div class="absolute -right-2 top-1/2 -rotate-90 origin-right translate-y-[-50%] bg-red-500 text-white text-[7px] font-black px-2 py-0.5 rounded-t-md shadow-sm uppercase tracking-tighter z-10">
+                    Pauta Inacessível / Prazo Cumprido
                 </div>
             ` : ''}
 
@@ -1104,7 +1104,7 @@ renderPautaCards(pautas, userId, userEmail, app) {
             </div>
         `;
 
-        // Eventos
+        // Evento de Deletar
         const deleteBtn = card.querySelector('.delete-pauta-btn');
         if (deleteBtn) {
             deleteBtn.onclick = (e) => {
@@ -1113,9 +1113,11 @@ renderPautaCards(pautas, userId, userEmail, app) {
             };
         }
 
+        // Evento de Clique no Card (Com a notificação igual às imagens que você mandou)
         card.onclick = () => {
             if (isExpired) {
-                showNotification('Esta pauta está inacessível devido ao cumprimento do prazo de 7 dias.', 'error');
+                // Chama a notificação visual do sistema (estilo toast verde/vermelho)
+                showNotification('Pauta inacessível devido o prazo cumprido!', 'error');
                 return;
             }
             app.loadPauta(pauta.id, pauta.name, pauta.type);
