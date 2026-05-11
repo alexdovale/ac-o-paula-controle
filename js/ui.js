@@ -1023,7 +1023,7 @@ export const UIService = {
         bindModal('terms-btn-footer', 'terms-modal', ['close-terms-modal-x', 'close-terms-modal-btn']);
     },
 
-    renderPautaCards(pautas, userId, userEmail, app) {
+    rrenderPautaCards(pautas, userId, userEmail, app) {
         const container = document.getElementById('pautas-list');
         if (!container) return;
 
@@ -1038,99 +1038,69 @@ export const UIService = {
             const isOwner = pauta.owner === userId;
             const isClosed = pauta.isClosed;
             
-            // Tratamento de datas
-            let dataCriacaoStr = 'Data desconhecida';
-            let statusBadge = '';
-            
+            // Lógica de Datas
+            let dataCriacaoStr = '---';
+            let dataExpiracaoStr = '';
+            let statusBadgeHtml = '';
+
             if (pauta.createdAt) {
                 const creationDate = new Date(pauta.createdAt);
                 dataCriacaoStr = creationDate.toLocaleDateString('pt-BR');
                 
                 const expirationDate = new Date(creationDate);
                 expirationDate.setDate(creationDate.getDate() + 7);
+                dataExpiracaoStr = expirationDate.toLocaleDateString('pt-BR');
+
                 const now = new Date();
-                
                 if (now > expirationDate) {
-                    statusBadge = '<span class="absolute -top-3 -right-3 bg-red-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md border-2 border-white z-20">Expirada</span>';
+                    statusBadgeHtml = `<p class="text-[10px] text-red-500 font-semibold mt-1">Expirou em: ${dataExpiracaoStr}</p>`;
                 } else {
-                    const daysLeft = Math.ceil((expirationDate - now) / (1000 * 60 * 60 * 24));
-                    statusBadge = `<span class="absolute -top-3 -right-3 bg-green-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md border-2 border-white z-20">${daysLeft} dias</span>`;
+                    statusBadgeHtml = `<p class="text-[10px] text-red-500 font-semibold mt-1">Será eliminada em: ${dataExpiracaoStr}</p>`;
                 }
             }
 
             const card = document.createElement('div');
-            // Classes atualizadas para centralizar conteúdo (flex flex-col items-center text-center)
-            card.className = `relative bg-white p-5 rounded-2xl shadow-sm border border-gray-200 hover:border-green-400 hover:shadow-md hover:-translate-y-1 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[160px] ${isClosed ? 'opacity-70' : ''}`;
+            // Classes ajustadas: Alinhamento à esquerda, padding generoso, borda cinza clara
+            card.className = `relative bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between min-h-[220px] ${isClosed ? 'opacity-60' : ''}`;
             
-            // Atributos de cor baseados no tipo
-            let typeColor = 'bg-blue-50 text-blue-700 border-blue-200';
-            let typeIcon = '📋';
-            let typeName = 'Padrão';
-            
-            if (pauta.type === 'agendado') {
-                typeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-                typeIcon = '📅';
-                typeName = 'Agendado';
-            } else if (pauta.type === 'avulso') {
-                typeColor = 'bg-amber-50 text-amber-700 border-amber-200';
-                typeIcon = '🚶';
-                typeName = 'Avulso';
-            } else if (pauta.type === 'multisala') {
-                typeColor = 'bg-purple-50 text-purple-700 border-purple-200';
-                typeIcon = '🏢';
-                typeName = 'Multi-Salas';
-            }
-
             card.innerHTML = `
-                ${statusBadge}
-                ${isClosed ? '<div class="absolute inset-0 bg-gray-100 bg-opacity-70 rounded-2xl flex items-center justify-center z-10 pointer-events-none"><span class="bg-gray-800 text-white text-xs font-bold px-4 py-2 rounded-lg uppercase tracking-widest shadow-lg">🔒 Fechada</span></div>' : ''}
-                
                 ${isOwner ? `
-                <button class="delete-pauta-btn absolute top-3 left-3 text-gray-300 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-full transition-all z-20" title="Excluir Pauta">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <button class="delete-pauta-btn absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors z-20">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
                     </svg>
                 </button>` : ''}
 
-                <div class="text-3xl mb-2">
-                    ${isOwner ? '<span title="Você é o criador">👑</span>' : '<span title="Compartilhada com você">🤝</span>'}
+                <div>
+                    <h3 class="font-bold text-xl text-gray-600 leading-tight uppercase mb-2 pr-8">
+                        ${escapeHTML(pauta.name)}
+                    </h3>
+                    
+                    <p class="text-sm text-gray-500 mb-6">Membros: ${pauta.members ? pauta.members.length : 1}</p>
                 </div>
                 
-                <h3 class="font-black text-xl text-gray-800 leading-tight mb-3 text-center uppercase tracking-wide px-4 w-full truncate" title="${escapeHTML(pauta.name)}">
-                    ${escapeHTML(pauta.name)}
-                </h3>
-                
-                <div class="flex flex-wrap justify-center items-center gap-2 mb-4">
-                    <span class="text-[10px] font-bold px-2 py-1 rounded border ${typeColor} flex items-center gap-1 shadow-sm">
-                        ${typeIcon} ${typeName}
-                    </span>
-                    <span class="text-[10px] font-bold px-2 py-1 rounded border bg-gray-50 text-gray-600 border-gray-200 shadow-sm">
-                        👥 ${pauta.members ? pauta.members.length : 1}
-                    </span>
-                </div>
-                
-                <div class="mt-auto border-t border-gray-100 w-full pt-3 text-center">
-                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Criada em: ${dataCriacaoStr}</span>
+                <div class="pt-4 border-t border-gray-100">
+                    <p class="text-[10px] text-gray-400 uppercase">Criada em: ${dataCriacaoStr}</p>
+                    ${statusBadgeHtml}
+                    
+                    ${isOwner ? `
+                        <div class="mt-2">
+                            <span class="bg-green-50 text-green-600 text-[9px] font-bold px-2 py-0.5 rounded uppercase">Criador</span>
+                        </div>
+                    ` : ''}
                 </div>
             `;
 
-            // EVENTO 1: Excluir a pauta (Se for o dono)
+            // Eventos
             const deleteBtn = card.querySelector('.delete-pauta-btn');
             if (deleteBtn) {
-                deleteBtn.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Impede que a pauta abra ao clicar na lixeira
-                    if (app && typeof app.deletePauta === 'function') {
-                        app.deletePauta(pauta.id, pauta.name);
-                    }
-                });
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    app.deletePauta(pauta.id, pauta.name);
+                };
             }
 
-            // EVENTO 2: Abrir a pauta clicando em qualquer lugar do card
-            card.addEventListener('click', () => {
-                if (app && typeof app.loadPauta === 'function') {
-                    app.loadPauta(pauta.id, pauta.name, pauta.type);
-                }
-            });
+            card.onclick = () => app.loadPauta(pauta.id, pauta.name, pauta.type);
 
             container.appendChild(card);
         });
