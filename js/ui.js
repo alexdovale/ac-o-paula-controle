@@ -1,1108 +1,2070 @@
-// js/ui.js - VERSÃO COMPLETA E ATUALIZADA
-import { escapeHTML, normalizeText, showNotification } from './utils.js';
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+/* import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";*/
+
+import { firebaseConfig } from './config.js';
+import { AuthService } from './auth.js';
 import { PautaService } from './pauta.js';
+import { UIService } from './ui.js';
+import CollaboratorService from './colaboradores.js';        
+import { ModalService } from './modal.js?v=20260313';
+import { NotesService } from './notes.js?v=20260313';
+import { StatisticsService } from './estatisticas.js?v=20260313';
+import { PDFService } from './pdfService.js?v=novo_pdf_v2';
+import { EmailService } from './emailService.js?v=20260313';
+import { escapeHTML, showNotification, normalizeText, copyToClipboard, formatTime, playSound } from './utils.js?v=20260313';
+import { setupDetailsModal, openDetailsModal } from './detalhes.js';
+import { DashboardService } from './dashboardService.js';
+import { subjectTree, flatSubjects } from './assuntos.js';
+import { showConfirmModal } from './confirmModal.js';
+import { logAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser, loadAuditLogs, exportAuditLogsPDF, loadDashboardData, populateUserFilter } from './admin.js';
+import { parsePautaCSV } from './csvHandler.js';
+import { getChecklistHTML } from './checklist.js';
 
-export const UIService = {
-    showScreen(screenName) {
-        document.getElementById('loading-container').classList.toggle('hidden', screenName !== 'loading');
-        document.getElementById('login-container').classList.toggle('hidden', screenName !== 'login');
-        document.getElementById('pauta-selection-container').classList.toggle('hidden', screenName !== 'pautaSelection');
-        document.getElementById('app-container').classList.toggle('hidden', screenName !== 'app');
-        document.getElementById('dashboard-container').classList.toggle('hidden', screenName !== 'dashboard');
-    },
-
-    /**
-     * Renderiza os botões de filtro na tela de seleção de pautas
-     */
-    renderPautaFilters(containerId, activeFilter, onFilterChange, app) {
-        const container = document.getElementById(containerId);
-        if (!container) {
-            console.error(`Container ${containerId} não encontrado`);
-            return;
-        }
+class SIGAPApp { // MANTIDO COMO SIGAP
+    constructor() {
+        this.db = null;
+        this.auth = null;
+        this.currentUser = null;
+        this.currentPauta = null;
+        this.currentPautaData = null;
+        this.allAssisted = [];
+        this.colaboradores = [];
+        this.currentUserName = '';
+        this.currentPautaOwnerId = null;
+        this.isPautaClosed = false;
+        this.customRoomsList = [];
+        this.unsubscribeFromAttendances = null;
+        this.unsubscribeFromCollaborators = null;
+        this.currentPautaFilter = 'all';
         
-        // Verificar se os elementos de filtro de data já existem
-        let dateFiltersHTML = '';
-        if (activeFilter === 'periodo') {
-            dateFiltersHTML = `
-                <div class="flex flex-wrap gap-4 mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div class="flex-1 min-w-[200px]">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Data Inicial</label>
-                        <input type="date" id="filter-data-inicial" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
-                    </div>
-                    <div class="flex-1 min-w-[200px]">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Data Final</label>
-                        <input type="date" id="filter-data-final" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
-                    </div>
-                    <div class="flex-1 min-w-[200px]">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Pauta</label>
-                        <select id="filter-tipo-pauta" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
-                            <option value="todos">Todos os tipos</option>
-                            <option value="agendado">Agendado</option>
-                            <option value="avulso">Avulso</option>
-                            <option value="multisala">Multi-Salas</option>
-                        </select>
-                    </div>
-                    <div class="flex items-end">
-                        <button id="aplicar-filtro-periodo" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700 transition shadow-md">
-                            Aplicar Filtros
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-        
-        container.innerHTML = `
-            <div class="flex flex-wrap gap-2 mb-4 justify-center">
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'all' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="all">
-                    📋 Todas
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'active' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="active">
-                    ✅ Pautas com prazo
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'expired' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="expired">
-                    🔒 Pautas expiradas
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'my' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="my">
-                    👑 Criadas por mim
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'shared' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="shared">
-                    🤝 Compartilhadas
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'periodo' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="periodo">
-                    📅 Período
-                </button>
-            </div>
-            ${dateFiltersHTML}
-        `;
-        
-        // Adicionar eventos aos botões
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const filter = btn.dataset.filter;
-                onFilterChange(filter);
-            });
-        });
-        
-        // Adicionar evento ao botão de aplicar filtro de período
-        const btnAplicar = document.getElementById('aplicar-filtro-periodo');
-        if (btnAplicar) {
-            btnAplicar.addEventListener('click', () => {
-                if (app && typeof app.loadPautasWithFilter === 'function') {
-                    app.loadPautasWithFilter();
-                }
-            });
-        }
-    },
+        this.init();
+    }
 
-    toggleAuthTabs(tab) {
-        const loginTab = document.getElementById('login-tab-btn');
-        const registerTab = document.getElementById('register-tab-btn');
-        const loginForm = document.getElementById('login-form');
-        const registerForm = document.getElementById('register-form');
-
-        if (tab === 'login') {
-            loginTab.classList.add('border-green-600', 'text-green-600');
-            loginTab.classList.remove('text-gray-500');
-            registerTab.classList.remove('border-green-600', 'text-green-600');
-            registerTab.classList.add('text-gray-500');
-            loginForm.classList.remove('hidden');
-            registerForm.classList.add('hidden');
-        } else {
-            registerTab.classList.add('border-green-600', 'text-green-600');
-            registerTab.classList.remove('text-gray-500');
-            loginTab.classList.remove('border-green-600', 'text-green-600');
-            loginTab.classList.add('text-gray-500');
-            registerForm.classList.remove('hidden');
-            loginForm.classList.add('hidden');
-        }
-    },
-
-    switchTab(tabName, app) {
-        const tabAgendamento = document.getElementById('tab-agendamento');
-        const tabAvulso = document.getElementById('tab-avulso');
-        const isScheduledContainer = document.getElementById('is-scheduled-container');
-        const formTitle = document.getElementById('form-title');
-        const pautaColumn = document.getElementById('pauta-column');
-        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-        const formContainer = document.getElementById('form-agendamento');
-
-        formContainer.classList.remove('hidden');
-
-        if (tabName === 'agendamento') {
-            tabAgendamento.classList.add('tab-active');
-            tabAvulso.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700');
-            isScheduledContainer.classList.remove('hidden');
-            pautaColumn.classList.remove('hidden');
-            if (app.currentPautaData?.useDelegationFlow) {
-                emAtendimentoColumn.classList.remove('hidden');
-            } else {
-                emAtendimentoColumn.classList.add('hidden');
-            }
-            if(formTitle) formTitle.textContent = "Adicionar Novo Agendamento";
-            this.showAgendamentoForm();
-        } else {
-            tabAvulso.classList.add('tab-active');
-            tabAgendamento.classList.remove('tab-active');
-            tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700');
-            isScheduledContainer.classList.add('hidden');
-            pautaColumn.classList.add('hidden');
-            if (app.currentPautaData?.useDelegationFlow) {
-                emAtendimentoColumn.classList.remove('hidden');
-            } else {
-                emAtendimentoColumn.classList.add('hidden');
-            }
-            if(formTitle) formTitle.textContent = "Adicionar Atendimento Avulso";
-            this.showAvulsoForm(app);
-        }
-        this.renderAssistedLists(app);
-    },
-
-    showAgendamentoForm() {
-        document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
-        document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
-        document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-        document.getElementById('arrival-time-wrapper').classList.add('hidden');
-        document.getElementById('manual-room-wrapper').classList.add('hidden');
-    },
-
-    showAvulsoForm(app) {
-        document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
-        document.getElementById('arrival-time-wrapper').classList.remove('hidden');
-        document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
-
-        const manualRoomWrapper = document.getElementById('manual-room-wrapper');
-        const manualRoomSelect = document.getElementById('manual-room-select');
-        
-        if (app.currentPautaData?.type === 'multisala' && app.currentPautaData.rooms) {
-            manualRoomWrapper.classList.remove('hidden');
-            manualRoomSelect.innerHTML = '';
-            app.currentPautaData.rooms.forEach(room => {
-                const opt = document.createElement('option');
-                opt.value = room;
-                opt.textContent = room;
-                manualRoomSelect.appendChild(opt);
-            });
-        } else {
-            manualRoomWrapper.classList.add('hidden');
-        }
-    },
-
-    togglePautaLock(app) {
-        const isOwner = app.auth?.currentUser?.uid === app.currentPautaOwnerId;
-        const isClosed = app.isPautaClosed;
-
-        const buttonsToDisable = [
-            'form-agendamento', 'file-upload', 'add-assisted-btn',
-            'download-pdf-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento'
-        ];
-
-        buttonsToDisable.forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                if (isClosed) {
-                    element.classList.add('pointer-events-none', 'opacity-50');
-                    element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = true);
-                } else {
-                    element.classList.remove('pointer-events-none', 'opacity-50');
-                    element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = false);
-                }
-            }
-        });
-
-        const actionPanelButtons = document.querySelectorAll('#actions-panel button');
-        actionPanelButtons.forEach(btn => {
-            if (btn.id === 'reopen-pauta-btn') {
-                btn.disabled = false;
-            } else {
-                btn.disabled = isClosed;
-            }
-        });
-        
-        const cardActionButtons = document.querySelectorAll('.assisted-card button:not(.quick-action-toggle)');
-        cardActionButtons.forEach(btn => {
-            btn.disabled = isClosed;
-        });
-
-        if (isClosed) {
-            document.getElementById('closed-pauta-alert').classList.remove('hidden');
-            document.getElementById('close-pauta-btn').classList.add('hidden');
-            document.getElementById('reopen-pauta-btn').classList.remove('hidden');
-        } else {
-            document.getElementById('closed-pauta-alert').classList.add('hidden');
-            document.getElementById('close-pauta-btn').classList.remove('hidden');
-            document.getElementById('reopen-pauta-btn').classList.add('hidden');
-        }
-
-        if (!isOwner) {
-            document.getElementById('close-pauta-btn').classList.add('hidden');
-            document.getElementById('reopen-pauta-btn').classList.add('hidden');
-        }
-    },
-
-    toggleFaltosos() {
-        const btn = document.getElementById('toggle-faltosos-btn');
-        const pautaColumn = document.getElementById('pauta-column');
-        const faltososColumn = document.getElementById('faltosos-column');
-
-        pautaColumn.classList.toggle('hidden');
-        faltososColumn.classList.toggle('hidden');
-
-        if (faltososColumn.classList.contains('hidden')) {
-            btn.textContent = 'Ver Faltosos';
-            btn.classList.remove('bg-blue-600');
-            btn.classList.add('bg-purple-600');
-        } else {
-            btn.textContent = 'Ver Pauta';
-            btn.classList.remove('bg-purple-600');
-            btn.classList.add('bg-blue-600');
-        }
-    },
-
-    toggleActionsPanel() {
-        const panel = document.getElementById('actions-panel');
-        const arrow = document.getElementById('actions-arrow');
-        
-        panel.classList.toggle('opacity-0');
-        panel.classList.toggle('scale-95');
-        panel.classList.toggle('pointer-events-none');
-        arrow.classList.toggle('rotate-180');
-    },
-
-    renderAssistedLists(app) {
-        console.log("🎨 renderAssistedLists chamado");
-        
-        if (!app) {
-            console.error("App não definido");
-            return;
-        }
-        
-        const allAssisted = app.allAssisted || [];
-        const currentPautaData = app.currentPautaData;
-        const colaboradores = app.colaboradores || [];
-
-        if (allAssisted.length === 0) {
-            console.log("Nenhum assistido encontrado");
-            this.clearContainers();
-            
-            const pautaList = document.getElementById('pauta-list');
-            const aguardandoList = document.getElementById('aguardando-list');
-            const atendidosList = document.getElementById('atendidos-list');
-            const emAtendimentoList = document.getElementById('em-atendimento-list');
-            const faltososList = document.getElementById('faltosos-list'); 
-            const distribuicaoList = document.getElementById('distribuicao-list'); 
-            
-            if (pautaList) pautaList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum agendamento</p>';
-            if (aguardandoList) aguardandoList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém aguardando</p>';
-            if (emAtendimentoList) emAtendimentoList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém em atendimento</p>';
-            if (atendidosList) atendidosList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum atendido</p>';
-            if (faltososList) faltososList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum faltoso</p>';
-            if (distribuicaoList) distribuicaoList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum aguardando distribuição</p>';
-            
-            this.updateCounters({
-                pauta: 0, aguardando: 0, emAtendimento: 0, atendidos: 0, faltosos: 0, distribuicao: 0
-            });
-            return;
-        }
-
-        allAssisted.forEach(a => {
-            if (a.status === 'aguardando' && a.priority !== 'URGENTE') {
-                a.priority = PautaService.getPriorityLevel(a);
-            }
-        });
-
-        const tabAgendamento = document.getElementById('tab-agendamento');
-        const currentMode = tabAgendamento?.classList.contains('tab-active') ? 'agendamento' : 'avulso';
-        const searchTerms = this.getSearchTerms();
-
-        const lists = {
-            pauta: allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento' && this.searchFilter(a, searchTerms.pauta)),
-            aguardando: allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode && this.searchFilter(a, searchTerms.aguardando)),
-            emAtendimento: allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode && this.searchFilter(a, searchTerms.emAtendimento)),
-            atendidos: allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && this.searchFilter(a, searchTerms.atendidos)),
-            faltosos: allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento' && this.searchFilter(a, searchTerms.faltosos)),
-            distribuicao: allAssisted.filter(a => a.status === 'aguardandoDistribuicao' && this.searchFilter(a, searchTerms.distribuicao))
-        };
-
-        lists.pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
-        lists.atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime)); 
-        lists.faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00')); 
-        lists.emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime)); 
-        
-        if (currentPautaData?.ordemAtendimento) {
-            lists.aguardando = PautaService.sortAguardando(lists.aguardando, currentPautaData.ordemAtendimento);
-        }
-
-        this.updateCounters(lists);
-        this.clearContainers();
-
-        this.renderPautaColumn(lists.pauta);
-        this.renderAguardandoColumn(lists.aguardando, currentPautaData, colaboradores);
-        this.renderEmAtendimentoColumn(lists.emAtendimento, currentPautaData, app.currentPauta?.id, app.currentUserName);
-        this.renderAtendidosColumn(lists.atendidos);
-        this.renderFaltososColumn(lists.faltosos); 
-        this.renderDistribuicaoColumn(lists.distribuicao, app.currentPauta?.id, app.currentUserName);
-
-        this.togglePautaLock(app);
-        setTimeout(() => PautaService.setupManualSort(app), 100); 
-    },
-
-    getSearchTerms() {
-        return {
-            pauta: normalizeText(document.getElementById('pauta-search')?.value || ''),
-            aguardando: normalizeText(document.getElementById('aguardando-search')?.value || ''),
-            emAtendimento: normalizeText(document.getElementById('em-atendimento-search')?.value || ''),
-            atendidos: normalizeText(document.getElementById('atendidos-search')?.value || ''),
-            faltosos: normalizeText(document.getElementById('faltosos-search')?.value || ''),
-            distribuicao: normalizeText(document.getElementById('distribuicao-search')?.value || '')
-        };
-    },
-
-    searchFilter(assisted, term) {
-        if (!term) return true;
-        
-        const arrivalTimeFormatted = assisted.arrivalTime ? 
-            new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
-        
-        const attendantName = (typeof assisted.attendant === 'object' && assisted.attendant !== null) 
-                              ? assisted.attendant.name || assisted.attendant.nome || '' 
-                              : assisted.attendant || '';
-
-        return normalizeText(assisted.name).includes(term) ||
-               (assisted.cpf && normalizeText(assisted.cpf).includes(term)) ||
-               normalizeText(assisted.subject).includes(term) ||
-               (assisted.scheduledTime && assisted.scheduledTime.includes(term)) ||
-               (arrivalTimeFormatted && arrivalTimeFormatted.includes(term)) ||
-               (attendantName && normalizeText(attendantName).includes(term)) ||
-               (assisted.assignedCollaborator?.name && normalizeText(assisted.assignedCollaborator.name).includes(term));
-    },
-
-    updateCounters(lists) {
-        const pautaCount = document.getElementById('pauta-count');
-        const aguardandoCount = document.getElementById('aguardando-count');
-        const emAtendimentoCount = document.getElementById('em-atendimento-count');
-        const atendidosCount = document.getElementById('atendidos-count');
-        const faltososCount = document.getElementById('faltosos-count');
-        const distribuicaoCount = document.getElementById('distribuicao-count');
-        
-        if (pautaCount) pautaCount.textContent = lists.pauta.length;
-        if (aguardandoCount) aguardandoCount.textContent = lists.aguardando.length;
-        if (emAtendimentoCount) emAtendimentoCount.textContent = lists.emAtendimento.length;
-        if (atendidosCount) atendidosCount.textContent = lists.atendidos.length;
-        if (faltososCount) faltososCount.textContent = lists.faltosos.length;
-        if (distribuicaoCount) distribuicaoCount.textContent = lists.distribuicao.length;
-    },
-
-    clearContainers() {
-        const containers = [
-            'pauta-list', 'aguardando-list', 'em-atendimento-list', 
-            'atendidos-list', 'faltosos-list', 'distribuicao-list'
-        ];
-        containers.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.innerHTML = '';
-        });
-    },
-
-    _getStandardizedFooterHtml(item) {
-        const lastActionBy = escapeHTML(item.lastActionBy || 'Sistema');
-        const lastActionDate = item.lastActionTimestamp ?
-            new Date(item.lastActionTimestamp).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) :
-            '--/-- --:--';
-        return `
-            <div class="mt-3 pt-2 border-t border-gray-100 flex justify-end">
-                <p class="text-[10px] text-gray-400 italic">Última ação por: <b>${lastActionBy}</b> às ${lastActionDate}</p>
-            </div>
-        `;
-    },
-
-    renderPautaColumn(items) {
-        const container = document.getElementById('pauta-list');
-        if (!container) return;
-
-        if (items.length === 0) {
-            container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum agendamento</p>';
-            return;
-        }
-
-        items.forEach(item => {
-            container.appendChild(this.createPautaCard(item));
-        });
-    },
-
-    createPautaCard(item) {
-        const currentUserRole = window.app?.currentUser?.role;
-        const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
-        const canEdit = currentUserRole !== 'apoio'; 
-        const isOwner = window.app?.auth?.currentUser?.uid === item.owner;
-
-        const card = document.createElement('div');
-        card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3';
-        card.setAttribute('data-id', item.id);
-        
-        card.innerHTML = `
-            ${canDelete ? `
-            <button data-id="${item.id}" class="delete-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 transition-colors" ${isOwner ? '' : 'disabled'} title="Excluir (apenas criador)">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                </svg>
-            </button>` : ''}
-
-            <p class="font-bold text-xl text-gray-800 leading-tight pr-6">${escapeHTML(item.name || '').toUpperCase()}</p>
-            
-            <div class="mt-2 space-y-0.5 text-sm text-gray-700">
-                <p>Assunto: <span class="font-bold uppercase">${escapeHTML(item.subject || 'Não informado')}</span></p>
-                <p>Agendado: <span class="font-bold">${item.scheduledTime || '--:--'}</span></p>
-            </div>
-
-            <div class="mt-4 space-y-2">
-                <div class="grid grid-cols-2 gap-2">
-                    <button data-id="${item.id}" class="check-in-btn bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm">
-                        Marcar Chegada
-                    </button>
-                    <button data-id="${item.id}" class="faltou-btn bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm" ${canEdit ? '' : 'disabled'}>
-                        Faltou
-                    </button>
-                </div>
-                <button data-id="${item.id}" class="edit-assisted-btn w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm" ${canEdit ? '' : 'disabled'}>
-                    Editar Dados
-                </button>
-            </div>
-
-            ${this._getStandardizedFooterHtml(item)}
-        `;
-        return card;
-    },
-
-    renderAguardandoColumn(items, currentPautaData, colaboradores) {
-        const container = document.getElementById('aguardando-list');
-        if (!container) return;
-
-        if (items.length === 0) {
-            container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém aguardando</p>';
-            return;
-        }
-
-        container.innerHTML = '';
-
-        if (currentPautaData?.type === 'multisala' && currentPautaData.rooms?.length > 0) {
-            currentPautaData.rooms.forEach(roomName => {
-                const peopleInRoom = items.filter(a => a.room === roomName);
-                if (peopleInRoom.length === 0) return;
-                
-                const roomGroup = document.createElement('div');
-                roomGroup.className = "mb-4 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 room-group-container shadow-sm";
-                
-                roomGroup.innerHTML = `
-                    <div class="bg-blue-100 p-2 border-b border-blue-200 flex flex-col gap-2">
-                        <div class="flex justify-between items-center px-1">
-                            <h4 class="font-bold text-blue-800 text-xs uppercase tracking-wider flex items-center gap-1">
-                                <span>🏢</span> ${escapeHTML(roomName)}
-                            </h4>
-                            <span class="bg-blue-200 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${peopleInRoom.length}</span>
-                        </div>
-                        <input type="search" placeholder="Pesquisar nesta sala..." class="room-search-input w-full p-1.5 text-xs border border-blue-200 rounded outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                    </div>
-                    <div class="p-2 space-y-2 room-cards-wrapper"></div>
-                `;
-                
-                const cardsWrapper = roomGroup.querySelector('.room-cards-wrapper');
-                
-                peopleInRoom.forEach((item, index) => {
-                    const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
-                    if (card) cardsWrapper.appendChild(card);
-                });
-                
-                container.appendChild(roomGroup);
-            });
-
-            const peopleNoRoom = items.filter(a => !a.room || !currentPautaData.rooms.includes(a.room));
-            if (peopleNoRoom.length > 0) {
-                const roomGroupNoRoom = document.createElement('div');
-                roomGroupNoRoom.className = "mb-4 border border-red-200 rounded-lg overflow-hidden bg-red-50 room-group-container shadow-sm";
-                
-                roomGroupNoRoom.innerHTML = `
-                    <div class="bg-red-100 p-2 border-b border-red-200 flex flex-col gap-2">
-                        <div class="flex justify-between items-center px-1">
-                            <h4 class="font-bold text-red-800 text-xs uppercase tracking-wider flex items-center gap-1">
-                                <span>⚠️</span> Sem Sala Definida
-                            </h4>
-                            <span class="bg-red-200 text-red-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${peopleNoRoom.length}</span>
-                        </div>
-                        <input type="search" placeholder="Pesquisar sem sala..." class="room-search-input w-full p-1.5 text-xs border border-red-200 rounded outline-none focus:ring-2 focus:ring-red-500 bg-white">
-                    </div>
-                    <div class="p-2 space-y-2 room-cards-wrapper"></div>
-                `;
-                
-                const cardsWrapperNoRoom = roomGroupNoRoom.querySelector('.room-cards-wrapper');
-                peopleNoRoom.forEach((item, index) => {
-                    const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
-                    if (card) cardsWrapperNoRoom.appendChild(card);
-                });
-                container.appendChild(roomGroupNoRoom);
-            }
-
-        } else {
-            items.forEach((item, index) => {
-                const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
-                if (card) container.appendChild(card);
-            });
-        }
-    },
-
-    createAguardandoCard(item, currentPautaData, colaboradores, index) {
+    async init() {
         try {
-            if (!item || !item.id) return null;
+            const app = initializeApp(firebaseConfig);
+            
+             /* // Bloco comentado para evitar erro 401 de conexão com App Check
+            initializeAppCheck(app, {
+                provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
+                isTokenAutoRefreshEnabled: true
+            }); 
+            */
 
-            const currentUserRole = window.app?.currentUser?.role;
-            const canEditPriority = currentUserRole === 'apoio' || currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            const canAttend = currentUserRole !== 'apoio';
-            const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
+            this.db = getFirestore(app);
+            this.auth = getAuth(app);
 
-            const card = document.createElement('div');
-            const priorityClass = PautaService.getPriorityClass(item.priority);
-            card.className = `assisted-card relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
-            card.setAttribute('data-id', item.id);
+            DashboardService.init(this);
 
-            let docStatusHtml = '';
-            if (item.selectedAction) {
-                let statusColor = 'bg-gray-100 text-gray-600';
-                let statusText = '📋 Selecionado';
-                let statusIcon = '📋';
-                
-                if (item.documentState === 'filling') { 
-                    statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
-                    statusText = '✏️ Preenchendo'; 
-                    statusIcon = '✏️';
-                } else if (item.documentState === 'saved') { 
-                    statusColor = 'bg-green-100 text-green-700 font-bold'; 
-                    statusText = '✅ Salvo'; 
-                    statusIcon = '✅';
-                } else if (item.documentState === 'pdf') { 
-                    statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
-                    statusText = '📄 PDF Emitido'; 
-                    statusIcon = '📄';
-                }
+            await this.setupOfflinePersistence();
+            this.setupEventListeners();
+            this.setupAuthListener();
+            
+            setupDetailsModal({ db: this.db });
+            this.loadExternalModalsContent();
+            
+        } catch (error) {
+            console.error("Erro na inicialização:", error);
+            showNotification("Erro ao iniciar o sistema", "error");
+        }
+    }
 
-                docStatusHtml = `
-                    <div class="mt-2 flex flex-col gap-1">
-                        <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
-                            <span>📂</span> 
-                            <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
-                            <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
-                        </span>
-                        <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
-                            <span>${statusIcon}</span>
-                            <span class="hidden xs:inline">${statusText}</span>
-                        </span>
-                    </div>`;
-            }
+    async loadExternalModalsContent() {
+        const modalsToLoad = [
+            { selector: '#policy-content', url: './politica.html' },
+            { selector: '#manual-modal .scrollable-content', url: './manual.html' },
+            { selector: '#terms-modal .scrollable-content', url: './termos.html' }
+        ];
 
-            const nomeSeguro = item.name || 'Nome não informado';
-            const assuntoSeguro = item.subject || 'Assunto não informado';
-            const scheduledTimeSeguro = item.scheduledTime || '--:--';
-            const priorityReasonSeguro = item.priorityReason || '';
-
-            let timeInfoHtml = `<span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">Chegada: --:--</span>`;
-            if (item.arrivalTime) {
-                try {
-                    const arrivalDate = new Date(item.arrivalTime);
-                    if (!isNaN(arrivalDate)) {
-                        const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                        if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
-                            timeInfoHtml = `
-                                <div class="inline-flex items-center gap-2 bg-blue-50/80 border border-blue-100 text-blue-800 px-2 py-1 rounded text-[11px] shadow-sm w-max">
-                                    <div class="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></svg>
-                                        <span>Agendado: <span class="font-semibold">${escapeHTML(scheduledTimeSeguro)}</span></span>
-                                    </div>
-                                    <div class="w-px h-3 bg-blue-200"></div>
-                                    <div class="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
-                                        <span>Chegou: <span class="font-bold">${horaChegada}</span></span>
-                                    </div>
-                                </div>
-                            `;
-                        } else {
-                            timeInfoHtml = `
-                                <div class="inline-flex items-center gap-1.5 bg-blue-50/80 border border-blue-100 text-blue-800 px-2.5 py-1 rounded text-[11px] shadow-sm w-max">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
-                                    <span>Chegada: <span class="font-bold">${horaChegada}</span></span>
-                                </div>
-                            `;
-                        }
+        for (const item of modalsToLoad) {
+            try {
+                const response = await fetch(item.url);
+                if (response.ok) {
+                    const html = await response.text();
+                    const container = document.querySelector(item.selector);
+                    if (container) {
+                        container.innerHTML = html; 
                     }
-                } catch (e) {
-                    console.warn("Erro ao formatar data:", e);
-                }
-            }
-
-            const numeroOrdem = index + 1;
-            const numeroBadge = `
-                <div class="absolute -left-2 -top-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
-                    ${numeroOrdem}
-                </div>
-            `;
-
-            const atenderButton = currentPautaData?.useDelegationFlow
-                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`
-                : `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`;
-
-            const actionButtonsHTML = `
-                <div class="absolute top-2 right-10 flex items-center">
-                    <div class="relative">
-                        <button data-id="${item.id}" class="quick-action-toggle text-gray-400 hover:text-blue-600 p-1 rounded-full transition-colors" title="Opções de atendimento" aria-expanded="false" aria-controls="quick-menu-${item.id}">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
-                            </svg>
-                        </button>
-                        <div id="quick-menu-${item.id}" class="quick-menu hidden absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 z-30 py-1" role="menu" aria-orientation="vertical" aria-labelledby="quick-toggle-${item.id}">
-                            <button data-id="${item.id}" data-tipo="reagendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2" role="menuitem">
-                                <span>🔄</span> Reagendar
-                            </button>
-                            <button data-id="${item.id}" data-tipo="agendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2" role="menuitem">
-                                <span>📅</span> Agendar
-                            </button>
-                            <button data-id="${item.id}" data-tipo="consulta" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2" role="menuitem">
-                                <span>🔍</span> Consulta
-                            </button>
-                            <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem">
-                                <span>⚙️</span> Outros
-                            </button>
-                            <button data-id="${item.id}" class="edit-assisted-btn quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem">
-                                <span>✏️</span> Editar Assistido
-                            </button>
-                            <button data-id="${item.id}" class="view-details-btn quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem">
-                                <span>👁️</span> Ver Detalhes
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            card.innerHTML = `
-                ${numeroBadge}
-                ${canAttend ? actionButtonsHTML : ''} 
-                ${canDelete ? `
-                <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                    </svg>
-                </button>` : ''}
-                <div class="flex flex-col h-full">
-                    ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
-                    <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(nomeSeguro)}</p>
-                    <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
-                    <div class="flex flex-wrap items-center gap-2 mb-2">
-                        ${timeInfoHtml}
-                        ${item.room && currentPautaData?.type !== 'multisala' ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(item.room)}</span>` : ''}
-                    </div>
-                    ${docStatusHtml}
-                    <div class="mt-4 grid grid-cols-2 gap-2">
-                        ${canAttend ? atenderButton : '<button disabled class="w-full bg-gray-300 text-gray-700 font-semibold py-2 rounded-lg text-sm">Sem Permissão</button>'}
-                        <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs" ${canEditPriority ? '' : 'disabled'}>${item.priority === 'URGENTE' ? 'Urgência' : 'Prioridade'}</button>
-                        <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-semibold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase" ${canAttend ? '' : 'disabled'}>Voltar</button>
-                    </div>
-                    <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
-                </div>
-                ${this._getStandardizedFooterHtml(item)}
-            `;
-            
-            return card;
-        } catch (error) {
-            console.error("Erro ao criar card de aguardando:", error, item);
-            return null;
-        }
-    },
-    
-    renderEmAtendimentoColumn(items, currentPautaData, pautaId, userName) {
-        const container = document.getElementById('em-atendimento-list');
-        if (!container) return;
-
-        if (items.length === 0) {
-            container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém em atendimento</p>';
-            return;
-        }
-
-        items.forEach((item, index) => {
-            const card = this.createEmAtendimentoCard(item, currentPautaData, pautaId, userName, index);
-            if (card) container.appendChild(card);
-        });
-    },
-
-    createEmAtendimentoCard(item, currentPautaData, pautaId, userName, index) {
-        try {
-            const currentUserRole = window.app?.currentUser?.role;
-            const canDelegateOrFinalize = currentUserRole !== 'apoio';
-            const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
-
-            const card = document.createElement('div');
-            card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
-            card.setAttribute('data-id', item.id);
-            
-            const startTime = item.inAttendanceTime ? 
-                new Date(item.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-            
-            const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-            const linkDireto = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&collaboratorName=${encodeURIComponent(userName)}`;
-
-            card.innerHTML = `
-                ${canDelete ? `
-                <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                    </svg>
-                </button>` : ''}
-
-                <p class="font-bold text-xl md:text-2xl text-gray-800">${index + 1}. ${escapeHTML(item.name || '')}</p>
-                <p class="text-xs md:text-sm mt-1">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
-                <p class="text-xs md:text-sm">Colaborador: ${escapeHTML(item.assignedCollaborator?.name || 'Não atribuído')}</p>
-                <p class="text-xs md:text-sm text-gray-400">Início: ${startTime}</p>
-
-                <div class="mt-4 flex flex-col gap-2">
-                    <div class="grid grid-cols-2 gap-2">
-                        <button data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(item.assignedCollaborator?.name || 'Não informado')}" class="delegate-finalization-btn bg-indigo-500 text-white font-bold py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm shadow-md transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
-                            Delegar
-                        </button>
-                        <button onclick="window.open('${linkDireto}', '_blank')" class="bg-green-500 text-white font-bold py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm shadow-md transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
-                            Finalizar
-                        </button>
-                    </div>
-                    <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 text-white font-bold py-2 rounded-lg text-xs md:text-sm shadow-md transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
-                        Voltar p/ Aguardando
-                    </button>
-                </div>
-
-                ${this._getStandardizedFooterHtml(item)}
-            `;
-            return card;
-        } catch (error) {
-            console.error("Erro ao criar card de em atendimento:", error, item);
-            return null;
-        }
-    },
-
-    renderAtendidosColumn(items) {
-        const container = document.getElementById('atendidos-list');
-        if (!container) return;
-
-        if (items.length === 0) {
-            container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum atendido</p>';
-            return;
-        }
-
-        container.innerHTML = '';
-        items.forEach(item => {
-            if (!item) return;
-            const card = this.createAtendidoCard(item);
-            if (card) container.appendChild(card);
-        });
-    },
-
-    createAtendidoCard(item) {
-        try {
-            const currentUserRole = window.app?.currentUser?.role;
-            const canManageDemandsOrEditAttendant = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            const canRevert = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-
-            const card = document.createElement('div');
-            card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4';
-            card.setAttribute('data-id', item.id);
-            
-            const arrivalT = item.arrivalTime ? 
-                new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
-            const attendedT = item.attendedTime ? 
-                new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-            
-            let atendenteNome = 'Não informado';
-            const atendenteRaw = item.attendedBy || item.attendant;
-            if (atendenteRaw) {
-                if (typeof atendenteRaw === 'object') {
-                    atendenteNome = atendenteRaw.nome || atendenteRaw.name || 'Não informado';
                 } else {
-                    atendenteNome = atendenteRaw;
+                    console.warn(`Arquivo não encontrado (local): ${item.url}. Usando os textos padrão embutidos.`);
                 }
+            } catch (error) {
+                console.error(`Erro ao tentar buscar ${item.url}:`, error);
             }
-
-            const confirmButton = item.isConfirmed 
-                ? 'bg-green-500 border-green-500 text-white' 
-                : 'bg-slate-100 text-slate-300';
-
-            card.innerHTML = `
-                <div class="flex justify-between items-start">
-                    <p class="font-bold text-lg md:text-xl text-gray-800">${escapeHTML(item.name || '')}</p>
-                    <button data-id="${item.id}" class="toggle-confirmed-atendido w-6 h-6 md:w-7 md:h-7 rounded-full border border-gray-200 flex items-center justify-center ${confirmButton} shadow-sm" ${canToggleConfirmed ? '' : 'disabled'}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/>
-                        </svg>
-                    </button>
-                </div>
-                
-                <p class="text-xs md:text-sm mt-1 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
-                
-                ${item.tipoAcaoRapida ? (() => {
-                    const acaoCfg = {
-                        'Reagendamento':       { icon: '🔄', bg: '#fffbeb', border: '#f59e0b', text: '#92400e', label: 'REAGENDADO' },
-                        'Agendamento':         { icon: '📅', bg: '#ecfdf5', border: '#10b981', text: '#065f46', label: 'AGENDADO' },
-                        'Consulta Processual': { icon: '🔍', bg: '#f5f3ff', border: '#8b5cf6', text: '#4c1d95', label: 'CONSULTA' },
-                        'Outros Assuntos':     { icon: '⚙️', bg: '#f0f9ff', border: '#0ea5e9', text: '#0c4a6e', label: 'OUTROS' }
-                    }[item.tipoAcaoRapida] || { icon: '⚡', bg: '#f0fdf4', border: '#22c55e', text: '#14532d', label: item.tipoAcaoRapida };
-                    return `<div class="mt-1 mb-2">
-                        <span style="background:${acaoCfg.bg};border:1.5px solid ${acaoCfg.border};color:${acaoCfg.text}" 
-                              class="inline-flex items-center gap-1 text-[10px] md:text-xs font-black px-2 py-1 rounded-lg">
-                            ${acaoCfg.icon} ${acaoCfg.label}
-                        </span>
-                    </div>`;
-                })() : ''}
-                
-                <div class="grid grid-cols-3 gap-1 md:gap-2 text-center border-t border-b py-2 md:py-3 my-2 md:my-3 text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-wider">
-                    <div>Agendado:<br><span class="text-gray-600">${item.scheduledTime || 'N/A'}</span></div>
-                    <div>Chegou:<br><span class="text-gray-600">${arrivalT}</span></div>
-                    <div>Finalizado:<br><span class="text-gray-600">${attendedT}</span></div>
-                </div>
-
-                <div class="flex justify-between items-center text-[10px] md:text-xs mb-4">
-                    <p class="text-gray-500">Por: <b class="text-gray-800">${escapeHTML(atendenteNome)}</b></p>
-                    <div class="grid grid-cols-2 gap-x-2 md:gap-x-4 gap-y-1 md:gap-y-2 text-right">
-                        <button data-id="${item.id}" class="manage-demands-btn text-blue-500 font-bold hover:underline" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Demandas</button>
-                        <button data-id="${item.id}" class="edit-assisted-btn text-slate-400 font-bold hover:underline" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Dados</button>
-                        <button data-id="${item.id}" class="edit-attendant-btn text-green-600 font-bold hover:underline" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Atendente</button>
-                        <button data-id="${item.id}" class="delete-btn text-red-500 font-bold hover:underline" ${canDelete ? '' : 'disabled'}>Deletar</button>
-                    </div>
-                </div>
-
-                ${item.arquivoPdfConteudo ? `
-                    <a href="${item.arquivoPdfConteudo}" download="${item.nomeArquivoPdf || 'protocolo.pdf'}" 
-                       class="mb-4 flex items-center justify-center gap-2 w-full bg-blue-50 text-blue-600 font-bold py-2 rounded-lg md:py-2.5 md:rounded-xl text-[8px] md:text-[10px] uppercase border border-blue-100 hover:bg-blue-100 transition">
-                        📄 Baixar Protocolo
-                    </a>
-                ` : ''}
-
-                <div class="pt-3 border-t">
-                    <div class="flex flex-col sm:flex-row justify-between items-center gap-2 md:gap-3">
-                        <p class="text-[7px] md:text-[9px] text-gray-400 uppercase italic">Última: ${escapeHTML(item.lastActionBy || 'Sistema')}</p>
-                        <button data-id="${item.id}" class="return-from-atendido-btn w-full sm:w-auto bg-orange-500 text-white font-black py-2 md:py-3 px-4 md:px-8 rounded-lg md:rounded-xl text-[8px] md:text-[10px] uppercase shadow-md active:scale-95 transition-all" ${canRevert ? '' : 'disabled'}>
-                            Voltar
-                        </button>
-                    </div>
-                </div>
-                ${this._getStandardizedFooterHtml(item)}
-            `;
-            return card;
-        } catch (error) {
-            console.error("Erro ao criar card de atendido:", error, item);
-            return null;
         }
-    },
+    }
 
-    renderFaltososColumn(items) {
-        const container = document.getElementById('faltosos-list');
-        if (!container) return;
-
-        if (items.length === 0) {
-            container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum faltoso</p>';
-            return;
+    setupOfflinePersistence() {
+        try {
+            enableIndexedDbPersistence(this.db, { synchronizeTabs: true }).catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    console.warn('⚠️ Persistência desativada: Múltiplas abas abertas.');
+                    showNotification('Múltiplas abas detectadas. Feche outras abas para evitar erros no modo offline.', 'warning');
+                } else if (err.code == 'unimplemented') {
+                    console.warn('⚠️ Navegador não suporta persistência offline.');
+                }
+            });
+        } catch (e) {
+            console.log("Erro ao ativar persistência:", e);
         }
-
-        container.innerHTML = '';
-        items.forEach(item => {
-            const currentUserRole = window.app?.currentUser?.role;
-            const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            const canRevert = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-
-            const card = document.createElement('div');
-            const priorityClass = PautaService.getPriorityClass(PautaService.getPriorityLevel(item));
-            const isConfirmed = item.isConfirmed || false;
-
-            card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4 opacity-90';
-            card.setAttribute('data-id', item.id);
-
-            const confirmButtonClass = isConfirmed 
-                ? 'bg-green-500 border-green-500 text-white' 
-                : 'bg-slate-100 text-slate-300';
-
-            card.innerHTML = `
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="font-bold text-lg md:text-xl text-gray-800 leading-tight">${escapeHTML(item.name || '').toUpperCase()}</p>
-                        <span class="text-[9px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded mt-1 border border-purple-100 inline-block uppercase">🚫 Faltoso</span>
-                    </div>
-                    
-                    <button data-id="${item.id}" class="toggle-confirmed-faltoso w-6 h-6 md:w-7 md:h-7 rounded-full border border-gray-200 flex items-center justify-center ${confirmButtonClass} shadow-sm transition-all" ${canToggleConfirmed ? '' : 'disabled'} title="Lançar falta no Verde">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/>
-                        </svg>
-                    </button>
-                </div>
-                
-                <p class="text-xs md:text-sm mt-2 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
-                
-                <div class="grid grid-cols-2 gap-2 text-center border-t border-b py-2 my-3 text-[9px] md:text-[10px] text-gray-400 uppercase font-bold tracking-wider">
-                    <div class="border-r">Agendado:<br><span class="text-gray-600">${item.scheduledTime || '---'}</span></div>
-                    <div>Falta marcada às:<br><span class="text-gray-600">${item.lastActionTimestamp ? new Date(item.lastActionTimestamp).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--'}</span></div>
-                </div>
-
-                <div class="flex justify-between items-center text-[10px] md:text-xs mb-4">
-                    <p class="text-gray-400 italic">Status: <span class="${isConfirmed ? 'text-green-600' : 'text-amber-600'} font-bold">${isConfirmed ? 'Lançado no Verde' : 'Pendente no Verde'}</span></p>
-                    <div class="flex gap-3">
-                        <button data-id="${item.id}" class="edit-assisted-btn text-slate-400 font-bold hover:underline" ${canRevert ? '' : 'disabled'}>Dados</button>
-                        <button data-id="${item.id}" class="delete-btn text-red-500 font-bold hover:underline" ${canDelete ? '' : 'disabled'}>Deletar</button>
-                    </div>
-                </div>
-
-                <div class="pt-3 border-t">
-                    <div class="flex flex-col sm:flex-row justify-end items-center gap-2">
-                        <button data-id="${item.id}" class="return-to-pauta-from-faltoso-btn w-full sm:w-auto bg-orange-500 text-white font-black py-2 px-6 rounded-lg text-[9px] md:text-[10px] uppercase shadow-md active:scale-95 transition-all" ${canRevert ? '' : 'disabled'}>
-                            Reativar Assistido
-                        </button>
-                    </div>
-                </div>
-
-                ${this._getStandardizedFooterHtml(item)}
-            `;
-            container.appendChild(card);
-        });
-    },
     
-    renderDistribuicaoColumn(items, pautaId, userName) {
-        const container = document.getElementById('distribuicao-list');
-        if (!container) return;
-
-        if (items.length === 0) {
-            container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum aguardando distribuição</p>';
-            return;
-        }
-
-        items.forEach(item => {
-            const currentUserRole = window.app?.currentUser?.role;
-            const canManageDistribution = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-
-            const card = document.createElement('div');
-            card.className = 'assisted-card relative bg-cyan-50 p-4 rounded-lg shadow-sm border border-cyan-200 mb-2';
-            card.setAttribute('data-id', item.id);
-            const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-            const linkExterno = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&collaboratorName=${encodeURIComponent(userName)}`;
-
-            card.innerHTML = `
-                <p class="font-bold text-gray-800 text-sm">${escapeHTML(item.name || '')}</p>
-                <p class="text-[10px] text-cyan-700 font-bold uppercase mt-1">⚖️ Aguardando Distribuição</p>
-                <div class="mt-3 space-y-2">
-                    <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white text-[10px] font-bold py-2 rounded hover:bg-cyan-700 uppercase shadow-sm" ${canManageDistribution ? '' : 'disabled'}>Painel de Protocolo</button>
-                    <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-white text-gray-400 border border-gray-200 text-[9px] py-1 rounded uppercase" ${canManageDistribution ? '' : 'disabled'}>Reverter</button>
-                </div>
-                ${this._getStandardizedFooterHtml(item)}
-            `;
-            container.appendChild(card);
+        window.addEventListener('offline', () => {
+            document.getElementById('offline-indicator').classList.remove('hidden');
         });
-    },
-
-    setupFooterModals() {
-        const bindModal = (btnId, modalId, closeIds) => {
-            const btn = document.getElementById(btnId);
-            const modal = document.getElementById(modalId);
-            
-            if (btn && modal) {
-                btn.onclick = () => modal.classList.remove('hidden');
-                
-                closeIds.forEach(id => {
-                    const closeBtn = document.getElementById(id);
-                    if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
-                });
-
-                modal.onclick = (e) => {
-                    if (e.target === modal) modal.classList.add('hidden');
-                };
-            }
-        };
-
-        bindModal('privacy-btn-footer', 'privacy-policy-modal', ['close-policy-modal-btn-x', 'close-policy-modal-btn']);
-        bindModal('manual-btn-footer', 'manual-modal', ['close-manual-modal-x', 'close-manual-modal-btn']);
-        bindModal('terms-btn-footer', 'terms-modal', ['close-terms-modal-x', 'close-terms-modal-btn']);
-    },
-
-    rrenderPautaCards(pautas, userId, userEmail, app) {
-        const container = document.getElementById('pautas-list');
-        if (!container) return;
-
-        if (!pautas || pautas.length === 0) {
-            container.innerHTML = '<p class="col-span-full text-center py-8 text-gray-500 font-medium">Nenhuma pauta encontrada.</p>';
-            return;
-        }
-
-        container.innerHTML = '';
-        
-        pautas.forEach(pauta => {
-            const isOwner = pauta.owner === userId;
-            const isClosed = pauta.isClosed;
-            
-            // Lógica de Datas
-            let dataCriacaoStr = '---';
-            let dataExpiracaoStr = '';
-            let statusBadgeHtml = '';
-
-            if (pauta.createdAt) {
-                const creationDate = new Date(pauta.createdAt);
-                dataCriacaoStr = creationDate.toLocaleDateString('pt-BR');
-                
-                const expirationDate = new Date(creationDate);
-                expirationDate.setDate(creationDate.getDate() + 7);
-                dataExpiracaoStr = expirationDate.toLocaleDateString('pt-BR');
-
-                const now = new Date();
-                if (now > expirationDate) {
-                    statusBadgeHtml = `<p class="text-[10px] text-red-500 font-semibold mt-1">Expirou em: ${dataExpiracaoStr}</p>`;
-                } else {
-                    statusBadgeHtml = `<p class="text-[10px] text-red-500 font-semibold mt-1">Será eliminada em: ${dataExpiracaoStr}</p>`;
-                }
-            }
-
-            const card = document.createElement('div');
-            // Classes ajustadas: Alinhamento à esquerda, padding generoso, borda cinza clara
-            card.className = `relative bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between min-h-[220px] ${isClosed ? 'opacity-60' : ''}`;
-            
-            card.innerHTML = `
-                ${isOwner ? `
-                <button class="delete-pauta-btn absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors z-20">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                    </svg>
-                </button>` : ''}
-
-                <div>
-                    <h3 class="font-bold text-xl text-gray-600 leading-tight uppercase mb-2 pr-8">
-                        ${escapeHTML(pauta.name)}
-                    </h3>
-                    
-                    <p class="text-sm text-gray-500 mb-6">Membros: ${pauta.members ? pauta.members.length : 1}</p>
-                </div>
-                
-                <div class="pt-4 border-t border-gray-100">
-                    <p class="text-[10px] text-gray-400 uppercase">Criada em: ${dataCriacaoStr}</p>
-                    ${statusBadgeHtml}
-                    
-                    ${isOwner ? `
-                        <div class="mt-2">
-                            <span class="bg-green-50 text-green-600 text-[9px] font-bold px-2 py-0.5 rounded uppercase">Criador</span>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-
-            // Eventos
-            const deleteBtn = card.querySelector('.delete-pauta-btn');
-            if (deleteBtn) {
-                deleteBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    app.deletePauta(pauta.id, pauta.name);
-                };
-            }
-
-            card.onclick = () => app.loadPauta(pauta.id, pauta.name, pauta.type);
-
-            container.appendChild(card);
+    
+        window.addEventListener('online', () => {
+            document.getElementById('offline-indicator').classList.add('hidden');
+            showNotification("Conexão restabelecida!", "success");
+            playSound('notification');
         });
     }
+
+    setupAuthListener() {
+        onAuthStateChanged(this.auth, async (user) => {
+            if (user) {
+                await AuthService.handleAuthState(this, user);
+                await this.loadUserPreferences(); 
+                this.applyRoleBasedUI(); 
+            } else {
+                UIService.showScreen('login');
+                document.getElementById('admin-panel-btn')?.classList.add('hidden');
+                document.getElementById('admin-btn-main')?.classList.add('hidden');
+            }
+        });
+    }
+
+    setupEventListeners() {
+        document.getElementById('login-form')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            AuthService.login(this);
+        });
+
+        document.getElementById('register-form')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            AuthService.register(this);
+        });
+
+        document.getElementById('forgot-password-link')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            AuthService.resetPassword(this.auth);
+        });
+
+        document.getElementById('login-tab-btn')?.addEventListener('click', () => {
+            UIService.toggleAuthTabs('login');
+        });
+
+        document.getElementById('register-tab-btn')?.addEventListener('click', () => {
+            UIService.toggleAuthTabs('register');
+        });
+
+        document.querySelectorAll('#logout-btn-main, #logout-btn-app').forEach(btn => {
+            if (btn) btn.addEventListener('click', () => AuthService.logout(this.auth));
+        });
+
+        document.getElementById('call-next-assisted-btn')?.addEventListener('click', () => {
+            PautaService.callNextAssisted(this);
+        });
+
+        document.getElementById('view-dashboard-btn')?.addEventListener('click', () => {
+            DashboardService.showDashboardScreen();
+        });
+
+        document.getElementById('dashboard-back-to-pautas-btn')?.addEventListener('click', () => {
+            this.showPautaSelectionScreen();
+        });        
+
+        const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
+        const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
+        const toggleEmAtendimento = document.getElementById('toggle-em-atendimento');
+        const toggleDistribuicao = document.getElementById('toggle-distribuicao');
+        const toggleFaltosos = document.getElementById('toggle-faltosos');
+
+        if (pautaSettingsToggle && pautaSettingsPanel) {
+            pautaSettingsToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                pautaSettingsPanel.classList.toggle('hidden');
+                if (!pautaSettingsPanel.classList.contains('hidden')) {
+                    this.loadColumnPreferences();
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (pautaSettingsPanel && !pautaSettingsPanel.contains(e.target) && !pautaSettingsToggle.contains(e.target)) {
+                    pautaSettingsPanel.classList.add('hidden');
+                }
+            });
+        }
+
+        toggleEmAtendimento?.addEventListener('change', () => this.saveColumnPreferences());
+        toggleDistribuicao?.addEventListener('change', () => this.saveColumnPreferences());
+        toggleFaltosos?.addEventListener('change', () => this.saveColumnPreferences());
+
+        document.getElementById('btn-manage-rooms')?.addEventListener('click', () => {
+            const listContainer = document.getElementById('manage-rooms-list');
+            if (!listContainer) return;
+            
+            listContainer.innerHTML = '';
+            
+            if (this.currentPautaData?.type === 'multisala' && this.customRoomsList && this.customRoomsList.length > 0) {
+                this.customRoomsList.forEach((room) => {
+                    const div = document.createElement('div');
+                    div.className = "flex gap-2 items-center mb-3 bg-gray-50 p-2 rounded-lg border";
+                    div.innerHTML = `
+                        <span class="text-gray-500">🏢</span>
+                        <input type="text" class="room-edit-input flex-1 p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none" data-original="${escapeHTML(room)}" value="${escapeHTML(room)}">
+                    `;
+                    listContainer.appendChild(div);
+                });
+            } else {
+                listContainer.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">Nenhuma sala configurada ou a pauta não é Multi-Salas.</p>';
+            }
+            
+            document.getElementById('manage-rooms-modal')?.classList.remove('hidden');
+        });
+
+        document.getElementById('cancel-manage-rooms-btn')?.addEventListener('click', () => {
+            document.getElementById('manage-rooms-modal')?.classList.add('hidden');
+        });
+
+        document.getElementById('save-manage-rooms-btn')?.addEventListener('click', async () => {
+            const inputs = document.querySelectorAll('.room-edit-input');
+            const newRoomsList = [];
+            const roomChanges = []; 
+            
+            inputs.forEach(input => {
+                const newName = input.value.trim();
+                const oldName = input.dataset.original;
+                if (newName) {
+                    newRoomsList.push(newName);
+                    if (newName !== oldName) {
+                        roomChanges.push({ oldName, newName });
+                    }
+                }
+            });
+
+            if (newRoomsList.length === 0 && inputs.length > 0) {
+                showNotification("A lista de salas não pode ficar vazia.", "error");
+                return;
+            }
+
+            try {
+                const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                await updateDoc(pautaRef, {
+                    customRooms: newRoomsList,
+                    rooms: newRoomsList
+                });
+                
+                this.customRoomsList = newRoomsList;
+                if (this.currentPautaData) {
+                    this.currentPautaData.customRooms = newRoomsList;
+                    this.currentPautaData.rooms = newRoomsList;
+                }
+
+                if (roomChanges.length > 0) {
+                    const batch = writeBatch(this.db);
+                    let hasChanges = false;
+                    
+                    this.allAssisted.forEach(assisted => {
+                        if (assisted.room) {
+                            const change = roomChanges.find(c => c.oldName === assisted.room);
+                            if (change) {
+                                const attRef = doc(this.db, "pautas", this.currentPauta.id, "attendances", assisted.id);
+                                batch.update(attRef, { room: change.newName });
+                                hasChanges = true;
+                            }
+                        }
+                    });
+                    
+                    if (hasChanges) await batch.commit();
+                }
+
+                document.getElementById('manage-rooms-modal')?.classList.add('hidden');
+                showNotification("Salas atualizadas com sucesso!", "success");
+                
+                if (typeof UIService.renderAssistedLists === 'function') {
+                    UIService.renderAssistedLists(this);
+                }
+                if (typeof PautaService.populateRoomSelects === 'function') {
+                    PautaService.populateRoomSelects(this);
+                }
+                
+            } catch (error) {
+                console.error("Erro ao salvar salas:", error);
+                showNotification("Erro ao atualizar salas.", "error");
+            }
+        });
+
+        document.getElementById('aguardando-list')?.addEventListener('input', (e) => {
+            if (e.target.classList.contains('room-search-input')) {
+                const query = e.target.value.toLowerCase();
+                const roomContainer = e.target.closest('.room-group-container'); 
+                if (roomContainer) {
+                    const cards = roomContainer.querySelectorAll('.assisted-card'); 
+                    cards.forEach(card => {
+                        const text = card.textContent.toLowerCase();
+                        card.style.display = text.includes(query) ? '' : 'none';
+                    });
+                }
+            }
+        });
+
+        document.getElementById('btn-gerar-ata-social')?.addEventListener('click', () => {
+            if (!this.currentPauta) {
+                showNotification("Nenhuma pauta selecionada!", "error");
+                return;
+            }
+            const totalAtendidos = this.allAssisted.filter(a => a.status === 'atendido').length;
+            document.getElementById('ata-acao-nome').value = this.currentPauta?.name || '';
+            document.getElementById('ata-data').value = new Date().toISOString().split('T')[0];
+            document.getElementById('ata-total').value = totalAtendidos;
+            document.getElementById('ata-endereco').value = '';
+            document.getElementById('ata-orgao').value = '';
+            document.getElementById('ata-social-modal').classList.remove('hidden');
+        });
+        
+        document.getElementById('confirm-ata-modal-btn')?.addEventListener('click', () => {
+            const acaoNome = document.getElementById('ata-acao-nome').value.trim();
+            const endereco = document.getElementById('ata-endereco').value.trim();
+            const dataAcao = document.getElementById('ata-data').value;
+            const orgaoNome = document.getElementById('ata-orgao').value.trim();
+            const totalManual = document.getElementById('ata-total').value;
+            
+            if (!acaoNome || !endereco || !dataAcao || !orgaoNome || !totalManual || totalManual < 0) {
+                showNotification("Preencha todos os campos corretamente.", "error");
+                return;
+            }
+            
+            const atendidos = this.allAssisted.filter(a => a.status === 'atendido');
+            const dadosExtras = { acao: acaoNome, endereco: endereco, data: dataAcao, orgao: orgaoNome, totalAtendimentos: totalManual };
+            
+            document.getElementById('ata-social-modal').classList.add('hidden');
+            
+            if (confirm("Deseja VISUALIZAR a Ata antes de baixar?")) {
+                PDFService.previewAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
+            } else {
+                PDFService.generateAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
+            }
+        });
+        
+        document.getElementById('cancel-ata-modal-btn')?.addEventListener('click', () => {
+            document.getElementById('ata-social-modal').classList.add('hidden');
+        });
+        
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.quick-action-toggle') && !e.target.closest('[id^="quick-menu-"]')) {
+                document.querySelectorAll('[id^="quick-menu-"]').forEach(menu => {
+                    menu.classList.add('hidden');
+                });
+            }
+        });
+
+        document.querySelectorAll('input[name="is-scheduled"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const wrapper = document.getElementById('scheduled-time-wrapper');
+                if (e.target.value === 'yes') wrapper.classList.remove('hidden');
+                else wrapper.classList.add('hidden');
+            });
+        });
+
+        document.querySelectorAll('input[name="has-arrived"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const wrapper = document.getElementById('arrival-time-wrapper');
+                if (e.target.value === 'yes') {
+                    wrapper.classList.remove('hidden');
+                    document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
+                } else {
+                    wrapper.classList.add('hidden');
+                }
+            });
+        });
+
+        document.getElementById('tab-agendamento')?.addEventListener('click', () => {
+            document.getElementById('scheduled-time-wrapper').classList.add('hidden');
+            document.getElementById('arrival-time-wrapper').classList.add('hidden');
+            document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
+            document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
+        });
+
+        document.getElementById('tab-avulso')?.addEventListener('click', () => {
+            document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
+            document.getElementById('arrival-time-wrapper').classList.remove('hidden');
+            document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
+            document.getElementById('scheduled-time-wrapper').classList.add('hidden');
+        });
+
+        document.getElementById('create-pauta-btn')?.addEventListener('click', () => {
+            document.getElementById('pauta-type-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('cancel-pauta-type-btn')?.addEventListener('click', () => {
+            document.getElementById('pauta-type-modal').classList.add('hidden');
+        });
+
+        document.querySelectorAll('.pauta-type-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const type = e.currentTarget.dataset.type;
+                document.getElementById('pauta-type-modal').classList.add('hidden');
+                
+                const createModal = document.getElementById('create-pauta-modal');
+                createModal.dataset.pautaType = type;
+                
+                const roomConfig = document.getElementById('room-config-container');
+                if (type === 'multisala') {
+                    roomConfig.classList.remove('hidden');
+                    this.customRoomsList = [];
+                    this.renderCustomRooms();
+                } else {
+                    roomConfig.classList.add('hidden');
+                }
+                
+                createModal.classList.remove('hidden');
+            });
+        });
+
+        document.getElementById('add-custom-room-btn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const input = document.getElementById('custom-room-input');
+            const name = input.value.trim();
+            if (name) {
+                if (!this.customRoomsList.includes(name)) {
+                    this.customRoomsList.push(name);
+                    this.renderCustomRooms();
+                    input.value = '';
+                    input.focus();
+                } else {
+                    showNotification("Este local já foi adicionado.", "error");
+                }
+            }
+        });
+
+        document.getElementById('custom-rooms-list')?.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-room-btn')) {
+                const index = e.target.dataset.index;
+                this.customRoomsList.splice(index, 1);
+                this.renderCustomRooms();
+            }
+        });
+
+        document.getElementById('cancel-create-pauta-btn')?.addEventListener('click', () => {
+            document.getElementById('create-pauta-modal').classList.add('hidden');
+        });
+
+        document.getElementById('next-to-ordem-btn')?.addEventListener('click', () => {
+            const pautaName = document.getElementById('create-pauta-name-input').value.trim();
+            if (!pautaName) {
+                showNotification("O nome da pauta não pode ser vazio.", "error");
+                return;
+            }
+            document.getElementById('create-pauta-modal').classList.add('hidden');
+            document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('cancel-ordem-btn')?.addEventListener('click', () => {
+            document.getElementById('ordem-atendimento-modal').classList.add('hidden');
+            document.getElementById('create-pauta-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('next-to-delegation-btn')?.addEventListener('click', () => {
+            document.getElementById('ordem-atendimento-modal').classList.add('hidden');
+            document.getElementById('delegation-flow-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('cancel-delegation-flow-btn')?.addEventListener('click', () => {
+            document.getElementById('delegation-flow-modal').classList.add('hidden');
+            document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('confirm-create-pauta-final-btn')?.addEventListener('click', async () => {
+            const pautaName = document.getElementById('create-pauta-name-input').value.trim();
+            const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
+            const orgaoId = document.getElementById('select-orgao-integracao').value; 
+            const user = this.auth.currentUser;
+            
+            if (!pautaName) {
+                showNotification("O nome da pauta não pode ser vazio.", "error");
+                return;
+            }
+        
+            try {
+                const novaPautaData = {
+                    name: pautaName,
+                    type: pautaType,
+                    owner: user.uid,
+                    members: [user.uid],
+                    memberEmails: [user.email],
+                    isClosed: false,
+                    createdAt: new Date().toISOString(),
+                    ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || 'padrao'
+                };
+
+                if (pautaType === 'multisala') {
+                    novaPautaData.customRooms = this.customRoomsList;
+                    novaPautaData.rooms = this.customRoomsList; // Consistência
+                }
+
+                const pautaRef = await addDoc(collection(this.db, "pautas"), novaPautaData);
+        
+                if (orgaoId) {
+                    showNotification("Sincronizando com base de dados Solar/Verde...", "info");
+                    const assistidosOficiais = await ApiIntegration.buscarDadosPautaOficial(orgaoId);
+                    
+                    for (const ast of assistidosOficiais) {
+                        await PautaService.addAssistedManual(this, {
+                            ...ast,
+                            status: 'pauta',
+                            externalId: `INT-${orgaoId}-${Date.now()}-${Math.random()}` 
+                        });
+                    }
+                    showNotification(`Integração concluída: ${assistidosOficiais.length} assistidos importados.`, 'success');
+                } else {
+                    showNotification("Pauta criada com sucesso!", 'success');
+                }
+        
+                document.getElementById('create-pauta-name-input').value = '';
+                document.getElementById('select-orgao-integracao').value = '';
+                document.getElementById('delegation-flow-modal').classList.add('hidden');
+                
+                this.showPautaSelectionScreen();
+                
+            } catch (error) {
+                console.error("Erro ao criar pauta:", error);
+                showNotification("Erro ao criar pauta.", "error");
+            }
+        });
+
+        document.getElementById('back-to-pautas-btn')?.addEventListener('click', () => {
+            if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
+            if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
+            this.currentPauta = null;
+            this.allAssisted = [];
+            this.colaboradores = [];
+            UIService.showScreen('pautaSelection');
+            if (this.auth?.currentUser) {
+                this.showPautaSelectionScreen();
+            }
+        });
+
+        document.getElementById('tab-agendamento')?.addEventListener('click', () => {
+            UIService.switchTab('agendamento', this);
+        });
+        
+        document.getElementById('tab-avulso')?.addEventListener('click', () => {
+            UIService.switchTab('avulso', this);
+        });
+
+        document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
+        
+        document.getElementById('share-pauta-btn')?.addEventListener('click', () => {
+            const modal = document.getElementById('share-modal');
+            if (modal) {
+                const toggle = document.getElementById('share-toggle');
+                const maskCheck = document.getElementById('mask-names-check');
+                
+                if (this.currentPautaData) {
+                    toggle.checked = this.currentPautaData.isPublic || false;
+                    maskCheck.checked = this.currentPautaData.maskNames || false;
+                    
+                    const statusText = document.getElementById('share-status-text');
+                    const linkContainer = document.getElementById('share-link-container');
+                    
+                    statusText.textContent = toggle.checked ? "Público" : "Privado";
+                    
+                    if (toggle.checked) {
+                        linkContainer.classList.remove('hidden');
+                        const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                        const link = `${baseUrl}/acompanhamento.html?id=${this.currentPauta.id}`;
+                        document.getElementById('share-link-input').value = link;
+                        document.getElementById('open-external-btn').href = link;
+                    } else {
+                        linkContainer.classList.add('hidden');
+                    }
+                }
+                modal.classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('share-toggle')?.addEventListener('change', async (e) => {
+            const isPublic = e.target.checked;
+            const statusText = document.getElementById('share-status-text');
+            const linkContainer = document.getElementById('share-link-container');
+            
+            statusText.textContent = isPublic ? "Público" : "Privado";
+            
+            if (isPublic) {
+                linkContainer.classList.remove('hidden');
+                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                const link = `${baseUrl}/acompanhamento.html?id=${this.currentPauta.id}`;
+                document.getElementById('share-link-input').value = link;
+                document.getElementById('open-external-btn').href = link;
+            } else {
+                linkContainer.classList.add('hidden');
+            }
+            
+            try {
+                const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                await updateDoc(pautaRef, { isPublic: isPublic });
+                this.currentPautaData.isPublic = isPublic;
+                showNotification(isPublic ? "Link público ativado." : "Link público desativado.", "success");
+            } catch (error) {
+                console.error(error);
+                showNotification("Erro ao atualizar status.", "error");
+            }
+        });
+
+        document.getElementById('copy-share-link-btn')?.addEventListener('click', () => {
+            const input = document.getElementById('share-link-input');
+            input.select();
+            navigator.clipboard.writeText(input.value);
+            showNotification("Link copiado!", "info");
+        });
+
+        document.getElementById('mask-names-check')?.addEventListener('change', async (e) => {
+            const mask = e.target.checked;
+            try {
+                const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                await updateDoc(pautaRef, { maskNames: mask });
+                this.currentPautaData.maskNames = mask;
+                showNotification("Configuração de privacidade atualizada.", "success");
+            } catch (error) {
+                showNotification("Erro ao salvar configuração.", "error");
+            }
+        });
+
+        document.getElementById('view-stats-btn')?.addEventListener('click', () => {
+            const modal = document.getElementById('statistics-modal');
+            if (!modal) {
+                showNotification("Modal de estatísticas não encontrado", "error");
+                return;
+            }
+            if (this.allAssisted && this.currentPauta?.name) {
+                if (typeof StatisticsService?.showModal === 'function') {
+                    StatisticsService.showModal(this.allAssisted, this.currentPautaData?.useDelegationFlow, this.currentPauta.name);
+                } else {
+                    showNotification("Erro ao carregar estatísticas", "error");
+                }
+            } else {
+                showNotification("Carregue uma pauta primeiro", "info");
+            }
+        });
+
+        document.getElementById('edit-pauta-name-btn')?.addEventListener('click', () => {
+            document.getElementById('edit-pauta-name-input').value = this.currentPauta?.name || '';
+            document.getElementById('edit-pauta-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('edit-pauta-config-btn')?.addEventListener('click', () => {
+            if (!this.currentPautaData) return;
+            
+            const typeRadios = document.querySelectorAll('input[name="edit-pauta-type"]');
+            typeRadios.forEach(radio => {
+                if (radio.value === this.currentPautaData.type) {
+                    radio.checked = true;
+                }
+            });
+            
+            const ordemRadios = document.querySelectorAll('input[name="edit-ordem"]');
+            ordemRadios.forEach(radio => {
+                if (radio.value === this.currentPautaData.ordemAtendimento) {
+                    radio.checked = true;
+                }
+            });
+            
+            const delegationRadios = document.querySelectorAll('input[name="edit-delegation"]');
+            delegationRadios.forEach(radio => {
+                const value = radio.value === 'true' ? true : false;
+                if (value === this.currentPautaData.useDelegationFlow) {
+                    radio.checked = true;
+                }
+            });
+            
+            const distCheck = document.getElementById('edit-use-distribution');
+            if (distCheck) {
+                distCheck.checked = this.currentPautaData.useDistributionFlow || false;
+            }
+            
+            document.getElementById('edit-pauta-config-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('confirm-edit-pauta-config-btn')?.addEventListener('click', async () => {
+            const newType = document.querySelector('input[name="edit-pauta-type"]:checked')?.value;
+            const newOrdem = document.querySelector('input[name="edit-ordem"]:checked')?.value;
+            const newDelegation = document.querySelector('input[name="edit-delegation"]:checked')?.value === 'true';
+            const newDistribution = document.getElementById('edit-use-distribution')?.checked || false;
+            
+            if (!newType || !newOrdem) {
+                showNotification("Selecione todas as opções", "error");
+                return;
+            }
+            
+            try {
+                const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                await updateDoc(pautaRef, {
+                    type: newType,
+                    ordemAtendimento: newOrdem,
+                    useDelegationFlow: newDelegation,
+                    useDistributionFlow: newDistribution
+                });
+                
+                this.currentPautaData.type = newType;
+                this.currentPautaData.ordemAtendimento = newOrdem;
+                this.currentPautaData.useDelegationFlow = newDelegation;
+                this.currentPautaData.useDistributionFlow = newDistribution;
+                
+                this.loadColumnPreferences();
+                
+                showNotification("Configurações atualizadas com sucesso!", "success");
+                document.getElementById('edit-pauta-config-modal').classList.add('hidden');
+                
+            } catch (error) {
+                console.error("Erro ao atualizar configurações:", error);
+                showNotification("Erro ao atualizar configurações", "error");
+            }
+        });
+
+        document.getElementById('cancel-edit-pauta-config-btn')?.addEventListener('click', () => {
+            document.getElementById('edit-pauta-config-modal').classList.add('hidden');
+        });
+
+        document.getElementById('manage-members-btn')?.addEventListener('click', async () => {
+            if (typeof ModalService?.openMembersModal === 'function') {
+                await ModalService.openMembersModal(this);
+            } else {
+                showNotification("Erro ao abrir gerenciar membros", "error");
+            }
+        });
+
+        document.getElementById('manage-collaborators-btn')?.addEventListener('click', () => {
+            CollaboratorService.openModal(this);
+        });
+
+        document.getElementById('close-pauta-btn')?.addEventListener('click', () => {
+            document.getElementById('close-modal-title').textContent = 'Fechar Pauta';
+            document.getElementById('close-modal-message').textContent = 'Para fechar esta pauta, confirme sua senha. Nenhum membro poderá fazer alterações até que você a reabra.';
+            document.getElementById('close-pauta-password').value = '';
+            document.getElementById('confirm-close-pauta-btn').textContent = 'Confirmar';
+            document.getElementById('close-pauta-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('reopen-pauta-btn')?.addEventListener('click', () => {
+            document.getElementById('close-modal-title').textContent = 'Reabrir Pauta';
+            document.getElementById('close-modal-message').textContent = 'Para reabrir esta pauta, confirme sua senha.';
+            document.getElementById('close-pauta-password').value = '';
+            document.getElementById('confirm-close-pauta-btn').textContent = 'Reabrir';
+            document.getElementById('close-pauta-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('confirm-close-pauta-btn')?.addEventListener('click', async () => {
+            const password = document.getElementById('close-pauta-password')?.value;
+            const errorDiv = document.getElementById('close-auth-error');
+            if (errorDiv) errorDiv.classList.add('hidden');
+
+            const isReopen = document.getElementById('confirm-close-pauta-btn')?.textContent.includes('Reabrir');
+            const user = this.auth.currentUser;
+            
+            if (!user || user.uid !== this.currentPautaOwnerId) {
+                showNotification("Você não tem permissão para esta ação.", "error");
+                document.getElementById('close-pauta-modal')?.classList.add('hidden');
+                return;
+            }
+
+            try {
+                const credential = EmailAuthProvider.credential(user.email, password);
+                await reauthenticateWithCredential(user, credential);
+                
+                const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                await updateDoc(pautaRef, { isClosed: !isReopen });
+                
+                this.isPautaClosed = !isReopen;
+                UIService.togglePautaLock(this);
+
+                showNotification(`Pauta ${isReopen ? 'reaberta' : 'fechada'} com sucesso.`, 'success', 5000);
+                document.getElementById('close-pauta-modal')?.classList.add('hidden');
+                
+            } catch (error) {
+                if (errorDiv) {
+                    errorDiv.textContent = 'Senha incorreta. Tente novamente.';
+                    errorDiv.classList.remove('hidden');
+                }
+                showNotification("Falha na autenticação.", "error");
+            }
+        });
+
+        document.getElementById('cancel-close-pauta-btn')?.addEventListener('click', () => {
+            document.getElementById('close-pauta-modal')?.classList.add('hidden');
+        });
+
+        document.getElementById('reset-all-btn')?.addEventListener('click', () => {
+            document.getElementById('reset-confirm-modal').classList.remove('hidden');
+        });
+
+        NotesService.setup();
+
+        document.getElementById('add-assisted-btn')?.addEventListener('click', () => {
+            if (typeof PautaService.addAssisted === 'function') {
+                PautaService.addAssisted(this);
+            } else {
+                showNotification("Esta ação requer atualização no código do serviço de pauta.", "warning");
+                const modalAdd = document.getElementById('add-assisted-modal');
+                if (modalAdd) {
+                    modalAdd.classList.remove('hidden');
+                }
+            }
+        });
+
+        document.getElementById('file-upload')?.addEventListener('change', (e) => {
+            PautaService.handleCSVUpload(e, this);
+        });
+
+        document.getElementById('toggle-faltosos-btn')?.addEventListener('click', UIService.toggleFaltosos);
+
+        ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('input', () => {
+                    UIService.renderAssistedLists(this);
+                });
+            }
+        });
+
+        document.getElementById('download-pdf-btn')?.addEventListener('click', () => {
+            const atendidos = this.allAssisted.filter(a => a.status === 'atendido');
+            PDFService.generateAtendidosPDF(this.currentPauta?.name || 'Pauta', atendidos);
+        });
+
+        document.getElementById('download-faltosos-pdf-btn')?.addEventListener('click', () => {
+            const faltosos = this.allAssisted.filter(a => a.status === 'faltoso');
+            if (faltosos.length === 0) {
+                showNotification("Nenhum faltoso registrado para gerar o PDF.", "info");
+                return;
+            }
+            PDFService.generateFaltososPDF(this.currentPauta?.name || 'Pauta', faltosos);
+        });
+
+        document.getElementById('download-collaborators-pdf-modal')?.addEventListener('click', () => {
+            const selectedCols = Array.from(document.querySelectorAll('.pdf-col-check:checked'))
+                .map(cb => cb.value);
+            PDFService.generateCollaboratorsPDF(this.currentPauta?.name || 'Pauta', this.colaboradores, selectedCols);
+        });
+
+        document.getElementById('clear-collaborators-list-modal')?.addEventListener('click', () => {
+            CollaboratorService.clearAll(this);
+        });
+
+        document.getElementById('format-help-link')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('format-help-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('privacy-policy-link')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('privacy-policy-modal').classList.remove('hidden');
+        });
+
+        UIService.setupFooterModals();
+        this.setupSubjectsAutocomplete();
+
+        document.body.addEventListener('click', (e) => {
+            PautaService.handleCardActions(e, this);
+        });
+
+        document.getElementById('collaborator-form-modal')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nome = document.getElementById('collaborator-name-modal')?.value.trim();
+            if (!nome) {
+                showNotification("Nome obrigatório", "error");
+                return;
+            }
+            const data = {
+                nome: nome,
+                cargo: document.getElementById('collaborator-role-modal')?.value,
+                equipe: document.getElementById('collaborator-team-modal')?.value,
+                email: document.getElementById('collaborator-email-modal')?.value || '',
+                telefone: document.getElementById('collaborator-phone-modal')?.value || '',
+                transporte: document.querySelector('input[name="transporte-colaborador"]:checked')?.value || 'Meios Próprios'
+            };
+            await CollaboratorService.saveCollaborator(this, data);
+        });
+        
+        document.querySelectorAll('[id^="cancel-"], [id^="close"]').forEach(btn => {
+            if (btn) {
+                btn.addEventListener('click', (e) => {
+                    const modal = e.target.closest('.fixed');
+                    if (modal) modal.classList.add('hidden');
+                });
+            }
+        });
+
+        document.querySelectorAll('.p-chip').forEach(chip => {
+            chip.addEventListener('click', function(e) {
+                e.preventDefault();
+                this.classList.toggle('selected');
+            });
+        });
+
+        document.getElementById('confirm-priority-reason-btn')?.addEventListener('click', async () => {
+            const selectedChips = Array.from(document.querySelectorAll('.p-chip.selected'))
+                                       .map(chip => chip.dataset.value);
+            const customReason = document.getElementById('priority-reason-input')?.value.trim() || '';
+            
+            let finalReason = selectedChips.join(', ');
+            if (customReason) {
+                finalReason = finalReason ? `${finalReason} | Obs: ${customReason}` : customReason;
+            }
+
+            if (!finalReason) { 
+                showNotification("Selecione uma categoria ou descreva o motivo.", "error"); 
+                return; 
+            }
+
+            if (!window.assistedIdToHandle) {
+                showNotification("ID do assistido não encontrado.", "error");
+                return;
+            }
+
+            await PautaService.updateStatus(
+                this.db,
+                this.currentPauta.id,
+                window.assistedIdToHandle,
+                { priority: 'URGENTE', priorityReason: finalReason },
+                this.currentUserName
+            );
+
+            document.querySelectorAll('.p-chip').forEach(c => c.classList.remove('selected'));
+            document.getElementById('priority-reason-input').value = '';
+            document.getElementById('priority-reason-modal')?.classList.add('hidden');
+            showNotification("Prioridade Ativada!", "success");
+        });
+
+        document.getElementById('cancel-priority-reason-btn')?.addEventListener('click', () => {
+            document.getElementById('priority-reason-modal')?.classList.add('hidden');
+        });
+
+        document.getElementById('back-to-action-selection-btn')?.addEventListener('click', () => {
+            if (typeof window.switchToActionSelectionView === 'function') {
+                window.switchToActionSelectionView();
+            }
+        });
+        
+        document.getElementById('save-checklist-btn')?.addEventListener('click', async () => {
+            const assistedId = window.assistedIdToHandle || window.currentAssistedId;
+            if (!assistedId) {
+                showNotification("Erro: assistido não identificado", "error");
+                return;
+            }
+            
+            const container = document.getElementById('checklist-container');
+            const checkedItems = Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => ({
+                id: cb.id,
+                text: cb.closest('label').querySelector('span').textContent,
+                type: document.querySelector(`input[name="type-${cb.id}"]:checked`)?.value || 'Físico'
+            }));
+
+            const checklistData = {
+                action: window.currentChecklistAction, 
+                checkedIds: checkedItems.map(item => item.id),
+                docTypes: checkedItems.reduce((acc, item) => { acc[item.id] = item.type; return acc; }, {}),
+                reuData: window.getReuDataFromForm ? window.getReuDataFromForm() : {},
+                expenseData: window.getExpenseDataFromForm ? window.getExpenseDataFromForm() : {}
+            };
+
+            try {
+                await updateDoc(doc(this.db, "pautas", this.currentPauta.id, "attendances", assistedId), {
+                    documentChecklist: checklistData,
+                    documentState: 'saved'
+                });
+                showNotification("Checklist salvo com sucesso!", "success");
+            } catch (error) {
+                console.error("Erro ao salvar:", error);
+                showNotification("Erro ao salvar checklist", "error");
+            }
+        });
+
+        document.getElementById('close-assisted-details-modal-btn')?.addEventListener('click', () => {
+            document.getElementById('assisted-details-modal').classList.add('hidden');
+        });
+        
+        document.getElementById('print-checklist-btn')?.addEventListener('click', async () => {
+            showNotification("Gerando PDF...", "info");
+            try {
+                const assistedName = document.getElementById('documents-assisted-name')?.textContent || 'Assistido';
+                const actionTitle = document.getElementById('checklist-title')?.textContent || '';
+
+                const documentosTextos = [];
+                document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
+                    let text = '';
+                    const label = cb.closest('label');
+                    if (label) {
+                        const span = label.querySelector('span:not(.sr-only)');
+                        if (span) text = span.textContent;
+                    }
+                    documentosTextos.push({ id: cb.id, text: (text || cb.id || 'Documento').trim() });
+                });
+
+                const docTypes = {};
+                document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
+                    const typeRadio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
+                    docTypes[cb.id] = typeRadio ? typeRadio.value : 'Fisico';
+                });
+
+                const reu = getReuDataFromForm();
+                const gastos = getExpenseDataFromForm();
+
+                const checklistData = {
+                    checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
+                    docTypes: docTypes,
+                    reuData: reu,
+                    expenseData: gastos
+                };
+
+                const resultado = PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
+                if (resultado) {
+                    showNotification("PDF gerado com sucesso!", "success");
+                } else {
+                    showNotification("Erro ao gerar PDF", "error");
+                }
+            } catch (err) {
+                console.error("Erro PDF:", err);
+                showNotification("Erro ao gerar PDF: " + err.message, "error");
+            }
+        });
+        
+        document.getElementById('reset-checklist-btn')?.addEventListener('click', () => {
+            if (confirm("Deseja mudar de assunto? Isso apagará o checklist atual.")) {
+                if (typeof window.switchToActionSelectionView === 'function') {
+                    window.switchToActionSelectionView();
+                }
+            }
+        });
+        
+        function getReuDataFromForm() {
+            return {
+                checkReuUnico: document.getElementById('check-reu-unico')?.checked || false,
+                nome: document.getElementById('nome-reu')?.value || '',
+                cpf: document.getElementById('cpf-reu')?.value || '',
+                telefone: document.getElementById('telefone-reu')?.value || '',
+                cep: document.getElementById('cep-reu')?.value || '',
+                rua: document.getElementById('rua-reu')?.value || '',
+                numero: document.getElementById('numero-reu')?.value || '',
+                complemento: document.getElementById('complemento-reu')?.value || '',
+                bairro: document.getElementById('bairro-reu')?.value || '',
+                cidade: document.getElementById('cidade-reu')?.value || '',
+                uf: document.getElementById('estado-reu')?.value || '',
+                referencia: document.getElementById('referencia-reu')?.value || '',
+                empresa: document.getElementById('empresa-reu')?.value || '',
+                rua_comercial: document.getElementById('rua-comercial-reu')?.value || '',
+                numero_comercial: document.getElementById('numero-comercial-reu')?.value || '',
+                bairro_comercial: document.getElementById('bairro-comercial-reu')?.value || '',
+                cidade_comercial: document.getElementById('cidade-comercial-reu')?.value || '',
+                uf_comercial: document.getElementById('estado-comercial-reu')?.value || '',
+                cep_comercial: document.getElementById('cep-comercial-reu')?.value || ''
+            };
+        }
+
+        function getExpenseDataFromForm() {
+            return {
+                checkExibirGastos: document.getElementById('check-exibir-gastos')?.checked ?? true,
+                moradia: document.getElementById('expense-moradia')?.value || '',
+                alimentacao: document.getElementById('expense-alimentacao')?.value || '',
+                educacao: document.getElementById('expense-educacao')?.value || '',
+                saude: document.getElementById('expense-saude')?.value || '',
+                vestuario: document.getElementById('expense-vestuario')?.value || '',
+                lazer: document.getElementById('expense-lazer')?.value || '',
+                outras: document.getElementById('expense-outras')?.value || ''
+            };
+        }
+
+        document.getElementById('confirm-attendant-btn')?.addEventListener('click', async () => {
+            const select = document.getElementById('attendant-select');
+            const attendantName = select?.value;
+            const nomeFinal = attendantName || null;
+            const useDist = this.currentPautaData?.useDistributionFlow === true;
+            const novoStatus = useDist ? 'aguardandoDistribuicao' : 'atendido';
+
+            let attendantData = nomeFinal;
+            if (nomeFinal) {
+                const selectedCollab = this.colaboradores?.find(c => c.nome === nomeFinal);
+                if (selectedCollab) {
+                    attendantData = { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe };
+                }
+            }
+
+            await PautaService.updateStatus(
+                this.db,
+                this.currentPauta.id,
+                window.assistedIdToHandle,
+                { status: novoStatus, attendant: attendantData, attendedTime: new Date().toISOString() },
+                this.currentUserName
+            );
+            
+            document.getElementById('attendant-modal')?.classList.add('hidden');
+            showNotification(novoStatus === 'atendido' ? "Atendimento finalizado!" : "Enviado para Distribuição ⚖️", "success");
+        });
+
+        document.getElementById('cancel-attendant-btn')?.addEventListener('click', () => {
+            document.getElementById('attendant-modal')?.classList.add('hidden');
+        });
+
+        document.getElementById('confirm-edit-attendant-btn')?.addEventListener('click', async () => {
+            const select = document.getElementById('edit-attendant-select');
+            const attendantName = select?.value;
+            
+            if (!attendantName) {
+                showNotification("Selecione um profissional", "error");
+                return;
+            }
+            
+            const selectedCollab = this.colaboradores?.find(c => c.nome === attendantName);
+            let attendantData = selectedCollab ? 
+                { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe } : 
+                attendantName;
+
+            await PautaService.updateStatus(
+                this.db,
+                this.currentPauta.id,
+                window.assistedIdToHandle,
+                { attendant: attendantData },
+                this.currentUserName
+            );
+            
+            document.getElementById('edit-attendant-modal')?.classList.add('hidden');
+            showNotification("Atendente atualizado com sucesso!", "success");
+        });
+
+        document.getElementById('cancel-edit-attendant-btn')?.addEventListener('click', () => {
+            document.getElementById('edit-attendant-modal')?.classList.add('hidden');
+        });
+
+        document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
+            const collaboratorId = window.selectedCollaboratorId;
+            const collaboratorName = window.selectedCollaboratorName || null;
+            const acoesRapidas = ['reagendar', 'agendar', 'consulta', 'outros'];
+            const isAcaoRapida = acoesRapidas.includes(window.assistedTipoAcao);
+
+            if (!isAcaoRapida && collaboratorId === undefined) { 
+                showNotification("Selecione um colaborador ou 'Não atribuir'.", "warning");
+                return;
+            }
+
+            if (isAcaoRapida) {
+                const tipoDescricao = window.assistedTipoDescricao || window.assistedTipoAcao || 'Ação rápida';
+                const atendenteFinal = collaboratorName || this.currentUserName;
+
+                await PautaService.updateStatus(
+                    this.db,
+                    this.currentPauta.id,
+                    window.assistedIdToHandle,
+                    {
+                        status: 'atendido',
+                        attendedBy: atendenteFinal,
+                        attendedAt: new Date().toISOString(),
+                        inAttendanceTime: new Date().toISOString(),
+                        isConfirmed: false,
+                        finalizadoPeloColaborador: true,
+                        distributionStatus: 'completed',
+                        tipoAcaoRapida: tipoDescricao,
+                        assignedCollaborator: collaboratorName ? { id: collaboratorId, name: collaboratorName } : null
+                    },
+                    this.currentUserName
+                );
+                showNotification(`${window.assistedNameToHandle} marcado como atendido por ${atendenteFinal} (${tipoDescricao}).`, "success");
+            } else if (window.assistedTipoAcao === 'atender_direto') {
+                const atendenteFinal = collaboratorName || this.currentUserName;
+                await PautaService.finishAttendance(this, window.assistedIdToHandle, atendenteFinal, []);
+                showNotification(`${window.assistedNameToHandle} marcado como atendido por ${atendenteFinal}.`, "success");
+            } else { 
+                let collaboratorData = null;
+                if (collaboratorName) {
+                    collaboratorData = { id: collaboratorId, name: collaboratorName };
+                    showNotification(`${window.assistedNameToHandle} atribuído a ${collaboratorName}.`, "success");
+                } else {
+                    showNotification(`${window.assistedNameToHandle} movido para 'Em Atendimento' sem colaborador atribuído.`, "success");
+                }
+
+                await PautaService.updateStatus(
+                    this.db,
+                    this.currentPauta.id,
+                    window.assistedIdToHandle,
+                    {
+                        status: 'emAtendimento',
+                        assignedCollaborator: collaboratorData,
+                        inAttendanceTime: new Date().toISOString()
+                    },
+                    this.currentUserName
+                );
+                showNotification(`${window.assistedNameToHandle} delegado para ${collaboratorName || 'ninguém (aguardando atribuição)'}.`, "success"); 
+            }
+            
+            document.getElementById('select-collaborator-modal')?.classList.add('hidden');
+            window.assistedIdToHandle = null;
+            window.assistedNameToHandle = null;
+            window.assistedTipoAcao = null;
+            window.assistedTipoDescricao = null;
+            window.selectedCollaboratorId = undefined;
+            window.selectedCollaboratorName = undefined;
+        });
+
+        document.getElementById('cancel-select-collaborator-btn')?.addEventListener('click', () => {
+            document.getElementById('select-collaborator-modal')?.classList.add('hidden');
+            window.selectedCollaboratorId = undefined;
+            window.selectedCollaboratorName = undefined;
+            window.assistedTipoAcao = null;
+            window.assistedTipoDescricao = null;
+        });
+
+        document.getElementById('confirm-arrival-btn')?.addEventListener('click', async () => {
+            const time = document.getElementById('arrival-time-input')?.value;
+            if (!time) {
+                showNotification("Informe o horário", "error");
+                return;
+            }
+            const [hours, minutes] = time.split(':');
+            const arrivalDate = new Date();
+            arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+            const roomSelect = document.getElementById('arrival-room-select');
+            const room = roomSelect && !roomSelect.classList.contains('hidden') ? roomSelect.value : null;
+
+            await PautaService.updateStatus(
+                this.db,
+                this.currentPauta.id,
+                window.assistedIdToHandle,
+                { status: 'aguardando', arrivalTime: arrivalDate.toISOString(), checkInOrder: Date.now(), room: room },
+                this.currentUserName
+            );
+
+            document.getElementById('arrival-modal')?.classList.add('hidden');
+            showNotification("Chegada registrada com sucesso!", "success");
+        });
+
+        document.getElementById('cancel-arrival-btn')?.addEventListener('click', () => {
+            document.getElementById('arrival-modal')?.classList.add('hidden');
+        });
+
+        document.getElementById('confirm-edit-assisted-btn')?.addEventListener('click', async () => {
+            const name = document.getElementById('edit-assisted-name')?.value.trim();
+            if (!name) {
+                showNotification("O nome não pode ficar em branco.", "error");
+                return;
+            }
+            
+            const updatedData = {
+                name: name,
+                cpf: document.getElementById('edit-assisted-cpf')?.value.trim() || '',
+                subject: document.getElementById('edit-assisted-subject')?.value.trim() || '',
+                scheduledTime: document.getElementById('edit-scheduled-time')?.value || null,
+            };
+            
+            const roomSelect = document.getElementById('edit-room-select');
+            if (roomSelect && !roomSelect.parentElement.classList.contains('hidden')) {
+                updatedData.room = roomSelect.value || null;
+            }
+            
+            await PautaService.updateStatus(
+                this.db,
+                this.currentPauta.id,
+                window.assistedIdToHandle,
+                updatedData,
+                this.currentUserName
+            );
+            
+            document.getElementById('edit-assisted-modal')?.classList.add('hidden');
+            showNotification("Dados atualizados com sucesso!", "success");
+        });
+
+        document.getElementById('cancel-edit-assisted-btn')?.addEventListener('click', () => {
+            document.getElementById('edit-assisted-modal')?.classList.add('hidden');
+        });
+
+        document.getElementById('demands-modal-add-demand-btn')?.addEventListener('click', () => {
+            const input = document.getElementById('demands-modal-new-demand-input');
+            const text = input?.value.trim();
+            if (text) {
+                const container = document.getElementById('demands-modal-list-container');
+                if (container) {
+                    if (container.querySelector('p.text-gray-500')) {
+                        container.innerHTML = '';
+                    }
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between items-center p-2 bg-white rounded-md';
+                    li.innerHTML = `<span>${escapeHTML(text)}</span><button class="remove-demand-item-btn text-red-500 text-xs">Remover</button>`;
+                    container.appendChild(li);
+                    input.value = '';
+                }
+            }
+        });
+
+        document.getElementById('demands-modal-list-container')?.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-demand-item-btn')) {
+                const li = e.target.closest('li');
+                if (li) li.remove();
+                
+                const container = document.getElementById('demands-modal-list-container');
+                if (container && container.children.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
+                }
+            }
+        });
+
+        document.getElementById('save-demands-btn')?.addEventListener('click', async () => {
+            const container = document.getElementById('demands-modal-list-container');
+            const items = container?.querySelectorAll('li') || [];
+            const descricoes = Array.from(items).map(li => li.querySelector('span')?.textContent || '');
+            
+            await PautaService.updateStatus(
+                this.db,
+                this.currentPauta.id,
+                window.assistedIdToHandle,
+                { demandas: { quantidade: descricoes.length, descricoes: descricoes } },
+                this.currentUserName
+            );
+            
+            showNotification("Demandas salvas com sucesso!", "success");
+            document.getElementById('demands-modal')?.classList.add('hidden');
+        });
+
+        document.getElementById('cancel-demands-btn')?.addEventListener('click', () => {
+            document.getElementById('demands-modal')?.classList.add('hidden');
+        });
+
+        document.getElementById('close-demands-modal-btn')?.addEventListener('click', () => {
+            document.getElementById('demands-modal')?.classList.add('hidden');
+        });
+
+        document.getElementById('confirm-reset-btn')?.addEventListener('click', async () => {
+            const attendanceCollectionRef = collection(this.db, "pautas", this.currentPauta.id, "attendances");
+            const snapshot = await getDocs(attendanceCollectionRef);
+            
+            if (snapshot.empty) {
+                showNotification("A pauta já está vazia.", "info");
+                document.getElementById('reset-confirm-modal')?.classList.add('hidden');
+                return;
+            }
+            
+            const batch = writeBatch(this.db);
+            snapshot.docs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+            
+            showNotification("Pauta zerada com sucesso.", "success");
+            document.getElementById('reset-confirm-modal')?.classList.add('hidden');
+        });
+
+        document.getElementById('cancel-reset-btn')?.addEventListener('click', () => {
+            document.getElementById('reset-confirm-modal')?.classList.add('hidden');
+        });
+
+        document.getElementById('confirm-edit-pauta-btn')?.addEventListener('click', async () => {
+            const newName = document.getElementById('edit-pauta-name-input')?.value.trim();
+            if (newName && this.currentPauta?.id) {
+                await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { name: newName });
+                document.getElementById('pauta-title').textContent = newName;
+                showNotification("Nome da pauta atualizado.", "success");
+                document.getElementById('edit-pauta-modal')?.classList.add('hidden');
+            } else {
+                showNotification("O nome não pode ser vazio.", "error");
+            }
+        });
+
+        document.getElementById('cancel-edit-pauta-btn')?.addEventListener('click', () => {
+            document.getElementById('edit-pauta-modal')?.classList.add('hidden');
+        });
+
+        document.getElementById('send-delegate-email-btn')?.addEventListener('click', async () => {
+            const emailInput = document.getElementById('collaborator-email-input');
+            const emailDestino = emailInput?.value.trim();
+            
+            if (!emailDestino) {
+                showNotification("Por favor, insira o e-mail.", "error");
+                return;
+            }
+
+            const btn = document.getElementById('send-delegate-email-btn');
+            if (btn) { btn.disabled = true; btn.textContent = "Enviando..."; }
+
+            let nomeColega = window.collaboratorNameForDelegation;
+            if (!nomeColega || nomeColega === "Não informado" || nomeColega === "undefined") {
+                nomeColega = "Colega Colaborador";
+            }
+
+            try {
+                await EmailService.sendDelegationEmail(
+                    emailDestino, nomeColega, window.assistedNameForDelegation, this.currentUserName,
+                    this.currentPauta.id, window.assistedIdForDelegation
+                );
+
+                document.getElementById('delegate-email-modal')?.classList.add('hidden');
+                if (emailInput) emailInput.value = '';
+            } catch (error) {
+                showNotification("Falha no envio do e-mail.", "error");
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = "Enviar E-mail"; }
+            }
+        });
+
+        document.getElementById('cancel-delegate-email-btn')?.addEventListener('click', () => {
+            document.getElementById('delegate-email-modal')?.classList.add('hidden');
+        });
+
+        document.body.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('remove-member-btn')) {
+                const email = e.target.dataset.email;
+                if (confirm(`Remover ${email} da pauta?`)) {
+                    try {
+                        const usersRef = collection(this.db, "users");
+                        const q = query(usersRef, where("email", "==", email));
+                        const querySnapshot = await getDocs(q);
+                        
+                        if (!querySnapshot.empty) {
+                            const userId = querySnapshot.docs[0].id;
+                            const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                            await updateDoc(pautaRef, { members: arrayRemove(userId), memberEmails: arrayRemove(email) });
+                            showNotification(`Membro ${email} removido`, "success");
+                            if (typeof ModalService?.openMembersModal === 'function') {
+                                await ModalService.openMembersModal(this);
+                            }
+                        }
+                    } catch (error) {
+                        showNotification("Erro ao remover membro", "error");
+                    }
+                }
+            }
+        });
+
+        document.getElementById('open-user-preferences-btn')?.addEventListener('click', () => {
+            this.openUserPreferencesModal();
+        });
+
+        document.getElementById('cancel-user-preferences-btn')?.addEventListener('click', () => {
+            document.getElementById('user-preferences-modal').classList.add('hidden');
+        });
+
+        document.getElementById('save-user-preferences-btn')?.addEventListener('click', async () => {
+            await this.saveUserPreferences();
+        });
+
+        const adminModal = document.getElementById('admin-modal');
+        const adminPanelBtnMain = document.getElementById('admin-btn-main'); 
+        const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn'); 
+
+        if (adminPanelBtnPautaSelection && adminModal) {
+            adminPanelBtnPautaSelection.addEventListener('click', () => {
+                adminModal.classList.remove('hidden');
+                this.setupAdminPanel(); 
+            });
+        }
+        
+        if (adminPanelBtnMain && adminModal) {
+            adminPanelBtnMain.addEventListener('click', () => {
+                adminModal.classList.remove('hidden');
+                this.setupAdminPanel();
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            const adminModal = document.getElementById('admin-modal');
+            const adminPanelToggle = document.getElementById('pauta-settings-toggle'); 
+            const adminActionsToggle = document.getElementById('actions-toggle');     
+            const adminPanelBtn = document.getElementById('admin-panel-btn');         
+            const adminBtnMain = document.getElementById('admin-btn-main');           
+
+            if ((adminModal && adminModal.contains(e.target)) ||
+                (adminPanelToggle && adminPanelToggle.contains(e.target)) ||
+                (adminActionsToggle && adminActionsToggle.contains(e.target)) ||
+                (adminPanelBtn && adminPanelBtn.contains(e.target)) ||
+                (adminBtnMain && adminBtnMain.contains(e.target))) {
+                return; 
+            }
+
+            const actionsPanel = document.getElementById('actions-panel');
+            const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
+
+            if (actionsPanel && !actionsPanel.classList.contains('hidden') && !actionsPanel.contains(e.target) && !document.getElementById('actions-toggle')?.contains(e.target)) {
+                actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+            }
+            if (pautaSettingsPanel && !pautaSettingsPanel.classList.contains('hidden') && pautaSettingsToggle && !pautaSettingsToggle.contains(e.target)) {
+                 pautaSettingsPanel.classList.add('hidden');
+                 const pautaSettingsArrow = document.getElementById('pauta-settings-arrow'); 
+                 if (pautaSettingsArrow) pautaSettingsArrow.classList.remove('rotate-180');
+            }
+
+            if (adminModal && !adminModal.classList.contains('hidden')) {
+                adminModal.classList.add('hidden');
+                const adminArrow = document.getElementById('actions-arrow'); 
+                if (adminArrow) adminArrow.classList.remove('rotate-180');
+            }
+        });
+
+        this.setupAdminPanel();
+    }
+
+    async loadUserPreferences() {
+        if (!this.auth?.currentUser || !this.db) {
+            this.userPreferences = this.getDefaultNotificationPreferences(); 
+            return;
+        }
+
+        const userDocRef = doc(this.db, "users", this.auth.currentUser.uid);
+        try {
+            const docSnap = await getDoc(userDocRef);
+            if (docSnap.exists()) {
+                const userData = docSnap.data();
+                this.userPreferences = userData.preferences || this.getDefaultNotificationPreferences(); 
+            } else {
+                this.userPreferences = this.getDefaultNotificationPreferences(); 
+            }
+        } catch (error) {
+            this.userPreferences = this.getDefaultNotificationPreferences();
+            showNotification("Erro ao carregar suas preferências.", "error");
+        }
+        this.applyUserPreferences(); 
+    }
+
+    async saveUserPreferences() {
+        if (!this.auth?.currentUser || !this.db) {
+            showNotification("Você precisa estar logado para salvar preferências.", "error");
+            return;
+        }
+
+        this.userPreferences = {
+            enableSoundsSuccess: document.getElementById('pref-enable-sounds-success')?.checked || false,
+            enableSoundsError: document.getElementById('pref-enable-sounds-error')?.checked || false,
+            enableSoundsInfo: document.getElementById('pref-enable-sounds-info')?.checked || false,
+            enableSoundsWarning: document.getElementById('pref-enable-sounds-warning')?.checked || false,
+            showToastsSuccess: document.getElementById('pref-show-toasts-success')?.checked || false,
+            showToastsError: document.getElementById('pref-show-toasts-error')?.checked || false,
+            showToastsInfo: document.getElementById('pref-show-toasts-info')?.checked || false,
+            showToastsWarning: document.getElementById('pref-show-toasts-warning')?.checked || false,
+        };
+
+        const userDocRef = doc(this.db, "users", this.auth.currentUser.uid);
+        try {
+            await updateDoc(userDocRef, {
+                preferences: this.userPreferences,
+                lastPreferenceUpdate: new Date().toISOString()
+            }, { merge: true });
+            
+            this.applyUserPreferences();
+            document.getElementById('user-preferences-modal').classList.add('hidden');
+            showNotification("Preferências salvas com sucesso!", 'success');
+        } catch (error) {
+            showNotification("Erro ao salvar suas preferências.", "error");
+        }
+    }
+
+    async openUserPreferencesModal() {
+        if (!this.auth?.currentUser) {
+            showNotification("Você precisa estar logado para ver suas preferências.", "error");
+            return;
+        }
+
+        const nameInput = document.getElementById('pref-user-name');
+        if (nameInput) nameInput.value = this.currentUserName || 'Não informado';
+        
+        const emailInput = document.getElementById('pref-user-email');
+        if (emailInput) emailInput.value = this.auth.currentUser.email || 'Não informado';
+
+        await this.loadUserPreferences(); 
+
+        const setChecked = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.checked = value;
+        };
+
+        setChecked('pref-enable-sounds-success', this.userPreferences.enableSoundsSuccess || false);
+        setChecked('pref-enable-sounds-error', this.userPreferences.enableSoundsError || false);
+        setChecked('pref-enable-sounds-info', this.userPreferences.enableSoundsInfo || false);
+        setChecked('pref-enable-sounds-warning', this.userPreferences.enableSoundsWarning || false);
+
+        setChecked('pref-show-toasts-success', this.userPreferences.showToastsSuccess || false);
+        setChecked('pref-show-toasts-error', this.userPreferences.showToastsError || false);
+        setChecked('pref-show-toasts-info', this.userPreferences.showToastsInfo || false);
+        setChecked('pref-show-toasts-warning', this.userPreferences.showToastsWarning || false);
+
+        document.getElementById('user-preferences-modal')?.classList.remove('hidden');
+    }
+
+    applyUserPreferences() {
+        console.log("⚙️ Aplicando preferências do usuário:", this.userPreferences);
+    }
+
+    getDefaultNotificationPreferences() {
+        return {
+            enableSoundsSuccess: true, enableSoundsError: true, enableSoundsInfo: true, enableSoundsWarning: true,
+            showToastsSuccess: true, showToastsError: true, showToastsInfo: true, showToastsWarning: true,
+        };
+    }
+
+    saveColumnPreferences() {
+        const preferences = {
+            showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
+            showDistribuicao: document.getElementById('toggle-distribuicao')?.checked || false,
+            showFaltosos: document.getElementById('toggle-faltosos')?.checked || false,
+        };
+        localStorage.setItem('sigap_column_preferences', JSON.stringify(preferences));
+        this.applyColumnPreferences(preferences);
+    }
+
+    loadColumnPreferences() {
+        const savedPreferences = localStorage.getItem('sigap_column_preferences');
+        let preferences = { showEmAtendimento: true, showDistribuicao: true, showFaltosos: false };
+        if (savedPreferences) preferences = JSON.parse(savedPreferences);
+
+        const chkEmAtendimento = document.getElementById('toggle-em-atendimento');
+        const chkDistribuicao = document.getElementById('toggle-distribuicao');
+        const chkFaltosos = document.getElementById('toggle-faltosos');
+        
+        if(chkEmAtendimento) chkEmAtendimento.checked = preferences.showEmAtendimento;
+        if(chkDistribuicao) chkDistribuicao.checked = preferences.showDistribuicao;
+        if(chkFaltosos) chkFaltosos.checked = preferences.showFaltosos;
+        
+        this.applyColumnPreferences(preferences);
+    }
+
+    applyColumnPreferences(preferences) {
+        const pautaType = this.currentPautaData?.type;
+        const useDelegationFlow = this.currentPautaData?.useDelegationFlow;
+        const useDistributionFlow = this.currentPautaData?.useDistributionFlow;
+
+        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
+        const distribuicaoColumn = document.getElementById('distribuicao-column');
+        const faltososColumn = document.getElementById('faltosos-column');
+
+        if (emAtendimentoColumn) {
+            if (useDelegationFlow && preferences.showEmAtendimento) emAtendimentoColumn.classList.remove('hidden');
+            else emAtendimentoColumn.classList.add('hidden');
+        }
+
+        if (distribuicaoColumn) {
+            if (useDistributionFlow && preferences.showDistribuicao) distribuicaoColumn.classList.remove('hidden');
+            else distribuicaoColumn.classList.add('hidden');
+        }
+        
+        if (faltososColumn) {
+            const pautaColumn = document.getElementById('pauta-column');
+            if (pautaType === 'agendado' && preferences.showFaltosos && pautaColumn && !pautaColumn.classList.contains('hidden')) {
+                 faltososColumn.classList.remove('hidden');
+            } else {
+                faltososColumn.classList.add('hidden');
+            }
+        }
+    }
+
+    renderCustomRooms() {
+        const list = document.getElementById('custom-rooms-list');
+        const noRoomsMsg = document.getElementById('no-rooms-msg');
+        if (!list || !noRoomsMsg) return;
+        
+        list.innerHTML = '';
+
+        if (this.customRoomsList.length === 0) {
+            noRoomsMsg.classList.remove('hidden');
+        } else {
+            noRoomsMsg.classList.add('hidden');
+            this.customRoomsList.forEach((room, index) => {
+                const li = document.createElement('li');
+                li.className = "flex justify-between items-center bg-white border p-2 rounded";
+                li.innerHTML = `<span>🏢 ${escapeHTML(room)}</span><button class="remove-room-btn text-red-500" data-index="${index}">Remover</button>`;
+                list.appendChild(li);
+            });
+        }
+    }
+
+    setupSubjectsAutocomplete() {
+        const datalist = document.getElementById('subjects-list');
+        if (!datalist) return;
+        flatSubjects.forEach(subject => {
+            const option = document.createElement('option');
+            option.value = subject.value;
+            datalist.appendChild(option);
+        });
+
+        const subjectInput = document.getElementById('assisted-subject');
+        const descriptionBox = document.getElementById('subject-description');
+        
+        if (subjectInput) {
+            subjectInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const filtered = flatSubjects.filter(item =>
+                    item.value.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)
+                );
+                datalist.innerHTML = '';
+                filtered.forEach(subject => {
+                    const option = document.createElement('option');
+                    option.value = subject.value;
+                    datalist.appendChild(option);
+                });
+            });
+
+            subjectInput.addEventListener('change', () => {
+                const value = subjectInput.value;
+                let selectedText = value.includes(' > ') ? value.split(' > ').pop() : value;
+                subjectInput.value = selectedText;
+
+                const found = flatSubjects.find(s => s.value === value || s.value.split(' > ').pop() === selectedText);
+                if (found?.description && descriptionBox) {
+                    descriptionBox.textContent = found.description;
+                    descriptionBox.classList.remove('hidden');
+                } else if (descriptionBox) {
+                    descriptionBox.classList.add('hidden');
+                }
+            });
+        }
+
+        document.getElementById('subject-info-btn')?.addEventListener('click', () => {
+            const value = subjectInput?.value || '';
+            const found = flatSubjects.find(s => s.value === value || s.value.split(' > ').pop() === value);
+            if (found?.description && descriptionBox) {
+                descriptionBox.textContent = found.description;
+                descriptionBox.classList.toggle('hidden');
+            } else if (descriptionBox) {
+                descriptionBox.textContent = 'Selecione um assunto válido.';
+                descriptionBox.classList.remove('hidden');
+            }
+        });
+    }
+
+    setupAdminPanel() {
+        const btnAdmin = document.getElementById('admin-panel-btn');
+        const adminModal = document.getElementById('admin-modal');
+        if (btnAdmin && adminModal) {
+            loadUsersList(this.db);
+            populateUserFilter(this.db);
+        }
+
+        document.getElementById('max-admin-btn')?.addEventListener('click', () => {
+            const window = document.getElementById('admin-window');
+            if (window) {
+                window.classList.toggle('max-w-4xl');
+                window.classList.toggle('max-w-none');
+                window.classList.toggle('rounded-lg');
+            }
+        });
+
+        document.getElementById('min-admin-btn')?.addEventListener('click', () => {
+            document.getElementById('admin-content-area')?.classList.toggle('hidden');
+        });
+
+        document.getElementById('close-admin-modal-btn')?.addEventListener('click', () => {
+            if (adminModal) adminModal.classList.add('hidden');
+        });
+
+        document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
+            cleanupOldData(this.db);
+        });
+
+        document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('view-audit-logs-btn');
+            const originalText = btn.textContent;
+            btn.textContent = "Carregando...";
+            btn.disabled = true;
+            try {
+                await loadAuditLogs(this.db);
+            } catch (error) {
+                showNotification("Erro ao carregar logs de auditoria", "error");
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
+            exportAuditLogsPDF(this.db);
+        });
+
+        document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
+            loadDashboardData(this.db);
+        });
+    }
+
+    async loadPauta(pautaId, pautaName, pautaType) {
+        try {
+            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
+            if (pautaDoc.exists()) {
+                const pautaData = pautaDoc.data();
+                if (pautaData.createdAt) {
+                    const creationDate = new Date(pautaData.createdAt);
+                    const expirationDate = new Date(creationDate);
+                    expirationDate.setDate(creationDate.getDate() + 7);
+                    if (new Date() > expirationDate) {
+                        showNotification("Esta pauta expirou e não pode mais ser acessada.", "error");
+                        return;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Erro ao verificar expiração:", error);
+        }
+
+        this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
+        document.getElementById('pauta-title').textContent = pautaName;
+
+        localStorage.setItem('lastPautaId', pautaId);
+        localStorage.setItem('lastPautaType', pautaType);
+
+        try {
+            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
+            if (pautaDoc.exists()) {
+                this.currentPautaData = pautaDoc.data();
+                this.currentPautaOwnerId = this.currentPautaData.owner;
+                this.isPautaClosed = this.currentPautaData.isClosed || false;
+                
+                if (this.currentPautaData.type === 'multisala' && this.currentPautaData.customRooms) {
+                    this.customRoomsList = this.currentPautaData.customRooms;
+                } else if (this.currentPautaData.type === 'multisala' && this.currentPautaData.rooms) {
+                    this.customRoomsList = this.currentPautaData.rooms;
+                } else {
+                    this.customRoomsList = [];
+                }
+
+                UIService.togglePautaLock(this);
+                this.loadColumnPreferences();
+                this.applyRoleBasedUI();
+                
+                const btnManageRooms = document.getElementById('btn-manage-rooms');
+                if (btnManageRooms) {
+                    if (this.currentPautaData.type === 'multisala') {
+                        btnManageRooms.classList.remove('hidden');
+                    } else {
+                        btnManageRooms.classList.add('hidden');
+                    }
+                }
+
+                if (typeof PautaService.populateRoomSelects === 'function') {
+                    PautaService.populateRoomSelects(this);
+                }
+            }
+
+            this.setupRealtimeListener(pautaId);
+            
+            if (typeof CollaboratorService?.setupListener === 'function') {
+                CollaboratorService.setupListener(this, pautaId);
+            }
+            
+            UIService.showScreen('app');
+        } catch (error) {
+            console.error("Erro ao carregar pauta:", error);
+            showNotification("Erro ao carregar pauta", "error");
+        }
+    }
+
+    async showPautaSelectionScreen() {
+        UIService.showScreen('pautaSelection');
+        this.currentPautaFilter = this.currentPautaFilter || 'all';
+        UIService.renderPautaFilters('filters-container', this.currentPautaFilter, async (filter) => {
+            this.currentPautaFilter = filter;
+            await this.loadPautasWithFilter();
+        }, this);
+        await this.loadPautasWithFilter();
+        this.loadColumnPreferences();
+    }
+
+    async loadPautasWithFilter() {
+        const user = this.auth.currentUser;
+        if (!user) return;
+        const pautasList = document.getElementById('pautas-list');
+        if (!pautasList) return;
+        pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas...</p>';
+    
+        try {
+            const q = query(
+                collection(this.db, "pautas"),
+                where("members", "array-contains", user.uid)
+            );
+            const snapshot = await getDocs(q);
+            let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            const filtrosAdicionais = {};
+            if (this.currentPautaFilter === 'periodo') {
+                filtrosAdicionais.dataInicial = document.getElementById('filter-data-inicial')?.value;
+                filtrosAdicionais.dataFinal = document.getElementById('filter-data-final')?.value;
+                filtrosAdicionais.tipo = document.getElementById('filter-tipo-pauta')?.value;
+            }
+            
+            const filteredPautas = PautaService.filterPautas(pautas, this.currentPautaFilter, user.uid, user.email, filtrosAdicionais);
+            
+            // CORREÇÃO CRÍTICA AQUI: A renderização acontece pelo UIService
+            UIService.renderPautaCards(filteredPautas, user.uid, user.email, this);
+            
+        } catch (error) {
+            console.error("Erro ao carregar pautas:", error);
+            if (pautasList) pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>';
+        }
+    }
+
+    async deletePauta(pautaId, pautaName) {
+        if (!this.db || !this.auth) return;
+        try {
+            const success = await PautaService.deletePauta(this.db, this.auth, pautaId, pautaName, this.currentUserName || 'Sistema');
+            if (success) {
+                playSound('success');
+                await this.loadPautasWithFilter();
+            }
+        } catch (error) {
+            showNotification("Erro ao deletar pauta: " + error.message, "error");
+        }
+    }
+
+    refreshAssistedList() {
+        if (!this.unsubscribeFromAttendances) this.loadAssistedList();
+    }
+    
+    async loadAssistedList() {
+        if (!this.currentPauta?.id) return;
+        try {
+            const attendanceRef = collection(this.db, "pautas", this.currentPauta.id, "attendances");
+            const snapshot = await getDocs(attendanceRef);
+            this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            UIService.renderAssistedLists(this);
+            setTimeout(() => { if (typeof PautaService.injectRoomSearches === 'function') PautaService.injectRoomSearches(this); }, 150);
+        } catch (error) {}
+    }
+
+    setupRealtimeListener(pautaId) {
+        if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
+        const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
+        this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
+            this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            UIService.renderAssistedLists(this);
+            setTimeout(() => { if (typeof PautaService.injectRoomSearches === 'function') PautaService.injectRoomSearches(this); }, 150);
+        }, (error) => {
+            showNotification("Erro ao carregar dados", "error");
+        });
+    }
+
+    applyRoleBasedUI() {
+        const currentUser = this.currentUser;
+        const currentUserRole = currentUser?.role; 
+        const isAuthenticated = this.auth?.currentUser != null;
+        const isUserApproved = currentUser?.status === 'approved'; 
+        
+        const adminPanelBtnMain = document.getElementById('admin-btn-main');
+        const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
+        const canAccessAdminPanel = (currentUserRole === 'admin' || currentUserRole === 'superadmin') && isAuthenticated && isUserApproved;
+        
+        if (adminPanelBtnMain) adminPanelBtnMain.classList.toggle('hidden', !canAccessAdminPanel);
+        if (adminPanelBtnPautaSelection) adminPanelBtnPautaSelection.classList.toggle('hidden', !canAccessAdminPanel);
+
+        const closePautaBtn = document.getElementById('close-pauta-btn');
+        const reopenPautaBtn = document.getElementById('reopen-pauta-btn');
+        const resetAllBtn = document.getElementById('reset-all-btn');
+        const manageMembersBtn = document.getElementById('manage-members-btn');
+        const manageCollaboratorsBtn = document.getElementById('manage-collaborators-btn');
+        const viewStatsBtn = document.getElementById('view-stats-btn');
+
+        const canManagePauta = (isUserApproved && (currentUserRole === 'user' || currentUserRole === 'apoio')) || currentUserRole === 'admin' || currentUserRole === 'superadmin';
+        
+        if (closePautaBtn) closePautaBtn.classList.toggle('hidden', !canManagePauta);
+        if (reopenPautaBtn) reopenPautaBtn.classList.toggle('hidden', !canManagePauta);
+        if (resetAllBtn) resetAllBtn.classList.toggle('hidden', !canManagePauta);
+        if (manageMembersBtn) manageMembersBtn.classList.toggle('hidden', !canManagePauta);
+        if (manageCollaboratorsBtn) manageCollaboratorsBtn.classList.toggle('hidden', !canManagePauta);
+        if (viewStatsBtn) viewStatsBtn.classList.toggle('hidden', !canAccessAdminPanel);
+
+        const isApoio = currentUserRole === 'apoio'; 
+        const addAssistedBtn = document.getElementById('add-assisted-btn');
+        const fileUpload = document.getElementById('file-upload');
+        const btnSyncVerde = document.getElementById('btn-sync-verde');
+
+        if (addAssistedBtn) addAssistedBtn.disabled = !isAuthenticated; 
+        if (fileUpload) fileUpload.disabled = isApoio;
+        if (btnSyncVerde) btnSyncVerde.disabled = isApoio;
+        
+        if (typeof UIService !== 'undefined' && typeof UIService.renderAssistedLists === 'function') {
+            UIService.renderAssistedLists(this); 
+        }
+    }
+}
+
+// ========================================================
+// EXPORTS ADICIONAIS E GLOBAIS
+// ========================================================
+window.showNotification = showNotification;
+window.openDetailsModal = openDetailsModal;
+
+window.switchToChecklistView = function() {
+    document.getElementById('document-action-selection')?.classList.add('hidden');
+    document.getElementById('document-checklist-view')?.classList.remove('hidden');
+    document.getElementById('document-checklist-view-header')?.classList.remove('hidden');
+    document.getElementById('checklist-search-container')?.classList.remove('hidden');
 };
+
+window.switchToActionSelectionView = function() {
+    document.getElementById('document-checklist-view')?.classList.add('hidden');
+    document.getElementById('document-action-selection')?.classList.remove('hidden');
+    document.getElementById('document-checklist-view-header')?.classList.add('hidden');
+    document.getElementById('checklist-search-container')?.classList.add('hidden');
+};
+
+window.sortColaboradores = function(criterio) {
+    if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.sortColaboradores === 'function') {
+        CollaboratorService.sortColaboradores(window.app, criterio);
+    } else {
+        if (!window.app || !window.app.colaboradores) return;
+        
+        window._sortColabDir = window._sortColabDir === 'asc' ? 'desc' : 'asc';
+        const direction = window._sortColabDir === 'asc' ? 1 : -1;
+        
+        window.app.colaboradores.sort((a, b) => {
+            let valA = (a[criterio] || '').toString().toLowerCase();
+            let valB = (b[criterio] || '').toString().toLowerCase();
+            if (valA < valB) return -1 * direction;
+            if (valA > valB) return 1 * direction;
+            return 0;
+        });
+        
+        if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.renderModalList === 'function') {
+            CollaboratorService.renderModalList(window.app);
+        } else if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.updateList === 'function') {
+            CollaboratorService.updateList(window.app);
+        }
+    }
+};
+
+window.app = new SIGAPApp();
+
+setTimeout(() => {
+    if (window.app && typeof window.app.deletePauta === 'function') {
+        window.app.deletePauta = window.app.deletePauta.bind(window.app);
+    }
+}, 500);
+
+document.addEventListener('blur', async (e) => {
+    if (e.target.id === 'cep-reu') {
+        const cep = e.target.value.replace(/\D/g, '');
+        if (cep.length === 8) {
+            try {
+                const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                const data = await response.json();
+                if (!data.erro) {
+                    document.getElementById('rua-reu').value = data.logradouro || '';
+                    document.getElementById('bairro-reu').value = data.bairro || '';
+                    document.getElementById('cidade-reu').value = data.localidade || '';
+                    document.getElementById('estado-reu').value = data.uf || '';
+                } else {
+                    showNotification("CEP não encontrado", "error");
+                }
+            } catch (error) {
+                showNotification("Erro ao buscar CEP", "error");
+            }
+        }
+    }
+}, true);
+
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleBtn = document.getElementById('toggle-logic-btn-padrao');
+    const content = document.getElementById('logic-explanation-padrao-content');
+    
+    if (toggleBtn && content) {
+        toggleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            content.classList.toggle('hidden');
+            if (content.classList.contains('hidden')) {
+                toggleBtn.textContent = 'Por que esta ordem é a mais justa? (Clique para expandir)';
+            } else {
+                toggleBtn.textContent = 'Por que esta ordem é a mais justa? (Clique para recolher)';
+            }
+        });
+    }
+});
