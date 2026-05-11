@@ -21,7 +21,6 @@ export const UIService = {
             return;
         }
         
-        // Verificar se os elementos de filtro de data já existem
         let dateFiltersHTML = '';
         if (activeFilter === 'periodo') {
             dateFiltersHTML = `
@@ -76,7 +75,6 @@ export const UIService = {
             ${dateFiltersHTML}
         `;
         
-        // Adicionar eventos aos botões
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const filter = btn.dataset.filter;
@@ -84,7 +82,6 @@ export const UIService = {
             });
         });
         
-        // Adicionar evento ao botão de aplicar filtro de período
         const btnAplicar = document.getElementById('aplicar-filtro-periodo');
         if (btnAplicar) {
             btnAplicar.addEventListener('click', () => {
@@ -358,23 +355,45 @@ export const UIService = {
         };
     },
 
+    // OMNI-SEARCH - Agora pesquisa Horário, Demandas, Salas e Atendentes dinamicamente!
     searchFilter(assisted, term) {
         if (!term) return true;
         
+        const termLower = normalizeText(term);
+
         const arrivalTimeFormatted = assisted.arrivalTime ? 
             new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
         
-        const attendantName = (typeof assisted.attendant === 'object' && assisted.attendant !== null) 
-                              ? assisted.attendant.name || assisted.attendant.nome || '' 
-                              : assisted.attendant || '';
+        const attendedTimeFormatted = assisted.attendedTime ? 
+            new Date(assisted.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
 
-        return normalizeText(assisted.name).includes(term) ||
-               (assisted.cpf && normalizeText(assisted.cpf).includes(term)) ||
-               normalizeText(assisted.subject).includes(term) ||
-               (assisted.scheduledTime && assisted.scheduledTime.includes(term)) ||
-               (arrivalTimeFormatted && arrivalTimeFormatted.includes(term)) ||
-               (attendantName && normalizeText(attendantName).includes(term)) ||
-               (assisted.assignedCollaborator?.name && normalizeText(assisted.assignedCollaborator.name).includes(term));
+        const inAttendanceTimeFormatted = assisted.inAttendanceTime ? 
+            new Date(assisted.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+
+        // Consolida todas as variações de nomes de quem atendeu para a pesquisa
+        let attendantName = '';
+        if (assisted.assignedCollaborator?.name) attendantName += ' ' + assisted.assignedCollaborator.name;
+        if (assisted.attendedBy) attendantName += ' ' + (typeof assisted.attendedBy === 'object' ? (assisted.attendedBy.nome || assisted.attendedBy.name) : assisted.attendedBy);
+        if (assisted.attendant) attendantName += ' ' + (typeof assisted.attendant === 'object' ? (assisted.attendant.nome || assisted.attendant.name) : assisted.attendant);
+
+        // Permite pesquisar por uma demanda que foi cadastrada via modal
+        const demandsText = assisted.demandas?.descricoes ? assisted.demandas.descricoes.join(' ') : '';
+        
+        // Juntamos absolutamente TUDO em um super texto para o filtro testar
+        const searchableString = normalizeText(`
+            ${assisted.name || ''} 
+            ${assisted.cpf || ''} 
+            ${assisted.subject || ''} 
+            ${assisted.scheduledTime || ''} 
+            ${arrivalTimeFormatted} 
+            ${attendedTimeFormatted}
+            ${inAttendanceTimeFormatted}
+            ${attendantName} 
+            ${demandsText}
+            ${assisted.room || ''}
+        `);
+
+        return searchableString.includes(termLower);
     },
 
     updateCounters(lists) {
@@ -1023,104 +1042,99 @@ export const UIService = {
         bindModal('terms-btn-footer', 'terms-modal', ['close-terms-modal-x', 'close-terms-modal-btn']);
     },
 
-renderPautaCards(pautas, userId, userEmail, app) {
-    const container = document.getElementById('pautas-list');
-    if (!container) return;
+    renderPautaCards(pautas, userId, userEmail, app) {
+        const container = document.getElementById('pautas-list');
+        if (!container) return;
 
-    if (!pautas || pautas.length === 0) {
-        container.innerHTML = '<p class="col-span-full text-center py-8 text-gray-500 font-medium">Nenhuma pauta encontrada.</p>';
-        return;
-    }
-
-    container.innerHTML = '';
-    
-    pautas.forEach(pauta => {
-        const isOwner = pauta.owner === userId;
-        const isClosed = pauta.isClosed;
-        
-        // Lógica de Datas
-        let dataCriacaoStr = '---';
-        let dataExpiracaoStr = '';
-        let isExpired = false;
-
-        if (pauta.createdAt) {
-            const creationDate = new Date(pauta.createdAt);
-            dataCriacaoStr = creationDate.toLocaleDateString('pt-BR');
-            
-            const expirationDate = new Date(creationDate);
-            expirationDate.setDate(creationDate.getDate() + 7);
-            dataExpiracaoStr = expirationDate.toLocaleDateString('pt-BR');
-
-            const now = new Date();
-            isExpired = now > expirationDate;
+        if (!pautas || pautas.length === 0) {
+            container.innerHTML = '<p class="col-span-full text-center py-8 text-gray-500 font-medium">Nenhuma pauta encontrada.</p>';
+            return;
         }
 
-        const card = document.createElement('div');
-        // Mantemos o estilo visual de "desativado" apenas com opacidade e grayscale
-        card.className = `relative bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex flex-col justify-between min-h-[220px] ${isExpired ? 'opacity-60 grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer'} ${isClosed ? 'opacity-60' : ''}`;
+        container.innerHTML = '';
         
-        card.innerHTML = `
-            ${isOwner ? `
-            <button class="delete-pauta-btn absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors z-20">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                </svg>
-            </button>` : ''}
-
-            <div>
-                <h3 class="font-bold text-xl text-gray-600 leading-tight uppercase mb-2 pr-8">
-                    ${escapeHTML(pauta.name)}
-                </h3>
-                <p class="text-sm text-gray-500 mb-6">Membros: ${pauta.members ? pauta.members.length : 1}</p>
-            </div>
+        pautas.forEach(pauta => {
+            const isOwner = pauta.owner === userId;
+            const isClosed = pauta.isClosed;
             
-            <div class="pt-4 border-t border-gray-100">
-                <p class="text-[10px] text-gray-400 uppercase font-bold">Criada em: ${dataCriacaoStr}</p>
-                
-                ${isExpired ? `
-                    <p class="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1">
-                        🚫 EXPIRADA EM: ${dataExpiracaoStr}
-                    </p>
-                ` : `
-                    <p class="text-[10px] text-amber-600 font-bold mt-1">
-                        ELIMINAÇÃO EM: ${dataExpiracaoStr}
-                    </p>
-                `}
-                
-                <div class="mt-3">
-                    ${isOwner ? `
-                        <span class="bg-green-50 text-green-600 text-[9px] font-black px-2 py-1 rounded border border-green-100 uppercase flex items-center w-max gap-1">
-                             Criador
-                        </span>
-                    ` : `
-                        <span class="bg-blue-50 text-blue-600 text-[9px] font-black px-2 py-1 rounded border border-blue-100 uppercase flex items-center w-max gap-1">
-                             Compartilhada
-                        </span>
-                    `}
-                </div>
-            </div>
-        `;
+            let dataCriacaoStr = '---';
+            let dataExpiracaoStr = '';
+            let isExpired = false;
 
-        // Lógica de Deletar
-        const deleteBtn = card.querySelector('.delete-pauta-btn');
-        if (deleteBtn) {
-            deleteBtn.onclick = (e) => {
-                e.stopPropagation();
-                app.deletePauta(pauta.id, pauta.name);
-            };
-        }
+            if (pauta.createdAt) {
+                const creationDate = new Date(pauta.createdAt);
+                dataCriacaoStr = creationDate.toLocaleDateString('pt-BR');
+                
+                const expirationDate = new Date(creationDate);
+                expirationDate.setDate(creationDate.getDate() + 7);
+                dataExpiracaoStr = expirationDate.toLocaleDateString('pt-BR');
 
-        // Lógica de Clique e Notificação (Estilo Toast igual ao adicionar assistido)
-        card.onclick = () => {
-            if (isExpired) {
-                // Notificação na parte inferior da tela
-                showNotification('Pauta inacessível devido o prazo cumprido!', 'error');
-                return;
+                const now = new Date();
+                isExpired = now > expirationDate;
             }
-            app.loadPauta(pauta.id, pauta.name, pauta.type);
-        };
 
-        container.appendChild(card);
-    });
-}
+            const card = document.createElement('div');
+            card.className = `relative bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex flex-col justify-between min-h-[220px] ${isExpired ? 'opacity-60 grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer'} ${isClosed ? 'opacity-60' : ''}`;
+            
+            card.innerHTML = `
+                ${isOwner ? `
+                <button class="delete-pauta-btn absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors z-20">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
+                    </svg>
+                </button>` : ''}
+
+                <div>
+                    <h3 class="font-bold text-xl text-gray-600 leading-tight uppercase mb-2 pr-8">
+                        ${escapeHTML(pauta.name)}
+                    </h3>
+                    <p class="text-sm text-gray-500 mb-6">Membros: ${pauta.members ? pauta.members.length : 1}</p>
+                </div>
+                
+                <div class="pt-4 border-t border-gray-100">
+                    <p class="text-[10px] text-gray-400 uppercase font-bold">Criada em: ${dataCriacaoStr}</p>
+                    
+                    ${isExpired ? `
+                        <p class="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1">
+                            🚫 EXPIRADA EM: ${dataExpiracaoStr}
+                        </p>
+                    ` : `
+                        <p class="text-[10px] text-amber-600 font-bold mt-1">
+                            ELIMINAÇÃO EM: ${dataExpiracaoStr}
+                        </p>
+                    `}
+                    
+                    <div class="mt-3">
+                        ${isOwner ? `
+                            <span class="bg-green-50 text-green-600 text-[9px] font-black px-2 py-1 rounded border border-green-100 uppercase flex items-center w-max gap-1">
+                                 Criador
+                            </span>
+                        ` : `
+                            <span class="bg-blue-50 text-blue-600 text-[9px] font-black px-2 py-1 rounded border border-blue-100 uppercase flex items-center w-max gap-1">
+                                 Compartilhada
+                            </span>
+                        `}
+                    </div>
+                </div>
+            `;
+
+            const deleteBtn = card.querySelector('.delete-pauta-btn');
+            if (deleteBtn) {
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    app.deletePauta(pauta.id, pauta.name);
+                };
+            }
+
+            card.onclick = () => {
+                if (isExpired) {
+                    showNotification('Pauta inacessível devido o prazo cumprido!', 'error');
+                    return;
+                }
+                app.loadPauta(pauta.id, pauta.name, pauta.type);
+            };
+
+            container.appendChild(card);
+        });
+    }
 };
