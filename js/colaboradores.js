@@ -25,9 +25,7 @@ const CollaboratorService = {
     // 1. AUTO-PREENCHIMENTO (BUSCA NA BASE MASTER)
     // ========================================================
     async buscarColaboradorMaster(app, identificador) {
-        // Limpeza: Se colarem um link, pega apenas a última parte (ID)
         const idLimpo = identificador.trim().split('/').pop();
-
         if (!idLimpo || idLimpo.length < 3) return;
 
         try {
@@ -94,7 +92,73 @@ const CollaboratorService = {
     },
 
     // ========================================================
-    // 3. FLUXO DE REVISÃO E UI (MOBILE)
+    // 3. GESTÃO DE DADOS DA ATA SOCIAL (PERSISTÊNCIA)
+    // ========================================================
+    
+    /**
+     * Salva os dados do formulário da Ata no documento da Pauta
+     */
+    async saveAtaData(app) {
+        if (!app?.currentPauta?.id) {
+            showNotification("Selecione uma pauta primeiro", "error");
+            return;
+        }
+
+        const data = {
+            ataAcaoNome: document.getElementById('ata-acao-nome').value.trim(),
+            ataEndereco: document.getElementById('ata-endereco').value.trim(),
+            ataData: document.getElementById('ata-data').value,
+            ataTotalManual: document.getElementById('ata-total').value,
+            ataOrgao: document.getElementById('ata-orgao').value.trim(),
+            ataLastUpdate: new Date().toISOString()
+        };
+
+        try {
+            const pautaRef = doc(app.db, "pautas", app.currentPauta.id);
+            await updateDoc(pautaRef, data);
+            
+            // Atualiza o estado local para evitar recarregamento
+            if (app.currentPautaData) {
+                Object.assign(app.currentPautaData, data);
+            }
+
+            showNotification("Dados da Ata salvos com sucesso!", "success");
+        } catch (error) {
+            console.error("Erro ao salvar dados da ata:", error);
+            showNotification("Erro ao salvar dados no banco.", "error");
+        }
+    },
+
+    /**
+     * Carrega os dados salvos da pauta para os campos do modal
+     */
+    async loadAtaData(app) {
+        if (!app?.currentPauta?.id) return;
+
+        try {
+            // Primeiro tenta usar os dados que já estão na memória do app
+            let data = app.currentPautaData;
+            
+            // Se não estiverem lá, busca no banco por segurança
+            if (!data || !data.ataOrgao) {
+                const pautaDoc = await getDoc(doc(app.db, "pautas", app.currentPauta.id));
+                if (pautaDoc.exists()) data = pautaDoc.data();
+            }
+
+            if (data) {
+                if (data.ataAcaoNome) document.getElementById('ata-acao-nome').value = data.ataAcaoNome;
+                if (data.ataEndereco) document.getElementById('ata-endereco').value = data.ataEndereco;
+                if (data.ataData) document.getElementById('ata-data').value = data.ataData;
+                if (data.ataTotalManual) document.getElementById('ata-total').value = data.ataTotalManual;
+                if (data.ataOrgao) document.getElementById('ata-orgao').value = data.ataOrgao;
+            }
+        } catch (error) {
+            console.error("Erro ao carregar dados da ata:", error);
+        }
+    },
+
+    // ========================================================
+    // 4. FLUXO DE REVISÃO E UI (MOBILE)
     // ========================================================
     openModal(app) {
         const modal = document.getElementById('collaborators-modal');
@@ -159,7 +223,7 @@ const CollaboratorService = {
     },
 
     // ========================================================
-    // 4. PERSISTÊNCIA (PAUTA + MASTER)
+    // 5. PERSISTÊNCIA (PAUTA + MASTER)
     // ========================================================
     async saveCollaborator(app) {
         if (!app?.currentPauta?.id) return;
@@ -199,7 +263,7 @@ const CollaboratorService = {
     },
 
     // ========================================================
-    // 5. RENDERIZAÇÃO E EVENTOS
+    // 6. RENDERIZAÇÃO E EVENTOS
     // ========================================================
     setupListener(app, pautaId) {
         if (this.currentListener) this.currentListener();
@@ -263,6 +327,12 @@ const CollaboratorService = {
                 await updateDoc(doc(app.db, "pautas", app.currentPauta.id, "collaborators", id), { presente: pres, horario: hor });
             };
         });
+
+        // Event listener para o botão de SALVAR DADOS da Ata
+        const btnSaveAta = document.getElementById('save-ata-data-btn');
+        if (btnSaveAta) {
+            btnSaveAta.onclick = () => this.saveAtaData(app);
+        }
     },
 
     async editCollaborator(app, id) {
