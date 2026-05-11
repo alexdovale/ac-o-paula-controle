@@ -7,6 +7,7 @@
  * - PDF por Grupo (apenas total do grupo + lista de membros)
  * - Botão para ocultar/mostrar totais individuais
  * - CONTAGEM CORRIGIDA cruzando os dados do atendimento com o banco de colaboradores.
+ * - VISUAL APRIMORADO E SEM REDUNDÂNCIAS
  */
 
 // ========================================================
@@ -48,7 +49,7 @@ export const StatisticsService = {
         // Atualizar título
         const titleEl = modal.querySelector('h2');
         if (titleEl) {
-            titleEl.innerHTML = `<span class="text-green-600">📊</span> Estatísticas - ${pautaName}`;
+            titleEl.innerHTML = `<span class="text-blue-600 mr-2">📊</span> Estatísticas - <span class="text-gray-700">${pautaName}</span>`;
         }
 
         const content = document.getElementById('statistics-content');
@@ -58,7 +59,7 @@ export const StatisticsService = {
         }
 
         // Mostrar loading
-        content.innerHTML = `<div class="flex items-center justify-center h-full"><p class="text-gray-600">Calculando estatísticas...</p></div>`;
+        content.innerHTML = `<div class="flex items-center justify-center h-64"><p class="text-gray-500 font-medium animate-pulse">Calculando estatísticas...</p></div>`;
 
         // Filtrar dados
         const atendidos = allAssisted.filter(a => a.status === 'atendido');
@@ -80,8 +81,6 @@ export const StatisticsService = {
             }
         }
         
-        console.log("📋 Colaboradores carregados:", todosColaboradores.length);
-
         // Organizar colaboradores por equipe e criar mapa de busca rápida
         const colaboradoresPorEquipe = {};
         const mapaNomeParaEquipe = {};
@@ -168,19 +167,6 @@ export const StatisticsService = {
             });
         });
         
-        // 2. Colaboradores flat (sem agrupamento)
-        const statsByCollaboratorFlat = {};
-        Object.values(statsByGroup).forEach(groupData => {
-            Object.entries(groupData.collaborators).forEach(([name, count]) => {
-                statsByCollaboratorFlat[name] = (statsByCollaboratorFlat[name] || 0) + count;
-            });
-        });
-        
-        // Ordenar colaboradores por quantidade (decrescente)
-        const sortedFlatCollaborators = Object.entries(statsByCollaboratorFlat)
-            .sort(([, a], [, b]) => b - a)
-            .map(([name, count]) => ({ name, count }));
-        
         // 3. Equipes ordenadas por nome
         const sortedGroups = Object.keys(statsByGroup)
             .sort()
@@ -218,12 +204,6 @@ export const StatisticsService = {
         const totalDemandasGeral = Object.values(statsBySubject).reduce((sum, data) => sum + data.total, 0);
 
         // Estatísticas por tipo de ação rápida
-        const acoesRapidasMap = {
-            'Reagendamento': { icon: '🔄', color: 'amber' },
-            'Agendamento':   { icon: '📅', color: 'emerald' },
-            'Consulta Processual': { icon: '🔍', color: 'purple' },
-            'Outros Assuntos': { icon: '⚙️', color: 'gray' }
-        };
         const statsByAcaoRapida = {};
         atendidos.forEach(a => {
             if (a.tipoAcaoRapida) {
@@ -274,9 +254,10 @@ export const StatisticsService = {
         const avgTimeDirect = directCount > 0 ? Math.round(totalDirectMinutes / directCount) : 0;
 
         const delegationHTML = useDelegationFlow ? `
-            <div class="bg-indigo-100 p-2 md:p-3 rounded-lg text-center border border-indigo-200">
-                <p class="text-xl md:text-2xl font-bold text-indigo-700">${avgTimeDelegated} min</p>
-                <p class="text-[8px] md:text-xs text-gray-600 mt-1">Tempo Médio (delegação)</p>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
+                <span class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2 text-sm">⏱️</span>
+                <p class="text-2xl font-black text-slate-800">${avgTimeDelegated} min</p>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1 text-center leading-tight">Média Delegação</p>
             </div>` : '';
 
         // HTML do bloco de ações rápidas
@@ -286,49 +267,24 @@ export const StatisticsService = {
             'Consulta Processual': { icon: '🔍', bg: '#f5f3ff', border: '#c4b5fd', text: '#4c1d95' },
             'Outros Assuntos':     { icon: '⚙️', bg: '#f9fafb', border: '#d1d5db', text: '#374151' }
         };
+        
         const acoesRapidasHTML = totalAcoesRapidas > 0 ? `
-            <div class="bg-white p-3 md:p-4 rounded-lg border">
-                <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-2">⚡ Ações Rápidas</h3>
-                <div class="grid grid-cols-2 gap-2">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <h3 class="text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <span class="text-blue-500">⚡</span> Ações Rápidas Utilizadas
+                </h3>
+                <div class="grid grid-cols-2 gap-3">
                     ${Object.entries(statsByAcaoRapida).sort(([,a],[,b]) => b-a).map(([tipo, qtd]) => {
                         const cfg = acoesRapidasCores[tipo] || { icon: '⚡', bg: '#eff6ff', border: '#93c5fd', text: '#1e40af' };
-                        return `<div style="background:${cfg.bg};border:1px solid ${cfg.border};color:${cfg.text}" class="flex items-center justify-between rounded-lg px-3 py-2">
-                            <span class="text-xs font-bold">${cfg.icon} ${tipo}</span>
+                        return `<div style="background:${cfg.bg}; border:1px solid ${cfg.border}; color:${cfg.text}" class="flex flex-col rounded-xl px-3 py-2.5">
+                            <span class="text-[10px] font-bold uppercase tracking-wider opacity-80 mb-1">${cfg.icon} ${tipo}</span>
                             <span class="text-xl font-black">${qtd}</span>
                         </div>`;
                     }).join('')}
                 </div>
-                <p class="text-[10px] text-gray-500 text-right mt-2">Total: <b>${totalAcoesRapidas}</b></p>
-            </div>
-        ` : '';
-
-        // HTML para colaboradores flat
-        const collaboratorsFlatHTML = sortedFlatCollaborators.length > 0 ? `
-            <div class="bg-white p-3 md:p-4 rounded-lg border">
-                <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-2">Atendimentos por Colaborador</h3>
-                <div class="max-h-[30vh] overflow-y-auto">
-                    <table class="w-full text-xs md:text-sm text-left">
-                        <thead class="text-[10px] md:text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
-                            <tr>
-                                <th class="px-2 md:px-4 py-1 md:py-2">Colaborador</th>
-                                <th class="px-2 md:px-4 py-1 md:py-2 text-right">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${sortedFlatCollaborators.map(({name, count}) => `
-                                <tr class="border-b">
-                                    <td class="px-2 md:px-4 py-1 md:py-2 font-medium text-xs md:text-sm">${name}</td>
-                                    <td class="px-2 md:px-4 py-1 md:py-2 text-right text-xs md:text-sm font-bold text-blue-600">${count}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                        <tfoot class="bg-gray-100 font-bold">
-                            <tr>
-                                <td class="px-2 md:px-4 py-1 md:py-2">TOTAL</td>
-                                <td class="px-2 md:px-4 py-1 md:py-2 text-right">${totalGeral}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                <div class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
+                    <span class="font-medium">Total de ações ágeis</span>
+                    <span class="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">${totalAcoesRapidas}</span>
                 </div>
             </div>
         ` : '';
@@ -349,41 +305,45 @@ export const StatisticsService = {
             colaboradoresCompletos.sort((a, b) => b.atendimentos - a.atendimentos);
             
             const collaboratorsRows = colaboradoresCompletos.map(({nome, atendimentos, cargo}) => `
-                <tr class="border-b collaborator-row group-${index}">
-                    <td class="px-2 md:px-4 py-1 md:py-2 font-medium text-xs md:text-sm pl-2 md:pl-8">${nome}</td>
-                    <td class="px-2 md:px-4 py-1 md:py-2 text-xs text-gray-600">${cargo || '-'}</td>
-                    <td class="px-2 md:px-4 py-1 md:py-2 text-right text-xs md:text-sm font-bold atendimento-valor-${index} ${atendimentos > 0 ? 'text-green-600' : 'text-gray-400'}">${atendimentos}</td>
+                <tr class="border-b border-slate-50 collaborator-row group-${index} hover:bg-slate-50/50 transition-colors">
+                    <td class="px-3 md:px-4 py-2.5 font-medium text-xs md:text-sm text-slate-700 pl-4 md:pl-6">${nome}</td>
+                    <td class="px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-500">${cargo || '-'}</td>
+                    <td class="px-3 md:px-4 py-2.5 text-right text-xs md:text-sm font-bold atendimento-valor-${index} ${atendimentos > 0 ? 'text-green-600' : 'text-slate-400'}">${atendimentos > 0 ? atendimentos : '-'}</td>
                 </tr>
             `).join('');
 
             const hasCollaborators = colaboradoresCompletos.length > 0;
 
             return `
-                <div class="mb-3 md:mb-4 border rounded-lg overflow-hidden group-container" data-group-index="${index}">
-                    <div class="bg-gray-100 px-2 md:px-4 py-2 font-bold text-xs md:text-sm flex justify-between items-center">
-                        <div class="flex items-center gap-2">
-                            <span>👥 ${groupName}</span>
-                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-[10px] md:text-xs">Total: ${total}</span>
-                            <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-[10px] md:text-xs">Membros: ${todosColaboradores.length}</span>
+                <div class="mb-4 border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white group-container" data-group-index="${index}">
+                    <div class="bg-slate-50/80 px-4 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-200">
+                        <div class="flex items-center gap-3">
+                            <span class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                <span class="text-blue-500">👥</span> ${groupName}
+                            </span>
+                            <div class="flex gap-2">
+                                <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md text-[10px] font-bold border border-blue-200" title="Total de Atendimentos">Atend.: ${total}</span>
+                                <span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md text-[10px] font-bold border border-purple-200" title="Membros Cadastrados">Membros: ${todosColaboradores.length}</span>
+                            </div>
                         </div>
                         <div class="flex gap-2">
-                            <button class="hide-individual-btn text-xs bg-white px-2 py-1 rounded border hover:bg-gray-50" data-group-index="${index}">
-                                🔽 Ocultar individuais
+                            <button class="hide-individual-btn text-[11px] font-medium text-slate-600 bg-white px-2.5 py-1.5 rounded-md border border-slate-200 hover:bg-slate-100 transition-colors shadow-sm" data-group-index="${index}">
+                                Ocultar Atendimentos
                             </button>
                             ${hasCollaborators ? `
-                                <button class="toggle-details-btn text-xs bg-white px-2 py-1 rounded border hover:bg-gray-50" data-group-index="${index}">
-                                    🔽 Ocultar detalhes
+                                <button class="toggle-details-btn text-[11px] font-medium text-slate-600 bg-white px-2.5 py-1.5 rounded-md border border-slate-200 hover:bg-slate-100 transition-colors shadow-sm" data-group-index="${index}">
+                                    Ocultar Lista
                                 </button>
                             ` : ''}
                         </div>
                     </div>
                     ${hasCollaborators ? `
-                        <table class="w-full text-xs md:text-sm text-left collaborators-table" data-group-index="${index}">
-                            <thead class="text-[9px] text-gray-500 uppercase bg-gray-50">
+                        <table class="w-full text-left collaborators-table" data-group-index="${index}">
+                            <thead class="text-[10px] text-slate-500 uppercase tracking-wider bg-white border-b border-slate-100">
                                 <tr>
-                                    <th class="px-2 md:px-4 py-1 pl-8">Colaborador</th>
-                                    <th class="px-2 md:px-4 py-1">Cargo</th>
-                                    <th class="px-2 md:px-4 py-1 text-right atendimento-header-${index}">Atend.</th>
+                                    <th class="px-3 md:px-4 py-2 font-semibold pl-4 md:pl-6">Colaborador</th>
+                                    <th class="px-3 md:px-4 py-2 font-semibold">Cargo</th>
+                                    <th class="px-3 md:px-4 py-2 font-semibold text-right atendimento-header-${index}">Total</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -391,189 +351,197 @@ export const StatisticsService = {
                             </tbody>
                         </table>
                     ` : `
-                        <div class="p-2 text-xs text-gray-500 italic">Nenhum colaborador cadastrado nesta equipe</div>
+                        <div class="p-4 text-xs text-slate-500 italic text-center bg-white">Nenhum colaborador cadastrado nesta equipe.</div>
                     `}
                 </div>
             `;
         }).join('');
 
-        // HTML dos botões de exportação
+        // HTML dos botões de exportação (UI Premium)
         const botoesExportacaoHTML = `
-            <div class="bg-white p-3 md:p-4 rounded-lg border mt-4">
-                <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-3">Exportar Relatórios</h3>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
-                    <button id="export-stats-pdf-btn" class="bg-blue-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-700 text-xs md:text-sm transition-colors">
-                        📊 PDF Resumo
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mt-4">
+                <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <span class="text-indigo-500">🖨️</span> Exportar Relatórios
+                </h3>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <button id="export-stats-pdf-btn" class="flex flex-col items-center justify-center gap-1.5 w-full bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200 hover:border-blue-200 font-bold py-3 px-2 rounded-xl text-xs transition-all shadow-sm">
+                        <span class="text-blue-500 text-lg">📊</span> Resumo
                     </button>
-                    <button id="export-equipes-pdf-btn" class="bg-purple-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-purple-700 text-xs md:text-sm transition-colors">
-                        👥 PDF Equipe
+                    <button id="export-equipes-pdf-btn" class="flex flex-col items-center justify-center gap-1.5 w-full bg-slate-50 hover:bg-purple-50 text-slate-700 hover:text-purple-700 border border-slate-200 hover:border-purple-200 font-bold py-3 px-2 rounded-xl text-xs transition-all shadow-sm">
+                        <span class="text-purple-500 text-lg">👥</span> Equipes
                     </button>
-                    <button id="export-grupo-pdf-btn" class="bg-green-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-green-700 text-xs md:text-sm transition-colors">
-                        📋 PDF Grupo
+                    <button id="export-grupo-pdf-btn" class="flex flex-col items-center justify-center gap-1.5 w-full bg-slate-50 hover:bg-green-50 text-slate-700 hover:text-green-700 border border-slate-200 hover:border-green-200 font-bold py-3 px-2 rounded-xl text-xs transition-all shadow-sm">
+                        <span class="text-green-500 text-lg">📋</span> Grupos
                     </button>
-                    <button id="export-stats-detalhado-btn" class="bg-orange-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-orange-700 text-xs md:text-sm transition-colors">
-                        📖 PDF Detalhado
+                    <button id="export-stats-detalhado-btn" class="flex flex-col items-center justify-center gap-1.5 w-full bg-slate-50 hover:bg-orange-50 text-slate-700 hover:text-orange-700 border border-slate-200 hover:border-orange-200 font-bold py-3 px-2 rounded-xl text-xs transition-all shadow-sm">
+                        <span class="text-orange-500 text-lg">📖</span> Detalhado
                     </button>
                 </div>
-                <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
-                    <label class="flex items-center"><input type="checkbox" id="export-general" class="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4 rounded" checked> Resumo</label>
-                    <label class="flex items-center"><input type="checkbox" id="export-collaborators" class="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4 rounded" checked> Colaboradores</label>
-                    <label class="flex items-center"><input type="checkbox" id="export-subjects" class="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4 rounded" checked> Assuntos</label>
-                    <label class="flex items-center"><input type="checkbox" id="export-scheduled-time" class="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4 rounded" checked> Agendados</label>
-                    <label class="flex items-center"><input type="checkbox" id="export-times" class="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4 rounded" checked> Atendimentos</label>
-                    <label class="flex items-center"><input type="checkbox" id="export-absentees-time" class="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4 rounded" checked> Faltosos</label>
+                
+                <div class="mt-5 pt-4 border-t border-slate-100">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Configurar Relatório Resumo:</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-[11px] font-medium text-slate-600">
+                        <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" id="export-general" class="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked> Geral</label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" id="export-collaborators" class="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked> Equipes</label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" id="export-subjects" class="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked> Assuntos</label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" id="export-scheduled-time" class="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked> Agenda</label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" id="export-times" class="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked> Chegada</label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" id="export-absentees-time" class="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked> Faltosos</label>
+                    </div>
                 </div>
             </div>
         `;
 
-        // HTML completo do conteúdo
+        // HTML completo do conteúdo organizado
         const html = `
-        <div id="statistics-content-wrapper" class="grid grid-cols-1 lg:grid-cols-5 gap-3 md:gap-4 h-full p-2 md:p-4 overflow-hidden">
-            <div class="lg:col-span-2 flex flex-col gap-3 md:gap-4 overflow-y-auto pr-1 md:pr-2">
-                <div class="bg-white p-3 md:p-4 rounded-lg border">
-                    <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-2 md:mb-3">Resumo Geral</h3>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3 text-center summary-cards">
-                        <div class="bg-green-100 p-2 md:p-3 rounded-lg border border-green-200">
-                            <p class="text-xl md:text-2xl font-bold text-green-700">${atendidos.length}</p>
-                            <p class="text-[9px] md:text-xs text-gray-600 mt-1">Atendidos</p>
-                        </div>
-                        <div class="bg-red-100 p-2 md:p-3 rounded-lg border border-red-200">
-                            <p class="text-xl md:text-2xl font-bold text-red-700">${faltosos.length}</p>
-                            <p class="text-[9px] md:text-xs text-gray-600 mt-1">Faltosos</p>
-                        </div>
-                        <div class="bg-blue-100 p-2 md:p-3 rounded-lg border border-blue-200">
-                            <p class="text-xl md:text-2xl font-bold text-blue-700">${avgTimeDirect} min</p>
-                            <p class="text-[9px] md:text-xs text-gray-600 mt-1">Tempo Médio</p>
-                        </div>
-                        ${totalAcoesRapidas > 0 ? `
-                        <div class="bg-amber-50 p-2 md:p-3 rounded-lg border border-amber-300 col-span-2 sm:col-span-1">
-                            <p class="text-xl md:text-2xl font-bold text-amber-700">${totalAcoesRapidas}</p>
-                            <p class="text-[9px] md:text-xs text-gray-600 mt-1">Opções de Atendimento</p>
-                        </div>` : ''}
-                        ${delegationHTML}
+        <div id="statistics-content-wrapper" class="grid grid-cols-1 xl:grid-cols-5 gap-5 h-full p-2 md:p-5 overflow-hidden bg-slate-50/30">
+            <!-- Coluna Esquerda -->
+            <div class="xl:col-span-2 flex flex-col gap-4 overflow-y-auto pr-1 md:pr-2 custom-scrollbar">
+                
+                <!-- Cards Principais -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
+                        <span class="w-8 h-8 rounded-full bg-green-50 text-green-600 flex items-center justify-center mb-2 text-sm">✅</span>
+                        <p class="text-2xl font-black text-slate-800">${atendidos.length}</p>
+                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1 text-center">Atendidos</p>
                     </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
+                        <span class="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center mb-2 text-sm">🚫</span>
+                        <p class="text-2xl font-black text-slate-800">${faltosos.length}</p>
+                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1 text-center">Faltosos</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
+                        <span class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-2 text-sm">⏱️</span>
+                        <p class="text-2xl font-black text-slate-800">${avgTimeDirect} min</p>
+                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1 text-center">T. Médio</p>
+                    </div>
+                    ${totalAcoesRapidas > 0 ? `
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center col-span-2 sm:col-span-1 sm:hidden">
+                        <span class="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-2 text-sm">⚡</span>
+                        <p class="text-2xl font-black text-slate-800">${totalAcoesRapidas}</p>
+                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1 text-center leading-tight">Opções</p>
+                    </div>` : ''}
+                    ${delegationHTML}
                 </div>
                 
                 ${acoesRapidasHTML}
                 ${botoesExportacaoHTML}
 
+                <!-- Tabelas de Horários -->
                 ${sortedScheduledTimes.length > 0 ? `
-                <div class="bg-white p-3 md:p-4 rounded-lg border">
-                    <h3 class="text-sm md:text-md font-semibold text-gray-800 mb-2">Agendados por Horário</h3>
-                    <div class="max-h-32 md:max-h-40 overflow-y-auto">
-                        <table class="w-full text-xs md:text-sm">
-                            <thead class="text-[9px] md:text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
-                                <tr><th class="px-2 md:px-4 py-1">Horário</th><th class="px-2 md:px-4 py-1 text-right">Qtd</th></tr>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2">📅 Agendados por Horário</h3>
+                    <div class="max-h-40 overflow-y-auto custom-scrollbar">
+                        <table class="w-full text-xs text-left">
+                            <thead class="text-[10px] text-slate-500 uppercase bg-slate-50 sticky top-0">
+                                <tr><th class="px-4 py-2 font-semibold">Horário</th><th class="px-4 py-2 font-semibold text-right">Qtd</th></tr>
                             </thead>
-                            <tbody>
+                            <tbody class="divide-y divide-slate-100">
                                 ${sortedScheduledTimes.map(time => `
-                                    <tr class="border-b">
-                                        <td class="px-2 md:px-4 py-1">${time}</td>
-                                        <td class="px-2 md:px-4 py-1 text-right">${statsByScheduledTime[time]}</td>
+                                    <tr class="hover:bg-slate-50/50">
+                                        <td class="px-4 py-2 font-medium text-slate-700">${time}</td>
+                                        <td class="px-4 py-2 text-right font-bold text-slate-600">${statsByScheduledTime[time]}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>
-                            <tfoot class="bg-gray-100 font-bold">
-                                <tr><td class="px-2 md:px-4 py-1">Total</td><td class="px-2 md:px-4 py-1 text-right">${allAssisted.length}</td></tr>
-                            </tfoot>
                         </table>
                     </div>
                 </div>` : ''}
 
                 ${sortedTimes.length > 0 ? `
-                <div class="bg-white p-3 md:p-4 rounded-lg border">
-                    <h3 class="text-sm md:text-md font-semibold text-gray-800 mb-2">Atendimentos (Chegada)</h3>
-                    <div class="max-h-32 md:max-h-40 overflow-y-auto">
-                        <table class="w-full text-xs md:text-sm">
-                            <thead class="text-[9px] md:text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
-                                <tr><th class="px-2 md:px-4 py-1">Horário</th><th class="px-2 md:px-4 py-1 text-right">Qtd</th></tr>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2">📍 Atendimentos (Chegada)</h3>
+                    <div class="max-h-40 overflow-y-auto custom-scrollbar">
+                        <table class="w-full text-xs text-left">
+                            <thead class="text-[10px] text-slate-500 uppercase bg-slate-50 sticky top-0">
+                                <tr><th class="px-4 py-2 font-semibold">Horário</th><th class="px-4 py-2 font-semibold text-right">Qtd</th></tr>
                             </thead>
-                            <tbody>
+                            <tbody class="divide-y divide-slate-100">
                                 ${sortedTimes.map(time => `
-                                    <tr class="border-b">
-                                        <td class="px-2 md:px-4 py-1">${time}</td>
-                                        <td class="px-2 md:px-4 py-1 text-right">${statsByTime[time]}</td>
+                                    <tr class="hover:bg-slate-50/50">
+                                        <td class="px-4 py-2 font-medium text-slate-700">${time}</td>
+                                        <td class="px-4 py-2 text-right font-bold text-green-600">${statsByTime[time]}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>
-                            <tfoot class="bg-gray-100 font-bold">
-                                <tr><td class="px-2 md:px-4 py-1">Total</td><td class="px-2 md:px-4 py-1 text-right">${atendidos.length}</td></tr>
-                            </tfoot>
                         </table>
                     </div>
                 </div>` : ''}
 
                 ${sortedTimesFaltosos.length > 0 ? `
-                <div class="bg-white p-3 md:p-4 rounded-lg border">
-                    <h3 class="text-sm md:text-md font-semibold text-red-800 mb-2">Faltosos por Horário</h3>
-                    <div class="max-h-32 md:max-h-40 overflow-y-auto">
-                        <table class="w-full text-xs md:text-sm">
-                            <thead class="text-[9px] md:text-xs text-red-700 uppercase bg-red-100 sticky top-0">
-                                <tr><th class="px-2 md:px-4 py-1">Horário</th><th class="px-2 md:px-4 py-1 text-right">Qtd</th></tr>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2">🚫 Faltosos por Horário</h3>
+                    <div class="max-h-40 overflow-y-auto custom-scrollbar">
+                        <table class="w-full text-xs text-left">
+                            <thead class="text-[10px] text-slate-500 uppercase bg-red-50 sticky top-0">
+                                <tr><th class="px-4 py-2 font-semibold">Horário</th><th class="px-4 py-2 font-semibold text-right">Qtd</th></tr>
                             </thead>
-                            <tbody>
+                            <tbody class="divide-y divide-slate-100">
                                 ${sortedTimesFaltosos.map(time => `
-                                    <tr class="border-b">
-                                        <td class="px-2 md:px-4 py-1">${time}</td>
-                                        <td class="px-2 md:px-4 py-1 text-right">${statsByTimeFaltosos[time]}</td>
+                                    <tr class="hover:bg-red-50/30">
+                                        <td class="px-4 py-2 font-medium text-slate-700">${time}</td>
+                                        <td class="px-4 py-2 text-right font-bold text-red-600">${statsByTimeFaltosos[time]}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>
-                            <tfoot class="bg-red-100 font-bold">
-                                <tr><td class="px-2 md:px-4 py-1">Total</td><td class="px-2 md:px-4 py-1 text-right">${faltosos.length}</td></tr>
-                            </tfoot>
                         </table>
                     </div>
                 </div>` : ''}
             </div>
 
-            <div class="lg:col-span-3 flex flex-col gap-3 md:gap-4 overflow-y-auto pr-1 md:pr-2">
-                <div class="bg-white p-3 md:p-4 rounded-lg border">
-                    <h3 class="text-base md:text-lg font-semibold text-gray-800 mb-2">Demandas por Assunto</h3>
-                    <div class="max-h-[40vh] md:max-h-[50vh] overflow-y-auto">
-                        <table class="w-full text-xs md:text-sm">
-                            <thead class="text-[9px] md:text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
+            <!-- Coluna Direita -->
+            <div class="xl:col-span-3 flex flex-col gap-4 overflow-y-auto pr-1 md:pr-2 custom-scrollbar">
+                
+                <!-- Tabela de Assuntos -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[40vh] md:h-auto min-h-[300px]">
+                    <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
+                        <span class="text-orange-500">🏷️</span> Demandas por Assunto
+                    </h3>
+                    <div class="flex-1 overflow-y-auto custom-scrollbar rounded-lg border border-slate-100">
+                        <table class="w-full text-xs md:text-sm text-left">
+                            <thead class="text-[10px] text-slate-500 uppercase bg-slate-50 sticky top-0 z-10 shadow-sm">
                                 <tr>
-                                    <th class="px-1 md:px-4 py-1">Assunto</th>
-                                    <th class="px-1 md:px-4 py-1 text-center">Total</th>
-                                    <th class="px-1 md:px-4 py-1 text-center text-green-600">Atend.</th>
-                                    <th class="px-1 md:px-4 py-1 text-center text-red-600">Falt.</th>
-                                    <th class="px-1 md:px-4 py-1 text-right">%</th>
+                                    <th class="px-4 py-3 font-bold">Assunto</th>
+                                    <th class="px-3 py-3 font-bold text-center">Total</th>
+                                    <th class="px-3 py-3 font-bold text-center text-green-600">Atend.</th>
+                                    <th class="px-3 py-3 font-bold text-center text-red-600">Falt.</th>
+                                    <th class="px-4 py-3 font-bold text-right">%</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody class="divide-y divide-slate-100">
                                 ${Object.entries(statsBySubject).sort(([,a],[,b]) => b.total - a.total).map(([subject, data]) => `
-                                    <tr class="border-b">
-                                        <td class="px-1 md:px-4 py-1 font-medium text-[10px] md:text-sm">${subject.length > 20 ? subject.substring(0,20)+'...' : subject}</td>
-                                        <td class="px-1 md:px-4 py-1 text-center font-bold">${data.total}</td>
-                                        <td class="px-1 md:px-4 py-1 text-center text-green-600">${data.atendidos}</td>
-                                        <td class="px-1 md:px-4 py-1 text-center text-red-600">${data.faltosos}</td>
-                                        <td class="px-1 md:px-4 py-1 text-right">${totalDemandasGeral > 0 ? ((data.total / totalDemandasGeral) * 100).toFixed(1) : 0}%</td>
+                                    <tr class="hover:bg-slate-50/50 transition-colors">
+                                        <td class="px-4 py-2.5 font-medium text-slate-700">${subject}</td>
+                                        <td class="px-3 py-2.5 text-center font-bold text-slate-800 bg-slate-50/50">${data.total}</td>
+                                        <td class="px-3 py-2.5 text-center font-semibold text-green-600">${data.atendidos}</td>
+                                        <td class="px-3 py-2.5 text-center font-semibold text-red-500">${data.faltosos}</td>
+                                        <td class="px-4 py-2.5 text-right font-medium text-slate-500">${totalDemandasGeral > 0 ? ((data.total / totalDemandasGeral) * 100).toFixed(1) : 0}%</td>
                                     </tr>`).join('')}
                             </tbody>
-                            <tfoot class="bg-gray-100 font-bold">
+                            <tfoot class="bg-slate-100 font-bold sticky bottom-0 z-10 shadow-[0_-2px_4px_rgba(0,0,0,0.02)]">
                                 <tr>
-                                    <td class="px-1 md:px-4 py-1">Total</td>
-                                    <td class="px-1 md:px-4 py-1 text-center">${totalDemandasGeral}</td>
-                                    <td class="px-1 md:px-4 py-1 text-center text-green-600">${totalDemandasAtendidos}</td>
-                                    <td class="px-1 md:px-4 py-1 text-center text-red-600">${totalDemandasFaltosos}</td>
-                                    <td class="px-1 md:px-4 py-1 text-right">100%</td>
+                                    <td class="px-4 py-3 text-slate-800">TOTAL GERAL</td>
+                                    <td class="px-3 py-3 text-center text-slate-800">${totalDemandasGeral}</td>
+                                    <td class="px-3 py-3 text-center text-green-700">${totalDemandasAtendidos}</td>
+                                    <td class="px-3 py-3 text-center text-red-700">${totalDemandasFaltosos}</td>
+                                    <td class="px-4 py-3 text-right text-slate-800">100%</td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
                 </div>
                 
-                ${collaboratorsFlatHTML}
-                
-                <div class="bg-white p-3 md:p-4 rounded-lg border">
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="text-base md:text-lg font-semibold text-gray-800">Atendimentos por Equipe</h3>
-                        <button id="toggle-all-groups-btn" class="text-xs bg-gray-200 px-3 py-1 rounded-full hover:bg-gray-300">
-                            🔽 Ocultar todos os detalhes
+                <!-- Equipes -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex-1 flex flex-col min-h-[400px]">
+                    <div class="flex flex-wrap justify-between items-center mb-4 gap-3 border-b border-slate-100 pb-3">
+                        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <span class="text-teal-500">🏢</span> Atendimentos por Equipe
+                        </h3>
+                        <button id="toggle-all-groups-btn" class="text-[11px] font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors">
+                            Ocultar todas as listas
                         </button>
                     </div>
-                    <div class="max-h-[40vh] overflow-y-auto" id="groups-container">
+                    <div class="flex-1 overflow-y-auto pr-2 custom-scrollbar" id="groups-container">
                         ${groupsHTML}
                     </div>
                 </div>
@@ -604,7 +572,9 @@ export const StatisticsService = {
                     else header.style.display = 'none';
                 }
                 
-                btn.textContent = isHidden ? '🔽 Ocultar individuais' : '👁️ Mostrar individuais';
+                btn.textContent = isHidden ? 'Ocultar Atendimentos' : 'Mostrar Atendimentos';
+                btn.classList.toggle('bg-blue-50', !isHidden);
+                btn.classList.toggle('text-blue-600', !isHidden);
             });
         });
 
@@ -618,10 +588,10 @@ export const StatisticsService = {
                 });
                 
                 document.querySelectorAll('.toggle-details-btn').forEach(btn => {
-                    if (btn) btn.textContent = isShowing ? '🔽 Mostrar detalhes' : '🔽 Ocultar detalhes';
+                    if (btn) btn.textContent = isShowing ? 'Mostrar Lista' : 'Ocultar Lista';
                 });
                 
-                toggleAllBtn.textContent = isShowing ? '🔽 Mostrar todos os detalhes' : '🔽 Ocultar todos os detalhes';
+                toggleAllBtn.textContent = isShowing ? 'Mostrar todas as listas' : 'Ocultar todas as listas';
             });
         }
         
@@ -634,10 +604,10 @@ export const StatisticsService = {
                 if (table) {
                     if (table.style.display === 'none') {
                         table.style.display = 'table';
-                        btn.textContent = '🔽 Ocultar detalhes';
+                        btn.textContent = 'Ocultar Lista';
                     } else {
                         table.style.display = 'none';
-                        btn.textContent = '🔽 Mostrar detalhes';
+                        btn.textContent = 'Mostrar Lista';
                     }
                 }
             });
@@ -647,7 +617,8 @@ export const StatisticsService = {
         const exportBtn = document.getElementById('export-stats-pdf-btn');
         if (exportBtn) {
             exportBtn.addEventListener('click', () => {
-                exportBtn.textContent = 'Gerando PDF Resumo...';
+                const originalHtml = exportBtn.innerHTML;
+                exportBtn.innerHTML = '<span class="animate-spin text-lg">⏳</span> Aguarde...';
                 exportBtn.disabled = true;
 
                 this.exportStatisticsToPDF(pautaName, {
@@ -665,7 +636,7 @@ export const StatisticsService = {
                     statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
                     statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
                 }).finally(() => {
-                    exportBtn.textContent = '📊 PDF Resumo';
+                    exportBtn.innerHTML = originalHtml;
                     exportBtn.disabled = false;
                 });
             });
@@ -674,7 +645,8 @@ export const StatisticsService = {
         const exportEquipesBtn = document.getElementById('export-equipes-pdf-btn');
         if (exportEquipesBtn) {
             exportEquipesBtn.addEventListener('click', () => {
-                exportEquipesBtn.textContent = 'Gerando PDF por Equipe...';
+                const originalHtml = exportEquipesBtn.innerHTML;
+                exportEquipesBtn.innerHTML = '<span class="animate-spin text-lg">⏳</span> Aguarde...';
                 exportEquipesBtn.disabled = true;
 
                 this.exportEquipesPDF(pautaName, {
@@ -682,7 +654,7 @@ export const StatisticsService = {
                     sortedGroups,
                     totalGeral
                 }).finally(() => {
-                    exportEquipesBtn.textContent = '👥 PDF Equipe';
+                    exportEquipesBtn.innerHTML = originalHtml;
                     exportEquipesBtn.disabled = false;
                 });
             });
@@ -691,14 +663,15 @@ export const StatisticsService = {
         const exportGrupoBtn = document.getElementById('export-grupo-pdf-btn');
         if (exportGrupoBtn) {
             exportGrupoBtn.addEventListener('click', () => {
-                exportGrupoBtn.textContent = 'Gerando PDF por Grupo...';
+                const originalHtml = exportGrupoBtn.innerHTML;
+                exportGrupoBtn.innerHTML = '<span class="animate-spin text-lg">⏳</span> Aguarde...';
                 exportGrupoBtn.disabled = true;
 
                 this.exportGrupoPDF(pautaName, {
                     sortedGroups,
                     totalGeral
                 }).finally(() => {
-                    exportGrupoBtn.textContent = '📋 PDF Grupo';
+                    exportGrupoBtn.innerHTML = originalHtml;
                     exportGrupoBtn.disabled = false;
                 });
             });
@@ -707,14 +680,15 @@ export const StatisticsService = {
         const exportDetalhadoBtn = document.getElementById('export-stats-detalhado-btn');
         if (exportDetalhadoBtn) {
             exportDetalhadoBtn.addEventListener('click', () => {
-                exportDetalhadoBtn.textContent = 'Gerando PDF Detalhado...';
+                const originalHtml = exportDetalhadoBtn.innerHTML;
+                exportDetalhadoBtn.innerHTML = '<span class="animate-spin text-lg">⏳</span> Aguarde...';
                 exportDetalhadoBtn.disabled = true;
 
                 this.exportDetailedStatisticsPDF(pautaName, {
                     totalGeral,
                     sortedGroups
                 }).finally(() => {
-                    exportDetalhadoBtn.textContent = '📖 PDF Detalhado';
+                    exportDetalhadoBtn.innerHTML = originalHtml;
                     exportDetalhadoBtn.disabled = false;
                 });
             });
@@ -1025,7 +999,7 @@ export const StatisticsService = {
     },
 
     /**
-     * Exporta estatísticas para PDF - VERSÃO ORIGINAL
+     * Exporta estatísticas para PDF - Mantido original para consistência
      */
     async exportStatisticsToPDF(pautaName, statsData) {
         const { jsPDF } = window.jspdf;
@@ -1284,4 +1258,4 @@ export const exportStatisticsToPDF = (pautaName, statsData) => {
 // Tornar global
 window.StatisticsService = StatisticsService;
 
-console.log("✅ estatisticas.js carregado com sucesso! Contagem corrigida com cruzamento de dados.");
+console.log("✅ estatisticas.js carregado com sucesso! Contagem corrigida, redundância removida e UI modernizada.");
