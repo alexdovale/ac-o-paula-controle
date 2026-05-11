@@ -228,10 +228,10 @@ export const UIService = {
             if (element) {
                 if (isClosed) {
                     element.classList.add('pointer-events-none', 'opacity-50');
-                    element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = true);
+                    element.querySelectorAll('input, button, a, select, textarea').forEach(el => el.disabled = true);
                 } else {
                     element.classList.remove('pointer-events-none', 'opacity-50');
-                    element.querySelectorAll('input, button, a, textarea').forEach(el => el.disabled = false);
+                    element.querySelectorAll('input, button, a, select, textarea').forEach(el => el.disabled = false);
                 }
             }
         });
@@ -245,7 +245,7 @@ export const UIService = {
             }
         });
         
-        const cardActionButtons = document.querySelectorAll('.assisted-card button:not(.quick-action-toggle)');
+        const cardActionButtons = document.querySelectorAll('.assisted-card button:not(.quick-action-toggle), .assisted-card select');
         cardActionButtons.forEach(btn => {
             btn.disabled = isClosed;
         });
@@ -370,6 +370,19 @@ export const UIService = {
         this.renderDistribuicaoColumn(lists.distribuicao, app.currentPauta?.id, app.currentUserName);
 
         this.togglePautaLock(app);
+        
+        // ----------------------------------------------------
+        // LÓGICA DE OCULTAR O BOTÃO "CHAMAR PRÓXIMO" EM MULTISALAS
+        // ----------------------------------------------------
+        const callNextBtn = document.getElementById('call-next-assisted-btn');
+        if (callNextBtn) {
+            if (currentPautaData?.type === 'multisala') {
+                callNextBtn.classList.add('hidden');
+            } else {
+                callNextBtn.classList.remove('hidden');
+            }
+        }
+        
         setTimeout(() => PautaService.setupManualSort(app), 100); 
     },
 
@@ -647,6 +660,28 @@ export const UIService = {
             const scheduledTimeSeguro = item.scheduledTime || '--:--';
             const priorityReasonSeguro = item.priorityReason || '';
 
+            // ----------------------------------------------------
+            // LÓGICA DE ALTERAR SALA DIRETAMENTE NO CARD
+            // ----------------------------------------------------
+            let roomDropdownHtml = '';
+            if (currentPautaData?.type === 'multisala') {
+                const availableRooms = currentPautaData.rooms || currentPautaData.customRooms || [];
+                
+                if (availableRooms.length > 0 && canEditPriority) { 
+                    // Se houver salas e a pessoa tiver permissão de edição, mostra um <select>
+                    const options = availableRooms.map(r => `<option value="${escapeHTML(r)}" ${item.room === r ? 'selected' : ''}>${escapeHTML(r)}</option>`).join('');
+                    roomDropdownHtml = `
+                        <select class="change-room-select bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] px-1 py-0.5 rounded font-bold border border-blue-200 outline-none cursor-pointer focus:ring-1 focus:ring-blue-500 max-w-[120px] truncate transition-colors" title="Mudar Sala">
+                            <option value="" ${!item.room ? 'selected' : ''}>Sem Sala</option>
+                            ${options}
+                        </select>
+                    `;
+                } else if (item.room) {
+                    // Sem permissão ou sem salas disponíveis, mostra só a tag de texto
+                    roomDropdownHtml = `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(item.room)}</span>`;
+                }
+            }
+
             let timeInfoHtml = `<span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">Chegada: --:--</span>`;
             if (item.arrivalTime) {
                 try {
@@ -739,7 +774,7 @@ export const UIService = {
                     <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
                     <div class="flex flex-wrap items-center gap-2 mb-2">
                         ${timeInfoHtml}
-                        ${item.room && currentPautaData?.type === 'multisala' ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(item.room)}</span>` : ''}
+                        ${roomDropdownHtml}
                     </div>
                     ${docStatusHtml}
                     <div class="mt-4 grid grid-cols-2 gap-2">
@@ -751,6 +786,23 @@ export const UIService = {
                 </div>
                 ${this._getStandardizedFooterHtml(item)}
             `;
+            
+            // Adiciona o Event Listener no Dropdown de Salas recém criado
+            const roomSelect = card.querySelector('.change-room-select');
+            if (roomSelect) {
+                roomSelect.addEventListener('change', (e) => {
+                    const newRoom = e.target.value || null;
+                    if (window.app && window.app.db && window.app.currentPauta) {
+                        PautaService.updateStatus(
+                            window.app.db,
+                            window.app.currentPauta.id,
+                            item.id,
+                            { room: newRoom },
+                            window.app.currentUserName || 'Sistema'
+                        );
+                    }
+                });
+            }
             
             return card;
         } catch (error) {
