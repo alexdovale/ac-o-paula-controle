@@ -200,25 +200,32 @@ export const loadAuditLogs = async (db) => {
         }
 
         const logsRef = collection(db, "audit_logs");
-        let constraints = [];
         
         const userFilter = document.getElementById('filter-log-user')?.value;
         const actionFilter = document.getElementById('filter-log-action')?.value;
         const startDate = document.getElementById('filter-log-start')?.value;
         const endDate = document.getElementById('filter-log-end')?.value;
 
-        if (userFilter && userFilter !== 'all') constraints.push(where("userEmail", "==", userFilter));
-        if (actionFilter && actionFilter !== 'all') constraints.push(where("action", "==", actionFilter));
-        if (startDate) constraints.push(where("timestamp", ">=", startDate));
-        if (endDate) constraints.push(where("timestamp", "<=", endDate + "T23:59:59"));
-        
-        let q = constraints.length > 0 
-            ? query(logsRef, ...constraints, orderBy("timestamp", "desc"), limit(200))
-            : query(logsRef, orderBy("timestamp", "desc"), limit(200));
-        
+        // BURLA DE ÍNDICES DO FIREBASE: Puxa os dados por data e filtra no Javascript
+        const q = query(logsRef, orderBy("timestamp", "desc"), limit(1500));
         const snapshot = await getDocs(q);
 
-        if (snapshot.empty) {
+        let filteredLogs = [];
+
+        snapshot.forEach((docSnap) => {
+            const log = docSnap.data();
+            if (!log.timestamp) return;
+
+            // Filtros feitos no Navegador (Evita failed-precondition do Firestore)
+            if (userFilter && userFilter !== 'all' && log.userEmail !== userFilter) return;
+            if (actionFilter && actionFilter !== 'all' && log.action !== actionFilter) return;
+            if (startDate && log.timestamp < startDate) return;
+            if (endDate && log.timestamp > endDate + "T23:59:59") return;
+
+            filteredLogs.push(log);
+        });
+
+        if (filteredLogs.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400 text-xs">Nenhum registro encontrado para estes filtros.</td></tr>';
             return;
         }
@@ -226,10 +233,8 @@ export const loadAuditLogs = async (db) => {
         tableBody.innerHTML = '';
         if (pdfBtn) pdfBtn.classList.remove('hidden');
 
-        snapshot.forEach((docSnap) => {
-            const log = docSnap.data();
-            if (!log.timestamp) return;
-            
+        // Limita a exibição na tela para não travar o navegador
+        filteredLogs.slice(0, 200).forEach((log) => {
             let formattedDate = 'Data inválida';
             try {
                 const date = new Date(log.timestamp);
@@ -282,7 +287,6 @@ export const loadAuditLogs = async (db) => {
         
         let errorMessage = "Erro ao carregar registros.";
         if (error.code === 'permission-denied') errorMessage = "Permissão negada. Você precisa ser admin.";
-        else if (error.code === 'failed-precondition') errorMessage = "O Firebase exige a criação de um Índice (Index) para combinar esses filtros. Verifique o console.";
         else if (error.message) errorMessage = error.message;
         
         tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500 text-xs font-bold border border-red-200 bg-red-50">
@@ -301,25 +305,30 @@ export const exportAuditLogsPDF = async (db) => {
         const docPDF = new jsPDF({ orientation: 'landscape' });
 
         const logsRef = collection(db, "audit_logs");
-        let constraints = [];
         
         const userFilter = document.getElementById('filter-log-user')?.value;
         const actionFilter = document.getElementById('filter-log-action')?.value;
         const startDate = document.getElementById('filter-log-start')?.value;
         const endDate = document.getElementById('filter-log-end')?.value;
 
-        if (userFilter && userFilter !== 'all') constraints.push(where("userEmail", "==", userFilter));
-        if (actionFilter && actionFilter !== 'all') constraints.push(where("action", "==", actionFilter));
-        if (startDate) constraints.push(where("timestamp", ">=", startDate));
-        if (endDate) constraints.push(where("timestamp", "<=", endDate + "T23:59:59"));
-        
-        let q = constraints.length > 0 
-            ? query(logsRef, ...constraints, orderBy("timestamp", "desc"), limit(500))
-            : query(logsRef, orderBy("timestamp", "desc"), limit(500));
-        
+        // BURLA DE ÍNDICES DO FIREBASE PARA PDF
+        const q = query(logsRef, orderBy("timestamp", "desc"), limit(1500));
         const snapshot = await getDocs(q);
 
-        if (snapshot.empty) {
+        let filteredLogs = [];
+        snapshot.forEach((docSnap) => {
+            const log = docSnap.data();
+            if (!log.timestamp) return;
+
+            if (userFilter && userFilter !== 'all' && log.userEmail !== userFilter) return;
+            if (actionFilter && actionFilter !== 'all' && log.action !== actionFilter) return;
+            if (startDate && log.timestamp < startDate) return;
+            if (endDate && log.timestamp > endDate + "T23:59:59") return;
+
+            filteredLogs.push(log);
+        });
+
+        if (filteredLogs.length === 0) {
             showNotification("Nenhum log para exportar nestas datas.", "warning");
             return;
         }
@@ -329,7 +338,7 @@ export const exportAuditLogsPDF = async (db) => {
         
         docPDF.setFontSize(10); docPDF.setTextColor(100, 100, 100);
         docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
-        docPDF.text(`Total de registros processados: ${snapshot.size}`, 14, 34);
+        docPDF.text(`Total de registros exportados: ${filteredLogs.length}`, 14, 34);
         
         let yOffset = 40;
         if (userFilter && userFilter !== 'all') { docPDF.text(`Filtro Usuario: ${userFilter}`, 14, yOffset); yOffset += 6; }
@@ -339,8 +348,7 @@ export const exportAuditLogsPDF = async (db) => {
         const head = [['Data/Hora', 'Usuario', 'Acao', 'Detalhes']];
         const body = [];
 
-        snapshot.docs.forEach(docSnap => {
-            const log = docSnap.data();
+        filteredLogs.forEach(log => {
             let dateStr = log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : 'Invalida';
             body.push([
                 dateStr,
@@ -357,7 +365,7 @@ export const exportAuditLogsPDF = async (db) => {
             theme: 'striped',
             headStyles: { fillColor: [126, 34, 206], fontSize: 8, halign: 'center' },
             styles: { fontSize: 7, cellPadding: 2 },
-            columnStyles: { 0: { cellWidth: 35 }, 1: { cellWidth: 45 }, 2: { cellWidth: 35 }, 3: { cellWidth: 'auto' } }
+            columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 55 }, 2: { cellWidth: 45 }, 3: { cellWidth: 'auto' } }
         });
 
         docPDF.save(`Auditoria_SIGAP_${new Date().toISOString().slice(0,10)}.pdf`);
@@ -429,11 +437,12 @@ export const cleanupOldData = async (db) => {
             }
         }
         showNotification(`Sucesso! ${count} limpos e ${statsCount} stats salvas.`);
+        loadDashboardData(db);
     } catch (error) { showNotification("Erro: " + error.message, "error"); }
 };
 
 export const generateTestData = async (db) => {
-    if (!confirm("Gerar dados de teste super turbinados para o BI?")) return;
+    if (!confirm("Gerar dados de teste para visualizar o BI?")) return;
     try {
         const testData = [];
         const assuntosPool = ["Divórcio", "Alimentos", "Guarda", "Curatela", "Inventário"];
@@ -444,7 +453,7 @@ export const generateTestData = async (db) => {
             let atendidos = Math.floor(totalDias * 0.8);
             
             testData.push({
-                pautaName: `Pauta Teste ${i+1}`,
+                pautaName: `Pauta de Teste Arquivada ${i+1}`,
                 creatorEmail: "teste@dperj.rj.gov.br",
                 dataReferencia: new Date(Date.now() - (i*5)*24*60*60*1000).toISOString(),
                 diaSemana: i,
@@ -478,11 +487,19 @@ export const loadDashboardData = async (db) => {
 
     try {
         const snapshot = await getDocs(collection(db, "estatisticas_permanentes"));
+        
         if (snapshot.empty) {
             resultsArea.innerHTML = `
-                <div class="text-center py-12">
-                    <p class="text-gray-500 mb-2">Nenhum dado estatístico consolidado ainda.</p>
-                    <button id="generate-test-data-btn" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold mt-4 shadow-md">Gerar Dados de Teste</button>
+                <div class="text-center py-12 bg-white rounded-lg border shadow-sm">
+                    <div class="text-5xl mb-4">📊</div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Seu BI ainda está vazio!</h3>
+                    <p class="text-gray-500 mb-6 text-sm max-w-lg mx-auto leading-relaxed">
+                        O Painel de Inteligência (BI) constrói gráficos usando apenas o seu <b>histórico de longo prazo</b>.<br><br>
+                        Quando uma Pauta fica velha, você deve clicar no botão <b>"Limpar Pautas Antigas (7+ dias)"</b> lá em cima. Ao fazer isso, o sistema empacota os dados e joga aqui para o BI analisar o seu desempenho!
+                    </p>
+                    <button id="generate-test-data-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg text-sm font-bold shadow-md transition-all">
+                        Inserir Dados Fictícios para Testar o BI
+                    </button>
                 </div>`;
             document.getElementById('generate-test-data-btn')?.addEventListener('click', () => generateTestData(db));
             return;
@@ -495,7 +512,7 @@ export const loadDashboardData = async (db) => {
         if (userFilter && userFilter !== 'all') filteredData = filteredData.filter(d => d.creatorEmail === userFilter);
 
         if (filteredData.length === 0) {
-            resultsArea.innerHTML = '<div class="text-center py-8 text-gray-500 font-semibold">Nenhum dado encontrado para os filtros selecionados.</div>';
+            resultsArea.innerHTML = '<div class="text-center py-8 text-gray-500 font-semibold bg-white rounded-lg border">Nenhum dado encontrado para os filtros selecionados.</div>';
             return;
         }
 
@@ -559,10 +576,9 @@ export const loadDashboardData = async (db) => {
         if (window.Chart) {
             ['chart-horarios', 'chart-prioridades'].forEach(id => { if (chartInstances[id]) chartInstances[id].destroy(); });
             
-            // Lógica robusta para Picos de Horários (Fallback se estiver vazio)
             const ctxHorarios = document.getElementById('chart-horarios').getContext('2d');
             let horSorted = Object.entries(mapHorarios).sort((a,b) => a[0].localeCompare(b[0]));
-            if (horSorted.length === 0) horSorted = [["Não informado", 0]]; // Corrige gráfico vazio
+            if (horSorted.length === 0) horSorted = [["Não informado", 0]]; 
 
             chartInstances['chart-horarios'] = new Chart(ctxHorarios, {
                 type: 'line', 
@@ -580,7 +596,6 @@ export const loadDashboardData = async (db) => {
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
 
-            // Lógica robusta para Prioridades (Fallback se estiver vazio)
             const ctxPrio = document.getElementById('chart-prioridades').getContext('2d');
             const prioSorted = Object.entries(mapPrioridades);
             
@@ -591,7 +606,7 @@ export const loadDashboardData = async (db) => {
             if (prioSorted.length === 0) {
                 prioLabels = ["Não informado"];
                 prioData = [1];
-                prioColors = ['#e2e8f0']; // Cinza claro neutro
+                prioColors = ['#e2e8f0']; 
             }
 
             chartInstances['chart-prioridades'] = new Chart(ctxPrio, {
@@ -670,4 +685,4 @@ window.populateUserFilter = () => populateUserFilter(window.app?.db);
 window.generateTestData = () => generateTestData(window.app?.db);
 window.loadAuditLogs = () => loadAuditLogs(window.app?.db);
 window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
-console.log("✅ Módulo admin.js carregado com sucesso (Auditoria e BI Completos)");
+console.log("✅ Módulo admin.js carregado com sucesso (Auditoria e BI Corrigidos)");
