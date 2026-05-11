@@ -680,12 +680,15 @@ export const PDFService = {
     },
 
     /**
-     * GERA LISTA DE COLABORADORES ORDENADA E AGRUPADA POR EQUIPE
+     * GERA LISTA DE COLABORADORES ORDENADA E AGRUPADA POR EQUIPE (UI PREMIUM + QUEBRA DE PÁGINA)
      */
     generateCollaboratorsPDF(pautaName, colaboradores, selectedCols = ['nome', 'cargo', 'equipe', 'transporte']) {
         try {
             const { jsPDF } = window.jspdf;
-            const docPDF = new jsPDF();
+            const docPDF = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+            const pageWidth = docPDF.internal.pageSize.getWidth();
+            const pageHeight = docPDF.internal.pageSize.getHeight();
+            const margin = 40;
 
             const colMap = {
                 'nome': { label: 'Membro da Equipe', getData: (c) => c.nome },
@@ -699,7 +702,7 @@ export const PDFService = {
                 }}
             };
 
-            // APENAS GARANTINDO A ORDENAÇÃO EXATA: EQUIPE -> CARGO -> NOME
+            // ORDENAÇÃO EXATA: EQUIPE -> CARGO -> NOME
             const sortedColaboradores = [...colaboradores].sort((a, b) => {
                 const equipeA = a.equipe || 'Sem Equipe';
                 const equipeB = b.equipe || 'Sem Equipe';
@@ -734,13 +737,14 @@ export const PDFService = {
                     currentEquipe = equipeAtual;
                     tableData.push([
                         {
-                            content: equipeAtual.toUpperCase(), // REMOVIDO O EMOJI 📁 AQUI
+                            content: equipeAtual.toUpperCase(),
                             colSpan: selectedCols.length,
                             styles: { 
                                 fillColor: [240, 253, 244], // Fundo verde claro (Tailwind green-50)
-                                textColor: [21, 128, 61],   // Texto verde mais forte (Tailwind green-700)
+                                textColor: [21, 128, 61],   // Texto verde forte (Tailwind green-700)
                                 fontStyle: 'bold', 
-                                halign: 'center'            // Fica mais limpo e centralizado no PDF
+                                halign: 'center',
+                                fontSize: 10
                             } 
                         }
                     ]);
@@ -750,21 +754,76 @@ export const PDFService = {
                 tableData.push(selectedCols.map(key => colMap[key] ? colMap[key].getData(c) : 'N/A'));
             });
 
+            // LOGO
+            const logoUrl = "https://raw.githubusercontent.com/alexdovale/calculo-mensuracao-codoc/main/logo.png";
+            try {
+                // Largura 140pt, Altura 33pt (~ 50x12mm)
+                docPDF.addImage(logoUrl, 'PNG', margin, margin, 140, 33);
+            } catch(e) { console.warn("Logo não carregada:", e); }
+
+            let startY = margin + 50;
+
+            // CABEÇALHO DO DOCUMENTO
             docPDF.setFontSize(16);
             docPDF.setTextColor(22, 163, 74); // Verde SIGAP
-            docPDF.text("Lista de Presença da Equipe", 14, 25);
-            docPDF.text(`Pauta: ${pautaName}`, 14, 40);
+            docPDF.setFont("helvetica", "bold");
+            docPDF.text("LISTA DE PRESENÇA DA EQUIPE", margin, startY);
+            startY += 18;
 
+            docPDF.setFontSize(10);
+            docPDF.setTextColor(100);
+            docPDF.setFont("helvetica", "normal");
+            docPDF.text(`Pauta: ${pautaName}`, margin, startY);
+            startY += 14;
+            docPDF.text(`Total de Colaboradores: ${sortedColaboradores.length}`, margin, startY);
+            startY += 14;
+            docPDF.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, margin, startY);
+            startY += 20;
+
+            // DESENHANDO A TABELA
             docPDF.autoTable({
                 head: header,
                 body: tableData,
-                startY: 55,
-                theme: 'striped',
-                headStyles: { fillColor: [22, 163, 74] }, // Verde SIGAP
-                styles: { fontSize: 9, halign: 'center', valign: 'middle' }
+                startY: startY,
+                theme: 'grid',
+                headStyles: { 
+                    fillColor: [22, 163, 74], 
+                    textColor: [255, 255, 255], 
+                    fontStyle: 'bold', 
+                    halign: 'center' 
+                },
+                styles: { 
+                    fontSize: 8.5, 
+                    cellPadding: 6, 
+                    valign: 'middle', 
+                    halign: 'center',
+                    lineColor: [220, 220, 220],
+                    lineWidth: 0.5
+                },
+                columnStyles: { 
+                    0: { halign: 'left', fontStyle: 'bold', textColor: [50, 50, 50] } // Nome alinhado à esquerda e em negrito
+                },
+                margin: { left: margin, right: margin, bottom: 40 },
+                didDrawPage: function (data) {
+                    // Adiciona rodapé com número da página em cada quebra
+                    const str = "Página " + docPDF.internal.getNumberOfPages();
+                    docPDF.setFontSize(8);
+                    docPDF.setTextColor(150);
+                    docPDF.setFont("helvetica", "normal");
+                    docPDF.text(str, pageWidth - margin - 30, pageHeight - 20);
+                }
             });
 
-            docPDF.save(`equipe_${pautaName.replace(/\s+/g, '_')}.pdf`);
+            // Assinatura do sistema no rodapé para todas as páginas geradas
+            const pageCount = docPDF.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                docPDF.setPage(i);
+                docPDF.setFontSize(8);
+                docPDF.setTextColor(150);
+                docPDF.text(`SIGAP - Sistema de Gerenciamento de Pauta`, margin, pageHeight - 20);
+            }
+
+            docPDF.save(`equipe_presenca_${pautaName.replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (e) {
             console.error("Erro PDF Equipe:", e);
@@ -838,4 +897,4 @@ export const generateFaltososPDF = (pautaName, faltosos) => {
 
 window.PDFService = PDFService;
 
-console.log("✅ pdfService.js carregado - VERSÃO FINAL (Logo 106x25mm, Texto limitado, Cores Verdes)!");
+console.log("✅ pdfService.js carregado - VERSÃO FINAL (Colaboradores UI Premium + Quebra de Página + Logo)!");
