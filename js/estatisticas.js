@@ -2,8 +2,9 @@
  * estatisticas.js - Versão Completa e Corrigida
  * Funcionalidades:
  * - PDF por Equipe (MOSTRA TODOS + QUEBRA DE PÁGINA AUTOMÁTICA)
- * - Visual "Verde SIGAP" unificado com Logo
+ * - Visual "Verde SIGAP" nativo sem imagens externas (Logo em texto)
  * - Tabelas inteligentes para não sobrepor textos
+ * - Ordenação Hierárquica: Defensores primeiro, Servidores depois.
  */
 
 export const StatisticsService = {
@@ -13,6 +14,38 @@ export const StatisticsService = {
         const end = new Date(endTimeISO);
         if (isNaN(start) || isNaN(end)) return null;
         return Math.round((end - start) / 60000);
+    },
+
+    // Ordenação Inteligente: Primeiro Defensor, depois Servidor, depois Alfabético
+    sortCollaboratorsByRole(colaboradores) {
+        return [...colaboradores].sort((a, b) => {
+            const getCargoWeight = (cargo) => {
+                const c = (cargo || '').toLowerCase();
+                if (c.includes('defensor')) return 1;
+                if (c.includes('servidor')) return 2;
+                return 3;
+            };
+            const weightA = getCargoWeight(a.cargo);
+            const weightB = getCargoWeight(b.cargo);
+            
+            if (weightA !== weightB) return weightA - weightB;
+            return (a.nome || '').localeCompare(b.nome || '');
+        });
+    },
+
+    // Função auxiliar para desenhar o Cabeçalho SIGAP
+    drawSigapHeader(doc, margin, startY) {
+        doc.setFontSize(24);
+        doc.setTextColor(22, 163, 74); // Verde SIGAP
+        doc.setFont("helvetica", "bold");
+        doc.text("SIGAP", margin, startY);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(120, 120, 120);
+        doc.setFont("helvetica", "normal");
+        doc.text("Sistema de Gerenciamento de Pauta", margin, startY + 12);
+        
+        return startY + 35; // Retorna o novo Y
     },
 
     showModal(allAssisted, useDelegationFlow, pautaName) {
@@ -235,9 +268,11 @@ export const StatisticsService = {
                 const atendimentos = collaborators.find(c => c.name === col.nome)?.count || 0;
                 colaboradoresCompletos.push({ nome: col.nome, atendimentos: atendimentos, cargo: col.cargo });
             });
-            colaboradoresCompletos.sort((a, b) => b.atendimentos - a.atendimentos);
             
-            const collaboratorsRows = colaboradoresCompletos.map(({nome, atendimentos, cargo}) => `
+            // ORDENAÇÃO NA TELA
+            const sortedColaboradoresUI = this.sortCollaboratorsByRole(colaboradoresCompletos);
+            
+            const collaboratorsRows = sortedColaboradoresUI.map(({nome, atendimentos, cargo}) => `
                 <tr class="border-b border-slate-50 collaborator-row group-${index} hover:bg-slate-50/50 transition-colors">
                     <td class="px-3 md:px-4 py-2.5 font-medium text-xs md:text-sm text-slate-700 pl-4 md:pl-6">${nome}</td>
                     <td class="px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-500">${cargo || '-'}</td>
@@ -245,7 +280,7 @@ export const StatisticsService = {
                 </tr>
             `).join('');
 
-            const hasCollaborators = colaboradoresCompletos.length > 0;
+            const hasCollaborators = sortedColaboradoresUI.length > 0;
 
             return `
                 <div class="mb-4 border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white group-container" data-group-index="${index}">
@@ -605,7 +640,7 @@ export const StatisticsService = {
     },
 
     // =========================================================================
-    // EXPORTAÇÃO COMPLETA POR EQUIPE (RESOLVE O PROBLEMA DA IMAGEM E DAS QUEBRAS)
+    // EXPORTAÇÃO COMPLETA POR EQUIPE
     // =========================================================================
     async exportEquipesPDF(pautaName, dados) {
         const { jsPDF } = window.jspdf;
@@ -614,20 +649,27 @@ export const StatisticsService = {
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 40;
 
-        const logoUrl = "https://raw.githubusercontent.com/alexdovale/calculo-mensuracao-codoc/main/logo.png";
-        try { doc.addImage(logoUrl, 'PNG', margin, margin, 140, 33); } catch(e) {}
-
-        let yPos = margin + 50;
+        let yPos = margin;
+        
+        // Novo Cabeçalho do seu Sistema (Substitui Imagem)
+        yPos = this.drawSigapHeader(doc, margin, yPos);
 
         doc.setFontSize(16);
         doc.setTextColor(22, 163, 74);
         doc.setFont("helvetica", "bold");
-        doc.text(`RELATÓRIO COMPLETO POR EQUIPE - ${pautaName}`, margin, yPos);
+        doc.text("RELATÓRIO COMPLETO POR EQUIPE", margin, yPos);
         yPos += 18;
         
-        doc.setFontSize(10);
+        doc.setFontSize(12);
         doc.setTextColor(100);
         doc.setFont("helvetica", "normal");
+        
+        // QUEBRA INTELIGENTE DO TÍTULO DA PAUTA (Resolve o problema da imagem)
+        const splitTitle = doc.splitTextToSize(`Pauta: ${pautaName}`, pageWidth - (margin * 2));
+        doc.text(splitTitle, margin, yPos);
+        yPos += (splitTitle.length * 15);
+        
+        doc.setFontSize(10);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
         yPos += 14;
         doc.setFont("helvetica", "bold");
@@ -637,7 +679,8 @@ export const StatisticsService = {
         dados.sortedGroups.forEach(({groupName, total, todosColaboradores, collaborators}) => {
             let body = [];
             if (todosColaboradores && todosColaboradores.length > 0) {
-                const cols = [...todosColaboradores].sort((a, b) => a.nome.localeCompare(b.nome));
+                // USA A ORDENAÇÃO: DEFENSOR > SERVIDOR > NOME
+                const cols = this.sortCollaboratorsByRole(todosColaboradores);
                 body = cols.map(col => {
                     const count = collaborators.find(c => c.name === col.nome)?.count || 0;
                     return [col.nome, col.cargo || '-', count];
@@ -697,20 +740,24 @@ export const StatisticsService = {
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 40;
 
-        const logoUrl = "https://raw.githubusercontent.com/alexdovale/calculo-mensuracao-codoc/main/logo.png";
-        try { doc.addImage(logoUrl, 'PNG', margin, margin, 140, 33); } catch(e) {}
-
-        let yPos = margin + 50;
+        let yPos = margin;
+        
+        yPos = this.drawSigapHeader(doc, margin, yPos);
 
         doc.setFontSize(16);
         doc.setTextColor(22, 163, 74);
         doc.setFont("helvetica", "bold");
-        doc.text(`RELATÓRIO DE GRUPOS - ${pautaName}`, margin, yPos);
+        doc.text("RELATÓRIO DE GRUPOS", margin, yPos);
         yPos += 18;
         
-        doc.setFontSize(10);
+        doc.setFontSize(12);
         doc.setTextColor(100);
         doc.setFont("helvetica", "normal");
+        const splitTitle = doc.splitTextToSize(`Pauta: ${pautaName}`, pageWidth - (margin * 2));
+        doc.text(splitTitle, margin, yPos);
+        yPos += (splitTitle.length * 15);
+        
+        doc.setFontSize(10);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
         yPos += 14;
         doc.setFont("helvetica", "bold");
@@ -720,7 +767,8 @@ export const StatisticsService = {
         dados.sortedGroups.forEach(({groupName, total, todosColaboradores}) => {
             let body = [];
             if (todosColaboradores && todosColaboradores.length > 0) {
-                const cols = [...todosColaboradores].sort((a, b) => a.nome.localeCompare(b.nome));
+                // USA A ORDENAÇÃO: DEFENSOR > SERVIDOR > NOME
+                const cols = this.sortCollaboratorsByRole(todosColaboradores);
                 body = cols.map(c => [c.nome, c.cargo || '-']);
             } else {
                 body = [['Nenhum colaborador cadastrado nesta equipe', '-']];
@@ -767,20 +815,24 @@ export const StatisticsService = {
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 40;
 
-        const logoUrl = "https://raw.githubusercontent.com/alexdovale/calculo-mensuracao-codoc/main/logo.png";
-        try { doc.addImage(logoUrl, 'PNG', margin, margin, 140, 33); } catch(e) {}
-
-        let yPos = margin + 50;
+        let yPos = margin;
+        
+        yPos = this.drawSigapHeader(doc, margin, yPos);
 
         doc.setFontSize(16);
         doc.setTextColor(22, 163, 74);
         doc.setFont("helvetica", "bold");
-        doc.text(`LISTA DE ASSISTIDOS POR EQUIPE - ${pautaName}`, margin, yPos);
+        doc.text("LISTA DE ASSISTIDOS POR EQUIPE", margin, yPos);
         yPos += 18;
         
-        doc.setFontSize(10);
+        doc.setFontSize(12);
         doc.setTextColor(100);
         doc.setFont("helvetica", "normal");
+        const splitTitle = doc.splitTextToSize(`Pauta: ${pautaName}`, pageWidth - (margin * 2));
+        doc.text(splitTitle, margin, yPos);
+        yPos += (splitTitle.length * 15);
+        
+        doc.setFontSize(10);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
         yPos += 14;
         doc.setFont("helvetica", "bold");
@@ -853,16 +905,22 @@ export const StatisticsService = {
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 40;
         
-        const logoUrl = "https://raw.githubusercontent.com/alexdovale/calculo-mensuracao-codoc/main/logo.png";
-        try { doc.addImage(logoUrl, 'PNG', margin, margin, 140, 33); } catch(e) {}
+        let yPos = margin;
         
-        let yPos = margin + 50;
+        yPos = this.drawSigapHeader(doc, margin, yPos);
 
         doc.setFontSize(16);
         doc.setTextColor(22, 163, 74);
         doc.setFont("helvetica", "bold");
-        doc.text(`RESUMO GERAL ESTATÍSTICO - ${pautaName}`, margin, yPos);
-        yPos += 20;
+        doc.text("RESUMO GERAL ESTATÍSTICO", margin, yPos);
+        yPos += 18;
+        
+        doc.setFontSize(12);
+        doc.setTextColor(100);
+        doc.setFont("helvetica", "normal");
+        const splitTitle = doc.splitTextToSize(`Pauta: ${pautaName}`, pageWidth - (margin * 2));
+        doc.text(splitTitle, margin, yPos);
+        yPos += (splitTitle.length * 15) + 5;
 
         const addSectionTitle = (title) => {
             if (yPos > pageHeight - 100) { 
@@ -1040,7 +1098,7 @@ export const StatisticsService = {
             doc.setFontSize(8);
             doc.setTextColor(150);
             doc.setFont("helvetica", "normal");
-            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')} - Página ${i} de ${pageCount}`, margin, pageHeight - 20);
+            doc.text(`SIGAP - Sistema de Gerenciamento de Pauta | Página ${i} de ${pageCount}`, margin, pageHeight - 20);
         }
 
         doc.save(`resumo_${pautaName.replace(/\s+/g, '_')}.pdf`);
@@ -1057,4 +1115,4 @@ export const exportStatisticsToPDF = (pautaName, statsData) => {
 
 window.StatisticsService = StatisticsService;
 
-console.log("✅ estatisticas.js carregado com sucesso (Tabelas automáticas sem sobreposição e com quebra de página)!");
+console.log("✅ estatisticas.js carregado com sucesso (Tabelas automáticas, Logo SIGAP e Ordem Hierárquica)!");
