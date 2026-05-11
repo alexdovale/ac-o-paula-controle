@@ -104,6 +104,9 @@ const CollaboratorService = {
             return;
         }
 
+        const btnSave = document.getElementById('save-ata-data-btn');
+        if (btnSave) btnSave.disabled = true;
+
         const data = {
             ataAcaoNome: document.getElementById('ata-acao-nome').value.trim(),
             ataEndereco: document.getElementById('ata-endereco').value.trim(),
@@ -117,15 +120,17 @@ const CollaboratorService = {
             const pautaRef = doc(app.db, "pautas", app.currentPauta.id);
             await updateDoc(pautaRef, data);
             
-            // Atualiza o estado local para evitar recarregamento
+            // Atualiza o cache local
             if (app.currentPautaData) {
-                Object.assign(app.currentPautaData, data);
+                app.currentPautaData = { ...app.currentPautaData, ...data };
             }
 
-            showNotification("Dados da Ata salvos com sucesso!", "success");
+            showNotification("Dados da Ata salvos com sucesso! 💾", "success");
         } catch (error) {
             console.error("Erro ao salvar dados da ata:", error);
             showNotification("Erro ao salvar dados no banco.", "error");
+        } finally {
+            if (btnSave) btnSave.disabled = false;
         }
     },
 
@@ -136,17 +141,15 @@ const CollaboratorService = {
         if (!app?.currentPauta?.id) return;
 
         try {
-            // Primeiro tenta usar os dados que já estão na memória do app
-            let data = app.currentPautaData;
-            
-            // Se não estiverem lá, busca no banco por segurança
-            if (!data || !data.ataOrgao) {
-                const pautaDoc = await getDoc(doc(app.db, "pautas", app.currentPauta.id));
-                if (pautaDoc.exists()) data = pautaDoc.data();
-            }
-
-            if (data) {
+            // Busca os dados mais recentes do banco para garantir sincronia
+            const pautaDoc = await getDoc(doc(app.db, "pautas", app.currentPauta.id));
+            if (pautaDoc.exists()) {
+                const data = pautaDoc.data();
+                
+                // Preenche os campos se os dados existirem
                 if (data.ataAcaoNome) document.getElementById('ata-acao-nome').value = data.ataAcaoNome;
+                else document.getElementById('ata-acao-nome').value = app.currentPauta.name || '';
+                
                 if (data.ataEndereco) document.getElementById('ata-endereco').value = data.ataEndereco;
                 if (data.ataData) document.getElementById('ata-data').value = data.ataData;
                 if (data.ataTotalManual) document.getElementById('ata-total').value = data.ataTotalManual;
@@ -319,6 +322,7 @@ const CollaboratorService = {
     },
 
     addEventListeners(app) {
+        // Checkbox de presença
         document.querySelectorAll('.checkin-checkbox').forEach(cb => {
             cb.onchange = async (e) => {
                 const id = e.target.dataset.id;
@@ -329,9 +333,29 @@ const CollaboratorService = {
         });
 
         // Event listener para o botão de SALVAR DADOS da Ata
+        // Importante: Usamos removeEventListener/addEventListener para evitar duplicados
         const btnSaveAta = document.getElementById('save-ata-data-btn');
         if (btnSaveAta) {
-            btnSaveAta.onclick = () => this.saveAtaData(app);
+            btnSaveAta.onclick = null; // Limpa anterior
+            btnSaveAta.onclick = (e) => {
+                e.preventDefault();
+                this.saveAtaData(app);
+            };
+        }
+
+        // Event listener para o botão que abre o modal da Ata 
+        // (Geralmente no modal de Estatísticas ou Colaboradores)
+        const btnOpenAtaModal = document.getElementById('btn-gerar-ata-social');
+        if (btnOpenAtaModal) {
+            const oldHandler = btnOpenAtaModal.onclick;
+            btnOpenAtaModal.onclick = (e) => {
+                // Carrega os dados antes de mostrar o modal
+                this.loadAtaData(app);
+                // Abre o modal
+                const modal = document.getElementById('ata-social-modal');
+                if (modal) modal.classList.remove('hidden');
+                if (oldHandler) oldHandler(e);
+            };
         }
     },
 
@@ -360,14 +384,14 @@ const CollaboratorService = {
         const filtrados = this.filtrarParaAta(app.colaboradores);
         if (filtrados.length === 0) return null;
 
-        let html = `<div style="font-family: sans-serif;"><h3>LISTA DE PRESENÇA - SIGEP</h3><table border="1" style="width:100%; border-collapse: collapse;">`;
+        let html = `<div style="font-family: sans-serif;"><h3>LISTA DE PRESENÇA - SIGAP</h3><table border="1" style="width:100%; border-collapse: collapse;">`;
         html += `<thead><tr><th>Nome</th><th>Cargo</th><th>Equipe</th><th>Horário</th></tr></thead><tbody>`;
         
         this.ordenarColaboradores(filtrados).forEach(c => {
             html += `<tr><td>${c.nome}</td><td>${c.cargo}</td><td>${c.equipe}</td><td>${c.horario}</td></tr>`;
         });
         
-        html += `</tbody></table><p style="font-size:10px; text-align:center;">Gerado automaticamente pelo SIGEP</p></div>`;
+        html += `</tbody></table><p style="font-size:10px; text-align:center;">Gerado automaticamente pelo SIGAP</p></div>`;
         return html;
     },
 
