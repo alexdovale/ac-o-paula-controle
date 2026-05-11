@@ -2068,3 +2068,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+
+window.CollaboratorService.loadAtaData(window.app);
