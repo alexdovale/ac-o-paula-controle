@@ -36,7 +36,7 @@
         <header class="mb-6 bg-white p-5 rounded-3xl shadow-sm border flex flex-col md:flex-row items-center justify-between gap-4">
             <div class="flex flex-col md:flex-row items-center gap-4 text-center md:text-left w-full md:w-auto">
                 
-                <!-- LOGO TIPOGRÁFICA SIGAP (Substituindo a Imagem) -->
+                <!-- LOGO TIPOGRÁFICA SIGAP -->
                 <div class="flex flex-col items-center justify-center md:pr-4 md:border-r-2 border-green-100">
                     <h1 class="text-4xl md:text-5xl font-black text-green-600 tracking-tighter leading-none">SIGAP</h1>
                     <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-1">Gestão de Pauta</p>
@@ -68,7 +68,7 @@
                     <h2 class="text-sm font-black uppercase flex items-center gap-2"><span class="text-lg">⏳</span> Fila de Espera</h2>
                     <span id="count-aguardando" class="bg-white text-amber-600 px-3 py-0.5 rounded-full text-xs font-black">0</span>
                 </div>
-                <div id="list-aguardando" class="p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50 scrollable-content"></div>
+                <div id="list-aguardando" class="p-4 overflow-y-auto flex-1 bg-slate-50 scrollable-content"></div>
             </div>
 
             <div id="col-atendimento" class="hidden bg-white rounded-3xl shadow-md border overflow-hidden flex flex-col h-full min-h-[400px]">
@@ -114,23 +114,42 @@
         const urlParams = new URLSearchParams(window.location.search);
         const pId = urlParams.get('id');
 
-        // --- LÓGICA DE ABREVIAÇÃO LGPD SOLICITADA ---
+        // --- LÓGICAS DE FORMATAÇÃO E ESCAPE ---
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
         function formatName(name, mask) {
             if (!name) return "---";
-            if (!mask) return name;
+            if (!mask) return escapeHTML(name);
             
             const parts = name.trim().split(/\s+/);
-            if (parts.length === 1) return parts[0];
+            if (parts.length === 1) return escapeHTML(parts[0]);
 
-            // Conectores que devem ser mantidos por extenso
             const connectors = ["de", "da", "do", "dos", "das"];
-
-            return parts.map((part, index) => {
-                if (index === 0) return part; // Primeiro nome completo
-                if (connectors.includes(part.toLowerCase())) return part; // Conectores completos
-                return part.charAt(0).toUpperCase() + "."; // Inicial do sobrenome
-            }).join(' ');
+            return escapeHTML(parts.map((part, index) => {
+                if (index === 0) return part;
+                if (connectors.includes(part.toLowerCase())) return part;
+                return part.charAt(0).toUpperCase() + ".";
+            }).join(' '));
         }
+
+        // Função geradora do Card Padrão
+        const createCardHTML = (a, i, color, type, data) => `
+            <div class="bg-white p-4 rounded-2xl border-l-8 ${a.priority === 'URGENTE' ? 'border-red-500 bg-red-50' : color} shadow-sm flex justify-between items-center transition-all hover:-translate-y-0.5 mb-2">
+                <div class="min-w-0">
+                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">${type === 'wait' ? (i+1) + 'º DA FILA' : 'PROCESSO ATIVO'}</p>
+                    <p class="font-bold text-gray-800 text-lg uppercase truncate">${formatName(a.name, data.maskNames)}</p>
+                </div>
+                <div class="flex flex-col items-end shrink-0 ml-2 gap-1">
+                    <span class="bg-blue-600 text-white text-[8px] font-black px-2 py-1 rounded-md uppercase tracking-wider">${escapeHTML(a.room) || 'GERAL'}</span>
+                    ${a.documentState === 'saved' ? '<span class="text-[8px] font-black text-green-700 bg-green-100 border border-green-200 px-1.5 py-0.5 rounded-md uppercase">Docs OK</span>' : ''}
+                </div>
+            </div>
+        `;
 
         if (pId) {
             onSnapshot(doc(db, "pautas", pId), (snap) => {
@@ -170,25 +189,62 @@
                         document.getElementById('count-distribuicao').textContent = dist.length;
                         document.getElementById('total-atendidos-count').textContent = done.length;
 
-                        const renderList = (elId, list, color, type) => {
-                            const el = document.getElementById(elId);
-                            el.innerHTML = list.length ? list.map((a, i) => `
-                                <div class="bg-white p-4 rounded-2xl border-l-8 ${a.priority === 'URGENTE' ? 'border-red-500 bg-red-50' : color} shadow-sm flex justify-between items-center transition-all hover:-translate-y-0.5">
-                                    <div class="min-w-0">
-                                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">${type === 'wait' ? (i+1) + 'º DA FILA' : 'PROCESSO ATIVO'}</p>
-                                        <p class="font-bold text-gray-800 text-lg uppercase truncate">${formatName(a.name, data.maskNames)}</p>
-                                    </div>
-                                    <div class="flex flex-col items-end shrink-0 ml-2 gap-1">
-                                        <span class="bg-blue-600 text-white text-[8px] font-black px-2 py-1 rounded-md uppercase tracking-wider">${a.room || 'GERAL'}</span>
-                                        ${a.documentState === 'saved' ? '<span class="text-[8px] font-black text-green-700 bg-green-100 border border-green-200 px-1.5 py-0.5 rounded-md uppercase">Docs OK</span>' : ''}
-                                    </div>
-                                </div>
-                            `).join('') : '<p class="text-center text-gray-300 py-10 text-[10px] font-black uppercase">Vazio</p>';
-                        };
+                        // RENDERIZAÇÃO DA FILA DE AGUARDANDO (Com suporte a MultiSalas)
+                        const elAg = document.getElementById('list-aguardando');
+                        if (ag.length === 0) {
+                            elAg.innerHTML = '<div class="flex items-center justify-center h-full"><p class="text-gray-300 text-[10px] font-black uppercase">Vazio</p></div>';
+                        } else if (data.type === 'multisala') {
+                            const rooms = data.rooms || data.customRooms || [];
+                            let html = '';
+                            
+                            rooms.forEach(room => {
+                                const roomItems = ag.filter(a => a.room === room);
+                                if (roomItems.length > 0) {
+                                    html += `
+                                        <div class="mb-5 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                                            <div class="bg-blue-50 px-4 py-2.5 border-b border-blue-100 flex justify-between items-center">
+                                                <span class="text-xs font-black text-blue-900 uppercase tracking-widest flex items-center gap-2">
+                                                    <span class="text-base">🏢</span> ${escapeHTML(room)}
+                                                </span>
+                                                <span class="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${roomItems.length}</span>
+                                            </div>
+                                            <div class="p-3 bg-slate-50/50">
+                                                ${roomItems.map((a, i) => createCardHTML(a, i, 'border-amber-400', 'wait', data)).join('')}
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+                            });
 
-                        renderList('list-aguardando', ag, 'border-amber-400', 'wait');
-                        renderList('list-atendimento', serv, 'border-green-500', 'pulse');
-                        renderList('list-distribuicao', dist, 'border-cyan-500', 'normal');
+                            const noRoomItems = ag.filter(a => !a.room || !rooms.includes(a.room));
+                            if (noRoomItems.length > 0) {
+                                html += `
+                                    <div class="mb-5 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                                        <div class="bg-red-50 px-4 py-2.5 border-b border-red-100 flex justify-between items-center">
+                                            <span class="text-xs font-black text-red-900 uppercase tracking-widest flex items-center gap-2">
+                                                <span class="text-base">⚠️</span> Sem Sala Definida
+                                            </span>
+                                            <span class="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${noRoomItems.length}</span>
+                                        </div>
+                                        <div class="p-3 bg-slate-50/50">
+                                            ${noRoomItems.map((a, i) => createCardHTML(a, i, 'border-amber-400', 'wait', data)).join('')}
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                            elAg.innerHTML = html;
+                        } else {
+                            elAg.innerHTML = ag.map((a, i) => createCardHTML(a, i, 'border-amber-400', 'wait', data)).join('');
+                        }
+
+                        // RENDERIZAÇÃO PADRÃO PARA AS OUTRAS COLUNAS
+                        document.getElementById('list-atendimento').innerHTML = serv.length 
+                            ? serv.map((a, i) => createCardHTML(a, i, 'border-green-500', 'pulse', data)).join('') 
+                            : '<p class="text-center text-gray-300 py-10 text-[10px] font-black uppercase">Vazio</p>';
+
+                        document.getElementById('list-distribuicao').innerHTML = dist.length 
+                            ? dist.map((a, i) => createCardHTML(a, i, 'border-cyan-500', 'normal', data)).join('') 
+                            : '<p class="text-center text-gray-300 py-10 text-[10px] font-black uppercase">Vazio</p>';
 
                         document.getElementById('list-atendidos-content').innerHTML = done.map(d => `
                             <div class="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center text-sm mb-2 hover:bg-gray-50 transition-colors">
