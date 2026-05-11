@@ -34,23 +34,27 @@
     <div id="app-content" class="hidden w-full max-w-7xl mx-auto flex-1 flex flex-col">
         
         <header class="mb-6 bg-white p-5 rounded-3xl shadow-sm border flex flex-col md:flex-row items-center justify-between gap-4">
-            <div class="flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
-                <!-- LOGO BASE DO INDEX -->
-                <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGAP" class="h-14 w-auto drop-shadow-sm">
+            <div class="flex flex-col md:flex-row items-center gap-4 text-center md:text-left w-full md:w-auto">
                 
-                <div>
-                    <h1 id="pauta-title" class="text-xl md:text-2xl font-black text-gray-800 uppercase tracking-tighter leading-tight">---</h1>
-                    <div class="flex items-center justify-center md:justify-start gap-2 mt-1">
+                <!-- LOGO TIPOGRÁFICA SIGAP (Substituindo a Imagem) -->
+                <div class="flex flex-col items-center justify-center md:pr-4 md:border-r-2 border-green-100">
+                    <h1 class="text-4xl md:text-5xl font-black text-green-600 tracking-tighter leading-none">SIGAP</h1>
+                    <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-1">Gestão de Pauta</p>
+                </div>
+                
+                <div class="mt-2 md:mt-0">
+                    <h2 id="pauta-title" class="text-xl md:text-2xl font-black text-gray-800 uppercase tracking-tighter leading-tight">---</h2>
+                    <div class="flex items-center justify-center md:justify-start gap-2 mt-1.5">
                         <span class="relative flex h-2 w-2">
                             <span class="animate-ping absolute h-full w-full rounded-full bg-green-400 opacity-75"></span>
                             <span class="relative rounded-full h-2 w-2 bg-green-500"></span>
                         </span>
-                        <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Painel Público SIGAP • Atualização ao vivo</p>
+                        <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Painel Público • Atualização ao vivo</p>
                     </div>
                 </div>
             </div>
 
-            <button id="open-atendidos-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl flex flex-col items-center shadow-lg transition-all min-w-[140px]">
+            <button id="open-atendidos-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl flex flex-col items-center shadow-lg transition-all min-w-[140px] w-full md:w-auto">
                 <span class="text-[9px] font-black uppercase opacity-70">Finalizados Hoje</span>
                 <span id="total-atendidos-count" class="text-2xl font-black">0</span>
             </button>
@@ -61,7 +65,7 @@
             
             <div id="col-aguardando" class="bg-white rounded-3xl shadow-md border overflow-hidden flex flex-col h-full min-h-[400px]">
                 <div class="bg-amber-500 p-4 text-white flex justify-between items-center shadow-md">
-                    <h2 class="text-sm font-black uppercase">⏳ Fila de Espera</h2>
+                    <h2 class="text-sm font-black uppercase flex items-center gap-2"><span class="text-lg">⏳</span> Fila de Espera</h2>
                     <span id="count-aguardando" class="bg-white text-amber-600 px-3 py-0.5 rounded-full text-xs font-black">0</span>
                 </div>
                 <div id="list-aguardando" class="p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50 scrollable-content"></div>
@@ -69,7 +73,7 @@
 
             <div id="col-atendimento" class="hidden bg-white rounded-3xl shadow-md border overflow-hidden flex flex-col h-full min-h-[400px]">
                 <div class="bg-green-600 p-4 text-white flex justify-between items-center shadow-md">
-                    <h2 class="text-sm font-black uppercase">👩‍💻 Em Atendimento</h2>
+                    <h2 class="text-sm font-black uppercase flex items-center gap-2"><span class="text-lg">👩‍💻</span> Em Atendimento</h2>
                     <span id="count-atendimento" class="bg-white text-green-700 px-3 py-0.5 rounded-full text-xs font-black">0</span>
                 </div>
                 <div id="list-atendimento" class="p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50 scrollable-content"></div>
@@ -77,7 +81,7 @@
 
             <div id="col-distribuicao" class="hidden bg-white rounded-3xl shadow-md border overflow-hidden flex flex-col h-full min-h-[400px]">
                 <div class="bg-cyan-600 p-4 text-white flex justify-between items-center shadow-md">
-                    <h2 class="text-sm font-black uppercase">⚖️ Distribuição</h2>
+                    <h2 class="text-sm font-black uppercase flex items-center gap-2"><span class="text-lg">⚖️</span> Distribuição</h2>
                     <span id="count-distribuicao" class="bg-white text-cyan-700 px-3 py-0.5 rounded-full text-xs font-black">0</span>
                 </div>
                 <div id="list-distribuicao" class="p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50 scrollable-content"></div>
@@ -90,7 +94,7 @@
         <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden">
             <div class="p-5 border-b flex justify-between items-center bg-blue-50">
                 <h2 class="text-lg font-black text-blue-900 uppercase italic">✅ Concluídos</h2>
-                <button id="close-atendidos-btn" class="text-blue-300 hover:text-blue-600 text-3xl font-bold">&times;</button>
+                <button id="close-atendidos-btn" class="text-blue-300 hover:text-blue-600 text-3xl font-bold transition-colors">&times;</button>
             </div>
             <div id="list-atendidos-content" class="p-4 overflow-y-auto flex-1 space-y-2 bg-gray-50 scrollable-content"></div>
         </div>
@@ -169,14 +173,14 @@
                         const renderList = (elId, list, color, type) => {
                             const el = document.getElementById(elId);
                             el.innerHTML = list.length ? list.map((a, i) => `
-                                <div class="bg-white p-4 rounded-2xl border-l-8 ${a.priority === 'URGENTE' ? 'border-red-500 bg-red-50' : color} shadow-sm flex justify-between items-center">
+                                <div class="bg-white p-4 rounded-2xl border-l-8 ${a.priority === 'URGENTE' ? 'border-red-500 bg-red-50' : color} shadow-sm flex justify-between items-center transition-all hover:-translate-y-0.5">
                                     <div class="min-w-0">
-                                        <p class="text-[9px] font-black text-gray-400 uppercase">${type === 'wait' ? (i+1) + 'º DA FILA' : 'PROCESSO ATIVO'}</p>
+                                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">${type === 'wait' ? (i+1) + 'º DA FILA' : 'PROCESSO ATIVO'}</p>
                                         <p class="font-bold text-gray-800 text-lg uppercase truncate">${formatName(a.name, data.maskNames)}</p>
                                     </div>
-                                    <div class="flex flex-col items-end shrink-0 ml-2">
-                                        <span class="bg-blue-600 text-white text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-tighter">${a.room || 'GERAL'}</span>
-                                        ${a.documentState === 'saved' ? '<span class="text-[8px] font-black text-green-600 uppercase bg-green-50 px-1 rounded mt-1">Docs OK</span>' : ''}
+                                    <div class="flex flex-col items-end shrink-0 ml-2 gap-1">
+                                        <span class="bg-blue-600 text-white text-[8px] font-black px-2 py-1 rounded-md uppercase tracking-wider">${a.room || 'GERAL'}</span>
+                                        ${a.documentState === 'saved' ? '<span class="text-[8px] font-black text-green-700 bg-green-100 border border-green-200 px-1.5 py-0.5 rounded-md uppercase">Docs OK</span>' : ''}
                                     </div>
                                 </div>
                             `).join('') : '<p class="text-center text-gray-300 py-10 text-[10px] font-black uppercase">Vazio</p>';
@@ -187,11 +191,11 @@
                         renderList('list-distribuicao', dist, 'border-cyan-500', 'normal');
 
                         document.getElementById('list-atendidos-content').innerHTML = done.map(d => `
-                            <div class="bg-white p-3 rounded-xl border flex justify-between items-center text-sm">
+                            <div class="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center text-sm mb-2 hover:bg-gray-50 transition-colors">
                                 <span class="font-bold text-gray-700 truncate">${formatName(d.name, data.maskNames)}</span>
-                                <span class="text-[9px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-full uppercase tracking-widest">OK</span>
+                                <span class="text-[9px] font-black text-green-700 bg-green-100 border border-green-200 px-2.5 py-1 rounded-md uppercase tracking-widest">Concluído</span>
                             </div>
-                        `).join('') || '<p class="text-center text-gray-400 py-10 uppercase text-xs font-bold">Ninguém finalizado ainda.</p>';
+                        `).join('') || '<p class="text-center text-gray-400 py-10 uppercase text-xs font-bold">Nenhum atendimento finalizado ainda.</p>';
                     });
                 } else {
                     document.getElementById('loading').classList.add('hidden');
