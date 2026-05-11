@@ -695,7 +695,7 @@ export const UIService = {
                     <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
                     <div class="flex flex-wrap items-center gap-2 mb-2">
                         ${timeInfoHtml}
-                        ${item.room && currentPautaData?.type !== 'multisala' ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(item.room)}</span>` : ''}
+                        ${item.room && currentPautaData?.type === 'multisala' ? `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold border border-blue-100">${escapeHTML(item.room)}</span>` : ''}
                     </div>
                     ${docStatusHtml}
                     <div class="mt-4 grid grid-cols-2 gap-2">
@@ -1022,8 +1022,6 @@ export const UIService = {
         bindModal('manual-btn-footer', 'manual-modal', ['close-manual-modal-x', 'close-manual-modal-btn']);
         bindModal('terms-btn-footer', 'terms-modal', ['close-terms-modal-x', 'close-terms-modal-btn']);
     },
-
-    // Localize o método renderPautaCards dentro do UIService e substitua por este:
 
 renderPautaCards(pautas, userId, userEmail, app) {
     const container = document.getElementById('pautas-list');
