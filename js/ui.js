@@ -76,35 +76,33 @@ export const UIService = {
         }
         
         container.innerHTML = `
-            <div class="flex flex-wrap gap-2 mb-4 justify-center">
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'all' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="all">
-                    📋 Todas
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'active' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="active">
-                    ✅ Pautas com prazo
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'expired' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="expired">
-                    🔒 Pautas expiradas
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'my' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="my">
-                    👑 Criadas por mim
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'shared' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="shared">
-                    🤝 Compartilhadas
-                </button>
-                <button class="filter-btn px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeFilter === 'periodo' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" data-filter="periodo">
-                    📅 Período
-                </button>
+            <div class="flex flex-col items-center mb-6">
+                <div class="w-full max-w-sm relative">
+                    <label for="main-pauta-filter" class="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1 text-center w-full">Filtro de Exibição</label>
+                    <div class="relative">
+                        <select id="main-pauta-filter" class="w-full p-3 pl-4 pr-10 appearance-none border border-gray-300 rounded-xl text-sm bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 font-semibold outline-none transition cursor-pointer text-gray-700">
+                            <option value="all" ${activeFilter === 'all' ? 'selected' : ''}>📋 Mostrar Todas as Pautas</option>
+                            <option value="active" ${activeFilter === 'active' ? 'selected' : ''}>✅ Pautas com prazo</option>
+                            <option value="expired" ${activeFilter === 'expired' ? 'selected' : ''}>🔒 Pautas expiradas</option>
+                            <option value="my" ${activeFilter === 'my' ? 'selected' : ''}>👑 Criadas por mim</option>
+                            <option value="shared" ${activeFilter === 'shared' ? 'selected' : ''}>🤝 Compartilhadas</option>
+                            <option value="periodo" ${activeFilter === 'periodo' ? 'selected' : ''}>📅 Filtrar por Período / Tipo</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
+                </div>
             </div>
             ${dateFiltersHTML}
         `;
         
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const filter = btn.dataset.filter;
-                onFilterChange(filter);
+        const filterSelect = document.getElementById('main-pauta-filter');
+        if (filterSelect) {
+            filterSelect.addEventListener('change', (e) => {
+                onFilterChange(e.target.value);
             });
-        });
+        }
         
         const btnAplicar = document.getElementById('aplicar-filtro-periodo');
         if (btnAplicar) {
@@ -857,7 +855,6 @@ export const UIService = {
             const attendedT = item.attendedTime ? 
                 new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
             
-            // UTILIZA O MOTOR DE NOME SINCRONIZADO
             const atendenteNome = this.getAttendantName(item);
 
             const confirmButton = item.isConfirmed 
@@ -1151,397 +1148,5 @@ export const UIService = {
 
             container.appendChild(card);
         });
-    },
-
-    handleCardActions(e, app) {
-        const button = e.target.closest('button');
-        if (!button) return;
-
-        const id = button.dataset.id;
-        if (!id) return;
-
-        const isMobile = this.isMobileDevice();
-
-        if (button.classList.contains('quick-action-toggle')) {
-            e.stopPropagation();
-            const menuId = `quick-menu-${id}`;
-            const menu = document.getElementById(menuId);
-            
-            if (!menu) return;
-            
-            this.closeAllQuickMenus(menuId);
-            
-            const isHidden = menu.classList.contains('hidden');
-            menu.classList.toggle('hidden');
-            
-            button.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
-            button.setAttribute('aria-label', isHidden ? 'Fechar menu rápido' : 'Abrir menu rápido');
-            
-            if (!menu.classList.contains('hidden')) {
-                setTimeout(() => {
-                    const firstItem = menu.querySelector('.quick-action-item');
-                    if (firstItem) firstItem.focus();
-                }, 100);
-                
-                setTimeout(() => {
-                    const clickOutsideHandler = (e) => {
-                        if (!menu.contains(e.target) && !button.contains(e.target)) {
-                            menu.classList.add('hidden');
-                            button.setAttribute('aria-expanded', 'false');
-                            document.removeEventListener('click', clickOutsideHandler);
-                        }
-                    };
-                    document.addEventListener('click', clickOutsideHandler);
-                }, 0);
-            }
-        }
-
-        if (button.classList.contains('quick-action-item')) {
-            e.stopPropagation();
-            
-            const actionKey = `${id}-${button.dataset.tipo}`;
-            if (!this.canPerformAction(actionKey)) return;
-            
-            const tipoAcao = button.dataset.tipo;
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            
-            if (!assisted) {
-                showNotification("Erro: Assistido não encontrado", "error");
-                return;
-            }
-            
-            const menu = document.getElementById(`quick-menu-${id}`);
-            if (menu) {
-                menu.classList.add('hidden');
-                const toggle = document.getElementById(`quick-toggle-${id}`);
-                if (toggle) toggle.setAttribute('aria-expanded', 'false');
-            }
-            
-            const tipoMap = {
-                'reagendar': 'Reagendamento',
-                'agendar': 'Agendamento',
-                'consulta': 'Consulta Processual',
-                'outros': 'Outros Assuntos'
-            };
-            
-            const tipoDescricao = tipoMap[tipoAcao] || tipoAcao;
-            
-            window.assistedIdToHandle = id;
-            window.assistedNameToHandle = assisted.name || '';
-            window.assistedTipoAcao = tipoAcao;
-            window.assistedTipoDescricao = tipoDescricao;
-            
-            const nameElement = document.getElementById('assisted-to-attend-name');
-            if (nameElement) nameElement.textContent = assisted.name || '';
-            
-            showNotification(`${tipoDescricao} para ${assisted.name}`, "info");
-            
-            if (typeof this.preencherListaColaboradoresModal === 'function') {
-                this.preencherListaColaboradoresModal(app);
-            }
-            
-            const modal = document.getElementById('select-collaborator-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                setTimeout(() => {
-                    const firstInput = modal.querySelector('input, button, [tabindex="0"]');
-                    if (firstInput) firstInput.focus();
-                }, 100);
-            }
-        }
-
-        if (button.classList.contains('check-in-btn')) {
-            window.assistedIdToHandle = id;
-            const modal = document.getElementById('arrival-modal');
-            if (modal) {
-                document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5);
-                if (isMobile) {
-                    const timeInput = document.getElementById('arrival-time-input');
-                    timeInput.setAttribute('pattern', '[0-9]{2}:[0-9]{2}');
-                }
-                modal.classList.remove('hidden');
-            }
-        }
-
-        if (button.classList.contains('faltou-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, { status: 'faltoso' }, app.currentUserName);
-        }
-
-        if (button.classList.contains('return-to-pauta-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'pauta',
-                arrivalTime: null,
-                priority: null,
-                assignedCollaborator: null,
-                inAttendanceTime: null,
-                room: null,
-                distributionStatus: null
-            }, app.currentUserName);
-        }
-
-        if (button.classList.contains('return-to-pauta-from-faltoso-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'pauta'
-            }, app.currentUserName);
-        }
-
-        if (button.classList.contains('return-to-aguardando-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardando',
-                attendant: null,
-                attendedTime: null
-            }, app.currentUserName);
-        }
-
-        if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardando',
-                assignedCollaborator: null,
-                delegatedBy: null,
-                delegatedAt: null,
-                inAttendanceTime: null,
-                distributionStatus: null
-            }, app.currentUserName);
-            
-            if (assisted && assisted.assignedCollaborator) {
-                showNotification(`Delegação para ${assisted.assignedCollaborator.name} removida`, "info");
-            }
-        }
-
-        if (button.classList.contains('return-to-aguardando-from-dist-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardando',
-                distributionStatus: null
-            }, app.currentUserName);
-        }
-
-        if (button.classList.contains('delete-btn')) {
-            if (confirm("Tem certeza?")) {
-                this.deleteAssisted(app.db, app.currentPauta.id, id, app.currentUserName);
-            }
-        }
-
-        if (button.classList.contains('priority-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (assisted && assisted.priority === 'URGENTE') {
-                if (confirm("Remover urgência?")) {
-                    this.updateStatus(app.db, app.currentPauta.id, id, {
-                        priority: null,
-                        priorityReason: null
-                    }, app.currentUserName);
-                }
-            } else {
-                window.assistedIdToHandle = id;
-                const modal = document.getElementById('priority-reason-modal');
-                if (modal) {
-                    document.querySelectorAll('.p-chip').forEach(c => c.classList.remove('selected'));
-                    document.getElementById('priority-reason-input').value = '';
-                    modal.classList.remove('hidden');
-                }
-            }
-        }
-
-        if (button.classList.contains('select-collaborator-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (!assisted) return;
-            
-            window.assistedIdToHandle = id;
-            window.assistedNameToHandle = assisted.name || '';
-            window.assistedTipoAcao = 'delegar';
-            
-            const nameElement = document.getElementById('assisted-to-attend-name');
-            if (nameElement) nameElement.textContent = assisted.name || '';
-            
-            this.preencherListaColaboradoresModal(app);
-            
-            const modal = document.getElementById('select-collaborator-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                setTimeout(() => {
-                    const searchInput = document.getElementById('collaborator-search-input');
-                    if (searchInput) searchInput.focus();
-                }, 100);
-            }
-        }
-
-        if (button.classList.contains('attend-directly-from-aguardando-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (!assisted) return;
-            
-            window.assistedIdToHandle = id;
-            window.assistedNameToHandle = assisted.name || '';
-            window.assistedTipoAcao = 'atender_direto'; 
-            
-            const nameElement = document.getElementById('assisted-to-attend-name');
-            if (nameElement) nameElement.textContent = assisted.name || '';
-            
-            this.preencherListaColaboradoresModal(app);
-            
-            const modal = document.getElementById('select-collaborator-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                setTimeout(() => {
-                    const searchInput = document.getElementById('collaborator-search-input');
-                    if (searchInput) searchInput.focus();
-                }, 100);
-            }
-        }
-
-        if (button.classList.contains('delegate-finalization-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (!assisted) return;
-            
-            window.assistedIdForDelegation = id;
-            window.assistedNameForDelegation = assisted.name || '';
-            window.collaboratorNameForDelegation = (assisted.assignedCollaborator && assisted.assignedCollaborator.name) || '';
-            document.getElementById('delegate-assisted-name').textContent = assisted.name || '';
-            
-            const modal = document.getElementById('delegate-email-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-            }
-        }
-
-        if (button.classList.contains('edit-assisted-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (assisted) {
-                document.getElementById('edit-assisted-name').value = assisted.name || '';
-                document.getElementById('edit-assisted-cpf').value = assisted.cpf || '';
-                document.getElementById('edit-assisted-subject').value = assisted.subject || '';
-                document.getElementById('edit-scheduled-time').value = assisted.scheduledTime || '';
-                
-                const roomSelect = document.getElementById('edit-room-select');
-                if (roomSelect && assisted.room && app.currentPautaData?.type === 'multisala') {
-                    roomSelect.value = assisted.room;
-                }
-                
-                window.assistedIdToHandle = id;
-                if (document.getElementById('edit-assisted-modal')) document.getElementById('edit-assisted-modal').classList.remove('hidden');
-            }
-        }
-
-        if (button.classList.contains('edit-attendant-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (assisted) {
-                this.preencherSelectColaboradores(app, 'edit-attendant-select');
-                
-                const select = document.getElementById('edit-attendant-select');
-                if (select) {
-                    const nomeAtendente = this.getAttendantName(assisted);
-                    const options = Array.from(select.options).map(opt => opt.value);
-                    if (options.includes(nomeAtendente)) select.value = nomeAtendente;
-                }
-                
-                window.assistedIdToHandle = id;
-                if (document.getElementById('edit-attendant-modal')) document.getElementById('edit-attendant-modal').classList.remove('hidden');
-            }
-        }
-
-        if (button.classList.contains('manage-demands-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (assisted) {
-                window.assistedIdToHandle = id;
-                document.getElementById('demands-assisted-name-modal').textContent = assisted.name || '';
-                
-                const infoDiv = document.createElement('div');
-                infoDiv.className = "mb-4 p-3 bg-gray-50 rounded-lg text-sm";
-                
-                let infoHtml = '';
-                const atendenteNome = this.getAttendantName(assisted);
-                
-                if (atendenteNome !== 'Não informado') {
-                    infoHtml += `<p><span class="font-semibold">Atendido por:</span> ${escapeHTML(atendenteNome)}</p>`;
-                }
-                
-                if (assisted.delegatedBy) {
-                    infoHtml += `<p><span class="font-semibold">Delegado por:</span> ${escapeHTML(assisted.delegatedBy)}`;
-                    if (atendenteNome !== 'Não informado' && atendenteNome !== assisted.delegatedBy) {
-                        infoHtml += ` para ${escapeHTML(atendenteNome)}`;
-                    }
-                    infoHtml += `</p>`;
-                }
-                if (assisted.demandas && assisted.demandas.descricoes && assisted.demandas.descricoes.length > 0) {
-                    infoHtml += `<p><span class="font-semibold">Demandas registradas:</span> ${assisted.demandas.descricoes.length}</p>`;
-                }
-                
-                if (infoHtml) {
-                    infoDiv.innerHTML = infoHtml;
-                    const modal = document.getElementById('demands-modal');
-                    const existingInfo = modal.querySelector('.attendance-info');
-                    if (existingInfo) existingInfo.remove();
-                    infoDiv.classList.add('attendance-info');
-                    const demandsListContainer = modal.querySelector('.demands-list-container');
-                    if (demandsListContainer) modal.insertBefore(infoDiv, demandsListContainer);
-                }
-                
-                const container = document.getElementById('demands-modal-list-container');
-                if (container) {
-                    container.innerHTML = '';
-                    const demands = (assisted.demandas && assisted.demandas.descricoes) || [];
-                    if (demands.length === 0) {
-                        container.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
-                    } else {
-                        demands.forEach(demand => {
-                            const li = document.createElement('li');
-                            li.className = 'flex justify-between items-center p-2 bg-white rounded-md text-xs md:text-sm';
-                            li.innerHTML = `<span>${escapeHTML(demand)}</span><button class="remove-demand-item-btn text-red-500 text-[10px] md:text-xs">Remover</button>`;
-                            container.appendChild(li);
-                        });
-                    }
-                }
-                if (document.getElementById('demands-modal')) document.getElementById('demands-modal').classList.remove('hidden');
-            }
-        }
-
-        if (button.classList.contains('view-details-btn')) {
-            if (window.openDetailsModal) {
-                window.openDetailsModal({
-                    assistedId: id,
-                    pautaId: app.currentPauta && app.currentPauta.id,
-                    allAssisted: app.allAssisted
-                });
-            } else {
-                showNotification("Erro ao abrir detalhes", "error");
-            }
-        }
-
-        if (button.classList.contains('return-from-atendido-btn')) {
-            const currentAssisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            let updateData = {
-                status: 'aguardando',
-                attendant: null,
-                attendedTime: null,
-                attendedBy: null,
-                attendedAt: null,
-                finalizadoPeloColaborador: false,
-                isConfirmed: false,
-                confirmationDetails: null,
-                distributionStatus: 'pending'
-            };
-
-            if (currentAssisted && currentAssisted.assignedCollaborator) {
-                updateData.status = 'emAtendimento';
-                updateData.attendant = currentAssisted.assignedCollaborator.name;
-                updateData.distributionStatus = 'distributed';
-            }
-            
-            this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
-        }
-
-        if (button.classList.contains('toggle-confirmed-atendido') || button.classList.contains('toggle-confirmed-faltoso')) {
-            const currentAssisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            const newConfirmedState = !(currentAssisted && (currentAssisted.isConfirmed || false));
-
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                isConfirmed: newConfirmedState,
-                confirmationDetails: newConfirmedState ? { 
-                    confirmedBy: app.currentUserName, 
-                    confirmedAt: new Date().toISOString() 
-                } : null
-            }, app.currentUserName);
-            
-            showNotification(`Status de Marcado Presença no Verde atualizado para ${newConfirmedState ? 'Confirmado' : 'Não Confirmado'}.`, 'info');
-        }
     }
 };
