@@ -225,12 +225,11 @@ export const PautaService = {
         }
 
         try {
-            // VERIFICAÇÃO DE SEGURANÇA: Garante que a sala só seja salva se for uma pauta multisala
             const isMultisala = window.app && window.app.currentPautaData && window.app.currentPautaData.type === 'multisala';
 
             const newAssisted = {
                 ...assistedData,
-                room: isMultisala ? (assistedData.room || null) : null, // Limpa qualquer lixo de importação em pautas normais
+                room: isMultisala ? (assistedData.room || null) : null,
                 status: assistedData.status || 'pauta', 
                 createdAt: new Date().toISOString(),
                 lastActionBy: userName,
@@ -275,7 +274,28 @@ export const PautaService = {
                 lastActionTimestamp: new Date().toISOString()
             };
 
-            // VERIFICAÇÃO DE SEGURANÇA: Garante que edições não injetem salas indevidas em pautas simples
+            // SINCRONIZAÇÃO TOTAL DE ATENDENTES: Garante que a mudança reflita em todas as telas e estatísticas imediatamente
+            if (updates.attendedBy !== undefined) {
+                const newName = typeof updates.attendedBy === 'object' ? (updates.attendedBy.nome || updates.attendedBy.name) : updates.attendedBy;
+                if (newName) {
+                    finalUpdates.assignedCollaborator = { id: currentData.assignedCollaborator?.id || 'manual', name: newName };
+                    finalUpdates.attendant = newName;
+                    finalUpdates.attendedBy = newName;
+                } else {
+                    finalUpdates.assignedCollaborator = null;
+                    finalUpdates.attendant = null;
+                    finalUpdates.attendedBy = null;
+                }
+            } else if (updates.assignedCollaborator !== undefined) {
+                if (updates.assignedCollaborator) {
+                    finalUpdates.attendedBy = updates.assignedCollaborator.name;
+                    finalUpdates.attendant = updates.assignedCollaborator.name;
+                } else {
+                    finalUpdates.attendedBy = null;
+                    finalUpdates.attendant = null;
+                }
+            }
+
             const isMultisala = window.app && window.app.currentPautaData && window.app.currentPautaData.type === 'multisala';
             if (!isMultisala && finalUpdates.room !== undefined) {
                 finalUpdates.room = null;
@@ -320,7 +340,6 @@ export const PautaService = {
             const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados atualizados';
             await logAction(db, window.app?.auth, userName || 'Sistema', pautaId, 'UPDATE_ASSISTED', `${action} - ${currentData.name || 'Assistido'}`, assistedId);
             
-            // Notificação interativa quando entra na fila
             if (updates.status === 'aguardando' && currentData.status !== 'aguardando') {
                 const currentAssisted = window.app.allAssisted.find(a => a.id === assistedId) || { name: 'Assistido' };
                 const name = currentAssisted.name || currentData.name;
@@ -733,14 +752,13 @@ export const PautaService = {
                 return;
             }
 
-            // Garante que uploads de CSV não coloquem sala em pauta normal
             const isMultisala = app.currentPautaData?.type === 'multisala';
 
             let successCount = 0;
             for (const assistido of assistidos) {
                 const assistedToSave = { ...assistido, type: 'agendamento' };
                 if (!isMultisala) {
-                    assistedToSave.room = null; // Impede gravação
+                    assistedToSave.room = null; 
                 }
 
                 const added = await this.addAssistedProgrammatic(
@@ -1367,8 +1385,18 @@ export const PautaService = {
                 this.preencherSelectColaboradores(app, 'edit-attendant-select');
                 
                 const select = document.getElementById('edit-attendant-select');
-                if (select && assisted.attendedBy) {
-                    let nomeAtendente = typeof assisted.attendedBy === 'object' ? assisted.attendedBy.nome || '' : assisted.attendedBy;
+                
+                // NOVO: Lê todas as possibilidades de atendente para popular corretamente no Modal
+                if (select) {
+                    let nomeAtendente = '';
+                    if (assisted.attendedBy) {
+                        nomeAtendente = typeof assisted.attendedBy === 'object' ? assisted.attendedBy.nome || assisted.attendedBy.name || '' : assisted.attendedBy;
+                    } else if (assisted.assignedCollaborator?.name) {
+                        nomeAtendente = assisted.assignedCollaborator.name;
+                    } else if (assisted.attendant) {
+                        nomeAtendente = typeof assisted.attendant === 'object' ? assisted.attendant.nome || assisted.attendant.name || '' : assisted.attendant;
+                    }
+                    
                     const options = Array.from(select.options).map(opt => opt.value);
                     if (options.includes(nomeAtendente)) select.value = nomeAtendente;
                 }
