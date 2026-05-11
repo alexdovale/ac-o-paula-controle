@@ -225,8 +225,12 @@ export const PautaService = {
         }
 
         try {
+            // VERIFICAÇÃO DE SEGURANÇA: Garante que a sala só seja salva se for uma pauta multisala
+            const isMultisala = window.app && window.app.currentPautaData && window.app.currentPautaData.type === 'multisala';
+
             const newAssisted = {
                 ...assistedData,
+                room: isMultisala ? (assistedData.room || null) : null, // Limpa qualquer lixo de importação em pautas normais
                 status: assistedData.status || 'pauta', 
                 createdAt: new Date().toISOString(),
                 lastActionBy: userName,
@@ -270,6 +274,12 @@ export const PautaService = {
                 lastActionBy: userName || 'Sistema',
                 lastActionTimestamp: new Date().toISOString()
             };
+
+            // VERIFICAÇÃO DE SEGURANÇA: Garante que edições não injetem salas indevidas em pautas simples
+            const isMultisala = window.app && window.app.currentPautaData && window.app.currentPautaData.type === 'multisala';
+            if (!isMultisala && finalUpdates.room !== undefined) {
+                finalUpdates.room = null;
+            }
             
             if (updates.status === 'aguardando') {
                 if (!updates.checkInOrder) {
@@ -723,12 +733,20 @@ export const PautaService = {
                 return;
             }
 
+            // Garante que uploads de CSV não coloquem sala em pauta normal
+            const isMultisala = app.currentPautaData?.type === 'multisala';
+
             let successCount = 0;
             for (const assistido of assistidos) {
+                const assistedToSave = { ...assistido, type: 'agendamento' };
+                if (!isMultisala) {
+                    assistedToSave.room = null; // Impede gravação
+                }
+
                 const added = await this.addAssistedProgrammatic(
                     app.db,
                     app.currentPauta.id,
-                    { ...assistido, type: 'agendamento' }, 
+                    assistedToSave, 
                     app.currentUserName || 'Sistema'
                 );
                 if (added) successCount++;
@@ -1287,7 +1305,6 @@ export const PautaService = {
             }
         }
 
-        // ⭐ NOVO: AÇÃO PARA O BOTÃO ATENDER DIRETO
         if (button.classList.contains('attend-directly-from-aguardando-btn')) {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             if (!assisted) return;
@@ -1335,7 +1352,7 @@ export const PautaService = {
                 document.getElementById('edit-scheduled-time').value = assisted.scheduledTime || '';
                 
                 const roomSelect = document.getElementById('edit-room-select');
-                if (roomSelect && assisted.room) {
+                if (roomSelect && assisted.room && app.currentPautaData?.type === 'multisala') {
                     roomSelect.value = assisted.room;
                 }
                 
