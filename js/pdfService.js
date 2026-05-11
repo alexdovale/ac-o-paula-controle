@@ -45,6 +45,23 @@ const getIdentificador = (colaborador) => {
     return '';
 };
 
+// MOTOR UNIFICADO DE ATENDENTES PARA O PDF
+const getAttendantNameForPDF = (item) => {
+    if (!item) return 'N/A';
+    if (item.attendedBy) {
+        const name = typeof item.attendedBy === 'object' ? (item.attendedBy.nome || item.attendedBy.name) : item.attendedBy;
+        if (name) return String(name).trim();
+    }
+    if (item.assignedCollaborator && item.assignedCollaborator.name) {
+        return String(item.assignedCollaborator.name).trim();
+    }
+    if (item.attendant) {
+        const name = typeof item.attendant === 'object' ? (item.attendant.nome || item.attendant.name) : item.attendant;
+        if (name) return String(name).trim();
+    }
+    return 'N/A';
+};
+
 // ========================================================
 // PDF SERVICE - VERSÃO FINAL
 // ========================================================
@@ -400,38 +417,45 @@ export const PDFService = {
             docPDF.text(`Data: ${new Date().toLocaleString('pt-BR')}`, 40, 55);
             docPDF.text(`Total: ${atendidos.length} assistidos | Assuntos totais: ${totalAssuntos}`, 40, 68);
 
-            const head = [["#", "Nome", "Agendado", "Chegou", "Chamado", "Duração", "Assunto", "Atendente", "Validado Verde"]];
+            const head = [["#", "Nome", "Agendado", "Chegou", "Chamado/Final", "Duração", "Assunto", "Atendente", "Verde"]];
 
-            const body = atendidos.map((item, index) => {
+            // 1) Ordenação pelo horário de agendamento (Resolve o problema da ordem)
+            const sortedAtendidos = [...atendidos].sort((a, b) => {
+                const timeA = a.scheduledTime || '23:59';
+                const timeB = b.scheduledTime || '23:59';
+                return timeA.localeCompare(timeB);
+            });
+
+            const body = sortedAtendidos.map((item, index) => {
                 const arrivalDate = getSafeDate(item.arrivalTime);
-                const attendedDate = getSafeDate(item.attendedTime);
+                
+                // 2) Busca a data em que foi finalizado ou começou a ser atendido (Resolve a duração N/A)
+                const attendedDate = getSafeDate(item.attendedAt || item.attendedTime || item.inAttendanceTime);
 
                 let duration = 'N/A';
                 if (arrivalDate && attendedDate) {
                     const diffMs = attendedDate.getTime() - arrivalDate.getTime();
-                    duration = calculateDuration(Math.round(diffMs / 60000));
+                    if (diffMs >= 0) {
+                        duration = calculateDuration(Math.round(diffMs / 60000));
+                    }
                 }
 
                 const arrStr = arrivalDate ? arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
                 const attStr = attendedDate ? attendedDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
 
-                let atendente = 'N/A';
-                if (item.attendant) {
-                    atendente = (typeof item.attendant === 'object')
-                        ? (item.attendant.nome || item.attendant.name || 'N/A')
-                        : String(item.attendant);
-                }
+                // 3) Motor unificado de atendente para o PDF (Resolve o atendente em branco)
+                const atendente = getAttendantNameForPDF(item);
 
                 return [
                     index + 1,
-                    cleanString(item.name),
+                    cleanString(item.name).toUpperCase(),
                     item.scheduledTime || (item.type === 'avulso' ? 'Avulso' : '---'),
                     arrStr,
                     attStr,
                     duration,
-                    cleanString(item.subject),
-                    cleanString(atendente),
-                    item.isConfirmed ? "CONCLUÍDO" : "PENDENTE"
+                    cleanString(item.subject).toUpperCase(),
+                    cleanString(atendente).toUpperCase(),
+                    item.isConfirmed ? "OK" : "PEND"
                 ];
             });
 
@@ -441,8 +465,14 @@ export const PDFService = {
                 startY: 80,
                 theme: 'striped',
                 headStyles: { fillColor: [22, 163, 74] }, // Verde SIGAP
-                styles: { fontSize: 8, cellPadding: 4, halign: 'center' },
-                columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 110 }, 6: { cellWidth: 150 } }
+                styles: { fontSize: 8, cellPadding: 4, halign: 'center', valign: 'middle' },
+                columnStyles: { 
+                    0: { cellWidth: 25 }, 
+                    1: { cellWidth: 140, halign: 'left' }, // Nome
+                    6: { cellWidth: 150, halign: 'left' }, // Assunto
+                    7: { cellWidth: 110, halign: 'left' }, // Atendente
+                    8: { fontStyle: 'bold' }
+                }
             });
 
             docPDF.save(`atendidos_${pautaName.replace(/\s+/g, '_')}.pdf`);
@@ -471,10 +501,16 @@ export const PDFService = {
             docPDF.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, 55);
             docPDF.text(`Total de Ausências: ${faltosos.length}`, 40, 68);
 
-            // Cabeçalho atualizado com ASSUNTO
             const head = [["#", "Nome do Assistido", "Agendado", "Assunto", "Falta às", "Verde"]];
 
-            const body = faltosos.map((item, index) => {
+            // 1) Ordenação pelo horário de agendamento 
+            const sortedFaltosos = [...faltosos].sort((a, b) => {
+                const timeA = a.scheduledTime || '23:59';
+                const timeB = b.scheduledTime || '23:59';
+                return timeA.localeCompare(timeB);
+            });
+
+            const body = sortedFaltosos.map((item, index) => {
                 const logTime = getSafeDate(item.lastActionTimestamp);
                 const faltaStr = logTime ? logTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
 
@@ -897,4 +933,4 @@ export const generateFaltososPDF = (pautaName, faltosos) => {
 
 window.PDFService = PDFService;
 
-console.log("✅ pdfService.js carregado - VERSÃO FINAL (Colaboradores UI Premium + Quebra de Página + Logo)!");
+console.log("✅ pdfService.js carregado - VERSÃO FINAL (Colaboradores UI Premium + Ordenação, Duração e Atendente Corrigidos)!");
