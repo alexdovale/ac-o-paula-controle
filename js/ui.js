@@ -1061,6 +1061,66 @@ export const UIService = {
         bindModal('terms-btn-footer', 'terms-modal', ['close-terms-modal-x', 'close-terms-modal-btn']);
     },
 
+    showExpiredPautaModal(pauta, app) {
+        const existing = document.getElementById('expired-pauta-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'expired-pauta-modal';
+        modal.className = 'fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity';
+        modal.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform scale-100 transition-transform">
+                <div class="p-6 text-center">
+                    <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Pauta Fechada / Expirada</h3>
+                    <p class="text-sm text-slate-500 mb-6 leading-relaxed">
+                        A pauta <b class="text-slate-700">${escapeHTML(pauta.name)}</b> atingiu o limite de tempo e foi bloqueada.<br><br>
+                        Você não pode mais alterá-la, mas o banco de dados está a salvo. O que deseja fazer?
+                    </p>
+                    <div class="flex flex-col gap-3">
+                        <button id="expired-stats-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2">
+                            <span class="text-lg">📊</span> Abrir Estatísticas e PDFs
+                        </button>
+                        <button id="expired-cancel-btn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-colors">
+                            Voltar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('expired-cancel-btn').onclick = () => modal.remove();
+
+        document.getElementById('expired-stats-btn').onclick = async () => {
+            const btn = document.getElementById('expired-stats-btn');
+            btn.innerHTML = '<span class="animate-spin text-lg">⏳</span> Buscando Arquivo...';
+            btn.disabled = true;
+            
+            try {
+                const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                const snapshot = await getDocs(collection(app.db, "pautas", pauta.id, "attendances"));
+                const allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                modal.remove();
+                
+                if (window.StatisticsService && typeof window.StatisticsService.showModal === 'function') {
+                    window.StatisticsService.showModal(allAssisted, pauta.useDelegationFlow, pauta.name);
+                } else {
+                    showNotification("Módulo de estatísticas não carregado.", "error");
+                }
+            } catch (error) {
+                console.error(error);
+                showNotification("Erro ao buscar dados arquivados.", "error");
+                modal.remove();
+            }
+        };
+    },
+
     renderPautaCards(pautas, userId, userEmail, app) {
         const container = document.getElementById('pautas-list');
         if (!container) return;
@@ -1147,7 +1207,7 @@ export const UIService = {
 
             card.onclick = () => {
                 if (isExpired) {
-                    showNotification('Pauta inacessível devido o prazo cumprido!', 'error');
+                    this.showExpiredPautaModal(pauta, app);
                     return;
                 }
                 app.loadPauta(pauta.id, pauta.name, pauta.type);
