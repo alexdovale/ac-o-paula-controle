@@ -1092,11 +1092,11 @@ renderPautaCards(pautas, userId, userEmail, app) {
                 <div class="mt-3">
                     ${isOwner ? `
                         <span class="bg-green-50 text-green-600 text-[9px] font-black px-2 py-1 rounded border border-green-100 uppercase flex items-center w-max gap-1">
-                            👑 Criador
+                             Criador
                         </span>
                     ` : `
                         <span class="bg-blue-50 text-blue-600 text-[9px] font-black px-2 py-1 rounded border border-blue-100 uppercase flex items-center w-max gap-1">
-                            🤝 Compartilhada
+                             Compartilhada
                         </span>
                     `}
                 </div>
