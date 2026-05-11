@@ -18,15 +18,15 @@ export const UIService = {
     getAttendantName(item) {
         if (!item) return 'Não informado';
         
-        // 1º Prioridade: assignedCollaborator (Campo atualizado pelos modais de Edição e Delegação recentes)
-        if (item.assignedCollaborator && item.assignedCollaborator.name) {
-            return String(item.assignedCollaborator.name).trim();
-        }
-        
-        // 2º Prioridade: attendedBy (Campo gravado na finalização)
+        // 1º Prioridade: attendedBy (Quem de fato atendeu na finalização)
         if (item.attendedBy) {
             const name = typeof item.attendedBy === 'object' ? (item.attendedBy.nome || item.attendedBy.name) : item.attendedBy;
             if (name) return String(name).trim();
+        }
+
+        // 2º Prioridade: assignedCollaborator (Quem foi delegado/editado)
+        if (item.assignedCollaborator && item.assignedCollaborator.name) {
+            return String(item.assignedCollaborator.name).trim();
         }
         
         // 3º Prioridade: attendant (Campo legado)
@@ -410,6 +410,7 @@ export const UIService = {
             ${attendantName} 
             ${demandsText}
             ${assisted.room || ''}
+            ${assisted.status || ''}
         `);
 
         return searchableString.includes(termLower);
@@ -856,6 +857,7 @@ export const UIService = {
             const attendedT = item.attendedTime ? 
                 new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
             
+            // UTILIZA O MOTOR DE NOME SINCRONIZADO
             const atendenteNome = this.getAttendantName(item);
 
             const confirmButton = item.isConfirmed 
