@@ -103,11 +103,11 @@ class SIGAPApp {
         }
     
         window.addEventListener('offline', () => {
-            document.getElementById('offline-indicator')?.classList.remove('hidden');
+            document.getElementById('offline-indicator').classList.remove('hidden');
         });
     
         window.addEventListener('online', () => {
-            document.getElementById('offline-indicator')?.classList.add('hidden');
+            document.getElementById('offline-indicator').classList.add('hidden');
             showNotification("Conexão restabelecida!", "success");
             playSound('notification');
         });
@@ -156,9 +156,7 @@ class SIGAPApp {
         });
 
         document.getElementById('call-next-assisted-btn')?.addEventListener('click', () => {
-            if (typeof PautaService.callNextAssisted === 'function') {
-                PautaService.callNextAssisted(this);
-            }
+            PautaService.callNextAssisted(this);
         });
 
         document.getElementById('view-dashboard-btn')?.addEventListener('click', () => {
@@ -202,7 +200,7 @@ class SIGAPApp {
             listContainer.innerHTML = '';
             
             if (this.currentPautaData?.type === 'multisala' && this.customRoomsList && this.customRoomsList.length > 0) {
-                this.customRoomsList.forEach((room, index) => {
+                this.customRoomsList.forEach((room) => {
                     const div = document.createElement('div');
                     div.className = "flex gap-2 items-center mb-3 bg-gray-50 p-2 rounded-lg border";
                     div.innerHTML = `
@@ -375,11 +373,17 @@ class SIGAPApp {
         });
 
         document.getElementById('tab-agendamento')?.addEventListener('click', () => {
-            UIService.switchTab('agendamento', this);
+            document.getElementById('scheduled-time-wrapper').classList.add('hidden');
+            document.getElementById('arrival-time-wrapper').classList.add('hidden');
+            document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
+            document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
         });
-        
+
         document.getElementById('tab-avulso')?.addEventListener('click', () => {
-            UIService.switchTab('avulso', this);
+            document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
+            document.getElementById('arrival-time-wrapper').classList.remove('hidden');
+            document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
+            document.getElementById('scheduled-time-wrapper').classList.add('hidden');
         });
 
         document.getElementById('create-pauta-btn')?.addEventListener('click', () => {
@@ -537,6 +541,14 @@ class SIGAPApp {
             if (this.auth?.currentUser) {
                 this.showPautaSelectionScreen();
             }
+        });
+
+        document.getElementById('tab-agendamento')?.addEventListener('click', () => {
+            UIService.switchTab('agendamento', this);
+        });
+        
+        document.getElementById('tab-avulso')?.addEventListener('click', () => {
+            UIService.switchTab('avulso', this);
         });
 
         document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
@@ -851,14 +863,7 @@ class SIGAPApp {
         this.setupSubjectsAutocomplete();
 
         document.body.addEventListener('click', (e) => {
-            // Se clicar nos modais de membros ou cards, delega para PautaService
-            if (e.target.closest('.assisted-card') || e.target.closest('.quick-action-toggle') || e.target.closest('.quick-menu')) {
-                 if(typeof UIService.handleCardActions === 'function'){
-                     UIService.handleCardActions(e, this);
-                 } else if (typeof PautaService.handleCardActions === 'function') {
-                     PautaService.handleCardActions(e, this);
-                 }
-            }
+            PautaService.handleCardActions(e, this);
         });
 
         document.getElementById('collaborator-form-modal')?.addEventListener('submit', async (e) => {
@@ -1091,6 +1096,9 @@ class SIGAPApp {
             document.getElementById('edit-attendant-modal')?.classList.add('hidden');
         });
 
+        // =========================================================================
+        // ATUALIZAÇÃO 1: ENVIO DE EMAIL AUTOMÁTICO SE O COLABORADOR TIVER EMAIL
+        // =========================================================================
         document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
             const collaboratorId = window.selectedCollaboratorId;
             const collaboratorName = window.selectedCollaboratorName || null;
@@ -1129,25 +1137,54 @@ class SIGAPApp {
                 await PautaService.finishAttendance(this, window.assistedIdToHandle, atendenteFinal, []);
                 showNotification(`${window.assistedNameToHandle} marcado como atendido por ${atendenteFinal}.`, "success");
             } else { 
+                // FLUXO DE DELEGAÇÃO NORMAL (Move para 'Em Atendimento')
                 let collaboratorData = null;
+                let updateData = {
+                    status: 'emAtendimento',
+                    inAttendanceTime: new Date().toISOString()
+                };
+                let emailColab = null;
+
                 if (collaboratorName) {
-                    collaboratorData = { id: collaboratorId, name: collaboratorName };
-                    showNotification(`${window.assistedNameToHandle} atribuído a ${collaboratorName}.`, "success");
-                } else {
-                    showNotification(`${window.assistedNameToHandle} movido para 'Em Atendimento' sem colaborador atribuído.`, "success");
+                    // Busca na lista de colaboradores pra ver se ele tem email cadastrado
+                    const colabObj = this.colaboradores?.find(c => c.nome === collaboratorName);
+                    emailColab = colabObj ? colabObj.email : null;
+
+                    collaboratorData = { id: collaboratorId, name: collaboratorName, email: emailColab };
+                    updateData.assignedCollaborator = collaboratorData;
                 }
 
+                // Se encontrou um email, gera a senha secreta (Token) e adiciona ao updateData
+                if (emailColab) {
+                    const tokenSeguranca = Date.now().toString(36) + Math.random().toString(36).substring(2);
+                    updateData.delegationToken = tokenSeguranca;
+                }
+
+                // 1. Salva no banco de dados
                 await PautaService.updateStatus(
                     this.db,
                     this.currentPauta.id,
                     window.assistedIdToHandle,
-                    {
-                        status: 'emAtendimento',
-                        assignedCollaborator: collaboratorData,
-                        inAttendanceTime: new Date().toISOString()
-                    },
+                    updateData,
                     this.currentUserName
                 );
+
+                // 2. Dispara o email automático em segundo plano se tiver e-mail
+                if (emailColab) {
+                    showNotification(`${window.assistedNameToHandle} atribuído a ${collaboratorName}. Disparando e-mail...`, "info");
+                    window.EmailService.sendDelegationEmail(
+                        emailColab, collaboratorName, window.assistedNameToHandle, this.currentUserName,
+                        this.currentPauta.id, window.assistedIdToHandle, updateData.delegationToken
+                    ).then(() => {
+                        showNotification(`E-mail seguro enviado para ${collaboratorName}!`, "success");
+                    }).catch(() => {
+                        showNotification(`Aviso: O colaborador foi atribuído, mas falhou ao enviar o e-mail.`, "warning");
+                    });
+                } else if (collaboratorName) {
+                    showNotification(`${window.assistedNameToHandle} atribuído a ${collaboratorName} (Sem e-mail cadastrado).`, "success");
+                } else {
+                    showNotification(`${window.assistedNameToHandle} movido para 'Em Atendimento' (Não atribuído).`, "success");
+                }
             }
             
             document.getElementById('select-collaborator-modal')?.classList.add('hidden');
@@ -1324,50 +1361,61 @@ class SIGAPApp {
             document.getElementById('edit-pauta-modal')?.classList.add('hidden');
         });
 
+        // =========================================================================
+        // ATUALIZAÇÃO 2: RECONHECER O EMAIL DIGITADO (HÍBRIDO)
+        // =========================================================================
         document.getElementById('send-delegate-email-btn')?.addEventListener('click', async () => {
             const emailInput = document.getElementById('collaborator-email-input');
             const emailDestino = emailInput?.value.trim();
             
             if (!emailDestino) {
-                showNotification("Por favor, insira o e-mail ou deixe qualquer texto para gerar o link.", "error");
+                showNotification("Por favor, insira o e-mail ou selecione na lista.", "error");
                 return;
             }
 
             const btn = document.getElementById('send-delegate-email-btn');
-            if (btn) { btn.disabled = true; btn.textContent = "Gerando Link Seguro..."; }
+            if (btn) { btn.disabled = true; btn.textContent = "Processando..."; }
 
             let nomeColega = window.collaboratorNameForDelegation;
-            if (!nomeColega || nomeColega === "Não informado" || nomeColega === "undefined") {
-                nomeColega = "Colega Colaborador";
+
+            // MÁGICA HÍBRIDA: Se o usuário digitou/selecionou um e-mail que existe na lista de colaboradores,
+            // o sistema "descobre" o nome dessa pessoa automaticamente.
+            const foundColab = this.colaboradores.find(c => c.email === emailDestino);
+            if (foundColab) {
+                nomeColega = foundColab.nome;
+            } else if (!nomeColega || nomeColega === "Não informado" || nomeColega === "undefined") {
+                nomeColega = "Colega"; // Se digitou um email totalmente novo, usa "Colega" como fallback
             }
 
-            // GERA UM TOKEN DE SEGURANÇA ÚNICO SEM DEPENDER DO crypto.randomUUID (Evita falhas em navegadores sem https estrito)
             const tokenSeguranca = Date.now().toString(36) + Math.random().toString(36).substring(2);
 
             try {
-                // 1. SALVA O TOKEN E O STATUS NO BANCO DE DADOS
+                await window.EmailService.sendDelegationEmail(
+                    emailDestino,
+                    nomeColega,
+                    window.assistedNameForDelegation,
+                    this.currentUserName,
+                    this.currentPauta.id,
+                    window.assistedIdForDelegation,
+                    tokenSeguranca
+                );
+
                 await updateDoc(doc(this.db, "pautas", this.currentPauta.id, "attendances", window.assistedIdForDelegation), {
                     status: 'emAtendimento',
                     assignedCollaborator: { email: emailDestino, name: nomeColega },
                     inAttendanceTime: new Date().toISOString(),
-                    delegationToken: tokenSeguranca // <-- Salva a senha no Firestore
+                    delegationToken: tokenSeguranca
                 });
-
-                // 2. ENVIA O EMAIL COM O TOKEN INCLUSO VIA EMAILJS
-                await window.EmailService.sendDelegationEmail(
-                    emailDestino, nomeColega, window.assistedNameForDelegation, this.currentUserName,
-                    this.currentPauta.id, window.assistedIdForDelegation, tokenSeguranca
-                );
 
                 document.getElementById('delegate-email-modal')?.classList.add('hidden');
                 if (emailInput) emailInput.value = '';
-                
-                showNotification(`Atendimento delegado com segurança para ${nomeColega}!`, "success");
+
+                // Não showNotification de sucesso aqui, porque o EmailService.js já exibe
             } catch (error) {
-                console.error("Erro na delegação:", error);
+                console.error("Erro completo:", error);
                 showNotification("Aconteceu um erro na geração do link de segurança.", "error");
             } finally {
-                if (btn) { btn.disabled = false; btn.textContent = "Enviar E-mail Seguro"; }
+                if (btn) { btn.disabled = false; btn.textContent = "Enviar E-mail / Link"; }
             }
         });
 
@@ -2043,6 +2091,5 @@ setTimeout(() => {
         console.warn("Ata Social service pendente na inicialização.");
     }
 }, 1000);
-
 
 window.CollaboratorService.loadAtaData(window.app);
