@@ -4,6 +4,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
+import { documentsData } from './detalhes.js'; // Importa a base de dados de documentos para traduzir os IDs
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -16,9 +17,8 @@ export const AtendimentoExternoService = {
     fluxoSelecionado: null,
 
     async init() {
-        console.log("⚡ Atendimento Externo inicializado (Com Histórico e Defensores)");
+        console.log("⚡ Atendimento Externo inicializado (Com Histórico Completo e Defensores)");
 
-        // 1. Pega as informações da URL
         const urlParams = new URLSearchParams(window.location.search);
         this.pautaId = urlParams.get('pautaId');
         this.assistidoId = urlParams.get('assistidoId');
@@ -31,10 +31,10 @@ export const AtendimentoExternoService = {
         }
 
         try {
-            // 2. Faz o Login Anônimo Silencioso (Para as Regras de Segurança aprovarem)
+            // 1. Faz o Login Anônimo Silencioso
             await signInAnonymously(auth);
 
-            // 3. Busca os dados da PAUTA (Para saber se usa Distribuição)
+            // 2. Busca os dados da PAUTA para regras de distribuição
             const pautaRef = doc(db, "pautas", this.pautaId);
             const pautaSnap = await getDoc(pautaRef);
             if (!pautaSnap.exists()) {
@@ -43,7 +43,7 @@ export const AtendimentoExternoService = {
             }
             const pautaData = pautaSnap.data();
 
-            // 4. Busca os dados do ASSISTIDO
+            // 3. Busca os dados do ASSISTIDO
             const docRef = doc(db, "pautas", this.pautaId, "attendances", this.assistidoId);
             const docSnap = await getDoc(docRef);
 
@@ -54,7 +54,7 @@ export const AtendimentoExternoService = {
 
             const assistido = docSnap.data();
 
-            // 5. Validação de Segurança
+            // 4. Validação de Segurança Exata
             if (assistido.delegationToken !== tokenRecebido) {
                 this.showError("Acesso Negado", "Token de segurança inválido ou expirado. O link pode ter sido alterado.");
                 return;
@@ -65,7 +65,7 @@ export const AtendimentoExternoService = {
                 return;
             }
 
-            // 6. Se passou na segurança, libera a interface!
+            // 5. Renderiza a Interface
             this.renderizarInterface(assistido, pautaData);
             this.setupListeners();
 
@@ -79,10 +79,9 @@ export const AtendimentoExternoService = {
         document.getElementById('assistido-nome').textContent = assistido.name || 'Nome não informado';
         document.getElementById('assistido-assunto').textContent = assistido.subject || 'Assunto não informado';
         
-        // Exibe o painel do colaborador
         document.getElementById('area-colaborador').classList.remove('hidden');
 
-        // Configura a exibição do botão de Distribuição com base nas regras da Pauta
+        // Controla a visibilidade da fila de Distribuição
         if (pautaData.useDistributionFlow) {
             document.getElementById('btn-fluxo-dist').classList.remove('hidden');
             this.carregarDefensores();
@@ -104,7 +103,6 @@ export const AtendimentoExternoService = {
 
             snap.docs.forEach(doc => {
                 const c = doc.data();
-                // Filtra apenas quem for Defensor
                 if (c.cargo === 'Defensor(a)' || c.cargo === 'Defensor') {
                     const opt = document.createElement('option');
                     opt.value = c.nome;
@@ -127,44 +125,127 @@ export const AtendimentoExternoService = {
         const lista = document.getElementById('lista-historico');
         if (!lista) return;
 
-        if (!assistido.documentChecklist || !assistido.documentChecklist.checkedIds || assistido.documentChecklist.checkedIds.length === 0) {
+        if (!assistido.documentChecklist || !assistido.documentChecklist.action) {
             lista.innerHTML = `
                 <div class="text-center py-8">
                     <span class="text-3xl">📭</span>
-                    <p class="text-xs text-gray-500 mt-2">Nenhum documento ou checklist registrado para este assistido.</p>
+                    <p class="text-sm font-bold text-gray-700 mt-3">Nenhum checklist registrado.</p>
+                    <p class="text-xs text-gray-500 mt-1">O atendimento anterior não salvou documentos ou planilhas.</p>
                 </div>
             `;
             return;
         }
 
         const chk = assistido.documentChecklist;
+        const actionData = documentsData[chk.action];
+        const actionTitle = actionData ? actionData.title : chk.action;
         
-        // Nome da Ação escolhida
         let html = `
             <div class="bg-blue-50 p-4 rounded-xl mb-4 border border-blue-100">
-                <p class="text-[10px] text-blue-500 font-bold uppercase mb-1">Ação Selecionada:</p>
-                <p class="text-sm font-bold text-blue-800">${chk.action || 'Não especificada'}</p>
+                <p class="text-[10px] text-blue-500 font-bold uppercase mb-1">Ação Analisada:</p>
+                <p class="text-sm font-black text-blue-800 uppercase">${actionTitle}</p>
             </div>
         `;
 
-        // Lista de documentos
-        html += `<h4 class="text-[10px] font-bold text-gray-400 uppercase mb-3">Documentos Coletados / Analisados</h4><ul class="space-y-2">`;
-        
-        chk.checkedIds.forEach(id => {
-            const tipo = chk.docTypes && chk.docTypes[id] ? chk.docTypes[id] : 'Físico';
-            const nomeFormatado = id.replace(/-/g, ' ').toUpperCase();
+        // ==========================================
+        // 1. LISTA DE DOCUMENTOS
+        // ==========================================
+        if (chk.checkedIds && chk.checkedIds.length > 0) {
+            html += `<h4 class="text-[10px] font-bold text-gray-400 uppercase mb-3">Documentos Coletados</h4><ul class="space-y-2 mb-6">`;
             
+            chk.checkedIds.forEach(id => {
+                // Ignora IDs que são do Réu ou de Gastos, focando só nos docs base
+                if (id.startsWith('reu-') || id.startsWith('gasto-')) return;
+
+                let docName = id;
+                // Traduz o ID "doc-acao-secao-index" para o texto real do documento
+                if (actionData && id.startsWith('doc-')) {
+                    const parts = id.split('-');
+                    if (parts.length >= 4) {
+                        const sIdx = parseInt(parts[2]);
+                        const dIdx = parseInt(parts[3]);
+                        const docObj = actionData.sections[sIdx]?.docs[dIdx];
+                        if (docObj) {
+                            docName = typeof docObj === 'string' ? docObj : docObj.text;
+                        }
+                    }
+                }
+
+                const tipo = chk.docTypes && chk.docTypes[id] ? chk.docTypes[id] : 'Físico';
+                
+                html += `
+                    <li class="text-xs bg-white border p-3 rounded-lg flex justify-between items-center shadow-sm">
+                        <span class="font-semibold text-gray-700 pr-2">📄 ${docName}</span> 
+                        <span class="font-bold text-[9px] uppercase tracking-wider ${tipo === 'Físico' ? 'text-amber-600 bg-amber-50' : 'text-emerald-600 bg-emerald-50'} px-2 py-1 rounded border">
+                            ${tipo}
+                        </span>
+                    </li>
+                `;
+            });
+            html += `</ul>`;
+        }
+
+        // ==========================================
+        // 2. DADOS DO RÉU
+        // ==========================================
+        if (chk.reuData && chk.reuData.checkReuUnico) {
+            const reu = chk.reuData;
             html += `
-                <li class="text-xs bg-white border p-3 rounded-lg flex justify-between items-center shadow-sm">
-                    <span class="font-semibold text-gray-700">📄 ${nomeFormatado}</span> 
-                    <span class="font-bold text-[10px] ${tipo === 'Físico' ? 'text-amber-600 bg-amber-50' : 'text-emerald-600 bg-emerald-50'} px-2 py-1 rounded border">
-                        ${tipo}
-                    </span>
-                </li>
+                <div class="bg-red-50 p-4 rounded-xl mb-6 border border-red-200 shadow-sm">
+                    <h4 class="text-[10px] font-black text-red-700 uppercase mb-3 flex items-center gap-1">
+                        <span>👤</span> Dados da Parte Contrária (Réu)
+                    </h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-xs text-gray-700">
+                        ${reu.nome ? `<p><b class="text-gray-500">Nome:</b> ${reu.nome}</p>` : ''}
+                        ${reu.cpf ? `<p><b class="text-gray-500">CPF:</b> ${reu.cpf}</p>` : ''}
+                        ${reu.telefone ? `<p><b class="text-gray-500">Telefone:</b> ${reu.telefone}</p>` : ''}
+                        ${reu.cep ? `<p class="sm:col-span-2"><b class="text-gray-500">Residência:</b> ${reu.rua}, ${reu.numero} ${reu.complemento ? ' - '+reu.complemento : ''} - ${reu.bairro}, ${reu.cidade}/${reu.uf} (CEP: ${reu.cep})</p>` : ''}
+                        ${reu.empresa ? `<p class="sm:col-span-2 pt-2 border-t border-red-100"><b class="text-gray-500">Trabalho:</b> ${reu.empresa} - ${reu.rua_comercial}, ${reu.numero_comercial} - ${reu.cidade_comercial}/${reu.uf_comercial}</p>` : ''}
+                    </div>
+                </div>
             `;
-        });
-        
-        html += `</ul>`;
+        }
+
+        // ==========================================
+        // 3. PLANILHA DE GASTOS
+        // ==========================================
+        if (chk.expenseData && chk.expenseData.checkExibirGastos) {
+            const gastos = chk.expenseData;
+            const categorias = [
+                { id: 'moradia', label: 'Moradia' },
+                { id: 'alimentacao', label: 'Alimentação' },
+                { id: 'educacao', label: 'Educação' },
+                { id: 'saude', label: 'Saúde' },
+                { id: 'vestuario', label: 'Vestuário' },
+                { id: 'lazer', label: 'Lazer' },
+                { id: 'outras', label: 'Outras' }
+            ];
+
+            let temGasto = false;
+            let gastosHtml = `
+                <div class="bg-green-50 p-4 rounded-xl mb-4 border border-green-200 shadow-sm">
+                    <h4 class="text-[10px] font-black text-green-800 uppercase mb-3 flex items-center gap-1">
+                        <span>💰</span> Planilha de Gastos Mensais
+                    </h4>
+                    <table class="w-full text-xs text-left">
+            `;
+
+            categorias.forEach(cat => {
+                if (gastos[cat.id] && gastos[cat.id] !== 'R$ 0,00' && gastos[cat.id].trim() !== '') {
+                    temGasto = true;
+                    gastosHtml += `
+                        <tr class="border-b border-green-100 last:border-0">
+                            <td class="py-2 font-semibold text-gray-600">${cat.label}</td>
+                            <td class="py-2 font-bold text-green-700 text-right">${gastos[cat.id]}</td>
+                        </tr>
+                    `;
+                }
+            });
+
+            gastosHtml += `</table></div>`;
+            if (temGasto) html += gastosHtml;
+        }
+
         lista.innerHTML = html;
     },
 
@@ -194,7 +275,6 @@ export const AtendimentoExternoService = {
     },
 
     setupListeners() {
-        // Listeners das Abas
         document.getElementById('tab-btn-encerramento')?.addEventListener('click', () => this.switchTab('encerramento'));
         document.getElementById('tab-btn-historico')?.addEventListener('click', () => this.switchTab('historico'));
 
@@ -213,7 +293,6 @@ export const AtendimentoExternoService = {
     selecionarFluxo(tipo, botaoClicado) {
         this.fluxoSelecionado = tipo;
         
-        // Limpa os estilos dos botões
         const botoes = [document.getElementById('btn-fluxo-direto'), document.getElementById('btn-fluxo-dist')];
         botoes.forEach(b => {
             if(b) {
@@ -222,11 +301,9 @@ export const AtendimentoExternoService = {
             }
         });
 
-        // Destaque azul no botão clicado
         botaoClicado.classList.remove('border-gray-200');
         botaoClicado.classList.add('ring-4', 'ring-blue-400', 'bg-blue-50');
 
-        // Mostra a caixa do defensor se for distribuição
         const configRevisao = document.getElementById('config-revisao');
         if (configRevisao) {
             if (tipo === 'distribuicao') {
@@ -250,7 +327,6 @@ export const AtendimentoExternoService = {
             finalizadoPeloColaborador: true
         };
 
-        // Regras para Distribuição vs Direto
         if (this.fluxoSelecionado === 'direto') {
             updateData.status = 'atendido';
             updateData.distributionStatus = 'completed';
@@ -275,10 +351,8 @@ export const AtendimentoExternoService = {
 
         try {
             const docRef = doc(db, "pautas", this.pautaId, "attendances", this.assistidoId);
-            
             await updateDoc(docRef, updateData);
 
-            // Sucesso!
             document.getElementById('area-colaborador').innerHTML = `
                 <div class="text-center p-8 bg-green-50 rounded-xl border border-green-200 shadow-sm mt-8">
                     <span class="text-5xl">✅</span>
