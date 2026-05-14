@@ -4,7 +4,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
-import { documentsData } from './detalhes.js'; // Importa a base de dados de documentos para traduzir os IDs
+import { documentsData } from './detalhes.js'; // Importa a base para traduzir os nomes
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -17,7 +17,7 @@ export const AtendimentoExternoService = {
     fluxoSelecionado: null,
 
     async init() {
-        console.log("⚡ Atendimento Externo inicializado (Com Histórico Completo e Defensores)");
+        console.log("⚡ Atendimento Externo inicializado (Com Histórico Traduzido e Defensores)");
 
         const urlParams = new URLSearchParams(window.location.search);
         this.pautaId = urlParams.get('pautaId');
@@ -31,10 +31,8 @@ export const AtendimentoExternoService = {
         }
 
         try {
-            // 1. Faz o Login Anônimo Silencioso
             await signInAnonymously(auth);
 
-            // 2. Busca os dados da PAUTA para regras de distribuição
             const pautaRef = doc(db, "pautas", this.pautaId);
             const pautaSnap = await getDoc(pautaRef);
             if (!pautaSnap.exists()) {
@@ -43,7 +41,6 @@ export const AtendimentoExternoService = {
             }
             const pautaData = pautaSnap.data();
 
-            // 3. Busca os dados do ASSISTIDO
             const docRef = doc(db, "pautas", this.pautaId, "attendances", this.assistidoId);
             const docSnap = await getDoc(docRef);
 
@@ -54,7 +51,6 @@ export const AtendimentoExternoService = {
 
             const assistido = docSnap.data();
 
-            // 4. Validação de Segurança Exata
             if (assistido.delegationToken !== tokenRecebido) {
                 this.showError("Acesso Negado", "Token de segurança inválido ou expirado. O link pode ter sido alterado.");
                 return;
@@ -65,7 +61,6 @@ export const AtendimentoExternoService = {
                 return;
             }
 
-            // 5. Renderiza a Interface
             this.renderizarInterface(assistido, pautaData);
             this.setupListeners();
 
@@ -81,7 +76,6 @@ export const AtendimentoExternoService = {
         
         document.getElementById('area-colaborador').classList.remove('hidden');
 
-        // Controla a visibilidade da fila de Distribuição
         if (pautaData.useDistributionFlow) {
             document.getElementById('btn-fluxo-dist').classList.remove('hidden');
             this.carregarDefensores();
@@ -137,34 +131,42 @@ export const AtendimentoExternoService = {
         }
 
         const chk = assistido.documentChecklist;
-        const actionData = documentsData[chk.action];
-        const actionTitle = actionData ? actionData.title : chk.action;
+        
+        // Garante que pega a base de dados
+        const baseDeDados = documentsData || window.documentsData || {};
+        const actionData = baseDeDados[chk.action];
+        
+        // Formata o título: Se achar na base usa o título real, se não, formata a chave
+        const actionTitle = actionData ? actionData.title : chk.action.replace(/_/g, ' ').toUpperCase();
         
         let html = `
-            <div class="bg-blue-50 p-4 rounded-xl mb-4 border border-blue-100">
+            <div class="bg-blue-50 p-4 rounded-xl mb-4 border border-blue-100 shadow-sm">
                 <p class="text-[10px] text-blue-500 font-bold uppercase mb-1">Ação Analisada:</p>
                 <p class="text-sm font-black text-blue-800 uppercase">${actionTitle}</p>
             </div>
         `;
 
         // ==========================================
-        // 1. LISTA DE DOCUMENTOS
+        // 1. LISTA DE DOCUMENTOS TRADUZIDOS
         // ==========================================
         if (chk.checkedIds && chk.checkedIds.length > 0) {
-            html += `<h4 class="text-[10px] font-bold text-gray-400 uppercase mb-3">Documentos Coletados</h4><ul class="space-y-2 mb-6">`;
+            html += `<h4 class="text-[10px] font-bold text-gray-400 uppercase mb-3">Documentos Coletados / Analisados</h4><ul class="space-y-2 mb-6">`;
             
             chk.checkedIds.forEach(id => {
-                // Ignora IDs que são do Réu ou de Gastos, focando só nos docs base
+                // Ignora IDs que são do Réu ou de Gastos
                 if (id.startsWith('reu-') || id.startsWith('gasto-')) return;
 
-                let docName = id;
-                // Traduz o ID "doc-acao-secao-index" para o texto real do documento
+                let docName = id.replace(/-/g, ' ').toUpperCase(); // Texto genérico caso dê falha
+
+                // Mágica da tradução: Lê o ID e busca o texto real na base
                 if (actionData && id.startsWith('doc-')) {
                     const parts = id.split('-');
-                    if (parts.length >= 4) {
-                        const sIdx = parseInt(parts[2]);
-                        const dIdx = parseInt(parts[3]);
-                        const docObj = actionData.sections[sIdx]?.docs[dIdx];
+                    // Pega os dois últimos números do ID (seção e index)
+                    const dIdx = parseInt(parts.pop());
+                    const sIdx = parseInt(parts.pop());
+                    
+                    if (!isNaN(sIdx) && !isNaN(dIdx) && actionData.sections[sIdx]) {
+                        const docObj = actionData.sections[sIdx].docs[dIdx];
                         if (docObj) {
                             docName = typeof docObj === 'string' ? docObj : docObj.text;
                         }
@@ -174,9 +176,9 @@ export const AtendimentoExternoService = {
                 const tipo = chk.docTypes && chk.docTypes[id] ? chk.docTypes[id] : 'Físico';
                 
                 html += `
-                    <li class="text-xs bg-white border p-3 rounded-lg flex justify-between items-center shadow-sm">
+                    <li class="text-xs bg-white border border-gray-200 p-3 rounded-lg flex justify-between items-center shadow-sm">
                         <span class="font-semibold text-gray-700 pr-2">📄 ${docName}</span> 
-                        <span class="font-bold text-[9px] uppercase tracking-wider ${tipo === 'Físico' ? 'text-amber-600 bg-amber-50' : 'text-emerald-600 bg-emerald-50'} px-2 py-1 rounded border">
+                        <span class="font-bold text-[9px] uppercase tracking-wider ${tipo === 'Físico' ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-emerald-600 bg-emerald-50 border-emerald-200'} px-2 py-1 rounded border">
                             ${tipo}
                         </span>
                     </li>
