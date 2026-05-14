@@ -1,6 +1,6 @@
 import { showNotification } from './utils.js';
 
-// 👇 COLOQUE SUA CHAVE PÚBLICA DO EMAILJS AQUI DENTRO DAS ASPAS 👇
+// Sua Chave Pública do EmailJS
 const EMAILJS_PUBLIC_KEY = "aGL-Q2UJcD2tDpUKq"; 
 
 export const EmailService = {
@@ -17,17 +17,17 @@ export const EmailService = {
         // 🔒 Link Seguro com Token
         const urlFinal = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${assistedId}&token=${tokenSeguranca}&colab=${encodeURIComponent(nomeColaborador)}`;
 
+        // CRÍTICO: Estes nomes devem bater EXATAMENTE com as chaves duplas {{ }} do EmailJS
         const templateParams = {
             to_email: emailDestino,
             to_name: nomeColaborador,
-            from_name: quemDelegou,
+            sender_name: quemDelegou, // Corrigido para bater com {{sender_name}}
             assisted_name: nomeAssistido,
-            delegation_link: urlFinal
+            link_atendimento: urlFinal // Corrigido para bater com {{link_atendimento}}
         };
 
         try {
             if (typeof emailjs !== 'undefined') {
-                // A CHAVE PÚBLICA AGORA É ENVIADA COMO 4º PARÂMETRO PARA AUTORIZAR O ENVIO
                 await emailjs.send('service_r1nxe6a', 'template_jslp9ny', templateParams, EMAILJS_PUBLIC_KEY);
                 showNotification("E-mail seguro enviado com sucesso!", "success");
                 return true;
