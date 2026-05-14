@@ -468,6 +468,7 @@ export const UIService = {
             ${demandsText}
             ${assisted.room || ''}
             ${assisted.status || ''}
+            ${assisted.defensorResponsavel || ''}
         `);
 
         return searchableString.includes(termLower);
@@ -880,7 +881,7 @@ export const UIService = {
                 new Date(item.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
             
             const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-            const linkDireto = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&collaboratorName=${encodeURIComponent(userName)}`;
+            const linkDireto = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(userName)}&token=${item.delegationToken || ''}`;
 
             const atendenteNome = this.getAttendantName(item);
 
@@ -1097,6 +1098,9 @@ export const UIService = {
         });
     },
     
+    // ==========================================
+    // RENDERIZAÇÃO DA DISTRIBUIÇÃO COM AGRUPAMENTO E BOTÃO PAINEL
+    // ==========================================
     renderDistribuicaoColumn(items, pautaId, userName) {
         const container = document.getElementById('distribuicao-list');
         if (!container) return;
@@ -1106,26 +1110,69 @@ export const UIService = {
             return;
         }
 
+        container.innerHTML = '';
+
+        // Agrupa os itens pelo nome do Defensor Responsável
+        const groups = {};
         items.forEach(item => {
-            const currentUserRole = window.app?.currentUser?.role;
-            const canManageDistribution = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
+            const defensor = item.defensorResponsavel || 'Não Atribuído';
+            if (!groups[defensor]) groups[defensor] = [];
+            groups[defensor].push(item);
+        });
 
-            const card = document.createElement('div');
-            card.className = 'assisted-card relative bg-cyan-50 p-4 rounded-lg shadow-sm border border-cyan-200 mb-2';
-            card.setAttribute('data-id', item.id);
-            const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-            const linkExterno = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&collaboratorName=${encodeURIComponent(userName)}`;
+        const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
 
-            card.innerHTML = `
-                <p class="font-bold text-gray-800 text-sm">${escapeHTML(item.name || '')}</p>
-                <p class="text-[10px] text-cyan-700 font-bold uppercase mt-1">⚖️ Aguardando Distribuição</p>
-                <div class="mt-3 space-y-2">
-                    <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white text-[10px] font-bold py-2 rounded hover:bg-cyan-700 uppercase shadow-sm" ${canManageDistribution ? '' : 'disabled'}>Painel de Protocolo</button>
-                    <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-white text-gray-400 border border-gray-200 text-[9px] py-1 rounded uppercase" ${canManageDistribution ? '' : 'disabled'}>Reverter</button>
+        Object.keys(groups).forEach(defensor => {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = "mb-4 border border-cyan-200 rounded-lg overflow-hidden bg-cyan-50 shadow-sm";
+
+            // LINK PARA O DASHBOARD (Sem assistidoId e token)
+            const linkPainel = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&colab=${encodeURIComponent(defensor)}`;
+
+            // Cabeçalho do Grupo
+            const headerHtml = `
+                <div class="bg-cyan-100 p-2 border-b border-cyan-200 flex flex-col gap-2">
+                    <div class="flex justify-between items-center px-1">
+                        <h4 class="font-bold text-cyan-800 text-xs uppercase tracking-wider flex items-center gap-1">
+                            <span>👨‍⚖️</span> ${escapeHTML(defensor)}
+                        </h4>
+                        <span class="bg-cyan-200 text-cyan-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${groups[defensor].length}</span>
+                    </div>
+                    <button onclick="navigator.clipboard.writeText('${linkPainel}'); showNotification('Link do painel copiado!', 'success');" class="w-full bg-cyan-600 text-white text-[10px] font-bold py-1.5 rounded hover:bg-cyan-700 uppercase shadow-sm flex items-center justify-center gap-1 transition-colors">
+                        <span>📋</span> Copiar Link do Painel
+                    </button>
                 </div>
-                ${this._getStandardizedFooterHtml(item)}
+                <div class="p-2 space-y-2 room-cards-wrapper"></div>
             `;
-            container.appendChild(card);
+            groupDiv.innerHTML = headerHtml;
+            const cardsWrapper = groupDiv.querySelector('.room-cards-wrapper');
+
+            // Renderiza os cards dentro do grupo
+            groups[defensor].forEach(item => {
+                const currentUserRole = window.app?.currentUser?.role;
+                const canManageDistribution = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
+
+                const card = document.createElement('div');
+                card.className = 'assisted-card relative bg-white p-3 rounded-lg shadow-sm border border-cyan-100 mb-2';
+                card.setAttribute('data-id', item.id);
+                
+                // Link antigo fallback
+                const linkExterno = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(userName)}&token=${item.delegationToken || ''}`;
+
+                card.innerHTML = `
+                    <p class="font-bold text-gray-800 text-sm truncate">${escapeHTML(item.name || '')}</p>
+                    <p class="text-[10px] text-cyan-700 font-bold uppercase mt-1 truncate">${escapeHTML(item.subject || '')}</p>
+                    ${item.notasRevisao ? `<div class="mt-2 text-[9px] bg-yellow-50 text-yellow-800 p-1.5 rounded border border-yellow-200"><span class="font-bold">Nota:</span> ${escapeHTML(item.notasRevisao)}</div>` : ''}
+                    <div class="mt-3 space-y-2">
+                        <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-50 text-cyan-700 border border-cyan-300 text-[10px] font-bold py-1.5 rounded hover:bg-cyan-100 uppercase shadow-sm" ${canManageDistribution ? '' : 'disabled'}>Abrir Protocolo Fixo</button>
+                        <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-white text-gray-400 border border-gray-200 text-[9px] py-1 rounded uppercase hover:bg-gray-50" ${canManageDistribution ? '' : 'disabled'}>Reverter</button>
+                    </div>
+                    ${this._getStandardizedFooterHtml(item)}
+                `;
+                cardsWrapper.appendChild(card);
+            });
+
+            container.appendChild(groupDiv);
         });
     },
 
@@ -1164,7 +1211,7 @@ export const UIService = {
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform scale-100 transition-transform">
                 <div class="p-6 text-center">
                     <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                     </div>
@@ -1552,9 +1599,6 @@ export const UIService = {
             }
         }
 
-        // =========================================================================
-        // ATUALIZAÇÃO: CRIAR DATALIST HÍBRIDO (SELECIONAR OU DIGITAR EMAIL)
-        // =========================================================================
         if (button.classList.contains('delegate-finalization-btn')) {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             if (!assisted) return;
@@ -1566,7 +1610,6 @@ export const UIService = {
             
             const modal = document.getElementById('delegate-email-modal');
             if (modal) {
-                // Cria ou atualiza o datalist de emails
                 let datalist = document.getElementById('colab-emails-list');
                 if (!datalist) {
                     datalist = document.createElement('datalist');
@@ -1575,7 +1618,6 @@ export const UIService = {
                 }
                 datalist.innerHTML = '';
                 
-                // Preenche a lista com quem tem e-mail
                 if (app.colaboradores) {
                     app.colaboradores.forEach(c => {
                         if (c.email) {
@@ -1587,7 +1629,6 @@ export const UIService = {
                     });
                 }
 
-                // Conecta o datalist ao campo de input
                 const emailInput = document.getElementById('collaborator-email-input');
                 if (emailInput) {
                     emailInput.setAttribute('list', 'colab-emails-list');
