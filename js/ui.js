@@ -1,4 +1,3 @@
-// js/ui.js - VERSÃO COMPLETA E ATUALIZADA
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
 import { PautaService } from './pauta.js';
 
@@ -11,10 +10,32 @@ export const UIService = {
         document.getElementById('dashboard-container').classList.toggle('hidden', screenName !== 'dashboard');
     },
 
-    /**
-     * Motor Unificado para capturar o nome do Atendente correto.
-     * Resolve o problema de atualizações não refletirem na tela.
-     */
+    isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    },
+
+    closeAllQuickMenus(exceptId = null) {
+        document.querySelectorAll('.quick-menu').forEach(menu => {
+            if (menu.id !== exceptId) {
+                menu.classList.add('hidden');
+                const toggleId = menu.id.replace('quick-menu-', 'quick-toggle-');
+                const toggle = document.getElementById(toggleId);
+                if (toggle) {
+                    toggle.setAttribute('aria-expanded', 'false');
+                    toggle.setAttribute('aria-label', 'Abrir menu rápido');
+                }
+            }
+        });
+    },
+
+    canPerformAction(actionKey) {
+        if (this._actionTimeouts && this._actionTimeouts[actionKey]) return false;
+        this._actionTimeouts = this._actionTimeouts || {};
+        this._actionTimeouts[actionKey] = true;
+        setTimeout(() => delete this._actionTimeouts[actionKey], 800);
+        return true;
+    },
+
     getAttendantName(item) {
         if (!item) return 'Não informado';
         
@@ -36,6 +57,45 @@ export const UIService = {
         }
         
         return 'Não informado';
+    },
+
+    preencherSelectColaboradores(app, selectId) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        const currentVal = select.value;
+        select.innerHTML = '<option value="">-- Selecione um profissional --</option>';
+        if (app.colaboradores && app.colaboradores.length > 0) {
+            app.colaboradores.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.nome;
+                opt.textContent = `${c.nome} (${c.cargo})`;
+                select.appendChild(opt);
+            });
+        }
+        if (currentVal) select.value = currentVal;
+    },
+
+    preencherListaColaboradoresModal(app) {
+        if (window.CollaboratorService && typeof window.CollaboratorService.renderModalList === 'function') {
+            window.CollaboratorService.renderModalList(app);
+        } else if (app.colaboradores) {
+            // Fallback caso CollaboratorService falhe
+            const container = document.getElementById('collaborator-selection-list');
+            if (container) {
+                container.innerHTML = '';
+                app.colaboradores.forEach(c => {
+                    const btn = document.createElement('button');
+                    btn.className = "w-full text-left p-3 mb-2 bg-white border rounded-lg hover:bg-blue-50 transition";
+                    btn.innerHTML = `<strong>${escapeHTML(c.nome)}</strong> - ${escapeHTML(c.cargo)}`;
+                    btn.onclick = () => {
+                        window.selectedCollaboratorId = c.id || c.nome;
+                        window.selectedCollaboratorName = c.nome;
+                        document.getElementById('confirm-select-collaborator-btn')?.click();
+                    };
+                    container.appendChild(btn);
+                });
+            }
+        }
     },
 
     renderPautaFilters(containerId, activeFilter, onFilterChange, app) {
@@ -296,8 +356,6 @@ export const UIService = {
     },
 
     renderAssistedLists(app) {
-        console.log("🎨 renderAssistedLists chamado");
-        
         if (!app) {
             console.error("App não definido");
             return;
@@ -308,7 +366,6 @@ export const UIService = {
         const colaboradores = app.colaboradores || [];
 
         if (allAssisted.length === 0) {
-            console.log("Nenhum assistido encontrado");
             this.clearContainers();
             
             const pautaList = document.getElementById('pauta-list');
@@ -371,9 +428,6 @@ export const UIService = {
 
         this.togglePautaLock(app);
         
-        // ----------------------------------------------------
-        // LÓGICA DE OCULTAR O BOTÃO "CHAMAR PRÓXIMO" EM MULTISALAS
-        // ----------------------------------------------------
         const callNextBtn = document.getElementById('call-next-assisted-btn');
         if (callNextBtn) {
             if (currentPautaData?.type === 'multisala') {
@@ -383,7 +437,7 @@ export const UIService = {
             }
         }
         
-        setTimeout(() => PautaService.setupManualSort(app), 100); 
+        setTimeout(() => { if (typeof PautaService.setupManualSort === 'function') PautaService.setupManualSort(app); }, 100); 
     },
 
     getSearchTerms() {
@@ -397,7 +451,6 @@ export const UIService = {
         };
     },
 
-    // OMNI-SEARCH - Pesquisa Horário, Demandas, Salas e Atendentes dinamicamente!
     searchFilter(assisted, term) {
         if (!term) return true;
         
@@ -412,9 +465,7 @@ export const UIService = {
         const inAttendanceTimeFormatted = assisted.inAttendanceTime ? 
             new Date(assisted.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
 
-        // Pega o nome do atendente pelo motor unificado
         const attendantName = this.getAttendantName(assisted);
-
         const demandsText = assisted.demandas?.descricoes ? assisted.demandas.descricoes.join(' ') : '';
         
         const searchableString = normalizeText(`
@@ -660,9 +711,6 @@ export const UIService = {
             const scheduledTimeSeguro = item.scheduledTime || '--:--';
             const priorityReasonSeguro = item.priorityReason || '';
 
-            // ----------------------------------------------------
-            // LÓGICA DE ALTERAR SALA DIRETAMENTE NO CARD
-            // ----------------------------------------------------
             let roomDropdownHtml = '';
             if (currentPautaData?.type === 'multisala') {
                 const availableRooms = currentPautaData.rooms || currentPautaData.customRooms || [];
@@ -795,7 +843,6 @@ export const UIService = {
                 ${this._getStandardizedFooterHtml(item)}
             `;
             
-            // Adiciona o Event Listener no Dropdown de Salas recém criado
             const roomSelect = card.querySelector('.change-room-select');
             if (roomSelect) {
                 roomSelect.addEventListener('change', (e) => {
@@ -1097,186 +1144,6 @@ export const UIService = {
         });
     },
 
-    setupFooterModals() {
-        const bindModal = (btnId, modalId, closeIds) => {
-            const btn = document.getElementById(btnId);
-            const modal = document.getElementById(modalId);
-            
-            if (btn && modal) {
-                btn.onclick = () => modal.classList.remove('hidden');
-                
-                closeIds.forEach(id => {
-                    const closeBtn = document.getElementById(id);
-                    if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
-                });
-
-                modal.onclick = (e) => {
-                    if (e.target === modal) modal.classList.add('hidden');
-                };
-            }
-        };
-
-        bindModal('privacy-btn-footer', 'privacy-policy-modal', ['close-policy-modal-btn-x', 'close-policy-modal-btn']);
-        bindModal('manual-btn-footer', 'manual-modal', ['close-manual-modal-x', 'close-manual-modal-btn']);
-        bindModal('terms-btn-footer', 'terms-modal', ['close-terms-modal-x', 'close-terms-modal-btn']);
-    },
-
-    showExpiredPautaModal(pauta, app) {
-        const existing = document.getElementById('expired-pauta-modal');
-        if (existing) existing.remove();
-
-        const modal = document.createElement('div');
-        modal.id = 'expired-pauta-modal';
-        modal.className = 'fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity';
-        modal.innerHTML = `
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform scale-100 transition-transform">
-                <div class="p-6 text-center">
-                    <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-bold text-slate-800 mb-2">Pauta Fechada / Expirada</h3>
-                    <p class="text-sm text-slate-500 mb-6 leading-relaxed">
-                        A pauta <b class="text-slate-700">${escapeHTML(pauta.name)}</b> atingiu o limite de tempo e foi bloqueada.<br><br>
-                        Você não pode mais alterá-la, mas o banco de dados está a salvo. O que deseja fazer?
-                    </p>
-                    <div class="flex flex-col gap-3">
-                        <button id="expired-stats-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2">
-                            <span class="text-lg">📊</span> Abrir Estatísticas e PDFs
-                        </button>
-                        <button id="expired-cancel-btn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-colors">
-                            Voltar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-
-        document.getElementById('expired-cancel-btn').onclick = () => modal.remove();
-
-        document.getElementById('expired-stats-btn').onclick = async () => {
-            const btn = document.getElementById('expired-stats-btn');
-            btn.innerHTML = '<span class="animate-spin text-lg">⏳</span> Buscando Arquivo...';
-            btn.disabled = true;
-            
-            try {
-                const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-                const snapshot = await getDocs(collection(app.db, "pautas", pauta.id, "attendances"));
-                const allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                modal.remove();
-                
-                if (window.StatisticsService && typeof window.StatisticsService.showModal === 'function') {
-                    window.StatisticsService.showModal(allAssisted, pauta.useDelegationFlow, pauta.name);
-                } else {
-                    showNotification("Módulo de estatísticas não carregado.", "error");
-                }
-            } catch (error) {
-                console.error(error);
-                showNotification("Erro ao buscar dados arquivados.", "error");
-                modal.remove();
-            }
-        };
-    },
-
-    renderPautaCards(pautas, userId, userEmail, app) {
-        const container = document.getElementById('pautas-list');
-        if (!container) return;
-
-        if (!pautas || pautas.length === 0) {
-            container.innerHTML = '<p class="col-span-full text-center py-8 text-gray-500 font-medium">Nenhuma pauta encontrada.</p>';
-            return;
-        }
-
-        container.innerHTML = '';
-        
-        pautas.forEach(pauta => {
-            const isOwner = pauta.owner === userId;
-            const isClosed = pauta.isClosed;
-            
-            let dataCriacaoStr = '---';
-            let dataExpiracaoStr = '';
-            let isExpired = false;
-
-            if (pauta.createdAt) {
-                const creationDate = new Date(pauta.createdAt);
-                dataCriacaoStr = creationDate.toLocaleDateString('pt-BR');
-                
-                const expirationDate = new Date(creationDate);
-                expirationDate.setDate(creationDate.getDate() + 7);
-                dataExpiracaoStr = expirationDate.toLocaleDateString('pt-BR');
-
-                const now = new Date();
-                isExpired = now > expirationDate;
-            }
-
-            const card = document.createElement('div');
-            card.className = `relative bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex flex-col justify-between min-h-[220px] ${isExpired ? 'opacity-60 grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer'} ${isClosed ? 'opacity-60' : ''}`;
-            
-            card.innerHTML = `
-                ${isOwner ? `
-                <button class="delete-pauta-btn absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors z-20">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                    </svg>
-                </button>` : ''}
-
-                <div>
-                    <h3 class="font-bold text-xl text-gray-600 leading-tight uppercase mb-2 pr-8">
-                        ${escapeHTML(pauta.name)}
-                    </h3>
-                    <p class="text-sm text-gray-500 mb-6">Membros: ${pauta.members ? pauta.members.length : 1}</p>
-                </div>
-                
-                <div class="pt-4 border-t border-gray-100">
-                    <p class="text-[10px] text-gray-400 uppercase font-bold">Criada em: ${dataCriacaoStr}</p>
-                    
-                    ${isExpired ? `
-                        <p class="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1">
-                            🚫 EXPIRADA EM: ${dataExpiracaoStr}
-                        </p>
-                    ` : `
-                        <p class="text-[10px] text-amber-600 font-bold mt-1">
-                            ELIMINAÇÃO EM: ${dataExpiracaoStr}
-                        </p>
-                    `}
-                    
-                    <div class="mt-3">
-                        ${isOwner ? `
-                            <span class="bg-green-50 text-green-600 text-[9px] font-black px-2 py-1 rounded border border-green-100 uppercase flex items-center w-max gap-1">
-                                 Criador
-                            </span>
-                        ` : `
-                            <span class="bg-blue-50 text-blue-600 text-[9px] font-black px-2 py-1 rounded border border-blue-100 uppercase flex items-center w-max gap-1">
-                                 Compartilhada
-                            </span>
-                        `}
-                    </div>
-                </div>
-            `;
-
-            const deleteBtn = card.querySelector('.delete-pauta-btn');
-            if (deleteBtn) {
-                deleteBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    app.deletePauta(pauta.id, pauta.name);
-                };
-            }
-
-            card.onclick = () => {
-                if (isExpired) {
-                    this.showExpiredPautaModal(pauta, app);
-                    return;
-                }
-                app.loadPauta(pauta.id, pauta.name, pauta.type);
-            };
-
-            container.appendChild(card);
-        });
-    },
-
     handleCardActions(e, app) {
         const button = e.target.closest('button');
         if (!button) return;
@@ -1388,11 +1255,11 @@ export const UIService = {
         }
 
         if (button.classList.contains('faltou-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, { status: 'faltoso' }, app.currentUserName);
+            PautaService.updateStatus(app.db, app.currentPauta.id, id, { status: 'faltoso' }, app.currentUserName);
         }
 
         if (button.classList.contains('return-to-pauta-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
+            PautaService.updateStatus(app.db, app.currentPauta.id, id, {
                 status: 'pauta',
                 arrivalTime: null,
                 priority: null,
@@ -1404,13 +1271,13 @@ export const UIService = {
         }
 
         if (button.classList.contains('return-to-pauta-from-faltoso-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
+            PautaService.updateStatus(app.db, app.currentPauta.id, id, {
                 status: 'pauta'
             }, app.currentUserName);
         }
 
         if (button.classList.contains('return-to-aguardando-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
+            PautaService.updateStatus(app.db, app.currentPauta.id, id, {
                 status: 'aguardando',
                 attendant: null,
                 attendedTime: null
@@ -1419,7 +1286,7 @@ export const UIService = {
 
         if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            this.updateStatus(app.db, app.currentPauta.id, id, {
+            PautaService.updateStatus(app.db, app.currentPauta.id, id, {
                 status: 'aguardando',
                 assignedCollaborator: null,
                 delegatedBy: null,
@@ -1434,15 +1301,24 @@ export const UIService = {
         }
 
         if (button.classList.contains('return-to-aguardando-from-dist-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
+            PautaService.updateStatus(app.db, app.currentPauta.id, id, {
                 status: 'aguardando',
                 distributionStatus: null
             }, app.currentUserName);
         }
 
         if (button.classList.contains('delete-btn')) {
-            if (confirm("Tem certeza?")) {
-                this.deleteAssisted(app.db, app.currentPauta.id, id, app.currentUserName);
+            if (confirm("Tem certeza que deseja deletar este assistido permanentemente?")) {
+                if (typeof PautaService.deleteAssisted === 'function') {
+                    PautaService.deleteAssisted(app.db, app.currentPauta.id, id, app.currentUserName);
+                } else {
+                    // Fallback caso a função deleteAssisted não esteja exposta corretamente
+                    import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js").then(({ doc, deleteDoc }) => {
+                        deleteDoc(doc(app.db, "pautas", app.currentPauta.id, "attendances", id)).then(() => {
+                           showNotification("Excluído com sucesso", "success");
+                        }).catch(() => showNotification("Erro ao excluir", "error"));
+                    });
+                }
             }
         }
 
@@ -1450,7 +1326,7 @@ export const UIService = {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             if (assisted && assisted.priority === 'URGENTE') {
                 if (confirm("Remover urgência?")) {
-                    this.updateStatus(app.db, app.currentPauta.id, id, {
+                    PautaService.updateStatus(app.db, app.currentPauta.id, id, {
                         priority: null,
                         priorityReason: null
                     }, app.currentUserName);
@@ -1650,14 +1526,14 @@ export const UIService = {
                 updateData.distributionStatus = 'distributed';
             }
             
-            this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
+            PautaService.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
         }
 
         if (button.classList.contains('toggle-confirmed-atendido') || button.classList.contains('toggle-confirmed-faltoso')) {
             const currentAssisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             const newConfirmedState = !(currentAssisted && (currentAssisted.isConfirmed || false));
 
-            this.updateStatus(app.db, app.currentPauta.id, id, {
+            PautaService.updateStatus(app.db, app.currentPauta.id, id, {
                 isConfirmed: newConfirmedState,
                 confirmationDetails: newConfirmedState ? { 
                     confirmedBy: app.currentUserName, 
@@ -1667,5 +1543,89 @@ export const UIService = {
             
             showNotification(`Status de Marcado Presença no Verde atualizado para ${newConfirmedState ? 'Confirmado' : 'Não Confirmado'}.`, 'info');
         }
+    },
+
+    setupFooterModals() {
+        const bindModal = (btnId, modalId, closeIds) => {
+            const btn = document.getElementById(btnId);
+            const modal = document.getElementById(modalId);
+            
+            if (btn && modal) {
+                btn.onclick = () => modal.classList.remove('hidden');
+                
+                closeIds.forEach(id => {
+                    const closeBtn = document.getElementById(id);
+                    if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
+                });
+
+                modal.onclick = (e) => {
+                    if (e.target === modal) modal.classList.add('hidden');
+                };
+            }
+        };
+
+        bindModal('privacy-btn-footer', 'privacy-policy-modal', ['close-policy-modal-btn-x', 'close-policy-modal-btn']);
+        bindModal('manual-btn-footer', 'manual-modal', ['close-manual-modal-x', 'close-manual-modal-btn']);
+        bindModal('terms-btn-footer', 'terms-modal', ['close-terms-modal-x', 'close-terms-modal-btn']);
+    },
+
+    showExpiredPautaModal(pauta, app) {
+        const existing = document.getElementById('expired-pauta-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'expired-pauta-modal';
+        modal.className = 'fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity';
+        modal.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform scale-100 transition-transform">
+                <div class="p-6 text-center">
+                    <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Pauta Fechada / Expirada</h3>
+                    <p class="text-sm text-slate-500 mb-6 leading-relaxed">
+                        A pauta <b class="text-slate-700">${escapeHTML(pauta.name)}</b> atingiu o limite de tempo e foi bloqueada.<br><br>
+                        Você não pode mais alterá-la, mas o banco de dados está a salvo. O que deseja fazer?
+                    </p>
+                    <div class="flex flex-col gap-3">
+                        <button id="expired-stats-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2">
+                            <span class="text-lg">📊</span> Abrir Estatísticas e PDFs
+                        </button>
+                        <button id="expired-cancel-btn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-colors">
+                            Voltar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('expired-cancel-btn').onclick = () => modal.remove();
+
+        document.getElementById('expired-stats-btn').onclick = async () => {
+            const btn = document.getElementById('expired-stats-btn');
+            btn.innerHTML = '<span class="animate-spin text-lg">⏳</span> Buscando Arquivo...';
+            btn.disabled = true;
+            
+            try {
+                const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                const snapshot = await getDocs(collection(app.db, "pautas", pauta.id, "attendances"));
+                const allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                modal.remove();
+                
+                if (window.StatisticsService && typeof window.StatisticsService.showModal === 'function') {
+                    window.StatisticsService.showModal(allAssisted, pauta.useDelegationFlow, pauta.name);
+                } else {
+                    showNotification("Módulo de estatísticas não carregado.", "error");
+                }
+            } catch (error) {
+                console.error(error);
+                showNotification("Erro ao buscar dados arquivados.", "error");
+                modal.remove();
+            }
+        };
     }
 };
