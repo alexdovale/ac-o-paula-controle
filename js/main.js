@@ -488,6 +488,9 @@ class SIGAPApp { // MANTIDO COMO SIGAP
             }
         
             try {
+                const useDelegationFlow = document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true';
+                const useDistributionFlow = document.getElementById('check-use-distribution')?.checked || false;
+
                 const novaPautaData = {
                     name: pautaName,
                     type: pautaType,
@@ -496,7 +499,9 @@ class SIGAPApp { // MANTIDO COMO SIGAP
                     memberEmails: [user.email],
                     isClosed: false,
                     createdAt: new Date().toISOString(),
-                    ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || 'padrao'
+                    ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || 'padrao',
+                    useDelegationFlow: useDelegationFlow,
+                    useDistributionFlow: useDistributionFlow
                 };
 
                 if (pautaType === 'multisala') {
