@@ -1380,30 +1380,42 @@ class SIGAPApp { // MANTIDO COMO SIGAP
             const emailDestino = emailInput?.value.trim();
             
             if (!emailDestino) {
-                showNotification("Por favor, insira o e-mail.", "error");
+                showNotification("Por favor, insira o e-mail (ou deixe qualquer texto para gerar o link).", "error");
                 return;
             }
 
             const btn = document.getElementById('send-delegate-email-btn');
-            if (btn) { btn.disabled = true; btn.textContent = "Enviando..."; }
+            if (btn) { btn.disabled = true; btn.textContent = "Processando..."; }
 
-            let nomeColega = window.collaboratorNameForDelegation;
-            if (!nomeColega || nomeColega === "Não informado" || nomeColega === "undefined") {
-                nomeColega = "Colega Colaborador";
-            }
+            let nomeColega = window.collaboratorNameForDelegation || "Colega";
 
             try {
+                // Chama nosso novo serviço simplificado que NÃO usa backend
                 await EmailService.sendDelegationEmail(
-                    emailDestino, nomeColega, window.assistedNameForDelegation, this.currentUserName,
-                    this.currentPauta.id, window.assistedIdForDelegation
+                    emailDestino, 
+                    nomeColega, 
+                    window.assistedNameForDelegation, 
+                    this.currentUserName,
+                    this.currentPauta.id, 
+                    window.assistedIdForDelegation
                 );
+
+                // ATUALIZA O BANCO DE DADOS LOCALMENTE PARA 'EM ATENDIMENTO'
+                await updateDoc(doc(this.db, "pautas", this.currentPauta.id, "attendances", window.assistedIdForDelegation), {
+                    status: 'emAtendimento',
+                    assignedCollaborator: { email: emailDestino, name: nomeColega },
+                    inAttendanceTime: new Date().toISOString()
+                });
 
                 document.getElementById('delegate-email-modal')?.classList.add('hidden');
                 if (emailInput) emailInput.value = '';
+                showNotification("Atendimento delegado com sucesso!", "success");
+
             } catch (error) {
-                showNotification("Falha no envio do e-mail.", "error");
+                console.error("Erro completo:", error);
+                showNotification("Aconteceu um erro. Tente atribuir o colaborador diretamente pela lista.", "error");
             } finally {
-                if (btn) { btn.disabled = false; btn.textContent = "Enviar E-mail"; }
+                if (btn) { btn.disabled = false; btn.textContent = "Enviar E-mail / Link"; }
             }
         });
 
