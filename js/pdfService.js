@@ -903,6 +903,95 @@ export const PDFService = {
             console.error("Erro PDF Estatísticas:", error);
             return false;
         }
+    },
+
+    /**
+     * NOVO: GERA PDF DA PLANILHA DE GASTOS JUDICIAL (Layout Grid e Preto/Branco)
+     */
+    generatePlanilhaGastosPDF(assistedName, expenseData) {
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+
+            // Título Centralizado
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("PLANILHA DE DESPESAS ATUAIS", doc.internal.pageSize.getWidth() / 2, 60, { align: "center" });
+
+            // Nome do Assistido
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            doc.text(`Assistido(a): ${assistedName}`, 40, 90);
+
+            // Mapeamento dos campos do banco para o PDF Judicial
+            const categorias = [
+                { id: 'moradia', label: 'Moradia na parcela referente à criança/adolescente\n(tais como condomínio, internet, luz e água)' },
+                { id: 'alimentacao', label: 'Alimentação' },
+                { id: 'educacao', label: 'Creche/escola / Curso / atividade extracurricular' },
+                { id: 'saude', label: 'Gastos com problemas de saúde / Plano de saúde / Medicamentos' },
+                { id: 'vestuario', label: 'Vestuário / Uniforme Escolar' },
+                { id: 'lazer', label: 'Transporte / Lazer' },
+                { id: 'outras', label: 'Outras (especificar)' }
+            ];
+
+            let total = 0;
+            const body = [];
+
+            // Povoa a tabela e faz a soma
+            categorias.forEach(cat => {
+                let valor = expenseData[cat.id] || '';
+                if (valor && valor !== 'R$ 0,00' && valor.trim() !== '') {
+                    const num = parseFloat(valor.replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+                    total += num;
+                    body.push([
+                        { content: cat.label, styles: { halign: 'center', valign: 'middle' } },
+                        { content: valor, styles: { halign: 'center', valign: 'middle' } }
+                    ]);
+                }
+            });
+
+            // Se o colaborador não informou nada, avisa no PDF
+            if (body.length === 0) {
+                 body.push([{content: 'Nenhuma despesa informada.', colSpan: 2, styles: {halign: 'center', fontStyle: 'italic'}}]);
+            } else {
+                 // Insere a linha final do TOTAL em negrito
+                 const totalFormatted = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                 body.push([
+                     { content: 'TOTAL', styles: { fontStyle: 'bold', halign: 'center' } },
+                     { content: totalFormatted, styles: { fontStyle: 'bold', halign: 'center' } }
+                 ]);
+            }
+
+            // Desenha a tabela com estilo jurídico/sério
+            doc.autoTable({
+                startY: 110,
+                head: [[
+                    { content: 'DESCRIÇÃO', styles: { halign: 'center', fontStyle: 'bold', fillColor: [255,255,255], textColor: [0,0,0], lineWidth: 1, lineColor: [0,0,0] } },
+                    { content: 'VALOR MENSAL', styles: { halign: 'center', fontStyle: 'bold', fillColor: [255,255,255], textColor: [0,0,0], lineWidth: 1, lineColor: [0,0,0] } }
+                ]],
+                body: body,
+                theme: 'grid',
+                styles: {
+                    lineColor: [0, 0, 0],
+                    lineWidth: 1,
+                    textColor: [0, 0, 0],
+                    fontSize: 10,
+                    cellPadding: 6
+                },
+                columnStyles: {
+                    0: { cellWidth: 280 },
+                    1: { cellWidth: 150 }
+                },
+                // Centraliza a tabela na folha A4 (280+150 = 430)
+                margin: { left: (doc.internal.pageSize.getWidth() - 430) / 2 }
+            });
+
+            doc.save(`Planilha_Despesas_${assistedName.replace(/\s+/g, '_')}.pdf`);
+            return true;
+        } catch (error) {
+            console.error("Erro PDF Planilha:", error);
+            return false;
+        }
     }
 };
 
@@ -930,7 +1019,11 @@ export const generateFaltososPDF = (pautaName, faltosos) => {
     return PDFService.generateFaltososPDF(pautaName, faltosos);
 };
 
+// Nova exportação da planilha
+export const generatePlanilhaGastosPDF = (assistedName, expenseData) => {
+    return PDFService.generatePlanilhaGastosPDF(assistedName, expenseData);
+};
 
 window.PDFService = PDFService;
 
-console.log("✅ pdfService.js carregado - VERSÃO FINAL (Colaboradores UI Premium + Ordenação, Duração e Atendente Corrigidos)!");
+console.log("✅ pdfService.js carregado - VERSÃO FINAL (Inclui PDF da Planilha de Gastos)!");
