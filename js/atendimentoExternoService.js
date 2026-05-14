@@ -1,9 +1,11 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { firebaseConfig } from './config.js';
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app); // <-- Precisamos do Auth aqui!
 
 export const AtendimentoExternoService = {
     pautaId: null,
@@ -12,7 +14,7 @@ export const AtendimentoExternoService = {
     fluxoSelecionado: null,
 
     async init() {
-        console.log("⚡ Atendimento Externo inicializado (Novo Fluxo Seguro)");
+        console.log("⚡ Atendimento Externo inicializado (Com Auth Anônima)");
 
         // 1. Pega as informações e a senha (token) direto da URL do navegador
         const urlParams = new URLSearchParams(window.location.search);
@@ -27,6 +29,9 @@ export const AtendimentoExternoService = {
         }
 
         try {
+            // LOGIN ANÔNIMO SILENCIOSO: Obrigatório para o Firebase não bloquear a leitura!
+            await signInAnonymously(auth);
+
             // 2. Busca os dados do assistido no Firestore
             const docRef = doc(db, "pautas", this.pautaId, "attendances", this.assistidoId);
             const docSnap = await getDoc(docRef);
@@ -39,7 +44,6 @@ export const AtendimentoExternoService = {
             const assistido = docSnap.data();
 
             // 3. O PULO DO GATO: Validação de Segurança
-            // Confere se a senha da URL é exatamente igual à senha salva no banco!
             if (assistido.delegationToken !== tokenRecebido) {
                 this.showError("Acesso Negado", "Token de segurança inválido ou expirado. O link pode ter sido alterado.");
                 return;
@@ -57,7 +61,8 @@ export const AtendimentoExternoService = {
 
         } catch (error) {
             console.error("Erro ao carregar dados:", error);
-            this.showError("Erro no Servidor", "Falha ao conectar com o banco de dados.");
+            // Agora o erro vai mostrar exatamente o que deu errado na tela
+            this.showError("Erro no Servidor", `Falha de conexão ou permissão: ${error.message}`);
         }
     },
 
@@ -86,7 +91,7 @@ export const AtendimentoExternoService = {
     selecionarFluxo(tipo, botaoClicado) {
         this.fluxoSelecionado = tipo;
         
-        // Limpa os estilos dos botões (remove o destaque azul)
+        // Limpa os estilos dos botões
         const botoes = [document.getElementById('btn-fluxo-direto'), document.getElementById('btn-fluxo-dist')];
         botoes.forEach(b => {
             if(b) {
