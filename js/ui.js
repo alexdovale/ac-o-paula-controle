@@ -39,18 +39,15 @@ export const UIService = {
     getAttendantName(item) {
         if (!item) return 'Não informado';
         
-        // 1º Prioridade: attendedBy (Quem de fato atendeu na finalização)
         if (item.attendedBy) {
             const name = typeof item.attendedBy === 'object' ? (item.attendedBy.nome || item.attendedBy.name) : item.attendedBy;
             if (name) return String(name).trim();
         }
 
-        // 2º Prioridade: assignedCollaborator (Quem foi delegado/editado)
         if (item.assignedCollaborator && item.assignedCollaborator.name) {
             return String(item.assignedCollaborator.name).trim();
         }
         
-        // 3º Prioridade: attendant (Campo legado)
         if (item.attendant) {
             const name = typeof item.attendant === 'object' ? (item.attendant.nome || item.attendant.name) : item.attendant;
             if (name) return String(name).trim();
@@ -79,7 +76,6 @@ export const UIService = {
         if (window.CollaboratorService && typeof window.CollaboratorService.renderModalList === 'function') {
             window.CollaboratorService.renderModalList(app);
         } else if (app.colaboradores) {
-            // Fallback caso CollaboratorService falhe
             const container = document.getElementById('collaborator-selection-list');
             if (container) {
                 container.innerHTML = '';
@@ -100,10 +96,7 @@ export const UIService = {
 
     renderPautaFilters(containerId, activeFilter, onFilterChange, app) {
         const container = document.getElementById(containerId);
-        if (!container) {
-            console.error(`Container ${containerId} não encontrado`);
-            return;
-        }
+        if (!container) return;
         
         const isPeriodo = activeFilter === 'periodo';
         
@@ -356,10 +349,7 @@ export const UIService = {
     },
 
     renderAssistedLists(app) {
-        if (!app) {
-            console.error("App não definido");
-            return;
-        }
+        if (!app) return;
         
         const allAssisted = app.allAssisted || [];
         const currentPautaData = app.currentPautaData;
@@ -382,9 +372,7 @@ export const UIService = {
             if (faltososList) faltososList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum faltoso</p>';
             if (distribuicaoList) distribuicaoList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum aguardando distribuição</p>';
             
-            this.updateCounters({
-                pauta: 0, aguardando: 0, emAtendimento: 0, atendidos: 0, faltosos: 0, distribuicao: 0
-            });
+            this.updateCounters({ pauta: 0, aguardando: 0, emAtendimento: 0, atendidos: 0, faltosos: 0, distribuicao: 0 });
             return;
         }
 
@@ -502,10 +490,7 @@ export const UIService = {
     },
 
     clearContainers() {
-        const containers = [
-            'pauta-list', 'aguardando-list', 'em-atendimento-list', 
-            'atendidos-list', 'faltosos-list', 'distribuicao-list'
-        ];
+        const containers = ['pauta-list', 'aguardando-list', 'em-atendimento-list', 'atendidos-list', 'faltosos-list', 'distribuicao-list'];
         containers.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.innerHTML = '';
@@ -1144,6 +1129,186 @@ export const UIService = {
         });
     },
 
+    setupFooterModals() {
+        const bindModal = (btnId, modalId, closeIds) => {
+            const btn = document.getElementById(btnId);
+            const modal = document.getElementById(modalId);
+            
+            if (btn && modal) {
+                btn.onclick = () => modal.classList.remove('hidden');
+                
+                closeIds.forEach(id => {
+                    const closeBtn = document.getElementById(id);
+                    if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
+                });
+
+                modal.onclick = (e) => {
+                    if (e.target === modal) modal.classList.add('hidden');
+                };
+            }
+        };
+
+        bindModal('privacy-btn-footer', 'privacy-policy-modal', ['close-policy-modal-btn-x', 'close-policy-modal-btn']);
+        bindModal('manual-btn-footer', 'manual-modal', ['close-manual-modal-x', 'close-manual-modal-btn']);
+        bindModal('terms-btn-footer', 'terms-modal', ['close-terms-modal-x', 'close-terms-modal-btn']);
+    },
+
+    showExpiredPautaModal(pauta, app) {
+        const existing = document.getElementById('expired-pauta-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'expired-pauta-modal';
+        modal.className = 'fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity';
+        modal.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform scale-100 transition-transform">
+                <div class="p-6 text-center">
+                    <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Pauta Fechada / Expirada</h3>
+                    <p class="text-sm text-slate-500 mb-6 leading-relaxed">
+                        A pauta <b class="text-slate-700">${escapeHTML(pauta.name)}</b> atingiu o limite de tempo e foi bloqueada.<br><br>
+                        Você não pode mais alterá-la, mas o banco de dados está a salvo. O que deseja fazer?
+                    </p>
+                    <div class="flex flex-col gap-3">
+                        <button id="expired-stats-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2">
+                            <span class="text-lg">📊</span> Abrir Estatísticas e PDFs
+                        </button>
+                        <button id="expired-cancel-btn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-colors">
+                            Voltar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('expired-cancel-btn').onclick = () => modal.remove();
+
+        document.getElementById('expired-stats-btn').onclick = async () => {
+            const btn = document.getElementById('expired-stats-btn');
+            btn.innerHTML = '<span class="animate-spin text-lg">⏳</span> Buscando Arquivo...';
+            btn.disabled = true;
+            
+            try {
+                const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                const snapshot = await getDocs(collection(app.db, "pautas", pauta.id, "attendances"));
+                const allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                modal.remove();
+                
+                if (window.StatisticsService && typeof window.StatisticsService.showModal === 'function') {
+                    window.StatisticsService.showModal(allAssisted, pauta.useDelegationFlow, pauta.name);
+                } else {
+                    showNotification("Módulo de estatísticas não carregado.", "error");
+                }
+            } catch (error) {
+                console.error(error);
+                showNotification("Erro ao buscar dados arquivados.", "error");
+                modal.remove();
+            }
+        };
+    },
+
+    renderPautaCards(pautas, userId, userEmail, app) {
+        const container = document.getElementById('pautas-list');
+        if (!container) return;
+
+        if (!pautas || pautas.length === 0) {
+            container.innerHTML = '<p class="col-span-full text-center py-8 text-gray-500 font-medium">Nenhuma pauta encontrada.</p>';
+            return;
+        }
+
+        container.innerHTML = '';
+        
+        pautas.forEach(pauta => {
+            const isOwner = pauta.owner === userId;
+            const isClosed = pauta.isClosed;
+            
+            let dataCriacaoStr = '---';
+            let dataExpiracaoStr = '';
+            let isExpired = false;
+
+            if (pauta.createdAt) {
+                const creationDate = new Date(pauta.createdAt);
+                dataCriacaoStr = creationDate.toLocaleDateString('pt-BR');
+                
+                const expirationDate = new Date(creationDate);
+                expirationDate.setDate(creationDate.getDate() + 7);
+                dataExpiracaoStr = expirationDate.toLocaleDateString('pt-BR');
+
+                const now = new Date();
+                isExpired = now > expirationDate;
+            }
+
+            const card = document.createElement('div');
+            card.className = `relative bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex flex-col justify-between min-h-[220px] ${isExpired ? 'opacity-60 grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer'} ${isClosed ? 'opacity-60' : ''}`;
+            
+            card.innerHTML = `
+                ${isOwner ? `
+                <button class="delete-pauta-btn absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors z-20">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
+                    </svg>
+                </button>` : ''}
+
+                <div>
+                    <h3 class="font-bold text-xl text-gray-600 leading-tight uppercase mb-2 pr-8">
+                        ${escapeHTML(pauta.name)}
+                    </h3>
+                    <p class="text-sm text-gray-500 mb-6">Membros: ${pauta.members ? pauta.members.length : 1}</p>
+                </div>
+                
+                <div class="pt-4 border-t border-gray-100">
+                    <p class="text-[10px] text-gray-400 uppercase font-bold">Criada em: ${dataCriacaoStr}</p>
+                    
+                    ${isExpired ? `
+                        <p class="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1">
+                            🚫 EXPIRADA EM: ${dataExpiracaoStr}
+                        </p>
+                    ` : `
+                        <p class="text-[10px] text-amber-600 font-bold mt-1">
+                            ELIMINAÇÃO EM: ${dataExpiracaoStr}
+                        </p>
+                    `}
+                    
+                    <div class="mt-3">
+                        ${isOwner ? `
+                            <span class="bg-green-50 text-green-600 text-[9px] font-black px-2 py-1 rounded border border-green-100 uppercase flex items-center w-max gap-1">
+                                 Criador
+                            </span>
+                        ` : `
+                            <span class="bg-blue-50 text-blue-600 text-[9px] font-black px-2 py-1 rounded border border-blue-100 uppercase flex items-center w-max gap-1">
+                                 Compartilhada
+                            </span>
+                        `}
+                    </div>
+                </div>
+            `;
+
+            const deleteBtn = card.querySelector('.delete-pauta-btn');
+            if (deleteBtn) {
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    app.deletePauta(pauta.id, pauta.name);
+                };
+            }
+
+            card.onclick = () => {
+                if (isExpired) {
+                    this.showExpiredPautaModal(pauta, app);
+                    return;
+                }
+                app.loadPauta(pauta.id, pauta.name, pauta.type);
+            };
+
+            container.appendChild(card);
+        });
+    },
+
     handleCardActions(e, app) {
         const button = e.target.closest('button');
         if (!button) return;
@@ -1235,8 +1400,8 @@ export const UIService = {
             if (modal) {
                 modal.classList.remove('hidden');
                 setTimeout(() => {
-                    const firstInput = modal.querySelector('input, button, [tabindex="0"]');
-                    if (firstInput) firstInput.focus();
+                    const searchInput = document.getElementById('collaborator-search-input');
+                    if (searchInput) searchInput.focus();
                 }, 100);
             }
         }
@@ -1312,7 +1477,6 @@ export const UIService = {
                 if (typeof PautaService.deleteAssisted === 'function') {
                     PautaService.deleteAssisted(app.db, app.currentPauta.id, id, app.currentUserName);
                 } else {
-                    // Fallback caso a função deleteAssisted não esteja exposta corretamente
                     import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js").then(({ doc, deleteDoc }) => {
                         deleteDoc(doc(app.db, "pautas", app.currentPauta.id, "attendances", id)).then(() => {
                            showNotification("Excluído com sucesso", "success");
@@ -1388,6 +1552,9 @@ export const UIService = {
             }
         }
 
+        // =========================================================================
+        // ATUALIZAÇÃO: CRIAR DATALIST HÍBRIDO (SELECIONAR OU DIGITAR EMAIL)
+        // =========================================================================
         if (button.classList.contains('delegate-finalization-btn')) {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             if (!assisted) return;
@@ -1399,6 +1566,34 @@ export const UIService = {
             
             const modal = document.getElementById('delegate-email-modal');
             if (modal) {
+                // Cria ou atualiza o datalist de emails
+                let datalist = document.getElementById('colab-emails-list');
+                if (!datalist) {
+                    datalist = document.createElement('datalist');
+                    datalist.id = 'colab-emails-list';
+                    document.body.appendChild(datalist);
+                }
+                datalist.innerHTML = '';
+                
+                // Preenche a lista com quem tem e-mail
+                if (app.colaboradores) {
+                    app.colaboradores.forEach(c => {
+                        if (c.email) {
+                            const opt = document.createElement('option');
+                            opt.value = c.email;
+                            opt.textContent = `${c.nome} (${c.cargo})`;
+                            datalist.appendChild(opt);
+                        }
+                    });
+                }
+
+                // Conecta o datalist ao campo de input
+                const emailInput = document.getElementById('collaborator-email-input');
+                if (emailInput) {
+                    emailInput.setAttribute('list', 'colab-emails-list');
+                    emailInput.value = (assisted.assignedCollaborator && assisted.assignedCollaborator.email) ? assisted.assignedCollaborator.email : '';
+                }
+
                 modal.classList.remove('hidden');
             }
         }
@@ -1543,89 +1738,6 @@ export const UIService = {
             
             showNotification(`Status de Marcado Presença no Verde atualizado para ${newConfirmedState ? 'Confirmado' : 'Não Confirmado'}.`, 'info');
         }
-    },
-
-    setupFooterModals() {
-        const bindModal = (btnId, modalId, closeIds) => {
-            const btn = document.getElementById(btnId);
-            const modal = document.getElementById(modalId);
-            
-            if (btn && modal) {
-                btn.onclick = () => modal.classList.remove('hidden');
-                
-                closeIds.forEach(id => {
-                    const closeBtn = document.getElementById(id);
-                    if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
-                });
-
-                modal.onclick = (e) => {
-                    if (e.target === modal) modal.classList.add('hidden');
-                };
-            }
-        };
-
-        bindModal('privacy-btn-footer', 'privacy-policy-modal', ['close-policy-modal-btn-x', 'close-policy-modal-btn']);
-        bindModal('manual-btn-footer', 'manual-modal', ['close-manual-modal-x', 'close-manual-modal-btn']);
-        bindModal('terms-btn-footer', 'terms-modal', ['close-terms-modal-x', 'close-terms-modal-btn']);
-    },
-
-    showExpiredPautaModal(pauta, app) {
-        const existing = document.getElementById('expired-pauta-modal');
-        if (existing) existing.remove();
-
-        const modal = document.createElement('div');
-        modal.id = 'expired-pauta-modal';
-        modal.className = 'fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity';
-        modal.innerHTML = `
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform scale-100 transition-transform">
-                <div class="p-6 text-center">
-                    <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-bold text-slate-800 mb-2">Pauta Fechada / Expirada</h3>
-                    <p class="text-sm text-slate-500 mb-6 leading-relaxed">
-                        A pauta <b class="text-slate-700">${escapeHTML(pauta.name)}</b> atingiu o limite de tempo e foi bloqueada.<br><br>
-                        Você não pode mais alterá-la, mas o banco de dados está a salvo. O que deseja fazer?
-                    </p>
-                    <div class="flex flex-col gap-3">
-                        <button id="expired-stats-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2">
-                            <span class="text-lg">📊</span> Abrir Estatísticas e PDFs
-                        </button>
-                        <button id="expired-cancel-btn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-colors">
-                            Voltar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-
-        document.getElementById('expired-cancel-btn').onclick = () => modal.remove();
-
-        document.getElementById('expired-stats-btn').onclick = async () => {
-            const btn = document.getElementById('expired-stats-btn');
-            btn.innerHTML = '<span class="animate-spin text-lg">⏳</span> Buscando Arquivo...';
-            btn.disabled = true;
-            
-            try {
-                const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-                const snapshot = await getDocs(collection(app.db, "pautas", pauta.id, "attendances"));
-                const allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                modal.remove();
-                
-                if (window.StatisticsService && typeof window.StatisticsService.showModal === 'function') {
-                    window.StatisticsService.showModal(allAssisted, pauta.useDelegationFlow, pauta.name);
-                } else {
-                    showNotification("Módulo de estatísticas não carregado.", "error");
-                }
-            } catch (error) {
-                console.error(error);
-                showNotification("Erro ao buscar dados arquivados.", "error");
-                modal.remove();
-            }
-        };
     }
 };
+```eof
