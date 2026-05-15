@@ -395,10 +395,13 @@ export const UIService = {
             distribuicao: allAssisted.filter(a => a.status === 'aguardandoDistribuicao' && this.searchFilter(a, searchTerms.distribuicao))
         };
 
+        // Ordem Padrão (Agendado primeiro)
         lists.pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
         lists.atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime)); 
         lists.faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00')); 
-        lists.emAtendimento.sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime)); 
+        
+        // ORDEM DE ATENDIMENTO: O primeiro a entrar fica no topo!
+        lists.emAtendimento.sort((a, b) => new Date(a.inAttendanceTime) - new Date(b.inAttendanceTime)); 
         
         if (currentPautaData?.ordemAtendimento) {
             lists.aguardando = PautaService.sortAguardando(lists.aguardando, currentPautaData.ordemAtendimento);
@@ -457,6 +460,7 @@ export const UIService = {
         const demandsText = assisted.demandas?.descricoes ? assisted.demandas.descricoes.join(' ') : '';
         
         const searchableString = normalizeText(`
+            ${assisted.numeroAgendamento || ''}
             ${assisted.name || ''} 
             ${assisted.cpf || ''} 
             ${assisted.subject || ''} 
@@ -468,7 +472,6 @@ export const UIService = {
             ${demandsText}
             ${assisted.room || ''}
             ${assisted.status || ''}
-            ${assisted.defensorResponsavel || ''}
         `);
 
         return searchableString.includes(termLower);
@@ -545,6 +548,7 @@ export const UIService = {
             <p class="font-bold text-xl text-gray-800 leading-tight pr-6">${escapeHTML(item.name || '').toUpperCase()}</p>
             
             <div class="mt-2 space-y-0.5 text-sm text-gray-700">
+                ${item.numeroAgendamento ? `<p>Nº Agend.: <span class="font-bold">${escapeHTML(item.numeroAgendamento)}</span></p>` : ''}
                 <p>Assunto: <span class="font-bold uppercase">${escapeHTML(item.subject || 'Não informado')}</span></p>
                 <p>Agendado: <span class="font-bold">${item.scheduledTime || '--:--'}</span></p>
             </div>
@@ -811,6 +815,7 @@ export const UIService = {
                 <div class="flex flex-col h-full">
                     ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
                     <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(nomeSeguro)}</p>
+                    ${item.numeroAgendamento ? `<p class="text-xs text-gray-600 mb-1">Nº Agend.: <strong>${escapeHTML(item.numeroAgendamento)}</strong></p>` : ''}
                     <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
                     <div class="flex items-end justify-between w-full mb-2 gap-2">
                         <div class="flex flex-wrap items-center gap-2">
@@ -856,6 +861,12 @@ export const UIService = {
         const container = document.getElementById('em-atendimento-list');
         if (!container) return;
 
+        // Auto-corrige o título do HTML "Em Atend." para "Em Atendimento" sem precisar mexer no HTML
+        const columnHeader = container.parentElement?.querySelector('h2');
+        if (columnHeader && columnHeader.innerHTML.includes('Em Atend.')) {
+            columnHeader.innerHTML = columnHeader.innerHTML.replace('Em Atend.', 'Em Atendimento');
+        }
+
         if (items.length === 0) {
             container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém em atendimento</p>';
             return;
@@ -872,6 +883,11 @@ export const UIService = {
             const currentUserRole = window.app?.currentUser?.role;
             const canDelegateOrFinalize = currentUserRole !== 'apoio';
             const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
+
+            // Lógica do botão Delegar
+            const isDelegated = !!(item.assignedCollaborator && item.assignedCollaborator.name);
+            const canDelegate = canDelegateOrFinalize && !isDelegated;
+            const delegateBtnClass = isDelegated ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-500 hover:bg-indigo-600';
 
             const card = document.createElement('div');
             card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
@@ -893,22 +909,26 @@ export const UIService = {
                     </svg>
                 </button>` : ''}
 
-                <p class="font-bold text-xl md:text-2xl text-gray-800">${index + 1}. ${escapeHTML(item.name || '')}</p>
-                <p class="text-xs md:text-sm mt-1">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
-                <p class="text-xs md:text-sm">Colaborador: ${escapeHTML(atendenteNome)}</p>
-                <p class="text-xs md:text-sm text-gray-400">Início: ${startTime}</p>
+                <p class="font-bold text-lg text-gray-800 leading-tight">${index + 1}. ${escapeHTML(item.name || '')}</p>
+                ${item.numeroAgendamento ? `<p class="text-xs text-gray-600 mt-1">Nº Agend.: <strong>${escapeHTML(item.numeroAgendamento)}</strong></p>` : ''}
+                <p class="text-xs text-gray-600 mt-1">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
+                <p class="text-xs text-gray-600 mt-1">Colaborador: ${escapeHTML(atendenteNome)}</p>
+                <p class="text-xs text-gray-400 mt-1">Início: ${startTime}</p>
 
                 <div class="mt-4 flex flex-col gap-2">
                     <div class="grid grid-cols-2 gap-2">
-                        <button data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(atendenteNome)}" class="delegate-finalization-btn bg-indigo-500 text-white font-bold py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm shadow-md transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
+                        <button data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(atendenteNome)}" class="delegate-finalization-btn ${delegateBtnClass} text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95" ${canDelegate ? '' : 'disabled'}>
                             Delegar
                         </button>
-                        <button onclick="window.open('${linkDireto}', '_blank')" class="bg-green-500 text-white font-bold py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm shadow-md transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
+                        <button onclick="window.open('${linkDireto}', '_blank')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
                             Finalizar
                         </button>
                     </div>
-                    <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 text-white font-bold py-2 rounded-lg text-xs md:text-sm shadow-md transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
+                    <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 hover:bg-slate-500 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
                         Voltar p/ Aguardando
+                    </button>
+                    <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-1 text-center underline w-full">
+                        Ver Detalhes
                     </button>
                 </div>
 
@@ -971,6 +991,7 @@ export const UIService = {
                     </button>
                 </div>
                 
+                ${item.numeroAgendamento ? `<p class="text-xs md:text-sm mt-1 text-gray-700">Nº Agend.: <b>${escapeHTML(item.numeroAgendamento)}</b></p>` : ''}
                 <p class="text-xs md:text-sm mt-1 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
                 
                 ${item.tipoAcaoRapida ? (() => {
@@ -1069,6 +1090,7 @@ export const UIService = {
                     </button>
                 </div>
                 
+                ${item.numeroAgendamento ? `<p class="text-xs md:text-sm mt-2 text-gray-700">Nº Agend.: <b>${escapeHTML(item.numeroAgendamento)}</b></p>` : ''}
                 <p class="text-xs md:text-sm mt-2 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
                 
                 <div class="grid grid-cols-2 gap-2 text-center border-t border-b py-2 my-3 text-[9px] md:text-[10px] text-gray-400 uppercase font-bold tracking-wider">
@@ -1098,9 +1120,6 @@ export const UIService = {
         });
     },
     
-    // ==========================================
-    // RENDERIZAÇÃO DA DISTRIBUIÇÃO COM AGRUPAMENTO E BOTÃO PAINEL
-    // ==========================================
     renderDistribuicaoColumn(items, pautaId, userName) {
         const container = document.getElementById('distribuicao-list');
         if (!container) return;
@@ -1112,7 +1131,6 @@ export const UIService = {
 
         container.innerHTML = '';
 
-        // Agrupa os itens pelo nome do Defensor Responsável
         const groups = {};
         items.forEach(item => {
             const defensor = item.defensorResponsavel || 'Não Atribuído';
@@ -1126,10 +1144,8 @@ export const UIService = {
             const groupDiv = document.createElement('div');
             groupDiv.className = "mb-4 border border-cyan-200 rounded-lg overflow-hidden bg-cyan-50 shadow-sm";
 
-            // LINK PARA O DASHBOARD (Sem assistidoId e token)
             const linkPainel = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&colab=${encodeURIComponent(defensor)}`;
 
-            // Cabeçalho do Grupo
             const headerHtml = `
                 <div class="bg-cyan-100 p-2 border-b border-cyan-200 flex flex-col gap-2">
                     <div class="flex justify-between items-center px-1">
@@ -1147,7 +1163,6 @@ export const UIService = {
             groupDiv.innerHTML = headerHtml;
             const cardsWrapper = groupDiv.querySelector('.room-cards-wrapper');
 
-            // Renderiza os cards dentro do grupo
             groups[defensor].forEach(item => {
                 const currentUserRole = window.app?.currentUser?.role;
                 const canManageDistribution = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
@@ -1156,11 +1171,11 @@ export const UIService = {
                 card.className = 'assisted-card relative bg-white p-3 rounded-lg shadow-sm border border-cyan-100 mb-2';
                 card.setAttribute('data-id', item.id);
                 
-                // Link antigo fallback
                 const linkExterno = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(userName)}&token=${item.delegationToken || ''}`;
 
                 card.innerHTML = `
                     <p class="font-bold text-gray-800 text-sm truncate">${escapeHTML(item.name || '')}</p>
+                    ${item.numeroAgendamento ? `<p class="text-[10px] text-gray-600 font-bold mt-1">Nº Agend.: ${escapeHTML(item.numeroAgendamento)}</p>` : ''}
                     <p class="text-[10px] text-cyan-700 font-bold uppercase mt-1 truncate">${escapeHTML(item.subject || '')}</p>
                     ${item.notasRevisao ? `<div class="mt-2 text-[9px] bg-yellow-50 text-yellow-800 p-1.5 rounded border border-yellow-200"><span class="font-bold">Nota:</span> ${escapeHTML(item.notasRevisao)}</div>` : ''}
                     <div class="mt-3 space-y-2">
@@ -1211,7 +1226,7 @@ export const UIService = {
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform scale-100 transition-transform">
                 <div class="p-6 text-center">
                     <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 24 24" stroke="currentColor" stroke-width="2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                     </div>
@@ -1610,31 +1625,6 @@ export const UIService = {
             
             const modal = document.getElementById('delegate-email-modal');
             if (modal) {
-                let datalist = document.getElementById('colab-emails-list');
-                if (!datalist) {
-                    datalist = document.createElement('datalist');
-                    datalist.id = 'colab-emails-list';
-                    document.body.appendChild(datalist);
-                }
-                datalist.innerHTML = '';
-                
-                if (app.colaboradores) {
-                    app.colaboradores.forEach(c => {
-                        if (c.email) {
-                            const opt = document.createElement('option');
-                            opt.value = c.email;
-                            opt.textContent = `${c.nome} (${c.cargo})`;
-                            datalist.appendChild(opt);
-                        }
-                    });
-                }
-
-                const emailInput = document.getElementById('collaborator-email-input');
-                if (emailInput) {
-                    emailInput.setAttribute('list', 'colab-emails-list');
-                    emailInput.value = (assisted.assignedCollaborator && assisted.assignedCollaborator.email) ? assisted.assignedCollaborator.email : '';
-                }
-
                 modal.classList.remove('hidden');
             }
         }
