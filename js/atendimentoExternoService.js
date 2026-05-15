@@ -113,6 +113,26 @@ export const AtendimentoExternoService = {
         
         document.getElementById('area-colaborador').classList.remove('hidden');
 
+        // ==== NOVO: Atalho dinâmico para o Painel do Defensor ====
+        const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
+        
+        if (isDefensor) {
+            if (!document.getElementById('btn-atalho-painel')) {
+                const areaColaborador = document.getElementById('area-colaborador');
+                const btnHtml = `
+                    <button id="btn-atalho-painel" class="w-full bg-indigo-50 border-2 border-indigo-200 text-indigo-700 hover:bg-indigo-100 font-black py-3 px-4 rounded-xl shadow-sm transition-colors text-xs flex items-center justify-center gap-2 mb-6 uppercase tracking-wider">
+                        💼 Acessar Meu Painel Judicial
+                    </button>
+                `;
+                areaColaborador.insertAdjacentHTML('afterbegin', btnHtml);
+
+                document.getElementById('btn-atalho-painel').onclick = () => {
+                    this.renderizarDashboardDefensor();
+                };
+            }
+        }
+        // ==========================================================
+
         this.renderizarHistorico(assistido);
         this.renderizarAbaEncerramentoDinamica(assistido, pautaData);
     },
@@ -345,13 +365,17 @@ export const AtendimentoExternoService = {
             const docRef = doc(db, "pautas", this.pautaId, "attendances", this.assistidoId);
             await updateDoc(docRef, updateData);
 
+            // Verifica se é defensor para adaptar o botão de sucesso
+            const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
+            const textoBotaoVoltar = isDefensor ? '💼 Ir para Meu Painel Judicial' : '⬅️ Voltar ao Painel';
+
             // Montamos o HTML de sucesso
             const mensagemSucessoHtml = `
                 <div class="text-center p-8 bg-green-50 rounded-xl border border-green-200 shadow-sm mt-8 animate-fade-in">
                     <span class="text-5xl">✅</span>
                     <h2 class="text-2xl font-bold text-green-800 mt-4">${tituloSucesso}</h2>
                     <p class="text-green-600 mt-2 font-medium">${subtituloSucesso}</p>
-                    <button onclick="window.history.back()" class="mt-6 text-sm text-green-700 underline font-bold">⬅️ Voltar ao Painel</button>
+                    <button id="btn-voltar-sucesso" class="mt-6 text-sm text-green-700 underline font-bold">${textoBotaoVoltar}</button>
                 </div>
             `;
 
@@ -364,6 +388,18 @@ export const AtendimentoExternoService = {
                 // Fallback: Se não achar, injeta no container principal da tela
                 const containerPrincipal = document.querySelector('.w-full.max-w-2xl') || document.body;
                 containerPrincipal.innerHTML = mensagemSucessoHtml;
+            }
+
+            // Atrela a lógica de clique após injetar o botão no HTML
+            const btnVoltar = document.getElementById('btn-voltar-sucesso');
+            if (btnVoltar) {
+                btnVoltar.onclick = () => {
+                    if (isDefensor) {
+                        this.renderizarDashboardDefensor();
+                    } else {
+                        window.history.back(); // Colaborador normal volta pelo histórico do navegador
+                    }
+                };
             }
 
             // Validação de segurança também para o header
