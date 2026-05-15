@@ -35,6 +35,16 @@ export const AtendimentoExternoService = {
             return;
         }
 
+        // ==== BARRA FIXA GLOBAL NO TOPO ====
+        if (!document.getElementById('fixed-colab-bar')) {
+            const bar = document.createElement('div');
+            bar.id = 'fixed-colab-bar';
+            bar.className = "fixed top-0 left-0 w-full bg-slate-900 text-slate-300 text-center py-2 text-xs font-bold z-[100] shadow-md flex items-center justify-center gap-2 tracking-wide";
+            const safeName = this.colaboradorNome.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            bar.innerHTML = `<span><span class="text-sm">🧑‍💻</span> OPERANDO COMO: <span class="text-white uppercase">${safeName}</span></span>`;
+            document.body.prepend(bar);
+        }
+
         try {
             await signInAnonymously(auth);
             await this.carregarColaboradoresGerais();
@@ -138,10 +148,9 @@ export const AtendimentoExternoService = {
                 const greetingHtml = `
                     <div id="greeting-colaborador" class="w-full bg-slate-50 border border-slate-200 text-slate-700 px-4 py-3 rounded-xl shadow-sm mb-6 text-xs flex items-center gap-3">
                         <span class="text-lg">👋</span>
-                        <span>Olá, <b>${this.colaboradorNome}</b>! Você está no painel de atendimento.</span>
+                        <span>Olá, <b>${this.colaboradorNome}</b>! Você está no painel de atendimento individual.</span>
                     </div>
                 `;
-                // Insere no topo da área do colaborador (garantindo que fique acima do banner de transferência, se houver)
                 areaColab.insertAdjacentHTML('afterbegin', greetingHtml);
             }
         }
