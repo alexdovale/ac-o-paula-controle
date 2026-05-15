@@ -986,7 +986,7 @@ export const UIService = {
             console.error("Erro ao criar card de em atendimento:", error, item);
             return null;
         }
-    }
+    },
 
     renderAtendidosColumn(items) {
         const container = document.getElementById('atendidos-list');
