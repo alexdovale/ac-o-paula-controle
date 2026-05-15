@@ -1213,6 +1213,103 @@ export const UIService = {
         bindModal('privacy-btn-footer', 'privacy-policy-modal', ['close-policy-modal-btn-x', 'close-policy-modal-btn']);
         bindModal('manual-btn-footer', 'manual-modal', ['close-manual-modal-x', 'close-manual-modal-btn']);
         bindModal('terms-btn-footer', 'terms-modal', ['close-terms-modal-x', 'close-terms-modal-btn']);
+        
+        // Injeta e configura o Modal de Formatação do CSV de forma dinâmica
+        this.renderFormatHelpModal();
+    },
+    
+    renderFormatHelpModal() {
+        const modal = document.getElementById('format-help-modal');
+        if (!modal) return;
+
+        modal.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] mx-4">
+                <div class="bg-blue-600 p-4 text-white flex justify-between items-center">
+                    <h2 class="font-black text-lg uppercase tracking-wide flex items-center gap-2">
+                        <span>📊</span> Como formatar a Planilha
+                    </h2>
+                    <button id="close-format-help-x" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
+                </div>
+                <div class="p-6 overflow-y-auto space-y-5 text-sm text-gray-700">
+                    <p>Para importar vários assistidos de uma vez, salve sua planilha Excel como <b>CSV (UTF-8)</b>. O sistema aceita o formato com <b>4 ou 5 colunas</b> separadas por ponto e vírgula (<code class="bg-gray-100 px-1 rounded font-bold text-blue-600">;</code>).</p>
+                    
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <h3 class="font-bold text-blue-800 mb-2 uppercase text-xs">Formato Padrão (5 Colunas)</h3>
+                        <p class="text-[10px] text-blue-600 mb-2">A coluna <b>Nº Agend</b> é opcional. Se não houver, deixe em branco ou use o formato de 4 colunas.</p>
+                        <code id="format-text-code" class="block bg-white p-3 rounded-lg border border-blue-200 text-xs mb-3 font-mono text-gray-800">Nº Agend; Nome Completo; Horário; Assunto; CPF</code>
+                        <button id="copy-format-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg shadow-sm transition-colors flex justify-center items-center gap-2">
+                            <span>📋</span> Copiar Cabeçalho
+                        </button>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                        <h3 class="font-bold text-gray-800 mb-2 uppercase text-xs">Exemplo de Linha</h3>
+                        <code id="example-text-code" class="block bg-white p-3 rounded-lg border border-gray-300 text-xs mb-3 font-mono text-gray-800">12345; Maria da Silva; 14:30; Alimentos; 111.222.333-44</code>
+                        <button id="copy-example-btn" class="w-full bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-xs font-bold py-2 rounded-lg shadow-sm transition-colors flex justify-center items-center gap-2">
+                            <span>📋</span> Copiar Exemplo
+                        </button>
+                    </div>
+
+                    <div class="bg-green-50 p-4 rounded-xl border border-green-100">
+                        <h3 class="font-bold text-green-800 mb-2 uppercase text-xs">🤖 Prompt para o ChatGPT</h3>
+                        <p class="text-[10px] text-green-700 mb-2">Cole o texto abaixo no ChatGPT junto com a sua lista de assistidos para ele criar a tabela perfeita para você:</p>
+                        <code id="prompt-text-code" class="block bg-white p-3 rounded-lg border border-green-200 text-[10.5px] mb-3 font-mono text-gray-800 leading-relaxed">Aja como um organizador de dados. Converta a lista de assistidos abaixo para o formato CSV com separador de ponto e vírgula (;). As colunas DEVEM ser exatamente nesta ordem: "Nº Agend; Nome Completo; Horário; Assunto; CPF". Caso alguma informação não exista (como Nº Agend ou CPF), deixe a coluna vazia mas mantenha o ponto e vírgula. Não coloque cabeçalho na resposta, apenas as linhas de dados prontas para copiar.</code>
+                        <button id="copy-prompt-btn" class="w-full bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-2 rounded-lg shadow-sm transition-colors flex justify-center items-center gap-2">
+                            <span>📋</span> Copiar Prompt
+                        </button>
+                    </div>
+                </div>
+                <div class="p-4 bg-gray-50 border-t flex justify-end">
+                    <button id="close-format-help-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg text-sm transition-colors">
+                        Entendi
+                    </button>
+                </div>
+            </div>
+        `;
+
+        const closeModals = () => modal.classList.add('hidden');
+        document.getElementById('close-format-help-x')?.addEventListener('click', closeModals);
+        document.getElementById('close-format-help-btn')?.addEventListener('click', closeModals);
+
+        const setupCopy = (btnId, codeId) => {
+            const btn = document.getElementById(btnId);
+            const codeEl = document.getElementById(codeId);
+            if (btn && codeEl) {
+                btn.addEventListener('click', () => {
+                    navigator.clipboard.writeText(codeEl.textContent);
+                    const originalHtml = btn.innerHTML;
+                    btn.innerHTML = `<span>✅</span> Copiado!`;
+                    
+                    if (btnId === 'copy-example-btn') {
+                        btn.classList.remove('bg-white', 'text-gray-700');
+                        btn.classList.add('bg-green-500', 'text-white', 'border-green-500');
+                    } else {
+                        btn.classList.add('bg-green-500');
+                        btn.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'bg-green-600', 'hover:bg-green-700');
+                    }
+
+                    if (window.showNotification) window.showNotification("Texto copiado para a área de transferência!", "success");
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalHtml;
+                        if (btnId === 'copy-example-btn') {
+                            btn.classList.add('bg-white', 'text-gray-700');
+                            btn.classList.remove('bg-green-500', 'text-white', 'border-green-500');
+                        } else if (btnId === 'copy-format-btn') {
+                            btn.classList.remove('bg-green-500');
+                            btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                        } else {
+                            btn.classList.remove('bg-green-500');
+                            btn.classList.add('bg-green-600', 'hover:bg-green-700');
+                        }
+                    }, 2000);
+                });
+            }
+        };
+
+        setupCopy('copy-format-btn', 'format-text-code');
+        setupCopy('copy-example-btn', 'example-text-code');
+        setupCopy('copy-prompt-btn', 'prompt-text-code');
     },
 
     showExpiredPautaModal(pauta, app) {
