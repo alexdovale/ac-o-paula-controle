@@ -2,7 +2,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
 import { documentsData } from './detalhes.js'; 
 import { PDFService } from './pdfService.js';
@@ -10,6 +10,9 @@ import { PDFService } from './pdfService.js';
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// URL da Logo em formato RAW do GitHub
+const LOGO_URL = "https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png";
 
 export const AtendimentoExternoService = {
     pautaId: null,
@@ -21,8 +24,6 @@ export const AtendimentoExternoService = {
     colaboradorAtual: null,
 
     async init() {
-        console.log("⚡ Atendimento Externo inicializado (Dashboard + Transferências + Defensor Automático)");
-
         const urlParams = new URLSearchParams(window.location.search);
         this.pautaId = urlParams.get('pautaId');
         this.assistidoId = urlParams.get('assistidoId'); 
@@ -30,41 +31,34 @@ export const AtendimentoExternoService = {
         this.colaboradorNome = urlParams.get('colab') || "Colaborador";
 
         if (!this.pautaId || !this.colaboradorNome) {
-            this.showError("Link Incompleto", "Faltam parâmetros de Pauta ou Colaborador na URL.");
+            this.showError("Link Incompleto", "Faltam parâmetros na URL.");
             return;
         }
 
         try {
             await signInAnonymously(auth);
-
-            // Carrega todos os colaboradores da pauta
             await this.carregarColaboradoresGerais();
 
-            // MODO DASHBOARD DO DEFENSOR (Se não tiver assistidoId específico)
+            // Agora QUALQUER colaborador tem seu próprio painel (não apenas o Defensor)
             if (!this.assistidoId) {
-                this.renderizarDashboardDefensor();
+                this.renderizarDashboard();
                 return;
             }
 
-            // MODO ATENDIMENTO INDIVIDUAL
             if (!tokenRecebido) {
-                this.showError("Link Incompleto", "Falta o token de segurança para acessar o atendimento.");
+                this.showError("Acesso Negado", "Falta o token de segurança.");
                 return;
             }
 
             const pautaRef = doc(db, "pautas", this.pautaId);
             const pautaSnap = await getDoc(pautaRef);
-            if (!pautaSnap.exists()) {
-                this.showError("Erro", "A pauta informada não existe mais.");
-                return;
-            }
             const pautaData = pautaSnap.data();
 
             const docRef = doc(db, "pautas", this.pautaId, "attendances", this.assistidoId);
             const docSnap = await getDoc(docRef);
 
             if (!docSnap.exists()) {
-                this.showError("Não encontrado", "Este assistido não existe mais na pauta.");
+                this.showError("Não encontrado", "Assistido não existe.");
                 return;
             }
 
@@ -72,12 +66,12 @@ export const AtendimentoExternoService = {
             this.assistidoData = assistido;
 
             if (assistido.delegationToken !== tokenRecebido) {
-                this.showError("Acesso Negado", "Token de segurança inválido ou expirado. O caso pode ter sido transferido.");
+                this.showError("Acesso Negado", "Token inválido.");
                 return;
             }
 
             if (assistido.status === 'atendido') {
-                this.showError("Atendimento Concluído", "Este atendimento já foi finalizado anteriormente.");
+                this.showError("Atendimento Concluído", "Atendimento já finalizado.");
                 return;
             }
 
@@ -85,94 +79,46 @@ export const AtendimentoExternoService = {
             this.setupListeners();
 
         } catch (error) {
-            console.error("Erro ao carregar dados:", error);
-            this.showError("Erro no Servidor", "Falha ao conectar com o banco de dados.");
+            console.error("Erro no init:", error);
+            this.showError("Erro", "Falha de conexão. Tente novamente.");
         }
     },
 
-    // ==========================================
-    // CARREGAMENTO DE COLABORADORES
-    // ==========================================
     async carregarColaboradoresGerais() {
         try {
             const snap = await getDocs(collection(db, "pautas", this.pautaId, "collaborators"));
             this.todosColaboradores = snap.docs.map(d => d.data());
             this.colaboradorAtual = this.todosColaboradores.find(c => c.nome === this.colaboradorNome);
-        } catch (error) {
-            console.error("Erro ao carregar colaboradores", error);
-            this.todosColaboradores = [];
-        }
+        } catch (e) { this.todosColaboradores = []; }
     },
 
-    // ==========================================
-    // RENDERIZAÇÃO DA TELA DE ATENDIMENTO (INDIVIDUAL)
-    // ==========================================
     renderizarInterface(assistido, pautaData) {
+        document.getElementById('assistido-nome').textContent = assistido.name || '';
+        document.getElementById('assistido-assunto').textContent = assistido.subject || '';
         
-        // ==== INJEÇÃO DINÂMICA DA LOGO NO CABEÇALHO ====
-        const headerBg = document.getElementById('header-bg');
-        if (headerBg && !document.getElementById('logo-header-main')) {
-            const textosWrapper = document.createElement('div');
-            textosWrapper.className = "overflow-hidden w-full";
+        const areaColab = document.getElementById('area-colaborador');
+        if (areaColab) areaColab.classList.remove('hidden');
+
+        // INJEÇÃO DINÂMICA DA ABA "MEU PAINEL" AGORA PARA TODOS OS COLABORADORES
+        const tabsContainer = document.getElementById('tab-btn-encerramento')?.parentElement;
+        if (tabsContainer && !document.getElementById('tab-btn-painel')) {
+            tabsContainer.insertAdjacentHTML('beforeend', `<button id="tab-btn-painel" class="flex-1 p-3 text-[10px] uppercase text-gray-400 font-bold border-b-2 border-transparent transition-colors">Meu Painel</button>`);
             
-            while (headerBg.firstChild) {
-                textosWrapper.appendChild(headerBg.firstChild);
-            }
-            
-            headerBg.classList.add('flex', 'items-center', 'gap-4');
-            
-            const logoDiv = document.createElement('div');
-            logoDiv.id = 'logo-header-main';
-            logoDiv.className = 'bg-white p-1 rounded-lg shadow-sm flex-shrink-0';
-            logoDiv.innerHTML = '<img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo do Sistema" class="h-10 w-auto object-contain">';
-            
-            headerBg.appendChild(logoDiv);
-            headerBg.appendChild(textosWrapper);
+            document.getElementById('tab-btn-painel').addEventListener('click', () => {
+                this.switchTab('painel');
+                this.renderizarDashboardNaAba();
+            });
         }
 
-        document.getElementById('assistido-nome').textContent = assistido.name || 'Nome não informado';
-        document.getElementById('assistido-assunto').textContent = assistido.subject || 'Assunto não informado';
-        
-        const areaColaborador = document.getElementById('area-colaborador');
-        areaColaborador.classList.remove('hidden');
-
-        // ==== NOVO: BANNER DE TRANSFERÊNCIA ====
-        // Exibe o aviso se o atendimento foi transferido de um colega X para o Y
-        if (assistido.historicoTransferencia && !document.getElementById('banner-transferencia')) {
-            const bannerHtml = `
-                <div id="banner-transferencia" class="w-full bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded-xl shadow-sm mb-6 text-xs font-medium flex items-center gap-3">
-                    <span class="text-lg">🔄</span>
-                    <span>${assistido.historicoTransferencia}</span>
-                </div>
-            `;
-            areaColaborador.insertAdjacentHTML('afterbegin', bannerHtml);
+        const abaHistorico = document.getElementById('aba-historico');
+        if (abaHistorico && !document.getElementById('aba-painel')) {
+            abaHistorico.insertAdjacentHTML('afterend', `<div id="aba-painel" class="hidden"></div>`);
         }
-        // =======================================
-
-        // ==== Atalho dinâmico para o Painel do Defensor ====
-        const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
-        if (isDefensor) {
-            if (!document.getElementById('btn-atalho-painel')) {
-                const btnHtml = `
-                    <button id="btn-atalho-painel" class="w-full bg-indigo-50 border-2 border-indigo-200 text-indigo-700 hover:bg-indigo-100 font-black py-3 px-4 rounded-xl shadow-sm transition-colors text-xs flex items-center justify-center gap-2 mb-6 uppercase tracking-wider">
-                        💼 Acessar Meu Painel Judicial
-                    </button>
-                `;
-                // Injeta no topo (se tiver banner, fica acima do banner)
-                areaColaborador.insertAdjacentHTML('afterbegin', btnHtml);
-
-                document.getElementById('btn-atalho-painel').onclick = () => {
-                    this.renderizarDashboardDefensor();
-                };
-            }
-        }
-        // ==========================================================
 
         this.renderizarHistorico(assistido);
         this.renderizarAbaEncerramentoDinamica(assistido, pautaData);
     },
 
-    // INJETA OS BOTÕES DE FORMA DINÂMICA
     renderizarAbaEncerramentoDinamica(assistido, pautaData) {
         const aba = document.getElementById('aba-encerramento');
         if (!aba) return;
@@ -185,7 +131,6 @@ export const AtendimentoExternoService = {
                 <button id="btn-opt-direto" class="fluxo-opt-btn ring-4 ring-blue-400 bg-blue-50 border-blue-200 p-4 rounded-xl text-left transition-all">
                     <span class="block text-lg mb-1">✅</span>
                     <span class="block font-bold text-gray-800">Finalizar Atendimento</span>
-                    <span class="block text-xs text-gray-500 mt-1">Concluir e dar baixa na pauta.</span>
                 </button>
         `;
 
@@ -194,7 +139,6 @@ export const AtendimentoExternoService = {
                 <button id="btn-opt-dist" class="fluxo-opt-btn border-2 border-gray-200 p-4 rounded-xl text-left transition-all hover:bg-gray-50">
                     <span class="block text-lg mb-1">⚖️</span>
                     <span class="block font-bold text-gray-800">Fila de Distribuição</span>
-                    <span class="block text-xs text-gray-500 mt-1">Enviar para Defensor(a) assinar.</span>
                 </button>
             `;
         }
@@ -203,42 +147,32 @@ export const AtendimentoExternoService = {
                 <button id="btn-opt-transferir" class="fluxo-opt-btn border-2 border-gray-200 p-4 rounded-xl text-left transition-all hover:bg-gray-50">
                     <span class="block text-lg mb-1">🔄</span>
                     <span class="block font-bold text-gray-800">Transferir Colega</span>
-                    <span class="block text-xs text-gray-500 mt-1">Passar a vez para outro membro.</span>
                 </button>
                 
                 <button id="btn-opt-pausar" class="fluxo-opt-btn border-2 border-gray-200 p-4 rounded-xl text-left transition-all hover:bg-gray-50">
                     <span class="block text-lg mb-1">⏸️</span>
-                    <span class="block font-bold text-gray-800">Pausar / Voltar p/ Fila</span>
-                    <span class="block text-xs text-gray-500 mt-1">Devolver para os "Aguardando".</span>
+                    <span class="block font-bold text-gray-800">Pausar p/ Fila</span>
                 </button>
             </div>
-        `;
 
-        optionsHtml += `
             <div id="config-distribuicao" class="hidden bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6">
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Defensor(a) Responsável</label>
-                <select id="select-defensor-dinamico" class="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white mb-3">
-                    <option value="">-- Selecione o Defensor --</option>
-                </select>
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Notas da Revisão (Opcional)</label>
-                <textarea id="notas-distribuicao-dinamico" rows="2" class="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white" placeholder="Ex: Falta assinar a página 2..."></textarea>
+                <select id="select-defensor-dinamico" class="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white mb-3"><option value="">-- Selecione --</option></select>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Notas (Opcional)</label>
+                <textarea id="notas-distribuicao-dinamico" rows="2" class="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white"></textarea>
             </div>
 
             <div id="config-transferencia" class="hidden bg-orange-50 p-4 rounded-xl border border-orange-200 mb-6">
-                <label class="block text-xs font-bold text-orange-700 uppercase mb-2">Transferir para qual colega?</label>
-                <select id="select-transferir-colega" class="w-full p-3 border border-orange-300 rounded-lg text-sm bg-white mb-3">
-                    <option value="">-- Selecione o Colega --</option>
-                </select>
-                <p class="text-[10px] text-orange-600 font-medium">⚠️ O sistema enviará um e-mail automaticamente (se houver e-mail cadastrado) para o colega assumir o link de segurança.</p>
+                <label class="block text-xs font-bold text-orange-700 uppercase mb-2">Transferir para:</label>
+                <select id="select-transferir-colega" class="w-full p-3 border border-orange-300 rounded-lg text-sm bg-white mb-3"><option value="">-- Selecione --</option></select>
             </div>
 
-            <button id="btn-finalizar-dinamico" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-md transition-colors text-sm uppercase tracking-wide">
+            <button id="btn-finalizar-dinamico" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-md transition-colors text-sm uppercase">
                 Confirmar e Seguir
             </button>
         `;
 
         aba.innerHTML = optionsHtml;
-
         this.povoarSelectsDinamicos();
 
         this.fluxoSelecionado = 'direto';
@@ -251,15 +185,10 @@ export const AtendimentoExternoService = {
 
         const todos = [btnDireto, btnDist, btnTransf, btnPausar].filter(Boolean);
 
-        const setAtivo = (btnClicado, fluxo) => {
+        const setAtivo = (btn, fluxo) => {
             this.fluxoSelecionado = fluxo;
-            todos.forEach(b => {
-                b.classList.remove('ring-4', 'ring-blue-400', 'bg-blue-50', 'border-blue-200');
-                b.classList.add('border-gray-200');
-            });
-            btnClicado.classList.remove('border-gray-200');
-            btnClicado.classList.add('ring-4', 'ring-blue-400', 'bg-blue-50', 'border-blue-200');
-
+            todos.forEach(b => { b.className = "fluxo-opt-btn border-2 border-gray-200 p-4 rounded-xl text-left transition-all hover:bg-gray-50"; });
+            btn.className = "fluxo-opt-btn ring-4 ring-blue-400 bg-blue-50 border-blue-200 p-4 rounded-xl text-left transition-all";
             configDist.classList.toggle('hidden', fluxo !== 'distribuicao');
             configTransf.classList.toggle('hidden', fluxo !== 'transferir');
         };
@@ -277,267 +206,160 @@ export const AtendimentoExternoService = {
         const selectColab = document.getElementById('select-transferir-colega');
 
         if (selectDef) {
-            const defensores = this.todosColaboradores.filter(c => c.cargo?.toLowerCase().includes('defensor'));
-            defensores.forEach(c => {
+            this.todosColaboradores.filter(c => c.cargo?.toLowerCase().includes('defensor')).forEach(c => {
                 const opt = document.createElement('option');
-                opt.value = c.nome;
-                opt.textContent = `${c.nome} ${c.equipe ? '(EQP ' + c.equipe + ')' : ''}`;
+                opt.value = c.nome; opt.textContent = c.nome;
                 selectDef.appendChild(opt);
             });
         }
-
         if (selectColab) {
-            const colegas = this.todosColaboradores.filter(c => c.nome !== this.colaboradorNome);
-            colegas.forEach(c => {
+            this.todosColaboradores.filter(c => c.nome !== this.colaboradorNome).forEach(c => {
                 const opt = document.createElement('option');
-                opt.value = c.nome;
-                opt.textContent = `${c.nome} - ${c.cargo || 'N/A'}`;
+                opt.value = c.nome; opt.textContent = c.nome;
                 selectColab.appendChild(opt);
             });
         }
     },
 
-    // ==========================================
-    // FINALIZADOR MASTER DE FLUXOS
-    // ==========================================
     async finalizarProcesso() {
         if (!this.fluxoSelecionado) return;
 
         const btnFinalizar = document.getElementById('btn-finalizar-dinamico');
         btnFinalizar.disabled = true;
-        btnFinalizar.textContent = "Processando...";
+        btnFinalizar.textContent = "Salvando...";
 
         let updateData = {};
-        let tituloSucesso = "Atendimento Atualizado!";
-        let subtituloSucesso = "Você já pode fechar esta aba ou voltar ao painel.";
+        let tSuc = "Atualizado!", subSuc = "Pode fechar a aba.";
 
         if (this.fluxoSelecionado === 'direto') {
-            updateData = {
-                status: 'atendido',
-                attendedAt: new Date().toISOString(),
-                attendedTime: new Date().toISOString(),
-                attendedBy: this.colaboradorNome,
-                finalizadoPeloColaborador: true,
-                distributionStatus: 'completed'
-            };
-            tituloSucesso = "Atendimento Concluído!";
-            subtituloSucesso = "O processo foi finalizado com sucesso.";
-        } 
-        
-        else if (this.fluxoSelecionado === 'distribuicao') {
-            const defensor = document.getElementById('select-defensor-dinamico')?.value;
-            const notas = document.getElementById('notas-distribuicao-dinamico')?.value;
-            if (!defensor) {
-                alert("Selecione um Defensor!");
-                btnFinalizar.disabled = false; btnFinalizar.textContent = "Confirmar e Seguir";
-                return;
-            }
-            updateData = {
-                status: 'aguardandoDistribuicao',
-                distributionStatus: 'pending',
-                defensorResponsavel: defensor,
-                notasRevisao: notas || ''
-            };
-            tituloSucesso = "Enviado para Assinatura!";
-            subtituloSucesso = `O Defensor ${defensor} recebeu o caso no Painel.`;
-        } 
-        
-        else if (this.fluxoSelecionado === 'transferir') {
-            const colegaSelecionado = document.getElementById('select-transferir-colega')?.value;
-            if (!colegaSelecionado) {
-                alert("Selecione o colega para quem deseja transferir!");
-                btnFinalizar.disabled = false; btnFinalizar.textContent = "Confirmar e Seguir";
-                return;
-            }
-
-            const colegaObj = this.todosColaboradores.find(c => c.nome === colegaSelecionado);
-            const emailDestino = colegaObj?.email || null;
-            const tokenSeguranca = Date.now().toString(36) + Math.random().toString(36).substring(2);
-
-            // ==== NOVO: GRAVANDO O RASTRO DE TRANSFERÊNCIA ====
-            updateData = {
-                status: 'emAtendimento', 
-                assignedCollaborator: { name: colegaSelecionado, email: emailDestino },
-                // Abaixo: zera e passa a contar o tempo de atendimento a partir de agora para o novo colega (Y)
-                inAttendanceTime: new Date().toISOString(), 
-                delegationToken: tokenSeguranca,
-                // Registra quem fez a transferência e para quem
-                historicoTransferencia: `O colaborador ${this.colaboradorNome} fez a transferência para ${colegaSelecionado}.`
-            };
-            // ===================================================
-
-            tituloSucesso = "Transferência Realizada!";
-            subtituloSucesso = `O atendimento foi repassado para ${colegaSelecionado}.`;
-
-            if (emailDestino) {
+            updateData = { status: 'atendido', attendedAt: new Date().toISOString(), attendedBy: this.colaboradorNome, distributionStatus: 'completed' };
+            tSuc = "Atendimento Concluído!";
+        } else if (this.fluxoSelecionado === 'distribuicao') {
+            const def = document.getElementById('select-defensor-dinamico')?.value;
+            if (!def) { alert("Selecione o Defensor!"); btnFinalizar.disabled = false; btnFinalizar.textContent = "Confirmar"; return; }
+            updateData = { status: 'aguardandoDistribuicao', distributionStatus: 'pending', defensorResponsavel: def };
+            tSuc = "Enviado para Assinatura!";
+        } else if (this.fluxoSelecionado === 'transferir') {
+            const col = document.getElementById('select-transferir-colega')?.value;
+            if (!col) { alert("Selecione o Colega!"); btnFinalizar.disabled = false; btnFinalizar.textContent = "Confirmar"; return; }
+            
+            const emailDest = this.todosColaboradores.find(c => c.nome === col)?.email || null;
+            const tk = Date.now().toString(36) + Math.random().toString(36).substring(2);
+            updateData = { status: 'emAtendimento', assignedCollaborator: { name: col, email: emailDest }, delegationToken: tk };
+            tSuc = "Transferência Realizada!";
+            
+            if (emailDest) {
                 try {
                     const { EmailService } = await import('./emailService.js');
-                    await EmailService.sendDelegationEmail(
-                        emailDestino, colegaSelecionado, this.assistidoData?.name, 
-                        this.colaboradorNome, this.pautaId, this.assistidoId, tokenSeguranca
-                    );
-                } catch(e) { console.warn("Email de transferência falhou silenciosamente", e); }
+                    await EmailService.sendDelegationEmail(emailDest, col, this.assistidoData?.name, this.colaboradorNome, this.pautaId, this.assistidoId, tk);
+                } catch(e){}
             }
-        } 
-        
-        else if (this.fluxoSelecionado === 'pausar') {
-            updateData = {
-                status: 'aguardando',
-                assignedCollaborator: null,
-                delegatedBy: null,
-                delegatedAt: null,
-                inAttendanceTime: null,
-                distributionStatus: null
-            };
-            tituloSucesso = "Atendimento Pausado!";
-            subtituloSucesso = "O assistido retornou para a lista de Aguardando.";
+        } else if (this.fluxoSelecionado === 'pausar') {
+            updateData = { status: 'aguardando', assignedCollaborator: null };
+            tSuc = "Pausado e Devolvido!";
         }
 
         try {
-            const docRef = doc(db, "pautas", this.pautaId, "attendances", this.assistidoId);
-            await updateDoc(docRef, updateData);
+            await signInAnonymously(auth);
+            await updateDoc(doc(db, "pautas", this.pautaId, "attendances", this.assistidoId), updateData);
+            
+            // O botão voltar sempre aponta para o Painel, independentemente de ser Defensor ou Servidor
+            const dashboardUrl = `${window.location.href.split('?')[0]}?pautaId=${this.pautaId}&colab=${encodeURIComponent(this.colaboradorNome)}`;
+            const botoesRetorno = `<a href="${dashboardUrl}" class="mt-6 inline-block text-sm text-green-700 underline font-bold">⬅️ Voltar ao Meu Painel</a>`;
 
-            const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
-            const textoBotaoVoltar = isDefensor ? '💼 Ir para Meu Painel Judicial' : '⬅️ Voltar ao Painel';
-
-            const mensagemSucessoHtml = `
-                <div class="text-center p-8 bg-green-50 rounded-xl border border-green-200 shadow-sm mt-8 animate-fade-in">
+            document.getElementById('aba-encerramento').innerHTML = `
+                <div class="text-center p-8 bg-green-50 rounded-xl border border-green-200 shadow-sm mt-4">
                     <span class="text-5xl">✅</span>
-                    <h2 class="text-2xl font-bold text-green-800 mt-4">${tituloSucesso}</h2>
-                    <p class="text-green-600 mt-2 font-medium">${subtituloSucesso}</p>
-                    <button id="btn-voltar-sucesso" class="mt-6 text-sm text-green-700 underline font-bold">${textoBotaoVoltar}</button>
+                    <h2 class="text-2xl font-bold text-green-800 mt-4">${tSuc}</h2>
+                    <p class="text-green-600 mt-2 font-medium">${subSuc}</p>
+                    ${botoesRetorno}
                 </div>
             `;
-
-            const areaColaborador = document.getElementById('area-colaborador');
-            
-            if (areaColaborador) {
-                areaColaborador.innerHTML = mensagemSucessoHtml;
-            } else {
-                const containerPrincipal = document.querySelector('.w-full.max-w-2xl') || document.body;
-                containerPrincipal.innerHTML = mensagemSucessoHtml;
-            }
-
-            const btnVoltar = document.getElementById('btn-voltar-sucesso');
-            if (btnVoltar) {
-                btnVoltar.onclick = () => {
-                    if (isDefensor) {
-                        this.renderizarDashboardDefensor();
-                    } else {
-                        window.history.back(); 
-                    }
-                };
-            }
-
-            const headerBg = document.getElementById('header-bg');
-            if (headerBg) {
-                headerBg.classList.remove('bg-blue-600', 'bg-indigo-600', 'bg-blue-500');
-                headerBg.classList.add('bg-green-600', 'transition-colors');
-            }
+            document.getElementById('header-bg').className = "bg-green-600 p-5 text-white transition-colors";
 
         } catch (error) {
-            console.error("Erro real ao salvar:", error);
+            console.error("Erro ao salvar:", error);
             alert("Erro ao salvar. Verifique a internet e tente novamente.");
             btnFinalizar.disabled = false;
             btnFinalizar.textContent = "Confirmar e Seguir";
         }
     },
 
-    // ==========================================
-    // RENDERIZAÇÃO DO HISTÓRICO 
-    // ==========================================
     renderizarHistorico(assistido) {
         const lista = document.getElementById('lista-historico');
         if (!lista) return;
 
         if (!assistido.documentChecklist || !assistido.documentChecklist.action) {
-            lista.innerHTML = `<div class="text-center py-8"><span class="text-3xl">📭</span><p class="text-sm font-bold text-gray-700 mt-3">Nenhum checklist registrado.</p></div>`;
+            lista.innerHTML = `<div class="text-center py-8">📭 Sem checklist</div>`;
             return;
         }
 
         const chk = assistido.documentChecklist;
-        const baseDeDados = documentsData || window.documentsData || {};
-        const actionData = baseDeDados[chk.action];
-        const actionTitle = actionData ? actionData.title : chk.action.replace(/_/g, ' ').toUpperCase();
+        const actionData = (documentsData || window.documentsData || {})[chk.action];
+        const actionTitle = actionData ? actionData.title : chk.action;
         
-        let html = `
-            <div class="bg-blue-50 p-4 rounded-xl mb-4 border border-blue-100 shadow-sm">
-                <p class="text-[10px] text-blue-500 font-bold uppercase mb-1">Ação Analisada:</p>
-                <p class="text-sm font-black text-blue-800 uppercase">${actionTitle}</p>
-            </div>
-        `;
+        let html = `<div class="bg-blue-50 p-4 rounded-xl mb-4 border border-blue-100 shadow-sm"><p class="text-[10px] text-blue-500 font-bold uppercase mb-1">Ação:</p><p class="text-sm font-black text-blue-800 uppercase">${actionTitle}</p></div>`;
 
         if (chk.checkedIds && chk.checkedIds.length > 0) {
-            html += `<h4 class="text-[10px] font-bold text-gray-400 uppercase mb-3">Documentos Coletados</h4><ul class="space-y-2 mb-6">`;
+            html += `<h4 class="text-[10px] font-bold text-gray-400 uppercase mb-3">Documentos</h4><ul class="space-y-2 mb-6">`;
             chk.checkedIds.forEach(id => {
                 if (id.startsWith('reu-') || id.startsWith('gasto-')) return;
                 let docName = id.replace(/-/g, ' ').toUpperCase();
-
                 if (actionData && id.startsWith('doc-')) {
                     const parts = id.split('-');
-                    const dIdx = parseInt(parts.pop());
-                    const sIdx = parseInt(parts.pop());
-                    if (!isNaN(sIdx) && !isNaN(dIdx) && actionData.sections[sIdx]) {
+                    const dIdx = parseInt(parts.pop()); const sIdx = parseInt(parts.pop());
+                    if (actionData.sections[sIdx]?.docs[dIdx]) {
                         const docObj = actionData.sections[sIdx].docs[dIdx];
-                        if (docObj) docName = typeof docObj === 'string' ? docObj : docObj.text;
+                        docName = typeof docObj === 'string' ? docObj : docObj.text;
                     }
                 }
-
                 const tipo = chk.docTypes && chk.docTypes[id] ? chk.docTypes[id] : 'Físico';
-                html += `
-                    <li class="text-xs bg-white border border-gray-200 p-3 rounded-lg flex justify-between items-center shadow-sm">
-                        <span class="font-semibold text-gray-700 pr-2">📄 ${docName}</span> 
-                        <span class="font-bold text-[9px] uppercase tracking-wider ${tipo === 'Físico' ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-emerald-600 bg-emerald-50 border-emerald-200'} px-2 py-1 rounded border">${tipo}</span>
-                    </li>
-                `;
+                html += `<li class="text-xs bg-white border p-3 rounded-lg flex justify-between shadow-sm"><span class="font-semibold text-gray-700 pr-2">📄 ${docName}</span><span class="font-bold text-[9px] uppercase border px-2 py-1 rounded ${tipo==='Físico'?'text-amber-600 bg-amber-50':'text-emerald-600 bg-emerald-50'}">${tipo}</span></li>`;
             });
             html += `</ul>`;
         }
 
         if (chk.reuData && chk.reuData.checkReuUnico) {
-            const reu = chk.reuData;
-            html += `
-                <div class="bg-red-50 p-4 rounded-xl mb-6 border border-red-200 shadow-sm">
-                    <h4 class="text-[10px] font-black text-red-700 uppercase mb-3 flex items-center gap-1"><span>👤</span> Dados da Parte Contrária (Réu)</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-xs text-gray-700">
-                        ${reu.nome ? `<p><b class="text-gray-500">Nome:</b> ${reu.nome}</p>` : ''}
-                        ${reu.cpf ? `<p><b class="text-gray-500">CPF:</b> ${reu.cpf}</p>` : ''}
-                        ${reu.telefone ? `<p><b class="text-gray-500">Telefone:</b> ${reu.telefone}</p>` : ''}
-                        ${reu.cep ? `<p class="sm:col-span-2"><b class="text-gray-500">Residência:</b> ${reu.rua}, ${reu.numero} ${reu.complemento ? ' - '+reu.complemento : ''} - ${reu.bairro}, ${reu.cidade}/${reu.uf} (CEP: ${reu.cep})</p>` : ''}
-                        ${reu.empresa ? `<p class="sm:col-span-2 pt-2 border-t border-red-100"><b class="text-gray-500">Trabalho:</b> ${reu.empresa} - ${reu.rua_comercial}, ${reu.numero_comercial} - ${reu.cidade_comercial}/${reu.uf_comercial}</p>` : ''}
-                    </div>
-                </div>
-            `;
+            html += `<div class="bg-red-50 p-4 rounded-xl mb-6 shadow-sm"><h4 class="text-[10px] font-black text-red-700 uppercase mb-2">👤 Parte Contrária</h4><p class="text-xs text-gray-700">${chk.reuData.nome || ''} - ${chk.reuData.cidade || ''}</p></div>`;
         }
 
         if (chk.expenseData && chk.expenseData.checkExibirGastos) {
             const gastos = chk.expenseData;
-            const categorias = [
-                { id: 'moradia', label: 'Moradia' }, { id: 'alimentacao', label: 'Alimentação' }, { id: 'educacao', label: 'Educação' },
-                { id: 'saude', label: 'Saúde' }, { id: 'vestuario', label: 'Vestuário' }, { id: 'lazer', label: 'Lazer' }, { id: 'outras', label: 'Outras' }
-            ];
+            let temGasto = false; let totalGastos = 0;
+            let gastosHtml = `<div class="bg-green-50 p-4 rounded-xl mb-4 shadow-sm"><h4 class="text-[10px] font-black text-green-800 uppercase mb-2">💰 Planilha de Gastos</h4><table class="w-full text-xs text-left mb-3">`;
 
-            let temGasto = false;
-            let totalGastos = 0;
-            let gastosHtml = `<div class="bg-green-50 p-4 rounded-xl mb-4 border border-green-200 shadow-sm"><h4 class="text-[10px] font-black text-green-800 uppercase mb-3 flex items-center gap-1"><span>💰</span> Planilha de Gastos Mensais</h4><table class="w-full text-xs text-left mb-3">`;
-
-            categorias.forEach(cat => {
-                if (gastos[cat.id] && String(gastos[cat.id]).trim() !== '' && gastos[cat.id] !== 'R$ 0,00') {
+            ['moradia','alimentacao','educacao','saude','vestuario','lazer','outras'].forEach(cat => {
+                if (gastos[cat] && String(gastos[cat]).trim() !== '' && gastos[cat] !== 'R$ 0,00') {
                     temGasto = true;
-                    const num = parseFloat(gastos[cat.id].replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
-                    totalGastos += num;
-                    gastosHtml += `<tr class="border-b border-green-100 last:border-0"><td class="py-2 font-semibold text-gray-600">${cat.label}</td><td class="py-2 font-bold text-green-700 text-right">${gastos[cat.id]}</td></tr>`;
+                    totalGastos += parseFloat(gastos[cat].replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+                    gastosHtml += `<tr class="border-b border-green-100"><td class="py-2 text-gray-600">${cat}</td><td class="py-2 font-bold text-green-700 text-right">${gastos[cat]}</td></tr>`;
                 }
             });
 
             if (temGasto) {
-                const totalFormatado = totalGastos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                gastosHtml += `<tr class="border-t-2 border-green-200"><td class="py-2 font-black text-green-900 uppercase">Total</td><td class="py-2 font-black text-green-900 text-right text-sm">${totalFormatado}</td></tr></table><button id="btn-baixar-planilha" class="mt-2 w-full bg-white border border-green-400 text-green-700 font-bold py-2.5 rounded-lg hover:bg-green-100 transition shadow-sm text-xs flex items-center justify-center gap-2">📄 Baixar Planilha em PDF</button></div>`;
+                gastosHtml += `<tr class="border-t-2 border-green-200"><td class="py-2 font-black text-green-900">TOTAL</td><td class="py-2 font-black text-green-900 text-right text-sm">${totalGastos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td></tr></table><button id="btn-baixar-planilha" class="mt-2 w-full bg-white border border-green-400 text-green-700 font-bold py-2.5 rounded-lg shadow-sm text-xs">📄 Baixar Planilha PDF</button></div>`;
                 html += gastosHtml;
             }
         }
-
         lista.innerHTML = html;
+    },
+
+    switchTab(tab) {
+        const btnEnc = document.getElementById('tab-btn-encerramento');
+        const btnHist = document.getElementById('tab-btn-historico');
+        const btnPainel = document.getElementById('tab-btn-painel');
+
+        if(btnEnc) btnEnc.className = tab==='encerramento' ? "flex-1 p-3 text-[10px] uppercase font-bold text-blue-600 border-b-2 border-blue-600 transition-colors" : "flex-1 p-3 text-[10px] uppercase font-bold text-gray-400 border-b-2 border-transparent transition-colors";
+        if(btnHist) btnHist.className = tab==='historico' ? "flex-1 p-3 text-[10px] uppercase font-bold text-green-600 border-b-2 border-green-600 transition-colors" : "flex-1 p-3 text-[10px] uppercase font-bold text-gray-400 border-b-2 border-transparent transition-colors";
+        if(btnPainel) btnPainel.className = tab==='painel' ? "flex-1 p-3 text-[10px] uppercase font-bold text-indigo-600 border-b-2 border-indigo-600 transition-colors" : "flex-1 p-3 text-[10px] uppercase font-bold text-gray-400 border-b-2 border-transparent transition-colors";
+
+        const abaEnc = document.getElementById('aba-encerramento');
+        const abaHist = document.getElementById('aba-historico');
+        const abaPainel = document.getElementById('aba-painel');
+
+        if(abaEnc) abaEnc.classList.toggle('hidden', tab !== 'encerramento');
+        if(abaHist) abaHist.classList.toggle('hidden', tab !== 'historico');
+        if(abaPainel) abaPainel.classList.toggle('hidden', tab !== 'painel');
     },
 
     setupListeners() {
@@ -546,169 +368,151 @@ export const AtendimentoExternoService = {
 
         setTimeout(() => {
             const btnBaixarPlanilha = document.getElementById('btn-baixar-planilha');
-            if (btnBaixarPlanilha && this.assistidoData && this.assistidoData.documentChecklist?.expenseData) {
-                btnBaixarPlanilha.onclick = () => {
-                    PDFService.generatePlanilhaGastosPDF(this.assistidoData.name || 'Assistido', this.assistidoData.documentChecklist.expenseData);
+            if (btnBaixarPlanilha && this.assistidoData?.documentChecklist?.expenseData) {
+                btnBaixarPlanilha.onclick = async () => {
+                    btnBaixarPlanilha.textContent = "⏳ Gerando PDF...";
+                    await PDFService.generatePlanilhaGastosPDF(this.assistidoData.name || 'Assistido', this.assistidoData.documentChecklist.expenseData);
+                    btnBaixarPlanilha.textContent = "📄 Baixar Planilha PDF";
                 };
             }
-        }, 300);
+        }, 500);
     },
 
-    switchTab(tab) {
-        const btnEncerramento = document.getElementById('tab-btn-encerramento');
-        const btnHistorico = document.getElementById('tab-btn-historico');
-        const abaEncerramento = document.getElementById('aba-encerramento');
-        const abaHistorico = document.getElementById('aba-historico');
+    async renderizarDashboardNaAba() {
+        const abaPainel = document.getElementById('aba-painel');
+        if (!abaPainel) return;
 
-        if (tab === 'encerramento') {
-            btnEncerramento.classList.add('tab-active');
-            btnEncerramento.classList.remove('text-gray-400');
-            btnHistorico.classList.remove('tab-active');
-            btnHistorico.classList.add('text-gray-400');
-            abaEncerramento.classList.remove('hidden');
-            abaHistorico.classList.add('hidden');
-        } else {
-            btnHistorico.classList.add('tab-active');
-            btnHistorico.classList.remove('text-gray-400');
-            btnEncerramento.classList.remove('tab-active');
-            btnEncerramento.classList.add('text-gray-400');
-            abaHistorico.classList.remove('hidden');
-            abaEncerramento.classList.add('hidden');
-        }
-    },
+        const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
+        const painelTitulo = isDefensor ? "💼 Meu Painel Judicial" : "💼 Meu Painel";
+        const tabPendenteTexto = isDefensor ? "Pendentes" : "Meus Casos";
+        const tabFinalizadoTexto = isDefensor ? "Protocolados" : "Finalizados";
 
-    // ==========================================
-    // DASHBOARD DO DEFENSOR
-    // ==========================================
-    async renderizarDashboardDefensor() {
-        const headerText = document.getElementById('assistido-nome');
-        if (headerText) headerText.innerHTML = `Painel do Defensor<br><span class="text-sm font-normal">${this.colaboradorNome}</span>`;
-        document.getElementById('assistido-assunto').classList.add('hidden');
-
-        const corpo = document.querySelector('.w-full.max-w-2xl');
-        if (!corpo) return;
-
-        corpo.innerHTML = `
-            <div id="header-bg" class="bg-indigo-600 p-5 rounded-t-2xl shadow flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <div class="bg-white p-1 rounded-lg shadow-sm flex-shrink-0">
-                        <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo do Sistema" class="h-10 w-auto object-contain">
-                    </div>
+        abaPainel.innerHTML = `
+            <div class="bg-indigo-600 p-4 rounded-xl shadow flex items-center justify-between mb-4 mt-2">
+                <div class="flex items-center gap-3">
+                    <img src="${LOGO_URL}" alt="Logo" class="w-10 h-10 object-contain bg-white rounded-full p-1 shadow-sm">
                     <div>
-                        <h1 class="text-white font-black text-lg sm:text-xl uppercase tracking-wide">Meu Painel Judicial</h1>
-                        <p class="text-indigo-200 text-xs mt-1">Bem-vindo(a), ${this.colaboradorNome}</p>
+                        <h1 class="text-white font-black text-sm uppercase">${painelTitulo}</h1>
+                        <p class="text-indigo-200 text-[10px] mt-1">${this.colaboradorNome}</p>
                     </div>
                 </div>
             </div>
-            
-            <div class="bg-white p-4 rounded-b-2xl shadow min-h-[400px]">
-                
+            <div class="bg-white rounded-xl min-h-[300px] border border-gray-200">
                 <div class="flex border-b border-gray-200 mb-4">
-                    <button id="tab-pendentes" class="w-1/2 py-3 text-xs font-bold uppercase tracking-wider text-indigo-600 border-b-2 border-indigo-600">Aguardando Assinatura</button>
-                    <button id="tab-assinados" class="w-1/2 py-3 text-xs font-bold uppercase tracking-wider text-gray-400 border-b-2 border-transparent hover:text-gray-600">Já Protocolados</button>
+                    <button id="tab-painel-pendentes-aba" class="w-1/2 py-2 text-xs font-bold uppercase text-indigo-600 border-b-2 border-indigo-600 transition-colors">${tabPendenteTexto}</button>
+                    <button id="tab-painel-assinados-aba" class="w-1/2 py-2 text-xs font-bold uppercase text-gray-400 border-b-2 border-transparent transition-colors">${tabFinalizadoTexto}</button>
                 </div>
-
-                <div id="lista-dashboard-conteudo" class="space-y-3">
-                    <p class="text-center text-gray-400 text-sm mt-10">Carregando seus casos...</p>
-                </div>
-
-            </div>
-        `;
+                <div id="lista-painel-conteudo-aba" class="space-y-3 p-3"><p class="text-center text-gray-400 text-xs">Carregando...</p></div>
+            </div>`;
 
         try {
-            const q = query(collection(db, "pautas", this.pautaId, "attendances"));
-            const snap = await getDocs(q);
+            const snap = await getDocs(query(collection(db, "pautas", this.pautaId, "attendances")));
             const todos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-            const pendentes = todos.filter(a => a.status === 'aguardandoDistribuicao' && a.defensorResponsavel === this.colaboradorNome);
-            const assinados = todos.filter(a => a.status === 'atendido' && a.attendedBy === this.colaboradorNome);
+            const pendentes = todos.filter(a => {
+                if (isDefensor) return a.status === 'aguardandoDistribuicao' && a.defensorResponsavel === this.colaboradorNome;
+                return a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome;
+            });
+            
+            const assinados = todos.filter(a => {
+                if (isDefensor) return a.status === 'atendido' && a.attendedBy === this.colaboradorNome;
+                return ['atendido', 'aguardandoDistribuicao'].includes(a.status) && (a.attendedBy === this.colaboradorNome || a.lastActionBy === this.colaboradorNome);
+            });
+
+            const btnAcaoTexto = isDefensor ? "🔍 Abrir e Assinar" : "🔍 Abrir Atendimento";
+            const txtConcluido = isDefensor ? "✅ Protocolado" : "✅ Finalizado";
 
             const renderLista = (lista, ehPendente) => {
-                const container = document.getElementById('lista-dashboard-conteudo');
-                if (lista.length === 0) {
-                    container.innerHTML = `<div class="text-center py-10 opacity-60"><span class="text-4xl mb-2 block">🙌</span><p class="text-sm font-bold text-gray-600">Sua mesa está limpa!</p></div>`;
-                    return;
-                }
+                const container = document.getElementById('lista-painel-conteudo-aba');
+                if (lista.length === 0) { container.innerHTML = `<div class="text-center py-6 opacity-60"><p class="text-xs font-bold text-gray-600">Sua mesa está limpa!</p></div>`; return; }
 
                 let html = '';
                 lista.forEach(item => {
-                    const notas = item.notasRevisao ? `<div class="mt-2 bg-yellow-50 p-2 rounded text-[10px] text-yellow-800 border border-yellow-200 font-medium">⚠️ <b>Nota:</b> ${item.notasRevisao}</div>` : '';
-                    
-                    // ==== NOVO: Aviso de transferência no Dashboard ====
-                    const bannerTransf = item.historicoTransferencia ? `<div class="mt-2 bg-orange-50 p-2 rounded text-[10px] text-orange-800 border border-orange-200 font-medium flex items-center gap-1"><span class="text-xs">🔄</span> ${item.historicoTransferencia}</div>` : '';
-                    
                     if (ehPendente) {
-                        const baseUrl = window.location.href.substring(0, window.location.href.indexOf('?'));
-                        const linkIndividual = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken}`;
-                        
-                        html += `
-                            <div class="border border-indigo-100 bg-white p-4 rounded-xl shadow-sm hover:shadow transition relative">
-                                <span class="absolute top-3 right-3 bg-red-100 text-red-600 text-[9px] font-black px-2 py-0.5 rounded uppercase">Pendente</span>
-                                <h3 class="font-black text-gray-800 text-sm w-3/4 truncate">${item.name}</h3>
-                                <p class="text-xs text-gray-500 mt-1">${item.subject || 'Assunto não informado'}</p>
-                                ${notas}
-                                ${bannerTransf}
-                                <a href="${linkIndividual}" class="mt-3 block text-center w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-2 rounded-lg text-xs transition border border-indigo-200">
-                                    🔍 Abrir e Assinar
-                                </a>
-                            </div>
-                        `;
+                        const linkIndividual = `${window.location.href.split('?')[0]}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken}`;
+                        html += `<div class="border border-indigo-100 bg-white p-3 rounded-xl shadow-sm mb-2"><h3 class="font-black text-gray-800 text-xs truncate">${item.name}</h3><a href="${linkIndividual}" class="mt-2 block text-center bg-indigo-50 text-indigo-700 font-bold py-1.5 rounded-lg text-[10px]">${btnAcaoTexto}</a></div>`;
                     } else {
-                        const horaStr = item.attendedAt ? new Date(item.attendedAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '';
-                        html += `
-                            <div class="border border-green-100 bg-green-50 p-4 rounded-xl shadow-sm opacity-80">
-                                <div class="flex justify-between items-start">
-                                    <h3 class="font-black text-green-900 text-sm truncate w-3/4">${item.name}</h3>
-                                    <span class="text-lg">✅</span>
-                                </div>
-                                <p class="text-xs text-green-700 mt-1">Protocolado às ${horaStr}</p>
-                            </div>
-                        `;
+                        html += `<div class="border border-green-100 bg-green-50 p-3 rounded-xl shadow-sm opacity-80 mb-2"><h3 class="font-black text-green-900 text-xs truncate">${item.name}</h3><p class="text-[9px] text-green-700 mt-1">${txtConcluido}</p></div>`;
                     }
                 });
                 container.innerHTML = html;
             };
 
-            const btnPendentes = document.getElementById('tab-pendentes');
-            const btnAssinados = document.getElementById('tab-assinados');
-
-            btnPendentes.onclick = () => {
-                btnPendentes.className = "w-1/2 py-3 text-xs font-bold uppercase tracking-wider text-indigo-600 border-b-2 border-indigo-600";
-                btnAssinados.className = "w-1/2 py-3 text-xs font-bold uppercase tracking-wider text-gray-400 border-b-2 border-transparent hover:text-gray-600";
-                renderLista(pendentes, true);
-            };
-
-            btnAssinados.onclick = () => {
-                btnAssinados.className = "w-1/2 py-3 text-xs font-bold uppercase tracking-wider text-green-600 border-b-2 border-green-600";
-                btnPendentes.className = "w-1/2 py-3 text-xs font-bold uppercase tracking-wider text-gray-400 border-b-2 border-transparent hover:text-gray-600";
-                renderLista(assinados, false);
-            };
-
+            document.getElementById('tab-painel-pendentes-aba').onclick = (e) => { e.target.className="w-1/2 py-2 text-xs font-bold uppercase text-indigo-600 border-b-2 border-indigo-600 transition-colors"; document.getElementById('tab-painel-assinados-aba').className="w-1/2 py-2 text-xs font-bold uppercase text-gray-400 border-b-2 border-transparent transition-colors"; renderLista(pendentes, true); };
+            document.getElementById('tab-painel-assinados-aba').onclick = (e) => { e.target.className="w-1/2 py-2 text-xs font-bold uppercase text-green-600 border-b-2 border-green-600 transition-colors"; document.getElementById('tab-painel-pendentes-aba').className="w-1/2 py-2 text-xs font-bold uppercase text-gray-400 border-b-2 border-transparent transition-colors"; renderLista(assinados, false); };
             renderLista(pendentes, true);
 
-        } catch (error) {
-            document.getElementById('lista-dashboard-conteudo').innerHTML = `<p class="text-red-500 text-sm text-center">Erro ao carregar processos.</p>`;
-        }
+        } catch (error) { document.getElementById('lista-painel-conteudo-aba').innerHTML = `<p class="text-red-500 text-center text-xs">Erro ao carregar processos.</p>`; }
+    },
+
+    async renderizarDashboard() {
+        const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
+        const painelTitulo = isDefensor ? "💼 Meu Painel Judicial" : "💼 Meu Painel";
+        const tabPendenteTexto = isDefensor ? "Pendentes" : "Meus Casos";
+        const tabFinalizadoTexto = isDefensor ? "Protocolados" : "Finalizados";
+
+        document.getElementById('assistido-nome').innerHTML = `${painelTitulo}<br><span class="text-sm font-normal">${this.colaboradorNome}</span>`;
+        document.getElementById('assistido-assunto').classList.add('hidden');
+
+        document.querySelector('.w-full.max-w-2xl').innerHTML = `
+            <div id="header-bg" class="bg-indigo-600 p-5 rounded-t-2xl shadow flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <img src="${LOGO_URL}" alt="Logo" class="w-14 h-14 object-contain bg-white rounded-full p-1.5 shadow-md">
+                    <div>
+                        <h1 class="text-white font-black text-xl uppercase">${painelTitulo}</h1>
+                        <p class="text-indigo-200 text-xs mt-1">Bem-vindo(a), ${this.colaboradorNome}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-b-2xl shadow min-h-[400px]">
+                <div class="flex border-b border-gray-200 mb-4">
+                    <button id="tab-pendentes" class="w-1/2 py-3 text-xs font-bold uppercase text-indigo-600 border-b-2 border-indigo-600 transition-colors">${tabPendenteTexto}</button>
+                    <button id="tab-assinados" class="w-1/2 py-3 text-xs font-bold uppercase text-gray-400 border-b-2 border-transparent transition-colors">${tabFinalizadoTexto}</button>
+                </div>
+                <div id="lista-dashboard-conteudo" class="space-y-3"><p class="text-center text-gray-400">Carregando...</p></div>
+            </div>`;
+
+        try {
+            const snap = await getDocs(query(collection(db, "pautas", this.pautaId, "attendances")));
+            const todos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            const pendentes = todos.filter(a => {
+                if (isDefensor) return a.status === 'aguardandoDistribuicao' && a.defensorResponsavel === this.colaboradorNome;
+                return a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome;
+            });
+            
+            const assinados = todos.filter(a => {
+                if (isDefensor) return a.status === 'atendido' && a.attendedBy === this.colaboradorNome;
+                return ['atendido', 'aguardandoDistribuicao'].includes(a.status) && (a.attendedBy === this.colaboradorNome || a.lastActionBy === this.colaboradorNome);
+            });
+
+            const btnAcaoTexto = isDefensor ? "🔍 Abrir e Assinar" : "🔍 Abrir Atendimento";
+            const txtConcluido = isDefensor ? "✅ Protocolado" : "✅ Finalizado";
+
+            const renderLista = (lista, ehPendente) => {
+                const container = document.getElementById('lista-dashboard-conteudo');
+                if (lista.length === 0) { container.innerHTML = `<div class="text-center py-10 opacity-60"><p class="text-sm font-bold text-gray-600">Sua mesa está limpa!</p></div>`; return; }
+
+                let html = '';
+                lista.forEach(item => {
+                    if (ehPendente) {
+                        const linkIndividual = `${window.location.href.split('?')[0]}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken}`;
+                        html += `<div class="border border-indigo-100 bg-white p-4 rounded-xl shadow-sm"><h3 class="font-black text-gray-800 text-sm truncate">${item.name}</h3><a href="${linkIndividual}" class="mt-3 block text-center bg-indigo-50 text-indigo-700 font-bold py-2 rounded-lg text-xs">${btnAcaoTexto}</a></div>`;
+                    } else {
+                        html += `<div class="border border-green-100 bg-green-50 p-4 rounded-xl shadow-sm opacity-80"><h3 class="font-black text-green-900 text-sm truncate">${item.name}</h3><p class="text-xs text-green-700 mt-1">${txtConcluido}</p></div>`;
+                    }
+                });
+                container.innerHTML = html;
+            };
+
+            document.getElementById('tab-pendentes').onclick = (e) => { e.target.className="w-1/2 py-3 text-xs font-bold uppercase text-indigo-600 border-b-2 border-indigo-600 transition-colors"; document.getElementById('tab-assinados').className="w-1/2 py-3 text-xs font-bold uppercase text-gray-400 border-b-2 border-transparent transition-colors"; renderLista(pendentes, true); };
+            document.getElementById('tab-assinados').onclick = (e) => { e.target.className="w-1/2 py-3 text-xs font-bold uppercase text-green-600 border-b-2 border-green-600 transition-colors"; document.getElementById('tab-pendentes').className="w-1/2 py-3 text-xs font-bold uppercase text-gray-400 border-b-2 border-transparent transition-colors"; renderLista(assinados, false); };
+            renderLista(pendentes, true);
+
+        } catch (error) { document.getElementById('lista-dashboard-conteudo').innerHTML = `<p class="text-red-500 text-center">Erro ao carregar processos.</p>`; }
     },
 
     showError(titulo, mensagem) {
-        const corpo = document.querySelector('.w-full.max-w-2xl');
-        if (corpo) {
-            corpo.innerHTML = `
-                <div class="bg-red-600 p-5 rounded-t-2xl shadow flex items-center gap-4">
-                    <div class="bg-white p-1 rounded-lg shadow-sm flex-shrink-0">
-                        <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo do Sistema" class="h-10 w-auto object-contain">
-                    </div>
-                    <div>
-                        <h1 class="text-white font-black text-xl uppercase tracking-wide">ERRO!</h1>
-                    </div>
-                </div>
-                <div class="p-8 text-center bg-white rounded-b-2xl shadow">
-                    <span class="text-5xl block mb-4">❌</span>
-                    <h2 class="text-xl font-bold text-gray-800">${titulo}</h2>
-                    <p class="text-gray-600 mt-2 font-medium">${mensagem}</p>
-                </div>
-            `;
-        }
+        document.querySelector('.w-full.max-w-2xl').innerHTML = `<div class="bg-red-600 p-6 text-white text-center rounded-t-2xl"><h1 class="font-black text-2xl uppercase mt-4">ERRO!</h1></div><div class="p-8 text-center bg-white rounded-b-2xl"><h2 class="text-xl font-bold">${titulo}</h2><p class="text-gray-600 mt-4">${mensagem}</p></div>`;
     }
 };
