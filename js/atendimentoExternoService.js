@@ -105,9 +105,36 @@ export const AtendimentoExternoService = {
     },
 
     // ==========================================
-    // RENDERIZAÇÃO DA TELA DE ATENDIMENTO
+    // RENDERIZAÇÃO DA TELA DE ATENDIMENTO (INDIVIDUAL)
     // ==========================================
     renderizarInterface(assistido, pautaData) {
+        
+        // ==== INJEÇÃO DINÂMICA DA LOGO NO CABEÇALHO DO ATENDIMENTO ====
+        const headerBg = document.getElementById('header-bg');
+        if (headerBg && !document.getElementById('logo-header-main')) {
+            // Cria um "envelope" para os textos não quebrarem o layout
+            const textosWrapper = document.createElement('div');
+            textosWrapper.className = "overflow-hidden w-full";
+            
+            // Move os elementos atuais do cabeçalho (H1 e P) para dentro desse envelope
+            while (headerBg.firstChild) {
+                textosWrapper.appendChild(headerBg.firstChild);
+            }
+            
+            // Adiciona flexbox no cabeçalho pai
+            headerBg.classList.add('flex', 'items-center', 'gap-4');
+            
+            // Cria e injeta a caixa da logo
+            const logoDiv = document.createElement('div');
+            logoDiv.id = 'logo-header-main';
+            logoDiv.className = 'bg-white p-1 rounded-lg shadow-sm flex-shrink-0';
+            logoDiv.innerHTML = '<img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo do Sistema" class="h-10 w-auto object-contain">';
+            
+            headerBg.appendChild(logoDiv);
+            headerBg.appendChild(textosWrapper);
+        }
+        // ===============================================================
+
         document.getElementById('assistido-nome').textContent = assistido.name || 'Nome não informado';
         document.getElementById('assistido-assunto').textContent = assistido.subject || 'Assunto não informado';
         
@@ -388,9 +415,12 @@ export const AtendimentoExternoService = {
                 };
             }
 
+            // Em vez de sobrescrever tudo, apenas trocamos a cor do fundo para verde.
+            // Assim, a logo injetada na renderizarInterface não desaparece.
             const headerBg = document.getElementById('header-bg');
             if (headerBg) {
-                headerBg.className = "bg-green-600 p-5 text-white transition-colors";
+                headerBg.classList.remove('bg-blue-600', 'bg-indigo-600', 'bg-blue-500');
+                headerBg.classList.add('bg-green-600', 'transition-colors');
             }
 
         } catch (error) {
@@ -536,7 +566,7 @@ export const AtendimentoExternoService = {
     },
 
     // ==========================================
-    // DASHBOARD DO DEFENSOR
+    // DASHBOARD DO DEFENSOR (COM LOGO)
     // ==========================================
     async renderizarDashboardDefensor() {
         const headerText = document.getElementById('assistido-nome');
@@ -546,11 +576,10 @@ export const AtendimentoExternoService = {
         const corpo = document.querySelector('.w-full.max-w-2xl');
         if (!corpo) return;
 
-        // Limpa a tela original e injeta o Dashboard com a sua logo raw do Github
         corpo.innerHTML = `
             <div id="header-bg" class="bg-indigo-600 p-5 rounded-t-2xl shadow flex items-center justify-between">
                 <div class="flex items-center gap-4">
-                    <div class="bg-white p-1 rounded-lg shadow-sm">
+                    <div class="bg-white p-1 rounded-lg shadow-sm flex-shrink-0">
                         <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo do Sistema" class="h-10 w-auto object-contain">
                     </div>
                     <div>
@@ -646,17 +675,25 @@ export const AtendimentoExternoService = {
         }
     },
 
+    // ==========================================
+    // TELA DE ERRO (AGORA COM A LOGO)
+    // ==========================================
     showError(titulo, mensagem) {
         const corpo = document.querySelector('.w-full.max-w-2xl');
         if (corpo) {
             corpo.innerHTML = `
-                <div class="bg-red-600 p-6 text-white text-center rounded-t-2xl">
-                    <span class="text-5xl">❌</span>
-                    <h1 class="font-black text-2xl uppercase mt-4">ERRO!</h1>
+                <div class="bg-red-600 p-5 rounded-t-2xl shadow flex items-center gap-4">
+                    <div class="bg-white p-1 rounded-lg shadow-sm flex-shrink-0">
+                        <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo do Sistema" class="h-10 w-auto object-contain">
+                    </div>
+                    <div>
+                        <h1 class="text-white font-black text-xl uppercase tracking-wide">ERRO!</h1>
+                    </div>
                 </div>
                 <div class="p-8 text-center bg-white rounded-b-2xl shadow">
+                    <span class="text-5xl block mb-4">❌</span>
                     <h2 class="text-xl font-bold text-gray-800">${titulo}</h2>
-                    <p class="text-gray-600 mt-4">${mensagem}</p>
+                    <p class="text-gray-600 mt-2 font-medium">${mensagem}</p>
                 </div>
             `;
         }
