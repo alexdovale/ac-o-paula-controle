@@ -109,22 +109,18 @@ export const AtendimentoExternoService = {
     // ==========================================
     renderizarInterface(assistido, pautaData) {
         
-        // ==== INJEÇÃO DINÂMICA DA LOGO NO CABEÇALHO DO ATENDIMENTO ====
+        // ==== INJEÇÃO DINÂMICA DA LOGO NO CABEÇALHO ====
         const headerBg = document.getElementById('header-bg');
         if (headerBg && !document.getElementById('logo-header-main')) {
-            // Cria um "envelope" para os textos não quebrarem o layout
             const textosWrapper = document.createElement('div');
             textosWrapper.className = "overflow-hidden w-full";
             
-            // Move os elementos atuais do cabeçalho (H1 e P) para dentro desse envelope
             while (headerBg.firstChild) {
                 textosWrapper.appendChild(headerBg.firstChild);
             }
             
-            // Adiciona flexbox no cabeçalho pai
             headerBg.classList.add('flex', 'items-center', 'gap-4');
             
-            // Cria e injeta a caixa da logo
             const logoDiv = document.createElement('div');
             logoDiv.id = 'logo-header-main';
             logoDiv.className = 'bg-white p-1 rounded-lg shadow-sm flex-shrink-0';
@@ -133,24 +129,36 @@ export const AtendimentoExternoService = {
             headerBg.appendChild(logoDiv);
             headerBg.appendChild(textosWrapper);
         }
-        // ===============================================================
 
         document.getElementById('assistido-nome').textContent = assistido.name || 'Nome não informado';
         document.getElementById('assistido-assunto').textContent = assistido.subject || 'Assunto não informado';
         
-        document.getElementById('area-colaborador').classList.remove('hidden');
+        const areaColaborador = document.getElementById('area-colaborador');
+        areaColaborador.classList.remove('hidden');
+
+        // ==== NOVO: BANNER DE TRANSFERÊNCIA ====
+        // Exibe o aviso se o atendimento foi transferido de um colega X para o Y
+        if (assistido.historicoTransferencia && !document.getElementById('banner-transferencia')) {
+            const bannerHtml = `
+                <div id="banner-transferencia" class="w-full bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded-xl shadow-sm mb-6 text-xs font-medium flex items-center gap-3">
+                    <span class="text-lg">🔄</span>
+                    <span>${assistido.historicoTransferencia}</span>
+                </div>
+            `;
+            areaColaborador.insertAdjacentHTML('afterbegin', bannerHtml);
+        }
+        // =======================================
 
         // ==== Atalho dinâmico para o Painel do Defensor ====
         const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
-        
         if (isDefensor) {
             if (!document.getElementById('btn-atalho-painel')) {
-                const areaColaborador = document.getElementById('area-colaborador');
                 const btnHtml = `
                     <button id="btn-atalho-painel" class="w-full bg-indigo-50 border-2 border-indigo-200 text-indigo-700 hover:bg-indigo-100 font-black py-3 px-4 rounded-xl shadow-sm transition-colors text-xs flex items-center justify-center gap-2 mb-6 uppercase tracking-wider">
                         💼 Acessar Meu Painel Judicial
                     </button>
                 `;
+                // Injeta no topo (se tiver banner, fica acima do banner)
                 areaColaborador.insertAdjacentHTML('afterbegin', btnHtml);
 
                 document.getElementById('btn-atalho-painel').onclick = () => {
@@ -346,12 +354,18 @@ export const AtendimentoExternoService = {
             const emailDestino = colegaObj?.email || null;
             const tokenSeguranca = Date.now().toString(36) + Math.random().toString(36).substring(2);
 
+            // ==== NOVO: GRAVANDO O RASTRO DE TRANSFERÊNCIA ====
             updateData = {
                 status: 'emAtendimento', 
                 assignedCollaborator: { name: colegaSelecionado, email: emailDestino },
-                inAttendanceTime: new Date().toISOString(),
-                delegationToken: tokenSeguranca
+                // Abaixo: zera e passa a contar o tempo de atendimento a partir de agora para o novo colega (Y)
+                inAttendanceTime: new Date().toISOString(), 
+                delegationToken: tokenSeguranca,
+                // Registra quem fez a transferência e para quem
+                historicoTransferencia: `O colaborador ${this.colaboradorNome} fez a transferência para ${colegaSelecionado}.`
             };
+            // ===================================================
+
             tituloSucesso = "Transferência Realizada!";
             subtituloSucesso = `O atendimento foi repassado para ${colegaSelecionado}.`;
 
@@ -415,8 +429,6 @@ export const AtendimentoExternoService = {
                 };
             }
 
-            // Em vez de sobrescrever tudo, apenas trocamos a cor do fundo para verde.
-            // Assim, a logo injetada na renderizarInterface não desaparece.
             const headerBg = document.getElementById('header-bg');
             if (headerBg) {
                 headerBg.classList.remove('bg-blue-600', 'bg-indigo-600', 'bg-blue-500');
@@ -566,7 +578,7 @@ export const AtendimentoExternoService = {
     },
 
     // ==========================================
-    // DASHBOARD DO DEFENSOR (COM LOGO)
+    // DASHBOARD DO DEFENSOR
     // ==========================================
     async renderizarDashboardDefensor() {
         const headerText = document.getElementById('assistido-nome');
@@ -622,6 +634,9 @@ export const AtendimentoExternoService = {
                 lista.forEach(item => {
                     const notas = item.notasRevisao ? `<div class="mt-2 bg-yellow-50 p-2 rounded text-[10px] text-yellow-800 border border-yellow-200 font-medium">⚠️ <b>Nota:</b> ${item.notasRevisao}</div>` : '';
                     
+                    // ==== NOVO: Aviso de transferência no Dashboard ====
+                    const bannerTransf = item.historicoTransferencia ? `<div class="mt-2 bg-orange-50 p-2 rounded text-[10px] text-orange-800 border border-orange-200 font-medium flex items-center gap-1"><span class="text-xs">🔄</span> ${item.historicoTransferencia}</div>` : '';
+                    
                     if (ehPendente) {
                         const baseUrl = window.location.href.substring(0, window.location.href.indexOf('?'));
                         const linkIndividual = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken}`;
@@ -632,6 +647,7 @@ export const AtendimentoExternoService = {
                                 <h3 class="font-black text-gray-800 text-sm w-3/4 truncate">${item.name}</h3>
                                 <p class="text-xs text-gray-500 mt-1">${item.subject || 'Assunto não informado'}</p>
                                 ${notas}
+                                ${bannerTransf}
                                 <a href="${linkIndividual}" class="mt-3 block text-center w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-2 rounded-lg text-xs transition border border-indigo-200">
                                     🔍 Abrir e Assinar
                                 </a>
@@ -675,9 +691,6 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ==========================================
-    // TELA DE ERRO (AGORA COM A LOGO)
-    // ==========================================
     showError(titulo, mensagem) {
         const corpo = document.querySelector('.w-full.max-w-2xl');
         if (corpo) {
