@@ -1259,53 +1259,52 @@ export const UIService = {
         if (!modal) return;
 
         modal.innerHTML = `
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] mx-4">
-                <div class="bg-blue-600 p-4 text-white flex justify-between items-center">
-                    <h2 class="font-black text-lg uppercase tracking-wide flex items-center gap-2">
-                        <span>📊</span> Como formatar a Planilha
-                    </h2>
-                    <button id="close-format-help-x" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
+            <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-2xl relative flex flex-col" style="max-height: 95vh;" onclick="event.stopPropagation()">
+                <div class="flex-shrink-0 mb-4 pr-8">
+                    <button id="close-format-help-x" class="absolute top-3 right-3 sm:top-4 sm:right-4 text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+                    <h2 class="text-xl sm:text-2xl font-bold leading-tight text-gray-800">Como Preparar sua Pauta para Importação</h2>
                 </div>
-                <div class="p-6 overflow-y-auto space-y-5 text-sm text-gray-700">
-                    <p>Para importar vários assistidos de uma vez, salve sua planilha Excel como <b>CSV (UTF-8)</b>. O sistema aceita o formato com <b>4 ou 5 colunas</b> separadas por ponto e vírgula (<code class="bg-gray-100 px-1 rounded font-bold text-blue-600">;</code>).</p>
-                    
-                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                        <h3 class="font-bold text-blue-800 mb-2 uppercase text-xs">Formato Padrão (5 Colunas)</h3>
-                        <p class="text-[10px] text-blue-600 mb-2">A coluna <b>Nº Agend</b> é opcional. Se não houver, deixe em branco ou use o formato de 4 colunas.</p>
-                        <code id="format-text-code" class="block bg-white p-3 rounded-lg border border-blue-200 text-xs mb-3 font-mono text-gray-800">Nº Agend; Nome Completo; Horário; Assunto; CPF</code>
-                        <button id="copy-format-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg shadow-sm transition-colors flex justify-center items-center gap-2">
-                            <span>📋</span> Copiar Cabeçalho
-                        </button>
+                <div class="flex-grow overflow-y-auto scrollable-content pr-2 sm:pr-4 text-gray-700">
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2">
+                         <p class="font-semibold text-sm">O arquivo deve seguir o formato abaixo, com 4 ou 5 colunas, nesta ordem:</p>
+                         <button id="copy-format-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1.5 px-3 rounded-lg hover:bg-gray-300 w-full sm:w-auto transition-colors">Copiar Formato</button>
+                    </div>
+                    <div class="bg-gray-100 p-3 sm:p-4 rounded-lg text-xs sm:text-sm mb-6 overflow-x-auto border border-gray-200">
+                        <code id="format-text-code" class="whitespace-nowrap font-mono">Nº Agend(opcional);Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code>
                     </div>
 
-                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                        <h3 class="font-bold text-gray-800 mb-2 uppercase text-xs">Exemplo de Linha</h3>
-                        <code id="example-text-code" class="block bg-white p-3 rounded-lg border border-gray-300 text-xs mb-3 font-mono text-gray-800">12345; Maria da Silva; 14:30; Alimentos; 111.222.333-44</code>
-                        <button id="copy-example-btn" class="w-full bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-xs font-bold py-2 rounded-lg shadow-sm transition-colors flex justify-center items-center gap-2">
-                            <span>📋</span> Copiar Exemplo
-                        </button>
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2">
+                        <h3 class="text-base sm:text-lg font-bold">Exemplo:</h3>
+                        <button id="copy-example-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1.5 px-3 rounded-lg hover:bg-gray-300 w-full sm:w-auto transition-colors">Copiar Exemplo</button>
                     </div>
+                    <pre class="bg-gray-100 p-3 sm:p-4 rounded-lg text-xs sm:text-sm overflow-x-auto mb-6 border border-gray-200"><code id="example-text-code" class="whitespace-pre-wrap word-break font-mono">12345;Maria Joaquina de Amaral Pereira;09:00;Divórcio Consensual;111.222.333-44
+;João da Silva;09:30;Ação de Alimentos;
+67890;Fulano de Tal;10:00;Curatela;444.555.666-77</code></pre>
 
-                    <div class="bg-green-50 p-4 rounded-xl border border-green-100">
-                        <h3 class="font-bold text-green-800 mb-2 uppercase text-xs">🤖 Prompt para o ChatGPT</h3>
-                        <p class="text-[10px] text-green-700 mb-2">Cole o texto abaixo no ChatGPT junto com a sua lista de assistidos para ele criar a tabela perfeita para você:</p>
-                        <code id="prompt-text-code" class="block bg-white p-3 rounded-lg border border-green-200 text-[10.5px] mb-3 font-mono text-gray-800 leading-relaxed">Aja como um organizador de dados. Converta a lista de assistidos abaixo para o formato CSV com separador de ponto e vírgula (;). As colunas DEVEM ser exatamente nesta ordem: "Nº Agend; Nome Completo; Horário; Assunto; CPF". Caso alguma informação não exista (como Nº Agend ou CPF), deixe a coluna vazia mas mantenha o ponto e vírgula. Não coloque cabeçalho na resposta, apenas as linhas de dados prontas para copiar.</code>
-                        <button id="copy-prompt-btn" class="w-full bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-2 rounded-lg shadow-sm transition-colors flex justify-center items-center gap-2">
-                            <span>📋</span> Copiar Prompt
-                        </button>
+                    <ul class="list-disc list-inside space-y-2 text-sm mb-6">
+                        <li>A primeira linha (cabeçalho) é <strong>opcional</strong>. O sistema a ignorará se presente.</li>
+                        <li>O campo <strong>Nº Agend</strong> é opcional. Se não houver, deixe o espaço em branco (ou use o formato antigo de 4 colunas).</li>
+                        <li>O campo <strong>CPF</strong> é opcional. Se não houver CPF, deixe o espaço em branco (ou não coloque nada após o último ponto e vírgula).</li>
+                        <li>O <strong>horário</strong> deve estar no formato <strong>HH:MM</strong> (Ex: 09:00, 14:30).</li>
+                        <li>Salve o arquivo com a extensão <strong>.csv</strong>.</li>
+                    </ul>
+
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2 pt-4 border-t border-gray-200">
+                        <h3 class="text-base sm:text-lg font-bold">Prompt para IA (Ex: ChatGPT, Gemini):</h3>
+                        <button id="copy-prompt-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1.5 px-3 rounded-lg hover:bg-gray-300 w-full sm:w-auto transition-colors">Copiar Prompt</button>
                     </div>
-                </div>
-                <div class="p-4 bg-gray-50 border-t flex justify-end">
-                    <button id="close-format-help-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg text-sm transition-colors">
-                        Entendi
-                    </button>
+                    <p class="text-xs sm:text-sm mb-2">Se sua pauta está em um PDF, copie o texto abaixo e cole junto com o conteúdo do seu PDF em uma IA para formatá-lo corretamente.</p>
+                    <pre class="bg-gray-100 p-3 sm:p-4 rounded-lg text-xs sm:text-sm overflow-x-auto border border-gray-200"><code id="prompt-text-code" class="whitespace-pre-wrap word-break font-mono">Olá! Por favor, converta o conteúdo do arquivo PDF que estou enviando para o formato CSV, usando ponto e vírgula (;) como separador. O resultado deve seguir este padrão:
+
+Nº Agend(opcional);Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)
+
+Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .csv.</code></pre>
                 </div>
             </div>
         `;
 
         const closeModals = () => modal.classList.add('hidden');
         document.getElementById('close-format-help-x')?.addEventListener('click', closeModals);
-        document.getElementById('close-format-help-btn')?.addEventListener('click', closeModals);
 
         const setupCopy = (btnId, codeId) => {
             const btn = document.getElementById(btnId);
@@ -1314,30 +1313,17 @@ export const UIService = {
                 btn.addEventListener('click', () => {
                     navigator.clipboard.writeText(codeEl.textContent);
                     const originalHtml = btn.innerHTML;
-                    btn.innerHTML = `<span>✅</span> Copiado!`;
+                    btn.innerHTML = `✅ Copiado!`;
                     
-                    if (btnId === 'copy-example-btn') {
-                        btn.classList.remove('bg-white', 'text-gray-700');
-                        btn.classList.add('bg-green-500', 'text-white', 'border-green-500');
-                    } else {
-                        btn.classList.add('bg-green-500');
-                        btn.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'bg-green-600', 'hover:bg-green-700');
-                    }
+                    btn.classList.remove('bg-gray-200', 'text-gray-800');
+                    btn.classList.add('bg-green-500', 'text-white');
 
                     if (window.showNotification) window.showNotification("Texto copiado para a área de transferência!", "success");
                     
                     setTimeout(() => {
                         btn.innerHTML = originalHtml;
-                        if (btnId === 'copy-example-btn') {
-                            btn.classList.add('bg-white', 'text-gray-700');
-                            btn.classList.remove('bg-green-500', 'text-white', 'border-green-500');
-                        } else if (btnId === 'copy-format-btn') {
-                            btn.classList.remove('bg-green-500');
-                            btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
-                        } else {
-                            btn.classList.remove('bg-green-500');
-                            btn.classList.add('bg-green-600', 'hover:bg-green-700');
-                        }
+                        btn.classList.remove('bg-green-500', 'text-white');
+                        btn.classList.add('bg-gray-200', 'text-gray-800');
                     }, 2000);
                 });
             }
