@@ -132,6 +132,18 @@ export const AtendimentoExternoService = {
                 `;
                 areaColab.insertAdjacentHTML('afterbegin', bannerHtml);
             }
+
+            // ==== MENSAGEM DE BOAS-VINDAS / IDENTIFICAÇÃO DO COLABORADOR ====
+            if (!document.getElementById('greeting-colaborador')) {
+                const greetingHtml = `
+                    <div id="greeting-colaborador" class="w-full bg-slate-50 border border-slate-200 text-slate-700 px-4 py-3 rounded-xl shadow-sm mb-6 text-xs flex items-center gap-3">
+                        <span class="text-lg">👋</span>
+                        <span>Olá, <b>${this.colaboradorNome}</b>! Você está no painel de atendimento.</span>
+                    </div>
+                `;
+                // Insere no topo da área do colaborador (garantindo que fique acima do banner de transferência, se houver)
+                areaColab.insertAdjacentHTML('afterbegin', greetingHtml);
+            }
         }
 
         // INJEÇÃO DINÂMICA DA ABA "MEU PAINEL" PARA TODOS OS COLABORADORES
