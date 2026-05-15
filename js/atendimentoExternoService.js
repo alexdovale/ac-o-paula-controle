@@ -93,13 +93,48 @@ export const AtendimentoExternoService = {
     },
 
     renderizarInterface(assistido, pautaData) {
+        // ==== INJEÇÃO DINÂMICA DA LOGO NO CABEÇALHO ====
+        const headerBg = document.getElementById('header-bg');
+        if (headerBg && !document.getElementById('logo-header-main')) {
+            const textosWrapper = document.createElement('div');
+            textosWrapper.className = "overflow-hidden w-full";
+            
+            while (headerBg.firstChild) {
+                textosWrapper.appendChild(headerBg.firstChild);
+            }
+            
+            headerBg.classList.add('flex', 'items-center', 'gap-4');
+            
+            const logoDiv = document.createElement('div');
+            logoDiv.id = 'logo-header-main';
+            logoDiv.className = 'bg-white p-1 rounded-lg shadow-sm flex-shrink-0';
+            logoDiv.innerHTML = `<img src="${LOGO_URL}" alt="Logo do Sistema" class="h-10 w-auto object-contain">`;
+            
+            headerBg.appendChild(logoDiv);
+            headerBg.appendChild(textosWrapper);
+        }
+
         document.getElementById('assistido-nome').textContent = assistido.name || '';
         document.getElementById('assistido-assunto').textContent = assistido.subject || '';
         
         const areaColab = document.getElementById('area-colaborador');
-        if (areaColab) areaColab.classList.remove('hidden');
+        if (areaColab) {
+            areaColab.classList.remove('hidden');
 
-        // INJEÇÃO DINÂMICA DA ABA "MEU PAINEL" AGORA PARA TODOS OS COLABORADORES
+            // ==== BANNER DE TRANSFERÊNCIA ====
+            // Exibe o aviso se o atendimento foi transferido de um colega para o atual
+            if (assistido.historicoTransferencia && !document.getElementById('banner-transferencia')) {
+                const bannerHtml = `
+                    <div id="banner-transferencia" class="w-full bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded-xl shadow-sm mb-6 text-xs font-medium flex items-center gap-3">
+                        <span class="text-lg">🔄</span>
+                        <span>${assistido.historicoTransferencia}</span>
+                    </div>
+                `;
+                areaColab.insertAdjacentHTML('afterbegin', bannerHtml);
+            }
+        }
+
+        // INJEÇÃO DINÂMICA DA ABA "MEU PAINEL" PARA TODOS OS COLABORADORES
         const tabsContainer = document.getElementById('tab-btn-encerramento')?.parentElement;
         if (tabsContainer && !document.getElementById('tab-btn-painel')) {
             tabsContainer.insertAdjacentHTML('beforeend', `<button id="tab-btn-painel" class="flex-1 p-3 text-[10px] uppercase text-gray-400 font-bold border-b-2 border-transparent transition-colors">Meu Painel</button>`);
@@ -245,7 +280,13 @@ export const AtendimentoExternoService = {
             
             const emailDest = this.todosColaboradores.find(c => c.nome === col)?.email || null;
             const tk = Date.now().toString(36) + Math.random().toString(36).substring(2);
-            updateData = { status: 'emAtendimento', assignedCollaborator: { name: col, email: emailDest }, delegationToken: tk };
+            updateData = { 
+                status: 'emAtendimento', 
+                assignedCollaborator: { name: col, email: emailDest }, 
+                inAttendanceTime: new Date().toISOString(),
+                delegationToken: tk,
+                historicoTransferencia: `Transferido por ${this.colaboradorNome} para ${col}.`
+            };
             tSuc = "Transferência Realizada!";
             
             if (emailDest) {
@@ -263,7 +304,7 @@ export const AtendimentoExternoService = {
             await signInAnonymously(auth);
             await updateDoc(doc(db, "pautas", this.pautaId, "attendances", this.assistidoId), updateData);
             
-            // O botão voltar sempre aponta para o Painel, independentemente de ser Defensor ou Servidor
+            // O botão voltar aponta para o Painel, seja você Defensor ou Servidor
             const dashboardUrl = `${window.location.href.split('?')[0]}?pautaId=${this.pautaId}&colab=${encodeURIComponent(this.colaboradorNome)}`;
             const botoesRetorno = `<a href="${dashboardUrl}" class="mt-6 inline-block text-sm text-green-700 underline font-bold">⬅️ Voltar ao Meu Painel</a>`;
 
@@ -275,7 +316,12 @@ export const AtendimentoExternoService = {
                     ${botoesRetorno}
                 </div>
             `;
-            document.getElementById('header-bg').className = "bg-green-600 p-5 text-white transition-colors";
+            
+            const headerBg = document.getElementById('header-bg');
+            if (headerBg) {
+                headerBg.classList.remove('bg-blue-600', 'bg-indigo-600', 'bg-blue-500');
+                headerBg.classList.add('bg-green-600', 'transition-colors');
+            }
 
         } catch (error) {
             console.error("Erro ao salvar:", error);
@@ -513,6 +559,20 @@ export const AtendimentoExternoService = {
     },
 
     showError(titulo, mensagem) {
-        document.querySelector('.w-full.max-w-2xl').innerHTML = `<div class="bg-red-600 p-6 text-white text-center rounded-t-2xl"><h1 class="font-black text-2xl uppercase mt-4">ERRO!</h1></div><div class="p-8 text-center bg-white rounded-b-2xl"><h2 class="text-xl font-bold">${titulo}</h2><p class="text-gray-600 mt-4">${mensagem}</p></div>`;
+        document.querySelector('.w-full.max-w-2xl').innerHTML = `
+            <div class="bg-red-600 p-5 rounded-t-2xl shadow flex items-center gap-4">
+                <div class="bg-white p-1 rounded-lg shadow-sm flex-shrink-0">
+                    <img src="${LOGO_URL}" alt="Logo do Sistema" class="h-10 w-auto object-contain">
+                </div>
+                <div>
+                    <h1 class="text-white font-black text-xl uppercase tracking-wide">ERRO!</h1>
+                </div>
+            </div>
+            <div class="p-8 text-center bg-white rounded-b-2xl shadow">
+                <span class="text-5xl block mb-4">❌</span>
+                <h2 class="text-xl font-bold text-gray-800">${titulo}</h2>
+                <p class="text-gray-600 mt-2 font-medium">${mensagem}</p>
+            </div>
+        `;
     }
 };
