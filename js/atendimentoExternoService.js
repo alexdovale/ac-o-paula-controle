@@ -113,7 +113,7 @@ export const AtendimentoExternoService = {
         
         document.getElementById('area-colaborador').classList.remove('hidden');
 
-        // ==== NOVO: Atalho dinâmico para o Painel do Defensor ====
+        // ==== Atalho dinâmico para o Painel do Defensor ====
         const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
         
         if (isDefensor) {
@@ -142,7 +142,6 @@ export const AtendimentoExternoService = {
         const aba = document.getElementById('aba-encerramento');
         if (!aba) return;
 
-        // Regra de Negócio: Se a pessoa logada tiver "Defensor" no cargo, ocultamos a Distribuição.
         const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
         const showDistribuicao = pautaData.useDistributionFlow && !isDefensor;
 
@@ -180,7 +179,6 @@ export const AtendimentoExternoService = {
             </div>
         `;
 
-        // Divulgação de Configurações Extra que ficam ocultas até clicar
         optionsHtml += `
             <div id="config-distribuicao" class="hidden bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6">
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Defensor(a) Responsável</label>
@@ -208,7 +206,6 @@ export const AtendimentoExternoService = {
 
         this.povoarSelectsDinamicos();
 
-        // LOGICA DE CLIQUE NOS BOTÕES
         this.fluxoSelecionado = 'direto';
         const btnDireto = document.getElementById('btn-opt-direto');
         const btnDist = document.getElementById('btn-opt-dist');
@@ -255,7 +252,6 @@ export const AtendimentoExternoService = {
         }
 
         if (selectColab) {
-            // Filtra todos MENOS o próprio cara que está transferindo
             const colegas = this.todosColaboradores.filter(c => c.nome !== this.colaboradorNome);
             colegas.forEach(c => {
                 const opt = document.createElement('option');
@@ -280,7 +276,6 @@ export const AtendimentoExternoService = {
         let tituloSucesso = "Atendimento Atualizado!";
         let subtituloSucesso = "Você já pode fechar esta aba ou voltar ao painel.";
 
-        // 1. FINALIZAR DIRETO
         if (this.fluxoSelecionado === 'direto') {
             updateData = {
                 status: 'atendido',
@@ -294,7 +289,6 @@ export const AtendimentoExternoService = {
             subtituloSucesso = "O processo foi finalizado com sucesso.";
         } 
         
-        // 2. FILA DE DISTRIBUIÇÃO
         else if (this.fluxoSelecionado === 'distribuicao') {
             const defensor = document.getElementById('select-defensor-dinamico')?.value;
             const notas = document.getElementById('notas-distribuicao-dinamico')?.value;
@@ -313,7 +307,6 @@ export const AtendimentoExternoService = {
             subtituloSucesso = `O Defensor ${defensor} recebeu o caso no Painel.`;
         } 
         
-        // 3. TRANSFERÊNCIA
         else if (this.fluxoSelecionado === 'transferir') {
             const colegaSelecionado = document.getElementById('select-transferir-colega')?.value;
             if (!colegaSelecionado) {
@@ -335,7 +328,6 @@ export const AtendimentoExternoService = {
             tituloSucesso = "Transferência Realizada!";
             subtituloSucesso = `O atendimento foi repassado para ${colegaSelecionado}.`;
 
-            // Tenta enviar e-mail se o colega tiver e-mail cadastrado
             if (emailDestino) {
                 try {
                     const { EmailService } = await import('./emailService.js');
@@ -347,7 +339,6 @@ export const AtendimentoExternoService = {
             }
         } 
         
-        // 4. DEVOLVER PARA FILA (PAUSAR)
         else if (this.fluxoSelecionado === 'pausar') {
             updateData = {
                 status: 'aguardando',
@@ -365,11 +356,9 @@ export const AtendimentoExternoService = {
             const docRef = doc(db, "pautas", this.pautaId, "attendances", this.assistidoId);
             await updateDoc(docRef, updateData);
 
-            // Verifica se é defensor para adaptar o botão de sucesso
             const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
             const textoBotaoVoltar = isDefensor ? '💼 Ir para Meu Painel Judicial' : '⬅️ Voltar ao Painel';
 
-            // Montamos o HTML de sucesso
             const mensagemSucessoHtml = `
                 <div class="text-center p-8 bg-green-50 rounded-xl border border-green-200 shadow-sm mt-8 animate-fade-in">
                     <span class="text-5xl">✅</span>
@@ -379,30 +368,26 @@ export const AtendimentoExternoService = {
                 </div>
             `;
 
-            // Tenta achar a área primária
             const areaColaborador = document.getElementById('area-colaborador');
             
             if (areaColaborador) {
                 areaColaborador.innerHTML = mensagemSucessoHtml;
             } else {
-                // Fallback: Se não achar, injeta no container principal da tela
                 const containerPrincipal = document.querySelector('.w-full.max-w-2xl') || document.body;
                 containerPrincipal.innerHTML = mensagemSucessoHtml;
             }
 
-            // Atrela a lógica de clique após injetar o botão no HTML
             const btnVoltar = document.getElementById('btn-voltar-sucesso');
             if (btnVoltar) {
                 btnVoltar.onclick = () => {
                     if (isDefensor) {
                         this.renderizarDashboardDefensor();
                     } else {
-                        window.history.back(); // Colaborador normal volta pelo histórico do navegador
+                        window.history.back(); 
                     }
                 };
             }
 
-            // Validação de segurança também para o header
             const headerBg = document.getElementById('header-bg');
             if (headerBg) {
                 headerBg.className = "bg-green-600 p-5 text-white transition-colors";
@@ -417,7 +402,7 @@ export const AtendimentoExternoService = {
     },
 
     // ==========================================
-    // RENDERIZAÇÃO DO HISTÓRICO (INTOCADA)
+    // RENDERIZAÇÃO DO HISTÓRICO 
     // ==========================================
     renderizarHistorico(assistido) {
         const lista = document.getElementById('lista-historico');
@@ -558,18 +543,21 @@ export const AtendimentoExternoService = {
         if (headerText) headerText.innerHTML = `Painel do Defensor<br><span class="text-sm font-normal">${this.colaboradorNome}</span>`;
         document.getElementById('assistido-assunto').classList.add('hidden');
 
-        // Cria a interface do Dashboard por cima do container principal
         const corpo = document.querySelector('.w-full.max-w-2xl');
         if (!corpo) return;
 
-        // Limpa a tela original e injeta o Dashboard
+        // Limpa a tela original e injeta o Dashboard com a sua logo raw do Github
         corpo.innerHTML = `
             <div id="header-bg" class="bg-indigo-600 p-5 rounded-t-2xl shadow flex items-center justify-between">
-                <div>
-                    <h1 class="text-white font-black text-xl uppercase tracking-wide">💼 Meu Painel Judicial</h1>
-                    <p class="text-indigo-200 text-xs mt-1">Bem-vindo(a), ${this.colaboradorNome}</p>
+                <div class="flex items-center gap-4">
+                    <div class="bg-white p-1 rounded-lg shadow-sm">
+                        <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo do Sistema" class="h-10 w-auto object-contain">
+                    </div>
+                    <div>
+                        <h1 class="text-white font-black text-lg sm:text-xl uppercase tracking-wide">Meu Painel Judicial</h1>
+                        <p class="text-indigo-200 text-xs mt-1">Bem-vindo(a), ${this.colaboradorNome}</p>
+                    </div>
                 </div>
-                <div class="bg-indigo-500 p-2 rounded-full text-white">⚖️</div>
             </div>
             
             <div class="bg-white p-4 rounded-b-2xl shadow min-h-[400px]">
@@ -586,15 +574,12 @@ export const AtendimentoExternoService = {
             </div>
         `;
 
-        // Busca dados em Tempo Real
         try {
             const q = query(collection(db, "pautas", this.pautaId, "attendances"));
             const snap = await getDocs(q);
             const todos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
             const pendentes = todos.filter(a => a.status === 'aguardandoDistribuicao' && a.defensorResponsavel === this.colaboradorNome);
-            
-            // Já finalizados hoje (status = atendido, attendedBy = nome)
             const assinados = todos.filter(a => a.status === 'atendido' && a.attendedBy === this.colaboradorNome);
 
             const renderLista = (lista, ehPendente) => {
@@ -610,7 +595,6 @@ export const AtendimentoExternoService = {
                     
                     if (ehPendente) {
                         const baseUrl = window.location.href.substring(0, window.location.href.indexOf('?'));
-                        // Gera o link individual MANTENDO O MESMO TOKEN para não quebrar a segurança
                         const linkIndividual = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken}`;
                         
                         html += `
@@ -640,7 +624,6 @@ export const AtendimentoExternoService = {
                 container.innerHTML = html;
             };
 
-            // Setup das abas do Dashboard
             const btnPendentes = document.getElementById('tab-pendentes');
             const btnAssinados = document.getElementById('tab-assinados');
 
@@ -656,7 +639,6 @@ export const AtendimentoExternoService = {
                 renderLista(assinados, false);
             };
 
-            // Inicia na aba pendentes
             renderLista(pendentes, true);
 
         } catch (error) {
