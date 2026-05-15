@@ -1,50 +1,81 @@
 // js/csvHandler.js
 
-/**
- * Lê o arquivo CSV e transforma em uma lista de objetos prontos para o Firebase.
- */
 export const parsePautaCSV = (file) => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-
+        
         reader.onload = (e) => {
-            const text = e.target.result;
-            let lines = text.split(/\r\n|\n|\r/).filter(line => line.trim() !== '');
-            
-            if (lines.length === 0) {
-                return reject("O arquivo está vazio.");
-            }
+            try {
+                const text = e.target.result;
+                const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+                if (lines.length === 0) throw new Error("Arquivo vazio");
 
-            // Lógica para ignorar o cabeçalho se ele não tiver formato de hora (HH:MM) na segunda coluna
-            const firstLineParts = lines[0].split(';').map(item => item.trim().replace(/^"|"$/g, ''));
-            if (firstLineParts.length >= 2) {
-                const potentialTime = firstLineParts[1].trim();
-                if (!/^\d{1,2}:\d{2}$/.test(potentialTime)) {
-                    lines.shift(); // Remove a primeira linha (cabeçalho)
+                const assistidos = [];
+                let startIndex = 0;
+                
+                // Ignora o cabeçalho se houver
+                const firstLineLower = lines[0].toLowerCase();
+                if (firstLineLower.includes('nome') || firstLineLower.includes('assunto') || firstLineLower.includes('agend')) {
+                    startIndex = 1;
                 }
-            }
 
-            const processedData = lines.map(line => {
-                const parts = line.split(';').map(item => item.trim().replace(/^"|"$/g, ''));
-                if (parts.length >= 3) {
-                    return {
-                        name: parts[0],
-                        scheduledTime: parts[1],
-                        subject: parts[2],
-                        cpf: parts.length > 3 ? parts[3] : null
-                    };
+                for (let i = startIndex; i < lines.length; i++) {
+                    const delimiter = lines[i].includes(';') ? ';' : ',';
+                    // Remove aspas caso o Excel coloque
+                    const cols = lines[i].split(delimiter).map(c => c.trim().replace(/^"|"$/g, ''));
+
+                    if (cols.length < 3) continue;
+
+                    let numeroAgendamento = '';
+                    let nome = '';
+                    let hora = '';
+                    let assunto = '';
+                    let cpf = '';
+
+                    // Validador de horário (ex: 14:30)
+                    const isTime = (str) => /^([01]?\d|2[0-3]):([0-5]\d)/.test(str);
+
+                    // Formato A (5 colunas): N° Agend ; Nome ; HH:MM ; Assunto ; CPF(opcional)
+                    if (cols.length >= 4 && isTime(cols[2])) {
+                        numeroAgendamento = cols[0];
+                        nome = cols[1];
+                        hora = cols[2];
+                        assunto = cols[3];
+                        cpf = cols[4] || '';
+                    } 
+                    // Formato B (4 colunas): Nome ; HH:MM ; Assunto ; CPF(opcional)
+                    else if (cols.length >= 3 && isTime(cols[1])) {
+                        nome = cols[0];
+                        hora = cols[1];
+                        assunto = cols[2];
+                        cpf = cols[3] || '';
+                    } 
+                    // Fallback
+                    else {
+                        nome = cols[0];
+                        hora = cols[1];
+                        assunto = cols[2];
+                        cpf = cols[3] || '';
+                    }
+
+                    if (nome) {
+                        assistidos.push({
+                            numeroAgendamento: numeroAgendamento,
+                            name: nome,
+                            scheduledTime: hora,
+                            subject: assunto,
+                            cpf: cpf
+                        });
+                    }
                 }
-                return null;
-            }).filter(item => item !== null && item.name && /^\d{1,2}:\d{2}$/.test(item.scheduledTime));
 
-            if (processedData.length === 0) {
-                return reject("Nenhum registro válido encontrado. Use o formato: Nome;HH:MM;Assunto;CPF");
+                resolve(assistidos);
+            } catch (err) {
+                reject(err);
             }
-
-            resolve(processedData);
         };
-
-        reader.onerror = () => reject("Erro ao ler o arquivo físico.");
+        
+        reader.onerror = () => reject(new Error("Falha na leitura do arquivo"));
         reader.readAsText(file);
     });
 };
