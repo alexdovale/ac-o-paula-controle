@@ -901,6 +901,40 @@ export const UIService = {
 
             const atendenteNome = this.getAttendantName(item);
 
+            let docStatusHtml = '';
+            if (item.selectedAction) {
+                let statusColor = 'bg-gray-100 text-gray-600';
+                let statusText = '📋 Selecionado';
+                let statusIcon = '📋';
+                
+                if (item.documentState === 'filling') { 
+                    statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
+                    statusText = '✏️ Preenchendo'; 
+                    statusIcon = '✏️';
+                } else if (item.documentState === 'saved') { 
+                    statusColor = 'bg-green-100 text-green-700 font-bold'; 
+                    statusText = '✅ Salvo'; 
+                    statusIcon = '✅';
+                } else if (item.documentState === 'pdf') { 
+                    statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
+                    statusText = '📄 PDF Emitido'; 
+                    statusIcon = '📄';
+                }
+
+                docStatusHtml = `
+                    <div class="mt-2 flex flex-col gap-1">
+                        <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
+                            <span>📂</span> 
+                            <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
+                            <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
+                        </span>
+                        <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
+                            <span>${statusIcon}</span>
+                            <span class="hidden xs:inline">${statusText}</span>
+                        </span>
+                    </div>`;
+            }
+
             card.innerHTML = `
                 ${canDelete ? `
                 <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500">
@@ -914,6 +948,8 @@ export const UIService = {
                 <p class="text-xs text-gray-600 mt-1">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
                 <p class="text-xs text-gray-600 mt-1">Colaborador: ${escapeHTML(atendenteNome)}</p>
                 <p class="text-xs text-gray-400 mt-1">Início: ${startTime}</p>
+
+                ${docStatusHtml}
 
                 <div class="mt-4 flex flex-col gap-2">
                     <div class="grid grid-cols-2 gap-2">
