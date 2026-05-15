@@ -128,7 +128,6 @@ export const AtendimentoExternoService = {
 
         let optionsHtml = `
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-                <!-- Botão 1: Direto -->
                 <button id="btn-opt-direto" class="fluxo-opt-btn ring-4 ring-blue-400 bg-blue-50 border-blue-200 p-4 rounded-xl text-left transition-all">
                     <span class="block text-lg mb-1">✅</span>
                     <span class="block font-bold text-gray-800">Finalizar Atendimento</span>
@@ -138,7 +137,6 @@ export const AtendimentoExternoService = {
 
         if (showDistribuicao) {
             optionsHtml += `
-                <!-- Botão 2: Distribuição -->
                 <button id="btn-opt-dist" class="fluxo-opt-btn border-2 border-gray-200 p-4 rounded-xl text-left transition-all hover:bg-gray-50">
                     <span class="block text-lg mb-1">⚖️</span>
                     <span class="block font-bold text-gray-800">Fila de Distribuição</span>
@@ -148,14 +146,12 @@ export const AtendimentoExternoService = {
         }
 
         optionsHtml += `
-                <!-- Botão 3: Transferir -->
                 <button id="btn-opt-transferir" class="fluxo-opt-btn border-2 border-gray-200 p-4 rounded-xl text-left transition-all hover:bg-gray-50">
                     <span class="block text-lg mb-1">🔄</span>
                     <span class="block font-bold text-gray-800">Transferir Colega</span>
                     <span class="block text-xs text-gray-500 mt-1">Passar a vez para outro membro.</span>
                 </button>
                 
-                <!-- Botão 4: Devolver -->
                 <button id="btn-opt-pausar" class="fluxo-opt-btn border-2 border-gray-200 p-4 rounded-xl text-left transition-all hover:bg-gray-50">
                     <span class="block text-lg mb-1">⏸️</span>
                     <span class="block font-bold text-gray-800">Pausar / Voltar p/ Fila</span>
@@ -349,7 +345,8 @@ export const AtendimentoExternoService = {
             const docRef = doc(db, "pautas", this.pautaId, "attendances", this.assistidoId);
             await updateDoc(docRef, updateData);
 
-            document.getElementById('area-colaborador').innerHTML = `
+            // Montamos o HTML de sucesso
+            const mensagemSucessoHtml = `
                 <div class="text-center p-8 bg-green-50 rounded-xl border border-green-200 shadow-sm mt-8 animate-fade-in">
                     <span class="text-5xl">✅</span>
                     <h2 class="text-2xl font-bold text-green-800 mt-4">${tituloSucesso}</h2>
@@ -357,10 +354,26 @@ export const AtendimentoExternoService = {
                     <button onclick="window.history.back()" class="mt-6 text-sm text-green-700 underline font-bold">⬅️ Voltar ao Painel</button>
                 </div>
             `;
-            document.getElementById('header-bg').className = "bg-green-600 p-5 text-white transition-colors";
+
+            // Tenta achar a área primária
+            const areaColaborador = document.getElementById('area-colaborador');
+            
+            if (areaColaborador) {
+                areaColaborador.innerHTML = mensagemSucessoHtml;
+            } else {
+                // Fallback: Se não achar, injeta no container principal da tela
+                const containerPrincipal = document.querySelector('.w-full.max-w-2xl') || document.body;
+                containerPrincipal.innerHTML = mensagemSucessoHtml;
+            }
+
+            // Validação de segurança também para o header
+            const headerBg = document.getElementById('header-bg');
+            if (headerBg) {
+                headerBg.className = "bg-green-600 p-5 text-white transition-colors";
+            }
 
         } catch (error) {
-            console.error("Erro ao salvar:", error);
+            console.error("Erro real ao salvar:", error);
             alert("Erro ao salvar. Verifique a internet e tente novamente.");
             btnFinalizar.disabled = false;
             btnFinalizar.textContent = "Confirmar e Seguir";
