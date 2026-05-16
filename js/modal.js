@@ -1,4 +1,5 @@
-// js/modal.js
+// js/modal.js (MODERNIZADO - PADRÃO PREMIUM SIGAP)
+
 import { collection, addDoc, doc, getDoc, updateDoc, arrayUnion, arrayRemove, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
@@ -7,12 +8,13 @@ export const ModalService = {
      * Abre o modal de seleção de tipo de pauta
      */
     openPautaTypeModal() {
-        document.getElementById('pauta-type-modal').classList.remove('hidden');
+        const modal = document.getElementById('pauta-type-modal');
+        if(modal) modal.classList.remove('hidden');
         
         document.querySelectorAll('.pauta-type-btn').forEach(btn => {
             btn.onclick = (e) => {
                 const type = e.currentTarget.dataset.type;
-                document.getElementById('pauta-type-modal').classList.add('hidden');
+                if(modal) modal.classList.add('hidden');
                 this.openCreatePautaModal(type);
             };
         });
@@ -53,10 +55,11 @@ export const ModalService = {
             noRoomsMsg.classList.add('hidden');
             window.customRoomsList.forEach((room, index) => {
                 const li = document.createElement('li');
-                li.className = "flex justify-between items-center bg-white border p-2 rounded";
+                // Estilo moderno
+                li.className = "flex justify-between items-center bg-white border border-slate-200 p-2.5 rounded-lg shadow-sm mb-2";
                 li.innerHTML = `
-                    <span>🏢 ${escapeHTML(room)}</span>
-                    <button class="remove-room-btn text-red-500" data-index="${index}">Remover</button>
+                    <span class="font-semibold text-slate-700">🏢 ${escapeHTML(room)}</span>
+                    <button class="remove-room-btn text-red-500 hover:text-red-700 bg-red-50 px-2 py-1 rounded text-xs font-bold transition-colors" data-index="${index}">Remover</button>
                 `;
                 list.appendChild(li);
             });
@@ -73,11 +76,11 @@ export const ModalService = {
         const toggle = document.getElementById('share-toggle');
         const maskCheck = document.getElementById('mask-names-check');
         
-        toggle.checked = app.currentPauta.isPublic || false;
-        maskCheck.checked = app.currentPauta.maskNames || false;
+        if (toggle) toggle.checked = app.currentPauta.isPublic || false;
+        if (maskCheck) maskCheck.checked = app.currentPauta.maskNames || false;
         
         this.updateShareUI(app);
-        modal.classList.remove('hidden');
+        if (modal) modal.classList.remove('hidden');
     },
 
     /**
@@ -88,16 +91,19 @@ export const ModalService = {
         const statusText = document.getElementById('share-status-text');
         const linkContainer = document.getElementById('share-link-container');
         
-        statusText.textContent = isPublic ? "Público" : "Privado";
+        if (statusText) statusText.textContent = isPublic ? "Acesso Público" : "Acesso Restrito";
         
         if (isPublic) {
-            linkContainer.classList.remove('hidden');
+            if (linkContainer) linkContainer.classList.remove('hidden');
             const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
             const link = `${baseUrl}/acompanhamento.html?id=${app.currentPauta.id}`;
-            document.getElementById('share-link-input').value = link;
-            document.getElementById('open-external-btn').href = link;
+            const linkInput = document.getElementById('share-link-input');
+            if (linkInput) linkInput.value = link;
+            
+            const btnExt = document.getElementById('open-external-btn');
+            if (btnExt) btnExt.href = link;
         } else {
-            linkContainer.classList.add('hidden');
+            if (linkContainer) linkContainer.classList.add('hidden');
         }
     },
 
@@ -106,11 +112,12 @@ export const ModalService = {
      */
     openPriorityModal(assistedId) {
         window.assistedIdToHandle = assistedId;
-        document.getElementById('priority-reason-modal').classList.remove('hidden');
+        const modal = document.getElementById('priority-reason-modal');
+        if (modal) modal.classList.remove('hidden');
         
-        // Reset selected chips
         document.querySelectorAll('.p-chip').forEach(c => c.classList.remove('selected'));
-        document.getElementById('priority-reason-input').value = '';
+        const input = document.getElementById('priority-reason-input');
+        if (input) input.value = '';
     },
 
     /**
@@ -119,25 +126,29 @@ export const ModalService = {
     openArrivalModal(assistedId, app) {
         window.assistedIdToHandle = assistedId;
         const modal = document.getElementById('arrival-modal');
-        document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5);
+        
+        const timeInput = document.getElementById('arrival-time-input');
+        if (timeInput) timeInput.value = new Date().toTimeString().slice(0,5);
         
         const roomContainer = document.getElementById('arrival-room-container');
         const roomSelect = document.getElementById('arrival-room-select');
         
         if (app.currentPauta?.type === 'multisala' && app.currentPauta.rooms) {
-            roomContainer.classList.remove('hidden');
-            roomSelect.innerHTML = '';
-            app.currentPauta.rooms.forEach(room => {
-                const opt = document.createElement('option');
-                opt.value = room;
-                opt.textContent = room;
-                roomSelect.appendChild(opt);
-            });
+            if (roomContainer) roomContainer.classList.remove('hidden');
+            if (roomSelect) {
+                roomSelect.innerHTML = '';
+                app.currentPauta.rooms.forEach(room => {
+                    const opt = document.createElement('option');
+                    opt.value = room;
+                    opt.textContent = room;
+                    roomSelect.appendChild(opt);
+                });
+            }
         } else {
-            roomContainer.classList.add('hidden');
+            if (roomContainer) roomContainer.classList.add('hidden');
         }
         
-        modal.classList.remove('hidden');
+        if (modal) modal.classList.remove('hidden');
     },
 
     /**
@@ -145,7 +156,9 @@ export const ModalService = {
      */
     openAttendantModal(assistedId, colaboradores) {
         window.assistedIdToHandle = assistedId;
-        document.getElementById('attendant-name').value = '';
+        
+        const inputName = document.getElementById('attendant-name');
+        if (inputName) inputName.value = '';
         
         const datalist = document.getElementById('collaborators-list');
         if (datalist) {
@@ -166,31 +179,36 @@ export const ModalService = {
     openSelectCollaboratorModal(assistedId, assistedName, colaboradores) {
         window.assistedIdToHandle = assistedId;
         window.assistedNameToHandle = assistedName;
-        document.getElementById('assisted-to-attend-name').textContent = assistedName;
+        
+        const nameLabel = document.getElementById('assisted-to-attend-name');
+        if (nameLabel) nameLabel.textContent = assistedName;
         
         const list = document.getElementById('collaborator-selection-list');
         if (!list) return;
         
         list.innerHTML = '';
 
-        // Opção "Não atribuir"
         const noAssign = document.createElement('label');
-        noAssign.className = 'flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50';
+        noAssign.className = 'flex items-center p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors shadow-sm mb-2';
         noAssign.innerHTML = `
-            <input type="radio" name="selectedCollaborator" value="null" data-name="Não atribuído" class="h-5 w-5" checked>
-            <span class="ml-3 font-semibold">Não atribuir</span>
+            <input type="radio" name="selectedCollaborator" value="null" data-name="Não atribuído" class="h-5 w-5 text-blue-600 focus:ring-blue-500" checked>
+            <span class="ml-3 font-semibold text-slate-700">🚫 Manter na Fila Geral (Não Atribuir)</span>
         `;
         list.appendChild(noAssign);
 
         if (colaboradores.length === 0) {
-            list.innerHTML += '<p class="text-gray-500 text-center mt-2">Nenhum colaborador cadastrado.</p>';
+            list.innerHTML += '<p class="text-slate-400 text-center mt-4 text-sm italic">Nenhum colaborador cadastrado na pauta.</p>';
         } else {
             colaboradores.forEach(c => {
+                const isDef = (c.cargo || '').toLowerCase().includes('defensor');
                 const label = document.createElement('label');
-                label.className = 'flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50';
+                label.className = 'flex items-center p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors shadow-sm mb-2';
                 label.innerHTML = `
-                    <input type="radio" name="selectedCollaborator" value="${c.id}" data-name="${c.nome}" class="h-5 w-5">
-                    <span class="ml-3 font-semibold">${c.nome}</span>
+                    <input type="radio" name="selectedCollaborator" value="${c.id}" data-name="${c.nome}" class="h-5 w-5 text-blue-600 focus:ring-blue-500">
+                    <div class="ml-3 flex flex-col">
+                        <span class="font-bold text-slate-800">${escapeHTML(c.nome)}</span>
+                        <span class="text-[10px] uppercase font-bold tracking-wider ${isDef ? 'text-blue-500' : 'text-slate-400'}">${escapeHTML(c.cargo)}</span>
+                    </div>
                 `;
                 list.appendChild(label);
             });
@@ -207,7 +225,8 @@ export const ModalService = {
         if (!assisted) return;
 
         window.assistedIdToHandle = assistedId;
-        document.getElementById('demands-assisted-name-modal').textContent = assisted.name;
+        const nameLabel = document.getElementById('demands-assisted-name-modal');
+        if (nameLabel) nameLabel.textContent = assisted.name;
         
         const container = document.getElementById('demands-modal-list-container');
         if (!container) return;
@@ -216,14 +235,14 @@ export const ModalService = {
 
         const demands = assisted.demandas?.descricoes || [];
         if (demands.length === 0) {
-            container.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
+            container.innerHTML = '<p class="text-slate-400 text-center text-sm italic p-2">Nenhuma demanda adicional registrada.</p>';
         } else {
             demands.forEach(demand => {
                 const li = document.createElement('li');
-                li.className = 'flex justify-between items-center p-2 bg-white rounded-md';
+                li.className = 'flex justify-between items-center p-3 bg-white border border-slate-200 rounded-lg shadow-sm mb-2';
                 li.innerHTML = `
-                    <span>${escapeHTML(demand)}</span>
-                    <button class="remove-demand-item-btn text-red-500 text-xs">Remover</button>
+                    <span class="text-sm font-medium text-slate-700">${escapeHTML(demand)}</span>
+                    <button class="remove-demand-item-btn text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 rounded transition">🗑️</button>
                 `;
                 container.appendChild(li);
             });
@@ -250,7 +269,6 @@ export const ModalService = {
         const inviteBtn = document.getElementById('invite-member-btn');
         
         if (!modal || !container) {
-            console.error("Modal de membros não encontrado");
             showNotification("Modal de membros não encontrado", "error");
             return;
         }
@@ -271,15 +289,18 @@ export const ModalService = {
                     pautaData.memberEmails.forEach(email => {
                         const isOwner = pautaData.ownerEmail === email;
                         const memberEl = document.createElement('div');
-                        memberEl.className = 'flex justify-between items-center bg-gray-100 p-2 rounded';
+                        memberEl.className = 'flex justify-between items-center bg-slate-50 border border-slate-200 p-3 rounded-lg shadow-sm mb-2';
                         memberEl.innerHTML = `
-                            <span>${email} ${isOwner ? '<span class="text-xs text-yellow-600 font-bold">(dono)</span>' : ''}</span>
-                            ${!isOwner ? `<button data-email="${email}" class="remove-member-btn text-red-500 hover:text-red-700 text-sm font-semibold">Remover</button>` : ''}
+                            <div class="flex items-center gap-2">
+                                <span class="bg-indigo-100 text-indigo-600 p-1.5 rounded-full text-xs">👤</span>
+                                <span class="font-medium text-slate-700">${email} ${isOwner ? '<span class="text-[10px] text-amber-600 font-black uppercase ml-1 bg-amber-50 px-1 rounded border border-amber-200">Dono</span>' : ''}</span>
+                            </div>
+                            ${!isOwner ? `<button data-email="${email}" class="remove-member-btn text-red-500 hover:text-white hover:bg-red-500 px-2 py-1 text-xs rounded transition-colors font-bold border border-red-200">Remover</button>` : ''}
                         `;
                         container.appendChild(memberEl);
                     });
                 } else {
-                    container.innerHTML = '<p class="text-gray-500 text-center">Nenhum membro na pauta. Convide alguém!</p>';
+                    container.innerHTML = '<p class="text-slate-400 text-center italic mt-2">Nenhum membro convidado.</p>';
                 }
             }
         } catch (error) {
@@ -287,16 +308,15 @@ export const ModalService = {
             showNotification("Erro ao carregar membros", "error");
         }
 
-        // Listener para o botão de convidar
         if (inviteBtn) {
             inviteBtn.onclick = async () => {
                 const email = inviteInput?.value.trim().toLowerCase();
                 if (!email) {
-                    if (statusDiv) statusDiv.textContent = 'Por favor, insira um email.';
+                    if (statusDiv) statusDiv.innerHTML = '<span class="text-red-500 text-xs font-bold">Por favor, insira um email.</span>';
                     return;
                 }
                 
-                if (statusDiv) statusDiv.textContent = 'Verificando...';
+                if (statusDiv) statusDiv.innerHTML = '<span class="text-indigo-500 text-xs font-bold animate-pulse">Verificando...</span>';
                 
                 try {
                     const usersRef = collection(app.db, "users");
@@ -304,7 +324,7 @@ export const ModalService = {
                     const querySnapshot = await getDocs(q);
                     
                     if (querySnapshot.empty) {
-                        if (statusDiv) statusDiv.textContent = 'Usuário não encontrado.';
+                        if (statusDiv) statusDiv.innerHTML = '<span class="text-red-500 text-xs font-bold">Usuário não encontrado no sistema.</span>';
                         return;
                     }
                     
@@ -316,15 +336,14 @@ export const ModalService = {
                         memberEmails: arrayUnion(email)
                     });
                     
-                    if (statusDiv) statusDiv.textContent = `Usuário ${email} convidado!`;
+                    if (statusDiv) statusDiv.innerHTML = `<span class="text-green-600 text-xs font-bold">✅ Usuário adicionado!</span>`;
                     if (inviteInput) inviteInput.value = '';
                     
-                    // Recarregar a lista
                     this.openMembersModal(app);
                     
                 } catch (error) {
                     console.error("Erro ao convidar:", error);
-                    if (statusDiv) statusDiv.textContent = 'Erro ao convidar usuário.';
+                    if (statusDiv) statusDiv.innerHTML = '<span class="text-red-500 text-xs font-bold">Erro de conexão ao convidar.</span>';
                 }
             };
         }
@@ -334,41 +353,54 @@ export const ModalService = {
      * Abre o modal de editar nome da pauta
      */
     openEditPautaModal(app) {
-        document.getElementById('edit-pauta-name-input').value = app.currentPauta?.name || '';
-        document.getElementById('edit-pauta-modal').classList.remove('hidden');
+        const input = document.getElementById('edit-pauta-name-input');
+        if (input) input.value = app.currentPauta?.name || '';
+        document.getElementById('edit-pauta-modal')?.classList.remove('hidden');
     },
 
     /**
      * Abre o modal de fechar pauta
      */
     openClosePautaModal(app) {
-        document.getElementById('close-modal-title').textContent = 'Fechar Pauta';
-        document.getElementById('close-modal-message').textContent = 'Para fechar esta pauta, confirme sua senha. Nenhum membro poderá fazer alterações até que você a reabra.';
-        document.getElementById('close-pauta-password').value = '';
-        document.getElementById('confirm-close-pauta-btn').textContent = 'Confirmar';
-        document.getElementById('close-pauta-modal').classList.remove('hidden');
+        const title = document.getElementById('close-modal-title');
+        const msg = document.getElementById('close-modal-message');
+        const pass = document.getElementById('close-pauta-password');
+        const btn = document.getElementById('confirm-close-pauta-btn');
+
+        if (title) title.textContent = 'Fechar Pauta';
+        if (msg) msg.textContent = 'Confirme sua senha. Nenhum membro poderá fazer alterações até que você a reabra.';
+        if (pass) pass.value = '';
+        if (btn) btn.textContent = 'Confirmar Fechamento';
+        
+        document.getElementById('close-pauta-modal')?.classList.remove('hidden');
     },
 
     /**
      * Abre o modal de reabrir pauta
      */
     openReopenPautaModal(app) {
-        document.getElementById('close-modal-title').textContent = 'Reabrir Pauta';
-        document.getElementById('close-modal-message').textContent = 'Para reabrir esta pauta, confirme sua senha.';
-        document.getElementById('close-pauta-password').value = '';
-        document.getElementById('confirm-close-pauta-btn').textContent = 'Reabrir';
-        document.getElementById('close-pauta-modal').classList.remove('hidden');
+        const title = document.getElementById('close-modal-title');
+        const msg = document.getElementById('close-modal-message');
+        const pass = document.getElementById('close-pauta-password');
+        const btn = document.getElementById('confirm-close-pauta-btn');
+
+        if (title) title.textContent = 'Reabrir Pauta';
+        if (msg) msg.textContent = 'Confirme sua senha para destravar a pauta para a equipe.';
+        if (pass) pass.value = '';
+        if (btn) btn.textContent = 'Reabrir Pauta';
+        
+        document.getElementById('close-pauta-modal')?.classList.remove('hidden');
     },
 
     /**
      * Abre o modal de zerar pauta
      */
     openResetPautaModal(app) {
-        document.getElementById('reset-confirm-modal').classList.remove('hidden');
+        document.getElementById('reset-confirm-modal')?.classList.remove('hidden');
     },
 
     /**
-     * Fecha todos os modais
+     * Utilitário global: Fecha todos os modais
      */
     closeAllModals() {
         document.querySelectorAll('.fixed.inset-0').forEach(modal => {
