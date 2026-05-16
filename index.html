@@ -343,10 +343,17 @@
                                 <label for="assisted-name" class="mb-1 font-medium text-gray-600 text-sm">Nome do Assistido</label>
                                 <input type="text" id="assisted-name" placeholder="Ex: João da Silva" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
                             </div>
+                            
                             <div class="flex flex-col">
                                 <label for="assisted-cpf" class="mb-1 font-medium text-gray-600 text-sm">CPF (Opcional)</label>
                                 <input type="text" id="assisted-cpf" placeholder="___.___.___-__" maxlength="14" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
                             </div>
+                            
+                            <div class="flex flex-col">
+                                <label for="assisted-num-agendamento" class="mb-1 font-medium text-gray-600 text-sm">Nº Agend.</label>
+                                <input type="text" id="assisted-num-agendamento" placeholder="Ex: 12345" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
+                            </div>
+                            
                             <div class="flex flex-col lg:col-span-4">
                                 <div class="flex items-center gap-2 mb-1">
                                     <label for="assisted-subject" class="font-medium text-gray-600 text-sm">Matéria - Assunto</label>
@@ -560,7 +567,6 @@
             </div>
         </div>
     </footer>
-
 
     <div id="pauta-type-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
@@ -1190,6 +1196,9 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
             <div class="space-y-4">
                 <div><label for="edit-assisted-name" class="block text-sm font-medium text-gray-700">Nome</label><input type="text" id="edit-assisted-name" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg text-sm sm:text-base"></div>
                 <div><label for="edit-assisted-cpf" class="block text-sm font-medium text-gray-700">CPF</label><input type="text" id="edit-assisted-cpf" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg text-sm sm:text-base"></div>
+                
+                <div><label for="edit-assisted-num-agendamento" class="block text-sm font-medium text-gray-700">Nº Agendamento</label><input type="text" id="edit-assisted-num-agendamento" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg text-sm sm:text-base"></div>
+                
                 <div><label for="edit-assisted-subject" class="block text-sm font-medium text-gray-700">Assunto</label><input list="subjects-list" type="text" id="edit-assisted-subject" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg text-sm sm:text-base"></div>
                 <div><label for="edit-scheduled-time" class="block text-sm font-medium text-gray-700">Horário Agendado</label><input type="time" id="edit-scheduled-time" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg text-sm sm:text-base"></div>
             </div>
