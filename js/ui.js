@@ -9,6 +9,11 @@ export const UIService = {
         document.getElementById('pauta-selection-container').classList.toggle('hidden', screenName !== 'pautaSelection');
         document.getElementById('app-container').classList.toggle('hidden', screenName !== 'app');
         document.getElementById('dashboard-container').classList.toggle('hidden', screenName !== 'dashboard');
+
+        // ⭐ SALVA A TELA ATUAL NA MEMÓRIA (Para não perder no F5) ⭐
+        if (screenName !== 'loading' && screenName !== 'login') {
+            localStorage.setItem('lastScreen', screenName);
+        }
     },
 
     isMobileDevice() {
@@ -82,8 +87,8 @@ export const UIService = {
                 container.innerHTML = '';
                 app.colaboradores.forEach(c => {
                     const btn = document.createElement('button');
-                    btn.className = "w-full text-left p-3 mb-2 bg-white border rounded-lg hover:bg-blue-50 transition";
-                    btn.innerHTML = `<strong>${escapeHTML(c.nome)}</strong> - ${escapeHTML(c.cargo)}`;
+                    btn.className = "w-full text-left p-3 mb-2 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 transition shadow-sm font-semibold text-gray-700";
+                    btn.innerHTML = `<span class="text-blue-600 mr-2">👤</span> ${escapeHTML(c.nome)} <span class="text-xs text-gray-400 font-normal ml-1">- ${escapeHTML(c.cargo)}</span>`;
                     btn.onclick = () => {
                         window.selectedCollaboratorId = c.id || c.nome;
                         window.selectedCollaboratorName = c.nome;
@@ -352,18 +357,13 @@ export const UIService = {
     renderAssistedLists(app) {
         if (!app) return;
         
-        // ==== ATUALIZA O PAINEL GERAL (SE ESTIVER ABERTO) ====
+        // Atualiza o painel geral flutuante, se estiver aberto
         if (typeof PainelGeralService !== 'undefined') {
-            const painelModal = document.getElementById('painel-flutuante-monitor'); // Pega o ID da janela se tiver mudado o tipo
+            const painelModal = document.getElementById('painel-geral-externo-modal'); 
             if (painelModal && !painelModal.classList.contains('hidden')) {
                 PainelGeralService.atualizarConteudo(app);
             }
-            // Para o novo modelo que usa janela flutuante, a atualização ocorre se o elemento base existir e estiver visível
-            if (typeof PainelGeralService.atualizarConteudo === 'function') {
-                 PainelGeralService.atualizarConteudo(app);
-            }
         }
-        // =====================================================
 
         const allAssisted = app.allAssisted || [];
         const currentPautaData = app.currentPautaData;
@@ -826,7 +826,7 @@ export const UIService = {
                 <div class="flex flex-col h-full">
                     ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
                     <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(nomeSeguro)}</p>
-                    ${item.numeroAgendamento ? `<p class="text-xs text-gray-600 mb-1">Nº Agend.: <strong>${escapeHTML(item.numeroAgendamento)}</strong></p>` : ''}
+                    ${item.numeroAgendamento ? `<p class="text-xs text-blue-700 font-bold mb-1 tracking-wide">Nº Agend.: ${escapeHTML(item.numeroAgendamento)}</p>` : ''}
                     <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
                     <div class="flex items-end justify-between w-full mb-2 gap-2">
                         <div class="flex flex-wrap items-center gap-2">
@@ -960,7 +960,7 @@ export const UIService = {
                 </button>` : ''}
 
                 <p class="font-bold text-lg text-gray-800 leading-tight">${index + 1}. ${escapeHTML(item.name || '')}</p>
-                ${item.numeroAgendamento ? `<p class="text-xs text-gray-600 mt-1">Nº Agend.: <strong>${escapeHTML(item.numeroAgendamento)}</strong></p>` : ''}
+                ${item.numeroAgendamento ? `<p class="text-xs text-blue-700 font-bold mt-1 tracking-wide">Nº Agend.: ${escapeHTML(item.numeroAgendamento)}</p>` : ''}
                 <p class="text-xs text-gray-600 mt-1">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
                 <p class="text-xs text-gray-600 mt-1">Colaborador: ${escapeHTML(atendenteNome)}</p>
                 <p class="text-xs text-gray-400 mt-1">Início do Tempo: ${startTime}</p>
@@ -1045,7 +1045,7 @@ export const UIService = {
                     </button>
                 </div>
                 
-                ${item.numeroAgendamento ? `<p class="text-xs md:text-sm mt-1 text-gray-700">Nº Agend.: <b>${escapeHTML(item.numeroAgendamento)}</b></p>` : ''}
+                ${item.numeroAgendamento ? `<p class="text-xs md:text-sm mt-1 text-blue-700 font-bold tracking-wide">Nº Agend.: ${escapeHTML(item.numeroAgendamento)}</p>` : ''}
                 <p class="text-xs md:text-sm mt-1 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
                 
                 ${item.tipoAcaoRapida ? (() => {
@@ -1144,7 +1144,7 @@ export const UIService = {
                     </button>
                 </div>
                 
-                ${item.numeroAgendamento ? `<p class="text-xs md:text-sm mt-2 text-gray-700">Nº Agend.: <b>${escapeHTML(item.numeroAgendamento)}</b></p>` : ''}
+                ${item.numeroAgendamento ? `<p class="text-xs md:text-sm mt-2 text-blue-700 font-bold tracking-wide">Nº Agend.: ${escapeHTML(item.numeroAgendamento)}</p>` : ''}
                 <p class="text-xs md:text-sm mt-2 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
                 
                 <div class="grid grid-cols-2 gap-2 text-center border-t border-b py-2 my-3 text-[9px] md:text-[10px] text-gray-400 uppercase font-bold tracking-wider">
@@ -1297,9 +1297,9 @@ export const UIService = {
                     </div>
 
                     <div class="mt-2 space-y-1">
-                        ${item.numeroAgendamento ? `<p class="text-xs text-gray-600">Nº Agend.: <strong>${escapeHTML(item.numeroAgendamento)}</strong></p>` : ''}
+                        ${item.numeroAgendamento ? `<p class="text-xs text-blue-700 font-bold tracking-wide">Nº Agend.: ${escapeHTML(item.numeroAgendamento)}</p>` : ''}
                         <p class="text-xs text-gray-600">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
-                        ${item.numeroProcesso ? `<p class="text-xs text-blue-700">Nº Proc: <strong>${escapeHTML(item.numeroProcesso)}</strong></p>` : ''}
+                        ${item.numeroProcesso ? `<p class="text-xs text-blue-700 font-bold">Nº Proc: ${escapeHTML(item.numeroProcesso)}</p>` : ''}
                     </div>
 
                     ${historicoTransferenciaHtml}
