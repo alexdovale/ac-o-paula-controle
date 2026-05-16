@@ -351,6 +351,10 @@ export const UIService = {
     renderAssistedLists(app) {
         if (!app) return;
         
+        // ==== INJETA O BOTÃO MEU PAINEL AUTOMATICAMENTE ====
+        this.injetarBotaoMeuPainel(app);
+        // ===================================================
+
         const allAssisted = app.allAssisted || [];
         const currentPautaData = app.currentPautaData;
         const colaboradores = app.colaboradores || [];
@@ -395,12 +399,9 @@ export const UIService = {
             distribuicao: allAssisted.filter(a => a.status === 'aguardandoDistribuicao' && this.searchFilter(a, searchTerms.distribuicao))
         };
 
-        // Ordem Padrão (Agendado primeiro)
         lists.pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
         lists.atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime)); 
         lists.faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00')); 
-        
-        // ORDEM DE ATENDIMENTO: O primeiro a entrar fica no topo!
         lists.emAtendimento.sort((a, b) => new Date(a.inAttendanceTime) - new Date(b.inAttendanceTime)); 
         
         if (currentPautaData?.ordemAtendimento) {
@@ -1895,5 +1896,133 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             
             showNotification(`Status de Marcado Presença no Verde atualizado para ${newConfirmedState ? 'Confirmado' : 'Não Confirmado'}.`, 'info');
         }
+    },
+
+    // ==========================================
+    // INJEÇÃO DO BOTÃO "MEU PAINEL"
+    // ==========================================
+    injetarBotaoMeuPainel(app) {
+        if (document.getElementById('btn-meu-painel-flutuante')) return;
+
+        const btn = document.createElement('button');
+        btn.id = 'btn-meu-painel-flutuante';
+        // Estilo moderno flutuante e expansivo
+        btn.className = "fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full shadow-2xl hover:bg-indigo-700 hover:shadow-indigo-500/50 hover:scale-105 transition-all z-50 flex items-center justify-center group overflow-hidden border-2 border-indigo-400/30";
+        btn.title = "Meu Painel de Produtividade";
+        
+        btn.innerHTML = `
+            <span class="text-2xl leading-none">📊</span>
+            <span class="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-[150px] group-hover:ml-2 transition-all duration-300 font-black text-sm tracking-wide">
+                MEU PAINEL
+            </span>
+        `;
+        
+        btn.onclick = () => this.abrirMeuPainel(app);
+        document.body.appendChild(btn);
+    },
+
+    // ==========================================
+    // CRIAÇÃO E LÓGICA DO MODAL "MEU PAINEL"
+    // ==========================================
+    abrirMeuPainel(app) {
+        let modal = document.getElementById('meu-painel-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'meu-painel-modal';
+            modal.className = 'fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity';
+            document.body.appendChild(modal);
+        }
+
+        const userName = app.currentUserName;
+        
+        // Filtra APENAS os assistidos onde o atendente é a pessoa logada no momento
+        const meusAtendimentos = (app.allAssisted || []).filter(a => {
+            const atendente = this.getAttendantName(a);
+            return atendente === userName && (a.status === 'atendido' || a.status === 'emAtendimento' || a.status === 'aguardandoDistribuicao');
+        });
+
+        const finalizados = meusAtendimentos.filter(a => a.status === 'atendido' || a.status === 'aguardandoDistribuicao');
+        const emAndamento = meusAtendimentos.filter(a => a.status === 'emAtendimento');
+
+        let listaHtml = '';
+        if (meusAtendimentos.length === 0) {
+            listaHtml = `<div class="text-center py-8 text-gray-400">
+                            <span class="text-5xl block mb-3 opacity-50">📭</span>
+                            <p class="font-medium text-sm">Você ainda não assumiu ou finalizou atendimentos nesta pauta hoje.</p>
+                         </div>`;
+        } else {
+            // Ordena para os mais recentes ficarem no topo da lista
+            meusAtendimentos.sort((a, b) => new Date(b.attendedTime || b.inAttendanceTime || 0) - new Date(a.attendedTime || a.inAttendanceTime || 0));
+            
+            listaHtml = `<div class="space-y-3 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">`;
+            
+            meusAtendimentos.forEach(item => {
+                const isConcluido = item.status === 'atendido' || item.status === 'aguardandoDistribuicao';
+                const icon = isConcluido ? '✅' : '⏳';
+                const statusTexto = isConcluido ? 'Concluído' : 'Em andamento';
+                const corBorder = isConcluido ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50';
+                
+                const hora = item.attendedTime || item.inAttendanceTime;
+                const horaFormatada = hora ? new Date(hora).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
+
+                listaHtml += `
+                    <div class="flex justify-between items-center p-3 rounded-xl border ${corBorder} shadow-sm">
+                        <div class="truncate pr-3">
+                            <p class="font-black text-gray-800 text-sm truncate">${escapeHTML(item.name || 'Sem Nome')}</p>
+                            <p class="text-[10px] text-gray-500 uppercase mt-0.5 font-medium truncate">${escapeHTML(item.subject || 'S/ Assunto')}</p>
+                        </div>
+                        <div class="text-right flex-shrink-0 flex flex-col items-end">
+                            <span class="text-sm bg-white px-2 py-0.5 rounded border border-gray-200 shadow-sm flex items-center gap-1">
+                                ${icon} <span class="text-[9px] font-bold text-gray-600">${statusTexto}</span>
+                            </span>
+                            <p class="text-[10px] font-bold text-gray-400 mt-1">${horaFormatada}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            listaHtml += `</div>`;
+        }
+
+        modal.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col transform transition-all scale-100 animate-fade-in-up">
+                <div class="bg-indigo-600 p-6 flex justify-between items-center text-white relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -mr-10 -mt-10 pointer-events-none"></div>
+                    <div class="relative z-10">
+                        <h2 class="font-black text-2xl flex items-center gap-2"><span>📊</span> Meu Painel</h2>
+                        <p class="text-indigo-200 text-xs mt-1 font-medium">Sua produtividade na pauta atual</p>
+                    </div>
+                    <button id="close-meu-painel" class="relative z-10 text-indigo-200 hover:text-white hover:rotate-90 transition-all text-3xl font-light leading-none">&times;</button>
+                </div>
+                
+                <div class="p-6 bg-gray-50">
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="bg-white p-5 rounded-xl border border-green-100 text-center shadow-sm relative overflow-hidden group">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
+                            <p class="text-4xl font-black text-green-600 group-hover:scale-110 transition-transform">${finalizados.length}</p>
+                            <p class="text-[10px] text-gray-500 font-bold uppercase mt-2 tracking-wider">Finalizados</p>
+                        </div>
+                        <div class="bg-white p-5 rounded-xl border border-blue-100 text-center shadow-sm relative overflow-hidden group">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                            <p class="text-4xl font-black text-blue-500 group-hover:scale-110 transition-transform">${emAndamento.length}</p>
+                            <p class="text-[10px] text-gray-500 font-bold uppercase mt-2 tracking-wider">Em Andamento</p>
+                        </div>
+                    </div>
+                    
+                    <h3 class="font-black text-xs text-gray-400 uppercase tracking-widest mb-4 border-b border-gray-200 pb-2">Histórico de Hoje</h3>
+                    ${listaHtml}
+                </div>
+            </div>
+        `;
+
+        modal.classList.remove('hidden');
+
+        document.getElementById('close-meu-painel').onclick = () => {
+            modal.classList.add('hidden');
+        };
+
+        // Fecha o modal ao clicar no fundo escuro
+        modal.onclick = (e) => {
+            if (e.target === modal) modal.classList.add('hidden');
+        };
     }
 };
