@@ -1,4 +1,4 @@
-// js/painelGeralService.js - MONITOR DE PRODUTIVIDADE (MODAL PADRONIZADO E DETALHADO)
+// js/painelGeralService.js - MONITOR DE PRODUTIVIDADE (DASHBOARD PROFISSIONAL)
 
 import { escapeHTML } from './utils.js';
 
@@ -7,8 +7,6 @@ export const PainelGeralService = {
     // 1. INJEÇÃO DO BOTÃO NO MENU DE AÇÕES
     // ========================================================
     injetarBotao(app) {
-        // A injeção e o controle de permissão continuam no main.js e ui.js,
-        // Mas podemos manter a lógica de atualização em tempo real aqui
         const modal = document.getElementById('painel-geral-externo-modal');
         if (modal && !modal.classList.contains('hidden')) {
             this.atualizarConteudo(app);
@@ -16,7 +14,7 @@ export const PainelGeralService = {
     },
 
     // ========================================================
-    // 2. CONSTRUÇÃO DO MODAL CENTRAL
+    // 2. CONSTRUÇÃO DO MODAL CENTRAL (ESTILO DASHBOARD)
     // ========================================================
     abrirPainel(app) {
         let modal = document.getElementById('painel-geral-externo-modal');
@@ -24,47 +22,42 @@ export const PainelGeralService = {
         if (!modal) {
             modal = document.createElement('div');
             modal.id = 'painel-geral-externo-modal';
-            // Usa as mesmas classes dos outros modais grandes do sistema (z-50, fundo preto translúcido, etc)
-            modal.className = 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-2 sm:p-4 transition-opacity';
+            // Fundo escuro com desfoque elegante (backdrop-blur)
+            modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-2 sm:p-6 transition-all duration-300 opacity-100';
             
             modal.innerHTML = `
-                <div class="bg-white shadow-2xl w-full max-w-5xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;">
+                <div class="bg-white shadow-2xl w-full max-w-7xl flex flex-col h-full sm:h-auto sm:rounded-2xl sm:max-h-[92vh] overflow-hidden transform scale-100 border border-slate-300">
                     
-                    <div class="flex justify-between items-center p-3 sm:p-5 border-b bg-emerald-50 shrink-0 sm:rounded-t-xl">
-                        <div class="flex items-center gap-3">
-                            <span class="text-2xl sm:text-3xl text-emerald-600 bg-white p-2 rounded-lg shadow-sm">📊</span>
+                    <div class="flex justify-between items-center p-4 sm:p-6 bg-slate-800 text-white shrink-0 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-64 h-64 bg-emerald-500 opacity-10 rounded-full blur-3xl -mr-10 -mt-20 pointer-events-none"></div>
+                        
+                        <div class="flex items-center gap-4 relative z-10">
+                            <div class="p-2.5 bg-white/10 rounded-xl backdrop-blur-md border border-white/10 shadow-inner">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-400"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                            </div>
                             <div>
-                                <h2 class="text-base sm:text-xl font-black text-emerald-800 uppercase tracking-wide">Monitor de Produtividade</h2>
-                                <p class="text-[10px] sm:text-xs font-semibold text-emerald-600 mt-0.5">Visão Geral da Equipe e Atendimentos</p>
+                                <h2 class="text-lg sm:text-2xl font-bold tracking-wide">Monitor de Produtividade</h2>
+                                <p class="text-[10px] sm:text-xs font-medium text-slate-300 mt-1">Acompanhamento em tempo real do fluxo externo</p>
                             </div>
                         </div>
-                        <button id="close-painel-geral-modal-btn" class="text-emerald-300 hover:text-emerald-600 bg-white hover:bg-emerald-100 rounded-lg p-2 transition-colors text-2xl font-bold leading-none w-10 h-10 flex items-center justify-center shadow-sm">&times;</button>
+                        <button id="close-painel-geral-modal-btn" class="relative z-10 text-slate-400 hover:text-white bg-slate-700/50 hover:bg-slate-700 rounded-lg p-2 transition-all w-10 h-10 flex items-center justify-center font-bold text-xl border border-transparent hover:border-slate-600 shadow-sm">&times;</button>
                     </div>
                     
-                    <div id="painel-monitor-body" class="flex-grow overflow-y-auto p-3 sm:p-6 bg-slate-50 scrollable-content">
+                    <div id="painel-monitor-body" class="flex-grow overflow-y-auto p-4 sm:p-6 bg-slate-50/80 scrollable-content">
                         <div id="painel-monitor-conteudo" class="space-y-6">
-                            <div class="flex justify-center py-10">
-                                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600"></div>
+                            <div class="flex justify-center py-20">
+                                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="p-3 sm:p-4 border-t bg-white shrink-0 sm:rounded-b-xl flex justify-end">
-                        <button id="btn-fechar-painel-baixo" class="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-300 transition-colors">Fechar Painel</button>
                     </div>
                 </div>
             `;
             
             document.body.appendChild(modal);
 
-            // Fechamento pelo X ou Botão Fechar
-            const closeActions = () => {
-                modal.classList.add('hidden');
-            };
+            const closeActions = () => { modal.classList.add('hidden'); };
             document.getElementById('close-painel-geral-modal-btn').onclick = closeActions;
-            document.getElementById('btn-fechar-painel-baixo').onclick = closeActions;
 
-            // Fechamento clicando fora do modal (no fundo escuro)
             modal.onclick = (e) => {
                 if (e.target === modal) closeActions();
             };
@@ -84,26 +77,34 @@ export const PainelGeralService = {
         const todos = app.allAssisted || [];
         const colaboradoresDb = app.colaboradores || [];
         
-        // Filtros de demandas externas
         const emMesa = todos.filter(a => a.status === 'emAtendimento' && a.delegationToken); 
         const distrib = todos.filter(a => a.status === 'aguardandoDistribuicao');
         const correcao = todos.filter(a => a.status === 'aguardandoCorrecao');
         const finalizados = todos.filter(a => a.status === 'atendido' && a.finalizadoPeloColaborador);
 
-        // Agrupamento dos colaboradores cadastrados
         const defensores = colaboradoresDb.filter(c => c.cargo?.toLowerCase().includes('defensor'));
         const servidores = colaboradoresDb.filter(c => !c.cargo?.toLowerCase().includes('defensor'));
+
+        // Função auxiliar para criar as Tags (Badges) de Processo/Agendamento
+        const getBadges = (a) => {
+            let badges = '';
+            if (a.numeroProcesso) {
+                badges += `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-slate-100 text-slate-600 border border-slate-200 mt-1" title="Nº do Processo">📄 ${escapeHTML(a.numeroProcesso)}</span>`;
+            }
+            if (a.numeroAgendamento) {
+                badges += `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 mt-1" title="Nº do Agendamento">📅 ${escapeHTML(a.numeroAgendamento)}</span>`;
+            }
+            return badges;
+        };
 
         // ====================================================
         // GERAÇÃO DE HTML: DEFENSORES
         // ====================================================
         const countDefensores = {};
-        // Inicializa com TODOS os defensores cadastrados
         defensores.forEach(d => { 
             countDefensores[d.nome] = { distrib: [], correcao: [], dataObj: d }; 
         });
 
-        // Adiciona as demandas para quem tem
         [...distrib, ...correcao].forEach(a => {
             const def = a.defensorResponsavel || 'Não Atribuído';
             if(!countDefensores[def]) countDefensores[def] = { distrib: [], correcao: [], dataObj: { nome: def, cargo: 'Defensor(a)' } };
@@ -118,50 +119,55 @@ export const PainelGeralService = {
             const isLivre = stats.distrib.length === 0 && stats.correcao.length === 0;
             
             let statusVisual = isLivre 
-                ? `<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded border border-emerald-200 shadow-sm font-black text-[10px] flex items-center gap-1.5"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> TOTALMENTE LIVRE</span>`
+                ? `<span class="bg-emerald-50 text-emerald-600 px-2 py-1 rounded-lg border border-emerald-100 shadow-sm font-bold text-[10px] flex items-center gap-1.5"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> Livre</span>`
                 : `<div class="flex gap-2">
-                     ${stats.distrib.length > 0 ? `<span class="bg-cyan-100 text-cyan-800 px-2.5 py-1 rounded text-[10px] font-black shadow-sm border border-cyan-200">${stats.distrib.length} Assinatura(s)</span>` : ''}
-                     ${stats.correcao.length > 0 ? `<span class="bg-amber-100 text-amber-800 px-2.5 py-1 rounded text-[10px] font-black shadow-sm border border-amber-200">${stats.correcao.length} Correção(ões)</span>` : ''}
+                     ${stats.distrib.length > 0 ? `<span class="bg-cyan-50 text-cyan-700 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-sm border border-cyan-100">${stats.distrib.length} Assinatura(s)</span>` : ''}
+                     ${stats.correcao.length > 0 ? `<span class="bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-sm border border-amber-100">${stats.correcao.length} Avaliação(ões)</span>` : ''}
                    </div>`;
 
-            // Detalhamento das peças (abre uma lista dentro do card)
             let detalhesHtml = '';
             if (!isLivre) {
-                detalhesHtml = `<div class="mt-3 space-y-1.5 border-t border-blue-100 pt-3 pl-2 sm:pl-4">`;
+                detalhesHtml = `<div class="mt-3 grid grid-cols-1 gap-2 pt-3 border-t border-slate-100">`;
                 
                 stats.distrib.forEach(a => {
                     detalhesHtml += `
-                        <div class="flex justify-between items-center text-xs bg-white p-2 rounded border border-cyan-100">
-                            <div class="flex flex-col">
-                                <span class="font-bold text-gray-800">${escapeHTML(a.name)}</span>
-                                <span class="text-[9px] text-gray-500">${escapeHTML(a.subject || 'S/ Assunto')}</span>
+                        <div class="flex justify-between items-start text-xs bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm hover:border-cyan-300 transition-colors">
+                            <div class="flex flex-col gap-0.5">
+                                <span class="font-bold text-slate-800">${escapeHTML(a.name)}</span>
+                                <span class="text-[10px] text-slate-500 truncate max-w-[200px]">${escapeHTML(a.subject || 'S/ Assunto')}</span>
+                                <div class="flex flex-wrap gap-1">
+                                    ${getBadges(a)}
+                                </div>
                             </div>
-                            <span class="bg-cyan-50 text-cyan-600 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase">Assinar</span>
+                            <span class="bg-cyan-50 text-cyan-700 px-2 py-1 rounded text-[9px] font-black uppercase tracking-wider border border-cyan-100 shrink-0">Assinar</span>
                         </div>`;
                 });
 
                 stats.correcao.forEach(a => {
                     detalhesHtml += `
-                        <div class="flex justify-between items-center text-xs bg-white p-2 rounded border border-amber-100">
-                            <div class="flex flex-col">
-                                <span class="font-bold text-gray-800">${escapeHTML(a.name)}</span>
-                                <span class="text-[9px] text-gray-500">${escapeHTML(a.subject || 'S/ Assunto')}</span>
-                                ${a.enviadoPor ? `<span class="text-[9px] font-semibold text-amber-500">De: ${escapeHTML(a.enviadoPor)}</span>` : ''}
+                        <div class="flex justify-between items-start text-xs bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm hover:border-amber-300 transition-colors">
+                            <div class="flex flex-col gap-0.5">
+                                <span class="font-bold text-slate-800">${escapeHTML(a.name)}</span>
+                                <span class="text-[10px] text-slate-500 truncate max-w-[200px]">${escapeHTML(a.subject || 'S/ Assunto')}</span>
+                                ${a.enviadoPor ? `<span class="text-[9px] font-semibold text-amber-600 mt-1">De: ${escapeHTML(a.enviadoPor)}</span>` : ''}
+                                <div class="flex flex-wrap gap-1">
+                                    ${getBadges(a)}
+                                </div>
                             </div>
-                            <span class="bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase">Corrigir</span>
+                            <span class="bg-amber-50 text-amber-700 px-2 py-1 rounded text-[9px] font-black uppercase tracking-wider border border-amber-100 shrink-0">Avaliar</span>
                         </div>`;
                 });
                 detalhesHtml += `</div>`;
             }
 
-            const presença = stats.dataObj.presente ? '<span class="text-green-500 ml-1" title="Presente">●</span>' : '<span class="text-gray-300 ml-1" title="Ausente">●</span>';
+            const presença = stats.dataObj.presente ? '<span class="text-green-500 ml-1 text-xs" title="Presente">●</span>' : '<span class="text-slate-300 ml-1 text-xs" title="Ausente">●</span>';
 
             defensoresHtml += `
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 shadow-sm hover:shadow transition-shadow">
+                <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                         <div>
-                            <h3 class="font-black text-blue-900 text-sm flex items-center">👨‍⚖️ ${escapeHTML(def)} ${presença}</h3>
-                            <p class="text-[10px] font-semibold text-blue-600 uppercase mt-0.5">Defensor(a) ${stats.dataObj.equipe ? '- Equipe ' + stats.dataObj.equipe : ''}</p>
+                            <h3 class="font-black text-slate-800 text-sm flex items-center">👨‍⚖️ ${escapeHTML(def)} ${presença}</h3>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Defensor(a) ${stats.dataObj.equipe ? '- Eq. ' + stats.dataObj.equipe : ''}</p>
                         </div>
                         ${statusVisual}
                     </div>
@@ -169,16 +175,13 @@ export const PainelGeralService = {
                 </div>
             `;
         });
-        if(!defensoresHtml) defensoresHtml = '<p class="text-sm text-gray-400 italic text-center py-4 bg-white rounded-lg border border-dashed">Nenhum defensor cadastrado na pauta.</p>';
+        if(!defensoresHtml) defensoresHtml = '<p class="text-sm text-slate-400 italic text-center py-6 bg-white rounded-xl border border-dashed border-slate-300">Nenhum defensor cadastrado.</p>';
 
         // ====================================================
         // GERAÇÃO DE HTML: SERVIDORES
         // ====================================================
         const countServidores = {};
-        // Inicializa com TODOS os servidores cadastrados
-        servidores.forEach(s => { 
-            countServidores[s.nome] = { mesa: [], dataObj: s }; 
-        });
+        servidores.forEach(s => { countServidores[s.nome] = { mesa: [], dataObj: s }; });
 
         emMesa.forEach(a => {
             const serv = a.assignedCollaborator?.name || 'Não Atribuído';
@@ -192,35 +195,37 @@ export const PainelGeralService = {
             const isLivre = stats.mesa.length === 0;
             
             let statusVisual = isLivre 
-                ? `<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded border border-emerald-200 shadow-sm font-black text-[10px] flex items-center gap-1.5"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> LIVRE</span>`
-                : `<span class="bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded text-[10px] font-black shadow-sm border border-indigo-200">⏳ ${stats.mesa.length} Em Mesa</span>`;
+                ? `<span class="bg-emerald-50 text-emerald-600 px-2 py-1 rounded-lg border border-emerald-100 shadow-sm font-bold text-[10px] flex items-center gap-1.5"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> Livre</span>`
+                : `<span class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg text-[10px] font-bold border border-indigo-100 shadow-sm">⏳ ${stats.mesa.length} Em Mesa</span>`;
 
-            // Detalhamento
             let detalhesHtml = '';
             if (!isLivre) {
-                detalhesHtml = `<div class="mt-3 space-y-1.5 border-t border-purple-100 pt-3 pl-2 sm:pl-4">`;
+                detalhesHtml = `<div class="mt-3 grid grid-cols-1 gap-2 pt-3 border-t border-slate-100">`;
                 stats.mesa.forEach(a => {
                     const hora = a.inAttendanceTime ? new Date(a.inAttendanceTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '';
                     detalhesHtml += `
-                        <div class="flex justify-between items-center text-xs bg-white p-2 rounded border border-purple-100">
-                            <div class="flex flex-col">
-                                <span class="font-bold text-gray-800">${escapeHTML(a.name)}</span>
-                                <span class="text-[9px] text-gray-500">${escapeHTML(a.subject || 'S/ Assunto')}</span>
+                        <div class="flex justify-between items-start text-xs bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors">
+                            <div class="flex flex-col gap-0.5">
+                                <span class="font-bold text-slate-800">${escapeHTML(a.name)}</span>
+                                <span class="text-[10px] text-slate-500 truncate max-w-[200px]">${escapeHTML(a.subject || 'S/ Assunto')}</span>
+                                <div class="flex flex-wrap gap-1">
+                                    ${getBadges(a)}
+                                </div>
                             </div>
-                            <span class="text-[9px] font-black text-purple-400 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100">${hora}</span>
+                            <span class="text-[9px] font-black text-indigo-500 bg-indigo-50 px-1.5 py-1 rounded border border-indigo-100 shrink-0">${hora}</span>
                         </div>`;
                 });
                 detalhesHtml += `</div>`;
             }
 
-            const presença = stats.dataObj.presente ? '<span class="text-green-500 ml-1" title="Presente">●</span>' : '<span class="text-gray-300 ml-1" title="Ausente">●</span>';
+            const presença = stats.dataObj.presente ? '<span class="text-green-500 ml-1 text-xs" title="Presente">●</span>' : '<span class="text-slate-300 ml-1 text-xs" title="Ausente">●</span>';
 
             servidoresHtml += `
-                <div class="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4 shadow-sm hover:shadow transition-shadow">
+                <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                         <div>
-                            <h3 class="font-black text-purple-900 text-sm flex items-center">🧑‍💻 ${escapeHTML(serv)} ${presença}</h3>
-                            <p class="text-[10px] font-semibold text-purple-600 uppercase mt-0.5">${escapeHTML(stats.dataObj.cargo)} ${stats.dataObj.equipe ? '- Equipe ' + stats.dataObj.equipe : ''}</p>
+                            <h3 class="font-black text-slate-800 text-sm flex items-center">🧑‍💻 ${escapeHTML(serv)} ${presença}</h3>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">${escapeHTML(stats.dataObj.cargo)} ${stats.dataObj.equipe ? '- Eq. ' + stats.dataObj.equipe : ''}</p>
                         </div>
                         ${statusVisual}
                     </div>
@@ -228,7 +233,7 @@ export const PainelGeralService = {
                 </div>
             `;
         });
-        if(!servidoresHtml) servidoresHtml = '<p class="text-sm text-gray-400 italic text-center py-4 bg-white rounded-lg border border-dashed">Nenhum servidor cadastrado na pauta.</p>';
+        if(!servidoresHtml) servidoresHtml = '<p class="text-sm text-slate-400 italic text-center py-6 bg-white rounded-xl border border-dashed border-slate-300">Nenhum servidor cadastrado.</p>';
 
         // ====================================================
         // GERAÇÃO DE HTML: FINALIZADOS
@@ -237,21 +242,24 @@ export const PainelGeralService = {
         let finalizadosHtml = '';
         
         if (finalizadosOrdenados.length === 0) {
-            finalizadosHtml = '<p class="text-sm text-gray-400 italic text-center py-4 bg-white rounded-lg border border-dashed">Nenhum atendimento finalizado pelo fluxo externo.</p>';
+            finalizadosHtml = '<p class="text-sm text-slate-400 italic text-center py-6 bg-white rounded-xl border border-dashed border-slate-300">Nenhum protocolo finalizado hoje.</p>';
         } else {
-            finalizadosHtml = `<div class="bg-white border border-green-200 rounded-lg overflow-hidden shadow-sm p-2 space-y-1">`;
+            finalizadosHtml = `<div class="bg-white border border-slate-200 rounded-xl shadow-sm p-3 space-y-2">`;
             finalizadosHtml += finalizadosOrdenados.map(a => {
                 const hora = a.attendedAt ? new Date(a.attendedAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
                 return `
-                    <div class="flex justify-between items-center py-2 px-2 border-b border-green-50 last:border-0 hover:bg-green-50 rounded transition-colors">
+                    <div class="flex justify-between items-center p-3 border border-slate-100 bg-slate-50/50 hover:bg-slate-100 rounded-lg transition-colors">
                         <div class="flex flex-col truncate pr-3">
-                            <span class="font-bold text-xs text-gray-800 truncate">${escapeHTML(a.name)}</span>
-                            <span class="text-[9px] text-gray-500 truncate">${escapeHTML(a.subject || 'S/ Assunto')}</span>
-                            ${a.attendedBy ? `<span class="text-[9px] text-green-600 font-bold mt-0.5">Por: ${escapeHTML(a.attendedBy)}</span>` : ''}
+                            <span class="font-bold text-xs text-slate-800 truncate">${escapeHTML(a.name)}</span>
+                            <span class="text-[10px] text-slate-500 truncate">${escapeHTML(a.subject || 'S/ Assunto')}</span>
+                            <div class="flex flex-wrap gap-1">
+                                ${getBadges(a)}
+                            </div>
+                            ${a.attendedBy ? `<span class="text-[9px] text-emerald-600 font-bold mt-1">Por: ${escapeHTML(a.attendedBy)}</span>` : ''}
                         </div>
                         <div class="flex flex-col items-end shrink-0">
-                            <span class="text-[9px] font-black text-green-700 bg-green-100 px-1.5 py-0.5 rounded border border-green-200 uppercase">Protocolado</span>
-                            <span class="text-[9px] font-bold text-gray-400 mt-1">${hora}</span>
+                            <span class="text-[9px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 uppercase tracking-wider shadow-sm">Protocolado</span>
+                            <span class="text-[10px] font-bold text-slate-400 mt-1.5">${hora}</span>
                         </div>
                     </div>
                 `;
@@ -263,52 +271,61 @@ export const PainelGeralService = {
         // RENDERIZAÇÃO FINAL NO MODAL
         // ====================================================
         conteudo.innerHTML = `
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
-                <div class="bg-white rounded-xl border border-gray-200 p-4 text-center shadow-sm relative overflow-hidden flex flex-col items-center justify-center">
-                    <div class="absolute top-0 left-0 w-full h-1 bg-purple-500"></div>
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Mesa Servidor</p>
-                    <p class="text-3xl font-black text-purple-600">${emMesa.length}</p>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 pl-2">Em Mesa</p>
+                    <p class="text-3xl font-black text-slate-800 pl-2">${emMesa.length}</p>
                 </div>
-                <div class="bg-white rounded-xl border border-gray-200 p-4 text-center shadow-sm relative overflow-hidden flex flex-col items-center justify-center">
-                    <div class="absolute top-0 left-0 w-full h-1 bg-cyan-500"></div>
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">P/ Assinatura</p>
-                    <p class="text-3xl font-black text-cyan-600">${distrib.length}</p>
+                <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-cyan-500"></div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 pl-2">Assinaturas</p>
+                    <p class="text-3xl font-black text-slate-800 pl-2">${distrib.length}</p>
                 </div>
-                <div class="bg-white rounded-xl border border-gray-200 p-4 text-center shadow-sm relative overflow-hidden flex flex-col items-center justify-center">
-                    <div class="absolute top-0 left-0 w-full h-1 bg-amber-500"></div>
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">P/ Avaliação</p>
-                    <p class="text-3xl font-black text-amber-500">${correcao.length}</p>
+                <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 pl-2">Avaliações</p>
+                    <p class="text-3xl font-black text-slate-800 pl-2">${correcao.length}</p>
                 </div>
-                <div class="bg-white rounded-xl border border-gray-200 p-4 text-center shadow-sm relative overflow-hidden flex flex-col items-center justify-center">
-                    <div class="absolute top-0 left-0 w-full h-1 bg-green-500"></div>
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Concluídos</p>
-                    <p class="text-3xl font-black text-green-600">${finalizados.length}</p>
+                <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 pl-2">Protocolados</p>
+                    <p class="text-3xl font-black text-slate-800 pl-2">${finalizados.length}</p>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="flex flex-col h-full bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                    <h3 class="font-black text-sm text-purple-700 uppercase tracking-widest mb-4 pb-2 border-b border-purple-100 flex items-center gap-2">
-                        <span>🧑‍💻</span> Servidores
-                    </h3>
-                    <div class="space-y-3">
+                
+                <div class="flex flex-col h-full">
+                    <div class="flex items-center justify-between mb-4 px-1">
+                        <h3 class="font-black text-sm text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                            <span class="text-indigo-500">🧑‍💻</span> Servidores
+                        </h3>
+                        <span class="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full font-bold">${servidores.length}</span>
+                    </div>
+                    <div class="space-y-4">
                         ${servidoresHtml}
                     </div>
                 </div>
 
-                <div class="flex flex-col h-full bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                    <h3 class="font-black text-sm text-blue-700 uppercase tracking-widest mb-4 pb-2 border-b border-blue-100 flex items-center gap-2">
-                        <span>👨‍⚖️</span> Defensores
-                    </h3>
-                    <div class="space-y-3">
+                <div class="flex flex-col h-full">
+                    <div class="flex items-center justify-between mb-4 px-1">
+                        <h3 class="font-black text-sm text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                            <span class="text-cyan-500">👨‍⚖️</span> Defensores
+                        </h3>
+                        <span class="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full font-bold">${defensores.length}</span>
+                    </div>
+                    <div class="space-y-4">
                         ${defensoresHtml}
                     </div>
                 </div>
 
-                <div class="flex flex-col h-full bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                    <h3 class="font-black text-sm text-green-700 uppercase tracking-widest mb-4 pb-2 border-b border-green-100 flex items-center gap-2">
-                        <span>✅</span> Últimos Concluídos
-                    </h3>
+                <div class="flex flex-col h-full">
+                    <div class="flex items-center justify-between mb-4 px-1">
+                        <h3 class="font-black text-sm text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                            <span class="text-emerald-500">✅</span> Concluídos
+                        </h3>
+                    </div>
                     <div>
                         ${finalizadosHtml}
                     </div>
