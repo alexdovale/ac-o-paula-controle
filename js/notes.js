@@ -1,16 +1,20 @@
-// js/notes.js - VERSÃO COMPLETA CORRIGIDA
-import { showNotification } from './utils.js';
+// js/notes.js - BLOCO DE NOTAS INTELIGENTE (MODERNIZADO)
+
+import { showNotification, debounce } from './utils.js';
 import { EmailService } from './emailService.js';
 
-// ========================================================
-// NOTES SERVICE - Objeto com todas as funções de anotações
-// ========================================================
-
 export const NotesService = {
-    STORAGE_KEY: 'pauta_notes',
+    
+    /**
+     * Gera uma chave única de armazenamento para não misturar rascunhos de pautas diferentes
+     */
+    getStorageKey() {
+        const pautaId = window.app?.currentPauta?.id || 'avulsa';
+        return `sigap_notes_v2_${pautaId}`;
+    },
 
     /**
-     * Configura o modal de anotações
+     * Configura os eventos e o modal de anotações
      */
     setup() {
         const notesBtn = document.getElementById("notes-btn");
@@ -19,142 +23,114 @@ export const NotesService = {
         const saveNotesBtn = document.getElementById("save-notes-btn");
         const notesText = document.getElementById("notes-text");
         
-        if (!notesBtn || !notesModal) {
-            console.warn("Elementos do modal de anotações não encontrados");
+        if (!notesBtn || !notesModal || !notesText) {
+            console.warn("Módulo de anotações não inicializado: Elementos não encontrados.");
             return;
         }
 
-        // Abrir modal
-        notesBtn.addEventListener("click", () => {
-            this.openModal();
+        // Abre o modal
+        notesBtn.addEventListener("click", () => this.openModal());
+
+        // Fecha o modal (botão e clique fora)
+        if (closeNotesBtn) closeNotesBtn.addEventListener("click", () => this.closeModal());
+        notesModal.addEventListener("click", (e) => {
+            if (e.target === notesModal) this.closeModal();
         });
 
-        // Fechar modal (botão X)
-        if (closeNotesBtn) {
-            closeNotesBtn.addEventListener("click", () => {
-                this.closeModal();
-            });
-        }
-
-        // Salvar anotações
+        // Salvar manual (feedback visual)
         if (saveNotesBtn) {
             saveNotesBtn.addEventListener("click", () => {
                 this.save();
+                this.closeModal();
             });
         }
 
-        // Fechar ao clicar fora do modal
-        notesModal.addEventListener("click", (e) => {
-            if (e.target === notesModal) {
-                this.closeModal();
+        // ==========================================
+        // AUTO-SAVE (Salvamento automático Premium)
+        // Salva silenciosamente a cada 1 segundo que o usuário para de digitar
+        // ==========================================
+        notesText.addEventListener("input", debounce(() => {
+            localStorage.setItem(this.getStorageKey(), notesText.value);
+            
+            // Opcional: Feedback bem sutil no botão de salvar para mostrar que salvou sozinho
+            if (saveNotesBtn) {
+                const textoOriginal = saveNotesBtn.textContent;
+                saveNotesBtn.textContent = "✓ Salvo";
+                saveNotesBtn.classList.replace('bg-indigo-600', 'bg-emerald-500');
+                setTimeout(() => {
+                    saveNotesBtn.textContent = textoOriginal;
+                    saveNotesBtn.classList.replace('bg-emerald-500', 'bg-indigo-600');
+                }, 1500);
             }
-        });
+        }, 1000));
     },
 
-    /**
-     * Abre o modal de anotações
-     */
     openModal() {
         const notesModal = document.getElementById("notes-modal");
         const notesText = document.getElementById("notes-text");
         
         if (notesModal && notesText) {
-            const saved = this.getNotes();
-            notesText.value = saved;
+            notesText.value = this.getNotes();
             notesModal.classList.remove("hidden");
+            // Foco automático para começar a digitar na hora
+            setTimeout(() => notesText.focus(), 100);
         }
     },
 
-    /**
-     * Fecha o modal de anotações
-     */
     closeModal() {
         const notesModal = document.getElementById("notes-modal");
-        if (notesModal) {
-            notesModal.classList.add("hidden");
-        }
+        if (notesModal) notesModal.classList.add("hidden");
     },
 
-    /**
-     * Salva as anotações atuais
-     */
     save() {
         const notesText = document.getElementById("notes-text");
         if (notesText) {
-            localStorage.setItem(this.STORAGE_KEY, notesText.value);
-            showNotification("Anotação salva!", "success");
-            this.closeModal();
+            localStorage.setItem(this.getStorageKey(), notesText.value);
+            showNotification("Anotações salvas com sucesso!", "success");
         }
     },
 
-    /**
-     * Obtém o texto das anotações
-     * @returns {string} Texto das anotações
-     */
     getNotes() {
-        return localStorage.getItem(this.STORAGE_KEY) || "";
+        return localStorage.getItem(this.getStorageKey()) || "";
     },
 
-    /**
-     * Limpa as anotações (opcional)
-     */
     clearNotes() {
-        if (confirm("Limpar todas as anotações?")) {
-            localStorage.removeItem(this.STORAGE_KEY);
-            showNotification("Anotações removidas!", "info");
+        if (confirm("Tem certeza que deseja apagar todas as anotações desta pauta?")) {
+            localStorage.removeItem(this.getStorageKey());
+            const notesText = document.getElementById("notes-text");
+            if (notesText) notesText.value = "";
+            showNotification("Anotações apagadas.", "info");
         }
     },
 
+    appendNotes(text) {
+        if (!text) return;
+        const current = this.getNotes();
+        const newNotes = current ? `${current}\n${text}` : text;
+        localStorage.setItem(this.getStorageKey(), newNotes);
+        showNotification("Texto anexado ao rascunho!", "success");
+    },
+
     /**
-     * Envia as anotações por email ao fechar a pauta
-     * @param {string} currentUserName - Nome do usuário atual
-     * @param {string} userEmail - Email do usuário
+     * Backup de segurança via E-mail
      */
     async sendOnClose(currentUserName, userEmail) {
         const notes = this.getNotes();
-        
-        if (notes.trim() === "") {
-            return;
-        }
+        if (!notes.trim() || !userEmail) return;
         
         try {
             await EmailService.sendNotesByEmail(notes, currentUserName, userEmail);
-            showNotification("Anotações enviadas para seu e-mail por segurança!", "info");
+            showNotification("Cópia das anotações enviada para seu e-mail.", "info");
         } catch (err) {
-            console.error("Falha ao enviar backup das notas:", err);
-            showNotification("Erro ao enviar anotações.", "error");
+            console.error("Falha ao enviar backup de notas:", err);
+            showNotification("Falha no backup das anotações por e-mail.", "warning");
         }
     },
 
-    /**
-     * Verifica se existem anotações salvas
-     * @returns {boolean}
-     */
-    hasNotes() {
-        const notes = this.getNotes();
-        return notes.trim() !== "";
-    },
-
-    /**
-     * Adiciona texto às anotações existentes
-     * @param {string} text - Texto a ser adicionado
-     */
-    appendNotes(text) {
-        if (!text) return;
-        
-        const current = this.getNotes();
-        const newNotes = current ? `${current}\n${text}` : text;
-        localStorage.setItem(this.STORAGE_KEY, newNotes);
-        showNotification("Texto adicionado às anotações!", "success");
-    },
-
-    /**
-     * Exporta anotações para download como arquivo .txt
-     */
     exportToTxt() {
         const notes = this.getNotes();
-        if (!notes) {
-            showNotification("Não há anotações para exportar", "info");
+        if (!notes.trim()) {
+            showNotification("O bloco de notas está vazio.", "warning");
             return;
         }
 
@@ -162,63 +138,25 @@ export const NotesService = {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `anotacoes_${new Date().toISOString().slice(0,10)}.txt`;
+        
+        const pautaNome = window.app?.currentPauta?.name || 'Geral';
+        const nomeArquivoSeguro = pautaNome.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        
+        a.download = `rascunho_${nomeArquivoSeguro}_${new Date().toISOString().slice(0,10)}.txt`;
         a.click();
         URL.revokeObjectURL(url);
         
-        showNotification("Anotações exportadas!", "success");
+        showNotification("Rascunho exportado (.txt)!", "success");
     }
 };
 
 // ========================================================
-// FUNÇÕES AVULSAS (para compatibilidade com código antigo)
+// FUNÇÕES AVULSAS (Mantidas para compatibilidade com versões antigas)
 // ========================================================
-
-/**
- * @deprecated Use NotesService.setup() instead
- */
-export function setupNotes() {
-    return NotesService.setup();
-}
-
-/**
- * @deprecated Use NotesService.openModal() instead
- */
-export function openNotesModal() {
-    return NotesService.openModal();
-}
-
-/**
- * @deprecated Use NotesService.save() instead
- */
-export function saveNotes() {
-    return NotesService.save();
-}
-
-/**
- * @deprecated Use NotesService.closeModal() instead
- */
-export function closeNotesModal() {
-    return NotesService.closeModal();
-}
-
-/**
- * @deprecated Use NotesService.sendOnClose() instead
- */
-export async function sendNotesOnClose(currentUserName, userEmail) {
-    return NotesService.sendOnClose(currentUserName, userEmail);
-}
-
-/**
- * @deprecated Use NotesService.getNotes() instead
- */
-export function getNotes() {
-    return NotesService.getNotes();
-}
-
-/**
- * @deprecated Use NotesService.clearNotes() instead
- */
-export function clearNotes() {
-    return NotesService.clearNotes();
-}
+export function setupNotes() { return NotesService.setup(); }
+export function openNotesModal() { return NotesService.openModal(); }
+export function saveNotes() { return NotesService.save(); }
+export function closeNotesModal() { return NotesService.closeModal(); }
+export async function sendNotesOnClose(currentUserName, userEmail) { return NotesService.sendOnClose(currentUserName, userEmail); }
+export function getNotes() { return NotesService.getNotes(); }
+export function clearNotes() { return NotesService.clearNotes(); }
