@@ -1,4 +1,5 @@
-// js/colaboradores.js - VERSÃO MOBILE + FILTRO ATA E ORDENAÇÃO AVANÇADA (SIGEP)
+// js/colaboradores.js - VERSÃO MOBILE + FILTRO ATA E ORDENAÇÃO AVANÇADA (MODERNIZADA)
+
 import { 
     collection, 
     onSnapshot, 
@@ -87,17 +88,17 @@ const CollaboratorService = {
     toggleOrdem() {
         this.ordemAtual = this.ordemAtual === 'grupo' ? 'nome' : 'grupo';
         const btn = document.getElementById('toggle-order-btn');
-        if (btn) btn.textContent = this.ordemAtual === 'grupo' ? '📁 Ordenar por Grupo' : '🔤 Ordenar por Nome';
+        if (btn) {
+            btn.innerHTML = this.ordemAtual === 'grupo' 
+                ? '<span class="mr-2">📁</span> Ordenar por Grupo' 
+                : '<span class="mr-2">🔤</span> Ordenar por Nome';
+        }
         if (window.app) this.renderTable(window.app);
     },
 
     // ========================================================
     // 3. GESTÃO DE DADOS DA ATA SOCIAL (PERSISTÊNCIA)
     // ========================================================
-    
-    /**
-     * Salva os dados do formulário da Ata no documento da Pauta
-     */
     async saveAtaData(app) {
         if (!app?.currentPauta?.id) {
             showNotification("Selecione uma pauta primeiro", "error");
@@ -120,7 +121,6 @@ const CollaboratorService = {
             const pautaRef = doc(app.db, "pautas", app.currentPauta.id);
             await updateDoc(pautaRef, data);
             
-            // Atualiza o cache local
             if (app.currentPautaData) {
                 app.currentPautaData = { ...app.currentPautaData, ...data };
             }
@@ -134,19 +134,14 @@ const CollaboratorService = {
         }
     },
 
-    /**
-     * Carrega os dados salvos da pauta para os campos do modal
-     */
     async loadAtaData(app) {
         if (!app?.currentPauta?.id) return;
 
         try {
-            // Busca os dados mais recentes do banco para garantir sincronia
             const pautaDoc = await getDoc(doc(app.db, "pautas", app.currentPauta.id));
             if (pautaDoc.exists()) {
                 const data = pautaDoc.data();
                 
-                // Preenche os campos se os dados existirem
                 if (data.ataAcaoNome) document.getElementById('ata-acao-nome').value = data.ataAcaoNome;
                 else document.getElementById('ata-acao-nome').value = app.currentPauta.name || '';
                 
@@ -185,10 +180,10 @@ const CollaboratorService = {
         
         const btn = document.createElement('button');
         btn.id = 'toggle-order-btn';
-        btn.className = 'w-full md:w-auto bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded text-sm mb-4 transition';
-        btn.textContent = this.ordemAtual === 'grupo' ? '📁 Ordenar por Grupo' : '🔤 Ordenar por Nome';
+        btn.className = 'w-full md:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-lg text-xs mb-4 transition-colors border border-slate-200 shadow-sm flex items-center justify-center';
+        btn.innerHTML = this.ordemAtual === 'grupo' ? '<span class="mr-2">📁</span> Ordenar por Grupo' : '<span class="mr-2">🔤</span> Ordenar por Nome';
         btn.onclick = () => this.toggleOrdem();
-        container.prepend(btn);
+        container.parentElement.insertBefore(btn, container); // Insere ANTES da tabela
     },
 
     configurarLogicaCargo() {
@@ -258,10 +253,10 @@ const CollaboratorService = {
             // Salva na Base Master para auto-preenchimento futuro
             await setDoc(doc(app.db, "colaboradores_gerais", data.identificador), data, { merge: true });
             
-            showNotification("Dados salvos com sucesso!", "success");
+            showNotification("Membro atualizado/salvo com sucesso!", "success");
             this.resetForm();
         } catch (error) {
-            showNotification("Erro ao salvar.", "error");
+            showNotification("Erro ao salvar no banco de dados.", "error");
         }
     },
 
@@ -289,31 +284,60 @@ const CollaboratorService = {
         ordenados.forEach(colab => {
             if (colab.transporte === 'Meios Próprios') selfT++; else compT++;
             
+            // Agrupador visual moderno
             if (this.ordemAtual === 'grupo' && ultimoGrupo !== colab.equipe) {
                 ultimoGrupo = colab.equipe;
-                tbody.innerHTML += `<tr class="bg-gray-100"><td colspan="5" class="p-2 font-bold text-gray-600 text-xs uppercase">📁 Equipe ${escapeHTML(ultimoGrupo)}</td></tr>`;
+                tbody.innerHTML += `
+                    <tr class="bg-indigo-50 border-b border-indigo-100">
+                        <td colspan="5" class="p-3 font-black text-indigo-800 text-xs uppercase tracking-widest flex items-center gap-2">
+                            <span>📁</span> Equipe ${escapeHTML(ultimoGrupo)}
+                        </td>
+                    </tr>
+                `;
             }
 
             const isDef = colab.cargo === 'Defensor(a)';
+            const statusCheckbox = colab.presente 
+                ? `<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                       <input type="checkbox" name="toggle" id="toggle-${colab.id}" class="checkin-checkbox toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer" checked data-id="${colab.id}"/>
+                       <label for="toggle-${colab.id}" class="toggle-label block overflow-hidden h-5 rounded-full bg-green-500 cursor-pointer"></label>
+                   </div>`
+                : `<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                       <input type="checkbox" name="toggle" id="toggle-${colab.id}" class="checkin-checkbox toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer" data-id="${colab.id}"/>
+                       <label for="toggle-${colab.id}" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label>
+                   </div>`;
+
             const row = document.createElement('tr');
-            row.className = "border-b hover:bg-gray-50 transition";
+            row.className = "border-b hover:bg-slate-50 transition-colors duration-150";
             row.innerHTML = `
                 <td class="p-3">
-                    <div class="font-bold ${isDef ? 'text-blue-700' : 'text-gray-800'}">${escapeHTML(colab.nome)}</div>
-                    <div class="text-[10px] text-gray-400 uppercase">${colab.tipo_id}: ${colab.identificador}</div>
+                    <div class="font-bold text-xs sm:text-sm ${isDef ? 'text-blue-700' : 'text-slate-800'} truncate max-w-[150px] sm:max-w-xs">${escapeHTML(colab.nome)}</div>
+                    <div class="text-[9px] sm:text-[10px] text-slate-500 uppercase mt-0.5">${colab.tipo_id}: ${colab.identificador}</div>
                 </td>
-                <td class="p-3 text-center">
-                    <input type="checkbox" class="checkin-checkbox w-6 h-6" data-id="${colab.id}" ${colab.presente ? 'checked' : ''}>
+                <td class="p-3 text-center align-middle">
+                    ${statusCheckbox}
                 </td>
-                <td class="p-3 hidden md:table-cell text-xs">${escapeHTML(colab.cargo)}</td>
-                <td class="p-3 text-center text-xs">${colab.horario || '--:--'}</td>
-                <td class="p-3 text-center">
-                    <button onclick="CollaboratorService.editCollaborator(window.app, '${colab.id}')" class="text-blue-500 p-1">✏️</button>
-                    <button onclick="CollaboratorService.deleteCollaborator(window.app, '${colab.id}')" class="text-red-500 p-1">🗑️</button>
+                <td class="p-3 hidden md:table-cell text-xs font-medium text-slate-600">${escapeHTML(colab.cargo)}</td>
+                <td class="p-3 text-center text-xs font-bold text-slate-500">${colab.horario || '--:--'}</td>
+                <td class="p-3 text-center flex justify-center gap-2 mt-1">
+                    <button onclick="CollaboratorService.editCollaborator(window.app, '${colab.id}')" class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 p-1.5 rounded transition" title="Editar">✏️</button>
+                    <button onclick="CollaboratorService.deleteCollaborator(window.app, '${colab.id}')" class="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition" title="Excluir">🗑️</button>
                 </td>
             `;
             tbody.appendChild(row);
         });
+
+        // Estilização customizada nativa para o toggle moderno (inserido via DOM para não precisar mexer no head)
+        if (!document.getElementById('toggle-css')) {
+            const style = document.createElement('style');
+            style.id = 'toggle-css';
+            style.innerHTML = `
+                .toggle-checkbox:checked { right: 0; border-color: #22c55e; }
+                .toggle-checkbox:checked + .toggle-label { background-color: #22c55e; }
+                .toggle-checkbox { right: 0; z-index: 1; border-color: #d1d5db; transition: all 0.2s ease; }
+            `;
+            document.head.appendChild(style);
+        }
 
         document.getElementById('total-participants-count').textContent = app.colaboradores.length;
         document.getElementById('self-transport-count').textContent = selfT;
@@ -322,39 +346,51 @@ const CollaboratorService = {
     },
 
     addEventListeners(app) {
-        // Checkbox de presença
+        // Lógica do Checkbox de Presença moderno
         document.querySelectorAll('.checkin-checkbox').forEach(cb => {
             cb.onchange = async (e) => {
                 const id = e.target.dataset.id;
                 const pres = e.target.checked;
                 const hor = pres ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                
+                // Animação visual imediata
+                const label = e.target.nextElementSibling;
+                if(pres) {
+                    label.classList.replace('bg-gray-300', 'bg-green-500');
+                } else {
+                    label.classList.replace('bg-green-500', 'bg-gray-300');
+                }
+
                 await updateDoc(doc(app.db, "pautas", app.currentPauta.id, "collaborators", id), { presente: pres, horario: hor });
             };
         });
 
-        // Event listener para o botão de SALVAR DADOS da Ata
-        // Importante: Usamos removeEventListener/addEventListener para evitar duplicados
         const btnSaveAta = document.getElementById('save-ata-data-btn');
         if (btnSaveAta) {
-            btnSaveAta.onclick = null; // Limpa anterior
+            btnSaveAta.onclick = null; 
             btnSaveAta.onclick = (e) => {
                 e.preventDefault();
                 this.saveAtaData(app);
             };
         }
 
-        // Event listener para o botão que abre o modal da Ata 
-        // (Geralmente no modal de Estatísticas ou Colaboradores)
         const btnOpenAtaModal = document.getElementById('btn-gerar-ata-social');
         if (btnOpenAtaModal) {
             const oldHandler = btnOpenAtaModal.onclick;
             btnOpenAtaModal.onclick = (e) => {
-                // Carrega os dados antes de mostrar o modal
                 this.loadAtaData(app);
-                // Abre o modal
                 const modal = document.getElementById('ata-social-modal');
                 if (modal) modal.classList.remove('hidden');
                 if (oldHandler) oldHandler(e);
+            };
+        }
+
+        // Evento de busca Master ao clicar no botão
+        const btnBuscarMaster = document.getElementById('buscar-master-btn');
+        if (btnBuscarMaster) {
+            btnBuscarMaster.onclick = () => {
+                const identificador = document.getElementById('collaborator-identificador-modal')?.value;
+                if(identificador) this.buscarColaboradorMaster(app, identificador);
             };
         }
     },
@@ -375,15 +411,20 @@ const CollaboratorService = {
             const emailInput = document.getElementById('collaborator-email-modal');
             if (emailInput) emailInput.value = c.email || '';
 
-            document.getElementById('add-collaborator-btn-modal').textContent = "Atualizar Membro";
+            document.getElementById('add-collaborator-btn-modal').textContent = "Atualizar Cadastro";
+            document.getElementById('add-collaborator-btn-modal').classList.replace('bg-green-600', 'bg-blue-600');
+            document.getElementById('add-collaborator-btn-modal').classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
             this.configurarLogicaCargo();
+            
+            // Rola pro topo suavemente para ver o formulário
+            document.getElementById('collaborators-modal').querySelector('.scrollable-content').scrollTo({ top: 0, behavior: 'smooth' });
         }
     },
 
     async deleteCollaborator(app, id) {
-        if (confirm("Remover este membro?")) {
+        if (confirm("Remover este membro da equipe atual?")) {
             await deleteDoc(doc(app.db, "pautas", app.currentPauta.id, "collaborators", id));
-            showNotification("Membro removido!");
+            showNotification("Membro removido da pauta!", "success");
         }
     },
 
@@ -405,7 +446,12 @@ const CollaboratorService = {
     resetForm() {
         document.getElementById('collaborator-form-modal')?.reset();
         this.editId = null;
-        document.getElementById('add-collaborator-btn-modal').textContent = "Salvar Membro";
+        const btnSubmit = document.getElementById('add-collaborator-btn-modal');
+        if (btnSubmit) {
+            btnSubmit.textContent = "Adicionar à Equipe";
+            btnSubmit.classList.replace('bg-blue-600', 'bg-green-600');
+            btnSubmit.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
+        }
         this.configurarLogicaCargo();
     }
 };
