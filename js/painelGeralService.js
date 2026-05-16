@@ -1,14 +1,15 @@
-// js/painelGeralService.js
+// js/painelGeralService.js - MONITOR DE PRODUTIVIDADE (FLUTUANTE E ARRASTÁVEL)
 
 import { escapeHTML } from './utils.js';
 
 export const PainelGeralService = {
-    
-    // Injeta o botão no menu de Ações da Pauta e atualiza o painel se já estiver aberto
+    // ========================================================
+    // 1. INJEÇÃO DO BOTÃO NO MENU DE AÇÕES
+    // ========================================================
     injetarBotao(app) {
         const actionsPanel = document.getElementById('actions-panel');
         
-        // Verifica permissões
+        // Verifica permissões (Operadores ou Apoio com liberação ativa)
         const role = window.app?.currentUser?.role || 'user';
         const isOwner = window.app?.auth?.currentUser?.uid === app.currentPautaOwnerId;
         const isOperador = isOwner || ['admin', 'superadmin', 'user'].includes(role);
@@ -23,93 +24,104 @@ export const PainelGeralService = {
             return;
         }
 
-        // Se o botão não existe, cria
+        // Cria o botão com visual padronizado do seu sistema
         if (actionsPanel && !btn) {
             btn = document.createElement('button');
             btn.id = 'btn-painel-geral-externo';
-            btn.className = "w-full bg-indigo-50 text-indigo-700 font-bold py-2.5 px-4 rounded-lg hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2 mt-4 border border-indigo-200 shadow-sm uppercase tracking-wide text-[11px]";
-            btn.innerHTML = `<span>📊</span> Monitor de Produtividade`;
+            btn.className = "w-full text-left px-3 py-2.5 sm:py-2 text-sm font-medium text-emerald-700 bg-emerald-100 rounded-lg hover:bg-emerald-200 transition-colors flex items-center gap-2 mt-2 shadow-sm whitespace-nowrap";
+            btn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-emerald-600"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                <span>Monitor da Equipe</span>
+            `;
+            
             btn.onclick = () => {
                 this.abrirPainel(app);
-                
-                // Fecha o menu de ações ao clicar
-                if (!actionsPanel.classList.contains('opacity-0')) {
-                    actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                    document.getElementById('actions-arrow')?.classList.remove('rotate-180');
-                }
             };
-            actionsPanel.appendChild(btn);
+            
+            // Adiciona como o primeiro botão para ter destaque
+            actionsPanel.insertBefore(btn, actionsPanel.firstChild);
         }
 
-        // Se o painel flutuante já estiver na tela, atualiza os dados em tempo real
+        // Atualiza os dados se o painel já estiver flutuando na tela
         const painel = document.getElementById('painel-flutuante-monitor');
         if (painel && !painel.classList.contains('hidden')) {
             this.atualizarConteudo(app);
         }
     },
 
+    // ========================================================
+    // 2. CONSTRUÇÃO DO MODAL FLUTUANTE
+    // ========================================================
     abrirPainel(app) {
         let painel = document.getElementById('painel-flutuante-monitor');
         
-        // Se não existir, constrói a estrutura da janela flutuante
         if (!painel) {
             painel = document.createElement('div');
             painel.id = 'painel-flutuante-monitor';
-            // Estilos da janela: Fixa, Z-index alto, sombra, cantos arredondados. Inicia no canto inferior direito.
-            painel.className = 'fixed bottom-6 right-6 w-80 sm:w-96 bg-white rounded-xl shadow-2xl flex flex-col z-[200] border border-gray-300 overflow-hidden';
+            // Layout moderno, fixo e arrastável
+            painel.className = 'fixed bottom-4 right-4 sm:bottom-8 sm:right-8 w-80 sm:w-96 bg-white rounded-xl shadow-2xl flex flex-col z-[200] border border-gray-200 overflow-hidden transform transition-transform duration-300 ease-out translate-y-0';
             painel.style.maxHeight = '85vh';
             
             painel.innerHTML = `
-                <div id="painel-monitor-header" class="bg-indigo-700 p-3 flex justify-between items-center text-white cursor-move select-none shrink-0 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-20 h-20 bg-white opacity-10 rounded-full -mr-5 -mt-5 pointer-events-none"></div>
-                    <div class="flex items-center gap-2 relative z-10">
-                        <span class="text-lg">📡</span>
-                        <h2 class="font-black text-sm uppercase tracking-wide">Monitor de Equipe</h2>
+                <div id="painel-monitor-header" class="bg-gradient-to-r from-emerald-600 to-teal-700 p-3 flex justify-between items-center text-white cursor-move select-none shrink-0 border-b border-emerald-800 shadow-md">
+                    <div class="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <h2 class="font-black text-xs uppercase tracking-widest">Produtividade</h2>
                     </div>
-                    <div class="flex items-center gap-1 relative z-10">
-                        <button id="btn-minimizar-monitor" class="w-6 h-6 flex items-center justify-center hover:bg-white/20 rounded transition-colors text-white font-bold" title="Minimizar">_</button>
-                        <button id="btn-fechar-monitor" class="w-6 h-6 flex items-center justify-center hover:bg-red-500 rounded transition-colors text-white font-bold" title="Fechar">&times;</button>
+                    <div class="flex items-center gap-2">
+                        <button id="btn-minimizar-monitor" class="w-6 h-6 flex items-center justify-center hover:bg-white/20 rounded transition-colors" title="Minimizar">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        </button>
+                        <button id="btn-fechar-monitor" class="w-6 h-6 flex items-center justify-center hover:bg-red-500 rounded transition-colors" title="Fechar">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
                     </div>
                 </div>
                 
-                <div id="painel-monitor-body" class="flex-grow overflow-y-auto bg-gray-50 flex flex-col custom-scrollbar">
-                    <div id="painel-monitor-conteudo" class="p-3">
-                        <p class="text-center text-xs text-gray-500 py-4">Carregando dados em tempo real...</p>
+                <div id="painel-monitor-body" class="flex-grow overflow-y-auto bg-slate-50 flex flex-col scrollable-content transition-all duration-300 origin-top">
+                    <div id="painel-monitor-conteudo" class="p-3 space-y-4">
+                        <div class="flex justify-center py-6">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                        </div>
                     </div>
                 </div>
             `;
             document.body.appendChild(painel);
 
-            // Funcionalidades dos botões de controle
+            // Listeners dos botões de controle da janela
             document.getElementById('btn-fechar-monitor').onclick = () => this.fecharPainel();
             
             document.getElementById('btn-minimizar-monitor').onclick = () => {
                 const body = document.getElementById('painel-monitor-body');
                 const btnMini = document.getElementById('btn-minimizar-monitor');
+                body.classList.toggle('hidden');
+                
                 if (body.classList.contains('hidden')) {
-                    body.classList.remove('hidden');
-                    btnMini.textContent = '_';
+                    btnMini.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>';
                 } else {
-                    body.classList.add('hidden');
-                    btnMini.textContent = '□';
+                    btnMini.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
                 }
             };
 
-            // Aplica a lógica de arrastar a janela (Drag & Drop)
             this.tornarArrastavel(painel, document.getElementById('painel-monitor-header'));
         }
 
-        painel.classList.remove('hidden');
+        // Animação de entrada
+        painel.classList.remove('hidden', 'translate-y-[120%]');
         this.atualizarConteudo(app);
     },
 
     fecharPainel() {
         const painel = document.getElementById('painel-flutuante-monitor');
         if (painel) {
-            painel.classList.add('hidden');
+            painel.classList.add('translate-y-[120%]');
+            setTimeout(() => painel.classList.add('hidden'), 300);
         }
     },
 
+    // ========================================================
+    // 3. PROCESSAMENTO DE DADOS (CRUZAMENTO DE TABELAS)
+    // ========================================================
     atualizarConteudo(app) {
         const conteudo = document.getElementById('painel-monitor-conteudo');
         if (!conteudo) return;
@@ -117,25 +129,19 @@ export const PainelGeralService = {
         const todos = app.allAssisted || [];
         const colaboradoresDb = app.colaboradores || [];
         
-        // Separa os dados de demanda
+        // Filtros Atendimento Externo
         const emMesa = todos.filter(a => a.status === 'emAtendimento' && a.delegationToken); 
         const distrib = todos.filter(a => a.status === 'aguardandoDistribuicao');
         const correcao = todos.filter(a => a.status === 'aguardandoCorrecao');
-        const finalizados = todos.filter(a => a.status === 'atendido' && a.finalizadoPeloColaborador); 
 
-        // Separa os colaboradores
+        // Filtro de Colaboradores Base
         const defensores = colaboradoresDb.filter(c => c.cargo?.toLowerCase().includes('defensor'));
         const servidores = colaboradoresDb.filter(c => !c.cargo?.toLowerCase().includes('defensor'));
 
-        // ==========================================
-        // 1. PROCESSA DEFENSORES
-        // ==========================================
+        // PROCESSA DEFENSORES
         const countDefensores = {};
-        defensores.forEach(d => {
-            countDefensores[d.nome] = { distrib: 0, correcao: 0 };
-        });
+        defensores.forEach(d => { countDefensores[d.nome] = { distrib: 0, correcao: 0 }; });
 
-        // Garante que se tiver uma demanda pra um defensor que foi removido da lista, ele apareça
         [...distrib, ...correcao].forEach(a => {
             const def = a.defensorResponsavel || 'Não Atribuído';
             if(!countDefensores[def]) countDefensores[def] = { distrib: 0, correcao: 0 };
@@ -149,32 +155,25 @@ export const PainelGeralService = {
             const stats = countDefensores[def];
             const total = stats.distrib + stats.correcao;
             
-            let statusVisual = '';
-            if (total === 0) {
-                statusVisual = `<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[9px] font-black border border-emerald-200">✅ LIVRE</span>`;
-            } else {
-                statusVisual = `<div class="flex gap-1 flex-col items-end">`;
-                if(stats.distrib > 0) statusVisual += `<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[9px] font-black border border-blue-200">${stats.distrib} p/ Assinar</span>`;
-                if(stats.correcao > 0) statusVisual += `<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[9px] font-black border border-amber-200">${stats.correcao} p/ Avaliar</span>`;
-                statusVisual += `</div>`;
-            }
+            let statusVisual = total === 0 
+                ? `<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-200 shadow-sm flex items-center gap-1"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Livre</span>`
+                : `<div class="flex flex-col items-end gap-1">
+                     ${stats.distrib > 0 ? `<span class="bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded text-[9px] font-bold shadow-sm">${stats.distrib} P/ Assinar</span>` : ''}
+                     ${stats.correcao > 0 ? `<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[9px] font-bold shadow-sm">${stats.correcao} P/ Avaliar</span>` : ''}
+                   </div>`;
 
             defensoresHtml += `
-                <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
-                    <span class="font-bold text-gray-800 text-xs truncate max-w-[150px]">👨‍⚖️ ${escapeHTML(def)}</span>
+                <div class="flex justify-between items-center py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors px-1">
+                    <span class="font-bold text-gray-700 text-xs truncate max-w-[140px]">${escapeHTML(def)}</span>
                     ${statusVisual}
                 </div>
             `;
         });
-        if(!defensoresHtml) defensoresHtml = '<p class="text-xs text-gray-400 italic">Nenhum defensor cadastrado ou ativo.</p>';
+        if(!defensoresHtml) defensoresHtml = '<p class="text-xs text-gray-400 italic text-center py-2">Sem defensores ativos.</p>';
 
-        // ==========================================
-        // 2. PROCESSA SERVIDORES
-        // ==========================================
+        // PROCESSA SERVIDORES
         const countServidores = {};
-        servidores.forEach(s => {
-            countServidores[s.nome] = 0;
-        });
+        servidores.forEach(s => { countServidores[s.nome] = 0; });
 
         emMesa.forEach(a => {
             const serv = a.assignedCollaborator?.name || 'Não Atribuído';
@@ -186,75 +185,74 @@ export const PainelGeralService = {
         Object.keys(countServidores).sort().forEach(serv => {
             const qtd = countServidores[serv];
             
-            let statusVisual = '';
-            if (qtd === 0) {
-                statusVisual = `<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[9px] font-black border border-emerald-200">✅ LIVRE</span>`;
-            } else {
-                statusVisual = `<span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[9px] font-black border border-purple-200">⏳ ${qtd} Em Mesa</span>`;
-            }
+            let statusVisual = qtd === 0 
+                ? `<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-200 shadow-sm flex items-center gap-1"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Livre</span>`
+                : `<span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-bold border border-indigo-200 shadow-sm">⏳ ${qtd} Em Mesa</span>`;
 
             servidoresHtml += `
-                <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
-                    <span class="font-bold text-gray-800 text-xs truncate max-w-[150px]">🧑‍💻 ${escapeHTML(serv)}</span>
+                <div class="flex justify-between items-center py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors px-1">
+                    <span class="font-bold text-gray-700 text-xs truncate max-w-[140px]">${escapeHTML(serv)}</span>
                     ${statusVisual}
                 </div>
             `;
         });
-        if(!servidoresHtml) servidoresHtml = '<p class="text-xs text-gray-400 italic">Nenhum servidor cadastrado ou ativo.</p>';
+        if(!servidoresHtml) servidoresHtml = '<p class="text-xs text-gray-400 italic text-center py-2">Sem servidores ativos.</p>';
 
-        // ==========================================
-        // MONTAGEM DO HTML FINAL
-        // ==========================================
+        // ========================================================
+        // 4. RENDERIZAÇÃO
+        // ========================================================
         conteudo.innerHTML = `
-            <div class="grid grid-cols-4 gap-2 mb-4">
-                <div class="bg-white rounded border border-purple-100 p-2 text-center shadow-sm">
-                    <p class="text-[9px] font-bold text-gray-400 uppercase">Mesa</p>
-                    <p class="text-sm font-black text-purple-600">${emMesa.length}</p>
+            <div class="grid grid-cols-3 gap-2">
+                <div class="bg-white rounded-lg border border-gray-200 p-2 text-center shadow-sm flex flex-col justify-center items-center">
+                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-0.5">Em Mesa</p>
+                    <p class="text-lg font-black text-indigo-600 leading-none">${emMesa.length}</p>
                 </div>
-                <div class="bg-white rounded border border-blue-100 p-2 text-center shadow-sm">
-                    <p class="text-[9px] font-bold text-gray-400 uppercase">Assinar</p>
-                    <p class="text-sm font-black text-blue-600">${distrib.length}</p>
+                <div class="bg-white rounded-lg border border-gray-200 p-2 text-center shadow-sm flex flex-col justify-center items-center">
+                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-0.5">Assinar</p>
+                    <p class="text-lg font-black text-cyan-600 leading-none">${distrib.length}</p>
                 </div>
-                <div class="bg-white rounded border border-amber-100 p-2 text-center shadow-sm">
-                    <p class="text-[9px] font-bold text-gray-400 uppercase">Avaliar</p>
-                    <p class="text-sm font-black text-amber-600">${correcao.length}</p>
-                </div>
-                <div class="bg-white rounded border border-green-100 p-2 text-center shadow-sm">
-                    <p class="text-[9px] font-bold text-gray-400 uppercase">Concluído</p>
-                    <p class="text-sm font-black text-green-600">${finalizados.length}</p>
+                <div class="bg-white rounded-lg border border-gray-200 p-2 text-center shadow-sm flex flex-col justify-center items-center">
+                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-0.5">Avaliar</p>
+                    <p class="text-lg font-black text-amber-500 leading-none">${correcao.length}</p>
                 </div>
             </div>
 
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm mb-3 overflow-hidden">
-                <div class="bg-gray-100 p-2 border-b border-gray-200">
-                    <h3 class="font-black text-[10px] text-gray-600 uppercase tracking-widest">Status: Servidores</h3>
+            <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                <div class="bg-indigo-50 px-3 py-2 border-b border-indigo-100 flex items-center justify-between">
+                    <h3 class="font-black text-[10px] text-indigo-800 uppercase tracking-widest flex items-center gap-1"><span>🧑‍💻</span> Servidores</h3>
+                    <span class="text-[9px] text-indigo-500 font-bold">${servidores.length} Ativos</span>
                 </div>
-                <div class="p-2">
+                <div class="px-3 py-1">
                     ${servidoresHtml}
                 </div>
             </div>
 
             <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-                <div class="bg-gray-100 p-2 border-b border-gray-200">
-                    <h3 class="font-black text-[10px] text-gray-600 uppercase tracking-widest">Status: Defensores</h3>
+                <div class="bg-cyan-50 px-3 py-2 border-b border-cyan-100 flex items-center justify-between">
+                    <h3 class="font-black text-[10px] text-cyan-800 uppercase tracking-widest flex items-center gap-1"><span>👨‍⚖️</span> Defensores</h3>
+                    <span class="text-[9px] text-cyan-500 font-bold">${defensores.length} Ativos</span>
                 </div>
-                <div class="p-2">
+                <div class="px-3 py-1">
                     ${defensoresHtml}
                 </div>
             </div>
         `;
     },
 
-    // Lógica para tornar a div arrastável pela tela
+    // ========================================================
+    // 5. MOTOR DE DRAG & DROP NATIVO (Mobile e Desktop)
+    // ========================================================
     tornarArrastavel(elementoPainel, elementoCabecalho) {
         let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
 
         elementoCabecalho.onmousedown = arrastarMouseDown;
-        // Suporte para touch no celular
         elementoCabecalho.ontouchstart = arrastarTouchStart;
 
         function arrastarMouseDown(e) {
             e = e || window.event;
+            // Ignora o clique se for nos botões do header
+            if (e.target.tagName.toLowerCase() === 'button' || e.target.closest('button')) return;
+            
             e.preventDefault();
             pos3 = e.clientX;
             pos4 = e.clientY;
@@ -263,6 +261,7 @@ export const PainelGeralService = {
         }
 
         function arrastarTouchStart(e) {
+            if (e.target.tagName.toLowerCase() === 'button' || e.target.closest('button')) return;
             pos3 = e.touches[0].clientX;
             pos4 = e.touches[0].clientY;
             document.ontouchend = pararArrastar;
@@ -277,11 +276,9 @@ export const PainelGeralService = {
             pos3 = e.clientX;
             pos4 = e.clientY;
 
-            // Desativa bottom/right para que top/left controlem o posicionamento
             elementoPainel.style.bottom = "auto";
             elementoPainel.style.right = "auto";
             
-            // Define os novos limites garantindo que não saia da tela
             let newTop = elementoPainel.offsetTop - pos2;
             let newLeft = elementoPainel.offsetLeft - pos1;
 
@@ -303,8 +300,16 @@ export const PainelGeralService = {
             elementoPainel.style.bottom = "auto";
             elementoPainel.style.right = "auto";
             
-            elementoPainel.style.top = (elementoPainel.offsetTop - pos2) + "px";
-            elementoPainel.style.left = (elementoPainel.offsetLeft - pos1) + "px";
+            let newTop = elementoPainel.offsetTop - pos2;
+            let newLeft = elementoPainel.offsetLeft - pos1;
+
+            if(newTop < 0) newTop = 0;
+            if(newLeft < 0) newLeft = 0;
+            if(newTop + elementoPainel.offsetHeight > window.innerHeight) newTop = window.innerHeight - elementoPainel.offsetHeight;
+            if(newLeft + elementoPainel.offsetWidth > window.innerWidth) newLeft = window.innerWidth - elementoPainel.offsetWidth;
+
+            elementoPainel.style.top = newTop + "px";
+            elementoPainel.style.left = newLeft + "px";
         }
 
         function pararArrastar() {
