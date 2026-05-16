@@ -351,12 +351,19 @@ export const UIService = {
 
     renderAssistedLists(app) {
         if (!app) return;
-
-        // ==== INJETA O BOTÃO DE PAINEL GERAL NO MENU DE AÇÕES ====
-        if (PainelGeralService) {
-            PainelGeralService.injetarBotao(app);
+        
+        // ==== ATUALIZA O PAINEL GERAL (SE ESTIVER ABERTO) ====
+        if (typeof PainelGeralService !== 'undefined') {
+            const painelModal = document.getElementById('painel-flutuante-monitor'); // Pega o ID da janela se tiver mudado o tipo
+            if (painelModal && !painelModal.classList.contains('hidden')) {
+                PainelGeralService.atualizarConteudo(app);
+            }
+            // Para o novo modelo que usa janela flutuante, a atualização ocorre se o elemento base existir e estiver visível
+            if (typeof PainelGeralService.atualizarConteudo === 'function') {
+                 PainelGeralService.atualizarConteudo(app);
+            }
         }
-        // =========================================================
+        // =====================================================
 
         const allAssisted = app.allAssisted || [];
         const currentPautaData = app.currentPautaData;
