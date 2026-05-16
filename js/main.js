@@ -1,8 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { PainelGeralService } from './painelGeralService.js';
-
 /* import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";*/
 
 import { firebaseConfig } from './config.js';
@@ -23,8 +21,9 @@ import { showConfirmModal } from './confirmModal.js';
 import { logAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser, loadAuditLogs, exportAuditLogsPDF, loadDashboardData, populateUserFilter } from './admin.js';
 import { parsePautaCSV } from './csvHandler.js';
 import { getChecklistHTML } from './checklist.js';
+import { PainelGeralService } from './painelGeralService.js'; // <--- NOVO IMPORT ADICIONADO AQUI
 
-class SIGAPApp { // MANTIDO COMO SIGAP
+class SIGAPApp { 
     constructor() {
         this.db = null;
         this.auth = null;
@@ -557,6 +556,18 @@ class SIGAPApp { // MANTIDO COMO SIGAP
         });
 
         document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
+
+        // --- NOVO: Listener do Painel Geral do Atendimento Externo ---
+        // Fechar o menu flutuante de ações assim que alguém clica no botão dinâmico
+        document.body.addEventListener('click', (e) => {
+            if (e.target.closest('#btn-painel-geral-externo')) {
+                const actionsPanel = document.getElementById('actions-panel');
+                if (actionsPanel) {
+                    actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                    document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+                }
+            }
+        });
         
         document.getElementById('share-pauta-btn')?.addEventListener('click', () => {
             const modal = document.getElementById('share-modal');
@@ -1886,7 +1897,6 @@ class SIGAPApp { // MANTIDO COMO SIGAP
             
             const filteredPautas = PautaService.filterPautas(pautas, this.currentPautaFilter, user.uid, user.email, filtrosAdicionais);
             
-            // CORREÇÃO CRÍTICA AQUI: A renderização acontece pelo UIService
             UIService.renderPautaCards(filteredPautas, user.uid, user.email, this);
             
         } catch (error) {
@@ -1972,6 +1982,17 @@ class SIGAPApp { // MANTIDO COMO SIGAP
         if (addAssistedBtn) addAssistedBtn.disabled = !isAuthenticated; 
         if (fileUpload) fileUpload.disabled = isApoio;
         if (btnSyncVerde) btnSyncVerde.disabled = isApoio;
+
+        // --- NOVO: Lógica para o botão do Painel Geral do Atendimento Externo ---
+        const btnMonitor = document.getElementById('btn-painel-geral-externo');
+        if (btnMonitor) {
+            const liberadoApoio = this.currentPautaData?.liberarPainelGeralApoio === true;
+            if (isApoio && !liberarPainelApoio) {
+                btnMonitor.classList.add('hidden');
+            } else {
+                btnMonitor.classList.remove('hidden');
+            }
+        }
         
         if (typeof UIService !== 'undefined' && typeof UIService.renderAssistedLists === 'function') {
             UIService.renderAssistedLists(this); 
