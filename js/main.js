@@ -1,6 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { PainelGeralService } from './painelGeralService.js';
+
+/* import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";*/
 
 import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
@@ -21,7 +24,7 @@ import { logAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, 
 import { parsePautaCSV } from './csvHandler.js';
 import { getChecklistHTML } from './checklist.js';
 
-class SIGAPApp { 
+class SIGAPApp { // MANTIDO COMO SIGAP
     constructor() {
         this.db = null;
         this.auth = null;
@@ -44,6 +47,13 @@ class SIGAPApp {
     async init() {
         try {
             const app = initializeApp(firebaseConfig);
+            
+             /* // Bloco comentado para evitar erro 401 de conexão com App Check
+            initializeAppCheck(app, {
+                provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
+                isTokenAutoRefreshEnabled: true
+            }); 
+            */
 
             this.db = getFirestore(app);
             this.auth = getAuth(app);
@@ -471,7 +481,7 @@ class SIGAPApp {
         document.getElementById('confirm-create-pauta-final-btn')?.addEventListener('click', async () => {
             const pautaName = document.getElementById('create-pauta-name-input').value.trim();
             const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
-            const orgaoId = document.getElementById('select-orgao-integracao')?.value; 
+            const orgaoId = document.getElementById('select-orgao-integracao').value; 
             const user = this.auth.currentUser;
             
             if (!pautaName) {
@@ -480,9 +490,6 @@ class SIGAPApp {
             }
         
             try {
-                const useDelegationFlow = document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true';
-                const useDistributionFlow = document.getElementById('check-use-distribution')?.checked || false;
-
                 const novaPautaData = {
                     name: pautaName,
                     type: pautaType,
@@ -491,21 +498,19 @@ class SIGAPApp {
                     memberEmails: [user.email],
                     isClosed: false,
                     createdAt: new Date().toISOString(),
-                    ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || 'padrao',
-                    useDelegationFlow: useDelegationFlow,
-                    useDistributionFlow: useDistributionFlow
+                    ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || 'padrao'
                 };
 
                 if (pautaType === 'multisala') {
                     novaPautaData.customRooms = this.customRoomsList;
-                    novaPautaData.rooms = this.customRoomsList; 
+                    novaPautaData.rooms = this.customRoomsList; // Consistência
                 }
 
                 const pautaRef = await addDoc(collection(this.db, "pautas"), novaPautaData);
         
-                if (orgaoId && typeof window.ApiIntegration !== 'undefined') {
+                if (orgaoId) {
                     showNotification("Sincronizando com base de dados Solar/Verde...", "info");
-                    const assistidosOficiais = await window.ApiIntegration.buscarDadosPautaOficial(orgaoId);
+                    const assistidosOficiais = await ApiIntegration.buscarDadosPautaOficial(orgaoId);
                     
                     for (const ast of assistidosOficiais) {
                         await PautaService.addAssistedManual(this, {
@@ -520,7 +525,7 @@ class SIGAPApp {
                 }
         
                 document.getElementById('create-pauta-name-input').value = '';
-                if(document.getElementById('select-orgao-integracao')) document.getElementById('select-orgao-integracao').value = '';
+                document.getElementById('select-orgao-integracao').value = '';
                 document.getElementById('delegation-flow-modal').classList.add('hidden');
                 
                 this.showPautaSelectionScreen();
@@ -1005,8 +1010,8 @@ class SIGAPApp {
                     docTypes[cb.id] = typeRadio ? typeRadio.value : 'Fisico';
                 });
 
-                const reu = window.getReuDataFromForm ? window.getReuDataFromForm() : {};
-                const gastos = window.getExpenseDataFromForm ? window.getExpenseDataFromForm() : {};
+                const reu = getReuDataFromForm();
+                const gastos = getExpenseDataFromForm();
 
                 const checklistData = {
                     checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
@@ -1034,6 +1039,43 @@ class SIGAPApp {
                 }
             }
         });
+        
+        function getReuDataFromForm() {
+            return {
+                checkReuUnico: document.getElementById('check-reu-unico')?.checked || false,
+                nome: document.getElementById('nome-reu')?.value || '',
+                cpf: document.getElementById('cpf-reu')?.value || '',
+                telefone: document.getElementById('telefone-reu')?.value || '',
+                cep: document.getElementById('cep-reu')?.value || '',
+                rua: document.getElementById('rua-reu')?.value || '',
+                numero: document.getElementById('numero-reu')?.value || '',
+                complemento: document.getElementById('complemento-reu')?.value || '',
+                bairro: document.getElementById('bairro-reu')?.value || '',
+                cidade: document.getElementById('cidade-reu')?.value || '',
+                uf: document.getElementById('estado-reu')?.value || '',
+                referencia: document.getElementById('referencia-reu')?.value || '',
+                empresa: document.getElementById('empresa-reu')?.value || '',
+                rua_comercial: document.getElementById('rua-comercial-reu')?.value || '',
+                numero_comercial: document.getElementById('numero-comercial-reu')?.value || '',
+                bairro_comercial: document.getElementById('bairro-comercial-reu')?.value || '',
+                cidade_comercial: document.getElementById('cidade-comercial-reu')?.value || '',
+                uf_comercial: document.getElementById('estado-comercial-reu')?.value || '',
+                cep_comercial: document.getElementById('cep-comercial-reu')?.value || ''
+            };
+        }
+
+        function getExpenseDataFromForm() {
+            return {
+                checkExibirGastos: document.getElementById('check-exibir-gastos')?.checked ?? true,
+                moradia: document.getElementById('expense-moradia')?.value || '',
+                alimentacao: document.getElementById('expense-alimentacao')?.value || '',
+                educacao: document.getElementById('expense-educacao')?.value || '',
+                saude: document.getElementById('expense-saude')?.value || '',
+                vestuario: document.getElementById('expense-vestuario')?.value || '',
+                lazer: document.getElementById('expense-lazer')?.value || '',
+                outras: document.getElementById('expense-outras')?.value || ''
+            };
+        }
 
         document.getElementById('confirm-attendant-btn')?.addEventListener('click', async () => {
             const select = document.getElementById('attendant-select');
@@ -1096,9 +1138,6 @@ class SIGAPApp {
             document.getElementById('edit-attendant-modal')?.classList.add('hidden');
         });
 
-        // =========================================================================
-        // ATUALIZAÇÃO 1: ENVIO DE EMAIL AUTOMÁTICO SE O COLABORADOR TIVER EMAIL
-        // =========================================================================
         document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
             const collaboratorId = window.selectedCollaboratorId;
             const collaboratorName = window.selectedCollaboratorName || null;
@@ -1137,54 +1176,26 @@ class SIGAPApp {
                 await PautaService.finishAttendance(this, window.assistedIdToHandle, atendenteFinal, []);
                 showNotification(`${window.assistedNameToHandle} marcado como atendido por ${atendenteFinal}.`, "success");
             } else { 
-                // FLUXO DE DELEGAÇÃO NORMAL (Move para 'Em Atendimento')
                 let collaboratorData = null;
-                let updateData = {
-                    status: 'emAtendimento',
-                    inAttendanceTime: new Date().toISOString()
-                };
-                let emailColab = null;
-
                 if (collaboratorName) {
-                    // Busca na lista de colaboradores pra ver se ele tem email cadastrado
-                    const colabObj = this.colaboradores?.find(c => c.nome === collaboratorName);
-                    emailColab = colabObj ? colabObj.email : null;
-
-                    collaboratorData = { id: collaboratorId, name: collaboratorName, email: emailColab };
-                    updateData.assignedCollaborator = collaboratorData;
+                    collaboratorData = { id: collaboratorId, name: collaboratorName };
+                    showNotification(`${window.assistedNameToHandle} atribuído a ${collaboratorName}.`, "success");
+                } else {
+                    showNotification(`${window.assistedNameToHandle} movido para 'Em Atendimento' sem colaborador atribuído.`, "success");
                 }
 
-                // Se encontrou um email, gera a senha secreta (Token) e adiciona ao updateData
-                if (emailColab) {
-                    const tokenSeguranca = Date.now().toString(36) + Math.random().toString(36).substring(2);
-                    updateData.delegationToken = tokenSeguranca;
-                }
-
-                // 1. Salva no banco de dados
                 await PautaService.updateStatus(
                     this.db,
                     this.currentPauta.id,
                     window.assistedIdToHandle,
-                    updateData,
+                    {
+                        status: 'emAtendimento',
+                        assignedCollaborator: collaboratorData,
+                        inAttendanceTime: new Date().toISOString()
+                    },
                     this.currentUserName
                 );
-
-                // 2. Dispara o email automático em segundo plano se tiver e-mail
-                if (emailColab) {
-                    showNotification(`${window.assistedNameToHandle} atribuído a ${collaboratorName}. Disparando e-mail...`, "info");
-                    window.EmailService.sendDelegationEmail(
-                        emailColab, collaboratorName, window.assistedNameToHandle, this.currentUserName,
-                        this.currentPauta.id, window.assistedIdToHandle, updateData.delegationToken
-                    ).then(() => {
-                        showNotification(`E-mail seguro enviado para ${collaboratorName}!`, "success");
-                    }).catch(() => {
-                        showNotification(`Aviso: O colaborador foi atribuído, mas falhou ao enviar o e-mail.`, "warning");
-                    });
-                } else if (collaboratorName) {
-                    showNotification(`${window.assistedNameToHandle} atribuído a ${collaboratorName} (Sem e-mail cadastrado).`, "success");
-                } else {
-                    showNotification(`${window.assistedNameToHandle} movido para 'Em Atendimento' (Não atribuído).`, "success");
-                }
+                showNotification(`${window.assistedNameToHandle} delegado para ${collaboratorName || 'ninguém (aguardando atribuição)'}.`, "success"); 
             }
             
             document.getElementById('select-collaborator-modal')?.classList.add('hidden');
@@ -1361,61 +1372,35 @@ class SIGAPApp {
             document.getElementById('edit-pauta-modal')?.classList.add('hidden');
         });
 
-        // =========================================================================
-        // ATUALIZAÇÃO 2: RECONHECER O EMAIL DIGITADO (HÍBRIDO)
-        // =========================================================================
         document.getElementById('send-delegate-email-btn')?.addEventListener('click', async () => {
             const emailInput = document.getElementById('collaborator-email-input');
             const emailDestino = emailInput?.value.trim();
             
             if (!emailDestino) {
-                showNotification("Por favor, insira o e-mail ou selecione na lista.", "error");
+                showNotification("Por favor, insira o e-mail.", "error");
                 return;
             }
 
             const btn = document.getElementById('send-delegate-email-btn');
-            if (btn) { btn.disabled = true; btn.textContent = "Processando..."; }
+            if (btn) { btn.disabled = true; btn.textContent = "Enviando..."; }
 
             let nomeColega = window.collaboratorNameForDelegation;
-
-            // MÁGICA HÍBRIDA: Se o usuário digitou/selecionou um e-mail que existe na lista de colaboradores,
-            // o sistema "descobre" o nome dessa pessoa automaticamente.
-            const foundColab = this.colaboradores.find(c => c.email === emailDestino);
-            if (foundColab) {
-                nomeColega = foundColab.nome;
-            } else if (!nomeColega || nomeColega === "Não informado" || nomeColega === "undefined") {
-                nomeColega = "Colega"; // Se digitou um email totalmente novo, usa "Colega" como fallback
+            if (!nomeColega || nomeColega === "Não informado" || nomeColega === "undefined") {
+                nomeColega = "Colega Colaborador";
             }
 
-            const tokenSeguranca = Date.now().toString(36) + Math.random().toString(36).substring(2);
-
             try {
-                await window.EmailService.sendDelegationEmail(
-                    emailDestino,
-                    nomeColega,
-                    window.assistedNameForDelegation,
-                    this.currentUserName,
-                    this.currentPauta.id,
-                    window.assistedIdForDelegation,
-                    tokenSeguranca
+                await EmailService.sendDelegationEmail(
+                    emailDestino, nomeColega, window.assistedNameForDelegation, this.currentUserName,
+                    this.currentPauta.id, window.assistedIdForDelegation
                 );
-
-                await updateDoc(doc(this.db, "pautas", this.currentPauta.id, "attendances", window.assistedIdForDelegation), {
-                    status: 'emAtendimento',
-                    assignedCollaborator: { email: emailDestino, name: nomeColega },
-                    inAttendanceTime: new Date().toISOString(),
-                    delegationToken: tokenSeguranca
-                });
 
                 document.getElementById('delegate-email-modal')?.classList.add('hidden');
                 if (emailInput) emailInput.value = '';
-
-                // Não showNotification de sucesso aqui, porque o EmailService.js já exibe
             } catch (error) {
-                console.error("Erro completo:", error);
-                showNotification("Aconteceu um erro na geração do link de segurança.", "error");
+                showNotification("Falha no envio do e-mail.", "error");
             } finally {
-                if (btn) { btn.disabled = false; btn.textContent = "Enviar E-mail / Link"; }
+                if (btn) { btn.disabled = false; btn.textContent = "Enviar E-mail"; }
             }
         });
 
@@ -1483,7 +1468,7 @@ class SIGAPApp {
             const adminPanelToggle = document.getElementById('pauta-settings-toggle'); 
             const adminActionsToggle = document.getElementById('actions-toggle');     
             const adminPanelBtn = document.getElementById('admin-panel-btn');         
-            const adminBtnMain = document.getElementById('admin-btn-main');            
+            const adminBtnMain = document.getElementById('admin-btn-main');           
 
             if ((adminModal && adminModal.contains(e.target)) ||
                 (adminPanelToggle && adminPanelToggle.contains(e.target)) ||
@@ -1901,6 +1886,7 @@ class SIGAPApp {
             
             const filteredPautas = PautaService.filterPautas(pautas, this.currentPautaFilter, user.uid, user.email, filtrosAdicionais);
             
+            // CORREÇÃO CRÍTICA AQUI: A renderização acontece pelo UIService
             UIService.renderPautaCards(filteredPautas, user.uid, user.email, this);
             
         } catch (error) {
@@ -1993,6 +1979,9 @@ class SIGAPApp {
     }
 }
 
+// ========================================================
+// EXPORTS ADICIONAIS E GLOBAIS
+// ========================================================
 window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
 
@@ -2081,15 +2070,3 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-
-setTimeout(() => {
-    try {
-        if (window.CollaboratorService && typeof window.CollaboratorService.loadAtaData === 'function') {
-            window.CollaboratorService.loadAtaData(window.app);
-        }
-    } catch (e) {
-        console.warn("Ata Social service pendente na inicialização.");
-    }
-}, 1000);
-
-window.CollaboratorService.loadAtaData(window.app);
