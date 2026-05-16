@@ -351,9 +351,9 @@ export const UIService = {
     renderAssistedLists(app) {
         if (!app) return;
         
-        // ==== INJETA O BOTÃO MEU PAINEL AUTOMATICAMENTE ====
-        this.injetarBotaoMeuPainel(app);
-        // ===================================================
+        // ==== INJETA O BOTÃO DE PAINEL GERAL NO MENU DE AÇÕES ====
+        this.injetarBotaoPainelGeral(app);
+        // =========================================================
 
         const allAssisted = app.allAssisted || [];
         const currentPautaData = app.currentPautaData;
@@ -396,7 +396,7 @@ export const UIService = {
             emAtendimento: allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode && this.searchFilter(a, searchTerms.emAtendimento)),
             atendidos: allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && this.searchFilter(a, searchTerms.atendidos)),
             faltosos: allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento' && this.searchFilter(a, searchTerms.faltosos)),
-            distribuicao: allAssisted.filter(a => a.status === 'aguardandoDistribuicao' && this.searchFilter(a, searchTerms.distribuicao))
+            distribuicao: allAssisted.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && this.searchFilter(a, searchTerms.distribuicao))
         };
 
         lists.pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
@@ -965,7 +965,7 @@ export const UIService = {
                             Delegar
                         </button>
                         <button onclick="window.open('${linkDireto}', '_blank')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
-                            Finalizar
+                            Finalizar / Encaminhar
                         </button>
                     </div>
                     <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 hover:bg-slate-500 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
@@ -1164,12 +1164,13 @@ export const UIService = {
         });
     },
     
+    // ==== REFORMA COMPLETA DO CARD DE DISTRIBUIÇÃO/CORREÇÃO ====
     renderDistribuicaoColumn(items, pautaId, userName) {
         const container = document.getElementById('distribuicao-list');
         if (!container) return;
 
         if (items.length === 0) {
-            container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum aguardando distribuição</p>';
+            container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum aguardando distribuição/avaliação</p>';
             return;
         }
 
@@ -1191,41 +1192,128 @@ export const UIService = {
             const linkPainel = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&colab=${encodeURIComponent(defensor)}`;
 
             const headerHtml = `
-                <div class="bg-cyan-100 p-2 border-b border-cyan-200 flex flex-col gap-2">
+                <div class="bg-cyan-100 p-3 border-b border-cyan-200 flex flex-col gap-2">
                     <div class="flex justify-between items-center px-1">
-                        <h4 class="font-bold text-cyan-800 text-xs uppercase tracking-wider flex items-center gap-1">
+                        <h4 class="font-black text-cyan-800 text-sm uppercase tracking-wider flex items-center gap-1">
                             <span>👨‍⚖️</span> ${escapeHTML(defensor)}
                         </h4>
-                        <span class="bg-cyan-200 text-cyan-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${groups[defensor].length}</span>
+                        <span class="bg-cyan-200 text-cyan-800 text-xs font-bold px-2.5 py-0.5 rounded-full shadow-sm">${groups[defensor].length}</span>
                     </div>
-                    <button onclick="navigator.clipboard.writeText('${linkPainel}'); showNotification('Link do painel copiado!', 'success');" class="w-full bg-cyan-600 text-white text-[10px] font-bold py-1.5 rounded hover:bg-cyan-700 uppercase shadow-sm flex items-center justify-center gap-1 transition-colors">
+                    <button onclick="navigator.clipboard.writeText('${linkPainel}'); showNotification('Link do painel copiado!', 'success');" class="w-full bg-cyan-600 text-white text-[11px] font-bold py-2 rounded-lg hover:bg-cyan-700 uppercase shadow-sm flex items-center justify-center gap-1 transition-colors">
                         <span>📋</span> Copiar Link do Painel
                     </button>
                 </div>
-                <div class="p-2 space-y-2 room-cards-wrapper"></div>
+                <div class="p-3 space-y-3 room-cards-wrapper"></div>
             `;
             groupDiv.innerHTML = headerHtml;
             const cardsWrapper = groupDiv.querySelector('.room-cards-wrapper');
 
-            groups[defensor].forEach(item => {
+            groups[defensor].forEach((item, index) => {
                 const currentUserRole = window.app?.currentUser?.role;
                 const canManageDistribution = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
+                const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
 
                 const card = document.createElement('div');
-                card.className = 'assisted-card relative bg-white p-3 rounded-lg shadow-sm border border-cyan-100 mb-2';
+                card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-cyan-200 mb-3 transition-all hover:shadow-md';
                 card.setAttribute('data-id', item.id);
                 
                 const linkExterno = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(userName)}&token=${item.delegationToken || ''}`;
 
-                card.innerHTML = `
-                    <p class="font-bold text-gray-800 text-sm truncate">${escapeHTML(item.name || '')}</p>
-                    ${item.numeroAgendamento ? `<p class="text-[10px] text-gray-600 font-bold mt-1">Nº Agend.: ${escapeHTML(item.numeroAgendamento)}</p>` : ''}
-                    <p class="text-[10px] text-cyan-700 font-bold uppercase mt-1 truncate">${escapeHTML(item.subject || '')}</p>
-                    ${item.notasRevisao ? `<div class="mt-2 text-[9px] bg-yellow-50 text-yellow-800 p-1.5 rounded border border-yellow-200"><span class="font-bold">Nota:</span> ${escapeHTML(item.notasRevisao)}</div>` : ''}
-                    <div class="mt-3 space-y-2">
-                        <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-50 text-cyan-700 border border-cyan-300 text-[10px] font-bold py-1.5 rounded hover:bg-cyan-100 uppercase shadow-sm" ${canManageDistribution ? '' : 'disabled'}>Abrir Protocolo Fixo</button>
-                        <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-white text-gray-400 border border-gray-200 text-[9px] py-1 rounded uppercase hover:bg-gray-50" ${canManageDistribution ? '' : 'disabled'}>Reverter</button>
+                // Número de Ordem na bolinha
+                const numeroOrdem = index + 1;
+                const numeroBadge = `
+                    <div class="absolute -left-2 -top-2 w-8 h-8 bg-cyan-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
+                        ${numeroOrdem}
                     </div>
+                `;
+
+                // Badge Dinâmico para Correção ou Distribuição
+                const badgeStatus = item.status === 'aguardandoCorrecao' 
+                    ? `<span class="absolute top-2 left-8 bg-amber-100 text-amber-700 text-[9px] font-black px-2 py-0.5 rounded uppercase border border-amber-200 shadow-sm">P/ Avaliação</span>` 
+                    : `<span class="absolute top-2 left-8 bg-blue-100 text-blue-700 text-[9px] font-black px-2 py-0.5 rounded uppercase border border-blue-200 shadow-sm">P/ Assinatura</span>`;
+
+                const historicoTransferenciaHtml = item.historicoTransferencia 
+                    ? `<div class="mt-2 bg-orange-50 border border-orange-200 text-orange-800 text-[10px] p-2 rounded flex items-center gap-1 font-medium shadow-sm">
+                           <span class="text-xs">🔄</span> 
+                           <span>${escapeHTML(item.historicoTransferencia)}</span>
+                       </div>` 
+                    : '';
+
+                let docStatusHtml = '';
+                if (item.selectedAction) {
+                    let statusColor = 'bg-gray-100 text-gray-600';
+                    let statusText = '📋 Selecionado';
+                    let statusIcon = '📋';
+                    
+                    if (item.documentState === 'filling') { 
+                        statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
+                        statusText = '✏️ Preenchendo'; 
+                        statusIcon = '✏️';
+                    } else if (item.documentState === 'saved') { 
+                        statusColor = 'bg-green-100 text-green-700 font-bold'; 
+                        statusText = '✅ Salvo'; 
+                        statusIcon = '✅';
+                    } else if (item.documentState === 'pdf') { 
+                        statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
+                        statusText = '📄 PDF Emitido'; 
+                        statusIcon = '📄';
+                    }
+
+                    docStatusHtml = `
+                        <div class="mt-2 flex flex-col gap-1">
+                            <span class="text-[10px] font-bold text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-100 truncate flex items-center gap-1">
+                                <span>📂</span> 
+                                <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
+                                <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
+                            </span>
+                            <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
+                                <span>${statusIcon}</span>
+                                <span class="hidden xs:inline">${statusText}</span>
+                            </span>
+                        </div>`;
+                }
+
+                const deleteBtnHtml = canDelete ? `
+                    <button data-id="${item.id}" class="delete-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 transition-colors z-10">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
+                        </svg>
+                    </button>` : '';
+
+                card.innerHTML = `
+                    ${numeroBadge}
+                    ${badgeStatus}
+                    ${deleteBtnHtml}
+                    
+                    <div class="pr-8 pt-4">
+                        <p class="font-bold text-lg text-gray-800 leading-tight">${escapeHTML(item.name || '')}</p>
+                    </div>
+
+                    <div class="mt-2 space-y-1">
+                        ${item.numeroAgendamento ? `<p class="text-xs text-gray-600">Nº Agend.: <strong>${escapeHTML(item.numeroAgendamento)}</strong></p>` : ''}
+                        <p class="text-xs text-gray-600">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
+                        ${item.numeroProcesso ? `<p class="text-xs text-blue-700">Nº Proc: <strong>${escapeHTML(item.numeroProcesso)}</strong></p>` : ''}
+                    </div>
+
+                    ${historicoTransferenciaHtml}
+                    ${docStatusHtml}
+                    
+                    ${item.notasRevisao ? `
+                        <div class="mt-3 bg-yellow-50 text-yellow-800 text-[11px] p-2.5 rounded-lg border border-yellow-200 shadow-sm leading-snug">
+                            <span class="font-black text-yellow-900 block mb-0.5">⚠️ NOTA PARA O DEFENSOR:</span> 
+                            ${escapeHTML(item.notasRevisao)}
+                        </div>` 
+                    : ''}
+                    
+                    <div class="mt-4 flex flex-col gap-2">
+                        <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white font-bold py-2.5 rounded-lg text-xs shadow-sm hover:bg-cyan-700 transition active:scale-95 uppercase tracking-wide" ${canManageDistribution ? '' : 'disabled'}>
+                            🔍 Abrir Protocolo Fixo
+                        </button>
+                        <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-slate-100 text-slate-600 border border-slate-200 font-bold py-2 rounded-lg text-xs shadow-sm hover:bg-slate-200 transition active:scale-95 uppercase tracking-wide" ${canManageDistribution ? '' : 'disabled'}>
+                            Reverter para Fila
+                        </button>
+                    </div>
+                    
                     ${this._getStandardizedFooterHtml(item)}
                 `;
                 cardsWrapper.appendChild(card);
@@ -1258,7 +1346,6 @@ export const UIService = {
         bindModal('manual-btn-footer', 'manual-modal', ['close-manual-modal-x', 'close-manual-modal-btn']);
         bindModal('terms-btn-footer', 'terms-modal', ['close-terms-modal-x', 'close-terms-modal-btn']);
         
-        // Injeta e configura o Modal de Formatação do CSV de forma dinâmica
         this.renderFormatHelpModal();
     },
     
@@ -1899,124 +1986,165 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     },
 
     // ==========================================
-    // INJEÇÃO DO BOTÃO "MEU PAINEL"
+    // INJEÇÃO DO BOTÃO "STATUS GERAL (VISÃO GLOBAL)" NO MENU DE AÇÕES
     // ==========================================
-    injetarBotaoMeuPainel(app) {
-        if (document.getElementById('btn-meu-painel-flutuante')) return;
+    injetarBotaoPainelGeral(app) {
+        const actionsPanel = document.getElementById('actions-panel');
+        if (!actionsPanel) return;
 
-        const btn = document.createElement('button');
-        btn.id = 'btn-meu-painel-flutuante';
-        // Estilo moderno flutuante e expansivo
-        btn.className = "fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full shadow-2xl hover:bg-indigo-700 hover:shadow-indigo-500/50 hover:scale-105 transition-all z-50 flex items-center justify-center group overflow-hidden border-2 border-indigo-400/30";
-        btn.title = "Meu Painel de Produtividade";
+        const role = window.app?.currentUser?.role || 'user';
+        const isOwner = window.app?.auth?.currentUser?.uid === app.currentPautaOwnerId;
+        const isOperador = isOwner || ['admin', 'superadmin', 'user'].includes(role);
         
-        btn.innerHTML = `
-            <span class="text-2xl leading-none">📊</span>
-            <span class="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-[150px] group-hover:ml-2 transition-all duration-300 font-black text-sm tracking-wide">
-                MEU PAINEL
-            </span>
-        `;
+        // Verifica se o painel foi liberado nas configurações da pauta (para o papel 'apoio')
+        const liberadoApoio = app.currentPautaData?.liberarPainelGeralApoio === true; 
+
+        // Só exibe se for operador OU se for apoio e o dono tiver liberado explicitamente
+        const canView = isOperador || (role === 'apoio' && liberadoApoio);
+
+        let btn = document.getElementById('btn-painel-geral-externo');
         
-        btn.onclick = () => this.abrirMeuPainel(app);
-        document.body.appendChild(btn);
+        if (!canView) {
+            if (btn) btn.remove();
+            return;
+        }
+
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.id = 'btn-painel-geral-externo';
+            btn.className = "w-full bg-indigo-50 text-indigo-700 font-bold py-2.5 px-4 rounded-lg hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2 mt-4 border border-indigo-200 shadow-sm uppercase tracking-wide text-[11px]";
+            btn.innerHTML = `<span>📊</span> Status do Atend. Externo`;
+            btn.onclick = () => {
+                this.abrirPainelGeralExterno(app);
+                this.toggleActionsPanel(); // Fecha o menu de ações ao abrir o modal
+            };
+            actionsPanel.appendChild(btn);
+        }
     },
 
     // ==========================================
-    // CRIAÇÃO E LÓGICA DO MODAL "MEU PAINEL"
+    // CRIAÇÃO E LÓGICA DO MODAL "STATUS GERAL DO ATENDIMENTO EXTERNO"
     // ==========================================
-    abrirMeuPainel(app) {
-        let modal = document.getElementById('meu-painel-modal');
+    abrirPainelGeralExterno(app) {
+        let modal = document.getElementById('painel-geral-externo-modal');
         if (!modal) {
             modal = document.createElement('div');
-            modal.id = 'meu-painel-modal';
+            modal.id = 'painel-geral-externo-modal';
             modal.className = 'fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity';
             document.body.appendChild(modal);
         }
 
-        const userName = app.currentUserName;
+        const todos = app.allAssisted || [];
         
-        // Filtra APENAS os assistidos onde o atendente é a pessoa logada no momento
-        const meusAtendimentos = (app.allAssisted || []).filter(a => {
-            const atendente = this.getAttendantName(a);
-            return atendente === userName && (a.status === 'atendido' || a.status === 'emAtendimento' || a.status === 'aguardandoDistribuicao');
+        // Separa as métricas globais baseadas no fluxo de Atendimento Externo
+        const distrib = todos.filter(a => a.status === 'aguardandoDistribuicao');
+        const correcao = todos.filter(a => a.status === 'aguardandoCorrecao');
+        const emMesa = todos.filter(a => a.status === 'emAtendimento' && a.delegationToken); // Tem token = está no fluxo externo
+        const finalizados = todos.filter(a => a.status === 'atendido' && a.finalizadoPeloColaborador); // Finalizado por lá
+
+        // Agrupa estatísticas por Defensor (Avaliadores/Assinantes)
+        const defensoresStats = {};
+        [...distrib, ...correcao].forEach(a => {
+            const def = a.defensorResponsavel || 'Não Atribuído';
+            if(!defensoresStats[def]) defensoresStats[def] = { distrib: 0, correcao: 0 };
+            
+            if(a.status === 'aguardandoDistribuicao') defensoresStats[def].distrib++;
+            if(a.status === 'aguardandoCorrecao') defensoresStats[def].correcao++;
         });
 
-        const finalizados = meusAtendimentos.filter(a => a.status === 'atendido' || a.status === 'aguardandoDistribuicao');
-        const emAndamento = meusAtendimentos.filter(a => a.status === 'emAtendimento');
+        // Agrupa estatísticas por Servidor (Em mesa desenvolvendo)
+        const servidoresStats = {};
+        emMesa.forEach(a => {
+            const serv = a.assignedCollaborator?.name || 'Não Atribuído';
+            if(!servidoresStats[serv]) servidoresStats[serv] = 0;
+            servidoresStats[serv]++;
+        });
 
-        let listaHtml = '';
-        if (meusAtendimentos.length === 0) {
-            listaHtml = `<div class="text-center py-8 text-gray-400">
-                            <span class="text-5xl block mb-3 opacity-50">📭</span>
-                            <p class="font-medium text-sm">Você ainda não assumiu ou finalizou atendimentos nesta pauta hoje.</p>
-                         </div>`;
-        } else {
-            // Ordena para os mais recentes ficarem no topo da lista
-            meusAtendimentos.sort((a, b) => new Date(b.attendedTime || b.inAttendanceTime || 0) - new Date(a.attendedTime || a.inAttendanceTime || 0));
-            
-            listaHtml = `<div class="space-y-3 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">`;
-            
-            meusAtendimentos.forEach(item => {
-                const isConcluido = item.status === 'atendido' || item.status === 'aguardandoDistribuicao';
-                const icon = isConcluido ? '✅' : '⏳';
-                const statusTexto = isConcluido ? 'Concluído' : 'Em andamento';
-                const corBorder = isConcluido ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50';
-                
-                const hora = item.attendedTime || item.inAttendanceTime;
-                const horaFormatada = hora ? new Date(hora).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
-
-                listaHtml += `
-                    <div class="flex justify-between items-center p-3 rounded-xl border ${corBorder} shadow-sm">
-                        <div class="truncate pr-3">
-                            <p class="font-black text-gray-800 text-sm truncate">${escapeHTML(item.name || 'Sem Nome')}</p>
-                            <p class="text-[10px] text-gray-500 uppercase mt-0.5 font-medium truncate">${escapeHTML(item.subject || 'S/ Assunto')}</p>
-                        </div>
-                        <div class="text-right flex-shrink-0 flex flex-col items-end">
-                            <span class="text-sm bg-white px-2 py-0.5 rounded border border-gray-200 shadow-sm flex items-center gap-1">
-                                ${icon} <span class="text-[9px] font-bold text-gray-600">${statusTexto}</span>
-                            </span>
-                            <p class="text-[10px] font-bold text-gray-400 mt-1">${horaFormatada}</p>
-                        </div>
+        // Monta o HTML dinâmico das listas
+        let defensoresHtml = '';
+        Object.keys(defensoresStats).forEach(def => {
+            defensoresHtml += `
+                <div class="flex justify-between items-center p-2.5 bg-blue-50 border border-blue-100 rounded-lg mb-2 shadow-sm">
+                    <span class="font-black text-blue-800 text-xs flex items-center gap-1">👨‍⚖️ ${escapeHTML(def)}</span>
+                    <div class="flex flex-col sm:flex-row gap-1 sm:gap-2 text-[9px] sm:text-[10px] font-bold text-right">
+                        ${defensoresStats[def].distrib > 0 ? `<span class="bg-blue-200 text-blue-800 px-2 py-0.5 rounded shadow-sm">${defensoresStats[def].distrib} Assinaturas</span>` : ''}
+                        ${defensoresStats[def].correcao > 0 ? `<span class="bg-amber-200 text-amber-800 px-2 py-0.5 rounded shadow-sm">${defensoresStats[def].correcao} Avaliações</span>` : ''}
                     </div>
-                `;
-            });
-            listaHtml += `</div>`;
-        }
+                </div>
+            `;
+        });
+        if(!defensoresHtml) defensoresHtml = '<p class="text-xs text-gray-500 italic p-3 text-center bg-gray-50 rounded-lg">Nenhum defensor com demandas pendentes.</p>';
 
+        let servidoresHtml = '';
+        Object.keys(servidoresStats).forEach(serv => {
+            servidoresHtml += `
+                <div class="flex justify-between items-center p-2.5 bg-purple-50 border border-purple-100 rounded-lg mb-2 shadow-sm">
+                    <span class="font-black text-purple-800 text-xs flex items-center gap-1">🧑‍💻 ${escapeHTML(serv)}</span>
+                    <span class="bg-purple-200 text-purple-800 px-2 py-0.5 rounded text-[10px] font-bold shadow-sm">${servidoresStats[serv]} em mesa</span>
+                </div>
+            `;
+        });
+        if(!servidoresHtml) servidoresHtml = '<p class="text-xs text-gray-500 italic p-3 text-center bg-gray-50 rounded-lg">Nenhum servidor com demandas em mesa.</p>';
+
+        // Monta o Modal
         modal.innerHTML = `
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col transform transition-all scale-100 animate-fade-in-up">
-                <div class="bg-indigo-600 p-6 flex justify-between items-center text-white relative overflow-hidden">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col transform transition-all scale-100 animate-fade-in-up max-h-[90vh]">
+                
+                <div class="bg-indigo-600 p-5 flex justify-between items-center text-white relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -mr-10 -mt-10 pointer-events-none"></div>
                     <div class="relative z-10">
-                        <h2 class="font-black text-2xl flex items-center gap-2"><span>📊</span> Meu Painel</h2>
-                        <p class="text-indigo-200 text-xs mt-1 font-medium">Sua produtividade na pauta atual</p>
+                        <h2 class="font-black text-lg sm:text-xl flex items-center gap-2 tracking-wide"><span>📊</span> Status do Atendimento Externo</h2>
+                        <p class="text-indigo-200 text-xs mt-1 font-medium">Acompanhamento global em tempo real</p>
                     </div>
-                    <button id="close-meu-painel" class="relative z-10 text-indigo-200 hover:text-white hover:rotate-90 transition-all text-3xl font-light leading-none">&times;</button>
+                    <button id="close-painel-geral" class="relative z-10 text-indigo-200 hover:text-white hover:rotate-90 transition-all text-3xl font-light leading-none">&times;</button>
                 </div>
                 
-                <div class="p-6 bg-gray-50">
-                    <div class="grid grid-cols-2 gap-4 mb-6">
-                        <div class="bg-white p-5 rounded-xl border border-green-100 text-center shadow-sm relative overflow-hidden group">
-                            <div class="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
-                            <p class="text-4xl font-black text-green-600 group-hover:scale-110 transition-transform">${finalizados.length}</p>
-                            <p class="text-[10px] text-gray-500 font-bold uppercase mt-2 tracking-wider">Finalizados</p>
+                <div class="p-5 bg-gray-50 overflow-y-auto custom-scrollbar flex-grow">
+                    <div class="grid grid-cols-4 gap-2 sm:gap-3 mb-6">
+                        <div class="bg-white p-3 rounded-xl border border-indigo-100 text-center shadow-sm relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-full h-1 bg-indigo-500"></div>
+                            <p class="text-xl sm:text-2xl font-black text-indigo-600 mt-1">${emMesa.length}</p>
+                            <p class="text-[8px] sm:text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-1">Em Mesa</p>
                         </div>
-                        <div class="bg-white p-5 rounded-xl border border-blue-100 text-center shadow-sm relative overflow-hidden group">
-                            <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-                            <p class="text-4xl font-black text-blue-500 group-hover:scale-110 transition-transform">${emAndamento.length}</p>
-                            <p class="text-[10px] text-gray-500 font-bold uppercase mt-2 tracking-wider">Em Andamento</p>
+                        <div class="bg-white p-3 rounded-xl border border-blue-100 text-center shadow-sm relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
+                            <p class="text-xl sm:text-2xl font-black text-blue-600 mt-1">${distrib.length}</p>
+                            <p class="text-[8px] sm:text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-1">P/ Assinar</p>
+                        </div>
+                        <div class="bg-white p-3 rounded-xl border border-amber-100 text-center shadow-sm relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-full h-1 bg-amber-500"></div>
+                            <p class="text-xl sm:text-2xl font-black text-amber-600 mt-1">${correcao.length}</p>
+                            <p class="text-[8px] sm:text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-1">P/ Avaliar</p>
+                        </div>
+                        <div class="bg-white p-3 rounded-xl border border-green-100 text-center shadow-sm relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-full h-1 bg-green-500"></div>
+                            <p class="text-xl sm:text-2xl font-black text-green-600 mt-1">${finalizados.length}</p>
+                            <p class="text-[8px] sm:text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-1">Protocolados</p>
                         </div>
                     </div>
                     
-                    <h3 class="font-black text-xs text-gray-400 uppercase tracking-widest mb-4 border-b border-gray-200 pb-2">Histórico de Hoje</h3>
-                    ${listaHtml}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                            <h3 class="font-black text-[10px] text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 pb-2">Pendências p/ Defensor</h3>
+                            <div class="space-y-1">
+                                ${defensoresHtml}
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                            <h3 class="font-black text-[10px] text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 pb-2">Demandas c/ Servidor</h3>
+                            <div class="space-y-1">
+                                ${servidoresHtml}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
 
         modal.classList.remove('hidden');
 
-        document.getElementById('close-meu-painel').onclick = () => {
+        document.getElementById('close-painel-geral').onclick = () => {
             modal.classList.add('hidden');
         };
 
