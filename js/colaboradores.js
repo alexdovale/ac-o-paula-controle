@@ -285,13 +285,15 @@ const CollaboratorService = {
         ordenados.forEach(colab => {
             if (colab.transporte === 'Meios Próprios') selfT++; else compT++;
             
-            // Agrupador visual moderno e elegante
+            // CORREÇÃO APLICADA AQUI: Retirado o flex do <td>, adicionado na <div> interna e corrigido as cores de fundo.
             if (this.ordemAtual === 'grupo' && ultimoGrupo !== colab.equipe) {
                 ultimoGrupo = colab.equipe;
                 tbody.innerHTML += `
-                    <tr class="bg-violet-50/50 border-b border-violet-100">
-                        <td colspan="5" class="p-3 font-black text-violet-800 text-[10px] sm:text-xs uppercase tracking-widest flex items-center gap-2">
-                            <span>📁</span> Equipe ${escapeHTML(ultimoGrupo)}
+                    <tr>
+                        <td colspan="5" class="bg-violet-50 border-y border-violet-100 p-3">
+                            <div class="font-black text-violet-800 text-[10px] sm:text-xs uppercase tracking-widest flex items-center gap-2">
+                                <span>📁</span> Equipe ${escapeHTML(ultimoGrupo)}
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -311,7 +313,7 @@ const CollaboratorService = {
             const row = document.createElement('tr');
             row.className = "border-b hover:bg-slate-50 transition-colors duration-150";
             
-            // Solução para Mobile: Exibir o cargo embaixo do nome caso a coluna principal suma (md:hidden)
+            // Solução para Mobile mantida
             row.innerHTML = `
                 <td class="p-3">
                     <div class="font-bold text-sm text-slate-800 truncate max-w-[140px] sm:max-w-xs">${escapeHTML(colab.nome)}</div>
