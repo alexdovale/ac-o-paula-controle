@@ -21,7 +21,7 @@ import { showConfirmModal } from './confirmModal.js';
 import { logAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser, loadAuditLogs, exportAuditLogsPDF, loadDashboardData, populateUserFilter } from './admin.js';
 import { parsePautaCSV } from './csvHandler.js';
 import { getChecklistHTML } from './checklist.js';
-import { PainelGeralService } from './painelGeralService.js'; // <--- NOVO IMPORT ADICIONADO AQUI
+import { PainelGeralService } from './painelGeralService.js'; // <--- IMPORT DO PAINEL GERAL
 
 class SIGAPApp { 
     constructor() {
@@ -502,7 +502,7 @@ class SIGAPApp {
 
                 if (pautaType === 'multisala') {
                     novaPautaData.customRooms = this.customRoomsList;
-                    novaPautaData.rooms = this.customRoomsList; // Consistência
+                    novaPautaData.rooms = this.customRoomsList; 
                 }
 
                 const pautaRef = await addDoc(collection(this.db, "pautas"), novaPautaData);
@@ -558,14 +558,17 @@ class SIGAPApp {
         document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
 
         // --- NOVO: Listener do Painel Geral do Atendimento Externo ---
-        // Fechar o menu flutuante de ações assim que alguém clica no botão dinâmico
-        document.body.addEventListener('click', (e) => {
-            if (e.target.closest('#btn-painel-geral-externo')) {
+        document.getElementById('btn-painel-geral-externo')?.addEventListener('click', () => {
+            if (typeof PainelGeralService !== 'undefined') {
+                PainelGeralService.abrirPainel(this);
+                // Fecha o menu de ações ao clicar
                 const actionsPanel = document.getElementById('actions-panel');
                 if (actionsPanel) {
                     actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
                     document.getElementById('actions-arrow')?.classList.remove('rotate-180');
                 }
+            } else {
+                showNotification("Módulo do painel não carregado.", "error");
             }
         });
         
@@ -1987,7 +1990,7 @@ class SIGAPApp {
         const btnMonitor = document.getElementById('btn-painel-geral-externo');
         if (btnMonitor) {
             const liberadoApoio = this.currentPautaData?.liberarPainelGeralApoio === true;
-            if (isApoio && !liberarPainelApoio) {
+            if (isApoio && !liberarApoio) {
                 btnMonitor.classList.add('hidden');
             } else {
                 btnMonitor.classList.remove('hidden');
@@ -2090,4 +2093,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // --- NOVO: Listener do Painel Geral do Atendimento Externo ---
+    document.getElementById('btn-painel-geral-externo')?.addEventListener('click', () => {
+        if (typeof PainelGeralService !== 'undefined') {
+            PainelGeralService.abrirPainel(window.app);
+            // Fecha o menu de ações ao clicar
+            const actionsPanel = document.getElementById('actions-panel');
+            if (actionsPanel) {
+                actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+            }
+        } else {
+            showNotification("Erro: Módulo do painel não carregado", "error");
+        }
+    });
 });
