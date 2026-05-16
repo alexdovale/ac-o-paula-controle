@@ -1,4 +1,4 @@
-// js/painelGeralService.js - MONITOR DE PRODUTIVIDADE (FLUTUANTE E ARRASTÁVEL)
+// js/painelGeralService.js - MONITOR DE PRODUTIVIDADE (MODAL PADRONIZADO E DETALHADO)
 
 import { escapeHTML } from './utils.js';
 
@@ -7,116 +7,71 @@ export const PainelGeralService = {
     // 1. INJEÇÃO DO BOTÃO NO MENU DE AÇÕES
     // ========================================================
     injetarBotao(app) {
-        const actionsPanel = document.getElementById('actions-panel');
-        
-        // Verifica permissões (Operadores ou Apoio com liberação ativa)
-        const role = window.app?.currentUser?.role || 'user';
-        const isOwner = window.app?.auth?.currentUser?.uid === app.currentPautaOwnerId;
-        const isOperador = isOwner || ['admin', 'superadmin', 'user'].includes(role);
-        const liberadoApoio = app.currentPautaData?.liberarPainelGeralApoio === true; 
-        const canView = isOperador || (role === 'apoio' && liberadoApoio);
-
-        let btn = document.getElementById('btn-painel-geral-externo');
-        
-        if (!canView) {
-            if (btn) btn.remove();
-            this.fecharPainel();
-            return;
-        }
-
-        // Cria o botão com visual padronizado do seu sistema
-        if (actionsPanel && !btn) {
-            btn = document.createElement('button');
-            btn.id = 'btn-painel-geral-externo';
-            btn.className = "w-full text-left px-3 py-2.5 sm:py-2 text-sm font-medium text-emerald-700 bg-emerald-100 rounded-lg hover:bg-emerald-200 transition-colors flex items-center gap-2 mt-2 shadow-sm whitespace-nowrap";
-            btn.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-emerald-600"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-                <span>Monitor da Equipe</span>
-            `;
-            
-            btn.onclick = () => {
-                this.abrirPainel(app);
-            };
-            
-            // Adiciona como o primeiro botão para ter destaque
-            actionsPanel.insertBefore(btn, actionsPanel.firstChild);
-        }
-
-        // Atualiza os dados se o painel já estiver flutuando na tela
-        const painel = document.getElementById('painel-flutuante-monitor');
-        if (painel && !painel.classList.contains('hidden')) {
+        // A injeção e o controle de permissão continuam no main.js e ui.js,
+        // Mas podemos manter a lógica de atualização em tempo real aqui
+        const modal = document.getElementById('painel-geral-externo-modal');
+        if (modal && !modal.classList.contains('hidden')) {
             this.atualizarConteudo(app);
         }
     },
 
     // ========================================================
-    // 2. CONSTRUÇÃO DO MODAL FLUTUANTE
+    // 2. CONSTRUÇÃO DO MODAL CENTRAL
     // ========================================================
     abrirPainel(app) {
-        let painel = document.getElementById('painel-flutuante-monitor');
+        let modal = document.getElementById('painel-geral-externo-modal');
         
-        if (!painel) {
-            painel = document.createElement('div');
-            painel.id = 'painel-flutuante-monitor';
-            // Layout moderno, fixo e arrastável
-            painel.className = 'fixed bottom-4 right-4 sm:bottom-8 sm:right-8 w-80 sm:w-96 bg-white rounded-xl shadow-2xl flex flex-col z-[200] border border-gray-200 overflow-hidden transform transition-transform duration-300 ease-out translate-y-0';
-            painel.style.maxHeight = '85vh';
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'painel-geral-externo-modal';
+            // Usa as mesmas classes dos outros modais grandes do sistema (z-50, fundo preto translúcido, etc)
+            modal.className = 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-2 sm:p-4 transition-opacity';
             
-            painel.innerHTML = `
-                <div id="painel-monitor-header" class="bg-gradient-to-r from-emerald-600 to-teal-700 p-3 flex justify-between items-center text-white cursor-move select-none shrink-0 border-b border-emerald-800 shadow-md">
-                    <div class="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                        <h2 class="font-black text-xs uppercase tracking-widest">Produtividade</h2>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button id="btn-minimizar-monitor" class="w-6 h-6 flex items-center justify-center hover:bg-white/20 rounded transition-colors" title="Minimizar">
-                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        </button>
-                        <button id="btn-fechar-monitor" class="w-6 h-6 flex items-center justify-center hover:bg-red-500 rounded transition-colors" title="Fechar">
-                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        </button>
-                    </div>
-                </div>
-                
-                <div id="painel-monitor-body" class="flex-grow overflow-y-auto bg-slate-50 flex flex-col scrollable-content transition-all duration-300 origin-top">
-                    <div id="painel-monitor-conteudo" class="p-3 space-y-4">
-                        <div class="flex justify-center py-6">
-                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+            modal.innerHTML = `
+                <div class="bg-white shadow-2xl w-full max-w-5xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;">
+                    
+                    <div class="flex justify-between items-center p-3 sm:p-5 border-b bg-emerald-50 shrink-0 sm:rounded-t-xl">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl sm:text-3xl text-emerald-600 bg-white p-2 rounded-lg shadow-sm">📊</span>
+                            <div>
+                                <h2 class="text-base sm:text-xl font-black text-emerald-800 uppercase tracking-wide">Monitor de Produtividade</h2>
+                                <p class="text-[10px] sm:text-xs font-semibold text-emerald-600 mt-0.5">Visão Geral da Equipe e Atendimentos</p>
+                            </div>
                         </div>
+                        <button id="close-painel-geral-modal-btn" class="text-emerald-300 hover:text-emerald-600 bg-white hover:bg-emerald-100 rounded-lg p-2 transition-colors text-2xl font-bold leading-none w-10 h-10 flex items-center justify-center shadow-sm">&times;</button>
+                    </div>
+                    
+                    <div id="painel-monitor-body" class="flex-grow overflow-y-auto p-3 sm:p-6 bg-slate-50 scrollable-content">
+                        <div id="painel-monitor-conteudo" class="space-y-6">
+                            <div class="flex justify-center py-10">
+                                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 sm:p-4 border-t bg-white shrink-0 sm:rounded-b-xl flex justify-end">
+                        <button id="btn-fechar-painel-baixo" class="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-300 transition-colors">Fechar Painel</button>
                     </div>
                 </div>
             `;
-            document.body.appendChild(painel);
-
-            // Listeners dos botões de controle da janela
-            document.getElementById('btn-fechar-monitor').onclick = () => this.fecharPainel();
             
-            document.getElementById('btn-minimizar-monitor').onclick = () => {
-                const body = document.getElementById('painel-monitor-body');
-                const btnMini = document.getElementById('btn-minimizar-monitor');
-                body.classList.toggle('hidden');
-                
-                if (body.classList.contains('hidden')) {
-                    btnMini.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>';
-                } else {
-                    btnMini.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
-                }
+            document.body.appendChild(modal);
+
+            // Fechamento pelo X ou Botão Fechar
+            const closeActions = () => {
+                modal.classList.add('hidden');
             };
+            document.getElementById('close-painel-geral-modal-btn').onclick = closeActions;
+            document.getElementById('btn-fechar-painel-baixo').onclick = closeActions;
 
-            this.tornarArrastavel(painel, document.getElementById('painel-monitor-header'));
+            // Fechamento clicando fora do modal (no fundo escuro)
+            modal.onclick = (e) => {
+                if (e.target === modal) closeActions();
+            };
         }
 
-        // Animação de entrada
-        painel.classList.remove('hidden', 'translate-y-[120%]');
+        modal.classList.remove('hidden');
         this.atualizarConteudo(app);
-    },
-
-    fecharPainel() {
-        const painel = document.getElementById('painel-flutuante-monitor');
-        if (painel) {
-            painel.classList.add('translate-y-[120%]');
-            setTimeout(() => painel.classList.add('hidden'), 300);
-        }
     },
 
     // ========================================================
@@ -129,194 +84,236 @@ export const PainelGeralService = {
         const todos = app.allAssisted || [];
         const colaboradoresDb = app.colaboradores || [];
         
-        // Filtros Atendimento Externo
+        // Filtros de demandas externas
         const emMesa = todos.filter(a => a.status === 'emAtendimento' && a.delegationToken); 
         const distrib = todos.filter(a => a.status === 'aguardandoDistribuicao');
         const correcao = todos.filter(a => a.status === 'aguardandoCorrecao');
+        const finalizados = todos.filter(a => a.status === 'atendido' && a.finalizadoPeloColaborador);
 
-        // Filtro de Colaboradores Base
+        // Agrupamento dos colaboradores cadastrados
         const defensores = colaboradoresDb.filter(c => c.cargo?.toLowerCase().includes('defensor'));
         const servidores = colaboradoresDb.filter(c => !c.cargo?.toLowerCase().includes('defensor'));
 
-        // PROCESSA DEFENSORES
+        // ====================================================
+        // GERAÇÃO DE HTML: DEFENSORES
+        // ====================================================
         const countDefensores = {};
-        defensores.forEach(d => { countDefensores[d.nome] = { distrib: 0, correcao: 0 }; });
+        // Inicializa com TODOS os defensores cadastrados
+        defensores.forEach(d => { 
+            countDefensores[d.nome] = { distrib: [], correcao: [], dataObj: d }; 
+        });
 
+        // Adiciona as demandas para quem tem
         [...distrib, ...correcao].forEach(a => {
             const def = a.defensorResponsavel || 'Não Atribuído';
-            if(!countDefensores[def]) countDefensores[def] = { distrib: 0, correcao: 0 };
+            if(!countDefensores[def]) countDefensores[def] = { distrib: [], correcao: [], dataObj: { nome: def, cargo: 'Defensor(a)' } };
             
-            if(a.status === 'aguardandoDistribuicao') countDefensores[def].distrib++;
-            if(a.status === 'aguardandoCorrecao') countDefensores[def].correcao++;
+            if(a.status === 'aguardandoDistribuicao') countDefensores[def].distrib.push(a);
+            if(a.status === 'aguardandoCorrecao') countDefensores[def].correcao.push(a);
         });
 
         let defensoresHtml = '';
         Object.keys(countDefensores).sort().forEach(def => {
             const stats = countDefensores[def];
-            const total = stats.distrib + stats.correcao;
+            const isLivre = stats.distrib.length === 0 && stats.correcao.length === 0;
             
-            let statusVisual = total === 0 
-                ? `<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-200 shadow-sm flex items-center gap-1"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Livre</span>`
-                : `<div class="flex flex-col items-end gap-1">
-                     ${stats.distrib > 0 ? `<span class="bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded text-[9px] font-bold shadow-sm">${stats.distrib} P/ Assinar</span>` : ''}
-                     ${stats.correcao > 0 ? `<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[9px] font-bold shadow-sm">${stats.correcao} P/ Avaliar</span>` : ''}
+            let statusVisual = isLivre 
+                ? `<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded border border-emerald-200 shadow-sm font-black text-[10px] flex items-center gap-1.5"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> TOTALMENTE LIVRE</span>`
+                : `<div class="flex gap-2">
+                     ${stats.distrib.length > 0 ? `<span class="bg-cyan-100 text-cyan-800 px-2.5 py-1 rounded text-[10px] font-black shadow-sm border border-cyan-200">${stats.distrib.length} Assinatura(s)</span>` : ''}
+                     ${stats.correcao.length > 0 ? `<span class="bg-amber-100 text-amber-800 px-2.5 py-1 rounded text-[10px] font-black shadow-sm border border-amber-200">${stats.correcao.length} Correção(ões)</span>` : ''}
                    </div>`;
 
+            // Detalhamento das peças (abre uma lista dentro do card)
+            let detalhesHtml = '';
+            if (!isLivre) {
+                detalhesHtml = `<div class="mt-3 space-y-1.5 border-t border-blue-100 pt-3 pl-2 sm:pl-4">`;
+                
+                stats.distrib.forEach(a => {
+                    detalhesHtml += `
+                        <div class="flex justify-between items-center text-xs bg-white p-2 rounded border border-cyan-100">
+                            <div class="flex flex-col">
+                                <span class="font-bold text-gray-800">${escapeHTML(a.name)}</span>
+                                <span class="text-[9px] text-gray-500">${escapeHTML(a.subject || 'S/ Assunto')}</span>
+                            </div>
+                            <span class="bg-cyan-50 text-cyan-600 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase">Assinar</span>
+                        </div>`;
+                });
+
+                stats.correcao.forEach(a => {
+                    detalhesHtml += `
+                        <div class="flex justify-between items-center text-xs bg-white p-2 rounded border border-amber-100">
+                            <div class="flex flex-col">
+                                <span class="font-bold text-gray-800">${escapeHTML(a.name)}</span>
+                                <span class="text-[9px] text-gray-500">${escapeHTML(a.subject || 'S/ Assunto')}</span>
+                                ${a.enviadoPor ? `<span class="text-[9px] font-semibold text-amber-500">De: ${escapeHTML(a.enviadoPor)}</span>` : ''}
+                            </div>
+                            <span class="bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase">Corrigir</span>
+                        </div>`;
+                });
+                detalhesHtml += `</div>`;
+            }
+
+            const presença = stats.dataObj.presente ? '<span class="text-green-500 ml-1" title="Presente">●</span>' : '<span class="text-gray-300 ml-1" title="Ausente">●</span>';
+
             defensoresHtml += `
-                <div class="flex justify-between items-center py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors px-1">
-                    <span class="font-bold text-gray-700 text-xs truncate max-w-[140px]">${escapeHTML(def)}</span>
-                    ${statusVisual}
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 shadow-sm hover:shadow transition-shadow">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                            <h3 class="font-black text-blue-900 text-sm flex items-center">👨‍⚖️ ${escapeHTML(def)} ${presença}</h3>
+                            <p class="text-[10px] font-semibold text-blue-600 uppercase mt-0.5">Defensor(a) ${stats.dataObj.equipe ? '- Equipe ' + stats.dataObj.equipe : ''}</p>
+                        </div>
+                        ${statusVisual}
+                    </div>
+                    ${detalhesHtml}
                 </div>
             `;
         });
-        if(!defensoresHtml) defensoresHtml = '<p class="text-xs text-gray-400 italic text-center py-2">Sem defensores ativos.</p>';
+        if(!defensoresHtml) defensoresHtml = '<p class="text-sm text-gray-400 italic text-center py-4 bg-white rounded-lg border border-dashed">Nenhum defensor cadastrado na pauta.</p>';
 
-        // PROCESSA SERVIDORES
+        // ====================================================
+        // GERAÇÃO DE HTML: SERVIDORES
+        // ====================================================
         const countServidores = {};
-        servidores.forEach(s => { countServidores[s.nome] = 0; });
+        // Inicializa com TODOS os servidores cadastrados
+        servidores.forEach(s => { 
+            countServidores[s.nome] = { mesa: [], dataObj: s }; 
+        });
 
         emMesa.forEach(a => {
             const serv = a.assignedCollaborator?.name || 'Não Atribuído';
-            if(countServidores[serv] === undefined) countServidores[serv] = 0;
-            countServidores[serv]++;
+            if(!countServidores[serv]) countServidores[serv] = { mesa: [], dataObj: { nome: serv, cargo: 'Servidor' } };
+            countServidores[serv].mesa.push(a);
         });
 
         let servidoresHtml = '';
         Object.keys(countServidores).sort().forEach(serv => {
-            const qtd = countServidores[serv];
+            const stats = countServidores[serv];
+            const isLivre = stats.mesa.length === 0;
             
-            let statusVisual = qtd === 0 
-                ? `<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-200 shadow-sm flex items-center gap-1"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Livre</span>`
-                : `<span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-bold border border-indigo-200 shadow-sm">⏳ ${qtd} Em Mesa</span>`;
+            let statusVisual = isLivre 
+                ? `<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded border border-emerald-200 shadow-sm font-black text-[10px] flex items-center gap-1.5"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> LIVRE</span>`
+                : `<span class="bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded text-[10px] font-black shadow-sm border border-indigo-200">⏳ ${stats.mesa.length} Em Mesa</span>`;
+
+            // Detalhamento
+            let detalhesHtml = '';
+            if (!isLivre) {
+                detalhesHtml = `<div class="mt-3 space-y-1.5 border-t border-purple-100 pt-3 pl-2 sm:pl-4">`;
+                stats.mesa.forEach(a => {
+                    const hora = a.inAttendanceTime ? new Date(a.inAttendanceTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '';
+                    detalhesHtml += `
+                        <div class="flex justify-between items-center text-xs bg-white p-2 rounded border border-purple-100">
+                            <div class="flex flex-col">
+                                <span class="font-bold text-gray-800">${escapeHTML(a.name)}</span>
+                                <span class="text-[9px] text-gray-500">${escapeHTML(a.subject || 'S/ Assunto')}</span>
+                            </div>
+                            <span class="text-[9px] font-black text-purple-400 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100">${hora}</span>
+                        </div>`;
+                });
+                detalhesHtml += `</div>`;
+            }
+
+            const presença = stats.dataObj.presente ? '<span class="text-green-500 ml-1" title="Presente">●</span>' : '<span class="text-gray-300 ml-1" title="Ausente">●</span>';
 
             servidoresHtml += `
-                <div class="flex justify-between items-center py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors px-1">
-                    <span class="font-bold text-gray-700 text-xs truncate max-w-[140px]">${escapeHTML(serv)}</span>
-                    ${statusVisual}
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4 shadow-sm hover:shadow transition-shadow">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                            <h3 class="font-black text-purple-900 text-sm flex items-center">🧑‍💻 ${escapeHTML(serv)} ${presença}</h3>
+                            <p class="text-[10px] font-semibold text-purple-600 uppercase mt-0.5">${escapeHTML(stats.dataObj.cargo)} ${stats.dataObj.equipe ? '- Equipe ' + stats.dataObj.equipe : ''}</p>
+                        </div>
+                        ${statusVisual}
+                    </div>
+                    ${detalhesHtml}
                 </div>
             `;
         });
-        if(!servidoresHtml) servidoresHtml = '<p class="text-xs text-gray-400 italic text-center py-2">Sem servidores ativos.</p>';
+        if(!servidoresHtml) servidoresHtml = '<p class="text-sm text-gray-400 italic text-center py-4 bg-white rounded-lg border border-dashed">Nenhum servidor cadastrado na pauta.</p>';
 
-        // ========================================================
-        // 4. RENDERIZAÇÃO
-        // ========================================================
+        // ====================================================
+        // GERAÇÃO DE HTML: FINALIZADOS
+        // ====================================================
+        const finalizadosOrdenados = finalizados.sort((a, b) => new Date(b.attendedAt || 0) - new Date(a.attendedAt || 0));
+        let finalizadosHtml = '';
+        
+        if (finalizadosOrdenados.length === 0) {
+            finalizadosHtml = '<p class="text-sm text-gray-400 italic text-center py-4 bg-white rounded-lg border border-dashed">Nenhum atendimento finalizado pelo fluxo externo.</p>';
+        } else {
+            finalizadosHtml = `<div class="bg-white border border-green-200 rounded-lg overflow-hidden shadow-sm p-2 space-y-1">`;
+            finalizadosHtml += finalizadosOrdenados.map(a => {
+                const hora = a.attendedAt ? new Date(a.attendedAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
+                return `
+                    <div class="flex justify-between items-center py-2 px-2 border-b border-green-50 last:border-0 hover:bg-green-50 rounded transition-colors">
+                        <div class="flex flex-col truncate pr-3">
+                            <span class="font-bold text-xs text-gray-800 truncate">${escapeHTML(a.name)}</span>
+                            <span class="text-[9px] text-gray-500 truncate">${escapeHTML(a.subject || 'S/ Assunto')}</span>
+                            ${a.attendedBy ? `<span class="text-[9px] text-green-600 font-bold mt-0.5">Por: ${escapeHTML(a.attendedBy)}</span>` : ''}
+                        </div>
+                        <div class="flex flex-col items-end shrink-0">
+                            <span class="text-[9px] font-black text-green-700 bg-green-100 px-1.5 py-0.5 rounded border border-green-200 uppercase">Protocolado</span>
+                            <span class="text-[9px] font-bold text-gray-400 mt-1">${hora}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            finalizadosHtml += `</div>`;
+        }
+
+        // ====================================================
+        // RENDERIZAÇÃO FINAL NO MODAL
+        // ====================================================
         conteudo.innerHTML = `
-            <div class="grid grid-cols-3 gap-2">
-                <div class="bg-white rounded-lg border border-gray-200 p-2 text-center shadow-sm flex flex-col justify-center items-center">
-                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-0.5">Em Mesa</p>
-                    <p class="text-lg font-black text-indigo-600 leading-none">${emMesa.length}</p>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
+                <div class="bg-white rounded-xl border border-gray-200 p-4 text-center shadow-sm relative overflow-hidden flex flex-col items-center justify-center">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-purple-500"></div>
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Mesa Servidor</p>
+                    <p class="text-3xl font-black text-purple-600">${emMesa.length}</p>
                 </div>
-                <div class="bg-white rounded-lg border border-gray-200 p-2 text-center shadow-sm flex flex-col justify-center items-center">
-                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-0.5">Assinar</p>
-                    <p class="text-lg font-black text-cyan-600 leading-none">${distrib.length}</p>
+                <div class="bg-white rounded-xl border border-gray-200 p-4 text-center shadow-sm relative overflow-hidden flex flex-col items-center justify-center">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-cyan-500"></div>
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">P/ Assinatura</p>
+                    <p class="text-3xl font-black text-cyan-600">${distrib.length}</p>
                 </div>
-                <div class="bg-white rounded-lg border border-gray-200 p-2 text-center shadow-sm flex flex-col justify-center items-center">
-                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-0.5">Avaliar</p>
-                    <p class="text-lg font-black text-amber-500 leading-none">${correcao.length}</p>
+                <div class="bg-white rounded-xl border border-gray-200 p-4 text-center shadow-sm relative overflow-hidden flex flex-col items-center justify-center">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-amber-500"></div>
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">P/ Avaliação</p>
+                    <p class="text-3xl font-black text-amber-500">${correcao.length}</p>
                 </div>
-            </div>
-
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-                <div class="bg-indigo-50 px-3 py-2 border-b border-indigo-100 flex items-center justify-between">
-                    <h3 class="font-black text-[10px] text-indigo-800 uppercase tracking-widest flex items-center gap-1"><span>🧑‍💻</span> Servidores</h3>
-                    <span class="text-[9px] text-indigo-500 font-bold">${servidores.length} Ativos</span>
-                </div>
-                <div class="px-3 py-1">
-                    ${servidoresHtml}
+                <div class="bg-white rounded-xl border border-gray-200 p-4 text-center shadow-sm relative overflow-hidden flex flex-col items-center justify-center">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-green-500"></div>
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Concluídos</p>
+                    <p class="text-3xl font-black text-green-600">${finalizados.length}</p>
                 </div>
             </div>
 
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-                <div class="bg-cyan-50 px-3 py-2 border-b border-cyan-100 flex items-center justify-between">
-                    <h3 class="font-black text-[10px] text-cyan-800 uppercase tracking-widest flex items-center gap-1"><span>👨‍⚖️</span> Defensores</h3>
-                    <span class="text-[9px] text-cyan-500 font-bold">${defensores.length} Ativos</span>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="flex flex-col h-full bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <h3 class="font-black text-sm text-purple-700 uppercase tracking-widest mb-4 pb-2 border-b border-purple-100 flex items-center gap-2">
+                        <span>🧑‍💻</span> Servidores
+                    </h3>
+                    <div class="space-y-3">
+                        ${servidoresHtml}
+                    </div>
                 </div>
-                <div class="px-3 py-1">
-                    ${defensoresHtml}
+
+                <div class="flex flex-col h-full bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <h3 class="font-black text-sm text-blue-700 uppercase tracking-widest mb-4 pb-2 border-b border-blue-100 flex items-center gap-2">
+                        <span>👨‍⚖️</span> Defensores
+                    </h3>
+                    <div class="space-y-3">
+                        ${defensoresHtml}
+                    </div>
+                </div>
+
+                <div class="flex flex-col h-full bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <h3 class="font-black text-sm text-green-700 uppercase tracking-widest mb-4 pb-2 border-b border-green-100 flex items-center gap-2">
+                        <span>✅</span> Últimos Concluídos
+                    </h3>
+                    <div>
+                        ${finalizadosHtml}
+                    </div>
                 </div>
             </div>
         `;
-    },
-
-    // ========================================================
-    // 5. MOTOR DE DRAG & DROP NATIVO (Mobile e Desktop)
-    // ========================================================
-    tornarArrastavel(elementoPainel, elementoCabecalho) {
-        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-
-        elementoCabecalho.onmousedown = arrastarMouseDown;
-        elementoCabecalho.ontouchstart = arrastarTouchStart;
-
-        function arrastarMouseDown(e) {
-            e = e || window.event;
-            // Ignora o clique se for nos botões do header
-            if (e.target.tagName.toLowerCase() === 'button' || e.target.closest('button')) return;
-            
-            e.preventDefault();
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            document.onmouseup = pararArrastar;
-            document.onmousemove = arrastarElemento;
-        }
-
-        function arrastarTouchStart(e) {
-            if (e.target.tagName.toLowerCase() === 'button' || e.target.closest('button')) return;
-            pos3 = e.touches[0].clientX;
-            pos4 = e.touches[0].clientY;
-            document.ontouchend = pararArrastar;
-            document.ontouchmove = arrastarElementoTouch;
-        }
-
-        function arrastarElemento(e) {
-            e = e || window.event;
-            e.preventDefault();
-            pos1 = pos3 - e.clientX;
-            pos2 = pos4 - e.clientY;
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-
-            elementoPainel.style.bottom = "auto";
-            elementoPainel.style.right = "auto";
-            
-            let newTop = elementoPainel.offsetTop - pos2;
-            let newLeft = elementoPainel.offsetLeft - pos1;
-
-            if(newTop < 0) newTop = 0;
-            if(newLeft < 0) newLeft = 0;
-            if(newTop + elementoPainel.offsetHeight > window.innerHeight) newTop = window.innerHeight - elementoPainel.offsetHeight;
-            if(newLeft + elementoPainel.offsetWidth > window.innerWidth) newLeft = window.innerWidth - elementoPainel.offsetWidth;
-
-            elementoPainel.style.top = newTop + "px";
-            elementoPainel.style.left = newLeft + "px";
-        }
-
-        function arrastarElementoTouch(e) {
-            pos1 = pos3 - e.touches[0].clientX;
-            pos2 = pos4 - e.touches[0].clientY;
-            pos3 = e.touches[0].clientX;
-            pos4 = e.touches[0].clientY;
-
-            elementoPainel.style.bottom = "auto";
-            elementoPainel.style.right = "auto";
-            
-            let newTop = elementoPainel.offsetTop - pos2;
-            let newLeft = elementoPainel.offsetLeft - pos1;
-
-            if(newTop < 0) newTop = 0;
-            if(newLeft < 0) newLeft = 0;
-            if(newTop + elementoPainel.offsetHeight > window.innerHeight) newTop = window.innerHeight - elementoPainel.offsetHeight;
-            if(newLeft + elementoPainel.offsetWidth > window.innerWidth) newLeft = window.innerWidth - elementoPainel.offsetWidth;
-
-            elementoPainel.style.top = newTop + "px";
-            elementoPainel.style.left = newLeft + "px";
-        }
-
-        function pararArrastar() {
-            document.onmouseup = null;
-            document.onmousemove = null;
-            document.ontouchend = null;
-            document.ontouchmove = null;
-        }
     }
 };
