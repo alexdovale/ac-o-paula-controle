@@ -1,4 +1,4 @@
-// js/colaboradores.js - VERSÃO MOBILE + FILTRO ATA E ORDENAÇÃO AVANÇADA (MODERNIZADA)
+// js/colaboradores.js - EQUIPE E PRESENÇA (OTIMIZADO PARA MOBILE E PREMIUM)
 
 import { 
     collection, 
@@ -180,10 +180,11 @@ const CollaboratorService = {
         
         const btn = document.createElement('button');
         btn.id = 'toggle-order-btn';
-        btn.className = 'w-full md:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-lg text-xs mb-4 transition-colors border border-slate-200 shadow-sm flex items-center justify-center';
+        // Estilo botão de filtro premium
+        btn.className = 'w-full md:w-auto bg-white hover:bg-slate-50 text-slate-700 font-bold px-4 py-3 md:py-2 rounded-xl text-sm mb-4 transition-colors border border-slate-200 shadow-sm flex items-center justify-center';
         btn.innerHTML = this.ordemAtual === 'grupo' ? '<span class="mr-2">📁</span> Ordenar por Grupo' : '<span class="mr-2">🔤</span> Ordenar por Nome';
         btn.onclick = () => this.toggleOrdem();
-        container.parentElement.insertBefore(btn, container); // Insere ANTES da tabela
+        container.parentElement.insertBefore(btn, container);
     },
 
     configurarLogicaCargo() {
@@ -239,7 +240,7 @@ const CollaboratorService = {
         };
 
         if (!data.nome || !data.identificador) {
-            showNotification("Preencha Nome e Matrícula/ID", "error");
+            showNotification("Preencha Nome e Matrícula/ID", "warning");
             return;
         }
 
@@ -250,7 +251,7 @@ const CollaboratorService = {
             } else {
                 await addDoc(colRef, { ...data, presente: false, horario: '--:--' });
             }
-            // Salva na Base Master para auto-preenchimento futuro
+            
             await setDoc(doc(app.db, "colaboradores_gerais", data.identificador), data, { merge: true });
             
             showNotification("Membro atualizado/salvo com sucesso!", "success");
@@ -284,12 +285,12 @@ const CollaboratorService = {
         ordenados.forEach(colab => {
             if (colab.transporte === 'Meios Próprios') selfT++; else compT++;
             
-            // Agrupador visual moderno
+            // Agrupador visual moderno e elegante
             if (this.ordemAtual === 'grupo' && ultimoGrupo !== colab.equipe) {
                 ultimoGrupo = colab.equipe;
                 tbody.innerHTML += `
-                    <tr class="bg-indigo-50 border-b border-indigo-100">
-                        <td colspan="5" class="p-3 font-black text-indigo-800 text-xs uppercase tracking-widest flex items-center gap-2">
+                    <tr class="bg-violet-50/50 border-b border-violet-100">
+                        <td colspan="5" class="p-3 font-black text-violet-800 text-[10px] sm:text-xs uppercase tracking-widest flex items-center gap-2">
                             <span>📁</span> Equipe ${escapeHTML(ultimoGrupo)}
                         </td>
                     </tr>
@@ -298,43 +299,45 @@ const CollaboratorService = {
 
             const isDef = colab.cargo === 'Defensor(a)';
             const statusCheckbox = colab.presente 
-                ? `<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                       <input type="checkbox" name="toggle" id="toggle-${colab.id}" class="checkin-checkbox toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer" checked data-id="${colab.id}"/>
-                       <label for="toggle-${colab.id}" class="toggle-label block overflow-hidden h-5 rounded-full bg-green-500 cursor-pointer"></label>
+                ? `<div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                       <input type="checkbox" name="toggle" id="toggle-${colab.id}" class="checkin-checkbox toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" checked data-id="${colab.id}"/>
+                       <label for="toggle-${colab.id}" class="toggle-label block overflow-hidden h-6 rounded-full bg-emerald-500 cursor-pointer shadow-inner"></label>
                    </div>`
-                : `<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                       <input type="checkbox" name="toggle" id="toggle-${colab.id}" class="checkin-checkbox toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer" data-id="${colab.id}"/>
-                       <label for="toggle-${colab.id}" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label>
+                : `<div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                       <input type="checkbox" name="toggle" id="toggle-${colab.id}" class="checkin-checkbox toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" data-id="${colab.id}"/>
+                       <label for="toggle-${colab.id}" class="toggle-label block overflow-hidden h-6 rounded-full bg-slate-300 cursor-pointer shadow-inner"></label>
                    </div>`;
 
             const row = document.createElement('tr');
             row.className = "border-b hover:bg-slate-50 transition-colors duration-150";
+            
+            // Solução para Mobile: Exibir o cargo embaixo do nome caso a coluna principal suma (md:hidden)
             row.innerHTML = `
                 <td class="p-3">
-                    <div class="font-bold text-xs sm:text-sm ${isDef ? 'text-blue-700' : 'text-slate-800'} truncate max-w-[150px] sm:max-w-xs">${escapeHTML(colab.nome)}</div>
-                    <div class="text-[9px] sm:text-[10px] text-slate-500 uppercase mt-0.5">${colab.tipo_id}: ${colab.identificador}</div>
+                    <div class="font-bold text-sm text-slate-800 truncate max-w-[140px] sm:max-w-xs">${escapeHTML(colab.nome)}</div>
+                    <div class="text-[9px] sm:text-[10px] text-slate-500 uppercase mt-0.5 tracking-wider">${colab.tipo_id}: ${colab.identificador}</div>
+                    <div class="text-[10px] font-black uppercase mt-1 md:hidden ${isDef ? 'text-blue-500' : 'text-slate-400'}">${escapeHTML(colab.cargo)}</div>
                 </td>
                 <td class="p-3 text-center align-middle">
                     ${statusCheckbox}
                 </td>
-                <td class="p-3 hidden md:table-cell text-xs font-medium text-slate-600">${escapeHTML(colab.cargo)}</td>
-                <td class="p-3 text-center text-xs font-bold text-slate-500">${colab.horario || '--:--'}</td>
-                <td class="p-3 text-center flex justify-center gap-2 mt-1">
-                    <button onclick="CollaboratorService.editCollaborator(window.app, '${colab.id}')" class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 p-1.5 rounded transition" title="Editar">✏️</button>
-                    <button onclick="CollaboratorService.deleteCollaborator(window.app, '${colab.id}')" class="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition" title="Excluir">🗑️</button>
+                <td class="p-3 hidden md:table-cell text-xs font-semibold text-slate-600">${escapeHTML(colab.cargo)}</td>
+                <td class="p-3 text-center text-xs font-black text-slate-400">${colab.horario || '--:--'}</td>
+                <td class="p-3 text-center flex justify-center gap-2 mt-1 sm:mt-2">
+                    <button onclick="CollaboratorService.editCollaborator(window.app, '${colab.id}')" class="text-blue-600 hover:text-white hover:bg-blue-500 bg-blue-50 p-2 sm:p-1.5 rounded-lg transition-colors shadow-sm" title="Editar">✏️</button>
+                    <button onclick="CollaboratorService.deleteCollaborator(window.app, '${colab.id}')" class="text-red-500 hover:text-white hover:bg-red-500 bg-red-50 p-2 sm:p-1.5 rounded-lg transition-colors shadow-sm" title="Excluir">🗑️</button>
                 </td>
             `;
             tbody.appendChild(row);
         });
 
-        // Estilização customizada nativa para o toggle moderno (inserido via DOM para não precisar mexer no head)
-        if (!document.getElementById('toggle-css')) {
+        if (!document.getElementById('toggle-css-colaboradores')) {
             const style = document.createElement('style');
-            style.id = 'toggle-css';
+            style.id = 'toggle-css-colaboradores';
             style.innerHTML = `
-                .toggle-checkbox:checked { right: 0; border-color: #22c55e; }
-                .toggle-checkbox:checked + .toggle-label { background-color: #22c55e; }
-                .toggle-checkbox { right: 0; z-index: 1; border-color: #d1d5db; transition: all 0.2s ease; }
+                .toggle-checkbox:checked { right: 0; border-color: #10b981; }
+                .toggle-checkbox:checked + .toggle-label { background-color: #10b981; }
+                .toggle-checkbox { right: 0; z-index: 1; border-color: #cbd5e1; transition: all 0.2s ease; }
             `;
             document.head.appendChild(style);
         }
@@ -346,19 +349,17 @@ const CollaboratorService = {
     },
 
     addEventListeners(app) {
-        // Lógica do Checkbox de Presença moderno
         document.querySelectorAll('.checkin-checkbox').forEach(cb => {
             cb.onchange = async (e) => {
                 const id = e.target.dataset.id;
                 const pres = e.target.checked;
                 const hor = pres ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
                 
-                // Animação visual imediata
                 const label = e.target.nextElementSibling;
                 if(pres) {
-                    label.classList.replace('bg-gray-300', 'bg-green-500');
+                    label.classList.replace('bg-slate-300', 'bg-emerald-500');
                 } else {
-                    label.classList.replace('bg-green-500', 'bg-gray-300');
+                    label.classList.replace('bg-emerald-500', 'bg-slate-300');
                 }
 
                 await updateDoc(doc(app.db, "pautas", app.currentPauta.id, "collaborators", id), { presente: pres, horario: hor });
@@ -385,7 +386,6 @@ const CollaboratorService = {
             };
         }
 
-        // Evento de busca Master ao clicar no botão
         const btnBuscarMaster = document.getElementById('buscar-master-btn');
         if (btnBuscarMaster) {
             btnBuscarMaster.onclick = () => {
@@ -411,12 +411,13 @@ const CollaboratorService = {
             const emailInput = document.getElementById('collaborator-email-modal');
             if (emailInput) emailInput.value = c.email || '';
 
-            document.getElementById('add-collaborator-btn-modal').textContent = "Atualizar Cadastro";
-            document.getElementById('add-collaborator-btn-modal').classList.replace('bg-green-600', 'bg-blue-600');
-            document.getElementById('add-collaborator-btn-modal').classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
+            const btnSubmit = document.getElementById('add-collaborator-btn-modal');
+            if (btnSubmit) {
+                btnSubmit.innerHTML = "💾 Atualizar Cadastro";
+                btnSubmit.className = "w-full bg-violet-600 text-white font-black py-4 rounded-xl hover:bg-violet-700 transition shadow-lg uppercase tracking-widest text-sm";
+            }
             this.configurarLogicaCargo();
             
-            // Rola pro topo suavemente para ver o formulário
             document.getElementById('collaborators-modal').querySelector('.scrollable-content').scrollTo({ top: 0, behavior: 'smooth' });
         }
     },
@@ -448,9 +449,8 @@ const CollaboratorService = {
         this.editId = null;
         const btnSubmit = document.getElementById('add-collaborator-btn-modal');
         if (btnSubmit) {
-            btnSubmit.textContent = "Adicionar à Equipe";
-            btnSubmit.classList.replace('bg-blue-600', 'bg-green-600');
-            btnSubmit.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
+            btnSubmit.innerHTML = "➕ Adicionar à Equipe";
+            btnSubmit.className = "w-full bg-emerald-600 text-white font-black py-4 rounded-xl hover:bg-emerald-700 transition shadow-lg uppercase tracking-widest text-sm";
         }
         this.configurarLogicaCargo();
     }
