@@ -128,6 +128,21 @@ class SIGAPApp {
                 await AuthService.handleAuthState(this, user);
                 await this.loadUserPreferences(); 
                 this.applyRoleBasedUI(); 
+                
+                // ⭐ SISTEMA DE RECUPERAÇÃO DE SESSÃO (ONDE EU PAREI?) ⭐
+                const lastPautaId = localStorage.getItem('lastPautaId');
+                const lastPautaName = localStorage.getItem('lastPautaName');
+                const lastPautaType = localStorage.getItem('lastPautaType');
+
+                // Se existe um marcador de pauta salvo, pula direto para ela
+                if (lastPautaId) {
+                    console.log("🔄 Restaurando sessão anterior: ", lastPautaName);
+                    this.loadPauta(lastPautaId, lastPautaName || 'Pauta', lastPautaType || 'agendado');
+                } else {
+                    // Se não, mostra a tela normal de escolher pautas
+                    this.showPautaSelectionScreen();
+                }
+
             } else {
                 UIService.showScreen('login');
                 document.getElementById('admin-panel-btn')?.classList.add('hidden');
@@ -538,9 +553,16 @@ class SIGAPApp {
         document.getElementById('back-to-pautas-btn')?.addEventListener('click', () => {
             if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
             if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
+            
             this.currentPauta = null;
             this.allAssisted = [];
             this.colaboradores = [];
+            
+            // ⭐ APAGA O MARCADOR AO VOLTAR (Sai da pauta)
+            localStorage.removeItem('lastPautaId');
+            localStorage.removeItem('lastPautaName');
+            localStorage.removeItem('lastPautaType');
+
             UIService.showScreen('pautaSelection');
             if (this.auth?.currentUser) {
                 this.showPautaSelectionScreen();
@@ -557,11 +579,9 @@ class SIGAPApp {
 
         document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
 
-        // --- NOVO: Listener do Painel Geral do Atendimento Externo ---
         document.getElementById('btn-painel-geral-externo')?.addEventListener('click', () => {
             if (typeof PainelGeralService !== 'undefined') {
                 PainelGeralService.abrirPainel(this);
-                // Fecha o menu de ações ao clicar
                 const actionsPanel = document.getElementById('actions-panel');
                 if (actionsPanel) {
                     actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
@@ -1816,7 +1836,9 @@ class SIGAPApp {
         this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
         document.getElementById('pauta-title').textContent = pautaName;
 
+        // ⭐ SALVA O MARCADOR EXATO DE ONDE VOCÊ ENTROU
         localStorage.setItem('lastPautaId', pautaId);
+        localStorage.setItem('lastPautaName', pautaName);
         localStorage.setItem('lastPautaType', pautaType);
 
         try {
