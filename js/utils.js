@@ -1,13 +1,10 @@
-// js/utils.js
-// Funções genéricas (escapeHTML, formatação de data, PDF, notificações, etc.)
+// js/utils.js - UTILITÁRIOS E UI PREMIUM (SIGAP)
 
 /**
  * Prevenção contra ataques XSS
- * @param {string} str - String a ser escapada
- * @returns {string} String escapada
  */
 export const escapeHTML = (str) => {
-    if (!str) return '';
+    if (str === null || str === undefined) return '';
     return String(str)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -17,192 +14,166 @@ export const escapeHTML = (str) => {
 };
 
 /**
- * Toca um som de notificação baseado nas preferências do usuário.
- * @param {string} type - Tipo de som ('notification', 'success', 'error', 'chime', 'info', 'warning').
+ * Toca sons do sistema respeitando as preferências do usuário
  */
 export function playSound(type = 'notification') {
-    // ⭐ Verificação de Preferências
     const preferenceKey = `enableSounds${type.charAt(0).toUpperCase() + type.slice(1)}`;
     const finalPreferenceKey = (type === 'chime' || type === 'notification' || type === 'info') 
         ? 'enableSoundsInfo' 
         : preferenceKey;
 
-    if (window.app && window.app.userPreferences && window.app.userPreferences[finalPreferenceKey] === false) {
-        return; // Não toca o som se desativado
+    if (window.app?.userPreferences && window.app.userPreferences[finalPreferenceKey] === false) {
+        return; 
     }
 
-    let audioPath = '';
-    switch (type) {
-        case 'success':
-            audioPath = './assets/sounds/success.mp3'; 
-            break;
-        case 'error':
-            audioPath = './assets/sounds/error.mp3';   
-            break;
-        case 'chime': 
-        case 'info':
-            audioPath = './assets/sounds/chime.mp3';   
-            break;
-        case 'warning':
-        case 'notification':
-        default:
-            audioPath = './assets/sounds/notification.mp3'; 
-            break;
-    }
+    const sounds = {
+        'success': './assets/sounds/success.mp3',
+        'error': './assets/sounds/error.mp3',
+        'chime': './assets/sounds/chime.mp3',
+        'info': './assets/sounds/chime.mp3',
+        'warning': './assets/sounds/notification.mp3',
+        'notification': './assets/sounds/notification.mp3'
+    };
 
-    const audio = new Audio(audioPath);
-    audio.volume = 0.5;
-    audio.play().catch(e => console.warn(`Falha ao reproduzir som '${type}':`, e));
+    const audio = new Audio(sounds[type] || sounds['notification']);
+    audio.volume = 0.4; // Volume um pouco mais suave e elegante
+    audio.play().catch(() => { /* Ignora erros silenciados pelo navegador */ });
 }
 
 /**
- * Fechar a notificação com animação
- * @param {HTMLElement} notification - O elemento da notificação
+ * Animação de saída da notificação
  */
 const closeNotification = (notification) => {
-    notification.classList.remove('translate-x-0', 'opacity-100');
-    notification.classList.add('translate-x-full', 'opacity-0');
+    notification.classList.remove('translate-x-0', 'opacity-100', 'scale-100');
+    notification.classList.add('translate-x-10', 'opacity-0', 'scale-95');
     notification.addEventListener('transitionend', () => {
-        if (notification.parentElement) {
-            notification.remove();
-        }
+        if (notification.parentElement) notification.remove();
     }, { once: true });
 };
 
 /**
- * Exibe uma notificação estilo toast, totalmente responsiva, respeitando as preferências.
- * @param {string} message - A mensagem a ser exibida.
- * @param {'success'|'error'|'info'|'warning'} type - O tipo da notificação (afeta a cor).
- * @param {number} [duration=5000] - Duração em milissegundos. Padrão 5000ms.
- * @param {Array<Object>} [actions] - Array de ações { label: string, callback: Function }.
+ * Sistema de Notificações Toast Premium (Glassmorphism e SVGs)
  */
-export function showNotification(message, type = 'info', duration = 5000, actions = []) {
-    // ⭐ Verificação de Preferências para o Toast
+export function showNotification(message, type = 'info', duration = 4000, actions = []) {
     const preferenceKey = `showToasts${type.charAt(0).toUpperCase() + type.slice(1)}`;
-    if (window.app && window.app.userPreferences && window.app.userPreferences[preferenceKey] === false) {
-        return; // Aborta a exibição se o usuário desativou nas configs
+    if (window.app?.userPreferences && window.app.userPreferences[preferenceKey] === false) {
+        return; 
     }
 
-    let notificationContainer = document.getElementById('notification-container');
-    
-    if (!notificationContainer) {
-        notificationContainer = document.createElement('div');
-        notificationContainer.id = 'notification-container';
-        notificationContainer.className = 'fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-[9999] flex flex-col items-end space-y-2 pointer-events-none';
-        document.body.appendChild(notificationContainer);
+    let container = document.getElementById('notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notification-container';
+        // Posicionamento superior direito no Desktop, inferior no Mobile
+        container.className = 'fixed bottom-4 left-4 right-4 sm:bottom-auto sm:top-6 sm:left-auto sm:right-6 z-[9999] flex flex-col sm:items-end space-y-3 pointer-events-none';
+        document.body.appendChild(container);
     }
 
     const notification = document.createElement('div');
-    notification.className = 'w-full sm:w-auto max-w-sm p-4 rounded-lg shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between text-white transition-all duration-300 transform translate-x-full opacity-0 pointer-events-auto gap-3';
+    // Design moderno com Backdrop Blur (Fundo de vidro)
+    notification.className = 'w-full sm:w-[350px] p-4 rounded-xl shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between text-slate-800 bg-white/90 backdrop-blur-md border transition-all duration-400 ease-[cubic-bezier(0.23,1,0.32,1)] transform sm:translate-x-10 translate-y-10 sm:translate-y-0 opacity-0 scale-95 pointer-events-auto gap-3';
 
-    let bgColor = '';
-    let textColorClass = '';
-    
+    let iconSvg = '';
+    let iconColor = '';
+    let borderColor = '';
+
     switch (type) {
         case 'success':
-            bgColor = 'bg-green-600';
-            textColorClass = 'text-green-700';
+            iconColor = 'text-emerald-500 bg-emerald-100';
+            borderColor = 'border-emerald-200';
+            iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>`;
             break;
         case 'error':
-            bgColor = 'bg-red-600';
-            textColorClass = 'text-red-700';
+            iconColor = 'text-rose-500 bg-rose-100';
+            borderColor = 'border-rose-200';
+            iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`;
             break;
         case 'warning':
-            bgColor = 'bg-orange-500';
-            textColorClass = 'text-orange-700';
+            iconColor = 'text-amber-500 bg-amber-100';
+            borderColor = 'border-amber-200';
+            iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
             break;
         case 'info':
         default:
-            bgColor = 'bg-blue-600';
-            textColorClass = 'text-blue-700';
+            iconColor = 'text-indigo-500 bg-indigo-100';
+            borderColor = 'border-indigo-200';
+            iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
             break;
     }
 
-    notification.classList.add(bgColor);
-    
-    // Toca o som (a função playSound já faz a própria verificação de preferência de som)
+    notification.classList.add(borderColor);
     playSound(type);
 
-    // Texto da Mensagem
-    const msgElement = document.createElement('p');
-    msgElement.className = 'text-sm font-medium leading-tight flex-grow';
-    msgElement.textContent = message;
-    notification.appendChild(msgElement);
+    // Estrutura Interna da Notificação
+    notification.innerHTML = `
+        <div class="flex items-start gap-3 w-full">
+            <div class="shrink-0 p-1.5 rounded-full ${iconColor} mt-0.5">
+                ${iconSvg}
+            </div>
+            <div class="flex flex-col flex-grow pt-1">
+                <p class="text-sm font-semibold text-slate-800 leading-tight">${message}</p>
+            </div>
+        </div>
+    `;
 
-    // Botões de Ação
+    // Botões de Ação Personalizados
     if (actions && actions.length > 0) {
         const actionsContainer = document.createElement('div');
-        actionsContainer.className = 'flex flex-wrap gap-2 w-full sm:w-auto justify-end sm:flex-shrink-0 mt-2 sm:mt-0 border-t border-white/20 sm:border-none pt-2 sm:pt-0';
+        actionsContainer.className = 'flex flex-wrap gap-2 w-full justify-end mt-2 pt-2 border-t border-slate-100';
         
         actions.forEach(action => {
             const btn = document.createElement('button');
-            btn.className = `px-3 py-1.5 bg-white ${textColorClass} rounded-md font-bold text-xs hover:bg-gray-100 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-${bgColor.split('-')[1]}-600 uppercase tracking-wide`;
+            btn.className = `px-3 py-1.5 bg-slate-100 text-slate-700 rounded font-bold text-[10px] hover:bg-slate-200 transition-colors uppercase tracking-wider`;
             btn.textContent = action.label;
             
             btn.addEventListener('click', () => {
-                if (typeof action.callback === 'function') {
-                    action.callback();
-                }
+                if (typeof action.callback === 'function') action.callback();
                 closeNotification(notification);
             });
-            
             actionsContainer.appendChild(btn);
         });
-        
         notification.appendChild(actionsContainer);
     }
 
-    notificationContainer.appendChild(notification);
+    container.appendChild(notification);
 
-    // Força reflow
-    void notification.offsetWidth;
-    notification.classList.remove('translate-x-full', 'opacity-0');
-    notification.classList.add('translate-x-0', 'opacity-100');
+    // Dispara animação fluida
+    requestAnimationFrame(() => {
+        notification.classList.remove('sm:translate-x-10', 'translate-y-10', 'opacity-0', 'scale-95');
+        notification.classList.add('translate-x-0', 'translate-y-0', 'opacity-100', 'scale-100');
+    });
 
-    // Auto-close apenas se não houver botões
     if (!actions || actions.length === 0) {
-        setTimeout(() => {
-            closeNotification(notification);
-        }, duration);
+        setTimeout(() => closeNotification(notification), duration);
     }
 }
 
+// ==========================================
+// FORMATADORES E HELPERS
+// ==========================================
+
 export const formatTime = (timeStamp) => {
     if (!timeStamp) return 'N/A';
-    let date;
-    if (timeStamp?.seconds) {
-        date = new Date(timeStamp.seconds * 1000);
-    } else {
-        date = new Date(timeStamp);
-    }
+    let date = timeStamp?.seconds ? new Date(timeStamp.seconds * 1000) : new Date(timeStamp);
     if (isNaN(date)) return 'N/A';
     return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 };
 
-/**
- * Normalizar texto para busca
- */
 export const normalizeText = (str) => {
     if (!str) return '';
     return String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 };
 
-/**
- * Copiar texto para o clipboard
- */
-export const copyToClipboard = async (text, successMsg = 'Copiado!') => {
+export const copyToClipboard = async (text, successMsg = 'Texto copiado!') => {
     try {
         await navigator.clipboard.writeText(text);
-        showNotification(successMsg, 'info');
+        showNotification(successMsg, 'success');
     } catch (err) {
         console.error('Erro ao copiar:', err);
-        showNotification('Erro ao copiar', 'error');
+        showNotification('Erro ao copiar texto.', 'error');
     }
 };
 
-/**
- * Formatar CPF
- */
 export const formatCPF = (cpf) => {
     if (!cpf) return '';
     const numeros = String(cpf).replace(/\D/g, '');
@@ -210,26 +181,17 @@ export const formatCPF = (cpf) => {
     return numeros.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 };
 
-/**
- * Validar email
- */
 export const isValidEmail = (email) => {
+    if (!email) return false;
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(String(email).toLowerCase());
 };
 
-/**
- * Debounce
- */
 export const debounce = (func, wait) => {
     let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
+    return function (...args) {
         clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
+        timeout = setTimeout(() => func.apply(this, args), wait);
     };
 };
 
@@ -244,7 +206,10 @@ export const truncateText = (text, limit = 50) => {
 export const formatDateBR = (date) => {
     if (!date) return '';
     const d = new Date(date);
-    return isNaN(d) ? '' : d.toLocaleDateString('pt-BR');
+    // Adiciona compensação de fuso para não dar erro de "dia anterior"
+    const userTimezoneOffset = d.getTimezoneOffset() * 60000;
+    const adjustedDate = new Date(d.getTime() + userTimezoneOffset);
+    return isNaN(adjustedDate) ? '' : adjustedDate.toLocaleDateString('pt-BR');
 };
 
 export const diffInMinutes = (start, end) => {
@@ -261,7 +226,7 @@ export const getPriorityColor = (priority) => {
 
 export const capitalize = (str) => {
     if (!str) return '';
-    return String(str).replace(/\b\w/g, l => l.toUpperCase());
+    return String(str).toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
 };
 
 export const unformat = (value) => {
@@ -270,12 +235,13 @@ export const unformat = (value) => {
 };
 
 export const isEmpty = (obj) => {
-    return obj && Object.keys(obj).length === 0 && obj.constructor === Object;
+    return !obj || (Object.keys(obj).length === 0 && obj.constructor === Object);
 };
 
 export const groupBy = (array, key) => {
+    if (!array || !Array.isArray(array)) return {};
     return array.reduce((result, item) => {
-        const groupKey = item[key];
+        const groupKey = item[key] || 'Outros';
         if (!result[groupKey]) result[groupKey] = [];
         result[groupKey].push(item);
         return result;
@@ -283,9 +249,10 @@ export const groupBy = (array, key) => {
 };
 
 export const sortByDate = (array, dateField = 'createdAt', ascending = false) => {
+    if (!array || !Array.isArray(array)) return [];
     return [...array].sort((a, b) => {
-        const dateA = new Date(a[dateField] || 0);
-        const dateB = new Date(b[dateField] || 0);
+        const dateA = new Date(a[dateField] || 0).getTime();
+        const dateB = new Date(b[dateField] || 0).getTime();
         return ascending ? dateA - dateB : dateB - dateA;
     });
 };
