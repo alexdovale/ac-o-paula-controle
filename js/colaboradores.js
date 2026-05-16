@@ -232,12 +232,12 @@ const CollaboratorService = {
         if (!app?.currentPauta?.id) return;
 
         const data = {
-            nome: document.getElementById('collaborator-name-modal')?.value.trim(),
-            cargo: document.getElementById('collaborator-role-modal')?.value,
-            identificador: document.getElementById('collaborator-identificador-modal')?.value.trim(),
-            equipe: document.getElementById('collaborator-team-modal')?.value,
-            telefone: document.getElementById('collaborator-phone-modal')?.value.trim(),
-            email: document.getElementById('collaborator-email-modal')?.value.trim(),
+            nome: document.getElementById('collaborator-name-modal')?.value?.trim() || '',
+            cargo: document.getElementById('collaborator-role-modal')?.value || '',
+            identificador: document.getElementById('collaborator-identificador-modal')?.value?.trim() || '',
+            equipe: document.getElementById('collaborator-team-modal')?.value || '',
+            telefone: document.getElementById('collaborator-phone-modal')?.value?.trim() || '',
+            email: document.getElementById('collaborator-email-modal')?.value?.trim() || '',
             transporte: document.querySelector('input[name="transporte-colaborador"]:checked')?.value || 'Meios Próprios',
             tipo_id: (document.getElementById('collaborator-role-modal')?.value === "Defensor(a)") ? "Matrícula" : "ID",
             updatedAt: new Date().toISOString()
@@ -364,10 +364,17 @@ const CollaboratorService = {
         if (snap.exists()) {
             const c = snap.data();
             this.editId = id;
-            document.getElementById('collaborator-name-modal').value = c.nome;
-            document.getElementById('collaborator-role-modal').value = c.cargo;
-            document.getElementById('collaborator-identificador-modal').value = c.identificador;
-            document.getElementById('collaborator-team-modal').value = c.equipe;
+            document.getElementById('collaborator-name-modal').value = c.nome || '';
+            document.getElementById('collaborator-role-modal').value = c.cargo || '';
+            document.getElementById('collaborator-identificador-modal').value = c.identificador || '';
+            document.getElementById('collaborator-team-modal').value = c.equipe || '';
+            
+            const phoneInput = document.getElementById('collaborator-phone-modal');
+            if (phoneInput) phoneInput.value = c.telefone || '';
+            
+            const emailInput = document.getElementById('collaborator-email-modal');
+            if (emailInput) emailInput.value = c.email || '';
+
             document.getElementById('add-collaborator-btn-modal').textContent = "Atualizar Membro";
             this.configurarLogicaCargo();
         }
