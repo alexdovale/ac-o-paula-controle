@@ -1,5 +1,5 @@
 
-// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (BLINDAGEM TOTAL ANTI-ERROS)
+// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (CORREÇÃO DE ACESSO E GRAVAÇÃO)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -77,9 +77,9 @@ export const AtendimentoExternoService = {
             const assistido = docSnap.data();
             this.assistidoData = assistido;
 
-            // ⭐ CORREÇÃO DO ACESSO NEGADO ⭐
-            // Só bloqueia se o assistido TIVER um token registrado no banco e ele for diferente do recebido.
-            // Se for um processo antigo sem token, ou uma abertura direta, ele permite a leitura.
+            // ⭐ CORREÇÃO DA TELA DE ACESSO NEGADO ⭐
+            // Só bloqueia se existir um token no banco E ele for diferente do que está na URL.
+            // Se o processo for antigo e não tiver token nenhum, ele deixa passar.
             if (assistido.delegationToken && tokenRecebido && assistido.delegationToken !== tokenRecebido) {
                 this.showError("Acesso Expirado", "O token de segurança mudou. O caso já pode ter sido assumido ou transferido.");
                 return;
@@ -331,9 +331,6 @@ export const AtendimentoExternoService = {
         preencher('select-servidor-devolver', servidores, '--- ESCOLHA O SERVIDOR ---', enviadoPorInicial);
     },
 
-    // ========================================================
-    // INTEGRAÇÃO BLINDADA (SEM PASSAR PELO REVIEWFLOW EXTERNO)
-    // ========================================================
     async finalizarProcesso() {
         if (!this.fluxoSelecionado) return;
 
@@ -344,7 +341,8 @@ export const AtendimentoExternoService = {
         const inputNumeroCaso = document.getElementById('input-numero-caso');
         const numeroProcessoSalvo = inputNumeroCaso ? inputNumeroCaso.value.trim() : '';
 
-        // ⭐ BLINDAGEM ANTI-UNDEFINED ⭐ (Evita que o Firebase recuse a gravação)
+        // ⭐ BLINDAGEM ANTI-UNDEFINED ⭐
+        // Garante que nenhuma variável envie 'undefined' para o banco.
         const numProcessoSeguro = numeroProcessoSalvo || '';
         const colabSeguro = this.colaboradorNome || 'Sistema';
         const pautaIdSeguro = this.pautaId || '';
@@ -490,16 +488,12 @@ export const AtendimentoExternoService = {
 
         } catch (error) {
             console.error("Erro no processamento:", error);
-            // ALERTA MELHORADO: Agora ele mostra o erro exato do Firebase se algo der errado
             alert(`Erro ao salvar no banco de dados. Motivo: ${error.message}`);
             btnFinalizar.disabled = false;
             btnFinalizar.textContent = "EXECUTAR AÇÃO";
         }
     },
 
-    // ==========================================
-    // ABAS SECUNDÁRIAS (Histórico e Peça)
-    // ==========================================
     renderizarHistorico(assistido) {
         const lista = document.getElementById('lista-historico');
         if (!lista) return;
@@ -600,9 +594,6 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ==========================================
-    // DASHBOARD UNIFICADO (DEFENSOR E SERVIDOR)
-    // ==========================================
     async renderizarDashboardUnificado() {
         const corpo = document.querySelector('.w-full.max-w-2xl');
         if (!corpo) return;
