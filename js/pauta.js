@@ -225,7 +225,6 @@ export const PautaService = {
         }
 
         try {
-            // VERIFICAÇÃO DE SEGURANÇA: Garante que a sala só seja salva se for uma pauta multisala
             const isMultisala = window.app && window.app.currentPautaData && window.app.currentPautaData.type === 'multisala';
 
             const newAssisted = {
@@ -275,9 +274,6 @@ export const PautaService = {
                 lastActionTimestamp: new Date().toISOString()
             };
 
-            // ==========================================
-            // SINCRONIZAÇÃO TOTAL DE ATENDENTES (MOTOR ABSOLUTO)
-            // ==========================================
             let novoNomeAtendente = undefined;
             if (updates.attendedBy !== undefined) {
                 novoNomeAtendente = updates.attendedBy;
@@ -300,7 +296,6 @@ export const PautaService = {
                 }
             }
 
-            // VERIFICAÇÃO DE SEGURANÇA: Garante que edições não injetem salas indevidas em pautas simples
             const isMultisala = window.app && window.app.currentPautaData && window.app.currentPautaData.type === 'multisala';
             if (!isMultisala && finalUpdates.room !== undefined) {
                 finalUpdates.room = null;
@@ -342,10 +337,9 @@ export const PautaService = {
             
             await updateDoc(docRef, finalUpdates);
             
-            const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados atualizados';
+            const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados updated';
             await logAction(db, window.app?.auth, userName || 'Sistema', pautaId, 'UPDATE_ASSISTED', `${action} - ${currentData.name || 'Assistido'}`, assistedId);
             
-            // Notificação interativa quando entra na fila
             if (updates.status === 'aguardando' && currentData.status !== 'aguardando') {
                 const currentAssisted = window.app.allAssisted.find(a => a.id === assistedId) || { name: 'Assistido' };
                 const name = currentAssisted.name || currentData.name;
@@ -384,6 +378,7 @@ export const PautaService = {
         }
     },
 
+    // ⭐ CORREÇÃO COMPLETA DA FUNÇÃO DE DELEGAÇÃO (SUMIR COM ERRO DO EMAILJS) ⭐
     async delegateAttendance(app, assistedId, collaboratorName, collaboratorId) {
         if (!assistedId || !collaboratorName) {
             showNotification("Selecione um colaborador!", "error");
@@ -399,33 +394,41 @@ export const PautaService = {
                 return false;
             }
 
+            // Injeta a criação do Token randômico e seguro anti-iOS
+            const tokenSeguro = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+                ? crypto.randomUUID().substring(0, 8) 
+                : Math.random().toString(36).substring(2, 10);
+
             await this.updateStatus(app.db, app.currentPauta.id, assistedId, {
                 status: 'emAtendimento',
                 assignedCollaborator: { id: collaboratorId || 'manual', name: collaboratorName },
                 delegatedBy: app.currentUserName,
-                delegatedAt: new Date().toISOString()
+                delegatedAt: new Date().toISOString(),
+                delegationToken: tokenSeguro // Grava de forma fixa no nó do assistido
             }, app.currentUserName);
 
             if (colab && colab.email) {
-                showNotification(`Gerando link seguro para ${collaboratorName}...`, "info");
+                showNotification(`Enviando e-mail para ${collaboratorName}...`, "info");
                 
+                // Dispara utilizando os 7 parâmetros exatos exigidos pelo arquivo emailService.js
                 await EmailService.sendDelegationEmail(
-                    colab.email,          
-                    collaboratorName,      
-                    assisted.name,         
-                    app.currentUserName,  
-                    app.currentPauta.id,  
-                    assistedId            
+                    colab.email,          // 1. toEmail
+                    collaboratorName,     // 2. toName
+                    assisted.name,        // 3. assistedName
+                    app.currentUserName,  // 4. senderName (Você)
+                    app.currentPauta.id,  // 5. pautaId
+                    assistedId,           // 6. assistidoId
+                    tokenSeguro           // 7. delegationToken (Elimina erro de falta de public key)
                 );
             } else {
                 console.warn("⚠️ Colaborador sem e-mail cadastrado. Status atualizado apenas no painel.");
-                showNotification("Colaborador sem e-mail. Link não enviado.", "warning");
+                showNotification("Colaborador sem e-mail. Notificação digital não enviada.", "warning");
             }
 
             return true;
         } catch (error) {
             console.error("❌ Erro crítico na delegação:", error);
-            showNotification("Falha ao delegar. Verifique o console.", "error");
+            showNotification("Falha ao delegar atendimento.", "error");
             return false;
         }
     },
@@ -522,7 +525,7 @@ export const PautaService = {
         const nextAssisted = orderedList[0];
 
         if (!nextAssisted) {
-            showNotification("Não foi possível identify o próximo assistido.", "error");
+            showNotification("Não foi possível identificar o próximo assistido.", "error");
             return;
         }
 
@@ -764,7 +767,7 @@ export const PautaService = {
             for (const assistido of assistidos) {
                 const assistedToSave = { ...assistido, type: 'agendamento' };
                 if (!isMultisala) {
-                    assistedToSave.room = null; // Impede gravação
+                    assistedToSave.room = null;
                 }
 
                 const added = await this.addAssistedProgrammatic(
@@ -875,7 +878,7 @@ export const PautaService = {
                 chosenClass: 'ring-2',
                 dragClass: 'scale-95',
                 handle: '.relative',
-                filter: 'button, svg, p, span, input', // Garante que a barra de pesquisa não dispare o drag
+                filter: 'button, svg, p, span, input', 
                 preventOnFilter: false,
                 forceFallback: isMobile,
                 fallbackClass: 'sortable-fallback',
