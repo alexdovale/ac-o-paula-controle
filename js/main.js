@@ -1,3 +1,5 @@
+// js/main.js - VERSÃO COMPLETA E CONSOLIDADA (SIGAP)
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -21,7 +23,7 @@ import { showConfirmModal } from './confirmModal.js';
 import { logAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser, loadAuditLogs, exportAuditLogsPDF, loadDashboardData, populateUserFilter } from './admin.js';
 import { parsePautaCSV } from './csvHandler.js';
 import { getChecklistHTML } from './checklist.js';
-import { PainelGeralService } from './painelGeralService.js'; // <--- IMPORT DO PAINEL GERAL
+import { PainelGeralService } from './painelGeralService.js'; 
 
 class SIGAPApp { 
     constructor() {
@@ -46,14 +48,6 @@ class SIGAPApp {
     async init() {
         try {
             const app = initializeApp(firebaseConfig);
-            
-             /* // Bloco comentado para evitar erro 401 de conexão com App Check
-            initializeAppCheck(app, {
-                provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
-                isTokenAutoRefreshEnabled: true
-            }); 
-            */
-
             this.db = getFirestore(app);
             this.auth = getAuth(app);
 
@@ -129,17 +123,14 @@ class SIGAPApp {
                 await this.loadUserPreferences(); 
                 this.applyRoleBasedUI(); 
                 
-                // ⭐ SISTEMA DE RECUPERAÇÃO DE SESSÃO (ONDE EU PAREI?) ⭐
                 const lastPautaId = localStorage.getItem('lastPautaId');
                 const lastPautaName = localStorage.getItem('lastPautaName');
                 const lastPautaType = localStorage.getItem('lastPautaType');
 
-                // Se existe um marcador de pauta salvo, pula direto para ela
                 if (lastPautaId) {
                     console.log("🔄 Restaurando sessão anterior: ", lastPautaName);
                     this.loadPauta(lastPautaId, lastPautaName || 'Pauta', lastPautaType || 'agendado');
                 } else {
-                    // Se não, mostra a tela normal de escolher pautas
                     this.showPautaSelectionScreen();
                 }
 
@@ -326,6 +317,11 @@ class SIGAPApp {
             }
         });
 
+        document.getElementById('btn-metrica-atendidos')?.addEventListener('click', () => {
+             const atendidos = (this.allAssisted || []).filter(a => a.status === 'atendido');
+             PDFService.generateAtendidosPDF(atendidos, this.currentPauta?.name || 'Pauta');
+        });
+
         document.getElementById('btn-gerar-ata-social')?.addEventListener('click', () => {
             if (!this.currentPauta) {
                 showNotification("Nenhuma pauta selecionada!", "error");
@@ -369,8 +365,8 @@ class SIGAPApp {
         });
         
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.quick-action-toggle') && !e.target.closest('[id^="quick-menu-"]')) {
-                document.querySelectorAll('[id^="quick-menu-"]').forEach(menu => {
+            if (!e.target.closest('.quick-action-toggle') && !e.target.closest('.quick-menu-box')) {
+                document.querySelectorAll('.quick-menu-box').forEach(menu => {
                     menu.classList.add('hidden');
                 });
             }
@@ -558,7 +554,6 @@ class SIGAPApp {
             this.allAssisted = [];
             this.colaboradores = [];
             
-            // ⭐ APAGA O MARCADOR AO VOLTAR (Sai da pauta)
             localStorage.removeItem('lastPautaId');
             localStorage.removeItem('lastPautaName');
             localStorage.removeItem('lastPautaType');
@@ -864,24 +859,27 @@ class SIGAPApp {
             }
         });
 
+        // ⭐ CORREÇÃO MOTO PDF: CAPTAÇÃO DE ARRAY FILTRADA + INVERSÃO DE PARÂMETROS ⭐
         document.getElementById('download-pdf-btn')?.addEventListener('click', () => {
-            const atendidos = this.allAssisted.filter(a => a.status === 'atendido');
-            PDFService.generateAtendidosPDF(this.currentPauta?.name || 'Pauta', atendidos);
+            const atendidosArray = (this.allAssisted || []).filter(a => a.status === 'atendido');
+            const nomePauta = this.currentPauta?.name || 'Pauta';
+            PDFService.generateAtendidosPDF(atendidosArray, nomePauta);
         });
 
         document.getElementById('download-faltosos-pdf-btn')?.addEventListener('click', () => {
-            const faltosos = this.allAssisted.filter(a => a.status === 'faltoso');
-            if (faltosos.length === 0) {
+            const faltososArray = (this.allAssisted || []).filter(a => a.status === 'faltoso');
+            if (faltososArray.length === 0) {
                 showNotification("Nenhum faltoso registrado para gerar o PDF.", "info");
                 return;
             }
-            PDFService.generateFaltososPDF(this.currentPauta?.name || 'Pauta', faltosos);
+            const nomePauta = this.currentPauta?.name || 'Pauta';
+            PDFService.generateFaltososPDF(faltososArray, nomePauta);
         });
 
         document.getElementById('download-collaborators-pdf-modal')?.addEventListener('click', () => {
-            const selectedCols = Array.from(document.querySelectorAll('.pdf-col-check:checked'))
-                .map(cb => cb.value);
-            PDFService.generateCollaboratorsPDF(this.currentPauta?.name || 'Pauta', this.colaboradores, selectedCols);
+            const nomePauta = this.currentPauta?.name || 'Pauta';
+            const listaAtendimentos = this.allAssisted || [];
+            PDFService.generateCollaboratorsPDF(this.colaboradores, listaAtendimentos, nomePauta);
         });
 
         document.getElementById('clear-collaborators-list-modal')?.addEventListener('click', () => {
@@ -1165,7 +1163,7 @@ class SIGAPApp {
             );
             
             document.getElementById('edit-attendant-modal')?.classList.add('hidden');
-            showNotification("Atendente atualizado com sucesso!", "success");
+            showNotification("Atendente updated com sucesso!", "success");
         });
 
         document.getElementById('cancel-edit-attendant-btn')?.addEventListener('click', () => {
@@ -1327,6 +1325,7 @@ class SIGAPApp {
                     li.innerHTML = `<span>${escapeHTML(text)}</span><button class="remove-demand-item-btn text-red-500 text-xs">Remover</button>`;
                     container.appendChild(li);
                     input.value = '';
+                    input.focus();
                 }
             }
         });
@@ -1501,8 +1500,8 @@ class SIGAPApp {
             const adminModal = document.getElementById('admin-modal');
             const adminPanelToggle = document.getElementById('pauta-settings-toggle'); 
             const adminActionsToggle = document.getElementById('actions-toggle');     
-            const adminPanelBtn = document.getElementById('admin-panel-btn');         
-            const adminBtnMain = document.getElementById('admin-btn-main');           
+            const adminPanelBtn = document.getElementById('admin-panel-btn');          
+            const adminBtnMain = document.getElementById('admin-btn-main');            
 
             if ((adminModal && adminModal.contains(e.target)) ||
                 (adminPanelToggle && adminPanelToggle.contains(e.target)) ||
@@ -1775,6 +1774,7 @@ class SIGAPApp {
                 window.classList.toggle('max-w-4xl');
                 window.classList.toggle('max-w-none');
                 window.classList.toggle('rounded-lg');
+                window.classList.toggle('rounded-lg');
             }
         });
 
@@ -1836,7 +1836,6 @@ class SIGAPApp {
         this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
         document.getElementById('pauta-title').textContent = pautaName;
 
-        // ⭐ SALVA O MARCADOR EXATO DE ONDE VOCÊ ENTROU
         localStorage.setItem('lastPautaId', pautaId);
         localStorage.setItem('lastPautaName', pautaName);
         localStorage.setItem('lastPautaType', pautaType);
@@ -2008,7 +2007,6 @@ class SIGAPApp {
         if (fileUpload) fileUpload.disabled = isApoio;
         if (btnSyncVerde) btnSyncVerde.disabled = isApoio;
 
-        // --- NOVO: Lógica para o botão do Painel Geral do Atendimento Externo ---
         const btnMonitor = document.getElementById('btn-painel-geral-externo');
         if (btnMonitor) {
             const liberadoApoio = this.currentPautaData?.liberarPainelGeralApoio === true;
@@ -2116,11 +2114,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // --- NOVO: Listener do Painel Geral do Atendimento Externo ---
     document.getElementById('btn-painel-geral-externo')?.addEventListener('click', () => {
         if (typeof PainelGeralService !== 'undefined') {
             PainelGeralService.abrirPainel(window.app);
-            // Fecha o menu de ações ao clicar
             const actionsPanel = document.getElementById('actions-panel');
             if (actionsPanel) {
                 actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
