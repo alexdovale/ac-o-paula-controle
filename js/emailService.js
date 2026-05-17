@@ -13,6 +13,7 @@ export const EmailService = {
             const script = document.createElement('script');
             script.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js";
             script.onload = () => {
+                // ⭐ Correção 1: Inicializa explicitamente na biblioteca global assim que carrega
                 window.emailjs.init(this.publicKey);
                 resolve();
             };
@@ -22,7 +23,6 @@ export const EmailService = {
     },
 
     async sendDelegationEmail(toEmail, toName, assistedName, senderName, pautaId, assistidoId, delegationToken) {
-        // Validação preventiva imediata para evitar chamadas falsas ao EmailJS
         if (!toEmail || !toEmail.includes('@')) {
             console.error("❌ Envio cancelado: E-mail inválido ou ausente.");
             if (window.showNotification) {
@@ -34,17 +34,14 @@ export const EmailService = {
         }
 
         try {
-            await this.loadEmailJSLibrary(); // Garante que a biblioteca existe
+            await this.loadEmailJSLibrary(); // Garante que a biblioteca existe e está inicializada
 
-            // Montagem inteligente do Link mantendo a estrutura limpa e sem index.html repetido
             let baseUrl = window.location.origin + window.location.pathname;
             if (!baseUrl.endsWith('atendimento_externo.html')) {
-                // Se a página de disparo for o console.html ou index.html, aponta para o arquivo de atendimento externo
                 const ultimoSlash = baseUrl.lastIndexOf('/');
                 baseUrl = baseUrl.substring(0, ultimoSlash + 1) + 'atendimento_externo.html';
             }
 
-            // Link de segurança completo
             const delegationLink = `${baseUrl}?pautaId=${pautaId}&assistidoId=${assistidoId}&colab=${encodeURIComponent(toName)}&token=${delegationToken}`;
             
             console.log("🔗 Link gerado para e-mail:", delegationLink);
@@ -57,21 +54,20 @@ export const EmailService = {
                 link_atendimento: delegationLink
             };
 
-            await window.emailjs.send(this.serviceId, this.templateId, templateParams);
-            console.log(`✅ Notificação enviada para o e-mail: ${toEmail}`);
+            // ⭐ Correção 2: Passa a publicKey como o 4º parâmetro para blindar contra qualquer falha de escopo
+            await window.emailjs.send(this.serviceId, this.templateId, templateParams, this.publicKey);
+            console.log(`✅ Notificação entregue com sucesso para o e-mail: ${toEmail}`);
             return true;
 
         } catch (error) {
             console.error("❌ Falha crítica no servidor EmailJS:", error);
             
-            // NOVO PLANO B: Apenas avisa sobre o erro no e-mail e falha de cota, SEM WHATSAPP
             if (window.showNotification) {
-                window.showNotification(`Falha técnica no EmailJS ao notificar ${toName}. Verifique o limite da cota diária ou credenciais do painel.`, "error", 7000);
+                window.showNotification(`Falha técnica no EmailJS ao notificar ${toName}. Verifique as credenciais ou limite de cotas.`, "error", 7000);
             } else {
-                alert(`⚠️ O servidor de e-mail falhou ao enviar a notificação para ${toName}. Monitore o painel do EmailJS.`);
+                alert(`⚠️ O servidor de e-mail falhou ao enviar a notificação para ${toName}.`);
             }
             
-            // Retorna false para que o console principal saiba que o e-mail não foi entregue
             return false;
         }
     }
