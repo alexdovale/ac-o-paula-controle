@@ -1,4 +1,4 @@
-// js/pauta.js - VERSÃO COMPLETA E CONSOLIDADA
+// js/pauta.js - VERSÃO COMPLETA E CONSOLIDADA (PADRÃO SIGAP)
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
@@ -337,10 +337,13 @@ export const PautaService = {
             
             await updateDoc(docRef, finalUpdates);
             
-            const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados updated';
-            await logAction(db, window.app?.auth, userName || 'Sistema', pautaId, 'UPDATE_ASSISTED', `${action} - ${currentData.name || 'Assistido'}`, assistedId);
-            
-            if (updates.status === 'aguardando' && currentData.status !== 'aguardando') {
+            // ========================================================
+            // ⭐ CORREÇÃO DAS NOTIFICAÇÕES (RETORNANDO A MENSAGEM DO VISTO VERDE)
+            // ========================================================
+            if (updates.isConfirmed !== undefined) {
+                const textoConfirmacao = updates.isConfirmed ? "Confirmado" : "Não Confirmado";
+                showNotification(`Status de Marcado Presença no Verde atualizado para ${textoConfirmacao}.`, 'info');
+            } else if (updates.status === 'aguardando' && currentData.status !== 'aguardando') {
                 const currentAssisted = window.app.allAssisted.find(a => a.id === assistedId) || { name: 'Assistido' };
                 const name = currentAssisted.name || currentData.name;
                 
@@ -370,15 +373,19 @@ export const PautaService = {
                     ]
                 );
             } else {
+                const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados atualizados';
                 showNotification(action, "success");
             }
+
+            const logActionText = updates.status ? `Status alterado para: ${updates.status}` : 'Dados atualizados';
+            await logAction(db, window.app?.auth, userName || 'Sistema', pautaId, 'UPDATE_ASSISTED', `${logActionText} - ${currentData.name || 'Assistido'}`, assistedId);
+            
         } catch (error) {
             console.error("Erro ao atualizar status:", error);
             showNotification("Erro ao atualizar", "error");
         }
     },
 
-    // ⭐ CORREÇÃO COMPLETA DA FUNÇÃO DE DELEGAÇÃO (SUMIR COM ERRO DO EMAILJS) ⭐
     async delegateAttendance(app, assistedId, collaboratorName, collaboratorId) {
         if (!assistedId || !collaboratorName) {
             showNotification("Selecione um colaborador!", "error");
@@ -394,7 +401,6 @@ export const PautaService = {
                 return false;
             }
 
-            // Injeta a criação do Token randômico e seguro anti-iOS
             const tokenSeguro = (typeof crypto !== 'undefined' && crypto.randomUUID) 
                 ? crypto.randomUUID().substring(0, 8) 
                 : Math.random().toString(36).substring(2, 10);
@@ -404,21 +410,20 @@ export const PautaService = {
                 assignedCollaborator: { id: collaboratorId || 'manual', name: collaboratorName },
                 delegatedBy: app.currentUserName,
                 delegatedAt: new Date().toISOString(),
-                delegationToken: tokenSeguro // Grava de forma fixa no nó do assistido
+                delegationToken: tokenSeguro 
             }, app.currentUserName);
 
             if (colab && colab.email) {
                 showNotification(`Enviando e-mail para ${collaboratorName}...`, "info");
                 
-                // Dispara utilizando os 7 parâmetros exatos exigidos pelo arquivo emailService.js
                 await EmailService.sendDelegationEmail(
-                    colab.email,          // 1. toEmail
-                    collaboratorName,     // 2. toName
-                    assisted.name,        // 3. assistedName
-                    app.currentUserName,  // 4. senderName (Você)
-                    app.currentPauta.id,  // 5. pautaId
-                    assistedId,           // 6. assistidoId
-                    tokenSeguro           // 7. delegationToken (Elimina erro de falta de public key)
+                    colab.email,          
+                    collaboratorName,     
+                    assisted.name,        
+                    app.currentUserName,  
+                    app.currentPauta.id,  
+                    assistedId,           
+                    tokenSeguro           
                 );
             } else {
                 console.warn("⚠️ Colaborador sem e-mail cadastrado. Status atualizado apenas no painel.");
@@ -1522,8 +1527,6 @@ export const PautaService = {
                     confirmedAt: new Date().toISOString() 
                 } : null
             }, app.currentUserName);
-            
-            showNotification(`Status de Marcado Presença no Verde atualizado para ${newConfirmedState ? 'Confirmado' : 'Não Confirmado'}.`, 'info');
         }
     }
 };
