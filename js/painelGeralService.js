@@ -22,7 +22,6 @@ export const PainelGeralService = {
         if (!modal) {
             modal = document.createElement('div');
             modal.id = 'painel-geral-externo-modal';
-            // Mesmas classes de fundo e z-index dos outros modais do sistema
             modal.className = 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-0 sm:p-4 transition-opacity';
             
             modal.innerHTML = `
@@ -73,7 +72,6 @@ export const PainelGeralService = {
         setTimeout(() => {
             const col = document.getElementById(targetId);
             if (col) {
-                // Se a coluna estiver oculta, ativa a visualização nas preferências
                 if (col.classList.contains('hidden') && toggleId) {
                     const chk = document.getElementById(toggleId);
                     if (chk) {
@@ -84,16 +82,14 @@ export const PainelGeralService = {
                     }
                 }
                 
-                // Rola a tela até a coluna
                 col.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
                 
-                // Pisca a coluna para destacar
                 col.classList.add('ring-4', 'ring-emerald-400', 'transition-all', 'duration-500');
                 setTimeout(() => {
                     col.classList.remove('ring-4', 'ring-emerald-400');
                 }, 1500);
             }
-        }, 300); // Aguarda o modal fechar para evitar lag
+        }, 300);
     },
 
     // ========================================================
@@ -182,14 +178,17 @@ export const PainelGeralService = {
                 detalhesHtml += `</div>`;
             }
 
-            const presença = stats.dataObj.presente ? '<span class="text-green-500 ml-1 text-xs" title="Presente">●</span>' : '<span class="text-gray-300 ml-1 text-xs" title="Ausente">●</span>';
+            const presenca = stats.dataObj.presente ? '<span class="text-green-500 ml-1 text-xs" title="Presente">●</span>' : '<span class="text-gray-300 ml-1 text-xs" title="Ausente">●</span>';
+            // Captura o e-mail cadastrado do Defensor para exibição rápida
+            const emailExibição = stats.dataObj.email ? `<p class="text-[10px] font-mono text-gray-500 lowercase mt-0.5">${escapeHTML(stats.dataObj.email)}</p>` : '';
 
             defensoresHtml += `
                 <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow transition-shadow">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
-                            <h3 class="font-bold text-gray-800 text-sm flex items-center">👨‍⚖️ ${escapeHTML(def)} ${presença}</h3>
+                            <h3 class="font-bold text-gray-800 text-sm flex items-center">👨‍⚖️ ${escapeHTML(def)} ${presenca}</h3>
                             <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Defensor(a) ${stats.dataObj.equipe ? '- Eq. ' + stats.dataObj.equipe : ''}</p>
+                            ${emailExibição}
                         </div>
                         ${statusVisual}
                     </div>
@@ -236,14 +235,17 @@ export const PainelGeralService = {
                 detalhesHtml += `</div>`;
             }
 
-            const presença = stats.dataObj.presente ? '<span class="text-green-500 ml-1 text-xs" title="Presente">●</span>' : '<span class="text-gray-300 ml-1 text-xs" title="Ausente">●</span>';
+            const presenca = stats.dataObj.presente ? '<span class="text-green-500 ml-1 text-xs" title="Presente">●</span>' : '<span class="text-gray-300 ml-1 text-xs" title="Ausente">●</span>';
+            // Captura o e-mail cadastrado do Servidor para exibição rápida
+            const emailExibição = stats.dataObj.email ? `<p class="text-[10px] font-mono text-gray-500 lowercase mt-0.5">${escapeHTML(stats.dataObj.email)}</p>` : '';
 
             servidoresHtml += `
                 <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow transition-shadow">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
-                            <h3 class="font-bold text-gray-800 text-sm flex items-center">🧑‍💻 ${escapeHTML(serv)} ${presença}</h3>
+                            <h3 class="font-bold text-gray-800 text-sm flex items-center">🧑‍💻 ${escapeHTML(serv)} ${presenca}</h3>
                             <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">${escapeHTML(stats.dataObj.cargo)} ${stats.dataObj.equipe ? '- Eq. ' + stats.dataObj.equipe : ''}</p>
+                            ${emailExibição}
                         </div>
                         ${statusVisual}
                     </div>
@@ -349,7 +351,6 @@ export const PainelGeralService = {
             </div>
         `;
 
-        // Ativa o clique dos botões para "Ir Para Tabela"
         document.querySelectorAll('.card-metrica').forEach(card => {
             card.onclick = () => {
                 const targetId = card.getAttribute('data-target');
