@@ -164,7 +164,7 @@ export const PDFService = {
         }
     },
 
-    // ⭐ REFORMULADO: RELATÓRIO DE ASSISTIDOS ATENDIDOS (COM HORÁRIO AGENDADO, QUEBRA DE TEXTO AUTOMÁTICA ANTI-VAZAMENTO) ⭐
+    // ⭐ RELATÓRIO DE ASSISTIDOS ATENDIDOS (COM HORÁRIO AGENDADO, DEMANDAS MÚLTIPLAS E QUEBRA AUTOMÁTICA) ⭐
     async generateAtendidosPDF(atendidosList, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
@@ -177,7 +177,7 @@ export const PDFService = {
             
             doc.setFontSize(10);
             doc.setFont("helvetica", "normal");
-            doc.text(`Sistema: SIGEP  |  Pauta: ${pautaNome}  |  Total: ${atendidosList.length}`, 40, 65);
+            doc.text(`Sistema: SIGEP  |  Pauta: ${pautaNome}  |  Total Atendidos: ${atendidosList.length}`, 40, 65);
 
             const body = atendidosList.map((a, index) => {
                 const dataAtendimento = getSafeDate(a.attendedAt || a.lastActionTimestamp);
@@ -187,11 +187,17 @@ export const PDFService = {
                 const duracaoTotal = getDuracaoMinutos(inicioProcesso, a.attendedAt);
                 const lancadoNoVerde = a.isConfirmed ? "Sim" : "Não";
 
+                // Varre o assunto principal e acopla as demandas adicionais criadas no atendimento
+                let assuntoCompleto = a.subject || 'Não Informado';
+                if (a.demandas && a.demandas.descricoes && a.demandas.descricoes.length > 0) {
+                    assuntoCompleto += '\n[Demandas Adicionais]:\n' + a.demandas.descricoes.map(d => `• ${d}`).join('\n');
+                }
+
                 return [
                     index + 1,
                     a.name || 'Não Informado',
-                    a.scheduledTime || 'Avulso', // ⏰ Inclusão do horário agendado solicitado
-                    a.subject || 'Não Informado',
+                    a.scheduledTime || 'Avulso', 
+                    assuntoCompleto, 
                     getAttendantNameForPDF(a),
                     a.numeroProcesso || 'S/ Número',
                     horaStr,
@@ -204,21 +210,21 @@ export const PDFService = {
 
             doc.autoTable({
                 startY: 80,
-                head: [['Nº', 'NOME DO ASSISTIDO', 'AGENDADO', 'ASSUNTO / DEMANDA', 'ATENDENTE', 'Nº PROCESSO / PROTOCOLO', 'HORA CONCL.', 'DURAÇÃO', 'LANÇADO VERDE']],
+                head: [['Nº', 'NOME DO ASSISTIDO', 'AGENDADO', 'ASSUNTO / DEMANDAS RESOLVIDAS', 'ATENDENTE', 'Nº PROCESSO / PROTOCOLO', 'HORA CONCL.', 'DURAÇÃO', 'LANÇADO VERDE']],
                 body: body,
-                theme: 'striped',
+                theme: 'grid', 
                 headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' },
-                styles: { fontSize: 8, cellPadding: 5, valign: 'middle', overflow: 'linebreak' }, // 💡 overflow: 'linebreak' força a quebra automática de linha
+                styles: { fontSize: 8, cellPadding: 5, valign: 'middle', overflow: 'linebreak' }, 
                 columnStyles: { 
                     0: { halign: 'center', cellWidth: 25 }, 
-                    1: { cellWidth: 120 }, // Limita tamanho fixo do nome para quebrar texto
-                    2: { halign: 'center', fontStyle: 'bold', cellWidth: 60 },
-                    3: { cellWidth: 160 }, // Limita tamanho do assunto para quebrar linha
-                    4: { cellWidth: 100 }, 
-                    5: { fontStyle: 'bold', halign: 'center', cellWidth: 100 }, 
-                    6: { halign: 'center', cellWidth: 60 }, 
-                    7: { halign: 'center', fontStyle: 'bold', cellWidth: 65 }, 
-                    8: { halign: 'center', cellWidth: 65 } 
+                    1: { cellWidth: 110 }, 
+                    2: { halign: 'center', fontStyle: 'bold', cellWidth: 55 },
+                    3: { cellWidth: 190 }, // Proteção estendida com auto-wrap para evitar que as quebras vazem o arquivo
+                    4: { cellWidth: 90 }, 
+                    5: { fontStyle: 'bold', halign: 'center', cellWidth: 90 }, 
+                    6: { halign: 'center', cellWidth: 50 }, 
+                    7: { halign: 'center', fontStyle: 'bold', cellWidth: 60 }, 
+                    8: { halign: 'center', cellWidth: 60 } 
                 }
             });
 
@@ -230,7 +236,7 @@ export const PDFService = {
         }
     },
 
-    // ⭐ REFORMULADO: RELATÓRIO DE FALTOSOS (QUEBRA DE TEXTO AUTOMÁTICA NAS COLUNAS DE TEXTO) ⭐
+    // ⭐ RELATÓRIO DE FALTOSOS (COM HORÁRIO AGENDADO, DATA DA FALTA, ATRASO LIMITE E AUTO-WRAP) ⭐
     async generateFaltososPDF(faltososList, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
@@ -270,11 +276,11 @@ export const PDFService = {
                 body: body,
                 theme: 'striped',
                 headStyles: { fillColor: [153, 27, 27], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' },
-                styles: { fontSize: 8.5, cellPadding: 6, valign: 'middle', overflow: 'linebreak' }, // 💡 Garante o wrap automático no celular/PC
+                styles: { fontSize: 8.5, cellPadding: 6, valign: 'middle', overflow: 'linebreak' }, 
                 columnStyles: { 
                     0: { halign: 'center', cellWidth: 30 }, 
-                    1: { cellWidth: 160 }, // Enquadra o nome
-                    2: { cellWidth: 220 }, // Enquadra o assunto sem estourar a folha
+                    1: { cellWidth: 160 }, 
+                    2: { cellWidth: 220 }, 
                     3: { halign: 'center', fontStyle: 'bold', cellWidth: 80 }, 
                     4: { halign: 'center', cellWidth: 70 }, 
                     5: { halign: 'center', fontStyle: 'bold', cellWidth: 80 }, 
@@ -290,7 +296,7 @@ export const PDFService = {
         }
     },
 
-    // ⭐ RELATÓRIO DE PRODUTIVIDADE E COLABORADORES COM AUTO-WRAP ⭐
+    // ⭐ RELATÓRIO DE PRODUTIVIDADE DA EQUIPE COM AUTO-WRAP ANTI-VAZAMENTO ⭐
     async generateCollaboratorsPDF(colaboradoresList, todosAtendimentos, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
@@ -331,7 +337,7 @@ export const PDFService = {
                 styles: { fontSize: 8.5, cellPadding: 6, valign: 'middle', overflow: 'linebreak' },
                 columnStyles: { 
                     0: { halign: 'center', cellWidth: 25 }, 
-                    1: { cellWidth: 150 }, // Força a quebra de linha em nomes gigantescos de colaboradores
+                    1: { cellWidth: 150 }, 
                     2: { halign: 'center', cellWidth: 100 }, 
                     3: { cellWidth: 90 }, 
                     4: { halign: 'center', cellWidth: 50 }, 
