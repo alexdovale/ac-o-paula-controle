@@ -1,9 +1,8 @@
-// js/main.js - VERSÃO COMPLETA E CONSOLIDADA (SIGAP)
+// js/main.js - VERSÃO COMPLETA E CONSOLIDADA (SIGEP)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-/* import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";*/
 
 import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
@@ -25,7 +24,7 @@ import { parsePautaCSV } from './csvHandler.js';
 import { getChecklistHTML } from './checklist.js';
 import { PainelGeralService } from './painelGeralService.js'; 
 
-class SIGAPApp { 
+class SIGEPApp { // ⭐ Batizado oficialmente como SIGEP
     constructor() {
         this.db = null;
         this.auth = null;
@@ -62,7 +61,7 @@ class SIGAPApp {
             
         } catch (error) {
             console.error("Erro na inicialização:", error);
-            showNotification("Erro ao iniciar o sistema", "error");
+            showNotification("Erro ao iniciar o sistema SIGEP", "error");
         }
     }
 
@@ -128,7 +127,7 @@ class SIGAPApp {
                 const lastPautaType = localStorage.getItem('lastPautaType');
 
                 if (lastPautaId) {
-                    console.log("🔄 Restaurando sessão anterior: ", lastPautaName);
+                    console.log("🔄 Restaurando sessão anterior SIGEP: ", lastPautaName);
                     this.loadPauta(lastPautaId, lastPautaName || 'Pauta', lastPautaType || 'agendado');
                 } else {
                     this.showPautaSelectionScreen();
@@ -754,7 +753,7 @@ class SIGAPApp {
             }
         });
 
-        document.getElementById('cancel-edit-pauta-config-btn')?.addEventListener('click', () => {
+        document.getElementById('edit-pauta-config-modal')?.querySelector('#cancel-edit-pauta-config-btn')?.addEventListener('click', () => {
             document.getElementById('edit-pauta-config-modal').classList.add('hidden');
         });
 
@@ -859,7 +858,7 @@ class SIGAPApp {
             }
         });
 
-        // ⭐ CORREÇÃO MOTO PDF: CAPTAÇÃO DE ARRAY FILTRADA + INVERSÃO DE PARÂMETROS ⭐
+        // ⭐ CORREÇÃO E ATIVAÇÃO DOS BOTÕES DE PDF INTERNOS DO PAINEL PRINCIPAL ⭐
         document.getElementById('download-pdf-btn')?.addEventListener('click', () => {
             const atendidosArray = (this.allAssisted || []).filter(a => a.status === 'atendido');
             const nomePauta = this.currentPauta?.name || 'Pauta';
@@ -869,7 +868,7 @@ class SIGAPApp {
         document.getElementById('download-faltosos-pdf-btn')?.addEventListener('click', () => {
             const faltososArray = (this.allAssisted || []).filter(a => a.status === 'faltoso');
             if (faltososArray.length === 0) {
-                showNotification("Nenhum faltoso registrado para gerar o PDF.", "info");
+                showNotification("Nenhum assistido faltoso registrado para emitir o relatório.", "info");
                 return;
             }
             const nomePauta = this.currentPauta?.name || 'Pauta';
@@ -1163,7 +1162,7 @@ class SIGAPApp {
             );
             
             document.getElementById('edit-attendant-modal')?.classList.add('hidden');
-            showNotification("Atendente updated com sucesso!", "success");
+            showNotification("Atendente atualizado com sucesso!", "success");
         });
 
         document.getElementById('cancel-edit-attendant-btn')?.addEventListener('click', () => {
@@ -1621,7 +1620,7 @@ class SIGAPApp {
     }
 
     applyUserPreferences() {
-        console.log("⚙️ Aplicando preferências do usuário:", this.userPreferences);
+        console.log("⚙️ Aplicando preferências do usuário no SIGEP:", this.userPreferences);
     }
 
     getDefaultNotificationPreferences() {
@@ -1678,7 +1677,7 @@ class SIGAPApp {
         
         if (faltososColumn) {
             const pautaColumn = document.getElementById('pauta-column');
-            if (pautaType === 'agendado' && preferences.showFaltosos && pautaColumn && !pautaColumn.classList.contains('hidden')) {
+            if (pautaType === 'agendamento' && preferences.showFaltosos && pautaColumn && !pautaColumn.classList.contains('hidden')) {
                  faltososColumn.classList.remove('hidden');
             } else {
                 faltososColumn.classList.add('hidden');
@@ -1761,20 +1760,18 @@ class SIGAPApp {
     }
 
     setupAdminPanel() {
-        const btnAdmin = document.getElementById('admin-panel-btn');
         const adminModal = document.getElementById('admin-modal');
-        if (btnAdmin && adminModal) {
+        if (adminModal) {
             loadUsersList(this.db);
             populateUserFilter(this.db);
         }
 
         document.getElementById('max-admin-btn')?.addEventListener('click', () => {
-            const window = document.getElementById('admin-window');
-            if (window) {
-                window.classList.toggle('max-w-4xl');
-                window.classList.toggle('max-w-none');
-                window.classList.toggle('rounded-lg');
-                window.classList.toggle('rounded-lg');
+            const windowEl = document.getElementById('admin-window');
+            if (windowEl) {
+                windowEl.classList.toggle('max-w-4xl');
+                windowEl.classList.toggle('max-w-none');
+                windowEl.classList.toggle('rounded-lg');
             }
         });
 
@@ -1902,7 +1899,7 @@ class SIGAPApp {
         if (!user) return;
         const pautasList = document.getElementById('pautas-list');
         if (!pautasList) return;
-        pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas...</p>';
+        pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas SIGEP...</p>';
     
         try {
             const q = query(
@@ -2068,7 +2065,7 @@ window.sortColaboradores = function(criterio) {
     }
 };
 
-window.app = new SIGAPApp();
+window.app = new SIGEPApp(); // ⭐ Instanciação oficial do SIGEP
 
 setTimeout(() => {
     if (window.app && typeof window.app.deletePauta === 'function') {
