@@ -44,7 +44,7 @@ const getIdentificador = (colaborador) => {
     if (colaborador.id) return colaborador.id;
     if (colaborador.matricula) return colaborador.matricula;
     if (colaborador.codigo) return colaborador.codigo;
-    return '';
+    return 'N/A';
 };
 
 const getAttendantNameForPDF = (item) => {
@@ -67,7 +67,7 @@ export const PDFService = {
     
     async generatePlanilhaGastosPDF(assistedName, expenseData) {
         try {
-            await ensureJsPDF(); // Garante que a biblioteca carregou
+            await ensureJsPDF(); 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
@@ -135,16 +135,155 @@ export const PDFService = {
         }
     },
 
+    // ⭐ IMPLEMENTAÇÃO: RELATÓRIO DE ASSISTIDOS ATENDIDOS ⭐
+    async generateAtendidosPDF(atendidosList, pautaNome = "Geral") {
+        try {
+            await ensureJsPDF();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' }); // Paisagem para caber mais colunas
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("RELATÓRIO DE ASSISTIDOS PROTOCOLADOS / ATENDIDOS", doc.internal.pageSize.getWidth() / 2, 40, { align: "center" });
+            
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Pauta / Mutirão: ${pautaNome}  |  Total de Atendidos: ${atendidosList.length}`, 40, 65);
+
+            const body = atendidosList.map((a, index) => {
+                const dataAtendimento = getSafeDate(a.attendedAt || a.lastActionTimestamp);
+                const horaStr = dataAtendimento ? dataAtendimento.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : 'N/A';
+                return [
+                    index + 1,
+                    a.name || 'Não Informado',
+                    a.cpf || 'N/A',
+                    a.subject || 'Não Informado',
+                    getAttendantNameForPDF(a),
+                    a.numeroProcesso || 'S/ Número',
+                    horaStr
+                ];
+            });
+
+            if (body.length === 0) body.push([{ content: "Nenhum atendimento finalizado nesta pauta.", colSpan: 7, styles: { halign: 'center', fontStyle: 'italic' } }]);
+
+            doc.autoTable({
+                startY: 80,
+                head: [['Nº', 'NOME DO ASSISTIDO', 'CPF', 'ASSUNTO / DEMANDA', 'ATENDENTE RESPONSÁVEL', 'Nº PROTOCOLO / PROCESSO', 'HORA']],
+                body: body,
+                theme: 'striped',
+                headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' },
+                styles: { fontSize: 9, cellPadding: 5, valign: 'middle' },
+                columnStyles: { 0: { halign: 'center' }, 2: { halign: 'center' }, 5: { fontStyle: 'bold', halign: 'center' }, 6: { halign: 'center' } }
+            });
+
+            doc.save(`Relatorio_Atendidos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            return true;
+        } catch (error) {
+            console.error("Erro ao gerar PDF de Atendidos:", error);
+            return false;
+        }
+    },
+
+    // ⭐ IMPLEMENTAÇÃO: RELATÓRIO DE ASSISTIDOS FALTOSOS ⭐
+    async generateFaltososPDF(faltososList, pautaNome = "Geral") {
+        try {
+            await ensureJsPDF();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("RELATÓRIO DE AUSÊNCIAS / FALTOSOS", doc.internal.pageSize.getWidth() / 2, 45, { align: "center" });
+
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Pauta / Mutirão: ${pautaNome}  |  Total de Faltosos: ${faltososList.length}`, 40, 70);
+
+            const body = faltososList.map((f, index) => [
+                index + 1,
+                f.name || 'Não Informado',
+                f.cpf || 'N/A',
+                f.subject || 'Não Informado',
+                f.scheduledTime || 'N/A'
+            ]);
+
+            if (body.length === 0) body.push([{ content: "Nenhum assistido marcado como faltoso.", colSpan: 5, styles: { halign: 'center', fontStyle: 'italic' } }]);
+
+            doc.autoTable({
+                startY: 85,
+                head: [['Nº', 'NOME DO ASSISTIDO', 'CPF', 'ASSUNTO PREVISTO', 'HORÁRIO AGENDADO']],
+                body: body,
+                theme: 'striped',
+                headStyles: { fillColor: [153, 27, 27], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' }, // Vermelho escuro p/ faltosos
+                styles: { fontSize: 9, cellPadding: 6, valign: 'middle' },
+                columnStyles: { 0: { halign: 'center' }, 2: { halign: 'center' }, 4: { halign: 'center', fontStyle: 'bold' } }
+            });
+
+            doc.save(`Relatorio_Faltosos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            return true;
+        } catch (error) {
+            console.error("Erro ao gerar PDF de Faltosos:", error);
+            return false;
+        }
+    },
+
+    // ⭐ IMPLEMENTAÇÃO: RELATÓRIO DE PRODUTIVIDADE E COLABORADORES ⭐
+    async generateCollaboratorsPDF(colaboradoresList, todosAtendimentos, pautaNome = "Geral") {
+        try {
+            await ensureJsPDF();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("RELATÓRIO DE PRODUTIVIDADE DA EQUIPE", doc.internal.pageSize.getWidth() / 2, 45, { align: "center" });
+
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Pauta: ${pautaNome}  |  Total de Colaboradores Cadastrados: ${colaboradoresList.length}`, 40, 70);
+
+            const body = colaboradoresList.map((c, index) => {
+                // Filtra quantos atendimentos passaram ou foram concluídos por este colaborador específico
+                const concluidos = todosAtendimentos.filter(a => a.status === 'atendido' && getAttendantNameForPDF(a) === c.nome).length;
+                const emMesa = todosAtendimentos.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome).length;
+
+                return [
+                    index + 1,
+                    c.nome || 'Não Informado',
+                    getIdentificador(c),
+                    c.cargo || 'Não Informado',
+                    c.equipe || 'N/A',
+                    emMesa,
+                    concluidos
+                ];
+            });
+
+            if (body.length === 0) body.push([{ content: "Nenhum colaborador registrado nesta equipe.", colSpan: 7, styles: { halign: 'center', fontStyle: 'italic' } }]);
+
+            doc.autoTable({
+                startY: 85,
+                head: [['Nº', 'NOME COMPLETO', 'IDENTIFICADOR / MATRÍCULA', 'CARGO', 'EQUIPE', 'EM MESA', 'CONCLUÍDOS']],
+                body: body,
+                theme: 'striped',
+                headStyles: { fillColor: [4, 120, 87], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' }, // Emerald p/ produtividade
+                styles: { fontSize: 9, cellPadding: 6, valign: 'middle' },
+                columnStyles: { 0: { halign: 'center' }, 2: { halign: 'center' }, 4: { halign: 'center' }, 5: { halign: 'center' }, 6: { halign: 'center', fontStyle: 'bold' } }
+            });
+
+            doc.save(`Produtividade_Equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            return true;
+        } catch (error) {
+            console.error("Erro ao gerar PDF de Colaboradores:", error);
+            return false;
+        }
+    },
+
     async generateAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
         await ensureJsPDF();
-        // O RESTANTE DO CÓDIGO PERMANECE IGUAL (ocultado aqui por brevidade)
         console.log("Função Ata Social");
     },
     async previewAtaAcaoSocial() { await ensureJsPDF(); },
-    async generateAtendidosPDF() { await ensureJsPDF(); },
-    async generateFaltososPDF() { await ensureJsPDF(); },
     async generateChecklistPDF() { await ensureJsPDF(); },
-    async generateCollaboratorsPDF() { await ensureJsPDF(); },
     async generateStatisticsPDF() { await ensureJsPDF(); }
 };
 
