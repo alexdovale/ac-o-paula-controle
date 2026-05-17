@@ -1,4 +1,3 @@
-
 // js/atendimentoExternoService.js - DASHBOARD JUDICIAL (BLINDAGEM TOTAL ANTI-ERROS NO IOS)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -33,6 +32,8 @@ export const AtendimentoExternoService = {
     assistidoData: null, 
     todosColaboradores: [],
     colaboradorAtual: null,
+    isProcessing: false, // Trava de segurança contra cliques duplos
+    todosAtendimentosPauta: [], // Cache local para busca instantânea no painel
 
     async init() {
         console.log("⚡ Atendimento Externo Inicializado (Premium Mode)");
@@ -49,16 +50,19 @@ export const AtendimentoExternoService = {
         }
 
         try {
-            await signInAnonymously(auth);
+            if (!auth.currentUser) {
+                await signInAnonymously(auth);
+            }
+            
             await this.carregarColaboradoresGerais();
 
-            // DASHBOARD UNIFICADO (Se não tem assistido na URL, mostra o painel geral)
+            // DASHBOARD UNIFICADO
             if (!this.assistidoId) {
                 this.renderizarDashboardUnificado();
                 return;
             }
 
-            // MODO ATENDIMENTO INDIVIDUAL (Peça do assistido aberta)
+            // MODO ATENDIMENTO INDIVIDUAL
             const pautaRef = doc(db, "pautas", this.pautaId);
             const pautaSnap = await getDoc(pautaRef);
             if (!pautaSnap.exists()) {
@@ -77,10 +81,8 @@ export const AtendimentoExternoService = {
             const assistido = docSnap.data();
             this.assistidoData = assistido;
 
-            // ⭐ CORREÇÃO DA TELA DE ACESSO NEGADO ⭐
-            // Ignora a validação se o banco não tem token (links antigos). Só bloqueia se o token divergir.
             if (assistido.delegationToken && assistido.delegationToken !== tokenRecebido) {
-                this.showError("Acesso Seguro Necessário", "Falta o token de segurança para acessar este atendimento.");
+                this.showError("Acesso Seguro Necessário", "O token de segurança é inválido ou expirou.");
                 return;
             }
 
@@ -119,7 +121,7 @@ export const AtendimentoExternoService = {
             headerBg.className = 'bg-slate-800 p-5 sm:p-6 rounded-t-2xl shadow-lg flex items-center gap-4 relative overflow-hidden';
             headerBg.innerHTML = `
                 <div class="absolute top-0 right-0 w-48 h-48 bg-blue-500 opacity-10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-                <div class="bg-white/10 p-2 rounded-xl border border-white/20 shadow-inner flex-shrink-0 relative z-10">
+                <div id="logo-header-main" class="bg-white/10 p-2 rounded-xl border border-white/20 shadow-inner flex-shrink-0 relative z-10">
                     <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" class="h-10 w-auto object-contain drop-shadow-md">
                 </div>
             `;
@@ -330,9 +332,17 @@ export const AtendimentoExternoService = {
         preencher('select-servidor-devolver', servidores, '--- ESCOLHA O SERVIDOR ---', enviadoPorInicial);
     },
 
-    async finalizarProcesso() {
-        if (!this.fluxoSelecionado) return;
+    _gerarTokenSeguro() {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID().substring(0, 8);
+        }
+        return Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
+    },
 
+    async finalizarProcesso() {
+        if (!this.fluxoSelecionado || this.isProcessing) return;
+
+        this.isProcessing = true;
         const btnFinalizar = document.getElementById('btn-finalizar-dinamico');
         btnFinalizar.disabled = true;
         btnFinalizar.innerHTML = '<span class="animate-pulse">PROCESSANDO...</span>';
@@ -340,7 +350,6 @@ export const AtendimentoExternoService = {
         const inputNumeroCaso = document.getElementById('input-numero-caso');
         const numeroProcessoSalvo = inputNumeroCaso ? inputNumeroCaso.value.trim() : '';
 
-        // Blindagem contra envio de undefined para o Firebase
         const numProcessoSeguro = numeroProcessoSalvo || '';
         const colabSeguro = this.colaboradorNome || 'Sistema';
         const pautaIdSeguro = this.pautaId || '';
@@ -351,20 +360,21 @@ export const AtendimentoExternoService = {
 
         try {
             const docRef = doc(db, "pautas", pautaIdSeguro, "attendances", assistidoIdSeguro);
-            const novoToken = Date.now().toString(36) + Math.random().toString(36).substring(2); 
+            const novoToken = this._gerarTokenSeguro();
+            const timestampIso = new Date().toISOString();
 
             if (this.fluxoSelecionado === 'direto') {
                 await updateDoc(docRef, {
                     status: numProcessoSeguro ? 'atendido' : 'aguardandoNumero',
                     attendedBy: colabSeguro,
-                    attendedAt: new Date().toISOString(),
+                    attendedAt: timestampIso,
                     finalizadoPeloColaborador: !!numProcessoSeguro,
                     numeroProcesso: numProcessoSeguro,
                     history: arrayUnion({
                         action: numProcessoSeguro ? 'APROVADO_E_DISTRIBUIDO' : 'APROVADO_AGUARDANDO_NUMERO',
                         by: colabSeguro,
                         msg: numProcessoSeguro ? `Nº ${numProcessoSeguro}` : 'Aprovado internamente',
-                        at: new Date().toISOString()
+                        at: timestampIso
                     })
                 });
                 tituloSucesso = "Atendimento Finalizado!";
@@ -373,7 +383,13 @@ export const AtendimentoExternoService = {
             else if (this.fluxoSelecionado === 'distribuicao') {
                 const def = document.getElementById('select-defensor-distribuicao')?.value || '';
                 const nota = document.getElementById('notas-distribuicao-dinamico')?.value || '';
-                if (!def) { alert("Obrigatório selecionar um Defensor."); btnFinalizar.disabled = false; btnFinalizar.textContent = "EXECUTAR AÇÃO"; return; }
+                if (!def) { 
+                    alert("Obrigatório selecionar um Defensor."); 
+                    this.isProcessing = false;
+                    btnFinalizar.disabled = false; 
+                    btnFinalizar.textContent = "EXECUTAR AÇÃO"; 
+                    return; 
+                }
                 
                 await updateDoc(docRef, {
                     status: 'aguardandoDistribuicao',
@@ -386,7 +402,7 @@ export const AtendimentoExternoService = {
                         action: 'ENVIADO_PARA_REVISAO',
                         by: colabSeguro,
                         msg: nota || 'Enviado para assinatura',
-                        at: new Date().toISOString()
+                        at: timestampIso
                     })
                 });
                 tituloSucesso = "Enviado à Distribuição!";
@@ -395,7 +411,13 @@ export const AtendimentoExternoService = {
             else if (this.fluxoSelecionado === 'correcao') {
                 const def = document.getElementById('select-defensor-correcao')?.value || '';
                 const nota = document.getElementById('notas-correcao-dinamico')?.value || '';
-                if (!def) { alert("Obrigatório selecionar um Defensor."); btnFinalizar.disabled = false; btnFinalizar.textContent = "EXECUTAR AÇÃO"; return; }
+                if (!def) { 
+                    alert("Obrigatório selecionar um Defensor."); 
+                    this.isProcessing = false;
+                    btnFinalizar.disabled = false; 
+                    btnFinalizar.textContent = "EXECUTAR AÇÃO"; 
+                    return; 
+                }
                 
                 await updateDoc(docRef, { 
                     status: 'aguardandoCorrecao', 
@@ -408,7 +430,7 @@ export const AtendimentoExternoService = {
                         action: 'ENVIADO_PARA_CORRECAO',
                         by: colabSeguro,
                         msg: nota || 'Avaliação solicitada',
-                        at: new Date().toISOString()
+                        at: timestampIso
                     })
                 });
                 tituloSucesso = "Enviado p/ Avaliação!";
@@ -417,13 +439,19 @@ export const AtendimentoExternoService = {
             else if (this.fluxoSelecionado === 'devolver') {
                 const serv = document.getElementById('select-servidor-devolver')?.value || '';
                 const nota = document.getElementById('notas-devolver-dinamico')?.value || '';
-                if (!serv) { alert("Selecione o servidor de destino."); btnFinalizar.disabled = false; btnFinalizar.textContent = "EXECUTAR AÇÃO"; return; }
+                if (!serv) { 
+                    alert("Selecione o servidor de destino."); 
+                    this.isProcessing = false;
+                    btnFinalizar.disabled = false; 
+                    btnFinalizar.textContent = "EXECUTAR AÇÃO"; 
+                    return; 
+                }
                 
                 const colegaObj = this.todosColaboradores.find(c => c.nome === serv);
                 await updateDoc(docRef, {
                     status: 'emAtendimento', 
                     assignedCollaborator: { name: serv, email: colegaObj?.email || '' },
-                    inAttendanceTime: new Date().toISOString(), 
+                    inAttendanceTime: timestampIso, 
                     delegationToken: novoToken,
                     historicoTransferencia: `Devolvido (Correção) por ${colabSeguro}. Msg: ${nota}`
                 });
@@ -432,13 +460,19 @@ export const AtendimentoExternoService = {
             }
             else if (this.fluxoSelecionado === 'transferir') {
                 const colega = document.getElementById('select-transferir-colega')?.value || '';
-                if (!colega) { alert("Selecione um colega."); btnFinalizar.disabled = false; btnFinalizar.textContent = "EXECUTAR AÇÃO"; return; }
+                if (!colega) { 
+                    alert("Selecione um colega."); 
+                    this.isProcessing = false;
+                    btnFinalizar.disabled = false; 
+                    btnFinalizar.textContent = "EXECUTAR AÇÃO"; 
+                    return; 
+                }
                 
                 const colegaObj = this.todosColaboradores.find(c => c.nome === colega);
                 await updateDoc(docRef, {
                     status: 'emAtendimento', 
                     assignedCollaborator: { name: colega, email: colegaObj?.email || '' },
-                    inAttendanceTime: new Date().toISOString(), 
+                    inAttendanceTime: timestampIso, 
                     delegationToken: novoToken,
                     historicoTransferencia: `Transferência de ${colabSeguro} para ${colega}.`
                 });
@@ -458,15 +492,11 @@ export const AtendimentoExternoService = {
                 subtituloSucesso = "O assistido foi mandado de volta à fila de espera.";
             }
 
-            // ⭐ CORREÇÃO INFALÍVEL DO "null is not an object" (Imagem 3) ⭐
-            // Ao invés de tentar injetar via innerHTML e procurar o botão no escuro do Safari,
-            // vamos esvaziar o container atual e criar o botão via DOM nativo. Garantido que funciona!
             const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
             const textoBotaoVoltar = isDefensor ? '⚖️ Voltar ao Painel Judicial' : '📊 Voltar à Minha Mesa';
 
             let areaColaborador = document.getElementById('area-colaborador');
             if (!areaColaborador) {
-                // Tenta achar o corpo principal se a area falhar
                 areaColaborador = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl') || document.body;
             }
 
@@ -479,7 +509,6 @@ export const AtendimentoExternoService = {
                 </div>
             `;
 
-            // O botão é criado e anexado via Javascript nativo para não haver chance de dar null
             const btnVoltar = document.createElement('button');
             btnVoltar.className = "bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 px-8 rounded-xl shadow transition w-full sm:w-auto uppercase text-xs tracking-widest";
             btnVoltar.innerText = textoBotaoVoltar;
@@ -500,6 +529,8 @@ export const AtendimentoExternoService = {
                 btnFinalizar.disabled = false;
                 btnFinalizar.textContent = "EXECUTAR AÇÃO";
             }
+        } catch {
+            this.isProcessing = false;
         }
     },
 
@@ -610,7 +641,6 @@ export const AtendimentoExternoService = {
         const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
         const tituloPainel = isDefensor ? 'Painel Judicial' : 'Minha Mesa de Trabalho';
         const subtituloPainel = isDefensor ? 'Fluxo de Assinaturas e Petições' : 'Atendimentos Repassados a Você';
-        const iconePainel = isDefensor ? '⚖️' : '🧑‍💻';
 
         corpo.className = "w-full max-w-4xl mx-auto my-4"; 
         corpo.innerHTML = `
@@ -630,6 +660,11 @@ export const AtendimentoExternoService = {
             </div>
             
             <div class="bg-slate-50 p-4 sm:p-6 rounded-b-2xl shadow-lg border border-slate-300 min-h-[500px]">
+                <!-- Campo de Busca Global Opcional / Mecanismo de Pesquisa Ativa -->
+                <div id="wrapper-busca-historico" class="hidden mb-4 animate-fade-in">
+                    <input type="text" id="input-busca-local" class="w-full p-3 border border-slate-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner font-sans" placeholder="🔍 Digite o nome do assistido ou assunto para buscar no seu histórico...">
+                </div>
+
                 <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 mb-6">
                     <div id="tabs-dashboard" class="flex gap-2 overflow-x-auto custom-scrollbar"></div>
                 </div>
@@ -642,7 +677,9 @@ export const AtendimentoExternoService = {
         try {
             const q = query(collection(db, "pautas", this.pautaId, "attendances"));
             const snap = await getDocs(q);
-            const todos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            // Salva no cache do objeto para busca instantânea
+            this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            
             const baseUrl = window.location.href.substring(0, window.location.href.indexOf('?'));
 
             const desenharCard = (item, isCardAberto) => {
@@ -663,6 +700,9 @@ export const AtendimentoExternoService = {
                 }
                 else if (item.status === 'emAtendimento') {
                     badgeTopo = `<span class="bg-indigo-100 text-indigo-800 text-[9px] font-black px-2 py-0.5 rounded border border-indigo-300 uppercase tracking-widest shadow-sm">Na Mesa</span>`;
+                }
+                else if (item.status === 'atendido') {
+                    badgeTopo = `<span class="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded border border-emerald-300 uppercase tracking-widest shadow-sm">Protocolado</span>`;
                 }
 
                 if (isCardAberto) {
@@ -692,6 +732,7 @@ export const AtendimentoExternoService = {
                     return `
                         <div class="border border-emerald-200 bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                             <div>
+                                <div class="mb-1">${badgeTopo}</div>
                                 <h3 class="font-black text-slate-800 text-sm truncate">${escapeHTML(item.name)}</h3>
                                 <p class="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-wide">${escapeHTML(item.subject)}</p>
                                 ${numProcessoHtml}
@@ -707,19 +748,28 @@ export const AtendimentoExternoService = {
 
             const container = document.getElementById('lista-dashboard-conteudo');
             const tabsDiv = document.getElementById('tabs-dashboard');
+            const wrapperBusca = document.getElementById('wrapper-busca-historico');
 
             if (isDefensor) {
-                const pendentes = todos.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome);
-                const finalizados = todos.filter(a => a.status === 'atendido' && a.attendedBy === this.colaboradorNome);
+                const pendentes = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome);
+                const finalizados = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' && a.attendedBy === this.colaboradorNome);
+                
+                // Filtra absolutamente tudo que teve interação desse Defensor na pauta ativa (Mesa de histórico de busca)
+                const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => 
+                    a.defensorResponsavel === this.colaboradorNome || 
+                    a.attendedBy === this.colaboradorNome ||
+                    (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome))
+                );
 
                 tabsDiv.innerHTML = `
                     <button id="tab-pendentes" class="flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap">Aguardando Avaliação <span class="bg-white/20 text-white ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
                     <button id="tab-assinados" class="flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap">Já Protocolados <span class="bg-slate-200 text-slate-700 ml-2 px-2 py-0.5 rounded text-[10px]">${finalizados.length}</span></button>
+                    <button id="tab-historico-busca" class="flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-indigo-500 hover:bg-indigo-50 rounded-lg transition whitespace-nowrap">🔍 Buscar Tudo</button>
                 `;
 
                 const renderDefensorList = (lista, isAberto) => {
                     if (lista.length === 0) {
-                        container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">🙌</span><p class="text-base font-black uppercase tracking-widest text-slate-500">MESA LIMPA! NENHUM PROCESSO PENDENTE.</p></div>`;
+                        container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">🙌</span><p class="text-base font-black uppercase tracking-widest text-slate-500">NENHUM PROCESSO LOCALIZADO.</p></div>`;
                         return;
                     }
                     container.innerHTML = lista.map(item => desenharCard(item, isAberto)).join('');
@@ -727,29 +777,62 @@ export const AtendimentoExternoService = {
 
                 const btnPend = document.getElementById('tab-pendentes');
                 const btnAssi = document.getElementById('tab-assinados');
+                const btnHist = document.getElementById('tab-historico-busca');
+
+                const limparEstilosAbas = () => {
+                    wrapperBusca.classList.add('hidden');
+                    btnPend.className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap";
+                    btnAssi.className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap";
+                    btnHist.className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-indigo-500 hover:bg-indigo-50 rounded-lg transition whitespace-nowrap";
+                };
 
                 btnPend.onclick = () => {
+                    limparEstilosAbas();
                     btnPend.className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap";
-                    btnAssi.className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap";
                     renderDefensorList(pendentes, true);
                 };
                 btnAssi.onclick = () => {
+                    limparEstilosAbas();
                     btnAssi.className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-emerald-600 text-white rounded-lg shadow transition whitespace-nowrap";
-                    btnPend.className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap";
                     renderDefensorList(finalizados, false);
+                };
+                btnHist.onclick = () => {
+                    limparEstilosAbas();
+                    wrapperBusca.classList.remove('hidden');
+                    btnHist.className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-indigo-600 text-white rounded-lg shadow transition whitespace-nowrap";
+                    renderDefensorList(meuHistoricoCompleto, true);
+                    
+                    document.getElementById('input-busca-local').oninput = (e) => {
+                        const termo = e.target.value.toLowerCase().trim();
+                        const filtrados = meuHistoricoCompleto.filter(i => 
+                            (i.name && i.name.toLowerCase().includes(termo)) || 
+                            (i.subject && i.subject.toLowerCase().includes(termo)) ||
+                            (i.numeroProcesso && i.numeroProcesso.includes(termo))
+                        );
+                        renderDefensorList(filtrados, true);
+                    };
                 };
 
                 renderDefensorList(pendentes, true);
 
             } else {
-                const emAndamento = todos.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
-                const enviados = todos.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
-                const finalizados = todos.filter(a => a.status === 'atendido' && a.attendedBy === this.colaboradorNome);
+                const emAndamento = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
+                const enviados = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
+                const finalizados = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' && a.attendedBy === this.colaboradorNome);
+                
+                // Histórico completo de tudo que o Servidor trabalhou
+                const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => 
+                    a.enviadoPor === this.colaboradorNome || 
+                    a.attendedBy === this.colaboradorNome || 
+                    a.assignedCollaborator?.name === this.colaboradorNome ||
+                    (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome))
+                );
 
                 tabsDiv.innerHTML = `
                     <button id="tab-em-mesa" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap">Em Mesa <span class="bg-white/20 text-white ml-1 px-1.5 py-0.5 rounded text-[9px]">${emAndamento.length}</span></button>
                     <button id="tab-enviados" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap">No Defensor <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${enviados.length}</span></button>
                     <button id="tab-finalizados" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap">Concluídos <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${finalizados.length}</span></button>
+                    <button id="tab-historico-busca" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-indigo-500 hover:bg-indigo-50 rounded-lg transition whitespace-nowrap">🔍 Buscar</button>
                 `;
 
                 const renderServidorList = (lista, isAberto, isEmptyAviso) => {
@@ -763,9 +846,11 @@ export const AtendimentoExternoService = {
                 const btnMesa = document.getElementById('tab-em-mesa');
                 const btnEnv = document.getElementById('tab-enviados');
                 const btnFin = document.getElementById('tab-finalizados');
+                const btnHist = document.getElementById('tab-historico-busca');
 
                 const resetTabs = () => {
-                    [btnMesa, btnEnv, btnFin].forEach(b => b.className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap");
+                    wrapperBusca.classList.add('hidden');
+                    [btnMesa, btnEnv, btnFin, btnHist].forEach(b => b.className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap");
                 };
 
                 btnMesa.onclick = () => {
@@ -783,11 +868,28 @@ export const AtendimentoExternoService = {
                     btnFin.className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-emerald-600 text-white rounded-lg shadow transition whitespace-nowrap";
                     renderServidorList(finalizados, false, "Você ainda não finalizou nada hoje.");
                 };
+                btnHist.onclick = () => {
+                    resetTabs();
+                    wrapperBusca.classList.remove('hidden');
+                    btnHist.className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-indigo-600 text-white rounded-lg shadow transition whitespace-nowrap";
+                    renderServidorList(meuHistoricoCompleto, true, "Nenhum histórico encontrado.");
+
+                    document.getElementById('input-busca-local').oninput = (e) => {
+                        const termo = e.target.value.toLowerCase().trim();
+                        const filtrados = meuHistoricoCompleto.filter(i => 
+                            (i.name && i.name.toLowerCase().includes(termo)) || 
+                            (i.subject && i.subject.toLowerCase().includes(termo)) ||
+                            (i.numeroProcesso && i.numeroProcesso.includes(termo))
+                        );
+                        renderServidorList(filtrados, true, "Nenhum processo corresponde aos termos.");
+                    };
+                };
 
                 renderServidorList(emAndamento, true, "Sua mesa está limpa.");
             }
 
         } catch (error) {
+            console.error(error);
             document.getElementById('lista-dashboard-conteudo').innerHTML = `<p class="text-red-500 text-sm text-center font-bold">Erro ao carregar os processos. O servidor pode estar offline.</p>`;
         }
     },
