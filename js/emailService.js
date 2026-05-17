@@ -22,16 +22,32 @@ export const EmailService = {
     },
 
     async sendDelegationEmail(toEmail, toName, assistedName, senderName, pautaId, assistidoId, delegationToken) {
+        // Validação preventiva imediata para evitar chamadas falsas ao EmailJS
+        if (!toEmail || !toEmail.includes('@')) {
+            console.error("❌ Envio cancelado: E-mail inválido ou ausente.");
+            if (window.showNotification) {
+                window.showNotification(`O colaborador ${toName} não possui e-mail válido cadastrado no sistema!`, "warning", 6000);
+            } else {
+                alert(`Erro: O colaborador ${toName} está sem e-mail cadastrado no banco.`);
+            }
+            return false;
+        }
+
         try {
             await this.loadEmailJSLibrary(); // Garante que a biblioteca existe
 
-            const baseUrl = window.location.href.substring(0, window.location.href.indexOf('?')) || window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-            const safeBaseUrl = baseUrl.endsWith('.html') ? baseUrl : `${baseUrl}/atendimento_externo.html`;
-            
+            // Montagem inteligente do Link mantendo a estrutura limpa e sem index.html repetido
+            let baseUrl = window.location.origin + window.location.pathname;
+            if (!baseUrl.endsWith('atendimento_externo.html')) {
+                // Se a página de disparo for o console.html ou index.html, aponta para o arquivo de atendimento externo
+                const ultimoSlash = baseUrl.lastIndexOf('/');
+                baseUrl = baseUrl.substring(0, ultimoSlash + 1) + 'atendimento_externo.html';
+            }
+
             // Link de segurança completo
-            const delegationLink = `${safeBaseUrl}?pautaId=${pautaId}&assistidoId=${assistidoId}&colab=${encodeURIComponent(toName)}&token=${delegationToken}`;
+            const delegationLink = `${baseUrl}?pautaId=${pautaId}&assistidoId=${assistidoId}&colab=${encodeURIComponent(toName)}&token=${delegationToken}`;
             
-            console.log("🔗 Link gerado:", delegationLink);
+            console.log("🔗 Link gerado para e-mail:", delegationLink);
 
             const templateParams = {
                 to_email: toEmail,
@@ -42,35 +58,20 @@ export const EmailService = {
             };
 
             await window.emailjs.send(this.serviceId, this.templateId, templateParams);
+            console.log(`✅ Notificação enviada para o e-mail: ${toEmail}`);
             return true;
 
         } catch (error) {
-            console.warn("⚠️ Falha no EmailJS. Ativando plano B...");
+            console.error("❌ Falha crítica no servidor EmailJS:", error);
             
-            // PLANO B: MENSAGEM DO WHATSAPP
-            const baseUrl = window.location.href.substring(0, window.location.href.indexOf('?')) || window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-            const safeBaseUrl = baseUrl.endsWith('.html') ? baseUrl : `${baseUrl}/atendimento_externo.html`;
-            const delegationLink = `${safeBaseUrl}?pautaId=${pautaId}&assistidoId=${assistidoId}&colab=${encodeURIComponent(toName)}&token=${delegationToken}`;
-            
-            const msg = `Olá ${toName},\n\nO(a) assistido(a) *${assistedName}* foi delegado(a) para você.\n\nAcesse o link seguro abaixo para finalizar o atendimento:\n${delegationLink}`;
-            
-            const textarea = document.createElement('textarea');
-            textarea.value = msg;
-            document.body.appendChild(textarea);
-            textarea.select();
-            
-            try {
-                document.execCommand('copy');
-                if (window.showNotification) {
-                    window.showNotification("Erro no e-mail. Link e mensagem copiados para a área de transferência! (Cole no WhatsApp)", "warning", 6000);
-                } else {
-                    alert("Erro no e-mail. Link copiado! Cole no WhatsApp do colega.");
-                }
-            } catch (err) {
-                console.error("Erro ao copiar:", err);
+            // NOVO PLANO B: Apenas avisa sobre o erro no e-mail e falha de cota, SEM WHATSAPP
+            if (window.showNotification) {
+                window.showNotification(`Falha técnica no EmailJS ao notificar ${toName}. Verifique o limite da cota diária ou credenciais do painel.`, "error", 7000);
+            } else {
+                alert(`⚠️ O servidor de e-mail falhou ao enviar a notificação para ${toName}. Monitore o painel do EmailJS.`);
             }
             
-            document.body.removeChild(textarea);
+            // Retorna false para que o console principal saiba que o e-mail não foi entregue
             return false;
         }
     }
