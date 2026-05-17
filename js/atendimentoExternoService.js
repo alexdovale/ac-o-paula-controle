@@ -6,7 +6,7 @@ import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, query, array
 import { firebaseConfig } from './config.js';
 import { documentsData } from './detalhes.js'; 
 import { PDFService } from './pdfService.js';
-import { EmailService } from './emailService.js'; // ✉️ Importação do serviço de e-mail unificado
+import { EmailService } from './emailService.js'; 
 
 const escapeHTML = (str) => {
     if (!str) return '';
@@ -45,7 +45,6 @@ export const AtendimentoExternoService = {
         const tokenRecebido = urlParams.get('token');
         this.colaboradorNome = urlParams.get('colab') || "Colaborador";
         
-        // Lê qual tela deve ser carregada se a página for atualizada (F5)
         const telaAtual = urlParams.get('view'); 
 
         if (!this.pautaId || !this.colaboradorNome) {
@@ -60,7 +59,6 @@ export const AtendimentoExternoService = {
             
             await this.carregarColaboradoresGerais();
 
-            // Se a URL indicar explicitamente a mesa, ou se não houver ID de assistido selecionado
             if (telaAtual === 'dashboard' || !this.assistidoId) {
                 this.renderizarDashboardUnificado();
                 return;
@@ -116,7 +114,6 @@ export const AtendimentoExternoService = {
     },
 
     renderizarInterface(assistido, pautaData) {
-        // Atualiza a URL para o modo individual removendo o parâmetro 'view'
         const url = new URL(window.location.href);
         url.searchParams.delete('view');
         window.history.pushState({}, '', url);
@@ -367,7 +364,6 @@ export const AtendimentoExternoService = {
         let tituloSucesso = "Atendimento Atualizado!";
         let subtituloSucesso = "Ação registrada com sucesso.";
         
-        // Variáveis locais de controle de e-mail destino
         let colaboradorDestinoObj = null;
 
         try {
@@ -385,7 +381,7 @@ export const AtendimentoExternoService = {
                     history: arrayUnion({
                         action: numProcessoSeguro ? 'APROVADO_E_DISTRIBUIDO' : 'APROVADO_AGUARDANDO_NUMERO',
                         by: colabSeguro,
-                        msg: numProcessoSeguro ? `Nº ${numProcessoSeguro}` : 'Aprovado internamente',
+                        msg: numProcessoSeguro ? `Nº Processo: ${numProcessoSeguro}` : 'Aprovado e protocolado internamente',
                         at: timestampIso
                     })
                 });
@@ -403,7 +399,6 @@ export const AtendimentoExternoService = {
                     return; 
                 }
                 
-                // Captura o objeto completo do Defensor para coletar o e-mail cadastrado
                 colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === def);
 
                 await updateDoc(docRef, {
@@ -416,7 +411,7 @@ export const AtendimentoExternoService = {
                     history: arrayUnion({
                         action: 'ENVIADO_PARA_REVISAO',
                         by: colabSeguro,
-                        msg: nota || 'Enviado para assinatura',
+                        msg: nota || `Enviado para assinatura do Defensor(a) ${def}`,
                         at: timestampIso
                     })
                 });
@@ -434,7 +429,6 @@ export const AtendimentoExternoService = {
                     return; 
                 }
                 
-                // Captura o objeto completo do Defensor Avaliador
                 colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === def);
 
                 await updateDoc(docRef, { 
@@ -447,7 +441,7 @@ export const AtendimentoExternoService = {
                     history: arrayUnion({
                         action: 'ENVIADO_PARA_CORRECAO',
                         by: colabSeguro,
-                        msg: nota || 'Avaliação solicitada',
+                        msg: nota || `Avaliação de petição solicitada ao Defensor(a) ${def}`,
                         at: timestampIso
                     })
                 });
@@ -465,7 +459,6 @@ export const AtendimentoExternoService = {
                     return; 
                 }
                 
-                // Captura o objeto completo do Servidor que receberá o ajuste
                 colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === serv);
 
                 await updateDoc(docRef, {
@@ -473,7 +466,13 @@ export const AtendimentoExternoService = {
                     assignedCollaborator: { name: serv, email: colaboradorDestinoObj?.email || '' },
                     inAttendanceTime: timestampIso, 
                     delegationToken: novoToken,
-                    historicoTransferencia: `Devolvido (Correção) por ${colabSeguro}. Msg: ${nota}`
+                    historicoTransferencia: `Devolvido (Correção) por ${colabSeguro}. Msg: ${nota}`,
+                    history: arrayUnion({
+                        action: 'DEVOLVIDO_COM_ERRO',
+                        by: colabSeguro,
+                        msg: nota || `Retornado para correção na mesa do Servidor(a) ${serv}`,
+                        at: timestampIso
+                    })
                 });
                 tituloSucesso = "Processo Devolvido!";
                 subtituloSucesso = `O servidor ${serv} deve corrigir o documento.`;
@@ -488,7 +487,6 @@ export const AtendimentoExternoService = {
                     return; 
                 }
                 
-                // Captura o objeto completo do Colega de transferência
                 colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === colega);
 
                 await updateDoc(docRef, {
@@ -496,7 +494,13 @@ export const AtendimentoExternoService = {
                     assignedCollaborator: { name: colega, email: colaboradorDestinoObj?.email || '' },
                     inAttendanceTime: timestampIso, 
                     delegationToken: novoToken,
-                    historicoTransferencia: `Transferência de ${colabSeguro} para ${colega}.`
+                    historicoTransferencia: `Transferência de ${colabSeguro} para ${colega}.`,
+                    history: arrayUnion({
+                        action: 'TRANSFERENCIA_DE_CASO',
+                        by: colabSeguro,
+                        msg: `Caso repassado para a mesa do colega ${colega}`,
+                        at: timestampIso
+                    })
                 });
                 tituloSucesso = "Transferência Ativa!";
                 subtituloSucesso = `Caso transferido com sucesso para ${colega}.`;
@@ -508,7 +512,13 @@ export const AtendimentoExternoService = {
                     delegatedBy: null,
                     delegatedAt: null,
                     inAttendanceTime: null,
-                    distributionStatus: null
+                    distributionStatus: null,
+                    history: arrayUnion({
+                        action: 'ATENDIMENTO_PAUSADO',
+                        by: colabSeguro,
+                        msg: 'Atendimento pausado pelo colaborador. Retornado para a fila de espera geral.',
+                        at: timestampIso
+                    })
                 });
                 tituloSucesso = "Pausa Registrada";
                 subtituloSucesso = "O assistido foi mandado de volta à fila de espera.";
@@ -517,8 +527,6 @@ export const AtendimentoExternoService = {
             // ✉️ DISPARO AUTOMÁTICO DO E-MAIL SE HOUVER DESTINATÁRIO DEFINIDO
             if (colaboradorDestinoObj && colaboradorDestinoObj.email) {
                 console.log(`✉️ Iniciando disparo de e-mail para: ${colaboradorDestinoObj.email}`);
-                
-                // Executa a chamada chamando diretamente o método exportado do EmailService
                 await EmailService.sendDelegationEmail(
                     colaboradorDestinoObj.email,
                     colaboradorDestinoObj.nome,
@@ -528,6 +536,15 @@ export const AtendimentoExternoService = {
                     assistidoIdSeguro,
                     novoToken
                 );
+            }
+
+            // Garante que a listagem de dados em cache seja imediatamente limpa e renovada com as novas chaves
+            try {
+                const q = query(collection(db, "pautas", pautaIdSeguro, "attendances"));
+                const snap = await getDocs(q);
+                this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            } catch (err) {
+                console.warn("Falha silenciosa ao sincronizar cache local pós-envio:", err);
             }
 
             // Interface gráfica de resposta de sucesso
@@ -677,7 +694,6 @@ export const AtendimentoExternoService = {
         const corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl');
         if (!corpo) return;
 
-        // Grava de forma fixa o estado na URL do navegador sem dar recarga
         const url = new URL(window.location.href);
         url.searchParams.set('view', 'dashboard');
         url.searchParams.delete('assistidoId'); 
@@ -935,7 +951,7 @@ export const AtendimentoExternoService = {
         }
     },
 
-    showError(titulo, mensagem) {
+    showError(titulo, message) {
         let corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl');
         if (!corpo) corpo = document.body;
 
@@ -951,7 +967,7 @@ export const AtendimentoExternoService = {
                 <div class="p-10 text-center bg-white rounded-b-3xl shadow-xl border-x border-b border-gray-200">
                     <span class="text-6xl block mb-6 drop-shadow-md">🔒</span>
                     <h2 class="text-xl font-black text-gray-800 uppercase tracking-wide mb-3">${titulo}</h2>
-                    <p class="text-gray-500 font-semibold leading-relaxed">${mensagem}</p>
+                    <p class="text-gray-500 font-semibold leading-relaxed">${message}</p>
                 </div>
             </div>
         `;
