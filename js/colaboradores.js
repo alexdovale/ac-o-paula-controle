@@ -1,4 +1,5 @@
-// js/colaboradores.js - EQUIPE E PRESENÇA (OTIMIZADO PARA MOBILE E PREMIUM)
+
+// js/colaboradores.js - EQUIPE E PRESENÇA (OTIMIZADO PARA MOBILE E IPHONE)
 
 import { 
     collection, 
@@ -22,9 +23,6 @@ const CollaboratorService = {
     ordemAtual: 'grupo', 
     gruposPermitidosAta: ['1', '2', '3', '4', 'CRC', 'Coordenadores'],
 
-    // ========================================================
-    // 1. AUTO-PREENCHIMENTO (BUSCA NA BASE MASTER)
-    // ========================================================
     async buscarColaboradorMaster(app, identificador) {
         const idLimpo = identificador.trim().split('/').pop();
         if (!idLimpo || idLimpo.length < 3) return;
@@ -53,9 +51,6 @@ const CollaboratorService = {
         }
     },
 
-    // ========================================================
-    // 2. ORDENAÇÃO DA LISTA (Defensor > Servidor > Outros)
-    // ========================================================
     ordenarColaboradores(colaboradores) {
         if (this.ordemAtual === 'nome') {
             return [...colaboradores].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
@@ -96,9 +91,6 @@ const CollaboratorService = {
         if (window.app) this.renderTable(window.app);
     },
 
-    // ========================================================
-    // 3. GESTÃO DE DADOS DA ATA SOCIAL (PERSISTÊNCIA)
-    // ========================================================
     async saveAtaData(app) {
         if (!app?.currentPauta?.id) {
             showNotification("Selecione uma pauta primeiro", "error");
@@ -155,9 +147,6 @@ const CollaboratorService = {
         }
     },
 
-    // ========================================================
-    // 4. FLUXO DE REVISÃO E UI (MOBILE)
-    // ========================================================
     openModal(app) {
         const modal = document.getElementById('collaborators-modal');
         if (!modal) return;
@@ -180,7 +169,6 @@ const CollaboratorService = {
         
         const btn = document.createElement('button');
         btn.id = 'toggle-order-btn';
-        // Estilo botão de filtro premium
         btn.className = 'w-full md:w-auto bg-white hover:bg-slate-50 text-slate-700 font-bold px-4 py-3 md:py-2 rounded-xl text-sm mb-4 transition-colors border border-slate-200 shadow-sm flex items-center justify-center';
         btn.innerHTML = this.ordemAtual === 'grupo' ? '<span class="mr-2">📁</span> Ordenar por Grupo' : '<span class="mr-2">🔤</span> Ordenar por Nome';
         btn.onclick = () => this.toggleOrdem();
@@ -221,9 +209,6 @@ const CollaboratorService = {
         };
     },
 
-    // ========================================================
-    // 5. PERSISTÊNCIA (PAUTA + MASTER)
-    // ========================================================
     async saveCollaborator(app) {
         if (!app?.currentPauta?.id) return;
 
@@ -261,9 +246,6 @@ const CollaboratorService = {
         }
     },
 
-    // ========================================================
-    // 6. RENDERIZAÇÃO E EVENTOS
-    // ========================================================
     setupListener(app, pautaId) {
         if (this.currentListener) this.currentListener();
         const ref = collection(app.db, "pautas", pautaId, "collaborators");
@@ -285,18 +267,18 @@ const CollaboratorService = {
         ordenados.forEach(colab => {
             if (colab.transporte === 'Meios Próprios') selfT++; else compT++;
             
-            // CORREÇÃO APLICADA AQUI: Retirado o flex do <td>, adicionado na <div> interna e corrigido as cores de fundo.
+            // ⭐ SOLUÇÃO SAFARI/IOS ⭐ colspan="5" forçado para ocupar toda a largura.
             if (this.ordemAtual === 'grupo' && ultimoGrupo !== colab.equipe) {
                 ultimoGrupo = colab.equipe;
-                tbody.innerHTML += `
-                    <tr>
-                        <td colspan="5" class="bg-violet-50 border-y border-violet-100 p-3">
-                            <div class="font-black text-violet-800 text-[10px] sm:text-xs uppercase tracking-widest flex items-center gap-2">
-                                <span>📁</span> Equipe ${escapeHTML(ultimoGrupo)}
-                            </div>
-                        </td>
-                    </tr>
+                const trGrupo = document.createElement('tr');
+                trGrupo.innerHTML = `
+                    <td colspan="5" class="bg-violet-50 p-3 border-y border-violet-200 text-left">
+                        <div class="font-black text-violet-900 text-[10px] sm:text-xs uppercase tracking-widest flex items-center gap-2">
+                            <span>📁</span> Equipe ${escapeHTML(ultimoGrupo)}
+                        </div>
+                    </td>
                 `;
+                tbody.appendChild(trGrupo);
             }
 
             const isDef = colab.cargo === 'Defensor(a)';
@@ -313,7 +295,6 @@ const CollaboratorService = {
             const row = document.createElement('tr');
             row.className = "border-b hover:bg-slate-50 transition-colors duration-150";
             
-            // Solução para Mobile mantida
             row.innerHTML = `
                 <td class="p-3">
                     <div class="font-bold text-sm text-slate-800 truncate max-w-[140px] sm:max-w-xs">${escapeHTML(colab.nome)}</div>
@@ -460,3 +441,5 @@ const CollaboratorService = {
 
 export default CollaboratorService;
 window.CollaboratorService = CollaboratorService;
+
+
