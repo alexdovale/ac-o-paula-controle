@@ -1,4 +1,4 @@
-// js/pdfService.js
+// js/pdfService.js - GERADOR DE RELATÓRIOS AUDITÁVEIS (PADRÃO SIGEP)
 
 /**
  * Baixa as bibliotecas de PDF automaticamente se não existirem
@@ -32,11 +32,40 @@ const getSafeDate = (timeValue) => {
     return isNaN(date.getTime()) ? null : date;
 };
 
-const calculateDuration = (totalMinutes) => {
-    if (totalMinutes === null || totalMinutes < 0) return 'N/A';
-    return totalMinutes >= 60 
-        ? `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}min` 
-        : `${totalMinutes} min`;
+// Auxiliar para calcular a duração entre duas marcas de tempo em minutos textuais
+const getDuracaoMinutos = (dataInicialStr, dataFinalStr) => {
+    if (!dataInicialStr || !dataFinalStr) return 'N/A';
+    const inicio = new Date(dataInicialStr);
+    const fim = new Date(dataFinalStr);
+    if (isNaN(inicio.getTime()) || isNaN(fim.getTime())) return 'N/A';
+    
+    const diffMs = fim - inicio;
+    const totalMinutos = Math.floor(diffMs / (1000 * 60));
+    
+    if (totalMinutos < 0) return '0 min';
+    if (totalMinutos >= 60) {
+        return `${Math.floor(totalMinutos / 60)}h ${totalMinutos % 60}min`;
+    }
+    return `${totalMinutos} min`;
+};
+
+// Auxiliar para calcular o atraso a partir de um horário HH:MM de agendamento e a data/hora da falta
+const getDiferencaAgendamento = (scheduledTime, lastActionTimestamp) => {
+    if (!scheduledTime || !lastActionTimestamp) return 'N/A';
+    const dataFalta = new Date(lastActionTimestamp);
+    if (isNaN(dataFalta.getTime())) return 'N/A';
+
+    try {
+        const [h, m] = scheduledTime.split(':').map(Number);
+        const dataAgendado = new Date(dataFalta);
+        dataAgendado.setHours(h, m, 0, 0);
+
+        const diffMs = dataFalta - dataAgendado;
+        const totalMinutos = Math.floor(diffMs / (1000 * 60));
+        return totalMinutos > 0 ? `${totalMinutos} min` : '0 min';
+    } catch (e) {
+        return 'N/A';
+    }
 };
 
 const getIdentificador = (colaborador) => {
@@ -135,12 +164,12 @@ export const PDFService = {
         }
     },
 
-    // ⭐ IMPLEMENTAÇÃO: RELATÓRIO DE ASSISTIDOS ATENDIDOS ⭐
+    // ⭐ REFORMULADO: RELATÓRIO DE ASSISTIDOS ATENDIDOS (COM ETAPA, DURAÇÃO E LANÇADO NO VERDE) ⭐
     async generateAtendidosPDF(atendidosList, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' }); // Paisagem para caber mais colunas
+            const doc = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
 
             doc.setFont("helvetica", "bold");
             doc.setFontSize(14);
@@ -148,35 +177,50 @@ export const PDFService = {
             
             doc.setFontSize(10);
             doc.setFont("helvetica", "normal");
-            doc.text(`Pauta / Mutirão: ${pautaNome}  |  Total de Atendidos: ${atendidosList.length}`, 40, 65);
+            doc.text(`Sistema: SIGEP  |  Pauta: ${pautaNome}  |  Total: ${atendidosList.length}`, 40, 65);
 
             const body = atendidosList.map((a, index) => {
                 const dataAtendimento = getSafeDate(a.attendedAt || a.lastActionTimestamp);
                 const horaStr = dataAtendimento ? dataAtendimento.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : 'N/A';
+                
+                // Calcula duração total da pauta até o encerramento do protocolo
+                const inicioProcesso = a.arrivalTime || a.createdAt;
+                const duracaoTotal = getDuracaoMinutos(inicioProcesso, a.attendedAt);
+
+                // Mapeia o status binário do botão do certo verde (Presença no Verde)
+                const lancadoNoVerde = a.isConfirmed ? "Sim" : "Não";
+
                 return [
                     index + 1,
                     a.name || 'Não Informado',
-                    a.cpf || 'N/A',
                     a.subject || 'Não Informado',
                     getAttendantNameForPDF(a),
                     a.numeroProcesso || 'S/ Número',
-                    horaStr
+                    horaStr,
+                    duracaoTotal,
+                    lancadoNoVerde
                 ];
             });
 
-            if (body.length === 0) body.push([{ content: "Nenhum atendimento finalizado nesta pauta.", colSpan: 7, styles: { halign: 'center', fontStyle: 'italic' } }]);
+            if (body.length === 0) body.push([{ content: "Nenhum atendimento finalizado nesta pauta.", colSpan: 8, styles: { halign: 'center', fontStyle: 'italic' } }]);
 
             doc.autoTable({
                 startY: 80,
-                head: [['Nº', 'NOME DO ASSISTIDO', 'CPF', 'ASSUNTO / DEMANDA', 'ATENDENTE RESPONSÁVEL', 'Nº PROTOCOLO / PROCESSO', 'HORA']],
+                head: [['Nº', 'NOME DO ASSISTIDO', 'ASSUNTO / DEMANDA', 'ATENDENTE', 'Nº PROCESSO / PROTOCOLO', 'HORA CONCL.', 'DURAÇÃO', 'LANÇADO VERDE']],
                 body: body,
                 theme: 'striped',
                 headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' },
-                styles: { fontSize: 9, cellPadding: 5, valign: 'middle' },
-                columnStyles: { 0: { halign: 'center' }, 2: { halign: 'center' }, 5: { fontStyle: 'bold', halign: 'center' }, 6: { halign: 'center' } }
+                styles: { fontSize: 8.5, cellPadding: 5, valign: 'middle' },
+                columnStyles: { 
+                    0: { halign: 'center' }, 
+                    4: { fontStyle: 'bold', halign: 'center' }, 
+                    5: { halign: 'center' }, 
+                    6: { halign: 'center', fontStyle: 'bold' }, 
+                    7: { halign: 'center' } 
+                }
             });
 
-            doc.save(`Relatorio_Atendidos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            doc.save(`SIGEP_Atendidos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (error) {
             console.error("Erro ao gerar PDF de Atendidos:", error);
@@ -184,12 +228,12 @@ export const PDFService = {
         }
     },
 
-    // ⭐ IMPLEMENTAÇÃO: RELATÓRIO DE ASSISTIDOS FALTOSOS ⭐
+    // ⭐ REFORMULADO: RELATÓRIO DE FALTOSOS (COM AGENDAMENTO, HORA DA FALTA, ATRASO E BOTÃO VERDE) ⭐
     async generateFaltososPDF(faltososList, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+            const doc = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
 
             doc.setFont("helvetica", "bold");
             doc.setFontSize(14);
@@ -197,29 +241,47 @@ export const PDFService = {
 
             doc.setFontSize(10);
             doc.setFont("helvetica", "normal");
-            doc.text(`Pauta / Mutirão: ${pautaNome}  |  Total de Faltosos: ${faltososList.length}`, 40, 70);
+            doc.text(`Sistema: SIGEP  |  Pauta: ${pautaNome}  |  Total Ausentes: ${faltososList.length}`, 40, 70);
 
-            const body = faltososList.map((f, index) => [
-                index + 1,
-                f.name || 'Não Informado',
-                f.cpf || 'N/A',
-                f.subject || 'Não Informado',
-                f.scheduledTime || 'N/A'
-            ]);
+            const body = faltososList.map((f, index) => {
+                const dataFalta = getSafeDate(f.lastActionTimestamp);
+                const horaFaltaStr = dataFalta ? dataFalta.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : 'N/A';
+                
+                // Calcula tempo total estourado de tolerância desde o horário agendado
+                const tempoAtraso = getDiferencaAgendamento(f.scheduledTime, f.lastActionTimestamp);
+                
+                const lancadoNoVerde = f.isConfirmed ? "Sim" : "Não";
 
-            if (body.length === 0) body.push([{ content: "Nenhum assistido marcado como faltoso.", colSpan: 5, styles: { halign: 'center', fontStyle: 'italic' } }]);
+                return [
+                    index + 1,
+                    f.name || 'Não Informado',
+                    f.subject || 'Não Informado',
+                    f.scheduledTime || 'Não Agendado',
+                    horaFaltaStr,
+                    tempoAtraso,
+                    lancadoNoVerde
+                ];
+            });
+
+            if (body.length === 0) body.push([{ content: "Nenhum assistido marcado como faltoso.", colSpan: 7, styles: { halign: 'center', fontStyle: 'italic' } }]);
 
             doc.autoTable({
                 startY: 85,
-                head: [['Nº', 'NOME DO ASSISTIDO', 'CPF', 'ASSUNTO PREVISTO', 'HORÁRIO AGENDADO']],
+                head: [['Nº', 'NOME DO ASSISTIDO', 'ASSUNTO PREVISTO', 'HORÁRIO AGENDADO', 'HORA FALTA', 'ATRASO LIMITE', 'LANÇADO VERDE']],
                 body: body,
                 theme: 'striped',
-                headStyles: { fillColor: [153, 27, 27], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' }, // Vermelho escuro p/ faltosos
+                headStyles: { fillColor: [153, 27, 27], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' },
                 styles: { fontSize: 9, cellPadding: 6, valign: 'middle' },
-                columnStyles: { 0: { halign: 'center' }, 2: { halign: 'center' }, 4: { halign: 'center', fontStyle: 'bold' } }
+                columnStyles: { 
+                    0: { halign: 'center' }, 
+                    3: { halign: 'center', fontStyle: 'bold' }, 
+                    4: { halign: 'center' }, 
+                    5: { halign: 'center', fontStyle: 'bold' }, 
+                    6: { halign: 'center' } 
+                }
             });
 
-            doc.save(`Relatorio_Faltosos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            doc.save(`SIGEP_Faltosos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (error) {
             console.error("Erro ao gerar PDF de Faltosos:", error);
@@ -227,7 +289,7 @@ export const PDFService = {
         }
     },
 
-    // ⭐ IMPLEMENTAÇÃO: RELATÓRIO DE PRODUTIVIDADE E COLABORADORES ⭐
+    // ⭐ RELATÓRIO DE PRODUTIVIDADE E COLABORADORES ⭐
     async generateCollaboratorsPDF(colaboradoresList, todosAtendimentos, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
@@ -240,10 +302,9 @@ export const PDFService = {
 
             doc.setFontSize(10);
             doc.setFont("helvetica", "normal");
-            doc.text(`Pauta: ${pautaNome}  |  Total de Colaboradores Cadastrados: ${colaboradoresList.length}`, 40, 70);
+            doc.text(`Sistema: SIGEP  |  Pauta: ${pautaNome}  |  Total Equipe: ${colaboradoresList.length}`, 40, 70);
 
             const body = colaboradoresList.map((c, index) => {
-                // Filtra quantos atendimentos passaram ou foram concluídos por este colaborador específico
                 const concluidos = todosAtendimentos.filter(a => a.status === 'atendido' && getAttendantNameForPDF(a) === c.nome).length;
                 const emMesa = todosAtendimentos.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome).length;
 
@@ -265,12 +326,12 @@ export const PDFService = {
                 head: [['Nº', 'NOME COMPLETO', 'IDENTIFICADOR / MATRÍCULA', 'CARGO', 'EQUIPE', 'EM MESA', 'CONCLUÍDOS']],
                 body: body,
                 theme: 'striped',
-                headStyles: { fillColor: [4, 120, 87], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' }, // Emerald p/ produtividade
+                headStyles: { fillColor: [4, 120, 87], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' },
                 styles: { fontSize: 9, cellPadding: 6, valign: 'middle' },
                 columnStyles: { 0: { halign: 'center' }, 2: { halign: 'center' }, 4: { halign: 'center' }, 5: { halign: 'center' }, 6: { halign: 'center', fontStyle: 'bold' } }
             });
 
-            doc.save(`Produtividade_Equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            doc.save(`SIGEP_Produtividade_Equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (error) {
             console.error("Erro ao gerar PDF de Colaboradores:", error);
