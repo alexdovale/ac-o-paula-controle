@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="pt-BR" class="scroll-smooth">
 <head>
@@ -6,244 +7,366 @@
     <title>Manual do Usuário - SIGEP</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Institutional Trust (Slate, Green, Blue, Yellow, Red) -->
+    <!-- Application Structure Plan: The SPA uses a classic "Documentation/Wiki" layout with a fixed sidebar navigation and a scrolling main content area. A ScrollSpy JavaScript function updates the active state in the sidebar as the user reads. The content is broken down into logical operational steps: Profiles -> Pauta Creation -> Kanban Flow -> Individual Attendance -> Dashboard -> Reports/LGPD -> Technology. This allows for quick, targeted onboarding for different user types without needing multiple pages. -->
+    <!-- Visualization & Content Choices: 
+         - Formatting: Used custom CSS classes (.note-box, .warning-box, .wiki-link, .section-title) combined with Tailwind to maintain visual consistency and readability for long-form text.
+         - Icons: Used Unicode emojis instead of SVG to maintain the "NO SVG" constraint while keeping the text highly scannable.
+         - Highlights: Critical system rules (like LGPD data retention and Pauta ordering) are placed inside highlighted boxes to ensure users do not miss them. 
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #334155; }
+        
         /* Estilos para a barra de rolagem fina */
         aside::-webkit-scrollbar { width: 5px; }
         aside::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        h1, h2, h3 { color: #1e293b; }
+        main::-webkit-scrollbar { width: 8px; }
+        main::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        
+        h1, h2, h3, h4 { color: #1e293b; }
         .wiki-link { @apply block px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-green-50 hover:text-green-700 transition; }
         .wiki-link.active { @apply bg-green-100 text-green-800 font-bold; }
-        .section-title { @apply text-2xl font-bold border-b pb-2 mb-4 mt-8 text-green-800; }
-        .sub-title { @apply text-lg font-bold mt-6 mb-2 text-gray-800; }
-        p { @apply mb-4 leading-relaxed; }
-        ul { @apply list-disc ml-6 mb-4 space-y-1; }
-        ol { @apply list-decimal ml-6 mb-4 space-y-1; }
-        code { @apply bg-gray-100 text-red-600 px-1 rounded text-sm font-mono; }
-        .note-box { @apply bg-blue-50 border-l-4 border-blue-500 p-4 text-blue-700 mb-4 text-sm; }
-        .warning-box { @apply bg-yellow-50 border-l-4 border-yellow-500 p-4 text-yellow-800 mb-4 text-sm; }
+        .section-title { @apply text-2xl font-bold border-b pb-2 mb-4 mt-8 text-green-800 flex items-center gap-2; }
+        .sub-title { @apply text-lg font-bold mt-8 mb-3 text-gray-800 flex items-center gap-2; }
+        p { @apply mb-4 leading-relaxed text-gray-700; }
+        ul { @apply list-disc ml-6 mb-6 space-y-2 text-gray-700; }
+        ol { @apply list-decimal ml-6 mb-6 space-y-2 text-gray-700; }
+        code { @apply bg-gray-100 text-red-600 px-1 rounded text-sm font-mono break-all; }
+        
+        .note-box { @apply bg-blue-50 border-l-4 border-blue-500 p-4 text-blue-800 mb-6 text-sm rounded-r-lg shadow-sm; }
+        .warning-box { @apply bg-yellow-50 border-l-4 border-yellow-500 p-4 text-yellow-800 mb-6 text-sm rounded-r-lg shadow-sm; }
+        .alert-box { @apply bg-red-50 border-l-4 border-red-500 p-4 text-red-800 mb-6 text-sm rounded-r-lg shadow-sm; }
+        .success-box { @apply bg-green-50 border-l-4 border-green-500 p-4 text-green-800 mb-6 text-sm rounded-r-lg shadow-sm; }
     </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
 
-    <!-- Cabeçalho -->
+    <!-- Cabeçalho Fixo -->
     <header class="bg-white border-b h-16 flex items-center justify-between px-6 shadow-sm z-10 flex-shrink-0">
         <div class="flex items-center gap-3">
-            <div class="bg-green-600 text-white p-2 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+            <div class="bg-green-600 text-white p-2 rounded-lg font-bold text-lg leading-none shadow-sm">
+                ⚖️
             </div>
-            <h1 class="text-xl font-bold tracking-tight">SIGEP <span class="text-gray-400 font-normal">| Manual do Usuário</span></h1>
+            <h1 class="text-xl font-extrabold tracking-tight text-slate-800">SIGEP <span class="text-gray-400 font-normal ml-1">| Wiki & Manual do Usuário</span></h1>
         </div>
-        <button onclick="window.close()" class="text-sm font-semibold text-gray-500 hover:text-red-600 flex items-center gap-1">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-            Fechar
+        <button onclick="window.close()" class="text-sm font-semibold text-gray-500 hover:text-red-600 flex items-center gap-1 transition-colors">
+            <span class="text-lg leading-none">✖</span> Fechar
         </button>
     </header>
 
     <div class="flex flex-1 overflow-hidden">
         
         <!-- Sidebar de Navegação (Menu) -->
-        <aside class="w-64 bg-white border-r overflow-y-auto hidden md:block flex-shrink-0 p-4">
+        <aside class="w-72 bg-white border-r overflow-y-auto hidden md:block flex-shrink-0 p-4">
             <nav class="space-y-1">
-                <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Introdução</p>
-                <a href="#inicio" class="wiki-link">Visão Geral</a>
-                <a href="#acesso" class="wiki-link">Acesso e Cadastro</a>
+                <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Visão Geral</p>
+                <a href="#perfis" class="wiki-link">1. Perfis de Usuário e Acessos</a>
 
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Gestão de Pautas</p>
-                <a href="#criar-pauta" class="wiki-link">Criar e Entrar</a>
-                <a href="#configuracoes" class="wiki-link">Configurações</a>
+                <a href="#criar-pauta" class="wiki-link">2.1 Criar e Ordenar Pauta</a>
+                <a href="#integracao" class="wiki-link">2.2 Integração Verde & CSV</a>
+                <a href="#menus" class="wiki-link">2.3 Menus e Colunas</a>
 
-                <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Fluxo de Atendimento</p>
-                <a href="#adicionar-assistido" class="wiki-link">Adicionar Assistido</a>
-                <a href="#kanban" class="wiki-link">Quadro Kanban</a>
-                <a href="#prioridades" class="wiki-link">Regras de Prioridade</a>
+                <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Atendimento Operacional</p>
+                <a href="#kanban" class="wiki-link">3. O Fluxo de Colunas (Kanban)</a>
+                <a href="#painel-individual" class="wiki-link">4. Painel de Triagem & Detalhes</a>
+                <a href="#meu-painel" class="wiki-link">5. "Meu Painel" Pessoal</a>
 
-                <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Documentação</p>
-                <a href="#checklist" class="wiki-link">Checklist de Documentos</a>
-                <a href="#dados-reu" class="wiki-link">Dados do Réu</a>
-                <a href="#despesas" class="wiki-link">Planilha de Despesas</a>
+                <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Gestão e Governança</p>
+                <a href="#central-pdf" class="wiki-link">6.1 Central de PDFs e Relatórios</a>
+                <a href="#lgpd" class="wiki-link">6.2 Privacidade e LGPD</a>
                 
-                <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Ferramentas Avançadas</p>
-                <a href="#estatisticas" class="wiki-link">Estatísticas (PDF)</a>
-                <a href="#tv-publica" class="wiki-link">Painel de TV</a>
-                <a href="#delegacao" class="wiki-link">Delegação Remota</a>
-                <a href="#anotacoes" class="wiki-link">Anotações e E-mail</a>
+                <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Sistema</p>
+                <a href="#tecnologia" class="wiki-link">7. Monitoramento e Sentry</a>
             </nav>
         </aside>
 
-        <!-- Área de Conteúdo -->
-        <main class="flex-1 overflow-y-auto p-8 scroll-smooth" id="content-area">
+        <!-- Área de Conteúdo Principal -->
+        <main class="flex-1 overflow-y-auto p-6 md:p-10 scroll-smooth bg-slate-50" id="content-area">
             
-            <!-- SEÇÃO INICIAL -->
-            <section id="inicio" class="mb-12">
-                <h2 class="text-3xl font-bold text-gray-900 mb-4">Bem-vindo ao SIGEP</h2>
-                <p class="text-lg text-gray-600">O <strong>SIGEP (Sistema de Gerenciamento de Pauta)</strong> é a solução definitiva para organizar o fluxo de atendimento da Defensoria Pública. Projetado para substituir planilhas manuais e filas desordenadas, ele oferece um controlo visual e em tempo real de cada etapa do processo jurídico.</p>
+            <div class="max-w-4xl mx-auto bg-white p-8 md:p-12 rounded-2xl shadow-sm border border-slate-100">
                 
-                <div class="note-box">
-                    <strong>Dica de Navegação:</strong> Use o menu lateral para ir direto ao tópico desejado. Em dispositivos móveis, o conteúdo é apresentado em fluxo contínuo.
-                </div>
-            </section>
-
-            <!-- SEÇÃO ACESSO -->
-            <section id="acesso" class="mb-12">
-                <h2 class="section-title">Acesso e Cadastro</h2>
-                <p>O sistema possui controle de acesso rigoroso para garantir a segurança dos dados sensíveis.</p>
-                
-                <h3 class="sub-title">1. Primeiro Acesso</h3>
-                <ol>
-                    <li>Na tela de login, clique no link <strong>"Não tem conta? Cadastre-se"</strong>.</li>
-                    <li>Informe seu <strong>Nome Completo</strong>, <strong>E-mail Institucional</strong> e crie uma senha forte (mínimo 6 caracteres).</li>
-                    <li>Ao confirmar, sua conta entrará em estado de <code>Aprovação Pendente</code>.</li>
-                </ol>
-
-                <div class="warning-box">
-                    <strong>Importante:</strong> Você não conseguirá acessar as pautas até que um Administrador aprove o seu cadastro no painel de controle.
+                <!-- INTRODUÇÃO -->
+                <div class="text-center mb-12">
+                    <h2 class="text-4xl font-extrabold text-slate-800 mb-4">Bem-vindo ao SIGEP</h2>
+                    <p class="text-lg text-slate-600">O <strong>Sistema de Gerenciamento de Pauta</strong> foi desenhado para garantir que o atendimento ao assistido seja organizado, rápido, rastreável e totalmente seguro.</p>
                 </div>
 
-                <h3 class="sub-title">2. Recuperação de Senha</h3>
-                <p>Esqueceu a senha? Na tela de login, clique em "Esqueceu a senha?". Digite seu e-mail e enviaremos um link seguro para redefinição.</p>
-            </section>
+                <!-- SEÇÃO 1: PERFIS -->
+                <section id="perfis" class="mb-16 pt-8">
+                    <h2 class="section-title"><span>🎭</span> 1. Perfis de Usuário e Acessos</h2>
+                    <p>O SIGEP é inteligente e adapta a sua interface, botões e permissões de acordo com o cargo do usuário logado. Existem 4 níveis principais de acesso no sistema:</p>
+                    
+                    <ul class="space-y-4">
+                        <li class="bg-gray-50 p-4 rounded-lg border border-gray-100"><strong>👑 Administrador / Superadmin:</strong> Tem controle total da plataforma. Pode aprovar e deletar usuários, criar pautas, apagar assistidos, editar a equipe, reabrir pautas fechadas e acessar o Painel de Auditoria (Logs) e Estatísticas globais.</li>
+                        <li class="bg-gray-50 p-4 rounded-lg border border-gray-100"><strong>👨‍⚖️ Defensor(a):</strong> Possui um fluxo focado em produtividade e aprovação. Tem acesso exclusivo ao "Meu Painel Judicial", uma caixa de entrada onde visualiza apenas os processos que já passaram pela triagem da equipe e estão prontos para revisão, assinatura ou protocolo.</li>
+                        <li class="bg-green-50 p-4 rounded-lg border border-green-100"><strong>🧑‍💻 Usuário Básico (Servidor / Residente / Estagiário):</strong> É o motor do atendimento e o perfil operacional padrão. Este usuário tem permissão para gerenciar a pauta, adicionar assistidos, <strong>importar planilhas (CSV) e sincronizar com o sistema Verde</strong>. É ele quem realiza a triagem (checklist, dados, planilhas) e dá andamento ao fluxo (resolvendo o caso ou enviando para a mesa do Defensor).</li>
+                        <li class="bg-gray-50 p-4 rounded-lg border border-gray-100"><strong>💁 Apoio (Recepção):</strong> Focado estritamente no controle de entrada. Pode registrar a chegada dos assistidos (check-in), marcar faltas e fazer encaminhamentos básicos. Por medidas de segurança e preservação da pauta, <strong>o sistema bloqueia</strong> este perfil de realizar ações críticas, como importar planilhas em lote (CSV) ou puxar dados oficiais do Verde.</li>
+                    </ul>
+                </section>
 
-            <!-- SEÇÃO PAUTAS -->
-            <section id="criar-pauta" class="mb-12">
-                <h2 class="section-title">Gestão de Pautas</h2>
-                <p>A "Pauta" funciona como uma sala virtual ou um evento diário (ex: "Plantão Cível 25/10").</p>
+                <!-- SEÇÃO 2.1 e 2.2: CRIAR E ORDENAR -->
+                <section id="criar-pauta" class="mb-16 pt-8 border-t border-slate-100">
+                    <h2 class="section-title"><span>📋</span> 2. Gerenciamento de Pautas</h2>
+                    <p>A "Pauta" é o ambiente de trabalho diário. Ela representa um dia de atendimento, um mutirão, ou a rotina de uma vara/núcleo específico.</p>
 
-                <h3 class="sub-title">Criando uma Pauta</h3>
-                <ul>
-                    <li>No painel inicial, clique em <strong>"+ Nova Pauta"</strong>.</li>
-                    <li><strong>Nome:</strong> Dê um nome descritivo (Ex: "Atendimento Família - Manhã").</li>
-                    <li><strong>Data:</strong> Selecione a data de referência.</li>
-                    <li><strong>Visibilidade:</strong> Se marcar como "Pública", o link de acompanhamento funcionará para qualquer pessoa. Se "Privada", apenas membros podem ver.</li>
-                </ul>
-                <p>Quem cria a pauta torna-se automaticamente o <strong>Dono (Owner)</strong> e possui permissões totais sobre ela.</p>
-            </section>
+                    <h3 class="sub-title">2.1. Criando uma Nova Pauta</h3>
+                    <p>Ao clicar no botão verde <strong>"Criar Nova Pauta"</strong> na tela inicial, você configura o esqueleto do seu dia de trabalho:</p>
+                    <ul>
+                        <li><strong>Tipo de Pauta:</strong> <em>Agendado</em> (hora marcada), <em>Avulso</em> (ordem de chegada) ou <em>Multi-Salas</em> (encaminha o assistido para salas virtuais/físicas específicas).</li>
+                        <li><strong>Fluxo de Delegação:</strong> Se ativado, permite que os casos sejam repassados entre estagiários e servidores de forma rastreável.</li>
+                        <li><strong>Fila de Distribuição:</strong> Se ativada, cria uma etapa final obrigatória de envio ao Defensor(a) para protocolo.</li>
+                    </ul>
 
-            <!-- SEÇÃO FLUXO -->
-            <section id="adicionar-assistido" class="mb-12">
-                <h2 class="section-title">Fluxo de Atendimento</h2>
-                
-                <h3 class="sub-title" id="adicionar-assistido">1. Triagem (Adicionar Assistido)</h3>
-                <p>Use o botão verde <strong>"+ Adicionar"</strong> para registrar uma nova chegada. O sistema pedirá:</p>
-                <ul>
-                    <li><strong>Nome:</strong> Nome do assistido.</li>
-                    <li><strong>Assunto:</strong> Comece a digitar para ver as sugestões (ex: "Divórcio", "Alimentos"). O sistema possui uma base de dados com mais de 50 tipos de ações.</li>
-                    <li><strong>Prioridade:</strong> Fundamental para o ordenamento da fila.</li>
-                </ul>
-
-                <h3 class="sub-title" id="kanban">2. O Quadro Kanban</h3>
-                <p>A tela principal é dividida em colunas que representam o status do assistido. Você pode <strong>clicar e arrastar</strong> os cartões entre as colunas:</p>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    <div class="bg-yellow-50 p-4 rounded border border-yellow-200">
-                        <span class="font-bold text-yellow-800 text-lg">⏳ Aguardando</span>
-                        <p class="text-sm mt-2">Fila de espera. O sistema organiza automaticamente: primeiro as <strong>Prioridades</strong>, depois a ordem de chegada.</p>
+                    <h3 class="sub-title">2.2. Definindo a Ordem de Atendimento</h3>
+                    <p>Ainda durante a criação (ou nas "Configurações" da pauta), escolha como o SIGEP organizará a fila de espera:</p>
+                    
+                    <div class="success-box">
+                        <strong class="flex items-center gap-2 text-lg">🌟 Padrão do Sistema (Recomendado)</strong>
+                        <p class="mt-2 text-green-900">A fila é organizada <strong>pelo horário agendado</strong>, e não por ordem alfabética. O sistema respeita estritamente o horário da marcação, mas prioriza automaticamente as urgências legais (Idosos 80+, Gestantes, PCD). Se duas pessoas do mesmo horário chegarem juntas, o sistema desempata colocando na frente quem fez o "Check-in" primeiro na recepção.</p>
                     </div>
-                    <div class="bg-blue-50 p-4 rounded border border-blue-200">
-                        <span class="font-bold text-blue-800 text-lg">🏃 Em Atendimento</span>
-                        <p class="text-sm mt-2">Arraste para cá quando chamar o assistido. O sistema registrará a hora de início e o seu nome como atendente.</p>
-                    </div>
-                    <div class="bg-green-50 p-4 rounded border border-green-200">
-                        <span class="font-bold text-green-800 text-lg">✅ Atendido</span>
-                        <p class="text-sm mt-2">Ao finalizar, mova para cá. O tempo total de atendimento é calculado e salvo nas estatísticas.</p>
-                    </div>
-                </div>
+                    
+                    <ul>
+                        <li><strong>🏃‍♂️ Ordem de Chegada:</strong> Ignora os horários de agendamento. A fila será estritamente organizada por quem chega e registra a presença na recepção primeiro. Útil para mutirões abertos.</li>
+                        <li><strong>🖐️ Ordem Manual (Arrastar e Soltar):</strong> Desliga a inteligência do sistema e passa o controle para você. Permite clicar no cartão do assistido e <strong>arrastá-lo livremente</strong> para cima ou para baixo.</li>
+                    </ul>
+                </section>
 
-                <div class="mt-4">
-                    <h3 class="sub-title" id="prioridades">Regra de Prioridades</h3>
-                    <p>A coluna "Aguardando" segue esta ordem rigorosa de classificação:</p>
-                    <ol class="list-decimal ml-6 font-semibold text-gray-700">
-                        <li class="text-red-600">URGENTE (Topo da fila)</li>
-                        <li class="text-green-600">Prioridade Máxima</li>
-                        <li class="text-orange-500">Prioridade Média</li>
-                        <li class="text-gray-500">Prioridade Mínima / Normal</li>
+                <!-- SEÇÃO 2.3 e 2.4: INTEGRAÇÃO -->
+                <section id="integracao" class="mb-16 pt-8">
+                    <h3 class="sub-title"><span>🔗</span> 2.3. Integração com Sistema Verde / Solar</h3>
+                    <p>O SIGEP possui capacidade de conexão com a base de dados oficial (Verde/Solar), eliminando a digitação manual.</p>
+                    <ul>
+                        <li><strong>Como funciona:</strong> Durante a criação da pauta, no campo "Sincronizar com Órgão", selecione a sua Defensoria.</li>
+                        <li><strong>O Resultado:</strong> O sistema fará o download automático de todos os assistidos agendados para o dia, importando Nome, Assunto, Horário e Número do Processo.</li>
+                        <li><strong>Botão Sincronizar:</strong> Dentro da pauta, use o botão azul <strong>"Sincronizar Verde"</strong> para buscar novos agendamentos que tenham caído de última hora.</li>
+                    </ul>
+
+                    <h3 class="sub-title"><span>📊</span> 2.4. Importando Assistidos (Excel/CSV)</h3>
+                    <p>Usuários Básicos e Administradores podem importar listas em lote:</p>
+                    <ol>
+                        <li>Salve sua planilha no formato <strong>CSV (UTF-8)</strong>.</li>
+                        <li>A planilha deve conter colunas separadas por ponto e vírgula (<code>;</code>):
+                            <br><code>Nº Agendamento(Opcional) ; Nome Completo ; Horário(HH:MM) ; Assunto ; CPF(Opcional)</code>
+                        </li>
+                        <li>Clique em <strong>"Carregar CSV"</strong>.</li>
                     </ol>
-                </div>
-            </section>
 
-            <!-- SEÇÃO DOCUMENTAÇÃO -->
-            <section id="checklist" class="mb-12">
-                <h2 class="section-title">Documentação e Checklist</h2>
-                <p>Esta é uma das ferramentas mais poderosas do SIGEP. Ao clicar no ícone 👁️ (Detalhes) num cartão, você acessa o painel do assistido.</p>
+                    <div class="note-box">
+                        <strong>🤖 Prompt Prático para IA:</strong> O sistema tem um botão "Como formatar pauta?". Nele, você pode copiar um texto pronto, colar no ChatGPT junto com o seu PDF da pauta, e a IA devolverá o texto perfeitamente formatado com os <code>;</code> para importar no SIGEP.
+                    </div>
+                </section>
 
-                <h3 class="sub-title">1. Checklist Inteligente</h3>
-                <p>Baseado no "Assunto" escolhido na triagem, o sistema carrega a lista exata de documentos necessários (Ex: Se for "Divórcio", pede Certidão de Casamento; se for "Alimentos", pede Certidão de Nascimento).</p>
-                <ul>
-                    <li>Marque os documentos apresentados.</li>
-                    <li>Para cada documento, você pode especificar o formato: <strong>Físico</strong> (papel) ou <strong>Digital</strong> (PDF/Foto).</li>
-                </ul>
+                <!-- SEÇÃO 2.5: MENUS -->
+                <section id="menus" class="mb-16 pt-8 border-t border-slate-100">
+                    <h3 class="sub-title">2.5. Menus Superiores (Ações e Colunas)</h3>
+                    <p>No topo direito do painel de qualquer pauta, existem dois botões essenciais para gerenciar a dinâmica do dia:</p>
+                    
+                    <h4 class="font-bold text-gray-800 mt-4 mb-2">A. O Menu de Ações (Botão Verde)</h4>
+                    <ul>
+                        <li>🔗 <strong>Compartilhamento Externo:</strong> Gera um link público de acompanhamento.</li>
+                        <li>📈 <strong>Ver Estatísticas:</strong> Permite ver os dados estatísticos da pauta individualmente e <strong>emitir um PDF gerencial</strong> (funciona mesmo para pautas antigas já encerradas).</li>
+                        <li>⚙️ <strong>Editar Configurações:</strong> Permite ligar/desligar a fila de distribuição ou mudar a regra de Ordem.</li>
+                        <li>🧑‍💼 <strong>Colaboradores:</strong> Gerencia a "Lista de Presença" da equipe e a <strong>Ata de Ação Social</strong>.</li>
+                        <li>🔒 <strong>Fechar Pauta / Zerar Pauta:</strong> Protege ou limpa a pauta (Requer senha).</li>
+                    </ul>
 
-                <h3 class="sub-title" id="dados-reu">2. Dados da Parte Contrária (Réu)</h3>
-                <p>Logo abaixo do checklist, há um formulário para cadastrar os dados do Réu (Nome, CPF, Endereço). Esses dados são salvos e saem no relatório final.</p>
+                    <h4 class="font-bold text-gray-800 mt-4 mb-2">B. O Menu de Exibição (Engrenagem ⚙️)</h4>
+                    <p>Permite ligar ou desligar as colunas do seu painel <em>Kanban</em> (Em Atendimento, Distribuição, Faltosos), ajudando a limpar visualmente a tela em celulares ou telas pequenas.</p>
+                </section>
 
-                <h3 class="sub-title" id="despesas">3. Planilha de Despesas</h3>
-                <p>Para ações de <strong>Alimentos</strong> ou <strong>Divórcio</strong>, o sistema exibe automaticamente uma tabela para cálculo de despesas (Alimentação, Moradia, Saúde, etc). O total é somado automaticamente.</p>
+                <!-- SEÇÃO 3: KANBAN -->
+                <section id="kanban" class="mb-16 pt-8 border-t border-slate-100">
+                    <h2 class="section-title"><span>🚦</span> 3. O Fluxo de Colunas (Kanban)</h2>
+                    <p>O painel principal funciona como uma esteira de produção. Cada coluna representa o estado físico ou processual do assistido.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                        <div class="bg-gray-50 p-4 rounded border border-gray-200 shadow-sm">
+                            <span class="font-bold text-gray-800 text-lg">📋 Pauta</span>
+                            <p class="text-sm mt-2 text-gray-600">Agendados do dia. Quando chegam, clica-se em <strong>"Marcar Chegada"</strong>.</p>
+                        </div>
+                        <div class="bg-yellow-50 p-4 rounded border border-yellow-200 shadow-sm">
+                            <span class="font-bold text-yellow-800 text-lg">⏳ Aguardando</span>
+                            <p class="text-sm mt-2 text-yellow-900">A fila de espera real da recepção. Siga a ordem automática do sistema.</p>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded border border-blue-200 shadow-sm">
+                            <span class="font-bold text-blue-800 text-lg">👩‍💻 Em Atendimento</span>
+                            <p class="text-sm mt-2 text-blue-900">Mostra quem já foi chamado e qual servidor está atendendo no momento.</p>
+                        </div>
+                        <div class="bg-cyan-50 p-4 rounded border border-cyan-200 shadow-sm">
+                            <span class="font-bold text-cyan-800 text-lg">⚖️ Distribuição</span>
+                            <p class="text-sm mt-2 text-cyan-900">Casos triados que aguardam assinatura do Defensor para protocolo.</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded border border-green-200 shadow-sm">
+                            <span class="font-bold text-green-800 text-lg">✅ Atendidos</span>
+                            <p class="text-sm mt-2 text-green-900">Arquivo de sucesso. O caso foi 100% resolvido.</p>
+                        </div>
+                        <div class="bg-red-50 p-4 rounded border border-red-200 shadow-sm">
+                            <span class="font-bold text-red-800 text-lg">🚫 Faltosos</span>
+                            <p class="text-sm mt-2 text-red-900">Pessoas que não compareceram no dia.</p>
+                        </div>
+                    </div>
+                </section>
 
-                <div class="note-box">
-                    <strong>Geração de PDF:</strong> Ao final do atendimento, clique no botão <strong>"Baixar PDF"</strong> no rodapé do modal. O sistema gera um documento completo com o checklist, dados do réu e observações para imprimir ou salvar.
-                </div>
-            </section>
+                <!-- SEÇÃO 4: PAINEL INDIVIDUAL -->
+                <section id="painel-individual" class="mb-16 pt-8 border-t border-slate-100">
+                    <h2 class="section-title"><span>🧑‍💻</span> 4. Painel de Triagem & Detalhes</h2>
+                    <p>Quando um colaborador clica em <strong>"Atender"</strong>, ele entra em um ambiente seguro, focado apenas naquele assistido.</p>
 
-            <!-- SEÇÃO FERRAMENTAS -->
-            <section id="estatisticas" class="mb-12">
-                <h2 class="section-title">Ferramentas Avançadas</h2>
+                    <h3 class="sub-title">4.1. Triagem Inteligente, PDFs e o Botão "Ver Detalhes"</h3>
+                    <p>O SIGEP guia o estagiário/servidor no fluxo jurídico de ponta a ponta:</p>
+                    
+                    <ul>
+                        <li><strong>Assuntos Inteligentes:</strong> Ao digitar um assunto (Ex: <em>Alimentos</em>), o SIGEP exibe uma <strong>descrição explicativa</strong> com os requisitos da ação.</li>
+                        <li><strong>Checklist Documental:</strong> Exibe os documentos exatos exigidos. O servidor marca o que foi entregue.</li>
+                        <li><strong>Planilha de Gastos (Automática):</strong> Indispensável para ações de família. Insira as despesas e o SIGEP calcula o valor total automaticamente.</li>
+                    </ul>
 
-                <h3 class="sub-title">📊 Estatísticas e Relatórios</h3>
-                <p>Clique no botão <strong>Estatísticas</strong> no menu superior. O sistema gera gráficos em tempo real:</p>
-                <ul>
-                    <li>Total de atendimentos vs. Faltosos.</li>
-                    <li>Tempo médio de duração dos atendimentos.</li>
-                    <li>Contagem por tipo de ação (Ex: 10 Divórcios, 5 Guardas).</li>
-                    <li>Produtividade por colaborador.</li>
-                </ul>
-                <p>Você pode exportar um <strong>Relatório Gerencial em PDF</strong> contendo todos esses dados para prestação de contas.</p>
+                    <div class="note-box">
+                        <strong>📄 Download de PDFs Emitidos:</strong> Sempre que uma Planilha de Gastos for gerada ou um checklist for salvo com sucesso, o SIGEP disponibiliza um botão de Download diretamente no Card do assistido ou no menu "Ver Detalhes". Isso permite baixar o PDF limpo e anexá-lo no Verde em segundos!
+                    </div>
 
-                <h3 class="sub-title" id="tv-publica">📺 Painel de TV (Link Público)</h3>
-                <p>Ideal para recepções. Clique no ícone de <strong>Compartilhar (Link)</strong>. Isso gera uma URL segura que:</p>
-                <ul>
-                    <li>Não exige login.</li>
-                    <li>Mostra apenas o <strong>Primeiro Nome</strong> e a inicial do sobrenome do assistido (proteção de dados).</li>
-                    <li>Exibe claramente quem está "Aguardando" e quem está "Em Atendimento".</li>
-                </ul>
+                    <div class="bg-slate-100 p-4 rounded-lg mb-6 border border-slate-300">
+                        <strong class="text-slate-800 text-lg flex items-center gap-2">👁️ O Botão "Ver Detalhes"</strong>
+                        <p class="mt-2 text-sm text-slate-700">Presente nos cartões do painel principal, este botão permite dar uma "espiada" rápida no processo. Ao clicar, abre um resumo mostrando quais documentos já foram marcados, o total da Planilha de Gastos e atalhos rápidos para baixar os PDFs gerados, sem precisar abrir o modo de edição.</p>
+                    </div>
 
-                <h3 class="sub-title" id="delegacao">📧 Delegação Remota (E-mail)</h3>
-                <p>Se precisar que outro colega finalize um atendimento (ex: um psicólogo ou outro defensor em outra sala), use a opção "Enviar para Colega".</p>
-                <p>O sistema envia um e-mail com um <strong>Link Exclusivo</strong>. O colega pode clicar nesse link e finalizar o atendimento no celular dele, sem precisar logar no sistema completo.</p>
-                
-                <h3 class="sub-title" id="anotacoes">📝 Anotações Rápidas</h3>
-                <p>Precisa anotar algo sobre a pauta inteira? Use o botão <strong>"Notas"</strong>. As anotações são salvas localmente no seu navegador, e você pode enviá-las para o seu próprio e-mail como lembrete ao final do dia.</p>
-            </section>
+                    <h3 class="sub-title">4.2. Aba Encerramento/Fluxo (Destino Final)</h3>
+                    <p>Após a triagem, o colaborador decide o destino do processo:</p>
+                    <ul>
+                        <li><strong>✅ Finalizar Atendimento:</strong> Resolve o caso e move para "Atendidos".</li>
+                        <li><strong>⚖️ Fila de Distribuição:</strong> Envia o caso para a mesa do Defensor. O servidor escolhe o nome e adiciona notas de revisão.</li>
+                        <li><strong>🔄 Transferir Colega:</strong> O caso é complexo? Transfira para um colega mais sénior atuar.</li>
+                    </ul>
+                </section>
 
-            <footer class="mt-20 pt-6 border-t text-center text-sm text-gray-400 pb-10">
-                <p>Manual do Usuário SIGEP - Versão 3.0 (Wiki Integrada)</p>
-                <p class="mt-2">&copy; <script>document.write(new Date().getFullYear())</script> Sistema de Gestão Jurídica</p>
-            </footer>
+                <!-- SEÇÃO 5: MEU PAINEL -->
+                <section id="meu-painel" class="mb-16 pt-8 border-t border-slate-100">
+                    <h2 class="section-title"><span>💼</span> 5. "Meu Painel" Pessoal</h2>
+                    <p>Para evitar que a equipe perca tempo procurando processos no mar do painel geral, o SIGEP possui o <strong>Meu Painel</strong>, uma mesa de trabalho virtual livre de ruídos.</p>
+                    
+                    <ul class="mt-4">
+                        <li><strong>Como acessar:</strong> Clique no botão "Meu Painel" dentro do atendimento, ou em "Ver Dashboard" na tela inicial.</li>
+                        <li><strong>Se você for Defensor(a):</strong> Verá a aba <em>Aguardando Assinatura</em>, com os processos que os servidores distribuíram diretamente para o seu nome assinar.</li>
+                        <li><strong>Se você for Servidor/Estagiário:</strong> Verá a aba <em>Meus Casos</em>, que é sua caixa de entrada com os atendimentos que você puxou para si ou que lhe transferiram.</li>
+                        <li><strong>Fluxo Ágil:</strong> Ao clicar em "Abrir e Assinar" no seu painel, você revisa, finaliza, e clica em <strong>"⬅️ Voltar ao Meu Painel"</strong>, retornando à sua fila privada imediatamente.</li>
+                    </ul>
+                </section>
 
+                <!-- SEÇÃO 6: GESTÃO, PDFs e LGPD -->
+                <section id="central-pdf" class="mb-16 pt-8 border-t border-slate-100">
+                    <h2 class="section-title"><span>🖨️</span> 6. Gestão, Central de PDFs e LGPD</h2>
+                    <p>O SIGEP não apenas organiza a fila, mas é uma verdadeira máquina de gerar documentos oficiais para compor os processos.</p>
+
+                    <h3 class="sub-title">6.1. Central de Documentos e Relatórios em PDF</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div class="bg-white border p-4 rounded-lg shadow-sm">
+                            <strong class="text-blue-700">Estatísticas da Pauta (Dashboard)</strong>
+                            <p class="text-xs mt-1 mb-2 text-gray-500">Menu Ações ➔ Ver Estatísticas</p>
+                            <p class="text-sm">Balanço gerencial individual da pauta, com ranking de assuntos e tempos médios. Ótimo para relatórios mensais.</p>
+                        </div>
+                        <div class="bg-white border p-4 rounded-lg shadow-sm">
+                            <strong class="text-blue-700">Planilha de Gastos Mensais</strong>
+                            <p class="text-xs mt-1 mb-2 text-gray-500">Atendimento ➔ Botão "Baixar Planilha PDF"</p>
+                            <p class="text-sm">Gera a tabela formatada com os cálculos automáticos de despesas para instruir a Petição Inicial de Alimentos.</p>
+                        </div>
+                        <div class="bg-white border p-4 rounded-lg shadow-sm">
+                            <strong class="text-blue-700">Ata de Ação Social (Mutirões)</strong>
+                            <p class="text-xs mt-1 mb-2 text-gray-500">Ações ➔ Colaboradores ➔ Gerar Ata Social</p>
+                            <p class="text-sm">Gera documento oficial com logotipo, total de atendimentos e lista de presença da equipe com espaço para assinaturas.</p>
+                        </div>
+                        <div class="bg-white border p-4 rounded-lg shadow-sm">
+                            <strong class="text-blue-700">Relatório Diário de Atendidos / Faltosos</strong>
+                            <p class="text-xs mt-1 mb-2 text-gray-500">Topo das colunas Atendidos ou Faltosos ➔ PDF</p>
+                            <p class="text-sm">Livro de registro de quem compareceu ou comprovação de abstenção para baixar processos no Verde.</p>
+                        </div>
+                    </div>
+
+                    <h3 class="sub-title mt-10" id="lgpd"><span>🛡️</span> 6.2. Privacidade, LGPD e o Prazo da Pauta</h3>
+                    <p>O SIGEP opera em conformidade com a LGPD. Ele é projetado para agilidade diária e não funciona como arquivo morto perpétuo (este papel cabe ao Verde/Solar).</p>
+
+                    <div class="alert-box">
+                        <strong class="text-lg">Exclusão de Dados Pessoais Sensíveis</strong>
+                        <p class="mt-2 text-red-900">Quando ocorre o <strong>cumprimento do prazo para encerrar a pauta</strong> (após 7 dias a pauta expira), o sistema realiza uma limpeza automática de segurança. Todos os dados pessoais (Nomes, CPFs, Endereços, Anotações) são <strong>apagados permanentemente</strong>.</p>
+                    </div>
+
+                    <div class="success-box">
+                        <strong class="text-lg">Preservação das Estatísticas</strong>
+                        <p class="mt-2 text-green-900">Embora os dados pessoais sejam deletados para proteger os assistidos, <strong>os dados quantitativos e estatísticos ficam salvos de forma anônima</strong>. Graças a isso, você pode clicar na opção <strong>"Ver Estatísticas"</strong> de pautas antigas e expiradas para visualizar gráficos e emitir o PDF gerencial daquele dia sem ferir a LGPD!</p>
+                    </div>
+                </section>
+
+                <!-- SEÇÃO 7: SENTRY E TECNOLOGIA -->
+                <section id="tecnologia" class="mb-10 pt-8 border-t border-slate-100">
+                    <h2 class="section-title"><span>📡</span> 7. Monitoramento Avançado (Sentry)</h2>
+                    <p>Para garantir que o sistema não deixe a equipe na mão durante um mutirão com centenas de pessoas, o SIGEP conta com integração nativa ao <strong>Sentry</strong> (Monitoramento de Infraestrutura).</p>
+                    
+                    <ul class="mt-4">
+                        <li>Se ocorrer qualquer travamento ou erro no navegador do usuário, o Sentry captura a falha de forma silenciosa e em tempo real.</li>
+                        <li>Ele recolhe os dados técnicos (por que a falha aconteceu) e envia um alerta imediato diretamente para a equipe de desenvolvimento.</li>
+                        <li>Isso permite manutenções preventivas e proativas, garantindo extrema estabilidade à plataforma, muitas vezes corrigindo erros antes mesmo que o núcleo precise abrir um chamado de suporte.</li>
+                    </ul>
+                </section>
+
+                <footer class="mt-20 pt-8 border-t border-slate-200 text-center text-sm text-slate-500 pb-10">
+                    <p class="font-bold">Manual do Usuário SIGEP</p>
+                    <p class="mt-2">&copy; <script>document.write(new Date().getFullYear())</script> Sistema de Gerenciamento de Pauta Institucional</p>
+                </footer>
+
+            </div>
         </main>
     </div>
 
+    <!-- JavaScript Navigation Logic -->
     <script>
-        // Script para navegação fluida e destaque do menu ativo
-        const sections = document.querySelectorAll('section');
-        const navLinks = document.querySelectorAll('.wiki-link');
-        const contentArea = document.getElementById('content-area');
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.wiki-link');
+            const contentArea = document.getElementById('content-area');
 
-        // Scroll Spy
-        contentArea.addEventListener('scroll', () => {
-            let current = '';
-            sections.forEach(section => {
-                const sectionTop = section.offsetTop;
-                if (contentArea.scrollTop >= (sectionTop - 150)) {
-                    current = section.getAttribute('id');
-                }
+            // Scroll Spy Functionality
+            contentArea.addEventListener('scroll', () => {
+                let current = '';
+                
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    const sectionHeight = section.clientHeight;
+                    // Adjusted offset to trigger earlier when scrolling down
+                    if (contentArea.scrollTop >= (sectionTop - 200)) {
+                        current = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${current}`) {
+                        link.classList.add('active');
+                    }
+                });
             });
+
+            // Smooth scrolling behavior adjustment for links
             navLinks.forEach(link => {
-                link.classList.remove('active');
-                if (link.getAttribute('href').includes(current)) {
-                    link.classList.add('active');
-                }
+                link.addEventListener('click', function(e) {
+                    // Let default anchor jump happen, but then we scroll spy handles highlight
+                    setTimeout(() => {
+                        const targetId = this.getAttribute('href').substring(1);
+                        const targetSection = document.getElementById(targetId);
+                        if(targetSection) {
+                             contentArea.scrollTo({
+                                 top: targetSection.offsetTop - 50,
+                                 behavior: 'smooth'
+                             });
+                        }
+                    }, 50);
+                });
             });
         });
     </script>
 </body>
 </html>
+
+```
