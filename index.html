@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema de Gerenciamento de Pauta - SIGAP</title>
+    <title>Sistema de Gerenciamento de Pauta - SIGEP</title>
 
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <meta name="theme-color" content="#16a34a"/>
@@ -20,7 +20,7 @@
           replaysSessionSampleRate: 0.1, 
           replaysOnErrorSampleRate: 1.0, 
           environment: "production",
-          release: "sigap@1.0.0",
+          release: "sigep@1.0.0",
           beforeSend(event, hint) {
             if (event.exception) {
               Sentry.showReportDialog({ eventId: event.event_id });
@@ -41,8 +41,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; min-height: 100vh; }
-        
-        /* Garante que o body e html não criem um novo contexto de empilhamento que quebre position: fixed */
         html, body {
             transform: none !important;
             filter: none !important;     
@@ -58,7 +56,7 @@
         .priority-minima { border-left: 5px solid #6b7280; }
         .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar, #members-list-container::-webkit-scrollbar, #statistics-content::-webkit-scrollbar { width: 8px; }
         .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track, #statistics-content::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
-        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-thumb, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb, #statistics-content::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb, #statistics-content::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
         input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
         .tab-active { border-color: #16a34a; background-color: #f0fdf4; color: #16a34a; font-weight: 600; }
         .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
@@ -97,8 +95,6 @@
             50% { background-color: #34d399; transform: scale(1.1); }
             100% { background-color: #e2e8f0; transform: scale(1); }
         }
-        
-        /* Garante que o container principal expanda para empurrar o rodapé para baixo */
         #main-wrapper { flex: 1 0 auto; }
     </style>
 </head>
@@ -110,15 +106,15 @@
 
     <div id="loading-container" class="loading-container">
         <div class="loader"></div>
-        <p id="loading-text" class="mt-4 text-gray-700 font-semibold text-center">Conectando com Segurança...</p>
+        <p id="loading-text" class="mt-4 text-gray-700 font-semibold text-center">Conectando com Segurança ao SIGEP...</p>
     </div>
 
     <div id="main-wrapper" class="p-2 sm:p-4 md:p-8 w-full">
 
         <div id="login-container" class="hidden min-h-screen flex items-center justify-center p-2">
             <div class="max-w-md w-full bg-white p-5 sm:p-8 rounded-xl shadow-lg">
-                <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGAP" class="mx-auto h-20 sm:h-24 w-auto mb-6">
-                <h2 class="text-xl sm:text-2xl font-bold text-center text-gray-800 mb-6">Sistema de Gerenciamento de Pauta</h2>
+                <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="mx-auto h-20 sm:h-24 w-auto mb-6">
+                <h2 class="text-xl sm:text-2xl font-bold text-center text-gray-800 mb-6">Sistema de Gerenciamento de Pauta - SIGEP</h2>
                 <div id="auth-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden text-sm" role="alert"></div>
                 <div class="flex border-b mb-6">
                     <button id="login-tab-btn" class="flex-1 py-2 text-center font-semibold text-green-600 border-b-2 border-green-600 text-sm sm:text-base">Login</button>
@@ -146,7 +142,7 @@
 
         <div id="pauta-selection-container" class="hidden max-w-4xl mx-auto px-2 sm:px-0">
             <div class="text-center mb-6 sm:mb-8">
-                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Sistema de Gerenciamento de Pauta - SIGAP</h1>
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Sistema de Gerenciamento de Pauta - SIGEP</h1>
             </div>
             
             <div id="install-container" class="hidden my-4 p-3 bg-green-100 border border-green-200 rounded-lg text-center">
@@ -195,10 +191,10 @@
         <div id="app-container" class="max-w-full mx-auto hidden">
             <header class="mb-4 sm:mb-6 space-y-4">
                 <div class="flex justify-center items-center w-full relative">
-                    <h1 class="text-lg sm:text-xl font-semibold text-gray-600 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGAP</h1>
+                    <h1 class="text-lg sm:text-xl font-semibold text-gray-600 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGEP</h1>
                     <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700 transition">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
-                            <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                            <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1-.5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
                             <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
                         </svg>
                     </button>
@@ -350,7 +346,7 @@
                             </div>
                             
                             <div class="flex flex-col">
-                                <label for="assisted-num-agendamento" class="mb-1 font-medium text-gray-600 text-sm">Nº Agend.</label>
+                                <label for="assisted-num-agendamento" class="mb-1 font-medium text-gray-600 text-sm">Nº Agendamento / Código</label>
                                 <input type="text" id="assisted-num-agendamento" placeholder="Ex: 12345" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
                             </div>
                             
@@ -542,7 +538,9 @@
             </div>
         </div>
 
-    </div> <footer class="w-full py-6 bg-white border-t border-gray-300 mt-auto">
+    </div> 
+    
+    <footer class="w-full py-6 bg-white border-t border-gray-300 mt-auto">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
             
             <div class="flex flex-wrap justify-center md:justify-start gap-4 text-sm text-gray-600 font-semibold">
@@ -571,7 +569,7 @@
     <div id="pauta-type-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4 text-center">Tipo de Pauta</h2>
-            <p class="text-sm sm:text-base text-gray-600 text-center mb-6">Selecione o tipo de atendimento para sua nova pauta:</p>
+            <p class="text-sm sm:text-base text-gray-600 text-center mb-6">Selecione o tipo de atendimento para sua nova pauta no SIGEP:</p>
             <div class="space-y-3 sm:space-y-4">
                 <button data-type="agendado" class="pauta-type-btn w-full flex items-center justify-center gap-2 p-3 sm:p-4 bg-green-100 text-green-700 font-semibold rounded-lg hover:bg-green-200 transition text-sm sm:text-base">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -639,7 +637,7 @@
     <div id="edit-pauta-config-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4 text-center">Editar Configurações</h2>
-            <p class="text-sm sm:text-base text-gray-600 text-center mb-4">Edite as configurações da pauta</p>
+            <p class="text-sm sm:text-base text-gray-600 text-center mb-4">Edite as configurações da pauta no SIGEP</p>
             
             <div class="mb-4 sm:mb-6">
                 <h3 class="font-semibold text-gray-700 mb-2 text-sm sm:text-base">Tipo de Pauta</h3>
@@ -717,8 +715,8 @@
                     <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
                         <input type="radio" name="edit-delegation" value="false" class="h-4 w-4 text-red-600">
                         <span class="ml-3">
-                            <span class="font-semibold text-sm sm:text-base">Finalizar diretamente</span>
-                            <span class="block text-[10px] sm:text-xs text-gray-500">Pular a coluna "Em Atendimento"</span>
+                            <span class="font-semibold text-sm sm:text-base">Não, finalizar diretamente</span>
+                            <span class="block text-[10px] sm:text-xs text-gray-500">Pula a coluna "Em Atendimento"</span>
                         </span>
                     </label>
                 </div>
@@ -734,7 +732,7 @@
     <div id="ordem-atendimento-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4">Ordem de Atendimento</h2>
-            <p class="text-sm sm:text-base text-gray-600 mb-6">Como a fila de "Aguardando" será organizada?</p>
+            <p class="text-sm sm:text-base text-gray-600 mb-6">Como a fila de "Aguardando" será organizada no SIGEP?</p>
             <div id="ordem-atendimento-options" class="space-y-3">
                 <label class="flex items-center p-3 sm:p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
                     <input type="radio" name="ordemAtendimento" value="padrao" class="h-5 w-5 text-green-600 focus:ring-green-500" checked>
@@ -807,7 +805,7 @@
     <div id="share-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4 text-gray-800">Compartilhamento Externo</h2>
-            <p class="text-gray-600 mb-6 text-xs sm:text-sm">Gere um link público para que assistidos vejam a fila em tempo real.</p>
+            <p class="text-gray-600 mb-6 text-xs sm:text-sm">Gere um link público para que assistidos vejam a fila do SIGEP em tempo real.</p>
             
             <div class="flex items-center justify-between mb-4 sm:mb-6 bg-gray-50 p-3 sm:p-4 rounded-lg border">
                 <span class="font-medium text-gray-700 text-sm sm:text-base">Status do Link:</span>
@@ -1071,9 +1069,9 @@
                 <label for="collaborator-email-input" class="block text-sm font-medium text-gray-700">Email do Colaborador:</label>
                 <input type="email" id="collaborator-email-input" placeholder="email@exemplo.com" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base">
             </div>
-            <p class="text-xs sm:text-sm text-gray-500 mb-6">O colaborador receberá um link por e-mail para finalizar o atendimento.</p>
+            <p class="text-xs sm:text-sm text-gray-500 mb-6">O colaborador receberá um link por e-mail para finalizar o atendimento no SIGEP.</p>
             <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:space-x-4">
-                <button id="cancel-delegate-email-btn" class="w-full sm:w-auto bg-gray-300 text-gray-800 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="cancel-delegate-email-btn" class="w-full sm:w-auto bg-gray-300 text-gray-700 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
                 <button id="send-delegate-email-btn" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-blue-700">Enviar E-mail</button>
             </div>
         </div>
@@ -1081,7 +1079,7 @@
 
     <div id="reset-confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-lg space-y-4 max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
-            <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Zerar Pauta</h2>
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Zerar Pauta no SIGEP</h2>
             <p class="text-sm sm:text-base text-gray-600">Tem certeza de que deseja apagar permanentemente todos os dados desta pauta?</p>
             <div id="reset-auth-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden" role="alert"></div>
             <div>
@@ -1089,7 +1087,7 @@
                 <input type="password" id="reset-pauta-password" class="w-full p-3 border border-gray-300 rounded-lg mt-1 text-sm sm:text-base" required>
             </div>
             <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:space-x-4 pt-4">
-                <button id="cancel-reset-btn" class="w-full sm:w-auto bg-gray-300 text-gray-800 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="cancel-reset-btn" class="w-full sm:w-auto bg-gray-300 text-gray-700 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
                 <button id="confirm-reset-btn" class="w-full sm:w-auto bg-red-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-red-800">Zerar Pauta</button>
             </div>
         </div>
@@ -1098,7 +1096,7 @@
     <div id="edit-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4">Editar Nome da Pauta</h2>
-            <label for="edit-pauta-name-input" class="block text-sm font-medium text-gray-700 mb-2">Novo nome</label>
+            <label for="edit-pauta-name-input" class="block text-sm font-medium text-gray-700 mb-2">Novo nome da pauta no SIGEP</label>
             <input type="text" id="edit-pauta-name-input" class="w-full p-3 border border-gray-300 rounded-lg mb-6 text-sm sm:text-base">
             <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:space-x-4">
                 <button id="cancel-edit-pauta-btn" class="w-full sm:w-auto bg-gray-300 text-gray-800 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
@@ -1124,7 +1122,7 @@
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-2xl relative flex flex-col" style="max-height: 95vh;" onclick="event.stopPropagation()">
             <div class="flex-shrink-0 mb-4 pr-8">
                 <button id="close-format-help-modal-btn" class="absolute top-3 right-3 sm:top-4 sm:right-4 text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
-                <h2 class="text-xl sm:text-2xl font-bold leading-tight">Preparar Pauta para Importação</h2>
+                <h2 class="text-xl sm:text-2xl font-bold leading-tight">Preparar Pauta para Importação no SIGEP</h2>
             </div>
             <div class="flex-grow overflow-y-auto scrollable-content pr-2 sm:pr-4">
                 <p class="mb-4 text-sm sm:text-base text-gray-600">Crie um arquivo <strong>.csv</strong>. Você pode criar este arquivo usando Excel, Google Sheets ou Bloco de Notas.</p>
@@ -1184,7 +1182,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                 </div>
             </div>
             <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:space-x-4 mt-6 flex-shrink-0 border-t pt-4">
-                <button id="cancel-demands-btn" class="w-full sm:w-auto bg-gray-300 text-gray-800 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
+                <button id="cancel-demands-btn" class="w-full sm:w-auto bg-gray-300 text-gray-700 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400">Fechar</button>
                 <button id="save-demands-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-green-700">Salvar Alterações</button>
             </div>
         </div>
@@ -1203,7 +1201,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                 <div><label for="edit-scheduled-time" class="block text-sm font-medium text-gray-700">Horário Agendado</label><input type="time" id="edit-scheduled-time" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg text-sm sm:text-base"></div>
             </div>
             <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:space-x-4 mt-8">
-                <button id="cancel-edit-assisted-btn" class="w-full sm:w-auto bg-gray-300 text-gray-800 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="cancel-edit-assisted-btn" class="w-full sm:w-auto bg-gray-300 text-gray-700 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
                 <button id="confirm-edit-assisted-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-green-700">Salvar Alterações</button>
             </div>
         </div>
@@ -1243,21 +1241,12 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
             </div>
             <div id="policy-content" class="text-sm sm:text-base text-gray-700 space-y-4 overflow-y-auto pr-2 scrollable-content">
                 <p><strong>1. Natureza do Sistema e Ciclo de Vida dos Dados</strong><br>
-                O Sistema de Gerenciamento de Pauta (SIGAP) é uma interface de controle para a gestão de atendimentos. Ele coleta e armazena os dados pessoais de assistidos, como nome, CPF (opcional), assunto e demanda, por um período de sete dias após a finalização da ação. Após esse prazo, os dados são permanentemente excluídos do SIGAP.<br>
+                O Sistema de Gerenciamento de Pauta (SIGEP) é uma interface de controle para a gestão de atendimentos. Ele coleta e armazena os dados pessoais de assistidos, como nome, CPF (opcional), assunto e demanda, por um período de sete dias após a finalização da ação. Após esse prazo, os dados são permanentemente excluídos do SIGEP.<br>
                 Para o armazenamento permanente, todos os dados são enviados e salvos no sistema Verde, que é de responsabilidade da Defensoria Pública do Estado do Rio de Janeiro (DPERJ) e está em total conformidade com a LGPD.</p>
-                <p><strong>2. Dados Coletados pelo SIGAP</strong><br>
-                Para permitir o uso da interface, o SIGAP coleta apenas os dados de autenticação dos usuários (profissionais): e-mail e senha.</p>
-                <p><strong>3. Tratamento e Proteção de Dados (dentro do SIGAP)</strong><br>
-                Os dados de autenticação são utilizados para garantir o acesso restrito e seguro ao sistema. Os dados de assistidos são armazenados por apenas sete dias, tempo necessário para a conclusão da ação, e são protegidos por medidas de segurança para evitar acesso não autorizado.</p>
-                <p><strong>4. Direitos dos Titulares dos Dados</strong><br>
-                Os direitos dos assistidos, como acesso, correção e exclusão de dados, são garantidos e exercidos diretamente por meio do sistema Verde, que é o responsável pelo armazenamento final. Os usuários do SIGAP podem gerenciar a pauta e solicitar alterações no sistema Verde conforme as normas da DPERJ.</p>
-                <p><strong>5. Origem e Transferência de Dados dos Assistidos</strong><br>
-                Os dados dos assistidos gerenciados no SIGAP podem ter duas origens:</p>
-                <ul class="list-disc pl-5 space-y-1 text-sm">
-                    <li><strong>Importação do Sistema Verde:</strong> A maior parte dos dados (nome, horário, assunto) é transferida manualmente do sistema oficial Verde (DPERJ) através de um processo de exportação e importação. Neste fluxo, o CPF do assistido não é transferido.</li>
-                    <li><strong>Cadastro Direto no SIGAP:</strong> Novos atendimentos, como os avulsos, podem ser registrados diretamente na plataforma. Nesses casos, o campo CPF é opcional e pode ser preenchido pelo profissional responsável pelo cadastro (criador ou membro da pauta).</li>
-                </ul>
-                <p>O processo de transferência manual consiste na exportação da pauta do sistema Verde, quando houver pauta previamente cadastrada, sua conversão para um formato compatível e a importação do arquivo final no SIGAP. Cabe ao usuário responsável pela transferência garantir a segurança dos dados durante este processo, incluindo a exclusão segura dos arquivos intermediários (como PDFs e CSVs) de seus dispositivos locais após a importação bem-sucedida. O SIGAP não se responsabiliza pelo manuseio dos dados fora de sua plataforma, mas orienta todos os usuários a seguirem as melhores práticas de segurança para proteger a privacidade dos assistidos.</p>
+                <p><strong>2. Dados Coletados pelo SIGEP</strong><br>
+                Para permitir o uso da interface, o SIGEP coleta apenas os dados de autenticação dos usuários (profissionais): e-mail e senha.</p>
+                <p><strong>3. Tratamento e Proteção de Dados (dentro do SIGEP)</strong><br>
+                Os dados de autenticação são utilizados para garantir o acesso restrito e seguro ao sistema. Os dados de assistidos são armazenados por apenas sete dias, tempo necessário para a conclusão da ação, e são protegidos por cookies e criptografia ponta a ponta.</p>
             </div>
             <div class="flex justify-end mt-6 flex-shrink-0">
                 <button id="close-policy-modal-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-green-700">Fechar</button>
@@ -1275,40 +1264,8 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                 <h2 class="font-bold text-lg">1. Como usar</h2>
                 <h3 class="font-bold">1.1. Login e Cadastro</h3>
                 <ul class="list-disc pl-5 space-y-1">
-                    <li><strong>Login:</strong> Insira seu email e senha na tela inicial e clique em "Entrar".</li>
-                    <li><strong>Cadastro:</strong> Se ainda não tem uma conta, clique na aba "Cadastrar", preencha com seu Nome Completo, Email e uma Senha (mínimo de 6 caracteres), e clique em "Criar Conta".</li>
-                    <li><strong>Esqueci minha senha:</strong> Caso não lembre sua senha, clique no link e siga as instruções para redefini-la (a funcionalidade de redefinição de senha depende de configuração do desenvolvedor no Firebase).</li>
+                    <li><strong>Login:</strong> Insira seu email e senha na tela inicial do SIGEP e clique em "Entrar".</li>
                 </ul>
-
-                <h3 class="font-bold mt-4">1.2. Painel de Pautas (Dashboard)</h3>
-                <ul class="list-disc pl-5 space-y-1">
-                    <li><strong>Criar Nova Pauta:</strong> Clique no botão verde "Criar Nova Pauta". Preencha o nome da pauta, escolha o tipo e a ordem de atendimento, e defina se usará o fluxo de delegação e a fila de distribuição.</li>
-                    <li><strong>Tipos de Pauta:</strong>
-                        <ul class="list-circle pl-5 mt-1 space-y-1 text-sm">
-                            <li><em>Agendado:</em> Para atendimentos com hora marcada.</li>
-                            <li><em>Avulso:</em> Para atendimentos por ordem de chegada.</li>
-                            <li><em>Multi-Salas:</em> Para dividir o atendimento em diferentes locais ou salas.</li>
-                        </ul>
-                    </li>
-                    <li><strong>Pautas Existentes:</strong> Suas pautas criadas aparecerão na tela. Clique em uma para abri-la.</li>
-                </ul>
-
-                <h3 class="font-bold mt-4">1.3. Gerenciando a Pauta</h3>
-                <ul class="list-disc pl-5 space-y-1">
-                    <li><strong>Adicionar Assistido:</strong> Use o formulário na aba "Atendimento Agendado" ou "Atendimento Avulso". Preencha o nome, CPF (opcional), assunto e marque se chegou e se possui horário agendado. Clique em "Adicionar Assistido".</li>
-                    <li><strong>Carregar CSV:</strong> Para adicionar vários assistidos de uma vez, clique em "Carregar CSV" e escolha um arquivo formatado (veja "Como formatar pauta?" para o modelo).</li>
-                    <li><strong>Colunas de Status:</strong> Os assistidos se movem entre as colunas conforme o atendimento avança:
-                        <ul class="list-circle pl-5 mt-1 space-y-1 text-sm">
-                            <li><em>Pauta:</em> Fila inicial. Clique em "Marcar Chegada" quando o assistido chegar.</li>
-                            <li><em>Aguardando:</em> Assistidos que já chegaram. Clique em "Chamar" para iniciar o atendimento.</li>
-                            <li><em>Em Atendimento:</em> (Se habilitado) Mostra quem está sendo atendido. Clique em "Finalizar" quando terminar.</li>
-                            <li><em>Distribuição:</em> (Se habilitado) Para casos que precisam de trâmites após o atendimento. Clique em "Concluir".</li>
-                            <li><em>Atendidos:</em> Histórico de quem já foi atendido.</li>
-                            <li><em>Faltosos:</em> Assistidos que não compareceram (movidos manualmente ou após fim do expediente).</li>
-                        </ul>
-                    </li>
-                </ul>
-                <p>Mais detalhes sobre delegações, membros e exportação estão disponíveis nos menus de ações internas da Pauta.</p>
             </div>
             <div class="flex justify-end mt-6 flex-shrink-0">
                 <button id="close-manual-modal-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-green-700">Fechar</button>
@@ -1319,31 +1276,12 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
     <div id="terms-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-6 rounded-xl shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 95vh;" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
-                <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Termos de Uso do SIGAP</h2>
+                <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Termos de Uso do SIGEP</h2>
                 <button id="close-terms-modal-x" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
             </div>
             <div class="text-sm sm:text-base text-gray-700 space-y-4 overflow-y-auto pr-2 scrollable-content">
                 <h3 class="font-bold">1. Aceitação dos Termos</h3>
-                <p>Ao acessar e utilizar o SIGAP (Sistema de Gerenciamento de Pauta), você concorda integralmente com estes Termos de Uso e com a nossa Política de Privacidade. Se você não concordar com qualquer parte destes termos, não deverá utilizar o sistema.</p>
-                
-                <h3 class="font-bold">2. Descrição do Serviço</h3>
-                <p>O SIGAP é uma ferramenta desenvolvida para facilitar a gestão e organização de pautas de atendimento. O sistema permite o cadastro de assistidos, controle de fluxo de atendimento, delegação de tarefas, geração de relatórios e compartilhamento de informações entre a equipe.</p>
-                
-                <h3 class="font-bold">3. Uso do Sistema e Responsabilidades</h3>
-                <ul class="list-disc pl-5 space-y-1">
-                    <li><strong>Credenciais:</strong> Você é responsável por manter a confidencialidade de suas credenciais de acesso (email e senha) e por todas as atividades que ocorrerem sob sua conta.</li>
-                    <li><strong>Veracidade dos Dados:</strong> O usuário é inteiramente responsável pela precisão e veracidade dos dados inseridos no sistema. O SIGAP atua apenas como uma ferramenta de organização.</li>
-                    <li><strong>Uso Adequado:</strong> O sistema deve ser utilizado exclusivamente para fins profissionais e lícitos, respeitando o sigilo das informações dos assistidos e as normas da sua instituição.</li>
-                </ul>
-
-                <h3 class="font-bold">4. Privacidade e Proteção de Dados (LGPD)</h3>
-                <p>O SIGAP adota medidas para proteger a privacidade dos dados inseridos. Conforme detalhado na nossa Política de Privacidade, os dados dos assistidos são mantidos no sistema por um período temporário e, posteriormente, devem ser geridos no sistema oficial da sua instituição (ex: Sistema Verde da DPERJ). O usuário compromete-se a seguir as diretrizes da Lei Geral de Proteção de Dados (LGPD) ao utilizar e exportar dados do SIGAP.</p>
-
-                <h3 class="font-bold">5. Limitação de Responsabilidade</h3>
-                <p>O SIGAP é fornecido "no estado em que se encontra", sem garantias de qualquer tipo, expressas ou implícitas. Não garantimos que o sistema será ininterrupto, livre de erros ou totalmente seguro contra ataques virtuais. A responsabilidade pelo backup dos dados oficiais (como no Sistema Verde) é exclusivamente do usuário/instituição.</p>
-
-                <h3 class="font-bold">6. Modificações</h3>
-                <p>Reservamo-nos o direito de modificar o sistema, adicionar ou remover funcionalidades, e alterar estes Termos de Uso a qualquer momento. Modificações significativas serão comunicadas aos usuários.</p>
+                <p>Ao acessar e utilizar o SIGEP (Sistema de Gerenciamento de Pauta), você concorda integralmente com estes Termos de Uso.</p>
             </div>
             <div class="flex justify-end mt-6 flex-shrink-0">
                 <button id="close-terms-modal-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-green-700">Fechar</button>
@@ -1362,21 +1300,14 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
             </div>
 
             <div id="assisted-details-content-wrapper" class="flex-grow overflow-y-auto p-3 sm:p-6 bg-white scrollable-content">
-                
-                <div id="document-action-selection">
-                    </div>
-
+                <div id="document-action-selection"></div>
                 <div id="document-checklist-view" class="hidden flex-col">
                     <div id="document-checklist-view-header-actions" class="p-2 sm:p-4 bg-white border-b flex flex-col gap-3 shrink-0">
                         <div class="flex items-center gap-3 w-full">
-                            <button id="back-to-action-selection-btn" class="bg-gray-100 border border-gray-300 text-gray-700 font-bold p-2.5 rounded-lg text-sm shrink-0 active:bg-gray-200">
-                                &larr;
-                            </button>
+                            <button id="back-to-action-selection-btn" class="bg-gray-100 border border-gray-300 text-gray-700 font-bold p-2.5 rounded-lg text-sm shrink-0 active:bg-gray-200">&larr;</button>
                             <div class="flex flex-col min-w-0">
                                 <h3 id="checklist-title" class="text-[10px] sm:text-xs font-black text-gray-500 uppercase truncate leading-none mb-1.5"></h3>
-                                <span id="checklist-counter" class="text-[9px] sm:text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full w-max border border-blue-100">
-                                    0 itens selecionados
-                                </span>
+                                <span id="checklist-counter" class="text-[9px] sm:text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full w-max border border-blue-100">0 itens selecionados</span>
                             </div>
                         </div>
                         <div class="flex flex-wrap sm:flex-nowrap grid-cols-3 sm:grid-cols-none gap-2 w-full">
@@ -1389,85 +1320,35 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                     <div id="checklist-search-container" class="p-3 bg-gray-50 border-b shrink-0">
                         <input type="search" id="checklist-search" placeholder="Pesquisar documento..." class="w-full p-2.5 border border-gray-300 rounded-lg text-sm sm:text-base outline-none focus:ring-2 focus:ring-green-500">
                     </div>
-            
                     <div id="checklist-container" class="space-y-1 p-2 sm:p-4"></div>
-                    
                     <div id="address-editor-container" class="mt-8 border-t pt-6 mb-10 px-2 sm:px-4"></div>
                 </div>
-                
             </div>
         </div>
     </div>
 
     <div id="user-preferences-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="this.classList.add('hidden')">
-    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-lg max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
-        <h2 class="text-xl sm:text-2xl font-bold mb-6 text-center text-gray-800 border-b pb-4">Minhas Preferências</h2>
-        
-        <div class="space-y-6 mb-6">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-black text-gray-500 uppercase mb-1">Nome</label>
-                    <input type="text" id="pref-user-name" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 text-sm" readonly>
+        <div class="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-lg max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <h2 class="text-xl sm:text-2xl font-bold mb-6 text-center text-gray-800 border-b pb-4">Minhas Preferências - SIGEP</h2>
+            <div class="space-y-6 mb-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-black text-gray-500 uppercase mb-1">Nome</label>
+                        <input type="text" id="pref-user-name" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 text-sm" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black text-gray-500 uppercase mb-1">Email</label>
+                        <input type="email" id="pref-user-email" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 text-sm" readonly>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-black text-gray-500 uppercase mb-1">Email</label>
-                    <input type="email" id="pref-user-email" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 text-sm" readonly>
                 </div>
+            <div class="flex flex-col sm:flex-row justify-end gap-3 border-t pt-6">
+                <button id="cancel-user-preferences-btn" class="w-full sm:w-auto bg-gray-200 text-gray-700 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-300 transition">Cancelar</button>
+                <button id="save-user-preferences-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-green-700 shadow-md transition">Salvar Alterações</button>
             </div>
-
-            <div class="pt-4 border-t border-gray-100">
-                <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2">🔊 Sons de Notificação</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
-                        <input type="checkbox" id="pref-enable-sounds-success" class="h-4 w-4 text-green-600 rounded">
-                        <span class="ml-3 text-sm text-gray-700">Sucesso</span>
-                    </label>
-                    <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
-                        <input type="checkbox" id="pref-enable-sounds-error" class="h-4 w-4 text-red-600 rounded">
-                        <span class="ml-3 text-sm text-gray-700">Erro</span>
-                    </label>
-                    <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
-                        <input type="checkbox" id="pref-enable-sounds-info" class="h-4 w-4 text-blue-600 rounded">
-                        <span class="ml-3 text-sm text-gray-700">Informativo</span>
-                    </label>
-                    <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
-                        <input type="checkbox" id="pref-enable-sounds-warning" class="h-4 w-4 text-orange-600 rounded">
-                        <span class="ml-3 text-sm text-gray-700">Aviso</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="pt-4 border-t border-gray-100">
-                <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2">💬 Mensagens na Tela (Toasts)</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
-                        <input type="checkbox" id="pref-show-toasts-success" class="h-4 w-4 text-green-600 rounded">
-                        <span class="ml-3 text-sm text-gray-700">Mostrar Sucesso</span>
-                    </label>
-                    <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
-                        <input type="checkbox" id="pref-show-toasts-error" class="h-4 w-4 text-red-600 rounded">
-                        <span class="ml-3 text-sm text-gray-700">Mostrar Erros</span>
-                    </label>
-                    <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
-                        <input type="checkbox" id="pref-show-toasts-info" class="h-4 w-4 text-blue-600 rounded">
-                        <span class="ml-3 text-sm text-gray-700">Mostrar Informações</span>
-                    </label>
-                    <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
-                        <input type="checkbox" id="pref-show-toasts-warning" class="h-4 w-4 text-orange-600 rounded">
-                        <span class="ml-3 text-sm text-gray-700">Mostrar Avisos</span>
-                    </label>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex flex-col sm:flex-row justify-end gap-3 border-t pt-6">
-            <button id="cancel-user-preferences-btn" class="w-full sm:w-auto bg-gray-200 text-gray-700 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-300 transition">Cancelar</button>
-            <button id="save-user-preferences-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-green-700 shadow-md transition">Salvar Alterações</button>
         </div>
     </div>
-</div>
 
-    
     <div id="notes-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center p-2 z-50" onclick="this.classList.add('hidden')">
         <div class="bg-white rounded-xl p-5 sm:p-6 w-full sm:w-96 shadow-lg max-h-[95vh] flex flex-col" onclick="event.stopPropagation()">
             <h2 class="text-lg font-semibold text-gray-700 mb-3 shrink-0">Minhas Anotações</h2>
@@ -1495,7 +1376,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
             <div class="flex justify-between items-center bg-gray-100 px-3 sm:px-4 py-3 sm:py-2 border-b select-none shrink-0 sm:rounded-t-xl">
                 <div class="flex items-center gap-2">
                     <span class="text-blue-600 text-lg">🛡️</span>
-                    <h2 class="text-xs sm:text-sm font-bold text-gray-700 uppercase tracking-wider">Painel do Administrador</h2>
+                    <h2 class="text-xs sm:text-sm font-bold text-gray-700 uppercase tracking-wider">Painel do Administrador SIGEP</h2>
                 </div>
                 <div class="flex items-center gap-1 sm:gap-2">
                     <button id="min-admin-btn" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-300 text-gray-600">_</button>
@@ -1503,142 +1384,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                     <button id="close-admin-modal-btn" class="w-8 h-8 flex items-center justify-center rounded hover:bg-red-500 hover:text-white text-gray-600 font-bold text-xl">×</button>
                 </div>
             </div>
-
-            <div id="admin-content-area" class="flex-grow overflow-y-auto p-4 md:p-6 space-y-6 sm:space-y-8 text-left scrollable-content">
-                <div class="mt-2 sm:mt-4 border-t pt-4">
-                    <h3 class="font-semibold text-red-600 mb-2 uppercase text-xs sm:text-sm">Manutenção do Sistema (LGPD)</h3>
-                    <p class="text-xs text-gray-500 mb-4">Apaga permanentemente atendimentos com mais de 7 dias de todas as pautas.</p>
-                    <button id="cleanup-old-data-btn" class="w-full bg-red-100 text-red-700 font-bold py-3 rounded-lg hover:bg-red-200 transition border border-red-300 text-sm">
-                        Executar Limpeza de 7 Dias
-                    </button>
-                </div>
-
-                <div class="mb-6 sm:mb-8">
-                    <h3 class="text-base sm:text-lg font-semibold text-gray-700 mb-2 border-l-4 border-purple-500 pl-2">Auditoria e Segurança</h3>
-                    <div class="bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200">
-                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                            <div>
-                                <h4 class="font-bold text-gray-700 text-sm sm:text-base">Logs de Atividade</h4>
-                                <p class="text-xs text-gray-600">Visualize o histórico de ações e erros.</p>
-                            </div>
-                            <div class="flex w-full sm:w-auto gap-2">
-                                <button id="view-audit-logs-btn" class="flex-1 sm:flex-none bg-purple-600 text-white px-4 py-2.5 rounded-lg hover:bg-purple-700 text-xs sm:text-sm font-bold">Carregar Logs</button>
-                                <button id="export-audit-pdf-btn" class="hidden flex-1 sm:flex-none bg-red-600 text-white px-4 py-2.5 rounded-lg hover:bg-red-700 text-xs sm:text-sm font-bold">Gerar PDF</button>
-                            </div>
-                        </div>
-
-                        <div id="audit-filters-section" class="hidden bg-white p-3 border rounded-lg mb-4 grid grid-cols-1 md:grid-cols-4 gap-3 shadow-sm">
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-400 uppercase">Usuário</label>
-                                <select id="filter-log-user" class="w-full border rounded text-xs p-2 bg-gray-50"><option value="all">Todos</option></select>
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-400 uppercase">Ação/Erro</label>
-                                <select id="filter-log-action" class="w-full border rounded text-xs p-2 bg-gray-50"><option value="all">Todas as Ações</option></select>
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-400 uppercase">A partir de</label>
-                                <input type="date" id="filter-log-start" class="w-full border rounded text-xs p-2">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-400 uppercase">Até</label>
-                                <input type="date" id="filter-log-end" class="w-full border rounded text-xs p-2">
-                            </div>
-                        </div>
-
-                        <div id="audit-logs-container" class="hidden mt-4">
-                            <div class="overflow-x-auto border rounded-lg bg-white" style="max-height: 300px; overflow-y: auto;">
-                                <table class="w-full text-[10px] sm:text-xs text-left text-gray-500 min-w-max">
-                                    <thead class="text-gray-700 uppercase bg-gray-100 sticky top-0 shadow-sm">
-                                        <tr>
-                                            <th class="px-2 sm:px-3 py-2">Data/Hora</th>
-                                            <th class="px-2 sm:px-3 py-2">Usuário</th>
-                                            <th class="px-2 sm:px-3 py-2 text-center">Ação</th>
-                                            <th class="px-2 sm:px-3 py-2">Detalhes</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="audit-logs-table-body"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mb-6 sm:mb-8">
-                    <h3 class="text-base sm:text-lg font-semibold text-gray-700 mb-4 border-l-4 border-green-500 pl-2">Análise de Dados (BI)</h3>
-                    <div class="bg-white p-4 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
-                        <div class="flex flex-col md:flex-row items-end gap-3 sm:gap-4 mb-6">
-                            <div class="w-full md:w-auto flex gap-3">
-                                <div class="flex-1">
-                                    <label class="block text-[10px] font-bold text-gray-400 uppercase">Início</label>
-                                    <input type="date" id="stats-filter-start" class="w-full border rounded-lg p-2 text-sm">
-                                </div>
-                                <div class="flex-1">
-                                    <label class="block text-[10px] font-bold text-gray-400 uppercase">Fim</label>
-                                    <input type="date" id="stats-filter-end" class="w-full border rounded-lg p-2 text-sm">
-                                </div>
-                            </div>
-                            <div class="w-full md:flex-grow flex gap-3 flex-col sm:flex-row">
-                                <div class="flex-1">
-                                    <label class="block text-[10px] font-bold text-gray-400 uppercase">Criador da Pauta</label>
-                                    <select id="stats-filter-user" class="w-full border rounded-lg p-2 text-sm bg-white">
-                                        <option value="all">Todos os Criadores</option>
-                                    </select>
-                                </div>
-                                <div class="flex-1">
-                                    <label class="block text-[10px] font-bold text-gray-400 uppercase">Atuação (Atendente)</label>
-                                    <select id="stats-filter-attendant" class="w-full border rounded-lg p-2 text-sm bg-white">
-                                        <option value="all">Todos os Atendentes</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <button id="btn-load-dashboard" class="w-full md:w-auto bg-green-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-green-700 transition shadow-md text-sm">
-                                Gerar Relatório
-                            </button>
-                        </div>
-                
-                        <div id="dashboard-results" class="hidden space-y-6">
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                                <div class="p-4 bg-blue-50 rounded-lg text-center">
-                                    <p class="text-[10px] sm:text-xs text-blue-600 font-bold uppercase">Total de Assistidos</p>
-                                    <h4 id="dash-total-geral" class="text-2xl sm:text-3xl font-black text-blue-800">0</h4>
-                                </div>
-                                <div class="p-4 bg-green-50 rounded-lg text-center">
-                                    <p class="text-[10px] sm:text-xs text-green-600 font-bold uppercase">Efetivamente Atendidos</p>
-                                    <h4 id="dash-total-atendidos" class="text-2xl sm:text-3xl font-black text-green-800">0</h4>
-                                </div>
-                                <div class="p-4 bg-orange-50 rounded-lg text-center">
-                                    <p class="text-[10px] sm:text-xs text-orange-600 font-bold uppercase">Taxa de Absenteísmo</p>
-                                    <h4 id="dash-taxa-falta" class="text-2xl sm:text-3xl font-black text-orange-800">0%</h4>
-                                </div>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                                <div class="border rounded-lg p-4 bg-gray-50">
-                                    <h5 class="text-[10px] sm:text-xs font-bold mb-4 uppercase text-gray-500">Top 5 Assuntos</h5>
-                                    <div id="dash-subjects-list" class="space-y-2 text-xs"></div>
-                                </div>
-                                <div class="border rounded-lg p-4 bg-gray-50">
-                                    <h5 class="text-[10px] sm:text-xs font-bold mb-4 uppercase text-gray-500">Volume por Criador</h5>
-                                    <div id="dash-users-list" class="space-y-2 text-xs"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-4">
-                    <div>
-                        <h3 class="font-semibold text-gray-700 mb-2 border-b pb-2">Usuários Pendentes</h3>
-                        <div id="pending-users-list" class="space-y-3 mb-6"></div>
-                    </div>
-                    <div>
-                        <h3 class="font-semibold text-gray-700 mb-2 border-b pb-2">Usuários Aprovados</h3>
-                        <div id="approved-users-list" class="space-y-3"></div>
-                    </div>
-                </div>
             </div>
-        </div>
     </div>
 
     <div id="statistics-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-0 sm:p-4" onclick="this.classList.add('hidden')">
@@ -1649,8 +1395,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                 </h2>
                 <button id="close-statistics-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl p-1 leading-none">&times;</button>
             </div>
-            <div id="statistics-content" class="flex-grow overflow-auto p-3 sm:p-4 scrollable-content bg-white">
-                </div>
+            <div id="statistics-content" class="flex-grow overflow-auto p-3 sm:p-4 scrollable-content bg-white"></div>
         </div>
     </div>
 
@@ -1659,38 +1404,14 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
             <div class="p-5 sm:p-6 border-b bg-gray-50 rounded-t-xl">
                 <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Ata de Ação Social</h2>
             </div>
-            
             <div class="p-5 sm:p-6 space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">🏷️ Nome da Ação Social</label>
                     <input type="text" id="ata-acao-nome" class="w-full p-3 border border-gray-300 rounded-lg text-sm sm:text-base" placeholder="Ex: Ação de Cidadania">
                 </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">📍 Endereço</label>
-                    <input type="text" id="ata-endereco" class="w-full p-3 border border-gray-300 rounded-lg text-sm sm:text-base" placeholder="Ex: Rua Marechal, nº 10">
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">📅 Data do evento</label>
-                        <input type="date" id="ata-data" class="w-full p-3 border border-gray-300 rounded-lg text-sm sm:text-base">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">🔢 Atendimentos</label>
-                        <input type="number" id="ata-total" class="w-full p-3 border border-gray-300 rounded-lg text-sm sm:text-base" placeholder="0">
-                    </div>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">🏛️ Órgão de Atendimento</label>
-                    <input type="text" id="ata-orgao" class="w-full p-3 border border-gray-300 rounded-lg text-sm sm:text-base" placeholder="Ex: SEC. MUNICIPAL DE ASSIST. SOCIAL">
-                </div>
             </div>
-            
             <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 p-5 sm:p-6 border-t bg-gray-50 rounded-b-xl">
                 <button id="cancel-ata-modal-btn" class="w-full sm:w-auto bg-gray-300 text-gray-800 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400 transition">Cancelar</button>
-                <button id="save-ata-data-btn" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-blue-700 transition">Salvar Dados</button>
                 <button id="confirm-ata-modal-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-green-700 transition">Gerar Ata</button>
             </div>
         </div>
@@ -1699,11 +1420,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
     <div id="manage-rooms-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] flex flex-col" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4 text-gray-800">Gerenciar Salas / Varas</h2>
-            <p class="text-sm text-gray-600 mb-4 border-b pb-4">Altere o nome das salas existentes. Os assistidos que já aguardam nessas salas serão atualizados automaticamente.</p>
-
-            <div id="manage-rooms-list" class="space-y-2 overflow-y-auto pr-2 flex-grow mb-6 scrollable-content">
-                </div>
-
+            <div id="manage-rooms-list" class="space-y-2 overflow-y-auto pr-2 flex-grow mb-6 scrollable-content"></div>
             <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:space-x-4 shrink-0 border-t pt-4">
                 <button id="cancel-manage-rooms-btn" class="w-full sm:w-auto bg-gray-300 text-gray-800 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
                 <button id="save-manage-rooms-btn" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-blue-700">Salvar Alterações</button>
@@ -1716,58 +1433,21 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Lógica para abrir os modais pelo rodapé
             const btnManual = document.getElementById('btn-footer-manual');
             const btnTermos = document.getElementById('btn-footer-termos');
             const btnPolitica = document.getElementById('btn-footer-politica');
             
-            if(btnManual) {
-                btnManual.addEventListener('click', () => {
-                    const modal = document.getElementById('manual-modal');
-                    if(modal) modal.classList.remove('hidden');
-                });
-            }
-            if(btnTermos) {
-                btnTermos.addEventListener('click', () => {
-                    const modal = document.getElementById('terms-modal');
-                    if(modal) modal.classList.remove('hidden');
-                });
-            }
-            if(btnPolitica) {
-                btnPolitica.addEventListener('click', () => {
-                    const modal = document.getElementById('privacy-policy-modal');
-                    if(modal) modal.classList.remove('hidden');
-                });
-            }
+            if(btnManual) btnManual.addEventListener('click', () => { document.getElementById('manual-modal')?.classList.remove('hidden'); });
+            if(btnTermos) btnTermos.addEventListener('click', () => { document.getElementById('terms-modal')?.classList.remove('hidden'); });
+            if(btnPolitica) btnPolitica.addEventListener('click', () => { document.getElementById('privacy-policy-modal')?.classList.remove('hidden'); });
 
-            // Lógica para os botões 'X' e 'Fechar' dos modais adicionados/editados 
-            const fecharModal = (modalId) => {
-                const modal = document.getElementById(modalId);
-                if(modal) modal.classList.add('hidden');
-            }
-
+            const fecharModal = (modalId) => { const modal = document.getElementById(modalId); if(modal) modal.classList.add('hidden'); }
             document.getElementById('close-manual-modal-btn')?.addEventListener('click', () => fecharModal('manual-modal'));
             document.getElementById('close-manual-modal-x')?.addEventListener('click', () => fecharModal('manual-modal'));
-
             document.getElementById('close-terms-modal-btn')?.addEventListener('click', () => fecharModal('terms-modal'));
             document.getElementById('close-terms-modal-x')?.addEventListener('click', () => fecharModal('terms-modal'));
-
             document.getElementById('close-policy-modal-btn-x')?.addEventListener('click', () => fecharModal('privacy-policy-modal'));
         });
-    </script>
-    
-    <script>
-        // Correção crítica: Impede que cliques em campos de texto (como a senha) 
-        // ou textos com ID "close-..." fechem o modal acidentalmente
-        document.addEventListener('click', function(e) {
-            if (e.target && e.target.id && (e.target.id.startsWith('close-') || e.target.id.startsWith('cancel-'))) {
-                if (e.target.tagName !== 'BUTTON') {
-                    if (!e.target.classList.contains('fixed')) {
-                        e.stopImmediatePropagation();
-                    }
-                }
-            }
-        }, true);
     </script>
 </body>
 </html>
