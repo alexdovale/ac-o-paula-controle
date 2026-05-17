@@ -2,110 +2,58 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Atendimento - SIGAP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Painel de Atendimento - SIGEP</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/jwt-decode@4.0.0/build/esm/index.min.js"></script>
     
-    <!-- ========================================== -->
-    <!-- BIBLIOTECAS ADICIONADAS AQUI -->
-    <!-- ========================================== -->
-    
-    <!-- Biblioteca de E-mail (EmailJS) -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script type="text/javascript">
         (function() { emailjs.init("aGL-Q2UJcD2tDpUKq"); })();
     </script>
 
-    <!-- Bibliotecas de PDF (jsPDF) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     
-    <!-- ========================================== -->
-
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        /* A classe .tab-active agora só adiciona a borda e cor, o font-bold é removido para ser adicionado via JS */
         .tab-active { border-bottom: 3px solid #16a34a; color: #16a34a; font-weight: bold; }
+        
+        /* Custom scrollbar para a caixinha de demandas adicionais móvel */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
-<body class="p-2 md:p-6 min-h-screen flex justify-center items-start pt-10">
+<body class="p-2 md:p-6 min-h-screen flex justify-center items-start pt-4 sm:pt-10">
 
-    <div class="w-full max-w-2xl bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col">
-        <div id="header-bg" class="bg-blue-600 p-5 text-white">
+    <div class="w-full max-w-4xl bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col">
+        <div id="header-bg" class="bg-slate-800 p-5 text-white transition-colors duration-300">
             <h1 id="assistido-nome" class="font-black text-xl uppercase truncate">CARREGANDO...</h1>
             <p id="assistido-assunto" class="text-xs opacity-90 truncate mt-1">Aguarde...</p>
         </div>
 
-        <div class="flex border-b bg-gray-50">
-            <button id="tab-btn-encerramento" class="flex-1 p-3 text-[10px] uppercase tab-active">Encerramento / Fluxo</button>
-            <button id="tab-btn-historico" class="flex-1 p-3 text-[10px] uppercase text-gray-400 font-bold">Histórico</button>
+        <div class="flex border-b bg-gray-50 select-none">
+            <button id="tab-btn-encerramento" class="flex-1 p-3.5 text-center font-black text-[11px] uppercase tracking-widest text-slate-800 border-b-2 border-slate-800 transition-colors">Encerramento / Fluxo</button>
+            <button id="tab-btn-historico" class="flex-1 p-3.5 text-center font-bold text-[11px] uppercase tracking-widest text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors">Histórico Recepção</button>
         </div>
 
-        <div class="p-6">
-            <div id="aba-encerramento">
-                
-                <div id="area-colaborador" class="hidden space-y-6">
-                    <h3 class="text-xs font-bold text-gray-500 uppercase">Como deseja finalizar?</h3>
-                    <div class="grid grid-cols-1 gap-3">
-                        <button id="btn-fluxo-direto" class="p-4 border-2 rounded-xl text-left transition border-gray-200 hover:bg-green-50">
-                            <span class="block font-bold text-gray-800 text-sm">✅ Finalizar Atendimento</span>
-                            <span class="text-[10px] text-gray-500">Concluir sem necessidade de revisão ou protocolo.</span>
-                        </button>
-                        
-                        <button id="btn-fluxo-dist" class="hidden p-4 border-2 rounded-xl text-left transition border-gray-200 hover:bg-cyan-50">
-                            <span class="block font-bold text-gray-800 text-sm">⚖️ Fila de Distribuição</span>
-                            <span class="text-[10px] text-gray-500">Mandar para a fila de processos que precisam de protocolo.</span>
-                        </button>
-
-                        <button id="btn-fluxo-rev" class="hidden p-4 border-2 rounded-xl text-left transition border-gray-200 hover:bg-purple-50">
-                            <span class="block font-bold text-gray-800 text-sm">🔍 Enviar p/ Defensor (Revisão)</span>
-                            <span class="text-[10px] text-gray-500">O Defensor aprovará e distribuirá o processo.</span>
-                        </button>
-                    </div>
-
-                    <div id="config-revisao" class="hidden bg-purple-50 p-4 rounded-xl border border-purple-100 space-y-4">
-                        <div>
-                            <label class="block text-[10px] font-bold text-purple-600 uppercase mb-1">Defensor Responsável</label>
-                            <select id="select-defensor" class="w-full border border-purple-200 p-2.5 rounded-lg text-sm bg-white"></select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-purple-600 uppercase mb-1">Notas para o Defensor</label>
-                            <textarea id="notas-revisao" class="w-full border border-purple-200 p-2.5 rounded-lg text-sm h-20" placeholder="Ex: Faltou comprovante de residência, mas anexei o resto."></textarea>
-                        </div>
-                    </div>
-
-                    <button id="btn-finalizar" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg uppercase tracking-wide active:scale-95 transition-all mt-4">Confirmar e Seguir</button>
-                </div>
-
-                <div id="area-defensor" class="hidden space-y-6">
-                    <div class="bg-purple-50 p-4 rounded-xl border border-purple-200">
-                        <h3 class="text-sm font-bold text-purple-800 mb-1">Processo em Revisão</h3>
-                        <p class="text-[11px] text-purple-600">Verifique a petição/triagem e decida o prosseguimento.</p>
-                    </div>
-
-                    <div class="space-y-4 border-t pt-4">
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Número do Processo (Se aprovado)</label>
-                            <input type="text" id="input-processo" class="w-full border p-3 rounded-lg text-sm font-mono" placeholder="Ex: 000000-00.2026.8.19.0000">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Motivo (Se precisar corrigir)</label>
-                            <textarea id="input-motivo" class="w-full border p-3 rounded-lg text-sm h-20" placeholder="Descreva o erro para o colaborador consertar..."></textarea>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3 pt-4 border-t">
-                        <button id="btn-aprovar" class="bg-green-600 text-white font-black py-3.5 rounded-xl uppercase text-xs shadow hover:bg-green-700">Aprovar e Protocolar</button>
-                        <button id="btn-devolver" class="bg-orange-500 text-white font-black py-3.5 rounded-xl uppercase text-xs shadow hover:bg-orange-600">Devolver p/ Correção</button>
+        <div class="p-4 sm:p-6">
+            <div id="aba-encerramento" class="space-y-6">
+                <div id="area-colaborador" class="hidden">
+                    <div class="flex justify-center py-10">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-800"></div>
                     </div>
                 </div>
-
             </div>
 
-            <div id="aba-historico" class="hidden">
-                <div id="lista-historico" class="space-y-3"></div>
+            <div id="aba-historico" class="hidden animate-fade-in">
+                <div id="lista-historico" class="space-y-4">
+                    <div class="flex justify-center py-10">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
