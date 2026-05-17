@@ -74,151 +74,151 @@ const ACTIONS_ALWAYS_EXPENSES = [
     'guarda'
 ];
 
-// 1.6 Ações que exigem dados de trabalho do réu
+// 1.6 Ações que exigem dados de trabalho do réu (Gatilha o formulário unificado automaticamente)
 const ACTIONS_WITH_WORK_INFO = [
+    'obrigacao_fazer',
+    'declaratoria_nulidade',
+    'indenizacao_danos',
+    'revisional_debito',
+    'exigir_contas',
     'alimentos_fixacao_majoracao_oferta',
     'alimentos_gravidicos',
     'alimentos_avoengos',
     'divorcio_litigioso',
-    'uniao_estavel_reconhecimento_dissolucao',
+    'uniao_estavel',
+    'guarda',
+    'regulamentacao_convivencia',
     'investigacao_paternidade'
 ];
 
 /* ========================================================
-   2. BASE DE DADOS DE AÇÕES
+   2. BASE DE DADOS DE AÇÕES COMPLETA (UNIFICADA SEM DUPLICADOS)
    ======================================================== */
 export const documentsData = {
     obrigacao_fazer: {
         title: 'Obrigação de Fazer',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Contrato/Acordo', 'Provas do descumprimento', 'Endereço completo', 'Dados de trabalho'] }
+            { title: 'Específicos', docs: ['Contrato/Acordo', 'Provas do descumprimento'] }
         ]
     },
     declaratoria_nulidade: {
         title: 'Declaratória de Nulidade',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Documento a anular', 'Provas da ilegalidade', 'Endereço completo'] }
+            { title: 'Específicos', docs: ['Documento a anular', 'Provas da ilegalidade'] }
         ]
     },
     indenizacao_danos: {
         title: 'Ação de Indenização',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['BO', 'Fotos/Vídeos', 'Orçamentos', 'Notas Fiscais', 'Testemunhas', 'Endereço completo', 'Dados de trabalho'] }
+            { title: 'Específicos', docs: ['Boletim de Ocorrência (BO)', 'Fotos / Vídeos do Dano', 'Orçamentos de Reparo', 'Notas Fiscais de Prejuízos', 'Rol de Testemunhas'] }
         ]
     },
     revisional_debito: {
         title: 'Ação Revisional de Débito',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Contrato', 'Planilha da dívida', 'Extratos', 'Endereço completo'] }
+            { title: 'Específicos', docs: ['Contrato de Financiamento / Empréstimo', 'Planilha de Evolução do Débito', 'Extratos Bancários Recentes'] }
         ]
     },
     exigir_contas: {
         title: 'Ação de Exigir Contas',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Prova da gestão de bens', 'Recusa em prestar contas', 'Endereço completo'] }
+            { title: 'Específicos', docs: ['Prova da administração de bens por terceiros', 'Notificação ou recusa em prestar contas'] }
         ]
     },
     alimentos_fixacao_majoracao_oferta: {
         title: 'Alimentos (Fixação / Majoração / Oferta)',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Do Alimentando', docs: ['Certidão de Nascimento', 'Comprovantes de despesas'] },
-            { title: 'Sobre o Réu', docs: ['Endereço completo', 'Dados de trabalho'] }
+            { title: 'Do Alimentando', docs: ['Certidão de Nascimento', 'Comprovantes de despesas da criança'] }
         ]
     },
     alimentos_gravidicos: {
         title: 'Ação de Alimentos Gravídicos',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Da Gestação', docs: ['Exame Beta HCG', 'Pré-Natal'] },
-            { title: 'Sobre o Réu', docs: ['Indícios de paternidade', 'Endereço completo', 'Dados de trabalho'] }
+            { title: 'Da Gestação', docs: ['Exame de Gravidez (Beta HCG)', 'Caderneta de Pré-Natal / Relatórios Médicos'] }
         ]
     },
     alimentos_avoengos: {
         title: 'Alimentos Avoengos',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Certidão de Nascimento', 'Prova da impossibilidade dos pais', 'Endereço completo', 'Dados de trabalho'] }
+            { title: 'Específicos', docs: ['Certidão de Nascimento', 'Prova da impossibilidade material dos genitores'] }
         ]
     },
     divorcio_consensual: {
         title: 'Divórcio Consensual',
         sections: [
-            { title: 'Documentação (Ambos)', docs: ['RG/CPF ambos', 'Comp. Residência ambos', 'Certidão Casamento', ...INCOME_DOCS_STRUCTURED] },
-            { title: 'Filhos/Bens', docs: ['Certidão Nascimento Filhos', 'Documentos Bens'] }
+            { title: 'Documentação (Ambos)', docs: ['RG e CPF de ambos', 'Comprovante de Residência de ambos', 'Certidão de Casamento Atualizada', ...INCOME_DOCS_STRUCTURED] },
+            { title: 'Filhos/Bens', docs: ['Certidão de Nascimento dos Filhos', 'Documentos de Bens (Documento de Carro / Escrituras)'] }
         ]
     },
     divorcio_litigioso: {
         title: 'Divórcio Litigioso',
         sections: [
-            { title: 'Base e Renda', docs: [...COMMON_DOCS_FULL, 'Certidão de Casamento'] },
-            { title: 'Filhos/Bens', docs: ['Certidão Nascimento Filhos', 'Documentos Bens'] },
-            { title: 'Sobre o Cônjuge', docs: ['Endereço completo', 'Dados de trabalho'] }
+            { title: 'Base e Renda', docs: [...COMMON_DOCS_FULL, 'Certidão de Casamento Atualizada'] },
+            { title: 'Filhos/Bens', docs: ['Certidão de Nascimento dos Filhos', 'Documentos de Propriedade de Bens'] }
         ]
     },
     uniao_estavel: {
         title: 'União Estável (Reconhecimento/Dissolução)',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Provas', docs: ['Certidão filhos', 'Contas conjuntas', 'Fotos', 'Testemunhas'] },
-            { title: 'Sobre o Réu', docs: ['Endereço completo', 'Dados de trabalho'] }
+            { title: 'Provas da Convivência', docs: ['Certidão de Nascimento de filhos comuns', 'Comprovante de mesmo endereço', 'Contas bancárias conjuntas / Apólices', 'Fotos do casal e redes sociais', 'Rol de Testemunhas'] }
         ]
     },
     guarda: {
         title: 'Ação de Guarda',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Da Criança', docs: ['Certidão Nascimento', 'Matrícula Escolar', 'Cartão Vacina'] },
-            { title: 'Do Réu', docs: ['Endereço completo', 'Dados de trabalho'] }
+            { title: 'Da Criança', docs: ['Certidão de Nascimento', 'Declaração de Matrícula Escolar', 'Cartão de Vacinação Atualizado'] }
         ]
     },
     regulamentacao_convivencia: {
         title: 'Regulamentação de Visitas',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Da Criança', docs: ['Certidão Nascimento'] },
-            { title: 'Sobre o Réu', docs: ['Endereço completo'] }
+            { title: 'Da Criança', docs: ['Certidão de Nascimento'] }
         ]
     },
     investigacao_paternidade: {
         title: 'Investigação de Paternidade',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Da Criança', docs: ['Certidão Nascimento (sem pai)'] },
-            { title: 'Suposto Pai', docs: ['Endereço completo', 'Dados de trabalho'] }
+            { title: 'Da Criança', docs: ['Certidão de Nascimento com paternidade em branco', 'Indícios ou provas do relacionamento na época da concepção'] }
         ]
     },
     curatela: {
         title: 'Curatela (Interdição)',
         sections: [
             { title: 'Base e Renda (Curador)', docs: COMMON_DOCS_FULL },
-            { title: 'Do Curatelando', docs: ['RG e CPF', 'Certidão Nascimento/Casamento', 'Renda (INSS)', 'Laudo Médico (CID)'] }
+            { title: 'Do Curatelando', docs: ['RG e CPF do Curatelando', 'Certidão de Nascimento ou Casamento do Curatelando', 'Comprovante de Renda / Extrato de Benefício do INSS', 'Atestado / Laudo Médico Detalhado com indicação do CID'] }
         ]
     },
     retificacao_registro_civil: {
         title: 'Retificação Registro Civil',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Certidão a retificar', 'Provas do erro'] }
+            { title: 'Específicos', docs: ['Certidão que apresenta o erro material', 'Documentos antigos que comprovam o dado correto'] }
         ]
     },
     alvara_valores: {
         title: 'Alvará (Valores)',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Do Falecido', docs: ['Óbito', 'Extratos'] }
+            { title: 'Do Falecido', docs: ['Certidão de Óbito', 'Extratos de contas bancárias / Resíduos do INSS / FGTS'] }
         ]
     },
     vaga_escola_creche: {
         title: 'Vaga em Creche/Escola',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Da Criança', docs: ['Certidão Nascimento', 'Protocolo Inscrição/Negativa'] }
+            { title: 'Da Criança', docs: ['Certidão de Nascimento', 'Protocolo de Inscrição na Rede Pública / Comprovante de Negativa de Vaga'] }
         ]
     }
 };
@@ -231,7 +231,7 @@ let currentPautaId = null;
 let db = null;                     
 let allAssisted = [];              
 let currentChecklistAction = null; 
-let demandasAdicionaisLocais = []; // ⭐ Array para guardar as demandas extras do assistido atual em memória
+let demandasAdicionaisLocais = []; 
 
 const getEl = (id) => document.getElementById(id);
 
@@ -304,23 +304,10 @@ function checkReuVisibility() {
             renderReuForm('address-editor-container');
         }
     } else {
-        const containerEl = getEl('checklist-container');
-        if (containerEl) {
-            const checkedLabels = Array.from(containerEl.querySelectorAll('.doc-checkbox:checked')).map(cb => 
-                cb.closest('label')?.querySelector('span')?.textContent || ''
-            );
-            const needsReu = checkedLabels.some(txt => txt.includes('Endereço') || txt.includes('Trabalho') || txt.includes('Réu'));
-            if (needsReu) {
-                reuArea.classList.remove('hidden');
-                if (reuArea.children.length === 0 || reuArea.innerHTML.trim() === '') renderReuForm('address-editor-container');
-            } else {
-                reuArea.classList.add('hidden');
-            }
-        }
+        reuArea.classList.add('hidden');
     }
 }
 
-// ⭐ INJEÇÃO DINÂMICA DA INTERFACE DE MÚLTIPLAS DEMANDAS EXTRA NO MODAL DE CHECKLIST ⭐
 function injectDemandasAdicionaisInterface(containerEl) {
     let divDemanda = document.getElementById('secao-demandas-adicionais-triagem');
     if (!divDemanda) {
@@ -359,7 +346,7 @@ function renderListaDemandasTriagem() {
     container.innerHTML = '';
 
     if (demandasAdicionaisLocais.length === 0) {
-        container.innerHTML = `<p class="text-[11px] text-gray-400 italic text-center py-2 bg-white rounded border border-dashed">Nenhuma demanda extra cadastrada.</p>`;
+        container.innerHTML = '<p class="text-[11px] text-gray-400 italic text-center py-2 bg-white rounded border border-dashed">Nenhuma demanda extra cadastrada.</p>';
         return;
     }
 
@@ -443,7 +430,6 @@ function renderChecklist(actionKey) {
         addExpenseButton(containerEl, saved);
     }
 
-    // Injeta painel de multiplas demandas
     injectDemandasAdicionaisInterface(containerEl);
 
     setupCheckboxEvents(containerEl);
@@ -537,7 +523,7 @@ function renderReuForm(containerId) {
             <div class="bg-white p-4 rounded-lg border border-gray-200 mb-4" style="border: 2px solid #f97316;">
                 <div class="flex items-center gap-3">
                     <input type="checkbox" id="check-reu-unico" class="h-5 w-5 text-red-600 rounded border-gray-300 focus:ring-red-500" checked>
-                    <label for="check-reu-unico" class="text-sm font-bold text-gray-700 cursor-pointer style="font-size: 16px; color: #b91c1c;">
+                    <label for="check-reu-unico" class="text-sm font-bold text-gray-700 cursor-pointer">
                         📋 DADOS DO RÉU (Endereço completo e Dados de trabalho)
                     </label>
                 </div>
@@ -899,7 +885,7 @@ async function handlePdf() {
             docTypes: getDocTypesFromForm(),
             reuData: reu,
             expenseData: gastos,
-            demandasAdicionais: demandasAdicionaisLocais // ⭐ Transmite para a engine do PDF as demandas adicionais
+            demandasAdicionais: demandasAdicionaisLocais 
         };
         
         const resultado = PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
@@ -962,7 +948,7 @@ async function handleSave(closeModal = true) {
         },
         demandas: {
             quantidade: demandasAdicionaisLocais.length,
-            descricoes: demandasAdicionaisLocais // ⭐ Grava na árvore o pool de casos extras unificados
+            descricoes: demandasAdicionaisLocais 
         },
         documentState: 'saved',
         selectedAction: currentChecklistAction ? documentsData[currentChecklistAction]?.title : null,
@@ -1053,7 +1039,6 @@ export async function openDetailsModal(config) {
         if (docSnap.exists()) {
             const data = docSnap.data();
             
-            // ⭐ CAPTURA E INJETA NA TELA O NÚMERO DE AGENDAMENTO SE SALVO NO FIREBASE ⭐
             if (data.numeroAgendamento && getEl('edit-assisted-num-agendamento')) {
                 getEl('edit-assisted-num-agendamento').value = data.numeroAgendamento;
             }
