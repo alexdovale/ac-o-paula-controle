@@ -77,9 +77,7 @@ export const AtendimentoExternoService = {
             const assistido = docSnap.data();
             this.assistidoData = assistido;
 
-            // ⭐ CORREÇÃO DA TELA DE ACESSO NEGADO ⭐
-            // Só bloqueia se existir um token no banco E ele for diferente do que está na URL.
-            // Se o processo for antigo e não tiver token nenhum, ele deixa passar.
+            // Bloqueia apenas se o token for divergente, ignora se não existir token antigo
             if (assistido.delegationToken && tokenRecebido && assistido.delegationToken !== tokenRecebido) {
                 this.showError("Acesso Expirado", "O token de segurança mudou. O caso já pode ter sido assumido ou transferido.");
                 return;
@@ -341,8 +339,7 @@ export const AtendimentoExternoService = {
         const inputNumeroCaso = document.getElementById('input-numero-caso');
         const numeroProcessoSalvo = inputNumeroCaso ? inputNumeroCaso.value.trim() : '';
 
-        // ⭐ BLINDAGEM ANTI-UNDEFINED ⭐
-        // Garante que nenhuma variável envie 'undefined' para o banco.
+        // Blindagem contra envio de undefined para o Firebase
         const numProcessoSeguro = numeroProcessoSalvo || '';
         const colabSeguro = this.colaboradorNome || 'Sistema';
         const pautaIdSeguro = this.pautaId || '';
@@ -460,7 +457,7 @@ export const AtendimentoExternoService = {
                 subtituloSucesso = "O assistido foi mandado de volta à fila de espera.";
             }
 
-            // SE DEU TUDO CERTO, MOSTRA A TELA DE SUCESSO
+            // ⭐ CORREÇÃO DE UI (Evita o "null is not an object" se a div principal mudar) ⭐
             const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
             const textoBotaoVoltar = isDefensor ? '⚖️ Voltar ao Painel Judicial' : '📊 Voltar à Minha Mesa';
 
@@ -473,27 +470,43 @@ export const AtendimentoExternoService = {
                 </div>
             `;
 
-            const areaColaborador = document.getElementById('area-colaborador');
-            if (areaColaborador) {
-                areaColaborador.innerHTML = mensagemSucessoHtml;
+            // Verifica as divs disponíveis com segurança para injetar a mensagem
+            let containerPrincipal = document.getElementById('area-colaborador') || document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl');
+            
+            if (containerPrincipal) {
+                containerPrincipal.innerHTML = mensagemSucessoHtml;
+            } else {
+                document.body.innerHTML = mensagemSucessoHtml; // Força a tela de sucesso no body se tudo falhar
             }
 
-            document.getElementById('btn-voltar-sucesso').onclick = () => this.renderizarDashboardUnificado(); 
+            // Aguarda um instante e vincula o clique do botão
+            setTimeout(() => {
+                const btnVoltar = document.getElementById('btn-voltar-sucesso');
+                if (btnVoltar) {
+                    btnVoltar.onclick = () => this.renderizarDashboardUnificado(); 
+                }
+            }, 50);
 
             const headerBg = document.getElementById('header-bg');
             if (headerBg) {
                 headerBg.classList.replace('bg-slate-800', 'bg-emerald-600');
-                headerBg.querySelector('div.bg-blue-500')?.remove(); 
+                const circuloAzul = headerBg.querySelector('.bg-blue-500');
+                if (circuloAzul) circuloAzul.remove(); 
             }
 
         } catch (error) {
             console.error("Erro no processamento:", error);
             alert(`Erro ao salvar no banco de dados. Motivo: ${error.message}`);
-            btnFinalizar.disabled = false;
-            btnFinalizar.textContent = "EXECUTAR AÇÃO";
+            if (btnFinalizar) {
+                btnFinalizar.disabled = false;
+                btnFinalizar.textContent = "EXECUTAR AÇÃO";
+            }
         }
     },
 
+    // ==========================================
+    // ABAS SECUNDÁRIAS (Histórico e Peça)
+    // ==========================================
     renderizarHistorico(assistido) {
         const lista = document.getElementById('lista-historico');
         if (!lista) return;
@@ -594,8 +607,11 @@ export const AtendimentoExternoService = {
         }
     },
 
+    // ==========================================
+    // DASHBOARD UNIFICADO (DEFENSOR E SERVIDOR)
+    // ==========================================
     async renderizarDashboardUnificado() {
-        const corpo = document.querySelector('.w-full.max-w-2xl');
+        const corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl');
         if (!corpo) return;
 
         const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
@@ -784,9 +800,11 @@ export const AtendimentoExternoService = {
     },
 
     showError(titulo, mensagem) {
-        const corpo = document.querySelector('.w-full.max-w-2xl');
-        if (corpo) {
-            corpo.innerHTML = `
+        let corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl');
+        if (!corpo) corpo = document.body;
+
+        corpo.innerHTML = `
+            <div class="w-full max-w-2xl mx-auto my-4">
                 <div class="bg-red-600 p-8 rounded-t-3xl shadow-xl flex flex-col items-center justify-center relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
                     <div class="bg-white p-3 rounded-2xl shadow-sm mb-4 relative z-10">
@@ -799,7 +817,7 @@ export const AtendimentoExternoService = {
                     <h2 class="text-xl font-black text-gray-800 uppercase tracking-wide mb-3">${titulo}</h2>
                     <p class="text-gray-500 font-semibold leading-relaxed">${mensagem}</p>
                 </div>
-            `;
-        }
+            </div>
+        `;
     }
 };
