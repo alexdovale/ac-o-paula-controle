@@ -151,7 +151,7 @@ export const PDFService = {
                 ]],
                 body: body,
                 theme: 'grid',
-                styles: { lineColor: [0, 0, 0], lineWidth: 1, textColor: [0, 0, 0], fontSize: 10, cellPadding: 6 },
+                styles: { lineColor: [0, 0, 0], lineWidth: 1, textColor: [0, 0, 0], fontSize: 10, cellPadding: 6, overflow: 'linebreak' },
                 columnStyles: { 0: { cellWidth: 280 }, 1: { cellWidth: 150 } },
                 margin: { left: (doc.internal.pageSize.getWidth() - 430) / 2 }
             });
@@ -164,7 +164,7 @@ export const PDFService = {
         }
     },
 
-    // ⭐ REFORMULADO: RELATÓRIO DE ASSISTIDOS ATENDIDOS (COM ETAPA, DURAÇÃO E LANÇADO NO VERDE) ⭐
+    // ⭐ REFORMULADO: RELATÓRIO DE ASSISTIDOS ATENDIDOS (COM HORÁRIO AGENDADO, QUEBRA DE TEXTO AUTOMÁTICA ANTI-VAZAMENTO) ⭐
     async generateAtendidosPDF(atendidosList, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
@@ -183,16 +183,14 @@ export const PDFService = {
                 const dataAtendimento = getSafeDate(a.attendedAt || a.lastActionTimestamp);
                 const horaStr = dataAtendimento ? dataAtendimento.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : 'N/A';
                 
-                // Calcula duração total da pauta até o encerramento do protocolo
                 const inicioProcesso = a.arrivalTime || a.createdAt;
                 const duracaoTotal = getDuracaoMinutos(inicioProcesso, a.attendedAt);
-
-                // Mapeia o status binário do botão do certo verde (Presença no Verde)
                 const lancadoNoVerde = a.isConfirmed ? "Sim" : "Não";
 
                 return [
                     index + 1,
                     a.name || 'Não Informado',
+                    a.scheduledTime || 'Avulso', // ⏰ Inclusão do horário agendado solicitado
                     a.subject || 'Não Informado',
                     getAttendantNameForPDF(a),
                     a.numeroProcesso || 'S/ Número',
@@ -202,21 +200,25 @@ export const PDFService = {
                 ];
             });
 
-            if (body.length === 0) body.push([{ content: "Nenhum atendimento finalizado nesta pauta.", colSpan: 8, styles: { halign: 'center', fontStyle: 'italic' } }]);
+            if (body.length === 0) body.push([{ content: "Nenhum atendimento finalizado nesta pauta.", colSpan: 9, styles: { halign: 'center', fontStyle: 'italic' } }]);
 
             doc.autoTable({
                 startY: 80,
-                head: [['Nº', 'NOME DO ASSISTIDO', 'ASSUNTO / DEMANDA', 'ATENDENTE', 'Nº PROCESSO / PROTOCOLO', 'HORA CONCL.', 'DURAÇÃO', 'LANÇADO VERDE']],
+                head: [['Nº', 'NOME DO ASSISTIDO', 'AGENDADO', 'ASSUNTO / DEMANDA', 'ATENDENTE', 'Nº PROCESSO / PROTOCOLO', 'HORA CONCL.', 'DURAÇÃO', 'LANÇADO VERDE']],
                 body: body,
                 theme: 'striped',
                 headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' },
-                styles: { fontSize: 8.5, cellPadding: 5, valign: 'middle' },
+                styles: { fontSize: 8, cellPadding: 5, valign: 'middle', overflow: 'linebreak' }, // 💡 overflow: 'linebreak' força a quebra automática de linha
                 columnStyles: { 
-                    0: { halign: 'center' }, 
-                    4: { fontStyle: 'bold', halign: 'center' }, 
-                    5: { halign: 'center' }, 
-                    6: { halign: 'center', fontStyle: 'bold' }, 
-                    7: { halign: 'center' } 
+                    0: { halign: 'center', cellWidth: 25 }, 
+                    1: { cellWidth: 120 }, // Limita tamanho fixo do nome para quebrar texto
+                    2: { halign: 'center', fontStyle: 'bold', cellWidth: 60 },
+                    3: { cellWidth: 160 }, // Limita tamanho do assunto para quebrar linha
+                    4: { cellWidth: 100 }, 
+                    5: { fontStyle: 'bold', halign: 'center', cellWidth: 100 }, 
+                    6: { halign: 'center', cellWidth: 60 }, 
+                    7: { halign: 'center', fontStyle: 'bold', cellWidth: 65 }, 
+                    8: { halign: 'center', cellWidth: 65 } 
                 }
             });
 
@@ -228,7 +230,7 @@ export const PDFService = {
         }
     },
 
-    // ⭐ REFORMULADO: RELATÓRIO DE FALTOSOS (COM AGENDAMENTO, HORA DA FALTA, ATRASO E BOTÃO VERDE) ⭐
+    // ⭐ REFORMULADO: RELATÓRIO DE FALTOSOS (QUEBRA DE TEXTO AUTOMÁTICA NAS COLUNAS DE TEXTO) ⭐
     async generateFaltososPDF(faltososList, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
@@ -246,10 +248,7 @@ export const PDFService = {
             const body = faltososList.map((f, index) => {
                 const dataFalta = getSafeDate(f.lastActionTimestamp);
                 const horaFaltaStr = dataFalta ? dataFalta.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : 'N/A';
-                
-                // Calcula tempo total estourado de tolerância desde o horário agendado
                 const tempoAtraso = getDiferencaAgendamento(f.scheduledTime, f.lastActionTimestamp);
-                
                 const lancadoNoVerde = f.isConfirmed ? "Sim" : "Não";
 
                 return [
@@ -271,13 +270,15 @@ export const PDFService = {
                 body: body,
                 theme: 'striped',
                 headStyles: { fillColor: [153, 27, 27], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' },
-                styles: { fontSize: 9, cellPadding: 6, valign: 'middle' },
+                styles: { fontSize: 8.5, cellPadding: 6, valign: 'middle', overflow: 'linebreak' }, // 💡 Garante o wrap automático no celular/PC
                 columnStyles: { 
-                    0: { halign: 'center' }, 
-                    3: { halign: 'center', fontStyle: 'bold' }, 
-                    4: { halign: 'center' }, 
-                    5: { halign: 'center', fontStyle: 'bold' }, 
-                    6: { halign: 'center' } 
+                    0: { halign: 'center', cellWidth: 30 }, 
+                    1: { cellWidth: 160 }, // Enquadra o nome
+                    2: { cellWidth: 220 }, // Enquadra o assunto sem estourar a folha
+                    3: { halign: 'center', fontStyle: 'bold', cellWidth: 80 }, 
+                    4: { halign: 'center', cellWidth: 70 }, 
+                    5: { halign: 'center', fontStyle: 'bold', cellWidth: 80 }, 
+                    6: { halign: 'center', cellWidth: 80 } 
                 }
             });
 
@@ -289,7 +290,7 @@ export const PDFService = {
         }
     },
 
-    // ⭐ RELATÓRIO DE PRODUTIVIDADE E COLABORADORES ⭐
+    // ⭐ RELATÓRIO DE PRODUTIVIDADE E COLABORADORES COM AUTO-WRAP ⭐
     async generateCollaboratorsPDF(colaboradoresList, todosAtendimentos, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
@@ -327,8 +328,16 @@ export const PDFService = {
                 body: body,
                 theme: 'striped',
                 headStyles: { fillColor: [4, 120, 87], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' },
-                styles: { fontSize: 9, cellPadding: 6, valign: 'middle' },
-                columnStyles: { 0: { halign: 'center' }, 2: { halign: 'center' }, 4: { halign: 'center' }, 5: { halign: 'center' }, 6: { halign: 'center', fontStyle: 'bold' } }
+                styles: { fontSize: 8.5, cellPadding: 6, valign: 'middle', overflow: 'linebreak' },
+                columnStyles: { 
+                    0: { halign: 'center', cellWidth: 25 }, 
+                    1: { cellWidth: 150 }, // Força a quebra de linha em nomes gigantescos de colaboradores
+                    2: { halign: 'center', cellWidth: 100 }, 
+                    3: { cellWidth: 90 }, 
+                    4: { halign: 'center', cellWidth: 50 }, 
+                    5: { halign: 'center', cellWidth: 50 }, 
+                    6: { halign: 'center', fontStyle: 'bold', cellWidth: 65 } 
+                }
             });
 
             doc.save(`SIGEP_Produtividade_Equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`);
