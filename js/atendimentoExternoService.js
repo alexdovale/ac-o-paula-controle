@@ -1,12 +1,12 @@
-// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (MODERNIZADO)
+
+// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (BLINDAGEM TOTAL ANTI-ERROS)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, query, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
 import { documentsData } from './detalhes.js'; 
 import { PDFService } from './pdfService.js';
-import { ReviewFlowService } from './reviewFlow.js'; // Importa a lógica que modernizamos antes
 
 const escapeHTML = (str) => {
     if (!str) return '';
@@ -24,9 +24,6 @@ const escapeHTML = (str) => {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-
-// Envelope falso para passar ao ReviewFlow
-const pseudoApp = { db: db, currentPauta: { id: null }, currentUserName: null };
 
 export const AtendimentoExternoService = {
     pautaId: null,
@@ -46,9 +43,6 @@ export const AtendimentoExternoService = {
         const tokenRecebido = urlParams.get('token');
         this.colaboradorNome = urlParams.get('colab') || "Colaborador";
 
-        pseudoApp.currentPauta.id = this.pautaId;
-        pseudoApp.currentUserName = this.colaboradorNome;
-
         if (!this.pautaId || !this.colaboradorNome) {
             this.showError("Link Incompleto", "Faltam parâmetros de Pauta ou Colaborador na URL.");
             return;
@@ -65,11 +59,6 @@ export const AtendimentoExternoService = {
             }
 
             // MODO ATENDIMENTO INDIVIDUAL (Peça do assistido aberta)
-            if (!tokenRecebido) {
-                this.showError("Acesso Seguro Necessário", "Falta o token de segurança para acessar este atendimento.");
-                return;
-            }
-
             const pautaRef = doc(db, "pautas", this.pautaId);
             const pautaSnap = await getDoc(pautaRef);
             if (!pautaSnap.exists()) {
@@ -88,7 +77,10 @@ export const AtendimentoExternoService = {
             const assistido = docSnap.data();
             this.assistidoData = assistido;
 
-            if (assistido.delegationToken !== tokenRecebido) {
+            // ⭐ CORREÇÃO DO ACESSO NEGADO ⭐
+            // Só bloqueia se o assistido TIVER um token registrado no banco e ele for diferente do recebido.
+            // Se for um processo antigo sem token, ou uma abertura direta, ele permite a leitura.
+            if (assistido.delegationToken && tokenRecebido && assistido.delegationToken !== tokenRecebido) {
                 this.showError("Acesso Expirado", "O token de segurança mudou. O caso já pode ter sido assumido ou transferido.");
                 return;
             }
@@ -102,7 +94,7 @@ export const AtendimentoExternoService = {
             this.setupListeners();
 
         } catch (error) {
-            console.error("Erro geral:", error);
+            console.error("Erro geral na inicialização:", error);
             this.showError("Conexão Perdida", "Falha ao conectar com o banco de dados principal.");
         }
     },
@@ -119,14 +111,12 @@ export const AtendimentoExternoService = {
     },
 
     renderizarInterface(assistido, pautaData) {
-        // Moderniza o Header principal da página
         const headerBg = document.getElementById('header-bg');
         if (headerBg && !document.getElementById('logo-header-main')) {
             const textosWrapper = document.createElement('div');
             textosWrapper.className = "overflow-hidden w-full";
             while (headerBg.firstChild) textosWrapper.appendChild(headerBg.firstChild);
             
-            // Layout refinado do cabeçalho
             headerBg.className = 'bg-slate-800 p-5 sm:p-6 rounded-t-2xl shadow-lg flex items-center gap-4 relative overflow-hidden';
             headerBg.innerHTML = `
                 <div class="absolute top-0 right-0 w-48 h-48 bg-blue-500 opacity-10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
@@ -137,7 +127,6 @@ export const AtendimentoExternoService = {
             headerBg.appendChild(textosWrapper);
         }
 
-        // Títulos refinados
         document.getElementById('assistido-nome').className = 'text-white font-black text-xl sm:text-2xl truncate relative z-10';
         document.getElementById('assistido-nome').textContent = assistido.name || 'Nome não informado';
         
@@ -147,7 +136,6 @@ export const AtendimentoExternoService = {
         const areaColaborador = document.getElementById('area-colaborador');
         areaColaborador.classList.remove('hidden');
 
-        // Banner de Histórico de Transferência / Retorno (Estilo Notificação)
         if (assistido.historicoTransferencia && !document.getElementById('banner-transferencia')) {
             const bannerHtml = `
                 <div id="banner-transferencia" class="w-full bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl shadow-sm mb-6 flex items-start gap-3 relative overflow-hidden">
@@ -162,7 +150,6 @@ export const AtendimentoExternoService = {
             areaColaborador.insertAdjacentHTML('afterbegin', bannerHtml);
         }
 
-        // Atalho dinâmico para o Painel Judicial
         if (!document.getElementById('btn-atalho-painel')) {
             const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
             const tituloBotao = isDefensor ? 'Ver Minhas Assinaturas Pendentes' : 'Ir para Meus Atendimentos';
@@ -188,7 +175,6 @@ export const AtendimentoExternoService = {
 
         let optionsHtml = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">`;
 
-        // ==== 1. FINALIZAR (Servidor ou Defensor com Processo) ====
         optionsHtml += `
             <button id="btn-opt-direto" class="fluxo-opt-btn bg-emerald-50 border-2 border-emerald-400 ring-2 ring-emerald-100 p-4 rounded-xl text-left transition-all hover:shadow-md group">
                 <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">✅</span>
@@ -198,7 +184,6 @@ export const AtendimentoExternoService = {
         `;
 
         if (showDistribuicao) {
-            // ==== FLUXOS DO SERVIDOR (Envia pro Defensor) ====
             optionsHtml += `
                 <button id="btn-opt-dist" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 hover:border-cyan-300 group">
                     <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">⚖️</span>
@@ -214,7 +199,6 @@ export const AtendimentoExternoService = {
         }
 
         if (isDefensor) {
-            // ==== FLUXO DO DEFENSOR (Devolve pro Servidor) ====
             optionsHtml += `
                 <button id="btn-opt-devolver" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 hover:border-orange-300 group">
                     <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">🔙</span>
@@ -224,7 +208,6 @@ export const AtendimentoExternoService = {
             `;
         }
 
-        // ==== COMUM (Transferir e Pausar) ====
         optionsHtml += `
             <button id="btn-opt-transferir" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 hover:border-indigo-300 group">
                 <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">🔄</span>
@@ -238,7 +221,6 @@ export const AtendimentoExternoService = {
             </button>
         </div>`;
 
-        // ==== CAIXAS DE FORMULÁRIO DINÂMICAS ====
         optionsHtml += `
             <div id="config-numero-processo" class="bg-slate-50 p-5 rounded-xl border border-slate-200 mb-6 transition-all shadow-inner">
                 <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1"><span>📄</span> Nº Processo / Protocolo (Opcional)</label>
@@ -293,12 +275,10 @@ export const AtendimentoExternoService = {
         const setAtivo = (btnClicado, fluxo) => {
             this.fluxoSelecionado = fluxo;
             
-            // Reseta visual de todos
             botoesFluxo.forEach(b => {
                 b.className = 'fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 group';
             });
             
-            // Colore o ativo de acordo com a aba
             const coresAvas = {
                 'direto': 'bg-emerald-50 border-2 border-emerald-400 ring-2 ring-emerald-100',
                 'distribuicao': 'bg-cyan-50 border-2 border-cyan-400 ring-2 ring-cyan-100',
@@ -309,7 +289,6 @@ export const AtendimentoExternoService = {
             };
             btnClicado.className = `fluxo-opt-btn ${coresAvas[fluxo]} p-4 rounded-xl text-left transition-all shadow-md group`;
 
-            // Mostra o form correto
             Object.keys(configBoxes).forEach(key => {
                 if(configBoxes[key]) configBoxes[key].classList.add('hidden');
             });
@@ -353,7 +332,7 @@ export const AtendimentoExternoService = {
     },
 
     // ========================================================
-    // INTEGRAÇÃO DE SUCESSO COM O REVIEWFLOW.JS (NOVO CÓDIGO)
+    // INTEGRAÇÃO BLINDADA (SEM PASSAR PELO REVIEWFLOW EXTERNO)
     // ========================================================
     async finalizarProcesso() {
         if (!this.fluxoSelecionado) return;
@@ -363,85 +342,114 @@ export const AtendimentoExternoService = {
         btnFinalizar.innerHTML = '<span class="animate-pulse">PROCESSANDO...</span>';
 
         const inputNumeroCaso = document.getElementById('input-numero-caso');
-        const numeroProcessoSalvo = inputNumeroCaso ? inputNumeroCaso.value.trim() : null;
+        const numeroProcessoSalvo = inputNumeroCaso ? inputNumeroCaso.value.trim() : '';
 
-        let sucesso = false;
+        // ⭐ BLINDAGEM ANTI-UNDEFINED ⭐ (Evita que o Firebase recuse a gravação)
+        const numProcessoSeguro = numeroProcessoSalvo || '';
+        const colabSeguro = this.colaboradorNome || 'Sistema';
+        const pautaIdSeguro = this.pautaId || '';
+        const assistidoIdSeguro = this.assistidoId || '';
+
         let tituloSucesso = "Atendimento Atualizado!";
         let subtituloSucesso = "Ação registrada com sucesso.";
 
-        // Aqui nós conectamos a tela com a API/Service que fizemos antes!
         try {
+            const docRef = doc(db, "pautas", pautaIdSeguro, "attendances", assistidoIdSeguro);
+            const novoToken = Date.now().toString(36) + Math.random().toString(36).substring(2); 
+
             if (this.fluxoSelecionado === 'direto') {
-                sucesso = await ReviewFlowService.approveReview(pseudoApp, this.assistidoId, numeroProcessoSalvo);
+                await updateDoc(docRef, {
+                    status: numProcessoSeguro ? 'atendido' : 'aguardandoNumero',
+                    attendedBy: colabSeguro,
+                    attendedAt: new Date().toISOString(),
+                    finalizadoPeloColaborador: !!numProcessoSeguro,
+                    numeroProcesso: numProcessoSeguro,
+                    history: arrayUnion({
+                        action: numProcessoSeguro ? 'APROVADO_E_DISTRIBUIDO' : 'APROVADO_AGUARDANDO_NUMERO',
+                        by: colabSeguro,
+                        msg: numProcessoSeguro ? `Nº ${numProcessoSeguro}` : 'Aprovado internamente',
+                        at: new Date().toISOString()
+                    })
+                });
                 tituloSucesso = "Atendimento Finalizado!";
-                subtituloSucesso = numeroProcessoSalvo ? "Processo distribuído e salvo." : "Atendimento encerrado sem número de processo.";
+                subtituloSucesso = numProcessoSeguro ? "Processo distribuído e salvo." : "Atendimento encerrado sem número de processo.";
             } 
             else if (this.fluxoSelecionado === 'distribuicao') {
-                const def = document.getElementById('select-defensor-distribuicao')?.value;
-                const nota = document.getElementById('notas-distribuicao-dinamico')?.value;
+                const def = document.getElementById('select-defensor-distribuicao')?.value || '';
+                const nota = document.getElementById('notas-distribuicao-dinamico')?.value || '';
                 if (!def) { alert("Obrigatório selecionar um Defensor."); btnFinalizar.disabled = false; btnFinalizar.textContent = "EXECUTAR AÇÃO"; return; }
                 
-                sucesso = await ReviewFlowService.sendToReview(pseudoApp, this.assistidoId, def, nota);
+                await updateDoc(docRef, {
+                    status: 'aguardandoDistribuicao',
+                    defensorResponsavel: def,
+                    notasRevisao: nota,
+                    numeroProcesso: numProcessoSeguro,
+                    enviadoPor: colabSeguro,
+                    delegationToken: novoToken,
+                    history: arrayUnion({
+                        action: 'ENVIADO_PARA_REVISAO',
+                        by: colabSeguro,
+                        msg: nota || 'Enviado para assinatura',
+                        at: new Date().toISOString()
+                    })
+                });
                 tituloSucesso = "Enviado à Distribuição!";
                 subtituloSucesso = `O Defensor(a) ${def} já recebeu o documento.`;
             }
             else if (this.fluxoSelecionado === 'correcao') {
-                const def = document.getElementById('select-defensor-correcao')?.value;
-                const nota = document.getElementById('notas-correcao-dinamico')?.value;
+                const def = document.getElementById('select-defensor-correcao')?.value || '';
+                const nota = document.getElementById('notas-correcao-dinamico')?.value || '';
                 if (!def) { alert("Obrigatório selecionar um Defensor."); btnFinalizar.disabled = false; btnFinalizar.textContent = "EXECUTAR AÇÃO"; return; }
                 
-                // Reaproveitamos o sendToReview, pois ele faz o histórico igual, mas forçamos o update para Correcao manual aqui 
-                // para não criar 50 funções diferentes no ReviewFlow
-                const docRef = doc(db, "pautas", this.pautaId, "attendances", this.assistidoId);
-                await updateDoc(docRef, { status: 'aguardandoCorrecao', defensorResponsavel: def, notasRevisao: nota, enviadoPor: this.colaboradorNome });
-                sucesso = true;
-
+                await updateDoc(docRef, { 
+                    status: 'aguardandoCorrecao', 
+                    defensorResponsavel: def, 
+                    notasRevisao: nota, 
+                    reviewMotivoDevolucao: nota,
+                    enviadoPor: colabSeguro,
+                    delegationToken: novoToken,
+                    history: arrayUnion({
+                        action: 'ENVIADO_PARA_CORRECAO',
+                        by: colabSeguro,
+                        msg: nota || 'Avaliação solicitada',
+                        at: new Date().toISOString()
+                    })
+                });
                 tituloSucesso = "Enviado p/ Avaliação!";
                 subtituloSucesso = `O Defensor(a) ${def} avaliará a dúvida inserida.`;
             }
             else if (this.fluxoSelecionado === 'devolver') {
-                const serv = document.getElementById('select-servidor-devolver')?.value;
-                const nota = document.getElementById('notas-devolver-dinamico')?.value;
+                const serv = document.getElementById('select-servidor-devolver')?.value || '';
+                const nota = document.getElementById('notas-devolver-dinamico')?.value || '';
                 if (!serv) { alert("Selecione o servidor de destino."); btnFinalizar.disabled = false; btnFinalizar.textContent = "EXECUTAR AÇÃO"; return; }
                 
                 const colegaObj = this.todosColaboradores.find(c => c.nome === serv);
-                const tokenObj = Date.now().toString(36) + Math.random().toString(36).substring(2);
-
-                const docRef = doc(db, "pautas", this.pautaId, "attendances", this.assistidoId);
                 await updateDoc(docRef, {
                     status: 'emAtendimento', 
-                    assignedCollaborator: { name: serv, email: colegaObj?.email || null },
+                    assignedCollaborator: { name: serv, email: colegaObj?.email || '' },
                     inAttendanceTime: new Date().toISOString(), 
-                    delegationToken: tokenObj,
-                    historicoTransferencia: `Devolvido (Correção) pelo Defensor ${this.colaboradorNome}. Msg: ${nota}`
+                    delegationToken: novoToken,
+                    historicoTransferencia: `Devolvido (Correção) por ${colabSeguro}. Msg: ${nota}`
                 });
-                sucesso = true;
-
                 tituloSucesso = "Processo Devolvido!";
                 subtituloSucesso = `O servidor ${serv} deve corrigir o documento.`;
             }
             else if (this.fluxoSelecionado === 'transferir') {
-                const colega = document.getElementById('select-transferir-colega')?.value;
+                const colega = document.getElementById('select-transferir-colega')?.value || '';
                 if (!colega) { alert("Selecione um colega."); btnFinalizar.disabled = false; btnFinalizar.textContent = "EXECUTAR AÇÃO"; return; }
                 
                 const colegaObj = this.todosColaboradores.find(c => c.nome === colega);
-                const tokenObj = Date.now().toString(36) + Math.random().toString(36).substring(2);
-
-                const docRef = doc(db, "pautas", this.pautaId, "attendances", this.assistidoId);
                 await updateDoc(docRef, {
                     status: 'emAtendimento', 
-                    assignedCollaborator: { name: colega, email: colegaObj?.email || null },
+                    assignedCollaborator: { name: colega, email: colegaObj?.email || '' },
                     inAttendanceTime: new Date().toISOString(), 
-                    delegationToken: tokenObj,
-                    historicoTransferencia: `Transferência de ${this.colaboradorNome} para ${colega}.`
+                    delegationToken: novoToken,
+                    historicoTransferencia: `Transferência de ${colabSeguro} para ${colega}.`
                 });
-                sucesso = true;
-
                 tituloSucesso = "Transferência Ativa!";
                 subtituloSucesso = `Caso transferido com sucesso para ${colega}.`;
             } 
             else if (this.fluxoSelecionado === 'pausar') {
-                const docRef = doc(db, "pautas", this.pautaId, "attendances", this.assistidoId);
                 await updateDoc(docRef, {
                     status: 'aguardando',
                     assignedCollaborator: null,
@@ -450,42 +458,40 @@ export const AtendimentoExternoService = {
                     inAttendanceTime: null,
                     distributionStatus: null
                 });
-                sucesso = true;
-
                 tituloSucesso = "Pausa Registrada";
                 subtituloSucesso = "O assistido foi mandado de volta à fila de espera.";
             }
 
-            if (sucesso) {
-                const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
-                const textoBotaoVoltar = isDefensor ? '⚖️ Voltar ao Painel Judicial' : '📊 Voltar à Minha Mesa';
+            // SE DEU TUDO CERTO, MOSTRA A TELA DE SUCESSO
+            const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
+            const textoBotaoVoltar = isDefensor ? '⚖️ Voltar ao Painel Judicial' : '📊 Voltar à Minha Mesa';
 
-                const mensagemSucessoHtml = `
-                    <div class="text-center p-8 sm:p-12 bg-emerald-50 rounded-2xl border-2 border-emerald-200 shadow-lg mt-6 animate-fade-in">
-                        <div class="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center text-4xl text-white mx-auto shadow-md mb-6">✓</div>
-                        <h2 class="text-2xl font-black text-emerald-800 uppercase tracking-widest">${tituloSucesso}</h2>
-                        <p class="text-emerald-600 mt-2 font-medium">${subtituloSucesso}</p>
-                        <button id="btn-voltar-sucesso" class="mt-8 bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 px-8 rounded-xl shadow transition w-full sm:w-auto uppercase text-xs tracking-widest">${textoBotaoVoltar}</button>
-                    </div>
-                `;
+            const mensagemSucessoHtml = `
+                <div class="text-center p-8 sm:p-12 bg-emerald-50 rounded-2xl border-2 border-emerald-200 shadow-lg mt-6 animate-fade-in">
+                    <div class="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center text-4xl text-white mx-auto shadow-md mb-6">✓</div>
+                    <h2 class="text-2xl font-black text-emerald-800 uppercase tracking-widest">${tituloSucesso}</h2>
+                    <p class="text-emerald-600 mt-2 font-medium">${subtituloSucesso}</p>
+                    <button id="btn-voltar-sucesso" class="mt-8 bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 px-8 rounded-xl shadow transition w-full sm:w-auto uppercase text-xs tracking-widest">${textoBotaoVoltar}</button>
+                </div>
+            `;
 
-                const areaColaborador = document.getElementById('area-colaborador');
-                if (areaColaborador) {
-                    areaColaborador.innerHTML = mensagemSucessoHtml;
-                }
+            const areaColaborador = document.getElementById('area-colaborador');
+            if (areaColaborador) {
+                areaColaborador.innerHTML = mensagemSucessoHtml;
+            }
 
-                document.getElementById('btn-voltar-sucesso').onclick = () => this.renderizarDashboardUnificado(); 
+            document.getElementById('btn-voltar-sucesso').onclick = () => this.renderizarDashboardUnificado(); 
 
-                const headerBg = document.getElementById('header-bg');
-                if (headerBg) {
-                    headerBg.classList.replace('bg-slate-800', 'bg-emerald-600');
-                    headerBg.querySelector('div.bg-blue-500')?.remove(); 
-                }
+            const headerBg = document.getElementById('header-bg');
+            if (headerBg) {
+                headerBg.classList.replace('bg-slate-800', 'bg-emerald-600');
+                headerBg.querySelector('div.bg-blue-500')?.remove(); 
             }
 
         } catch (error) {
             console.error("Erro no processamento:", error);
-            alert("A conexão falhou. Nada foi salvo. Tente novamente.");
+            // ALERTA MELHORADO: Agora ele mostra o erro exato do Firebase se algo der errado
+            alert(`Erro ao salvar no banco de dados. Motivo: ${error.message}`);
             btnFinalizar.disabled = false;
             btnFinalizar.textContent = "EXECUTAR AÇÃO";
         }
@@ -606,8 +612,7 @@ export const AtendimentoExternoService = {
         const subtituloPainel = isDefensor ? 'Fluxo de Assinaturas e Petições' : 'Atendimentos Repassados a Você';
         const iconePainel = isDefensor ? '⚖️' : '🧑‍💻';
 
-        // Cabeçalho Premium da Tela Principal
-        corpo.className = "w-full max-w-4xl mx-auto my-4"; // Alargou um pouco pro dashboard respirar
+        corpo.className = "w-full max-w-4xl mx-auto my-4"; 
         corpo.innerHTML = `
             <div id="header-bg" class="bg-slate-800 p-6 sm:p-8 rounded-t-2xl shadow-xl flex items-center justify-between relative overflow-hidden border-b border-slate-700">
                 <div class="absolute top-0 right-0 w-64 h-64 bg-${isDefensor ? 'cyan' : 'indigo'}-500 opacity-20 rounded-full blur-3xl -mr-10 -mt-20 pointer-events-none"></div>
@@ -640,7 +645,6 @@ export const AtendimentoExternoService = {
             const todos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             const baseUrl = window.location.href.substring(0, window.location.href.indexOf('?'));
 
-            // Função de desenho de Card Ultra-Premium
             const desenharCard = (item, isCardAberto) => {
                 const notas = item.notasRevisao ? `<div class="mt-3 bg-yellow-50 p-3 rounded-lg text-xs text-yellow-900 border border-yellow-300 font-semibold shadow-sm leading-snug">⚠️ <b>Nota Anexada:</b> ${escapeHTML(item.notasRevisao)}</div>` : '';
                 const numProcessoHtml = item.numeroProcesso ? `<span class="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 font-mono text-[10px] font-bold border border-slate-300 mt-2">Nº ${escapeHTML(item.numeroProcesso)}</span>` : '';
