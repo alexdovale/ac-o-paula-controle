@@ -35,9 +35,10 @@ export const AtendimentoExternoService = {
     colaboradorAtual: null,
     isProcessing: false, 
     todosAtendimentosPauta: [], 
+    demandasAdicionaisLocais: [], // ⭐ Array dinâmico para segurar as novas demandas em memória
 
     async init() {
-        console.log("⚡ Atendimento Externo Inicializado (Premium Mode)");
+        console.log("⚡ Atendimento Externo Inicializado (Premium Mode - SIGEP)");
 
         const urlParams = new URLSearchParams(window.location.search);
         this.pautaId = urlParams.get('pautaId');
@@ -82,6 +83,9 @@ export const AtendimentoExternoService = {
 
             const assistido = docSnap.data();
             this.assistidoData = assistido;
+
+            // Restaura demandas adicionais já existentes se houver
+            this.demandasAdicionaisLocais = (assistido.demandas && assistido.demandas.descricoes) ? [...assistido.demandas.descricoes] : [];
 
             if (assistido.delegationToken && assistido.delegationToken !== tokenRecebido) {
                 this.showError("Acesso Seguro Necessário", "O token de segurança é inválido ou expirou.");
@@ -228,7 +232,17 @@ export const AtendimentoExternoService = {
             </button>
         </div>`;
 
+        // ⭐ INJEÇÃO DA SEÇÃO DE DEMANDAS ADICIONAIS DENTRO DO FORMULÁRIO GERAL DE REVISÃO ⭐
         optionsHtml += `
+            <div id="secao-demandas-adicionais-externo" class="bg-indigo-50 p-5 rounded-xl border border-indigo-200 mb-6 shadow-inner">
+                <label class="block text-[10px] font-black text-indigo-700 uppercase tracking-widest mb-2 flex items-center gap-1"><span>📋</span> Acumular Demandas Resolvidas (Múltiplos Casos)</label>
+                <div class="flex gap-2 mb-3">
+                    <input type="text" id="input-nova-demanda-externo" class="flex-grow p-2.5 border border-indigo-300 rounded-lg text-xs outline-none bg-white focus:ring-2 focus:ring-indigo-500" placeholder="Ex: Regulamentação de Guarda...">
+                    <button type="button" id="btn-add-demanda-externo" class="bg-indigo-600 text-white font-bold px-4 py-2 rounded-lg text-xs hover:bg-indigo-700 transition shadow-sm uppercase tracking-wider">Somar</button>
+                </div>
+                <div id="container-lista-demandas-externo" class="space-y-1.5 max-h-36 overflow-y-auto pr-1"></div>
+            </div>
+
             <div id="config-numero-processo" class="bg-slate-50 p-5 rounded-xl border border-slate-200 mb-6 transition-all shadow-inner">
                 <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1"><span>📄</span> Nº Processo / Protocolo (Opcional)</label>
                 <input type="text" id="input-numero-caso" value="${assistido.numeroProcesso || ''}" class="w-full p-3.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono placeholder:font-sans" placeholder="Ex: 0001234-56.2026.8.19.0021">
@@ -267,6 +281,7 @@ export const AtendimentoExternoService = {
 
         aba.innerHTML = optionsHtml;
         this.povoarSelectsDinamicos();
+        this.atualizarListaDemandasInterfaceExterna(); // Desenha na tela as demandas acumuladas
 
         this.fluxoSelecionado = 'direto';
         const botoesFluxo = document.querySelectorAll('.fluxo-opt-btn');
@@ -309,7 +324,48 @@ export const AtendimentoExternoService = {
         document.getElementById('btn-opt-transferir')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'transferir'));
         document.getElementById('btn-opt-pausar')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'pausar'));
 
+        // Configuração dos gatilhos para injetar/remover demandas pelo clique externo
+        document.getElementById('btn-add-demanda-externo').onclick = () => this.adicionarNovaDemandaFluxoExterno();
+
         document.getElementById('btn-finalizar-dinamico').onclick = () => this.finalizarProcesso();
+    },
+
+    // ⭐ NOVO: GATILHOS EXCLUSIVOS PARA CONTROLAR AS DEMANDAS NO ATENDIMENTO EXTERNO ⭐
+    adicionarNovaDemandaFluxoExterno() {
+        const input = document.getElementById('input-nova-demanda-externo');
+        const text = input ? input.value.trim() : '';
+        if (text) {
+            this.demandasAdicionaisLocais.push(text);
+            input.value = '';
+            this.atualizarListaDemandasInterfaceExterna();
+        }
+    },
+
+    removerDemandaFluxoExterno(index) {
+        this.demandasAdicionaisLocais.splice(index, 1);
+        this.atualizarListaDemandasInterfaceExterna();
+    },
+
+    atualizarListaDemandasInterfaceExterna() {
+        const container = document.getElementById('container-lista-demandas-externo');
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (this.demandasAdicionaisLocais.length === 0) {
+            container.innerHTML = `<p class="text-[11px] text-gray-400 italic font-semibold text-center py-2 bg-white rounded border border-dashed border-indigo-200">Nenhum caso extra somado.</p>`;
+            return;
+        }
+
+        this.demandasAdicionaisLocais.forEach((dem, index) => {
+            const div = document.createElement('div');
+            div.className = "flex justify-between items-center bg-white border border-indigo-100 p-2 rounded-lg shadow-sm text-xs";
+            div.innerHTML = `
+                <span class="font-bold text-slate-700">⚖️ ${escapeHTML(dem)}</span>
+                <button type="button" class="text-[10px] font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded transition" data-index="${index}">Remover</button>
+            `;
+            div.querySelector('button').onclick = () => this.removerDemandaFluxoExterno(index);
+            container.appendChild(div);
+        });
     },
 
     povoarSelectsDinamicos() {
@@ -366,6 +422,12 @@ export const AtendimentoExternoService = {
         
         let colaboradorDestinoObj = null;
 
+        // Bloco estrutural para salvar as demandas no Firebase seguindo o nó do SIGEP
+        const objetoDemandasFinal = {
+            quantidade: this.demandasAdicionaisLocais.length,
+            descricoes: this.demandasAdicionaisLocais
+        };
+
         try {
             const docRef = doc(db, "pautas", pautaIdSeguro, "attendances", assistidoIdSeguro);
             const novoToken = this._gerarTokenSeguro();
@@ -378,6 +440,7 @@ export const AtendimentoExternoService = {
                     attendedAt: timestampIso,
                     finalizadoPeloColaborador: !!numProcessoSeguro,
                     numeroProcesso: numProcessoSeguro,
+                    demandas: objetoDemandasFinal, // ⭐ Grava na árvore o pool de demandas resolvidas
                     history: arrayUnion({
                         action: numProcessoSeguro ? 'APROVADO_E_DISTRIBUIDO' : 'APROVADO_AGUARDANDO_NUMERO',
                         by: colabSeguro,
@@ -408,6 +471,7 @@ export const AtendimentoExternoService = {
                     numeroProcesso: numProcessoSeguro,
                     enviadoPor: colabSeguro,
                     delegationToken: novoToken,
+                    demandas: objetoDemandasFinal, // ⭐ Sincroniza as demandas para a análise do defensor
                     history: arrayUnion({
                         action: 'ENVIADO_PARA_REVISAO',
                         by: colabSeguro,
@@ -438,6 +502,7 @@ export const AtendimentoExternoService = {
                     reviewMotivoDevolucao: nota,
                     enviadoPor: colabSeguro,
                     delegationToken: novoToken,
+                    demandas: objetoDemandasFinal,
                     history: arrayUnion({
                         action: 'ENVIADO_PARA_CORRECAO',
                         by: colabSeguro,
@@ -467,6 +532,7 @@ export const AtendimentoExternoService = {
                     inAttendanceTime: timestampIso, 
                     delegationToken: novoToken,
                     historicoTransferencia: `Devolvido (Correção) por ${colabSeguro}. Msg: ${nota}`,
+                    demandas: objetoDemandasFinal,
                     history: arrayUnion({
                         action: 'DEVOLVIDO_COM_ERRO',
                         by: colabSeguro,
@@ -495,6 +561,7 @@ export const AtendimentoExternoService = {
                     inAttendanceTime: timestampIso, 
                     delegationToken: novoToken,
                     historicoTransferencia: `Transferência de ${colabSeguro} para ${colega}.`,
+                    demandas: objetoDemandasFinal,
                     history: arrayUnion({
                         action: 'TRANSFERENCIA_DE_CASO',
                         by: colabSeguro,
@@ -513,6 +580,7 @@ export const AtendimentoExternoService = {
                     delegatedAt: null,
                     inAttendanceTime: null,
                     distributionStatus: null,
+                    demandas: objetoDemandasFinal,
                     history: arrayUnion({
                         action: 'ATENDIMENTO_PAUSADO',
                         by: colabSeguro,
