@@ -2,10 +2,10 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acompanhamento de Fila - SIGAP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Acompanhamento de Fila - SIGEP</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
         .scrollable-content::-webkit-scrollbar { width: 4px; }
@@ -15,86 +15,85 @@
 </head>
 <body class="p-2 sm:p-4 md:p-8 min-h-screen flex flex-col">
 
-    <!-- 1. CARREGAMENTO -->
     <div id="loading" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-        <p class="mt-4 text-gray-500 font-bold uppercase text-[10px] tracking-widest">Sincronizando com a Pauta...</p>
+        <p class="mt-4 text-gray-500 font-bold uppercase text-[10px] tracking-widest">Sincronizando com o SIGEP...</p>
     </div>
 
-    <!-- 2. ERRO / PRIVADO -->
     <div id="error-screen" class="hidden fixed inset-0 bg-gray-100 flex flex-col items-center justify-center p-4 z-50">
         <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full text-center border-t-8 border-red-500">
             <h1 class="text-xl font-black text-gray-800 mb-2">ACESSO RESTRITO</h1>
-            <p class="text-gray-500 text-sm mb-6">Esta pauta está privada ou o link expirou.</p>
-            <button onclick="location.reload()" class="bg-green-600 text-white px-8 py-3 rounded-xl font-bold">Tentar Novamente</button>
+            <p class="text-gray-500 text-sm mb-6">Esta pauta está privada ou o link expirou no SIGEP.</p>
+            <button onclick="location.reload()" class="bg-green-600 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-widest shadow-md">Tentar Novamente</button>
         </div>
     </div>
 
-    <!-- 3. CONTEÚDO PRINCIPAL -->
     <div id="app-content" class="hidden w-full max-w-7xl mx-auto flex-1 flex flex-col">
         
         <header class="mb-6 bg-white p-5 rounded-3xl shadow-sm border flex flex-col md:flex-row items-center justify-between gap-4">
             <div class="flex flex-col md:flex-row items-center gap-4 text-center md:text-left w-full md:w-auto">
                 
-                <!-- LOGO TIPOGRÁFICA SIGAP -->
-                <div class="flex flex-col items-center justify-center md:pr-4 md:border-r-2 border-green-100">
-                    <h1 class="text-4xl md:text-5xl font-black text-green-600 tracking-tighter leading-none">SIGAP</h1>
-                    <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-1">Gestão de Pauta</p>
+                <div class="flex items-center gap-3 md:pr-5 md:border-r-2 border-slate-100">
+                    <div class="bg-slate-50 p-2 rounded-xl border shadow-inner shrink-0">
+                        <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo SIGEP" class="h-10 w-auto object-contain">
+                    </div>
+                    <div class="flex flex-col text-left">
+                        <h1 class="text-2xl font-black text-slate-800 tracking-tighter leading-none">SIGEP</h1>
+                        <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Gestão de Pauta</p>
+                    </div>
                 </div>
                 
-                <div class="mt-2 md:mt-0">
+                <div class="mt-1 md:mt-0">
                     <h2 id="pauta-title" class="text-xl md:text-2xl font-black text-gray-800 uppercase tracking-tighter leading-tight">---</h2>
                     <div class="flex items-center justify-center md:justify-start gap-2 mt-1.5">
                         <span class="relative flex h-2 w-2">
                             <span class="animate-ping absolute h-full w-full rounded-full bg-green-400 opacity-75"></span>
                             <span class="relative rounded-full h-2 w-2 bg-green-500"></span>
                         </span>
-                        <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Painel Público • Atualização ao vivo</p>
+                        <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Painel Público de Acompanhamento • Atualização ao vivo</p>
                     </div>
                 </div>
             </div>
 
-            <button id="open-atendidos-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl flex flex-col items-center shadow-lg transition-all min-w-[140px] w-full md:w-auto">
+            <button id="open-atendidos-btn" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-3 rounded-2xl flex flex-col items-center shadow-lg transition-all min-w-[140px] w-full md:w-auto uppercase tracking-wider">
                 <span class="text-[9px] font-black uppercase opacity-70">Finalizados Hoje</span>
                 <span id="total-atendidos-count" class="text-2xl font-black">0</span>
             </button>
         </header>
 
-        <!-- GRID DINÂMICA -->
         <div id="main-grid" class="grid grid-cols-1 gap-4 flex-1 min-h-0">
             
             <div id="col-aguardando" class="bg-white rounded-3xl shadow-md border overflow-hidden flex flex-col h-full min-h-[400px]">
-                <div class="bg-amber-500 p-4 text-white flex justify-between items-center shadow-md">
+                <div class="bg-amber-500 p-4 text-white flex justify-between items-center shadow-md shrink-0">
                     <h2 class="text-sm font-black uppercase flex items-center gap-2"><span class="text-lg">⏳</span> Fila de Espera</h2>
-                    <span id="count-aguardando" class="bg-white text-amber-600 px-3 py-0.5 rounded-full text-xs font-black">0</span>
+                    <span id="count-aguardando" class="bg-white text-amber-600 px-3 py-0.5 rounded-full text-xs font-black shadow-sm">0</span>
                 </div>
-                <div id="list-aguardando" class="p-4 overflow-y-auto flex-1 bg-slate-50 scrollable-content"></div>
+                <div id="list-aguardando" class="p-3 sm:p-4 overflow-y-auto flex-1 bg-slate-50 scrollable-content"></div>
             </div>
 
             <div id="col-atendimento" class="hidden bg-white rounded-3xl shadow-md border overflow-hidden flex flex-col h-full min-h-[400px]">
-                <div class="bg-green-600 p-4 text-white flex justify-between items-center shadow-md">
-                    <h2 class="text-sm font-black uppercase flex items-center gap-2"><span class="text-lg">👩‍💻</span> Em Atendimento</h2>
-                    <span id="count-atendimento" class="bg-white text-green-700 px-3 py-0.5 rounded-full text-xs font-black">0</span>
+                <div class="bg-indigo-600 p-4 text-white flex justify-between items-center shadow-md shrink-0">
+                    <h2 class="text-sm font-black uppercase flex items-center gap-2"><span class="text-lg">🧑‍💻</span> Em Atendimento</h2>
+                    <span id="count-atendimento" class="bg-white text-indigo-700 px-3 py-0.5 rounded-full text-xs font-black shadow-sm">0</span>
                 </div>
-                <div id="list-atendimento" class="p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50 scrollable-content"></div>
+                <div id="list-atendimento" class="p-3 sm:p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50 scrollable-content"></div>
             </div>
 
             <div id="col-distribuicao" class="hidden bg-white rounded-3xl shadow-md border overflow-hidden flex flex-col h-full min-h-[400px]">
-                <div class="bg-cyan-600 p-4 text-white flex justify-between items-center shadow-md">
-                    <h2 class="text-sm font-black uppercase flex items-center gap-2"><span class="text-lg">⚖️</span> Distribuição</h2>
-                    <span id="count-distribuicao" class="bg-white text-cyan-700 px-3 py-0.5 rounded-full text-xs font-black">0</span>
+                <div class="bg-cyan-600 p-4 text-white flex justify-between items-center shadow-md shrink-0">
+                    <h2 class="text-sm font-black uppercase flex items-center gap-2"><span class="text-lg">⚖️</span> Distribuição / Assinatura</h2>
+                    <span id="count-distribuicao" class="bg-white text-cyan-700 px-3 py-0.5 rounded-full text-xs font-black shadow-sm">0</span>
                 </div>
-                <div id="list-distribuicao" class="p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50 scrollable-content"></div>
+                <div id="list-distribuicao" class="p-3 sm:p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50 scrollable-content"></div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL HISTÓRICO ATENDIDOS -->
-    <div id="atendidos-modal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden">
-            <div class="p-5 border-b flex justify-between items-center bg-blue-50">
-                <h2 class="text-lg font-black text-blue-900 uppercase italic">✅ Concluídos</h2>
-                <button id="close-atendidos-btn" class="text-blue-300 hover:text-blue-600 text-3xl font-bold transition-colors">&times;</button>
+    <div id="atendidos-modal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4" onclick="this.classList.add('hidden')">
+        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden" onclick="event.stopPropagation()">
+            <div class="p-5 border-b flex justify-between items-center bg-slate-50">
+                <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2"><span>✅</span> Concluídos Hoje</h2>
+                <button id="close-atendidos-btn" class="text-gray-400 hover:text-red-500 text-3xl font-bold transition-colors leading-none p-1">&times;</button>
             </div>
             <div id="list-atendidos-content" class="p-4 overflow-y-auto flex-1 space-y-2 bg-gray-50 scrollable-content"></div>
         </div>
@@ -114,7 +113,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         const pId = urlParams.get('id');
 
-        // --- LÓGICAS DE FORMATAÇÃO E ESCAPE ---
         function escapeHTML(str) {
             if (!str) return '';
             return str.replace(/[&<>'"]/g, 
@@ -137,19 +135,39 @@
             }).join(' '));
         }
 
-        // Função geradora do Card Padrão
-        const createCardHTML = (a, i, color, type, data) => `
-            <div class="bg-white p-4 rounded-2xl border-l-8 ${a.priority === 'URGENTE' ? 'border-red-500 bg-red-50' : color} shadow-sm flex justify-between items-center transition-all hover:-translate-y-0.5 mb-2">
-                <div class="min-w-0">
-                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">${type === 'wait' ? (i+1) + 'º DA FILA' : 'PROCESSO ATIVO'}</p>
-                    <p class="font-bold text-gray-800 text-lg uppercase truncate">${formatName(a.name, data.maskNames)}</p>
+        // ⭐ NOVO: GERAÇÃO DO CARD INJETANDO HORÁRIO E NÚMERO DE AGENDAMENTO EXIGIDOS ⭐
+        const createCardHTML = (a, i, color, type, data) => {
+            const numAgendamento = a.numeroAgendamento || a.numAgendamento || '';
+            const horaAgendada = a.scheduledTime || '';
+            
+            // Constrói os metadados de identificação de agendamento solicitados
+            let blocosAgendamento = '';
+            if (numAgendamento || horaMarcada) {
+                blocosAgendamento = `<div class="flex flex-wrap gap-1 mt-1.5">`;
+                if (numAgendamento) {
+                    blocosAgendamento += `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-50 text-blue-600 border border-blue-100">📅 Nº Agend: ${escapeHTML(numAgendamento)}</span>`;
+                }
+                if (horaAgendada) {
+                    blocosAgendamento += `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-slate-100 text-slate-600 border border-slate-200">⏰ Horário: ${escapeHTML(horaAgendada)}</span>`;
+                }
+                blocosAgendamento += `</div>`;
+            }
+
+            return `
+                <div class="bg-white p-3.5 rounded-2xl border-l-8 ${a.priority === 'URGENTE' ? 'border-red-500 bg-red-50/50' : color} shadow-sm flex justify-between items-center transition-all mb-2 border border-slate-200/60">
+                    <div class="min-w-0 flex-grow pr-2">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">${type === 'wait' ? (i+1) + 'º DA FILA' : 'PROCESSO ATIVO'}</p>
+                        <h4 class="font-bold text-slate-800 text-sm uppercase truncate leading-tight">${formatName(a.name, data.maskNames)}</h4>
+                        
+                        ${blocosAgendamento}
+                    </div>
+                    <div class="flex flex-col items-end shrink-0 gap-1">
+                        <span class="bg-slate-800 text-white text-[8px] font-black px-2 py-1 rounded-md uppercase tracking-wider">${escapeHTML(a.room) || 'GERAL'}</span>
+                        ${a.documentState === 'saved' ? '<span class="text-[8px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md uppercase">Docs OK</span>' : ''}
+                    </div>
                 </div>
-                <div class="flex flex-col items-end shrink-0 ml-2 gap-1">
-                    <span class="bg-blue-600 text-white text-[8px] font-black px-2 py-1 rounded-md uppercase tracking-wider">${escapeHTML(a.room) || 'GERAL'}</span>
-                    ${a.documentState === 'saved' ? '<span class="text-[8px] font-black text-green-700 bg-green-100 border border-green-200 px-1.5 py-0.5 rounded-md uppercase">Docs OK</span>' : ''}
-                </div>
-            </div>
-        `;
+            `;
+        };
 
         if (pId) {
             onSnapshot(doc(db, "pautas", pId), (snap) => {
@@ -163,7 +181,7 @@
                     if (data.useDelegationFlow) { document.getElementById('col-atendimento').classList.remove('hidden'); columnsCount++; }
                     else { document.getElementById('col-atendimento').classList.add('hidden'); }
 
-                    if (data.useDistribution) { document.getElementById('col-distribuicao').classList.remove('hidden'); columnsCount++; }
+                    if (data.useDistributionFlow) { document.getElementById('col-distribuicao').classList.remove('hidden'); columnsCount++; }
                     else { document.getElementById('col-distribuicao').classList.add('hidden'); }
 
                     grid.className = `grid grid-cols-1 ${columnsCount > 1 ? 'lg:grid-cols-' + columnsCount : ''} gap-4 flex-1 min-h-0`;
@@ -181,18 +199,18 @@
                         });
 
                         const serv = items.filter(i => i.status === 'emAtendimento').sort((a,b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
-                        const dist = items.filter(i => i.status === 'aguardando_distribuicao');
-                        const done = items.filter(i => i.status === 'atendido').sort((a,b) => new Date(b.attendedTime) - new Date(a.attendedTime));
+                        const dist = items.filter(i => i.status === 'aguardandoDistribuicao' || i.status === 'aguardandoCorrecao');
+                        const done = items.filter(i => i.status === 'atendido').sort((a,b) => new Date(b.attendedAt || b.attendedTime) - new Date(a.attendedAt || a.attendedTime));
 
                         document.getElementById('count-aguardando').textContent = ag.length;
                         document.getElementById('count-atendimento').textContent = serv.length;
                         document.getElementById('count-distribuicao').textContent = dist.length;
                         document.getElementById('total-atendidos-count').textContent = done.length;
 
-                        // RENDERIZAÇÃO DA FILA DE AGUARDANDO (Com suporte a MultiSalas)
+                        // RENDERIZAÇÃO FILA MULTISALAS
                         const elAg = document.getElementById('list-aguardando');
                         if (ag.length === 0) {
-                            elAg.innerHTML = '<div class="flex items-center justify-center h-full"><p class="text-gray-300 text-[10px] font-black uppercase">Vazio</p></div>';
+                            elAg.innerHTML = '<div class="flex items-center justify-center py-20"><p class="text-gray-300 text-[10px] font-black uppercase tracking-widest">Fila Limpa</p></div>';
                         } else if (data.type === 'multisala') {
                             const rooms = data.rooms || data.customRooms || [];
                             let html = '';
@@ -201,15 +219,15 @@
                                 const roomItems = ag.filter(a => a.room === room);
                                 if (roomItems.length > 0) {
                                     html += `
-                                        <div class="mb-5 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-                                            <div class="bg-blue-50 px-4 py-2.5 border-b border-blue-100 flex justify-between items-center">
-                                                <span class="text-xs font-black text-blue-900 uppercase tracking-widest flex items-center gap-2">
-                                                    <span class="text-base">🏢</span> ${escapeHTML(room)}
+                                        <div class="mb-4 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                                            <div class="bg-slate-50 px-4 py-2 border-b border-gray-200 flex justify-between items-center">
+                                                <span class="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <span>🏢</span> ${escapeHTML(room)}
                                                 </span>
-                                                <span class="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${roomItems.length}</span>
+                                                <span class="bg-slate-800 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${roomItems.length}</span>
                                             </div>
-                                            <div class="p-3 bg-slate-50/50">
-                                                ${roomItems.map((a, i) => createCardHTML(a, i, 'border-amber-400', 'wait', data)).join('')}
+                                            <div class="p-2 bg-slate-50/30">
+                                                ${roomItems.map((a, i) => createCardHTML(a, i, 'border-amber-500', 'wait', data)).join('')}
                                             </div>
                                         </div>
                                     `;
@@ -219,15 +237,15 @@
                             const noRoomItems = ag.filter(a => !a.room || !rooms.includes(a.room));
                             if (noRoomItems.length > 0) {
                                 html += `
-                                    <div class="mb-5 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-                                        <div class="bg-red-50 px-4 py-2.5 border-b border-red-100 flex justify-between items-center">
-                                            <span class="text-xs font-black text-red-900 uppercase tracking-widest flex items-center gap-2">
-                                                <span class="text-base">⚠️</span> Sem Sala Definida
+                                    <div class="mb-4 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                                        <div class="bg-red-50 px-4 py-2 border-b border-red-100 flex justify-between items-center">
+                                            <span class="text-xs font-black text-red-900 uppercase tracking-widest flex items-center gap-1.5">
+                                                <span>⚠️</span> Triagem Geral (Sem Sala)
                                             </span>
                                             <span class="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${noRoomItems.length}</span>
                                         </div>
-                                        <div class="p-3 bg-slate-50/50">
-                                            ${noRoomItems.map((a, i) => createCardHTML(a, i, 'border-amber-400', 'wait', data)).join('')}
+                                        <div class="p-2 bg-slate-50/30">
+                                            ${noRoomItems.map((a, i) => createCardHTML(a, i, 'border-amber-500', 'wait', data)).join('')}
                                         </div>
                                     </div>
                                 `;
@@ -237,21 +255,20 @@
                             elAg.innerHTML = ag.map((a, i) => createCardHTML(a, i, 'border-amber-400', 'wait', data)).join('');
                         }
 
-                        // RENDERIZAÇÃO PADRÃO PARA AS OUTRAS COLUNAS
                         document.getElementById('list-atendimento').innerHTML = serv.length 
-                            ? serv.map((a, i) => createCardHTML(a, i, 'border-green-500', 'pulse', data)).join('') 
-                            : '<p class="text-center text-gray-300 py-10 text-[10px] font-black uppercase">Vazio</p>';
+                            ? serv.map((a, i) => createCardHTML(a, i, 'border-indigo-500', 'pulse', data)).join('') 
+                            : '<div class="text-center py-10"><p class="text-gray-300 text-[10px] font-black uppercase tracking-widest">Ninguém em atendimento</p></div>';
 
                         document.getElementById('list-distribuicao').innerHTML = dist.length 
                             ? dist.map((a, i) => createCardHTML(a, i, 'border-cyan-500', 'normal', data)).join('') 
-                            : '<p class="text-center text-gray-300 py-10 text-[10px] font-black uppercase">Vazio</p>';
+                            : '<div class="text-center py-10"><p class="text-gray-300 text-[10px] font-black uppercase tracking-widest">Nenhum processo aguardando</p></div>';
 
                         document.getElementById('list-atendidos-content').innerHTML = done.map(d => `
-                            <div class="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center text-sm mb-2 hover:bg-gray-50 transition-colors">
-                                <span class="font-bold text-gray-700 truncate">${formatName(d.name, data.maskNames)}</span>
-                                <span class="text-[9px] font-black text-green-700 bg-green-100 border border-green-200 px-2.5 py-1 rounded-md uppercase tracking-widest">Concluído</span>
+                            <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center text-sm mb-2 hover:bg-gray-50 transition-colors">
+                                <span class="font-bold text-gray-700 uppercase text-xs truncate">${formatName(d.name, data.maskNames)}</span>
+                                <span class="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md uppercase tracking-widest">Concluído</span>
                             </div>
-                        `).join('') || '<p class="text-center text-gray-400 py-10 uppercase text-xs font-bold">Nenhum atendimento finalizado ainda.</p>';
+                        `).join('') || '<p class="text-center text-gray-400 py-10 uppercase text-xs font-bold">Nenhum atendimento finalizado hoje.</p>';
                     });
                 } else {
                     document.getElementById('loading').classList.add('hidden');
