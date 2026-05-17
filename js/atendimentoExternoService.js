@@ -1,5 +1,5 @@
 
-// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (CORREÇÃO DE ACESSO E GRAVAÇÃO)
+// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (BLINDAGEM TOTAL ANTI-ERROS NO IOS)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -77,9 +77,10 @@ export const AtendimentoExternoService = {
             const assistido = docSnap.data();
             this.assistidoData = assistido;
 
-            // Bloqueia apenas se o token for divergente, ignora se não existir token antigo
-            if (assistido.delegationToken && tokenRecebido && assistido.delegationToken !== tokenRecebido) {
-                this.showError("Acesso Expirado", "O token de segurança mudou. O caso já pode ter sido assumido ou transferido.");
+            // ⭐ CORREÇÃO DA TELA DE ACESSO NEGADO ⭐
+            // Ignora a validação se o banco não tem token (links antigos). Só bloqueia se o token divergir.
+            if (assistido.delegationToken && assistido.delegationToken !== tokenRecebido) {
+                this.showError("Acesso Seguro Necessário", "Falta o token de segurança para acessar este atendimento.");
                 return;
             }
 
@@ -457,35 +458,33 @@ export const AtendimentoExternoService = {
                 subtituloSucesso = "O assistido foi mandado de volta à fila de espera.";
             }
 
-            // ⭐ CORREÇÃO DE UI (Evita o "null is not an object" se a div principal mudar) ⭐
+            // ⭐ CORREÇÃO INFALÍVEL DO "null is not an object" (Imagem 3) ⭐
+            // Ao invés de tentar injetar via innerHTML e procurar o botão no escuro do Safari,
+            // vamos esvaziar o container atual e criar o botão via DOM nativo. Garantido que funciona!
             const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
             const textoBotaoVoltar = isDefensor ? '⚖️ Voltar ao Painel Judicial' : '📊 Voltar à Minha Mesa';
 
-            const mensagemSucessoHtml = `
+            let areaColaborador = document.getElementById('area-colaborador');
+            if (!areaColaborador) {
+                // Tenta achar o corpo principal se a area falhar
+                areaColaborador = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl') || document.body;
+            }
+
+            areaColaborador.innerHTML = `
                 <div class="text-center p-8 sm:p-12 bg-emerald-50 rounded-2xl border-2 border-emerald-200 shadow-lg mt-6 animate-fade-in">
                     <div class="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center text-4xl text-white mx-auto shadow-md mb-6">✓</div>
                     <h2 class="text-2xl font-black text-emerald-800 uppercase tracking-widest">${tituloSucesso}</h2>
                     <p class="text-emerald-600 mt-2 font-medium">${subtituloSucesso}</p>
-                    <button id="btn-voltar-sucesso" class="mt-8 bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 px-8 rounded-xl shadow transition w-full sm:w-auto uppercase text-xs tracking-widest">${textoBotaoVoltar}</button>
+                    <div id="btn-voltar-container" class="mt-8"></div>
                 </div>
             `;
 
-            // Verifica as divs disponíveis com segurança para injetar a mensagem
-            let containerPrincipal = document.getElementById('area-colaborador') || document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl');
-            
-            if (containerPrincipal) {
-                containerPrincipal.innerHTML = mensagemSucessoHtml;
-            } else {
-                document.body.innerHTML = mensagemSucessoHtml; // Força a tela de sucesso no body se tudo falhar
-            }
-
-            // Aguarda um instante e vincula o clique do botão
-            setTimeout(() => {
-                const btnVoltar = document.getElementById('btn-voltar-sucesso');
-                if (btnVoltar) {
-                    btnVoltar.onclick = () => this.renderizarDashboardUnificado(); 
-                }
-            }, 50);
+            // O botão é criado e anexado via Javascript nativo para não haver chance de dar null
+            const btnVoltar = document.createElement('button');
+            btnVoltar.className = "bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 px-8 rounded-xl shadow transition w-full sm:w-auto uppercase text-xs tracking-widest";
+            btnVoltar.innerText = textoBotaoVoltar;
+            btnVoltar.onclick = () => this.renderizarDashboardUnificado();
+            document.getElementById('btn-voltar-container').appendChild(btnVoltar);
 
             const headerBg = document.getElementById('header-bg');
             if (headerBg) {
@@ -504,9 +503,6 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ==========================================
-    // ABAS SECUNDÁRIAS (Histórico e Peça)
-    // ==========================================
     renderizarHistorico(assistido) {
         const lista = document.getElementById('lista-historico');
         if (!lista) return;
@@ -607,9 +603,6 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ==========================================
-    // DASHBOARD UNIFICADO (DEFENSOR E SERVIDOR)
-    // ==========================================
     async renderizarDashboardUnificado() {
         const corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl');
         if (!corpo) return;
