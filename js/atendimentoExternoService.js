@@ -6,6 +6,7 @@ import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, query, array
 import { firebaseConfig } from './config.js';
 import { documentsData } from './detalhes.js'; 
 import { PDFService } from './pdfService.js';
+import { EmailService } from './emailService.js'; // ✉️ Importação do serviço de e-mail unificado
 
 const escapeHTML = (str) => {
     if (!str) return '';
@@ -365,6 +366,9 @@ export const AtendimentoExternoService = {
 
         let tituloSucesso = "Atendimento Atualizado!";
         let subtituloSucesso = "Ação registrada com sucesso.";
+        
+        // Variáveis locais de controle de e-mail destino
+        let colaboradorDestinoObj = null;
 
         try {
             const docRef = doc(db, "pautas", pautaIdSeguro, "attendances", assistidoIdSeguro);
@@ -399,6 +403,9 @@ export const AtendimentoExternoService = {
                     return; 
                 }
                 
+                // Captura o objeto completo do Defensor para coletar o e-mail cadastrado
+                colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === def);
+
                 await updateDoc(docRef, {
                     status: 'aguardandoDistribuicao',
                     defensorResponsavel: def,
@@ -427,6 +434,9 @@ export const AtendimentoExternoService = {
                     return; 
                 }
                 
+                // Captura o objeto completo do Defensor Avaliador
+                colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === def);
+
                 await updateDoc(docRef, { 
                     status: 'aguardandoCorrecao', 
                     defensorResponsavel: def, 
@@ -455,10 +465,12 @@ export const AtendimentoExternoService = {
                     return; 
                 }
                 
-                const colegaObj = this.todosColaboradores.find(c => c.nome === serv);
+                // Captura o objeto completo do Servidor que receberá o ajuste
+                colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === serv);
+
                 await updateDoc(docRef, {
                     status: 'emAtendimento', 
-                    assignedCollaborator: { name: serv, email: colegaObj?.email || '' },
+                    assignedCollaborator: { name: serv, email: colaboradorDestinoObj?.email || '' },
                     inAttendanceTime: timestampIso, 
                     delegationToken: novoToken,
                     historicoTransferencia: `Devolvido (Correção) por ${colabSeguro}. Msg: ${nota}`
@@ -476,10 +488,12 @@ export const AtendimentoExternoService = {
                     return; 
                 }
                 
-                const colegaObj = this.todosColaboradores.find(c => c.nome === colega);
+                // Captura o objeto completo do Colega de transferência
+                colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === colega);
+
                 await updateDoc(docRef, {
                     status: 'emAtendimento', 
-                    assignedCollaborator: { name: colega, email: colegaObj?.email || '' },
+                    assignedCollaborator: { name: colega, email: colaboradorDestinoObj?.email || '' },
                     inAttendanceTime: timestampIso, 
                     delegationToken: novoToken,
                     historicoTransferencia: `Transferência de ${colabSeguro} para ${colega}.`
@@ -500,6 +514,23 @@ export const AtendimentoExternoService = {
                 subtituloSucesso = "O assistido foi mandado de volta à fila de espera.";
             }
 
+            // ✉️ DISPARO AUTOMÁTICO DO E-MAIL SE HOUVER DESTINATÁRIO DEFINIDO
+            if (colaboradorDestinoObj && colaboradorDestinoObj.email) {
+                console.log(`✉️ Iniciando disparo de e-mail para: ${colaboradorDestinoObj.email}`);
+                
+                // Executa a chamada chamando diretamente o método exportado do EmailService
+                await EmailService.sendDelegationEmail(
+                    colaboradorDestinoObj.email,
+                    colaboradorDestinoObj.nome,
+                    this.assistidoData?.name || "Assistido",
+                    colabSeguro,
+                    pautaIdSeguro,
+                    assistidoIdSeguro,
+                    novoToken
+                );
+            }
+
+            // Interface gráfica de resposta de sucesso
             const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
             const textoBotaoVoltar = isDefensor ? '⚖️ Voltar ao Painel Judicial' : '📊 Voltar à Minha Mesa';
 
