@@ -1,4 +1,4 @@
-// js/pdfService.js - VERSÃO DEFINITIVA (SIGEP + Checklist Textual + Preview Ata + Logo Blindada)
+// js/pdfService.js - VERSÃO DEFINITIVA (SIGEP + Preview Ata + Logo Defensoria Raw)
 
 const ensureJsPDF = async () => {
     if (typeof window.jspdf === 'undefined') {
@@ -75,7 +75,7 @@ const getAttendantNameForPDF = (item) => {
     return 'N/A';
 };
 
-// ⭐ FUNÇÃO NOVA: Transforma o link da logo em Base64 para nunca falhar no jsPDF
+// ⭐ FUNÇÃO: Transforma o link da logo em Base64 para nunca falhar no jsPDF
 const loadImageBase64 = (url) => {
     return new Promise((resolve) => {
         const img = new Image();
@@ -92,7 +92,7 @@ const loadImageBase64 = (url) => {
     });
 };
 
-// Lógica principal de geração da Ata (agora aguardando a imagem)
+// Lógica principal de geração da Ata
 const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, dadosExtras = {}) => {
     const dataInput = dadosExtras.data ? new Date(dadosExtras.data + 'T12:00:00') : new Date();
     const dia = dataInput.getDate();
@@ -106,11 +106,18 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
         ? dadosExtras.totalAtendimentos 
         : atendidos.length;
 
-    // Garante que a logo seja carregada corretamente
-    const logoUrl = "https://raw.githubusercontent.com/alexdovale/calculo-mensuracao-codoc/main/logo.png";
+    // ⭐ LOGO OFICIAL DA DEFENSORIA (URL RAW) ⭐
+    const logoUrl = "https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/logo_defensoria.png";
     const base64Logo = await loadImageBase64(logoUrl);
+    
+    // Inserindo a logo
     if (base64Logo) {
-        try { doc.addImage(base64Logo, 'PNG', 52, 8, 106, 25); } catch(e) { console.warn("Erro ao inserir logo no PDF", e); }
+        try { 
+            // Ajustei ligeiramente as coordenadas para a logo ficar centralizada e proporcional
+            doc.addImage(base64Logo, 'PNG', 52, 8, 106, 25); 
+        } catch(e) { 
+            console.warn("Erro ao inserir logo no PDF", e); 
+        }
     }
 
     doc.setFont("helvetica", "bold");
