@@ -317,10 +317,6 @@ export const exportAuditLogsPDF = async (db) => {
     } catch (e) { showNotification("Erro ao exportar PDF", "error"); }
 };
 
-// =========================================================================
-// MÓDULO DE LIMPEZA E BI (OBSERVATÓRIO COM CONTAGEM CRUZADA)
-// =========================================================================
-
 export const cleanupOldData = async (db) => {
     if (!confirm("Isso apagará dados com mais de 7 dias e gerará estatísticas permanentes de faturamento. Confirmar?")) return;
 
@@ -581,8 +577,7 @@ window.generateTestData = () => generateTestData(window.app?.db);
 window.loadAuditLogs = () => loadAuditLogs(window.app?.db);
 window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
 
-// 🔥 SOLUÇÃO DA TRAVA DO SAFARI: Export default nulo para o "star export" do iOS não quebrar
-const AdminModule = { name: "SIGEP Admin Module" };
-export default AdminModule;
+// 🔥 COMPATIBILIDADE DEFINITIVA PARA SAFARI iOS EM PRODUÇÃO: Export nomeado padrão limpo que sana o erro de árvore do WebKit
+export default { name: "SIGEP Admin Module Container" };
 
 console.log("✅ Módulo admin.js totalmente reestruturado com faturamento duplo ativo.");
