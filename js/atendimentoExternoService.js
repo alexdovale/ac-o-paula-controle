@@ -1,8 +1,8 @@
-// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (PREMIUM: LOGIN SALVO, CORES, LAYOUT E PWA)
+// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (PREMIUM: REAL-TIME, LOGIN SALVO E PWA)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, query, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, query, arrayUnion, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
 import { documentsData } from './detalhes.js'; 
 import { PDFService } from './pdfService.js';
@@ -43,9 +43,10 @@ export const AtendimentoExternoService = {
     isProcessing: false, 
     todosAtendimentosPauta: [], 
     demandasAdicionaisLocais: [], 
+    unsubscribeDashboard: null, // ⭐ NOVO: Controle de Atualização em Tempo Real
 
     async init() {
-        console.log("⚡ Atendimento Externo Inicializado (Premium Mode - SIGEP)");
+        console.log("⚡ Atendimento Externo Inicializado (Premium Real-time - SIGEP)");
 
         // BLINDAGEM MÁXIMA CONTRA PROVEDORES DE E-MAIL
         const searchLimpa = window.location.search.replace(/&amp;/g, '&');
@@ -77,7 +78,6 @@ export const AtendimentoExternoService = {
             // ⭐ BARREIRA DE SEGURANÇA (LOGIN) COM "LEMBRAR ACESSO" ⭐
             if (telaAtual === 'dashboard') {
                 const sessionKey = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
-                // Verifica se tem sessão temporária (aba) ou persistente (Lembrar Login)
                 if (!sessionStorage.getItem(sessionKey) && !localStorage.getItem(sessionKey)) {
                     this.renderizarTelaLoginColaborador();
                     return;
@@ -140,7 +140,23 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ⭐ TELA DE LOGIN COM OPÇÃO DE MANTER CONECTADO ⭐
+    // ⭐ ESCUTA EM TEMPO REAL PARA ATUALIZAR CONTADORES E LISTAS ⭐
+    setupRealtimeListenerDashboard() {
+        if (this.unsubscribeDashboard) this.unsubscribeDashboard();
+        
+        const q = query(collection(db, "pautas", this.pautaId, "attendances"));
+        this.unsubscribeDashboard = onSnapshot(q, (snap) => {
+            this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            
+            // Só atualiza a tela se o container do dashboard estiver visível (não for a tela do assistido)
+            if (document.getElementById('lista-dashboard-conteudo')) {
+                this.atualizarListasDoDashboard();
+            }
+        }, (error) => {
+            console.error("Erro no realtime dashboard:", error);
+        });
+    },
+
     renderizarTelaLoginColaborador() {
         let corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl');
         if (!corpo) corpo = document.body;
@@ -214,9 +230,14 @@ export const AtendimentoExternoService = {
                 errorMsg.classList.remove('hidden');
             }
         };
-    }, // <-- A VÍRGULA QUE FALTAVA ESTÁ AQUI!!!
+    },
 
     renderizarInterface(assistido, pautaData) {
+        if (this.unsubscribeDashboard) {
+            this.unsubscribeDashboard();
+            this.unsubscribeDashboard = null;
+        }
+
         const url = new URL(window.location.href);
         url.searchParams.delete('view');
         window.history.pushState({}, '', url);
@@ -702,12 +723,6 @@ export const AtendimentoExternoService = {
                 );
             }
 
-            try {
-                const q = query(collection(db, "pautas", pautaIdSeguro, "attendances"));
-                const snap = await getDocs(q);
-                this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            } catch (err) {}
-
             const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
             const textoBotaoVoltar = isDefensor ? '⚖️ Voltar ao Painel Judicial' : '📊 Voltar à Minha Mesa';
 
@@ -897,6 +912,11 @@ export const AtendimentoExternoService = {
 
     // ⭐ DASHBOARD EXCLUSIVO DO COLABORADOR COM ABAS INTELIGENTES ⭐
     async renderizarDashboardUnificado() {
+        // Inicializa o Listener do Dashboard para tempo real na primeira renderização
+        if (!this.unsubscribeDashboard) {
+            this.setupRealtimeListenerDashboard();
+        }
+
         const corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl') || document.body;
         
         const url = new URL(window.location.href);
@@ -1024,197 +1044,224 @@ export const AtendimentoExternoService = {
                 prefs.mode = m;
                 localStorage.setItem('dashboard_prefs', JSON.stringify(prefs));
                 menuSettings.classList.add('hidden');
-                this.renderizarDashboardUnificado(); 
+                
+                // Força a re-renderização das listas com o novo layout
+                this.atualizarListasDoDashboard(); 
             });
         });
 
-        try {
-            const q = query(collection(db, "pautas", this.pautaId, "attendances"));
-            const snap = await getDocs(q);
-            this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Se já temos dados cacheados do onSnapshot, podemos renderizar direto
+        if (this.todosAtendimentosPauta && this.todosAtendimentosPauta.length > 0) {
+            this.atualizarListasDoDashboard();
+        }
+    },
+
+    // ⭐ NOVO: FUNÇÃO EXCLUSIVA PARA ATUALIZAR AS LISTAS E CONTADORES EM TEMPO REAL ⭐
+    atualizarListasDoDashboard() {
+        const container = document.getElementById('lista-dashboard-conteudo');
+        const tabsDiv = document.getElementById('tabs-dashboard');
+        const wrapperBusca = document.getElementById('wrapper-busca-historico');
+        
+        if (!container) return; // Só atualiza se a tela do dashboard estiver ativa
+
+        const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
+        const prefs = JSON.parse(localStorage.getItem('dashboard_prefs')) || { mode: 'tabs', color: 'slate' };
+        const baseUrl = window.location.href.substring(0, window.location.href.indexOf('?'));
+
+        const desenharCard = (item, isCardAberto) => {
+            const notas = item.notasRevisao ? `<div class="mt-3 bg-yellow-50 p-3 rounded-lg text-xs text-yellow-900 border border-yellow-300 font-semibold shadow-sm leading-snug">⚠️ <b>Nota Anexada:</b> ${escapeHTML(item.notasRevisao)}</div>` : '';
+            const numProcessoHtml = item.numeroProcesso ? `<span class="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 font-mono text-[10px] font-bold border border-slate-300 mt-2">Nº ${escapeHTML(item.numeroProcesso)}</span>` : '';
+            const bannerTransf = item.historicoTransferencia ? `<div class="mt-3 bg-orange-50 p-2.5 rounded-lg text-[11px] text-orange-900 border border-orange-300 font-bold flex items-start gap-1 shadow-sm leading-snug"><span class="text-sm">🔄</span> <span>${escapeHTML(item.historicoTransferencia)}</span></div>` : '';
             
-            const baseUrl = window.location.href.substring(0, window.location.href.indexOf('?'));
-
-            const desenharCard = (item, isCardAberto) => {
-                const notas = item.notasRevisao ? `<div class="mt-3 bg-yellow-50 p-3 rounded-lg text-xs text-yellow-900 border border-yellow-300 font-semibold shadow-sm leading-snug">⚠️ <b>Nota Anexada:</b> ${escapeHTML(item.notasRevisao)}</div>` : '';
-                const numProcessoHtml = item.numeroProcesso ? `<span class="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 font-mono text-[10px] font-bold border border-slate-300 mt-2">Nº ${escapeHTML(item.numeroProcesso)}</span>` : '';
-                const bannerTransf = item.historicoTransferencia ? `<div class="mt-3 bg-orange-50 p-2.5 rounded-lg text-[11px] text-orange-900 border border-orange-300 font-bold flex items-start gap-1 shadow-sm leading-snug"><span class="text-sm">🔄</span> <span>${escapeHTML(item.historicoTransferencia)}</span></div>` : '';
-                
-                let badgeTopo = '';
-                let bgColorCard = 'bg-white border-slate-200 hover:border-slate-400';
-                
-                if (item.status === 'aguardandoCorrecao') {
-                    badgeTopo = `<span class="bg-amber-100 text-amber-800 text-[9px] font-black px-2 py-0.5 rounded border border-amber-300 uppercase tracking-widest shadow-sm">Avaliação</span>`;
-                    bgColorCard = 'bg-amber-50/30 border-amber-200 hover:border-amber-400';
-                }
-                else if (item.status === 'aguardandoDistribuicao') {
-                    badgeTopo = `<span class="bg-cyan-100 text-cyan-800 text-[9px] font-black px-2 py-0.5 rounded border border-cyan-300 uppercase tracking-widest shadow-sm">Assinatura</span>`;
-                    bgColorCard = 'bg-cyan-50/30 border-cyan-200 hover:border-cyan-400';
-                }
-                else if (item.status === 'emAtendimento') {
-                    badgeTopo = `<span class="bg-indigo-100 text-indigo-800 text-[9px] font-black px-2 py-0.5 rounded border border-indigo-300 uppercase tracking-widest shadow-sm">Na Mesa</span>`;
-                }
-                else if (item.status === 'atendido') {
-                    badgeTopo = `<span class="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded border border-emerald-300 uppercase tracking-widest shadow-sm">Protocolado</span>`;
-                }
-
-                if (isCardAberto) {
-                    const linkIndividual = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken || ''}`;
-                    return `
-                        <div class="border-2 ${bgColorCard} p-5 rounded-2xl shadow-sm hover:shadow-lg transition-all relative group flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
-                            <div class="flex-grow w-full sm:w-auto">
-                                <div class="flex items-center gap-2 mb-2">
-                                    ${badgeTopo}
-                                    ${item.enviadoPor ? `<span class="text-[9px] text-slate-500 font-bold uppercase">Via: ${escapeHTML(item.enviadoPor)}</span>` : ''}
-                                </div>
-                                <h3 class="font-black text-slate-800 text-lg w-full truncate">${escapeHTML(item.name)}</h3>
-                                <p class="text-xs font-semibold text-slate-500 mt-1 uppercase tracking-wide">${escapeHTML(item.subject || 'Assunto não informado')}</p>
-                                ${numProcessoHtml}
-                                ${notas}
-                                ${bannerTransf}
-                            </div>
-                            <div class="shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
-                                <a href="${linkIndividual}" class="block text-center w-full sm:w-40 bg-slate-800 hover:bg-slate-900 text-white font-black py-3 px-4 rounded-xl text-[10px] transition-colors shadow uppercase tracking-widest ring-offset-2 ring-slate-800 group-hover:ring-2">
-                                    ABRIR PEÇA
-                                </a>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    const horaStr = item.attendedAt ? new Date(item.attendedAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '';
-                    return `
-                        <div class="border border-emerald-200 bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
-                            <div>
-                                <div class="mb-1">${badgeTopo}</div>
-                                <h3 class="font-black text-slate-800 text-sm truncate">${escapeHTML(item.name)}</h3>
-                                <p class="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-wide">${escapeHTML(item.subject)}</p>
-                                ${numProcessoHtml}
-                            </div>
-                            <div class="shrink-0 text-right">
-                                <span class="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-1 rounded border border-emerald-300 uppercase tracking-widest shadow-sm inline-flex items-center gap-1"><span>✅</span> Finalizado</span>
-                                <p class="text-[9px] text-slate-400 font-bold mt-1.5">${horaStr}</p>
-                            </div>
-                        </div>
-                    `;
-                }
-            };
-
-            const container = document.getElementById('lista-dashboard-conteudo');
-            const tabsDiv = document.getElementById('tabs-dashboard');
-            const wrapperBusca = document.getElementById('wrapper-busca-historico');
-
-            const desenharSecao = (titulo, emoji, lista, isAberto) => {
-                let html = `<div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6">
-                                <h2 class="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 border-b pb-2 flex items-center gap-2"><span>${emoji}</span> ${titulo} <span class="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md text-[10px] ml-2">${lista.length}</span></h2>`;
-                if (lista.length === 0) {
-                    html += `<p class="text-center text-xs text-gray-400 italic py-4">Nenhum processo nesta etapa.</p>`;
-                } else {
-                    html += lista.map(item => desenharCard(item, isAberto)).join('');
-                }
-                html += `</div>`;
-                return html;
-            };
-
-            // LÓGICA DE ABAS COM NOMES AJUSTADOS (DEFENSOR VS SERVIDOR)
-            if (isDefensor) {
-                const pendentes = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome);
-                
-                // Distribuições: mostra todos os processos "atendidos" onde ele foi o responsável pela assinatura OU ele mesmo que atendeu
-                const distribuidos = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' && (a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
-                
-                const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
-
-                if (prefs.mode === 'list') {
-                    container.innerHTML = 
-                        desenharSecao('Para Assinar / Corrigir', '⚖️', pendentes, true) + 
-                        desenharSecao('Distribuições (Minha Equipe)', '✅', distribuidos, false);
-                } else {
-                    tabsDiv.innerHTML = `
-                        <button id="tab-pendentes" class="flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap">Para Assinar / Corrigir <span class="bg-white/20 text-white ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
-                        <button id="tab-assinados" class="flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap">Distribuições (Equipe) <span class="bg-slate-200 text-slate-700 ml-2 px-2 py-0.5 rounded text-[10px]">${distribuidos.length}</span></button>
-                        <button id="tab-historico-busca" class="flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-indigo-500 hover:bg-indigo-50 rounded-lg transition whitespace-nowrap">🔍 Buscar Tudo</button>
-                    `;
-
-                    const renderDefensorList = (lista, isAberto) => {
-                        if (lista.length === 0) {
-                            container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">🙌</span><p class="text-base font-black uppercase tracking-widest text-slate-500">MESA LIMPA.</p></div>`;
-                            return;
-                        }
-                        container.innerHTML = lista.map(item => desenharCard(item, isAberto)).join('');
-                    };
-
-                    const limparEstilosAbas = () => {
-                        wrapperBusca.classList.add('hidden');
-                        document.getElementById('tab-pendentes').className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap";
-                        document.getElementById('tab-assinados').className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap";
-                        document.getElementById('tab-historico-busca').className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-indigo-500 hover:bg-indigo-50 rounded-lg transition whitespace-nowrap";
-                    };
-
-                    document.getElementById('tab-pendentes').onclick = () => { limparEstilosAbas(); document.getElementById('tab-pendentes').className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap"; renderDefensorList(pendentes, true); };
-                    document.getElementById('tab-assinados').onclick = () => { limparEstilosAbas(); document.getElementById('tab-assinados').className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-emerald-600 text-white rounded-lg shadow transition whitespace-nowrap"; renderDefensorList(distribuidos, false); };
-                    document.getElementById('tab-historico-busca').onclick = () => {
-                        limparEstilosAbas(); wrapperBusca.classList.remove('hidden');
-                        document.getElementById('tab-historico-busca').className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-indigo-600 text-white rounded-lg shadow transition whitespace-nowrap";
-                        renderDefensorList(meuHistoricoCompleto, true);
-                        document.getElementById('input-busca-local').oninput = (e) => {
-                            const termo = e.target.value.toLowerCase().trim();
-                            renderDefensorList(meuHistoricoCompleto.filter(i => (i.name && i.name.toLowerCase().includes(termo)) || (i.subject && i.subject.toLowerCase().includes(termo)) || (i.numeroProcesso && i.numeroProcesso.includes(termo))), true);
-                        };
-                    };
-                    renderDefensorList(pendentes, true);
-                }
-
-            } else {
-                // SERVIDORES
-                const emAndamento = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
-                const enviados = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
-                const finalizados = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' && a.attendedBy === this.colaboradorNome);
-                const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome || a.assignedCollaborator?.name === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
-
-                if (prefs.mode === 'list') {
-                    container.innerHTML = 
-                        desenharSecao('Para Fazer / Corrigir', '👩‍💻', emAndamento, true) + 
-                        desenharSecao('No Defensor (Avaliando)', '⏳', enviados, true) + 
-                        desenharSecao('Concluídos Hoje', '✅', finalizados, false);
-                } else {
-                    tabsDiv.innerHTML = `
-                        <button id="tab-em-mesa" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap">Fazer/Corrigir <span class="bg-white/20 text-white ml-1 px-1.5 py-0.5 rounded text-[9px]">${emAndamento.length}</span></button>
-                        <button id="tab-enviados" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap">No Defensor <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${enviados.length}</span></button>
-                        <button id="tab-finalizados" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap">Concluídos <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${finalizados.length}</span></button>
-                        <button id="tab-historico-busca" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-indigo-500 hover:bg-indigo-50 rounded-lg transition whitespace-nowrap">🔍 Buscar</button>
-                    `;
-
-                    const renderServidorList = (lista, isAberto, isEmptyAviso) => {
-                        if (lista.length === 0) {
-                            container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">📭</span><p class="text-sm font-black uppercase tracking-widest text-slate-500">${isEmptyAviso}</p></div>`;
-                            return;
-                        }
-                        container.innerHTML = lista.map(item => desenharCard(item, isAberto)).join('');
-                    };
-
-                    const resetTabs = () => {
-                        wrapperBusca.classList.add('hidden');
-                        ['tab-em-mesa', 'tab-enviados', 'tab-finalizados', 'tab-historico-busca'].forEach(id => document.getElementById(id).className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap");
-                    };
-
-                    document.getElementById('tab-em-mesa').onclick = () => { resetTabs(); document.getElementById('tab-em-mesa').className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap"; renderServidorList(emAndamento, true, "Sua mesa está limpa."); };
-                    document.getElementById('tab-enviados').onclick = () => { resetTabs(); document.getElementById('tab-enviados').className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-indigo-600 text-white rounded-lg shadow transition whitespace-nowrap"; renderServidorList(enviados, true, "Nenhum documento seu no Defensor."); };
-                    document.getElementById('tab-finalizados').onclick = () => { resetTabs(); document.getElementById('tab-finalizados').className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-emerald-600 text-white rounded-lg shadow transition whitespace-nowrap"; renderServidorList(finalizados, false, "Você ainda não finalizou nada hoje."); };
-                    document.getElementById('tab-historico-busca').onclick = () => {
-                        resetTabs(); wrapperBusca.classList.remove('hidden'); document.getElementById('tab-historico-busca').className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-indigo-600 text-white rounded-lg shadow transition whitespace-nowrap";
-                        renderServidorList(meuHistoricoCompleto, true, "Nenhum histórico encontrado.");
-                        document.getElementById('input-busca-local').oninput = (e) => {
-                            const termo = e.target.value.toLowerCase().trim();
-                            renderServidorList(meuHistoricoCompleto.filter(i => (i.name && i.name.toLowerCase().includes(termo)) || (i.subject && i.subject.toLowerCase().includes(termo)) || (i.numeroProcesso && i.numeroProcesso.includes(termo))), true, "Nada encontrado.");
-                        };
-                    };
-                    renderServidorList(emAndamento, true, "Sua mesa está limpa.");
-                }
+            let badgeTopo = '';
+            let bgColorCard = 'bg-white border-slate-200 hover:border-slate-400';
+            
+            if (item.status === 'aguardandoCorrecao') {
+                badgeTopo = `<span class="bg-amber-100 text-amber-800 text-[9px] font-black px-2 py-0.5 rounded border border-amber-300 uppercase tracking-widest shadow-sm">Avaliação</span>`;
+                bgColorCard = 'bg-amber-50/30 border-amber-200 hover:border-amber-400';
+            }
+            else if (item.status === 'aguardandoDistribuicao') {
+                badgeTopo = `<span class="bg-cyan-100 text-cyan-800 text-[9px] font-black px-2 py-0.5 rounded border border-cyan-300 uppercase tracking-widest shadow-sm">Assinatura</span>`;
+                bgColorCard = 'bg-cyan-50/30 border-cyan-200 hover:border-cyan-400';
+            }
+            else if (item.status === 'emAtendimento') {
+                badgeTopo = `<span class="bg-indigo-100 text-indigo-800 text-[9px] font-black px-2 py-0.5 rounded border border-indigo-300 uppercase tracking-widest shadow-sm">Na Mesa</span>`;
+            }
+            else if (item.status === 'atendido') {
+                badgeTopo = `<span class="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded border border-emerald-300 uppercase tracking-widest shadow-sm">Protocolado</span>`;
             }
 
-        } catch (error) {
-            console.error(error);
-            document.getElementById('lista-dashboard-conteudo').innerHTML = `<p class="text-red-500 text-sm text-center font-bold">Erro ao carregar os processos. O servidor pode estar offline.</p>`;
+            if (isCardAberto) {
+                const linkIndividual = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken || ''}`;
+                return `
+                    <div class="border-2 ${bgColorCard} p-5 rounded-2xl shadow-sm hover:shadow-lg transition-all relative group flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
+                        <div class="flex-grow w-full sm:w-auto">
+                            <div class="flex items-center gap-2 mb-2">
+                                ${badgeTopo}
+                                ${item.enviadoPor ? `<span class="text-[9px] text-slate-500 font-bold uppercase">Via: ${escapeHTML(item.enviadoPor)}</span>` : ''}
+                            </div>
+                            <h3 class="font-black text-slate-800 text-lg w-full truncate">${escapeHTML(item.name)}</h3>
+                            <p class="text-xs font-semibold text-slate-500 mt-1 uppercase tracking-wide">${escapeHTML(item.subject || 'Assunto não informado')}</p>
+                            ${numProcessoHtml}
+                            ${notas}
+                            ${bannerTransf}
+                        </div>
+                        <div class="shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+                            <a href="${linkIndividual}" class="block text-center w-full sm:w-40 bg-slate-800 hover:bg-slate-900 text-white font-black py-3 px-4 rounded-xl text-[10px] transition-colors shadow uppercase tracking-widest ring-offset-2 ring-slate-800 group-hover:ring-2">
+                                ABRIR PEÇA
+                            </a>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const horaStr = item.attendedAt ? new Date(item.attendedAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '';
+                return `
+                    <div class="border border-emerald-200 bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
+                        <div>
+                            <div class="mb-1">${badgeTopo}</div>
+                            <h3 class="font-black text-slate-800 text-sm truncate">${escapeHTML(item.name)}</h3>
+                            <p class="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-wide">${escapeHTML(item.subject)}</p>
+                            ${numProcessoHtml}
+                        </div>
+                        <div class="shrink-0 text-right">
+                            <span class="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-1 rounded border border-emerald-300 uppercase tracking-widest shadow-sm inline-flex items-center gap-1"><span>✅</span> Finalizado</span>
+                            <p class="text-[9px] text-slate-400 font-bold mt-1.5">${horaStr}</p>
+                        </div>
+                    </div>
+                `;
+            }
+        };
+
+        const desenharSecao = (titulo, emoji, lista, isAberto) => {
+            let html = `<div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6">
+                            <h2 class="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 border-b pb-2 flex items-center gap-2"><span>${emoji}</span> ${titulo} <span class="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md text-[10px] ml-2">${lista.length}</span></h2>`;
+            if (lista.length === 0) {
+                html += `<p class="text-center text-xs text-gray-400 italic py-4">Nenhum processo nesta etapa.</p>`;
+            } else {
+                html += lista.map(item => desenharCard(item, isAberto)).join('');
+            }
+            html += `</div>`;
+            return html;
+        };
+
+        if (isDefensor) {
+            const pendentes = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome);
+            const distribuidos = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' && (a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
+            const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
+
+            if (prefs.mode === 'list') {
+                container.innerHTML = 
+                    desenharSecao('Para Assinar / Corrigir', '⚖️', pendentes, true) + 
+                    desenharSecao('Distribuições (Minha Equipe)', '✅', distribuidos, false);
+                // No modo lista as abas ficam invisiveis
+                if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
+            } else {
+                if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
+                
+                // Cria ou atualiza as abas preservando qual estava ativa
+                const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-pendentes';
+                
+                tabsDiv.innerHTML = `
+                    <button id="tab-pendentes" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-pendentes' ? 'bg-slate-800 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Para Assinar / Corrigir <span class="${abaAtivaId === 'tab-pendentes' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
+                    <button id="tab-assinados" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-assinados' ? 'bg-emerald-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Distribuições (Equipe) <span class="${abaAtivaId === 'tab-assinados' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-2 px-2 py-0.5 rounded text-[10px]">${distribuidos.length}</span></button>
+                    <button id="tab-historico-busca" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-historico-busca' ? 'bg-indigo-600 text-white shadow mode-btn-active' : 'bg-white text-indigo-500 hover:bg-indigo-50'}">🔍 Buscar Tudo</button>
+                `;
+
+                const renderDefensorList = (lista, isAberto) => {
+                    if (lista.length === 0) {
+                        container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">🙌</span><p class="text-base font-black uppercase tracking-widest text-slate-500">MESA LIMPA.</p></div>`;
+                        return;
+                    }
+                    container.innerHTML = lista.map(item => desenharCard(item, isAberto)).join('');
+                };
+
+                const limparEstilosAbas = () => {
+                    wrapperBusca.classList.add('hidden');
+                    document.querySelectorAll('.tab-btn').forEach(btn => {
+                        btn.className = btn.className.replace(/bg-slate-800|bg-emerald-600|bg-indigo-600|text-white|shadow|mode-btn-active/g, '').trim();
+                        btn.classList.add('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100', 'tab-btn');
+                    });
+                    document.getElementById('tab-historico-busca').classList.replace('text-slate-500', 'text-indigo-500');
+                };
+
+                document.getElementById('tab-pendentes').onclick = () => { limparEstilosAbas(); const btn = document.getElementById('tab-pendentes'); btn.classList.add('bg-slate-800', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100'); btn.querySelector('span').className = 'bg-white/20 text-white ml-2 px-2 py-0.5 rounded text-[10px]'; renderDefensorList(pendentes, true); };
+                document.getElementById('tab-assinados').onclick = () => { limparEstilosAbas(); const btn = document.getElementById('tab-assinados'); btn.classList.add('bg-emerald-600', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100'); btn.querySelector('span').className = 'bg-white/20 text-white ml-2 px-2 py-0.5 rounded text-[10px]'; renderDefensorList(distribuidos, false); };
+                document.getElementById('tab-historico-busca').onclick = () => {
+                    limparEstilosAbas(); wrapperBusca.classList.remove('hidden');
+                    const btn = document.getElementById('tab-historico-busca'); btn.classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-indigo-500', 'hover:bg-indigo-50', 'text-slate-500', 'hover:text-slate-800');
+                    renderDefensorList(meuHistoricoCompleto, true);
+                    document.getElementById('input-busca-local').oninput = (e) => {
+                        const termo = e.target.value.toLowerCase().trim();
+                        renderDefensorList(meuHistoricoCompleto.filter(i => (i.name && i.name.toLowerCase().includes(termo)) || (i.subject && i.subject.toLowerCase().includes(termo)) || (i.numeroProcesso && i.numeroProcesso.includes(termo))), true);
+                    };
+                };
+
+                // Executa a renderização baseada na aba ativa
+                if (abaAtivaId === 'tab-assinados') renderDefensorList(distribuidos, false);
+                else if (abaAtivaId === 'tab-historico-busca') { wrapperBusca.classList.remove('hidden'); renderDefensorList(meuHistoricoCompleto, true); }
+                else renderDefensorList(pendentes, true);
+            }
+
+        } else {
+            // SERVIDORES
+            const emAndamento = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
+            const enviados = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
+            const finalizados = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' && a.attendedBy === this.colaboradorNome);
+            const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome || a.assignedCollaborator?.name === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
+
+            if (prefs.mode === 'list') {
+                container.innerHTML = 
+                    desenharSecao('Para Fazer / Corrigir', '👩‍💻', emAndamento, true) + 
+                    desenharSecao('No Defensor (Avaliando)', '⏳', enviados, true) + 
+                    desenharSecao('Concluídos Hoje', '✅', finalizados, false);
+                if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
+            } else {
+                if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
+                const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-em-mesa';
+
+                tabsDiv.innerHTML = `
+                    <button id="tab-em-mesa" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-em-mesa' ? 'bg-slate-800 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Fazer/Corrigir <span class="${abaAtivaId === 'tab-em-mesa' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-1 px-1.5 py-0.5 rounded text-[9px]">${emAndamento.length}</span></button>
+                    <button id="tab-enviados" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-enviados' ? 'bg-indigo-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">No Defensor <span class="${abaAtivaId === 'tab-enviados' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-1 px-1.5 py-0.5 rounded text-[9px]">${enviados.length}</span></button>
+                    <button id="tab-finalizados" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-finalizados' ? 'bg-emerald-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Concluídos <span class="${abaAtivaId === 'tab-finalizados' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-1 px-1.5 py-0.5 rounded text-[9px]">${finalizados.length}</span></button>
+                    <button id="tab-historico-busca" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-historico-busca' ? 'bg-indigo-600 text-white shadow mode-btn-active' : 'bg-white text-indigo-500 hover:bg-indigo-50'}">🔍 Buscar</button>
+                `;
+
+                const renderServidorList = (lista, isAberto, isEmptyAviso) => {
+                    if (lista.length === 0) {
+                        container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">📭</span><p class="text-sm font-black uppercase tracking-widest text-slate-500">${isEmptyAviso}</p></div>`;
+                        return;
+                    }
+                    container.innerHTML = lista.map(item => desenharCard(item, isAberto)).join('');
+                };
+
+                const resetTabs = () => {
+                    wrapperBusca.classList.add('hidden');
+                    document.querySelectorAll('.tab-btn').forEach(btn => {
+                        btn.className = btn.className.replace(/bg-slate-800|bg-emerald-600|bg-indigo-600|text-white|shadow|mode-btn-active/g, '').trim();
+                        btn.classList.add('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100', 'tab-btn');
+                    });
+                    document.getElementById('tab-historico-busca').classList.replace('text-slate-500', 'text-indigo-500');
+                };
+
+                document.getElementById('tab-em-mesa').onclick = () => { resetTabs(); const btn = document.getElementById('tab-em-mesa'); btn.classList.add('bg-slate-800', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100'); btn.querySelector('span').className = 'bg-white/20 text-white ml-1 px-1.5 py-0.5 rounded text-[9px]'; renderServidorList(emAndamento, true, "Sua mesa está limpa."); };
+                document.getElementById('tab-enviados').onclick = () => { resetTabs(); const btn = document.getElementById('tab-enviados'); btn.classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100'); btn.querySelector('span').className = 'bg-white/20 text-white ml-1 px-1.5 py-0.5 rounded text-[9px]'; renderServidorList(enviados, true, "Nenhum documento seu no Defensor."); };
+                document.getElementById('tab-finalizados').onclick = () => { resetTabs(); const btn = document.getElementById('tab-finalizados'); btn.classList.add('bg-emerald-600', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100'); btn.querySelector('span').className = 'bg-white/20 text-white ml-1 px-1.5 py-0.5 rounded text-[9px]'; renderServidorList(finalizados, false, "Você ainda não finalizou nada hoje."); };
+                document.getElementById('tab-historico-busca').onclick = () => {
+                    resetTabs(); wrapperBusca.classList.remove('hidden');
+                    const btn = document.getElementById('tab-historico-busca'); btn.classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-indigo-500', 'hover:bg-indigo-50', 'text-slate-500', 'hover:text-slate-800');
+                    renderServidorList(meuHistoricoCompleto, true, "Nenhum histórico encontrado.");
+                    document.getElementById('input-busca-local').oninput = (e) => {
+                        const termo = e.target.value.toLowerCase().trim();
+                        renderServidorList(meuHistoricoCompleto.filter(i => (i.name && i.name.toLowerCase().includes(termo)) || (i.subject && i.subject.toLowerCase().includes(termo)) || (i.numeroProcesso && i.numeroProcesso.includes(termo))), true, "Nada encontrado.");
+                    };
+                };
+
+                // Executa a renderização baseada na aba ativa
+                if (abaAtivaId === 'tab-enviados') renderServidorList(enviados, true, "Nenhum documento seu no Defensor.");
+                else if (abaAtivaId === 'tab-finalizados') renderServidorList(finalizados, false, "Você ainda não finalizou nada hoje.");
+                else if (abaAtivaId === 'tab-historico-busca') { wrapperBusca.classList.remove('hidden'); renderServidorList(meuHistoricoCompleto, true, "Nenhum histórico encontrado."); }
+                else renderServidorList(emAndamento, true, "Sua mesa está limpa.");
+            }
         }
     },
 
