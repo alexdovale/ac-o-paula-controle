@@ -1,4 +1,4 @@
-// js/pdfService.js - GERADOR DE RELATÓRIOS AUDITÁVEIS (PADRÃO SIGEP)
+// js/pdfService.js - VERSÃO FINAL CONSOLIDADA (SIGEP + Checklist Textual + Ata Social)
 
 /**
  * Baixa as bibliotecas de PDF automaticamente se não existirem
@@ -32,48 +32,35 @@ const getSafeDate = (timeValue) => {
     return isNaN(date.getTime()) ? null : date;
 };
 
-// Auxiliar para calcular a duração entre duas marcas de tempo em minutos textuais
-const getDuracaoMinutos = (dataInicialStr, dataFinalStr) => {
-    if (!dataInicialStr || !dataFinalStr) return 'N/A';
-    const inicio = new Date(dataInicialStr);
-    const fim = new Date(dataFinalStr);
-    if (isNaN(inicio.getTime()) || isNaN(fim.getTime())) return 'N/A';
-    
-    const diffMs = fim - inicio;
-    const totalMinutos = Math.floor(diffMs / (1000 * 60));
-    
-    if (totalMinutos < 0) return '0 min';
-    if (totalMinutos >= 60) {
-        return `${Math.floor(totalMinutos / 60)}h ${totalMinutos % 60}min`;
-    }
-    return `${totalMinutos} min`;
+const calculateDuration = (totalMinutes) => {
+    if (totalMinutes === null || totalMinutes < 0) return 'N/A';
+    return totalMinutes >= 60 
+        ? `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}min` 
+        : `${totalMinutes} min`;
 };
 
-// Auxiliar para calcular o atraso a partir de um horário HH:MM de agendamento e a data/hora da falta
-const getDiferencaAgendamento = (scheduledTime, lastActionTimestamp) => {
-    if (!scheduledTime || !lastActionTimestamp) return 'N/A';
-    const dataFalta = new Date(lastActionTimestamp);
-    if (isNaN(dataFalta.getTime())) return 'N/A';
-
-    try {
-        const [h, m] = scheduledTime.split(':').map(Number);
-        const dataAgendado = new Date(dataFalta);
-        dataAgendado.setHours(h, m, 0, 0);
-
-        const diffMs = dataFalta - dataAgendado;
-        const totalMinutos = Math.floor(diffMs / (1000 * 60));
-        return totalMinutos > 0 ? `${totalMinutos} min` : '0 min';
-    } catch (e) {
-        return 'N/A';
+const formatCurrency = (value) => {
+    if (!value) return 'R$ 0,00';
+    if (typeof value === 'string' && value.includes('R$')) return value;
+    
+    let num = 0;
+    if (typeof value === 'string') {
+        const cleanValue = value.replace(/[R$\s]/g, '').replace(',', '.');
+        num = parseFloat(cleanValue) || 0;
+    } else {
+        num = value || 0;
     }
+    
+    return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };
 
+// Helper para obter identificador
 const getIdentificador = (colaborador) => {
     if (colaborador.identificador) return colaborador.identificador;
     if (colaborador.id) return colaborador.id;
     if (colaborador.matricula) return colaborador.matricula;
     if (colaborador.codigo) return colaborador.codigo;
-    return 'N/A';
+    return '';
 };
 
 const getAttendantNameForPDF = (item) => {
@@ -92,9 +79,12 @@ const getAttendantNameForPDF = (item) => {
     return 'N/A';
 };
 
+// ========================================================
+// PDF SERVICE - VERSÃO FINAL
+// ========================================================
+
 export const PDFService = {
     
-    // 1. PLANILHA ISOLADA DE GASTOS
     async generatePlanilhaGastosPDF(assistedName, expenseData) {
         try {
             await ensureJsPDF(); 
@@ -139,8 +129,8 @@ export const PDFService = {
             } else {
                  const totalFormatted = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                  body.push([
-                     { content: 'TOTAL DAS NECESSIDADES MENSAL', styles: { fontStyle: 'bold', halign: 'center', fillColor: [240, 253, 244] } },
-                     { content: totalFormatted, styles: { fontStyle: 'bold', halign: 'center', fillColor: [220, 252, 231], textColor: [21, 128, 61] } }
+                     { content: 'TOTAL', styles: { fontStyle: 'bold', halign: 'center' } },
+                     { content: totalFormatted, styles: { fontStyle: 'bold', halign: 'center' } }
                  ]);
             }
 
@@ -152,7 +142,7 @@ export const PDFService = {
                 ]],
                 body: body,
                 theme: 'grid',
-                styles: { lineColor: [0, 0, 0], lineWidth: 1, textColor: [0, 0, 0], fontSize: 10, cellPadding: 6, overflow: 'linebreak' },
+                styles: { lineColor: [0, 0, 0], lineWidth: 1, textColor: [0, 0, 0], fontSize: 10, cellPadding: 6 },
                 columnStyles: { 0: { cellWidth: 280 }, 1: { cellWidth: 150 } },
                 margin: { left: (doc.internal.pageSize.getWidth() - 430) / 2 }
             });
@@ -165,196 +155,583 @@ export const PDFService = {
         }
     },
 
-    // 2. RELATÓRIO GLOBAL DE ATENDIDOS (MÉTRICAS)
-    async generateAtendidosPDF(atendidosList, pautaNome = "Geral") {
+    /**
+     * GERA ATA DE AÇÃO SOCIAL
+     */
+    async generateAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
-
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("RELATÓRIO DE ASSISTIDOS PROTOCOLADOS / ATENDIDOS", doc.internal.pageSize.getWidth() / 2, 40, { align: "center" });
+            const doc = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'a4'
+            });
             
-            doc.setFontSize(10);
+            // DADOS PARA O CABEÇALHO
+            const dataInput = dadosExtras.data ? new Date(dadosExtras.data + 'T12:00:00') : new Date();
+            const dia = dataInput.getDate();
+            const mesExtenso = dataInput.toLocaleString('pt-BR', { month: 'long' });
+            const ano = dataInput.getFullYear();
+            
+            const endereco = dadosExtras.endereco || "Não informado";
+            const nomeDaAcao = dadosExtras.acao || pautaName;
+            const orgaoAtendimentoConteudo = dadosExtras.orgao || "NÃO INFORMADO";
+            const totalAtendidos = dadosExtras.totalAtendimentos !== undefined 
+                ? dadosExtras.totalAtendimentos 
+                : atendidos.length;
+
+            // 1. LOGO (106x25mm)
+            const logoUrl = "https://raw.githubusercontent.com/alexdovale/calculo-mensuracao-codoc/main/logo.png";
+            try {
+                // Centralizado: (210 - 106) / 2 = 52mm de margem esquerda
+                doc.addImage(logoUrl, 'PNG', 52, 8, 106, 25);
+            } catch(e) { console.warn("Logo não carregada:", e); }
+
+            // 2. TÍTULO
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(13);
+            doc.text("ATA AÇÃO SOCIAL", 105, 45, { align: "center" });
+
+            // 3. TEXTO INTRODUTÓRIO (limitado à largura das tabelas = 170mm)
             doc.setFont("helvetica", "normal");
-            doc.text(`Sistema: SIGEP  |  Pauta: ${pautaNome}  |  Total Atendidos: ${atendidosList.length}`, 40, 65);
+            doc.setFontSize(9);
+            
+            const introText = `Aos ${dia} dias do mês de ${mesExtenso} do ano de ${ano}, a partir das 9h, em ${endereco}, trabalharam na ${nomeDaAcao}, os(as) Defensores(as) Públicos(as) abaixo listados(as), bem como os(as) servidores(as), conforme listagem a seguir:`;
+            
+            const splitIntro = doc.splitTextToSize(introText, 170);
+            doc.text(splitIntro, 20, 55);
+            
+            let currentY = 55 + (splitIntro.length * 4.5);
 
-            const body = atendidosList.map((a, index) => {
-                const dataAtendimento = getSafeDate(a.attendedAt || a.lastActionTimestamp);
-                const horaStr = dataAtendimento ? dataAtendimento.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : 'N/A';
-                
-                const inicioProcesso = a.arrivalTime || a.createdAt;
-                const duracaoTotal = getDuracaoMinutos(inicioProcesso, a.attendedAt);
-                const lancadoNoVerde = a.isConfirmed ? "Sim" : "Não";
+            const sortedColaboradores = [...colaboradores].sort((a, b) => {
+                const eqA = a.equipe || '';
+                const eqB = b.equipe || '';
+                if (eqA !== eqB) return eqA.localeCompare(eqB);
+                return (a.nome || '').localeCompare(b.nome || '');
+            });
 
-                let assuntoCompleto = a.subject || 'Não Informado';
-                if (a.demandas && a.demandas.descricoes && a.demandas.descricoes.length > 0) {
-                    assuntoCompleto += '\n[Demandas Adicionais]:\n' + a.demandas.descricoes.map(d => `• ${d}`).join('\n');
+            const defensores = sortedColaboradores.filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'));
+            const servidores = sortedColaboradores.filter(c => c.cargo && !c.cargo.toLowerCase().includes('defensor'));
+
+            const larguraNome = 65;
+            const larguraIdentificador = 30;
+            const larguraAssinatura = 170 - larguraNome - larguraIdentificador;
+
+            if (defensores.length > 0) {
+                doc.autoTable({
+                    startY: currentY + 1,
+                    head: [[
+                        { content: 'DEFENSOR(A) PÚBLICO(A)', colSpan: 3, styles: { halign: 'center', fontStyle: 'bold', fontSize: 9, fillColor: [146, 208, 80] } }
+                    ]],
+                    body: [
+                        [
+                            { content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                            { content: 'MATRÍCULA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                            { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } }
+                        ],
+                        ...defensores.map(c => [
+                            { content: c.nome || '', styles: { halign: 'center', fontSize: 8, cellPadding: 2 } },
+                            { content: getIdentificador(c), styles: { halign: 'center', fontSize: 8, cellPadding: 2 } },
+                            { content: '', styles: { halign: 'center', fontSize: 8, cellPadding: 2 } }
+                        ])
+                    ],
+                    theme: 'grid',
+                    headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold', fontSize: 9 },
+                    styles: { fontSize: 8, cellPadding: 2.5, lineColor: [0, 0, 0], lineWidth: 0.2, valign: 'middle', halign: 'center' },
+                    columnStyles: { 0: { cellWidth: larguraNome }, 1: { cellWidth: larguraIdentificador }, 2: { cellWidth: larguraAssinatura } },
+                    margin: { left: 20, right: 20 }
+                });
+                currentY = doc.lastAutoTable.finalY + 2;
+            }
+
+            if (servidores.length > 0) {
+                doc.autoTable({
+                    startY: currentY,
+                    head: [[
+                        { content: 'SERVIDOR(A)', colSpan: 3, styles: { halign: 'center', fontStyle: 'bold', fontSize: 9, fillColor: [146, 208, 80] } }
+                    ]],
+                    body: [
+                        [
+                            { content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                            { content: 'ID FUNCIONAL', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                            { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } }
+                        ],
+                        ...servidores.map(c => [
+                            { content: c.nome || '', styles: { halign: 'center', fontSize: 8, cellPadding: 2 } },
+                            { content: getIdentificador(c), styles: { halign: 'center', fontSize: 8, cellPadding: 2 } },
+                            { content: '', styles: { halign: 'center', fontSize: 8, cellPadding: 2 } }
+                        ])
+                    ],
+                    theme: 'grid',
+                    headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold', fontSize: 9 },
+                    styles: { fontSize: 8, cellPadding: 2.5, lineColor: [0, 0, 0], lineWidth: 0.2, valign: 'middle', halign: 'center' },
+                    columnStyles: { 0: { cellWidth: larguraNome }, 1: { cellWidth: larguraIdentificador }, 2: { cellWidth: larguraAssinatura } },
+                    margin: { left: 20, right: 20 }
+                });
+                currentY = doc.lastAutoTable.finalY + 2;
+            }
+
+            doc.autoTable({
+                startY: currentY,
+                body: [
+                    [
+                        { content: 'ÓRGÃO DE ATENDIMENTO - AS', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                        { content: 'TOTAL DE ATENDIMENTOS', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } }
+                    ],
+                    [
+                        { content: orgaoAtendimentoConteudo.toUpperCase(), styles: { halign: 'center', fontSize: 8, cellPadding: 3 } },
+                        { content: String(totalAtendidos), styles: { halign: 'center', fontSize: 10, fontStyle: 'bold', cellPadding: 3 } }
+                    ]
+                ],
+                theme: 'grid',
+                styles: { 
+                    fontSize: 8, 
+                    halign: 'center', 
+                    cellPadding: 3, 
+                    lineColor: [0, 0, 0], 
+                    lineWidth: 0.2,
+                    valign: 'middle'
+                },
+                columnStyles: { 0: { cellWidth: 110 }, 1: { cellWidth: 60 } },
+                margin: { left: 20, right: 20 }
+            });
+            
+            currentY = doc.lastAutoTable.finalY + 6;
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(8);
+            doc.text("OBSERVAÇÕES:", 20, currentY);
+            doc.setDrawColor(0, 0, 0);
+            doc.line(20, currentY + 3, 190, currentY + 3);
+            
+            for (let i = 1; i <= 3; i++) {
+                const lineY = currentY + 6 + (i * 4.5);
+                if (lineY < doc.internal.pageSize.getHeight() - 15) {
+                    doc.setDrawColor(200, 200, 200);
+                    doc.line(20, lineY, 190, lineY);
+                }
+            }
+
+            const nomeArquivo = `Ata_Social_${(dadosExtras.acao || pautaName).replace(/\s+/g, '_')}.pdf`;
+            doc.save(nomeArquivo);
+            console.log("✅ Ata gerada com sucesso!");
+            return true;
+            
+        } catch (error) {
+            console.error("Erro ao gerar Ata Social:", error);
+            alert("Erro ao gerar a ata. Verifique o console para mais detalhes.");
+            return false;
+        }
+    },
+
+    /**
+     * VISUALIZAR ATA (PREVIEW)
+     */
+    async previewAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
+        try {
+            await ensureJsPDF();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'a4'
+            });
+            
+            const dataInput = dadosExtras.data ? new Date(dadosExtras.data + 'T12:00:00') : new Date();
+            const dia = dataInput.getDate();
+            const mesExtenso = dataInput.toLocaleString('pt-BR', { month: 'long' });
+            const ano = dataInput.getFullYear();
+            
+            const endereco = dadosExtras.endereco || "Não informado";
+            const nomeDaAcao = dadosExtras.acao || pautaName;
+            const orgaoAtendimentoConteudo = dadosExtras.orgao || "NÃO INFORMADO";
+            const totalAtendidos = dadosExtras.totalAtendimentos !== undefined 
+                ? dadosExtras.totalAtendimentos 
+                : atendidos.length;
+
+            const logoUrl = "https://raw.githubusercontent.com/alexdovale/calculo-mensuracao-codoc/main/logo.png";
+            try {
+                doc.addImage(logoUrl, 'PNG', 52, 8, 106, 25);
+            } catch(e) {}
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(13);
+            doc.text("ATA AÇÃO SOCIAL", 105, 45, { align: "center" });
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            const introText = `Aos ${dia} dias do mês de ${mesExtenso} do ano de ${ano}, a partir das 9h, em ${endereco}, trabalharam na ${nomeDaAcao}, os(as) Defensores(as) Públicos(as) abaixo listados(as), bem como os(as) servidores(as), conforme listagem a seguir:`;
+            
+            const splitIntro = doc.splitTextToSize(introText, 170);
+            doc.text(splitIntro, 20, 55);
+            
+            let currentY = 55 + (splitIntro.length * 4.5);
+
+            const sortedColaboradores = [...colaboradores].sort((a, b) => {
+                const eqA = a.equipe || '';
+                const eqB = b.equipe || '';
+                if (eqA !== eqB) return eqA.localeCompare(eqB);
+                return (a.nome || '').localeCompare(b.nome || '');
+            });
+
+            const defensores = sortedColaboradores.filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'));
+            const servidores = sortedColaboradores.filter(c => c.cargo && !c.cargo.toLowerCase().includes('defensor'));
+
+            const larguraNome = 65;
+            const larguraIdentificador = 30;
+            const larguraAssinatura = 170 - larguraNome - larguraIdentificador;
+
+            if (defensores.length > 0) {
+                doc.autoTable({
+                    startY: currentY + 1,
+                    head: [[{ content: 'DEFENSOR(A) PÚBLICO(A)', colSpan: 3, styles: { halign: 'center', fontStyle: 'bold', fontSize: 9, fillColor: [146, 208, 80] } }]],
+                    body: [
+                        [
+                            { content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                            { content: 'MATRÍCULA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                            { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } }
+                        ],
+                        ...defensores.map(c => [c.nome || '', getIdentificador(c), ''])
+                    ],
+                    theme: 'grid',
+                    headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold', fontSize: 9 },
+                    styles: { fontSize: 8, cellPadding: 2.5, lineColor: [0, 0, 0], lineWidth: 0.2, valign: 'middle', halign: 'center' },
+                    columnStyles: { 0: { cellWidth: larguraNome }, 1: { cellWidth: larguraIdentificador }, 2: { cellWidth: larguraAssinatura } },
+                    margin: { left: 20, right: 20 }
+                });
+                currentY = doc.lastAutoTable.finalY + 2;
+            }
+
+            if (servidores.length > 0) {
+                doc.autoTable({
+                    startY: currentY,
+                    head: [[{ content: 'SERVIDOR(A)', colSpan: 3, styles: { halign: 'center', fontStyle: 'bold', fontSize: 9, fillColor: [146, 208, 80] } }]],
+                    body: [
+                        [
+                            { content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                            { content: 'ID FUNCIONAL', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                            { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } }
+                        ],
+                        ...servidores.map(c => [c.nome || '', getIdentificador(c), ''])
+                    ],
+                    theme: 'grid',
+                    headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold', fontSize: 9 },
+                    styles: { fontSize: 8, cellPadding: 2.5, lineColor: [0, 0, 0], lineWidth: 0.2, valign: 'middle', halign: 'center' },
+                    columnStyles: { 0: { cellWidth: larguraNome }, 1: { cellWidth: larguraIdentificador }, 2: { cellWidth: larguraAssinatura } },
+                    margin: { left: 20, right: 20 }
+                });
+                currentY = doc.lastAutoTable.finalY + 2;
+            }
+
+            doc.autoTable({
+                startY: currentY,
+                body: [
+                    [
+                        { content: 'ÓRGÃO DE ATENDIMENTO - AS', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                        { content: 'TOTAL DE ATENDIMENTOS', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } }
+                    ],
+                    [
+                        { content: orgaoAtendimentoConteudo.toUpperCase(), styles: { halign: 'center', fontSize: 8, cellPadding: 3 } },
+                        { content: String(totalAtendidos), styles: { halign: 'center', fontSize: 10, fontStyle: 'bold', cellPadding: 3 } }
+                    ]
+                ],
+                theme: 'grid',
+                styles: { fontSize: 8, halign: 'center', cellPadding: 3, lineColor: [0, 0, 0], lineWidth: 0.2, valign: 'middle' },
+                columnStyles: { 0: { cellWidth: 110 }, 1: { cellWidth: 60 } },
+                margin: { left: 20, right: 20 }
+            });
+            
+            currentY = doc.lastAutoTable.finalY + 6;
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(8);
+            doc.text("OBSERVAÇÕES:", 20, currentY);
+            doc.line(20, currentY + 3, 190, currentY + 3);
+            
+            for (let i = 1; i <= 3; i++) {
+                const lineY = currentY + 6 + (i * 4.5);
+                if (lineY < doc.internal.pageSize.getHeight() - 15) {
+                    doc.setDrawColor(200, 200, 200);
+                    doc.line(20, lineY, 190, lineY);
+                }
+            }
+
+            const blob = doc.output('bloburl');
+            window.open(blob, '_blank');
+            return true;
+            
+        } catch (error) {
+            console.error("Erro ao visualizar Ata:", error);
+            return false;
+        }
+    },
+
+    /**
+     * GERA O RELATÓRIO DE ATENDIDOS
+     */
+    async generateAtendidosPDF(pautaName, atendidos) {
+        try {
+            await ensureJsPDF();
+            const { jsPDF } = window.jspdf;
+            const docPDF = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
+
+            docPDF.setFontSize(18);
+            docPDF.setTextColor(22, 163, 74); // Verde SIGAP
+            docPDF.text(`Relatório de Atendidos - ${pautaName}`, 40, 40);
+
+            docPDF.setFontSize(10);
+            docPDF.setTextColor(100);
+            const totalAssuntos = atendidos.reduce((acc, a) => acc + 1 + (a.demandas?.quantidade || 0), 0);
+            docPDF.text(`Data: ${new Date().toLocaleString('pt-BR')}`, 40, 55);
+            docPDF.text(`Total: ${atendidos.length} assistidos | Assuntos totais: ${totalAssuntos}`, 40, 68);
+
+            const head = [["#", "Nome", "Agendado", "Chegou", "Chamado", "Duração", "Assunto", "Atendente", "Validado Verde"]];
+
+            const body = atendidos.map((item, index) => {
+                const arrivalDate = getSafeDate(item.arrivalTime);
+                const attendedDate = getSafeDate(item.attendedTime);
+
+                let duration = 'N/A';
+                if (arrivalDate && attendedDate) {
+                    const diffMs = attendedDate.getTime() - arrivalDate.getTime();
+                    duration = calculateDuration(Math.round(diffMs / 60000));
+                }
+
+                const arrStr = arrivalDate ? arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
+                const attStr = attendedDate ? attendedDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
+
+                let atendente = 'N/A';
+                if (item.attendant) {
+                    atendente = (typeof item.attendant === 'object')
+                        ? (item.attendant.nome || item.attendant.name || 'N/A')
+                        : String(item.attendant);
                 }
 
                 return [
                     index + 1,
-                    a.name || 'Não Informado',
-                    a.scheduledTime || 'Avulso', 
-                    assuntoCompleto, 
-                    getAttendantNameForPDF(a),
-                    a.numeroProcesso || 'S/ Número',
-                    horaStr,
-                    duracaoTotal,
-                    lancadoNoVerde
+                    cleanString(item.name),
+                    item.scheduledTime || (item.type === 'avulso' ? 'Avulso' : '---'),
+                    arrStr,
+                    attStr,
+                    duration,
+                    cleanString(item.subject),
+                    cleanString(atendente),
+                    item.isConfirmed ? "CONCLUÍDO" : "PENDENTE"
                 ];
             });
 
-            if (body.length === 0) body.push([{ content: "Nenhum atendimento finalizado nesta pauta.", colSpan: 9, styles: { halign: 'center', fontStyle: 'italic' } }]);
-
-            doc.autoTable({
+            docPDF.autoTable({
+                head: head,
+                body: body,
                 startY: 80,
-                head: [['Nº', 'NOME DO ASSISTIDO', 'AGENDADO', 'ASSUNTO / DEMANDAS RESOLVIDAS', 'ATENDENTE', 'Nº PROCESSO / PROTOCOLO', 'HORA CONCL.', 'DURAÇÃO', 'LANÇADO VERDE']],
-                body: body,
-                theme: 'grid', 
-                headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' },
-                styles: { fontSize: 8, cellPadding: 5, valign: 'middle', overflow: 'linebreak' }, 
-                columnStyles: { 
-                    0: { halign: 'center', cellWidth: 25 }, 
-                    1: { cellWidth: 110 }, 
-                    2: { halign: 'center', fontStyle: 'bold', cellWidth: 55 },
-                    3: { cellWidth: 190 }, 
-                    4: { cellWidth: 90 }, 
-                    5: { fontStyle: 'bold', halign: 'center', cellWidth: 90 }, 
-                    6: { halign: 'center', cellWidth: 50 }, 
-                    7: { halign: 'center', fontStyle: 'bold', cellWidth: 60 }, 
-                    8: { halign: 'center', cellWidth: 60 } 
-                }
+                theme: 'striped',
+                headStyles: { fillColor: [22, 163, 74] }, // Verde SIGAP
+                styles: { fontSize: 8, cellPadding: 4, halign: 'center' },
+                columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 110 }, 6: { cellWidth: 150 } }
             });
 
-            doc.save(`SIGEP_Atendidos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            docPDF.save(`atendidos_${pautaName.replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (error) {
-            console.error("Erro ao gerar PDF de Atendidos:", error);
+            console.error("Erro PDF Atendidos:", error);
             return false;
         }
     },
-
-    // 3. RELATÓRIO DE AUSÊNCIAS (MÉTRICAS)
-    async generateFaltososPDF(faltososList, pautaNome = "Geral") {
+    
+    /**
+     * GERA O RELATÓRIO DE FALTOSOS
+     */
+    async generateFaltososPDF(pautaName, faltosos) {
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
+            const docPDF = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("RELATÓRIO DE AUSÊNCIAS / FALTOSOS", doc.internal.pageSize.getWidth() / 2, 45, { align: "center" });
+            docPDF.setFontSize(18);
+            docPDF.setTextColor(22, 163, 74); // Verde SIGAP
+            docPDF.text(`Relatório de Faltosos - ${pautaName}`, 40, 40);
 
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "normal");
-            doc.text(`Sistema: SIGEP  |  Pauta: ${pautaNome}  |  Total Ausentes: ${faltososList.length}`, 40, 70);
+            docPDF.setFontSize(10);
+            docPDF.setTextColor(100);
+            docPDF.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, 55);
+            docPDF.text(`Total de Ausências: ${faltosos.length}`, 40, 68);
 
-            const body = faltososList.map((f, index) => {
-                const dataFalta = getSafeDate(f.lastActionTimestamp);
-                const horaFaltaStr = dataFalta ? dataFalta.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : 'N/A';
-                const tempoAtraso = getDiferencaAgendamento(f.scheduledTime, f.lastActionTimestamp);
-                const lancadoNoVerde = f.isConfirmed ? "Sim" : "Não";
+            const head = [["#", "Nome do Assistido", "Agendado", "Assunto", "Falta às", "Verde"]];
+
+            const body = faltosos.map((item, index) => {
+                const logTime = getSafeDate(item.lastActionTimestamp);
+                const faltaStr = logTime ? logTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
 
                 return [
                     index + 1,
-                    f.name || 'Não Informado',
-                    f.subject || 'Não Informado',
-                    f.scheduledTime || 'Não Agendado',
-                    horaFaltaStr,
-                    tempoAtraso,
-                    lancadoNoVerde
+                    cleanString(item.name).toUpperCase(),
+                    item.scheduledTime || (item.type === 'avulso' ? 'Avulso' : '---'),
+                    cleanString(item.subject).toUpperCase(), 
+                    faltaStr,
+                    item.isConfirmed ? "OK" : "PEND"
                 ];
             });
 
-            if (body.length === 0) body.push([{ content: "Nenhum assistido marcado como faltoso.", colSpan: 7, styles: { halign: 'center', fontStyle: 'italic' } }]);
-
-            doc.autoTable({
-                startY: 85,
-                head: [['Nº', 'NOME DO ASSISTIDO', 'ASSUNTO PREVISTO', 'HORÁRIO AGENDADO', 'HORA FALTA', 'ATRASO LIMITE', 'LANÇADO VERDE']],
+            docPDF.autoTable({
+                head: head,
                 body: body,
-                theme: 'striped',
-                headStyles: { fillColor: [153, 27, 27], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' },
-                styles: { fontSize: 8.5, cellPadding: 6, valign: 'middle', overflow: 'linebreak' }, 
+                startY: 85,
+                theme: 'grid',
+                headStyles: { fillColor: [22, 163, 74] }, // Verde SIGAP
+                styles: { fontSize: 8, cellPadding: 5, halign: 'center', valign: 'middle', overflow: 'linebreak' },
                 columnStyles: { 
-                    0: { halign: 'center', cellWidth: 30 }, 
-                    1: { cellWidth: 160 }, 
-                    2: { cellWidth: 220 }, 
-                    3: { halign: 'center', fontStyle: 'bold', cellWidth: 80 }, 
-                    4: { halign: 'center', cellWidth: 70 }, 
-                    5: { fontStyle: 'bold', halign: 'center', cellWidth: 80 }, 
-                    6: { halign: 'center', cellWidth: 80 } 
+                    1: { halign: 'left', cellWidth: 140 }, 
+                    3: { halign: 'left', cellWidth: 160 }, 
+                    5: { fontStyle: 'bold' }               
                 }
             });
 
-            doc.save(`SIGEP_Faltosos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            const pageCount = docPDF.internal.getNumberOfPages();
+            for(let i = 1; i <= pageCount; i++) {
+                docPDF.setPage(i);
+                docPDF.setFontSize(7);
+                docPDF.text(`SIGEP - Sistema de Gerenciamento de Pauta | Página ${i} de ${pageCount}`, 40, 820);
+            }
+
+            docPDF.save(`faltosos_${pautaName.replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (error) {
-            console.error("Erro ao gerar PDF de Faltosos:", error);
+            console.error("Erro PDF Faltosos:", error);
             return false;
         }
     },
 
-    // 4. RELATÓRIO DE PRODUTIVIDADE DA EQUIPE (MÉTRICAS)
-    async generateCollaboratorsPDF(colaboradoresList, todosAtendimentos, pautaNome = "Geral") {
+    /**
+     * GERA LISTA DE COLABORADORES ORDENADA
+     */
+    async generateCollaboratorsPDF(pautaName, colaboradores, selectedCols = ['nome', 'cargo', 'equipe', 'transporte']) {
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+            const docPDF = new jsPDF();
 
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("RELATÓRIO DE PRODUTIVIDADE DA EQUIPE", doc.internal.pageSize.getWidth() / 2, 45, { align: "center" });
+            const colMap = {
+                'nome': { label: 'Membro da Equipe', getData: (c) => c.nome },
+                'cargo': { label: 'Cargo', getData: (c) => c.cargo || 'N/A' },
+                'equipe': { label: 'Equipe', getData: (c) => c.equipe ? `EQP ${c.equipe}` : 'N/A' },
+                'presenca': { label: 'Status / Horário', getData: (c) => c.presente ? `Presente (${c.horario})` : 'Ausente' },
+                'transporte': { label: 'Deslocamento', getData: (c) => {
+                    let desc = c.transporte || 'Não Informado';
+                    if (c.transporte === 'Com a Empresa' && c.localEncontro) desc += ` (${c.localEncontro})`;
+                    return desc;
+                }}
+            };
 
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "normal");
-            doc.text(`Sistema: SIGEP  |  Pauta: ${pautaNome}  |  Total Equipe: ${colaboradoresList.length}`, 40, 70);
+            const sortedColaboradores = [...colaboradores].sort((a, b) => {
+                const equipeA = a.equipe || 'Sem Equipe';
+                const equipeB = b.equipe || 'Sem Equipe';
+                if (equipeA !== equipeB) return equipeA.localeCompare(equipeB);
 
-            const body = colaboradoresList.map((c, index) => {
-                const concluidos = todosAtendimentos.filter(a => a.status === 'atendido' && getAttendantNameForPDF(a) === c.nome).length;
-                const emMesa = todosAtendimentos.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome).length;
+                const getCargoWeight = (cargo) => {
+                    const c = (cargo || '').toLowerCase();
+                    if (c.includes('defensor')) return 1;
+                    if (c.includes('servidor')) return 2;
+                    return 3;
+                };
 
-                return [
-                    index + 1,
-                    c.nome || 'Não Informado',
-                    getIdentificador(c),
-                    c.cargo || 'Não Informado',
-                    c.equipe || 'N/A',
-                    emMesa,
-                    concluidos
-                ];
+                const weightA = getCargoWeight(a.cargo);
+                const weightB = getCargoWeight(b.cargo);
+                
+                if (weightA !== weightB) return weightA - weightB;
+                
+                return (a.nome || '').localeCompare(b.nome || '');
             });
 
-            if (body.length === 0) body.push([{ content: "Nenhum colaborador registrado nesta equipe.", colSpan: 7, styles: { halign: 'center', fontStyle: 'italic' } }]);
+            const header = [selectedCols.map(key => colMap[key] ? colMap[key].label : key)];
+            
+            const tableData = [];
+            let currentEquipe = null;
 
-            doc.autoTable({
-                startY: 85,
-                head: [['Nº', 'NOME COMPLETO', 'IDENTIFICADOR / MATRÍCULA', 'CARGO', 'EQUIPE', 'EM MESA', 'CONCLUÍDOS']],
-                body: body,
-                theme: 'striped',
-                headStyles: { fillColor: [4, 120, 87], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' },
-                styles: { fontSize: 8.5, cellPadding: 6, valign: 'middle', overflow: 'linebreak' },
-                columnStyles: { 
-                    0: { halign: 'center', cellWidth: 25 }, 
-                    1: { cellWidth: 150 }, 
-                    2: { halign: 'center', cellWidth: 100 }, 
-                    3: { cellWidth: 90 }, 
-                    4: { halign: 'center', cellWidth: 50 }, 
-                    5: { halign: 'center', cellWidth: 50 }, 
-                    6: { halign: 'center', fontStyle: 'bold', cellWidth: 65 } 
+            sortedColaboradores.forEach(c => {
+                const equipeAtual = c.equipe ? `Equipe ${c.equipe}` : 'Sem Equipe';
+                
+                if (equipeAtual !== currentEquipe) {
+                    currentEquipe = equipeAtual;
+                    tableData.push([
+                        {
+                            content: equipeAtual.toUpperCase(),
+                            colSpan: selectedCols.length,
+                            styles: { 
+                                fillColor: [240, 253, 244], 
+                                textColor: [21, 128, 61],   
+                                fontStyle: 'bold', 
+                                halign: 'center'            
+                            } 
+                        }
+                    ]);
                 }
+                
+                tableData.push(selectedCols.map(key => colMap[key] ? colMap[key].getData(c) : 'N/A'));
             });
 
-            doc.save(`SIGEP_Produtividade_Equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            docPDF.setFontSize(16);
+            docPDF.setTextColor(22, 163, 74); // Verde SIGAP
+            docPDF.text("Lista de Presença da Equipe", 14, 25);
+            docPDF.text(`Pauta: ${pautaName}`, 14, 40);
+
+            docPDF.autoTable({
+                head: header,
+                body: tableData,
+                startY: 55,
+                theme: 'striped',
+                headStyles: { fillColor: [22, 163, 74] }, // Verde SIGAP
+                styles: { fontSize: 9, halign: 'center', valign: 'middle' }
+            });
+
+            docPDF.save(`equipe_${pautaName.replace(/\s+/g, '_')}.pdf`);
             return true;
-        } catch (error) {
-            console.error("Erro ao gerar PDF de Colaboradores:", error);
+        } catch (e) {
+            console.error("Erro PDF Equipe:", e);
             return false;
         }
     },
 
-    // ⭐ 5. EXTRATO INDIVIDUAL TEXTUAL (FORMATO IDÊNTICO À IMAGEM DE REFERÊNCIA) ⭐
+    /**
+     * GERA PDF DE ESTATÍSTICAS
+     */
+    async generateStatisticsPDF(pautaName, statsData) {
+        try {
+            await ensureJsPDF();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(18);
+            doc.setTextColor(22, 101, 52); // Verde escuro SIGAP
+            doc.text(`Estatísticas - ${pautaName}`, 14, 20);
+
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 30);
+
+            let y = 40;
+
+            doc.setFontSize(12);
+            doc.setTextColor(0);
+            doc.text("Resumo Geral:", 14, y);
+            y += 10;
+
+            doc.setFontSize(10);
+            doc.text(`Total de Atendidos: ${statsData.atendidos || 0}`, 20, y);
+            y += 7;
+            doc.text(`Total de Faltosos: ${statsData.faltosos || 0}`, 20, y);
+            y += 7;
+            doc.text(`Tempo Médio: ${statsData.tempoMedio || 'N/A'}`, 20, y);
+
+            doc.save(`estatisticas_${pautaName.replace(/\s+/g, '_')}.pdf`);
+            return true;
+        } catch (error) {
+            console.error("Erro PDF Estatísticas:", error);
+            return false;
+        }
+    },
+
+    // ⭐ 5. EXTRATO INDIVIDUAL TEXTUAL (CHECKLIST IDÊNTICO À IMAGEM DE REFERÊNCIA) ⭐
     async generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos) {
         try {
             await ensureJsPDF();
@@ -363,20 +740,20 @@ export const PDFService = {
             // Criando PDF em formato retrato (A4)
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
-            let y = 60; // Cursor Vertical Y inicial
-            const marginX = 50; // Margem Esquerda
+            let y = 60; 
+            const marginX = 50; 
             const maxWidth = doc.internal.pageSize.getWidth() - (marginX * 2);
             const pageHeight = doc.internal.pageSize.getHeight();
 
-            // Função auxiliar para quebra de página
+            // Quebra de página automática
             const checkPage = (heightToAdd = 20) => {
                 if (y + heightToAdd >= pageHeight - 50) {
                     doc.addPage();
-                    y = 60; // Reseta o Y na nova página
+                    y = 60; 
                 }
             };
 
-            // Função auxiliar para injetar textos
+            // Injeta textos e aplica recuos
             const addText = (text, isBold = false, size = 10, indent = 0) => {
                 doc.setFont("helvetica", isBold ? "bold" : "normal");
                 doc.setFontSize(size);
@@ -389,16 +766,14 @@ export const PDFService = {
             };
 
             // --- CABEÇALHO ---
-            // Título centralizado
             doc.setFont("helvetica", "bold");
             doc.setFontSize(14);
             doc.text("Checklist de Atendimento - SIGEP", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
             y += 40;
 
-            // Dados do assistido
             addText(`Assistido: ${assistedName.toUpperCase()}`, false, 11);
             addText(`Ação: ${actionTitle}`, false, 11);
-            y += 30; // Espaçamento antes da próxima seção
+            y += 30;
 
             // --- 1. DOCUMENTAÇÃO ENTREGUE ---
             addText("DOCUMENTAÇÃO ENTREGUE:", true, 11);
@@ -407,11 +782,11 @@ export const PDFService = {
             documentosTextos.forEach((item) => {
                 if (item.id.startsWith('reu-') || item.id.startsWith('gastos-') || item.id.startsWith('gasto-')) return;
                 const tipoEntrega = checklistData.docTypes && checklistData.docTypes[item.id] ? checklistData.docTypes[item.id] : 'Físico';
-                addText(`[X] ${item.text} - [${tipoEntrega.toUpperCase()}]`, false, 10, 20); // Recuo de 20pt
+                addText(`[X] ${item.text} - [${tipoEntrega.toUpperCase()}]`, false, 10, 20); 
             });
             y += 20;
 
-            // --- 2. DEMANDAS ADICIONAIS (Se houver) ---
+            // --- 2. DEMANDAS ADICIONAIS ---
             if (checklistData.demandasAdicionais && checklistData.demandasAdicionais.length > 0) {
                 addText("DEMANDAS ADICIONAIS:", true, 11);
                 y += 10;
@@ -440,16 +815,16 @@ export const PDFService = {
                 let totalGastos = 0;
                 categoriasNome.forEach(c => {
                     const valorStr = g[c.id] || 'R$ 0,00';
-                    addText(`${c.label}: ${valorStr}`, false, 10, 20); // Recuo de 20pt
+                    addText(`${c.label}: ${valorStr}`, false, 10, 20); 
                     
                     const num = parseFloat(String(valorStr).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
                     totalGastos += num;
                 });
 
                 if (totalGastos > 0) {
-                    y += 5; // Pequeno espaço antes do total
+                    y += 5; 
                     const totalFormatado = totalGastos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                    addText(`${totalFormatado}`, true, 10, 20); // Negrito, recuado
+                    addText(`${totalFormatado}`, true, 10, 20); 
                 }
                 y += 20;
             }
@@ -508,22 +883,40 @@ export const PDFService = {
                 }
             }
 
-            // Efetua o download do arquivo
             doc.save(`Checklist_SIGEP_${assistedName.replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (err) {
             console.error("Erro crítico na montagem do PDF textual:", err);
             return false;
         }
-    },
-
-    // 6. STUBS PARA EXPANSÕES FUTURAS
-    async generateAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
-        await ensureJsPDF();
-        console.log("Função Ata Social");
-    },
-    async previewAtaAcaoSocial() { await ensureJsPDF(); },
-    async generateStatisticsPDF() { await ensureJsPDF(); }
+    }
 };
 
+// ========================================================
+// EXPORTAÇÕES
+// ========================================================
+
+export const generateAtendidosPDF = (pautaName, atendidos) => {
+    return PDFService.generateAtendidosPDF(pautaName, atendidos);
+};
+
+export const generateChecklistPDF = (assistedName, actionTitle, checklistData, documentosTextos) => {
+    return PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
+};
+
+export const generateCollaboratorsPDF = (pautaName, colaboradores, selectedCols) => {
+    return PDFService.generateCollaboratorsPDF(pautaName, colaboradores, selectedCols);
+};
+
+export const generateStatisticsPDF = (pautaName, statsData) => {
+    return PDFService.generateStatisticsPDF(pautaName, statsData);
+};
+
+export const generateFaltososPDF = (pautaName, faltosos) => {
+    return PDFService.generateFaltososPDF(pautaName, faltosos);
+};
+
+
 window.PDFService = PDFService;
+
+console.log("✅ pdfService.js carregado - VERSÃO FINAL CONSOLIDADA!");
