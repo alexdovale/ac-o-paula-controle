@@ -109,11 +109,10 @@ export const AtendimentoExternoService = {
             this.demandasAdicionaisLocais = (assistido.demandas && assistido.demandas.descricoes) ? [...assistido.demandas.descricoes] : [];
 
             if (assistido.delegationToken && assistido.delegationToken !== tokenRecebido) {
-                this.showError("Acesso Seguro Necessário", "O token de segurança é inválido ou expirou.");
+                this.showError("Acesso Secure Necessário", "O token de segurança é inválido ou expirou.");
                 return;
             }
 
-            // ⭐ CORREÇÃO DA REGRA: Barreira removida daqui, pois agora a renderizarInterface cuida do bloqueio visual sem travar o script!
             this.renderizarInterface(assistido, pautaSnap.data());
             this.setupListeners();
 
@@ -258,7 +257,6 @@ export const AtendimentoExternoService = {
         const areaColaborador = document.getElementById('area-colaborador');
         areaColaborador.classList.remove('hidden');
 
-        // Limpa resíduos de interações anteriores para a renderização limpa em tempo real
         document.getElementById('banner-transferencia')?.remove();
         document.getElementById('banner-atendido-trava')?.remove();
 
@@ -293,15 +291,17 @@ export const AtendimentoExternoService = {
 
         this.renderizarHistorico(assistido);
 
-        // ⭐ BLINDAGEM MÁXIMA: Se foi finalizado, oculta os controles de operações de forma imediata! ⭐
         if (assistido.status === 'atendido') {
             const abaEncerramento = document.getElementById('aba-encerramento');
             if (abaEncerramento) {
+                // Se o caso já tem número CNJ, exibe um atalho direto de consulta na trava do Verde
+                const cnjRef = assistido.numeroProcesso ? `<p class="mt-3 font-mono font-bold text-xs bg-white text-slate-700 px-3 py-2 rounded border inline-block select-all">📄 CNJ: ${escapeHTML(item.numeroProcesso)}</p>` : '';
                 abaEncerramento.innerHTML = `
                     <div id="banner-atendido-trava" class="text-center p-8 bg-emerald-50 rounded-2xl border-2 border-emerald-200 shadow-sm animate-fade-in mt-2">
                         <div class="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center text-3xl text-white mx-auto shadow-sm mb-4">✓</div>
                         <h2 class="text-xl font-black text-emerald-800 uppercase tracking-wider">Protocolo Encerrado</h2>
                         <p class="text-emerald-600 mt-1 text-xs font-medium">Este atendimento já foi finalizado e distribuído. Nenhuma operação adicional é permitida.</p>
+                        ${cnjRef}
                     </div>
                 `;
             }
@@ -309,7 +309,6 @@ export const AtendimentoExternoService = {
                 headerBg.className = 'bg-emerald-600 p-5 sm:p-6 rounded-t-2xl shadow-lg flex items-center gap-4 relative overflow-hidden transition-colors duration-500';
             }
         } else {
-            // Se o processo estiver aberto, renderiza as opções normais de trabalho
             this.renderizarAbaEncerramentoDinamica(assistido, pautaData);
         }
     },
@@ -321,8 +320,36 @@ export const AtendimentoExternoService = {
         const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
         const showDistribuicao = pautaData.useDistributionFlow && !isDefensor;
 
-        let optionsHtml = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">`;
+        let optionsHtml = ``;
 
+        // ⭐ NOVO ATALHO EXECUTIVO: Painel de Conexão direta com o Verde / Solar para o Defensor ⭐
+        if (isDefensor) {
+            // Se o processo já tiver número de distribuição prévio ou CNJ, gera o link amigável, caso contrário abre a busca geral
+            const urlVerdeSolar = assistido.numeroProcesso 
+                ? `https://verde.defensoria.rj.def.br/#/atendimento/pesquisa?termo=${encodeURIComponent(assistido.numeroProcesso)}`
+                : `https://verde.defensoria.rj.def.br/#/atendimento/pesquisa?termo=${encodeURIComponent(assistido.name)}`;
+
+            optionsHtml += `
+                <div class="bg-slate-900 text-white p-5 rounded-xl border border-slate-700 shadow-xl mb-6 animate-fade-in flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h4 class="text-[10px] font-black uppercase text-emerald-400 tracking-widest mb-1">Integração Exclusiva Verde / Solar</h4>
+                        <p class="text-xs font-bold text-slate-300">Acesse a mesa de distribuição oficial com um clique:</p>
+                        ${assistido.numeroProcesso ? `<span class="inline-block mt-2 font-mono font-bold text-[11px] bg-slate-800 border border-slate-700 text-slate-200 px-2.5 py-1 rounded">CNJ: ${escapeHTML(assistido.numeroProcesso)}</span>` : '<span class="inline-block mt-2 text-[10px] bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded border border-amber-500/30 uppercase tracking-wider">Aguardando numeração final</span>'}
+                    </div>
+                    <div class="flex gap-2 w-full sm:w-auto shrink-0">
+                        ${assistido.numeroProcesso ? `
+                        <button type="button" onclick="navigator.clipboard.writeText('${assistido.numeroProcesso}'); alert('Nº CNJ copiado para a área de transferência!');" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs uppercase tracking-wider transition border border-slate-700 active:scale-95">
+                            📋 Copiar CNJ
+                        </button>` : ''}
+                        <a href="${urlVerdeSolar}" target="_blank" class="text-center flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 px-5 rounded-lg text-xs uppercase tracking-widest transition shadow-md active:scale-95 flex items-center justify-center gap-1.5">
+                            <span>⚖️</span> Abrir no Verde
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+
+        optionsHtml += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">`;
         const textoConcluir = isDefensor ? "Concluir e Distribuir" : "Finalizar Protocolo";
 
         optionsHtml += `
@@ -382,7 +409,7 @@ export const AtendimentoExternoService = {
             </div>
 
             <div id="config-numero-processo" class="bg-slate-50 p-5 rounded-xl border border-slate-200 mb-6 transition-all shadow-inner">
-                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1"><span>📄</span> Nº Processo / Protocolo (Opcional)</label>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1"><span>📄</span> Nº Processo / Protocolo CNJ (Opcional)</label>
                 <input type="text" id="input-numero-caso" value="${assistido.numeroProcesso || ''}" class="w-full p-3.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono placeholder:font-sans" placeholder="Ex: 0001234-56.2026.8.19.0021">
             </div>
 
@@ -565,14 +592,13 @@ export const AtendimentoExternoService = {
             const novoToken = this._gerarTokenSeguro();
             const timestampIso = new Date().toISOString();
 
-            // ⭐ CONTAGEM ISOLADA DE NOMES LIMPOS SEM PERDER CONEXÃO DO FIREBASE ⭐
             if (this.fluxoSelecionado === 'direto') {
                 const enviadoPorServidor = this.assistidoData?.enviadoPor || null;
                 
                 await updateDoc(docRef, {
                     status: numProcessoSeguro ? 'atendido' : 'aguardandoNumero',
-                    attendedBy: colabSeguro,                      // Nome Limpo do Defensor ativo
-                    enviadoPor: enviadoPorServidor,               // Preserva o Nome Limpo do Servidor original intacto
+                    attendedBy: colabSeguro,                      
+                    enviadoPor: enviadoPorServidor,               
                     creatorEmail: enviadoPorServidor ? null : (this.colaboradorAtual?.email || null), 
                     attendedAt: timestampIso,
                     finalizadoPeloColaborador: !!numProcessoSeguro,
@@ -606,7 +632,7 @@ export const AtendimentoExternoService = {
                     defensorResponsavel: def,
                     notasRevisao: nota,
                     numeroProcesso: numProcessoSeguro,
-                    enviadoPor: colabSeguro, // Grava o Nome do Servidor que instruiu a peça
+                    enviadoPor: colabSeguro, 
                     delegationToken: novoToken,
                     demandas: objetoDemandasFinal, 
                     history: arrayUnion({
@@ -637,7 +663,7 @@ export const AtendimentoExternoService = {
                     defensorResponsavel: def, 
                     notasRevisao: nota, 
                     reviewMotivoDevolucao: nota,
-                    enviadoPor: colabSeguro, // Grava o Nome do Servidor para auditoria de retorno
+                    enviadoPor: colabSeguro, 
                     delegationToken: novoToken,
                     demandas: objetoDemandasFinal,
                     history: arrayUnion({
@@ -742,7 +768,6 @@ export const AtendimentoExternoService = {
                 );
             }
 
-            // ⭐ Em vez de chamar funções de tela avulsas que crashavam, volta para o painel limpo tratando o realtime
             this.renderizarDashboardUnificado();
 
         } catch (error) {
@@ -1101,6 +1126,12 @@ export const AtendimentoExternoService = {
                 `;
             } else {
                 const horaStr = item.attendedAt ? new Date(item.attendedAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '';
+                // Atalho clicável do Verde direto no card do Dashboard Principal do Defensor
+                const atalhoVerdeCard = isDefensor ? `
+                    <a href="https://verde.defensoria.rj.def.br/#/atendimento/pesquisa?termo=${encodeURIComponent(item.numeroProcesso || item.name)}" target="_blank" class="mt-2 inline-flex items-center gap-1 text-[10px] font-black text-emerald-600 hover:text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded shadow-sm uppercase tracking-wider transition active:scale-95">
+                        <span>⚖️</span> Ver no Verde
+                    </a>` : '';
+
                 return `
                     <div class="border border-emerald-200 bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
                         <div>
@@ -1108,6 +1139,7 @@ export const AtendimentoExternoService = {
                             <h3 class="font-black text-slate-800 text-sm truncate">${escapeHTML(item.name)}</h3>
                             <p class="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-wide">${escapeHTML(item.subject)}</p>
                             ${numProcessoHtml}
+                            ${atalhoVerdeCard}
                         </div>
                         <div class="shrink-0 text-right">
                             <span class="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-1 rounded border border-emerald-300 uppercase tracking-widest shadow-sm inline-flex items-center gap-1"><span>✅</span> Finalizado</span>
@@ -1148,7 +1180,7 @@ export const AtendimentoExternoService = {
                 const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-pendentes';
                 
                 tabsDiv.innerHTML = `
-                    <button id="tab-pendentes" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-pendentes' ? 'bg-slate-800 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Para Fazer / Assinar / Corrigir <span class="${abaAtivaId === 'tab-pendentes' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
+                    <button id="tab-pendentes" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-pendentes' ? 'bg-slate-800 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Fazer / Assinar / Corrigir <span class="${abaAtivaId === 'tab-pendentes' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
                     <button id="tab-assinados" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-assinados' ? 'bg-emerald-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Distribuições (Equipe) <span class="${abaAtivaId === 'tab-assinados' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-2 px-2 py-0.5 rounded text-[10px]">${distribuidos.length}</span></button>
                     <button id="tab-historico-busca" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-historico-busca' ? 'bg-indigo-600 text-white shadow mode-btn-active' : 'bg-white text-indigo-500 hover:bg-indigo-50'}">🔍 Buscar Tudo</button>
                 `;
@@ -1191,7 +1223,6 @@ export const AtendimentoExternoService = {
             const emAndamento = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
             const enviados = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
             
-            // ⭐ FILTRO DE SINCRO EM TEMPO REAL AJUSTADO: Lê e valida rigorosamente com base no Nome de Exibição
             const finalizados = this.todosAtendimentosPauta.filter(a => 
                 (a.status === 'atendido' && a.attendedBy === this.colaboradorNome) || 
                 (a.status === 'atendido' && a.enviadoPor === this.colaboradorNome)
