@@ -164,7 +164,6 @@ export const PDFService = {
         }
     },
 
-    // ⭐ RELATÓRIO DE ASSISTIDOS ATENDIDOS (COM HORÁRIO AGENDADO, DEMANDAS MÚLTIPLAS E QUEBRA AUTOMÁTICA) ⭐
     async generateAtendidosPDF(atendidosList, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
@@ -187,7 +186,6 @@ export const PDFService = {
                 const duracaoTotal = getDuracaoMinutos(inicioProcesso, a.attendedAt);
                 const lancadoNoVerde = a.isConfirmed ? "Sim" : "Não";
 
-                // Varre o assunto principal e acopla as demandas adicionais criadas no atendimento
                 let assuntoCompleto = a.subject || 'Não Informado';
                 if (a.demandas && a.demandas.descricoes && a.demandas.descricoes.length > 0) {
                     assuntoCompleto += '\n[Demandas Adicionais]:\n' + a.demandas.descricoes.map(d => `• ${d}`).join('\n');
@@ -219,7 +217,7 @@ export const PDFService = {
                     0: { halign: 'center', cellWidth: 25 }, 
                     1: { cellWidth: 110 }, 
                     2: { halign: 'center', fontStyle: 'bold', cellWidth: 55 },
-                    3: { cellWidth: 190 }, // Proteção estendida com auto-wrap para evitar que as quebras vazem o arquivo
+                    3: { cellWidth: 190 }, 
                     4: { cellWidth: 90 }, 
                     5: { fontStyle: 'bold', halign: 'center', cellWidth: 90 }, 
                     6: { halign: 'center', cellWidth: 50 }, 
@@ -236,7 +234,6 @@ export const PDFService = {
         }
     },
 
-    // ⭐ RELATÓRIO DE FALTOSOS (COM HORÁRIO AGENDADO, DATA DA FALTA, ATRASO LIMITE E AUTO-WRAP) ⭐
     async generateFaltososPDF(faltososList, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
@@ -283,7 +280,7 @@ export const PDFService = {
                     2: { cellWidth: 220 }, 
                     3: { halign: 'center', fontStyle: 'bold', cellWidth: 80 }, 
                     4: { halign: 'center', cellWidth: 70 }, 
-                    5: { halign: 'center', fontStyle: 'bold', cellWidth: 80 }, 
+                    5: { fontStyle: 'bold', halign: 'center', cellWidth: 80 }, 
                     6: { halign: 'center', cellWidth: 80 } 
                 }
             });
@@ -296,7 +293,6 @@ export const PDFService = {
         }
     },
 
-    // ⭐ RELATÓRIO DE PRODUTIVIDADE DA EQUIPE COM AUTO-WRAP ANTI-VAZAMENTO ⭐
     async generateCollaboratorsPDF(colaboradoresList, todosAtendimentos, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
@@ -354,12 +350,110 @@ export const PDFService = {
         }
     },
 
+    // ⭐ NOVO E COMPLETO: MOTOR DE MONTAGEM DO PDF DA TRIAGEM / DETALHES (CONECTADO COM demandasAdicionais) ⭐
+    async generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos) {
+        try {
+            await ensureJsPDF();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+
+            // 1. TÍTULO PRINCIPAL DO SIGEP
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("EXTRATO DE TRIAGEM E DOCUMENTAÇÃO", doc.internal.pageSize.getWidth() / 2, 45, { align: "center" });
+
+            // 2. QUADRO DE INFORMAÇÕES DO ASSISTIDO
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Sistema: SIGEP  |  Emissão: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}`, 40, 70);
+            doc.text(`Assistido(a): ${assistedName.toUpperCase()}`, 40, 85);
+            doc.text(`Ação Selecionada: ${actionTitle.toUpperCase()}`, 40, 100);
+
+            // 3. CONSTRUÇÃO DA TABELA DO CHECKLIST
+            const body = [];
+            
+            // Filtra e empilha os documentos normais coletados do checklist
+            documentosTextos.forEach((item, index) => {
+                if (item.id.startsWith('reu-') || item.id.startsWith('gasto-')) return; // Pula os metadados do réu/gastos pois eles ganham blocos dedicados abaixo
+                
+                const tipoEntrega = checklistData.docTypes && checklistData.docTypes[item.id] ? checklistData.docTypes[item.id] : 'Físico';
+                body.push([
+                    index + 1,
+                    item.text,
+                    `CONFERIDO (${tipoEntrega.toUpperCase()})`
+                ]);
+            });
+
+            // Se o colaborador anexou múltiplos assuntos/demandas adicionais (via assuntos.js)
+            if (checklistData.demandasAdicionais && checklistData.demandasAdicionais.length > 0) {
+                body.push([{ content: "⚖️ CASOS ACUMULADOS / DEMANDAS ADICIONAIS RESOLVIDAS", colSpan: 3, styles: { fontStyle: 'bold', fillColor: [243, 244, 246] } }]);
+                checklistData.demandasAdicionais.forEach((demanda, dIdx) => {
+                    body.push([
+                        `+${dIdx + 1}`,
+                        `Demanda Extra: ${demanda}`,
+                        "CONFERIDO E ATENDIDO"
+                    ]);
+                });
+            }
+
+            // Se o checkbox unificado de qualificação do réu estiver preenchido
+            if (checklistData.reuData && checklistData.reuData.checkReuUnico) {
+                const r = checklistData.reuData;
+                body.push([{ content: "👤 QUALIFICAÇÃO DA PARTE CONTRÁRIA (RÉU)", colSpan: 3, styles: { fontStyle: 'bold', fillColor: [fee2e2 || 254, 226, 226], textColor: [185, 28, 28] } }]);
+                if (r.nome) body.push(["•", `Nome do Réu: ${r.nome}`, "CITAÇÃO"]);
+                if (r.cpf) body.push(["•", `CPF do Réu: ${r.cpf}`, "CITAÇÃO"]);
+                if (r.telefone) body.push(["•", `WhatsApp/Contato: ${r.telefone}`, "CITAÇÃO"]);
+                if (r.rua) body.push(["•", `Endereço Residencial: ${r.rua}, nº ${r.numero} ${r.complemento ? '- '+r.complemento : ''} - ${r.bairro}, ${r.cidade}/${r.uf}`, "CITAÇÃO PRINCIPAL"]);
+                if (r.empresa) body.push(["•", `Endereço Comercial/Trabalho: ${r.empresa} - ${r.rua_comercial}, nº ${r.numero_comercial} - ${r.bairro_comercial}`, "CITAÇÃO ALTERNATIVA"]);
+            }
+
+            // Se houver planilha de despesas/gastos cadastrada
+            if (checklistData.expenseData && checklistData.expenseData.checkExibirGastos) {
+                const g = checklistData.expenseData;
+                body.push([{ content: "💰 EXTRACTO DE GASTOS / NECESSIDADES MENSAIS", colSpan: 3, styles: { fontStyle: 'bold', fillColor: [220, 252, 231], textColor: [21, 128, 61] } }]);
+                
+                const categoriasNome = [
+                    {id: 'moradia', label: 'Moradia/Habitação'}, {id: 'alimentacao', label: 'Alimentação'},
+                    {id: 'educacao', label: 'Educação/Escola'}, {id: 'saude', label: 'Saúde/Medicamentos'},
+                    {id: 'vestuario', label: 'Vestuário/Higiene'}, {id: 'lazer', label: 'Lazer/Combustível'},
+                    {id: 'outras', label: 'Outras Despesas'}
+                ];
+
+                categoriasNome.forEach(c => {
+                    if (g[c.id] && g[c.id] !== 'R$ 0,00') {
+                        body.push(["$", c.label, g[c.id]]);
+                    }
+                });
+            }
+
+            // Desenha a tabela com controle estrito de quebra automática de linha
+            doc.autoTable({
+                startY: 120,
+                head: [['Nº', 'DOCUMENTO / ESPECIFICAÇÃO DE TRIAGEM', 'ESTADO DE ENTREGA']],
+                body: body,
+                theme: 'grid',
+                headStyles: { fillColor: [22, 163, 74], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' },
+                styles: { fontSize: 8.5, cellPadding: 5, valign: 'middle', overflow: 'linebreak' },
+                columnStyles: {
+                    0: { halign: 'center', cellWidth: 30 },
+                    1: { cellWidth: 380 },
+                    2: { halign: 'center', cellWidth: 110, fontStyle: 'bold' }
+                }
+            });
+
+            doc.save(`SIGEP_Triagem_${assistedName.replace(/\s+/g, '_')}.pdf`);
+            return true;
+        } catch (err) {
+            console.error("Erro crítico na montagem do PDF de triagem:", err);
+            return false;
+        }
+    },
+
     async generateAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
         await ensureJsPDF();
         console.log("Função Ata Social");
     },
     async previewAtaAcaoSocial() { await ensureJsPDF(); },
-    async generateChecklistPDF() { await ensureJsPDF(); },
     async generateStatisticsPDF() { await ensureJsPDF(); }
 };
 
