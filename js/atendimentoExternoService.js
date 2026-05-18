@@ -35,7 +35,7 @@ export const AtendimentoExternoService = {
     colaboradorAtual: null,
     isProcessing: false, 
     todosAtendimentosPauta: [], 
-    demandasAdicionaisLocais: [], // ⭐ Array dinâmico para segurar as novas demandas em memória
+    demandasAdicionaisLocais: [], 
 
     async init() {
         console.log("⚡ Atendimento Externo Inicializado (Premium Mode - SIGEP)");
@@ -65,7 +65,6 @@ export const AtendimentoExternoService = {
                 return;
             }
 
-            // MODO ATENDIMENTO INDIVIDUAL
             const pautaRef = doc(db, "pautas", this.pautaId);
             const pautaSnap = await getDoc(pautaRef);
             if (!pautaSnap.exists()) {
@@ -84,7 +83,6 @@ export const AtendimentoExternoService = {
             const assistido = docSnap.data();
             this.assistidoData = assistido;
 
-            // Restaura demandas adicionais já existentes se houver
             this.demandasAdicionaisLocais = (assistido.demandas && assistido.demandas.descricoes) ? [...assistido.demandas.descricoes] : [];
 
             if (assistido.delegationToken && assistido.delegationToken !== tokenRecebido) {
@@ -232,7 +230,6 @@ export const AtendimentoExternoService = {
             </button>
         </div>`;
 
-        // ⭐ INJEÇÃO DA SEÇÃO DE DEMANDAS ADICIONAIS DENTRO DO FORMULÁRIO GERAL DE REVISÃO ⭐
         optionsHtml += `
             <div id="secao-demandas-adicionais-externo" class="bg-indigo-50 p-5 rounded-xl border border-indigo-200 mb-6 shadow-inner">
                 <label class="block text-[10px] font-black text-indigo-700 uppercase tracking-widest mb-2 flex items-center gap-1"><span>📋</span> Acumular Demandas Resolvidas (Múltiplos Casos)</label>
@@ -281,7 +278,7 @@ export const AtendimentoExternoService = {
 
         aba.innerHTML = optionsHtml;
         this.povoarSelectsDinamicos();
-        this.atualizarListaDemandasInterfaceExterna(); // Desenha na tela as demandas acumuladas
+        this.atualizarListaDemandasInterfaceExterna();
 
         this.fluxoSelecionado = 'direto';
         const botoesFluxo = document.querySelectorAll('.fluxo-opt-btn');
@@ -324,13 +321,10 @@ export const AtendimentoExternoService = {
         document.getElementById('btn-opt-transferir')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'transferir'));
         document.getElementById('btn-opt-pausar')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'pausar'));
 
-        // Configuração dos gatilhos para injetar/remover demandas pelo clique externo
         document.getElementById('btn-add-demanda-externo').onclick = () => this.adicionarNovaDemandaFluxoExterno();
-
         document.getElementById('btn-finalizar-dinamico').onclick = () => this.finalizarProcesso();
     },
 
-    // ⭐ NOVO: GATILHOS EXCLUSIVOS PARA CONTROLAR AS DEMANDAS NO ATENDIMENTO EXTERNO ⭐
     adicionarNovaDemandaFluxoExterno() {
         const input = document.getElementById('input-nova-demanda-externo');
         const text = input ? input.value.trim() : '';
@@ -422,7 +416,6 @@ export const AtendimentoExternoService = {
         
         let colaboradorDestinoObj = null;
 
-        // Bloco estrutural para salvar as demandas no Firebase seguindo o nó do SIGEP
         const objetoDemandasFinal = {
             quantidade: this.demandasAdicionaisLocais.length,
             descricoes: this.demandasAdicionaisLocais
@@ -440,7 +433,7 @@ export const AtendimentoExternoService = {
                     attendedAt: timestampIso,
                     finalizadoPeloColaborador: !!numProcessoSeguro,
                     numeroProcesso: numProcessoSeguro,
-                    demandas: objetoDemandasFinal, // ⭐ Grava na árvore o pool de demandas resolvidas
+                    demandas: objetoDemandasFinal, 
                     history: arrayUnion({
                         action: numProcessoSeguro ? 'APROVADO_E_DISTRIBUIDO' : 'APROVADO_AGUARDANDO_NUMERO',
                         by: colabSeguro,
@@ -471,7 +464,7 @@ export const AtendimentoExternoService = {
                     numeroProcesso: numProcessoSeguro,
                     enviadoPor: colabSeguro,
                     delegationToken: novoToken,
-                    demandas: objetoDemandasFinal, // ⭐ Sincroniza as demandas para a análise do defensor
+                    demandas: objetoDemandasFinal, 
                     history: arrayUnion({
                         action: 'ENVIADO_PARA_REVISAO',
                         by: colabSeguro,
@@ -592,7 +585,6 @@ export const AtendimentoExternoService = {
                 subtituloSucesso = "O assistido foi mandado de volta à fila de espera.";
             }
 
-            // ✉️ DISPARO AUTOMÁTICO DO E-MAIL SE HOUVER DESTINATÁRIO DEFINIDO
             if (colaboradorDestinoObj && colaboradorDestinoObj.email) {
                 console.log(`✉️ Iniciando disparo de e-mail para: ${colaboradorDestinoObj.email}`);
                 await EmailService.sendDelegationEmail(
@@ -606,7 +598,6 @@ export const AtendimentoExternoService = {
                 );
             }
 
-            // Garante que a listagem de dados em cache seja imediatamente limpa e renovada com as novas chaves
             try {
                 const q = query(collection(db, "pautas", pautaIdSeguro, "attendances"));
                 const snap = await getDocs(q);
@@ -615,7 +606,6 @@ export const AtendimentoExternoService = {
                 console.warn("Falha silenciosa ao sincronizar cache local pós-envio:", err);
             }
 
-            // Interface gráfica de resposta de sucesso
             const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
             const textoBotaoVoltar = isDefensor ? '⚖️ Voltar ao Painel Judicial' : '📊 Voltar à Minha Mesa';
 
@@ -658,6 +648,7 @@ export const AtendimentoExternoService = {
         }
     },
 
+    // ⭐ CORRIGIDO: RENDERIZANDO A PLANILHA DE GASTOS NA TELA E ATIVANDO O BOTÃO PDF ⭐
     renderizarHistorico(assistido) {
         const lista = document.getElementById('lista-historico');
         if (!lista) return;
@@ -720,6 +711,52 @@ export const AtendimentoExternoService = {
                     </div>
                 </div>
             `;
+        }
+
+        // DESENHANDO A PLANILHA DE GASTOS
+        if (chk.expenseData && chk.expenseData.checkExibirGastos) {
+            const g = chk.expenseData;
+            const categorias = [
+                { id: 'moradia', label: 'Moradia' }, { id: 'alimentacao', label: 'Alimentação' },
+                { id: 'educacao', label: 'Educação' }, { id: 'saude', label: 'Saúde' },
+                { id: 'vestuario', label: 'Vestuário' }, { id: 'lazer', label: 'Lazer' },
+                { id: 'outras', label: 'Outras' }
+            ];
+
+            let totalGastos = 0;
+            let gastosHtml = '';
+            
+            categorias.forEach(c => {
+                if (g[c.id] && g[c.id] !== 'R$ 0,00') {
+                    gastosHtml += `<div class="flex justify-between text-xs mb-1.5"><span class="text-emerald-700 font-bold uppercase tracking-wider">${c.label}</span><span class="font-black text-emerald-900">${g[c.id]}</span></div>`;
+                    const num = parseFloat(String(g[c.id]).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+                    totalGastos += num;
+                }
+            });
+
+            if (totalGastos > 0) {
+                const totalFormatado = totalGastos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                
+                html += `
+                    <div class="bg-emerald-50 p-5 rounded-xl mb-6 border border-emerald-200 shadow-sm relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+                        <h4 class="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-4 pl-1 flex items-center gap-1">
+                            <span>💰</span> PLANILHA DE GASTOS
+                        </h4>
+                        <div class="pl-1 space-y-1 mb-4">
+                            ${gastosHtml}
+                        </div>
+                        <div class="flex justify-between font-black text-emerald-900 border-t-2 border-emerald-200 pt-3 mt-2 pl-1 text-sm">
+                            <span class="uppercase tracking-widest">TOTAL</span>
+                            <span>${totalFormatado}</span>
+                        </div>
+                        
+                        <button id="btn-baixar-planilha" class="mt-5 w-full bg-white border-2 border-emerald-300 text-emerald-700 font-black py-3 rounded-xl text-xs hover:bg-emerald-100 transition shadow-sm flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95">
+                            <span>📄</span> Baixar Planilha PDF
+                        </button>
+                    </div>
+                `;
+            }
         }
 
         lista.innerHTML = html;
