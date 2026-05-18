@@ -1,8 +1,8 @@
-// js/main.js - VERSÃO COM PERFIL DE APOIO TRAVADO (SIGEP)
+// js/main.js - VERSÃO COM MEMÓRIA SEGURA E MONITOR DE EQUIPE LIVRE (SIGEP)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, collection, getDoc, getDocs, writeBatch, addDoc, updateDoc, arrayRemove, arrayUnion, enableIndexedDbPersistence, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
@@ -100,6 +100,7 @@ class SIGEPApp {
                 } else if (err.code == 'unimplemented') {
                     console.warn('⚠️ Navegador não suporta persistência offline.');
                 } else {
+                    // ⭐ BLINDAGEM ANTI-CORRUPÇÃO ATIVADA AQUI ⭐
                     console.error('⚠️ Falha de integridade ou corrupção no cache local IndexedDB. Forçando inicialização estritamente online.', err.message);
                 }
             });
@@ -290,7 +291,7 @@ class SIGEPApp {
                 }
 
                 document.getElementById('manage-rooms-modal')?.classList.add('hidden');
-                showNotification("Salas atualizadas com sucesso!", "success");
+                showNotification("Salas updated com sucesso!", "success");
                 
                 if (typeof UIService.renderAssistedLists === 'function') {
                     UIService.renderAssistedLists(this);
@@ -663,7 +664,7 @@ class SIGEPApp {
                 const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
                 await updateDoc(pautaRef, { maskNames: mask });
                 this.currentPautaData.maskNames = mask;
-                showNotification("Configuração de privacidade updated.", "success");
+                showNotification("Configuração de privacidade atualizada.", "success");
             } catch (error) {
                 showNotification("Erro ao salvar configuração.", "error");
             }
@@ -2037,7 +2038,7 @@ class SIGEPApp {
         const currentUserRole = currentUser?.role; 
         const isAuthenticated = this.auth?.currentUser != null;
         const isUserApproved = currentUser?.status === 'approved'; 
-        const isApoio = currentUserRole === 'apoio'; 
+        const isApoio = currentUserRole === 'apoio'; // Identifica se é perfil de Apoio
         
         const adminPanelBtnMain = document.getElementById('admin-btn-main');
         const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
@@ -2062,7 +2063,7 @@ class SIGEPApp {
         if (manageCollaboratorsBtn) manageCollaboratorsBtn.classList.toggle('hidden', !canManagePauta);
         if (viewStatsBtn) viewStatsBtn.classList.toggle('hidden', !canAccessAdminPanel);
 
-        // ⭐ TRAVA DO PERFIL DE APOIO: O botão de "Chamar Próximo" some completamente da tela para o Apoio ⭐
+        // ⭐ TRAVA EXCLUSIVA: O botão de "Chamar Próximo" some completamente para o perfil de Apoio
         const callNextBtn = document.getElementById('call-next-assisted-btn');
         if (callNextBtn) {
             if (isApoio || !isAuthenticated) {
@@ -2095,7 +2096,7 @@ class SIGEPApp {
         }
     }
 }
-
+    
 window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
 
