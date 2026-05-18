@@ -1,4 +1,4 @@
-// js/main.js - VERSÃO COMPLETA (SIGEP COM DELEGAÇÃO AUTOMÁTICA E TOKENS VALIDADOS)
+// js/main.js - VERSÃO COM MEMÓRIA SEGURA PARA LINKS DE DELEGAÇÃO (SIGEP)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -1144,6 +1144,10 @@ class SIGEPApp {
                 return;
             }
 
+            // 🛡️ BLINDAGEM MÁXIMA: Salva na memória o ID exato antes que qualquer função apague
+            const idAssistidoAtual = window.assistedIdToHandle;
+            const nomeAssistidoAtual = window.assistedNameToHandle;
+
             if (isAcaoRapida) {
                 const tipoDescricao = window.assistedTipoDescricao || window.assistedTipoAcao || 'Ação rápida';
                 const atendenteFinal = collaboratorName || this.currentUserName;
@@ -1151,7 +1155,7 @@ class SIGEPApp {
                 await PautaService.updateStatus(
                     this.db,
                     this.currentPauta.id,
-                    window.assistedIdToHandle,
+                    idAssistidoAtual,
                     {
                         status: 'atendido',
                         attendedBy: atendenteFinal,
@@ -1165,28 +1169,25 @@ class SIGEPApp {
                     },
                     this.currentUserName
                 );
-                showNotification(`${window.assistedNameToHandle} marcado como atendido por ${atendenteFinal} (${tipoDescricao}).`, "success");
+                showNotification(`${nomeAssistidoAtual} marcado como atendido por ${atendenteFinal} (${tipoDescricao}).`, "success");
             } else if (window.assistedTipoAcao === 'atender_direto') {
                 const atendenteFinal = collaboratorName || this.currentUserName;
-                await PautaService.finishAttendance(this, window.assistedIdToHandle, atendenteFinal, []);
-                showNotification(`${window.assistedNameToHandle} marcado como atendido por ${atendenteFinal}.`, "success");
+                await PautaService.finishAttendance(this, idAssistidoAtual, atendenteFinal, []);
+                showNotification(`${nomeAssistidoAtual} marcado como atendido por ${atendenteFinal}.`, "success");
             } else { 
-                // 💡 FLUXO DE DELEGAÇÃO COMPLETO
                 let collaboratorData = null;
                 let emailDestino = null;
                 
-                // Gera a senha/token de segurança obrigatória
                 const novoToken = Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
 
                 if (collaboratorName) {
-                    // Tenta puxar o e-mail cadastrado
                     const selectedCollab = this.colaboradores?.find(c => c.nome === collaboratorName);
                     emailDestino = selectedCollab?.email || null;
                     
                     collaboratorData = { id: collaboratorId, name: collaboratorName, email: emailDestino };
-                    showNotification(`${window.assistedNameToHandle} atribuído a ${collaboratorName}.`, "success");
+                    showNotification(`${nomeAssistidoAtual} atribuído a ${collaboratorName}.`, "success");
                 } else {
-                    showNotification(`${window.assistedNameToHandle} movido para 'Em Atendimento' sem atribuição.`, "success");
+                    showNotification(`${nomeAssistidoAtual} movido para 'Em Atendimento' sem atribuição.`, "success");
                 }
 
                 const updatePayload = {
@@ -1196,36 +1197,37 @@ class SIGEPApp {
                 };
 
                 if (collaboratorName) {
-                    updatePayload.delegationToken = novoToken; // Salva o token gerado no banco de dados!
+                    updatePayload.delegationToken = novoToken; 
                 }
 
+                // Salva no banco de dados primeiro
                 await PautaService.updateStatus(
                     this.db,
                     this.currentPauta.id,
-                    window.assistedIdToHandle,
+                    idAssistidoAtual, // Usa o ID protegido
                     updatePayload,
                     this.currentUserName
                 );
                 
-                // 💡 GATILHO AUTOMÁTICO DE E-MAIL
+                // 💡 DISPARO DO E-MAIL APÓS SALVAR, GARANTINDO QUE O ID NÃO FOI PERDIDO
                 if (emailDestino) {
                     showNotification(`Disparando notificação para o e-mail cadastrado...`, "info");
                     try {
                         await EmailService.sendDelegationEmail(
                             emailDestino, 
                             collaboratorName, 
-                            window.assistedNameToHandle, 
+                            nomeAssistidoAtual, 
                             this.currentUserName,
                             this.currentPauta.id, 
-                            window.assistedIdToHandle, 
-                            novoToken // Passa o token exato para injetar no link do e-mail
+                            idAssistidoAtual, // ID seguro para o e-mail montar o link correto
+                            novoToken 
                         );
                     } catch(e) {
                         console.error("Erro no envio auto:", e);
                     }
                 }
 
-                showNotification(`${window.assistedNameToHandle} delegado com sucesso.`, "success"); 
+                showNotification(`${nomeAssistidoAtual} delegado com sucesso.`, "success"); 
             }
             
             document.getElementById('select-collaborator-modal')?.classList.add('hidden');
@@ -1403,7 +1405,7 @@ class SIGEPApp {
             document.getElementById('edit-pauta-modal')?.classList.add('hidden');
         });
 
-        // ⭐ CORREÇÃO AQUI: BLINDAGEM DO BOTÃO MANUAL DE ENVIAR E-MAIL (GERANDO TOKEN SEGURO) ⭐
+        // ⭐ CORREÇÃO AQUI: BLINDAGEM DO BOTÃO MANUAL DE ENVIAR E-MAIL NA COLUNA "EM ATENDIMENTO" ⭐
         document.getElementById('send-delegate-email-btn')?.addEventListener('click', async () => {
             const emailInput = document.getElementById('collaborator-email-input');
             const emailDestino = emailInput?.value.trim();
@@ -1421,22 +1423,21 @@ class SIGEPApp {
                 nomeColega = "Colega Colaborador";
             }
 
-            // Cria o token seguro para garantir a permissão na tela externa
+            // ID blindado salvo antes de qualquer manipulação
+            const idAssistidoAtual = window.assistedIdForDelegation;
             const novoToken = Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
 
             try {
-                // 1. Atualiza o banco com o novo token antes de enviar o e-mail!
-                const docRef = doc(this.db, "pautas", this.currentPauta.id, "attendances", window.assistedIdForDelegation);
+                const docRef = doc(this.db, "pautas", this.currentPauta.id, "attendances", idAssistidoAtual);
                 await updateDoc(docRef, { delegationToken: novoToken });
 
-                // 2. Dispara o e-mail entregando a chave gerada acima
                 await EmailService.sendDelegationEmail(
                     emailDestino, 
                     nomeColega, 
                     window.assistedNameForDelegation, 
                     this.currentUserName,
                     this.currentPauta.id, 
-                    window.assistedIdForDelegation,
+                    idAssistidoAtual, // ID seguro repassado para formar o link correto
                     novoToken
                 );
 
@@ -2034,9 +2035,6 @@ class SIGEPApp {
     }
 }
 
-// ========================================================
-// EXPORTS ADICIONAIS E GLOBAIS
-// ========================================================
 window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
 
