@@ -113,11 +113,7 @@ export const AtendimentoExternoService = {
                 return;
             }
 
-            if (assistido.status === 'atendido') {
-                this.showError("Protocolo Fechado", "Este atendimento já foi finalizado e protocolado.");
-                return;
-            }
-
+            // ⭐ CORREÇÃO DA REGRA: Barreira removida daqui, pois agora a renderizarInterface cuida do bloqueio visual sem travar o script!
             this.renderizarInterface(assistido, pautaSnap.data());
             this.setupListeners();
 
@@ -262,7 +258,11 @@ export const AtendimentoExternoService = {
         const areaColaborador = document.getElementById('area-colaborador');
         areaColaborador.classList.remove('hidden');
 
-        if (assistido.historicoTransferencia && !document.getElementById('banner-transferencia')) {
+        // Limpa resíduos de interações anteriores para a renderização limpa em tempo real
+        document.getElementById('banner-transferencia')?.remove();
+        document.getElementById('banner-atendido-trava')?.remove();
+
+        if (assistido.historicoTransferencia) {
             const bannerHtml = `
                 <div id="banner-transferencia" class="w-full bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl shadow-sm mb-6 flex items-start gap-3 relative overflow-hidden">
                     <div class="absolute left-0 top-0 bottom-0 w-1 bg-amber-500"></div>
@@ -292,7 +292,26 @@ export const AtendimentoExternoService = {
         }
 
         this.renderizarHistorico(assistido);
-        this.renderizarAbaEncerramentoDinamica(assistido, pautaData);
+
+        // ⭐ BLINDAGEM MÁXIMA: Se foi finalizado, oculta os controles de operações de forma imediata! ⭐
+        if (assistido.status === 'atendido') {
+            const abaEncerramento = document.getElementById('aba-encerramento');
+            if (abaEncerramento) {
+                abaEncerramento.innerHTML = `
+                    <div id="banner-atendido-trava" class="text-center p-8 bg-emerald-50 rounded-2xl border-2 border-emerald-200 shadow-sm animate-fade-in mt-2">
+                        <div class="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center text-3xl text-white mx-auto shadow-sm mb-4">✓</div>
+                        <h2 class="text-xl font-black text-emerald-800 uppercase tracking-wider">Protocolo Encerrado</h2>
+                        <p class="text-emerald-600 mt-1 text-xs font-medium">Este atendimento já foi finalizado e distribuído. Nenhuma operação adicional é permitida.</p>
+                    </div>
+                `;
+            }
+            if (headerBg) {
+                headerBg.className = 'bg-emerald-600 p-5 sm:p-6 rounded-t-2xl shadow-lg flex items-center gap-4 relative overflow-hidden transition-colors duration-500';
+            }
+        } else {
+            // Se o processo estiver aberto, renderiza as opções normais de trabalho
+            this.renderizarAbaEncerramentoDinamica(assistido, pautaData);
+        }
     },
 
     renderizarAbaEncerramentoDinamica(assistido, pautaData) {
@@ -527,7 +546,7 @@ export const AtendimentoExternoService = {
         const numeroProcessoSalvo = inputNumeroCaso ? inputNumeroCaso.value.trim() : '';
 
         const numProcessoSeguro = numeroProcessoSalvo || '';
-        const colabSeguro = this.colaboradorNome || 'Sistema';
+        const colabSeguro = this.colaboradorNome || 'Sistema'; 
         const pautaIdSeguro = this.pautaId || '';
         const assistidoIdSeguro = this.assistidoId || '';
 
@@ -546,14 +565,14 @@ export const AtendimentoExternoService = {
             const novoToken = this._gerarTokenSeguro();
             const timestampIso = new Date().toISOString();
 
-            // ⭐ COORDENAÇÃO DE SINCRO E PROD ENGENHARIA DE METAS DUPLAS ATIVADA ⭐
+            // ⭐ CONTAGEM ISOLADA DE NOMES LIMPOS SEM PERDER CONEXÃO DO FIREBASE ⭐
             if (this.fluxoSelecionado === 'direto') {
                 const enviadoPorServidor = this.assistidoData?.enviadoPor || null;
                 
                 await updateDoc(docRef, {
                     status: numProcessoSeguro ? 'atendido' : 'aguardandoNumero',
-                    attendedBy: colabSeguro,                      // Registra Defensor Ativo (+1 BI)
-                    enviadoPor: enviadoPorServidor,               // Mantém Servidor Intacto de Origem (+1 BI)
+                    attendedBy: colabSeguro,                      // Nome Limpo do Defensor ativo
+                    enviadoPor: enviadoPorServidor,               // Preserva o Nome Limpo do Servidor original intacto
                     creatorEmail: enviadoPorServidor ? null : (this.colaboradorAtual?.email || null), 
                     attendedAt: timestampIso,
                     finalizadoPeloColaborador: !!numProcessoSeguro,
@@ -587,7 +606,7 @@ export const AtendimentoExternoService = {
                     defensorResponsavel: def,
                     notasRevisao: nota,
                     numeroProcesso: numProcessoSeguro,
-                    enviadoPor: colabSeguro, // Trava e blinda o Nome do Servidor que trabalhou
+                    enviadoPor: colabSeguro, // Grava o Nome do Servidor que instruiu a peça
                     delegationToken: novoToken,
                     demandas: objetoDemandasFinal, 
                     history: arrayUnion({
@@ -618,7 +637,7 @@ export const AtendimentoExternoService = {
                     defensorResponsavel: def, 
                     notasRevisao: nota, 
                     reviewMotivoDevolucao: nota,
-                    enviadoPor: colabSeguro, // Trava e blinda o Nome do Servidor
+                    enviadoPor: colabSeguro, // Grava o Nome do Servidor para auditoria de retorno
                     delegationToken: novoToken,
                     demandas: objetoDemandasFinal,
                     history: arrayUnion({
@@ -723,6 +742,7 @@ export const AtendimentoExternoService = {
                 );
             }
 
+            // ⭐ Em vez de chamar funções de tela avulsas que crashavam, volta para o painel limpo tratando o realtime
             this.renderizarDashboardUnificado();
 
         } catch (error) {
@@ -1171,7 +1191,7 @@ export const AtendimentoExternoService = {
             const emAndamento = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
             const enviados = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
             
-            // ⭐ CORREÇÃO DE FILTRAGEM ESTREITA AQUI ⭐
+            // ⭐ FILTRO DE SINCRO EM TEMPO REAL AJUSTADO: Lê e valida rigorosamente com base no Nome de Exibição
             const finalizados = this.todosAtendimentosPauta.filter(a => 
                 (a.status === 'atendido' && a.attendedBy === this.colaboradorNome) || 
                 (a.status === 'atendido' && a.enviadoPor === this.colaboradorNome)
