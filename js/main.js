@@ -8,7 +8,7 @@ import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
 import { PautaService } from './pauta.js';
 import { UIService } from './ui.js';
-import CollaboratorService from './colaboradores.js';        
+import CollaboratorService from './colaboradores.js';         
 import { ModalService } from './modal.js?v=20260313';
 import { NotesService } from './notes.js?v=20260313';
 import { StatisticsService } from './estatisticas.js?v=20260313';
@@ -99,6 +99,9 @@ class SIGEPApp {
                     showNotification('Múltiplas abas detectadas. Feche outras abas para evitar erros no modo offline.', 'warning');
                 } else if (err.code == 'unimplemented') {
                     console.warn('⚠️ Navegador não suporta persistência offline.');
+                } else {
+                    // ⭐ BLINDAGEM ANTI-CORRUPÇÃO ATIVADA AQUI ⭐
+                    console.error('⚠️ Falha de integridade ou corrupção no cache local IndexedDB. Forçando inicialização estritamente online.', err.message);
                 }
             });
         } catch (e) {
@@ -288,7 +291,7 @@ class SIGEPApp {
                 }
 
                 document.getElementById('manage-rooms-modal')?.classList.add('hidden');
-                showNotification("Salas atualizadas com sucesso!", "success");
+                showNotification("Salas updated com sucesso!", "success");
                 
                 if (typeof UIService.renderAssistedLists === 'function') {
                     UIService.renderAssistedLists(this);
@@ -427,6 +430,8 @@ class SIGEPApp {
                     roomConfig.classList.remove('hidden');
                     this.customRoomsList = [];
                     this.renderCustomRooms();
+                    input.value = '';
+                    input.focus();
                 } else {
                     roomConfig.classList.add('hidden');
                 }
@@ -1135,7 +1140,6 @@ class SIGEPApp {
             document.getElementById('edit-attendant-modal')?.classList.add('hidden');
         });
 
-        // ⭐ NOVO: GATILHO COM MODO MUTIRÃO SILENCIOSO E MEMÓRIA SEGURA ⭐
         document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
             const collaboratorId = window.selectedCollaboratorId;
             const collaboratorName = window.selectedCollaboratorName || null;
@@ -1147,10 +1151,8 @@ class SIGEPApp {
                 return;
             }
 
-            // Verifica se o Modo Mutirão (Silencioso) está ligado
             const isSilentMode = document.getElementById('toggle-silent-mode')?.checked || false;
 
-            // Salva na memória o ID exato antes de qualquer coisa
             const idAssistidoAtual = window.assistedIdToHandle;
             const nomeAssistidoAtual = window.assistedNameToHandle;
 
@@ -1199,7 +1201,6 @@ class SIGEPApp {
                     inAttendanceTime: new Date().toISOString()
                 };
 
-                // Se o modo silencioso NÃO estiver ativo, salva o token
                 if (collaboratorName && !isSilentMode) {
                     updatePayload.delegationToken = novoToken; 
                 }
@@ -1212,7 +1213,6 @@ class SIGEPApp {
                     this.currentUserName
                 );
                 
-                // Só dispara o e-mail se o Modo Silencioso estiver DESLIGADO
                 if (emailDestino && !isSilentMode) {
                     showNotification(`Disparando notificação para o e-mail cadastrado...`, "info");
                     try {
@@ -1229,7 +1229,6 @@ class SIGEPApp {
                         console.error("Erro no envio auto:", e);
                     }
                 } else if (emailDestino && isSilentMode) {
-                    // Aviso apenas visual de que o modo silencioso agiu
                     showNotification(`Card movido para ${collaboratorName} silenciosamente.`, "info");
                 } else {
                     showNotification(`${nomeAssistidoAtual} delegado com sucesso.`, "success"); 
@@ -1699,7 +1698,7 @@ class SIGEPApp {
             if (pautaType === 'agendamento' && preferences.showFaltosos && pautaColumn && !pautaColumn.classList.contains('hidden')) {
                  faltososColumn.classList.remove('hidden');
             } else {
-                faltososColumn.classList.add('hidden');
+                return;
             }
         }
     }
@@ -1895,7 +1894,6 @@ class SIGEPApp {
                 CollaboratorService.setupListener(this, pautaId);
             }
             
-            // ⭐ INICIA O MONITOR DE ENVELOPES
             this.iniciarMonitorEnvelopes();
 
             UIService.showScreen('app');
@@ -1905,17 +1903,14 @@ class SIGEPApp {
         }
     }
 
-    // ⭐ NOVO: MONITOR DE DISPONIBILIDADE DA EQUIPE ⭐
     iniciarMonitorEnvelopes() {
         if (this.monitorInterval) clearInterval(this.monitorInterval);
         
         const verificarDisponibilidade = () => {
             if (!this.currentPautaData?.useDelegationFlow || !this.colaboradores || this.colaboradores.length === 0) return;
 
-            // Filtra quem bateu o ponto (Presente)
             const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
             
-            // Filtra quem está realmente LIVRE (sem nada na mesa e sem assinaturas pendentes)
             const colabsLivres = colabsAtivos.filter(c => {
                 const casosOcupando = this.allAssisted.filter(a => {
                     const emAtendimentoNormal = a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome;
@@ -1935,7 +1930,6 @@ class SIGEPApp {
                     btnEnvelope = document.createElement('button');
                     btnEnvelope.id = 'btn-colabs-disponiveis';
                     btnEnvelope.onclick = () => {
-                        // Mostra o nome e o cargo pra ficar mais fácil de identificar se é Defensor ou Servidor
                         const nomes = colabsLivres.map(c => `• ${c.nome} (${c.cargo || 'Membro'})`).join('\n');
                         alert(`Equipe livre no momento:\n\n${nomes}`);
                     };
@@ -2079,15 +2073,14 @@ class SIGEPApp {
 
         const btnMonitor = document.getElementById('btn-painel-geral-externo');
         if (btnMonitor) {
-            const btnMonitor = document.getElementById('btn-painel-geral-externo');
-            if (btnMonitor) {
-                const liberadoApoio = this.currentPautaData?.liberarPainelGeralApoio === true;
-                if (isApoio && !liberadoApoio) {  //  Corrigido para "liberadoApoio"
-                    btnMonitor.classList.add('hidden');
-                } else {
-                    btnMonitor.classList.remove('hidden');
-                }
+            const liberadoApoio = this.currentPautaData?.liberarPainelGeralApoio === true;
+            // ⭐ CORREÇÃO DA VARIÁVEL REALIZADA AQUI (!liberadoApoio) ⭐
+            if (isApoio && !liberadoApoio) { 
+                btnMonitor.classList.add('hidden');
+            } else {
+                btnMonitor.classList.remove('hidden');
             }
+        }
         
         if (typeof UIService !== 'undefined' && typeof UIService.renderAssistedLists === 'function') {
             UIService.renderAssistedLists(this); 
