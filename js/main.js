@@ -1,4 +1,4 @@
-// js/main.js - VERSÃO COMPLETA E CONSOLIDADA (SIGEP)
+// js/main.js - VERSÃO COMPLETA (SIGEP COM DELEGAÇÃO AUTOMÁTICA E TOKENS VALIDADOS)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -24,7 +24,7 @@ import { parsePautaCSV } from './csvHandler.js';
 import { getChecklistHTML } from './checklist.js';
 import { PainelGeralService } from './painelGeralService.js'; 
 
-class SIGEPApp { // ⭐ Batizado oficialmente como SIGEP
+class SIGEPApp { 
     constructor() {
         this.db = null;
         this.auth = null;
@@ -287,7 +287,7 @@ class SIGEPApp { // ⭐ Batizado oficialmente como SIGEP
                 }
 
                 document.getElementById('manage-rooms-modal')?.classList.add('hidden');
-                showNotification("Salas updated com sucesso!", "success");
+                showNotification("Salas atualizadas com sucesso!", "success");
                 
                 if (typeof UIService.renderAssistedLists === 'function') {
                     UIService.renderAssistedLists(this);
@@ -336,11 +336,11 @@ class SIGEPApp { // ⭐ Batizado oficialmente como SIGEP
         });
         
         document.getElementById('confirm-ata-modal-btn')?.addEventListener('click', () => {
-            const acaoNome = document.getElementById('ata-acao-nome').value.trim();
-            const endereco = document.getElementById('ata-endereco').value.trim();
-            const dataAcao = document.getElementById('ata-data').value;
-            const orgaoNome = document.getElementById('ata-orgao').value.trim();
-            const totalManual = document.getElementById('ata-total').value;
+            const acaoNome = document.getElementById('ata-acao-nome')?.value.trim();
+            const endereco = document.getElementById('ata-endereco')?.value.trim();
+            const dataAcao = document.getElementById('ata-data')?.value;
+            const orgaoNome = document.getElementById('ata-orgao')?.value.trim();
+            const totalManual = document.getElementById('ata-total')?.value;
             
             if (!acaoNome || !endereco || !dataAcao || !orgaoNome || !totalManual || totalManual < 0) {
                 showNotification("Preencha todos os campos corretamente.", "error");
@@ -858,7 +858,6 @@ class SIGEPApp { // ⭐ Batizado oficialmente como SIGEP
             }
         });
 
-        // Botões de PDF internos do painel principal
         document.getElementById('download-pdf-btn')?.addEventListener('click', () => {
             const atendidosArray = (this.allAssisted || []).filter(a => a.status === 'atendido');
             const nomePauta = this.currentPauta?.name || 'Pauta';
@@ -1018,7 +1017,6 @@ class SIGEPApp { // ⭐ Batizado oficialmente como SIGEP
             document.getElementById('assisted-details-modal').classList.add('hidden');
         });
         
-        // ⭐ CONSOLIDADO: O botão PDF do ver detalhes agora executa a rotina nativa e correta do detalhes.js ⭐
         document.getElementById('print-checklist-btn')?.addEventListener('click', async () => {
             const { handlePdf } = await import('./detalhes.js');
             if (typeof handlePdf === 'function') {
@@ -1127,13 +1125,14 @@ class SIGEPApp { // ⭐ Batizado oficialmente como SIGEP
             );
             
             document.getElementById('edit-attendant-modal')?.classList.add('hidden');
-            showNotification("Atendente updated com sucesso!", "success");
+            showNotification("Atendente atualizado com sucesso!", "success");
         });
 
         document.getElementById('cancel-edit-attendant-btn')?.addEventListener('click', () => {
             document.getElementById('edit-attendant-modal')?.classList.add('hidden');
         });
 
+        // ⭐ CORREÇÃO DE SEGURANÇA E DISPARO DE E-MAIL AQUI (DELEGAÇÃO PELA COLUNA AGUARDANDO) ⭐
         document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
             const collaboratorId = window.selectedCollaboratorId;
             const collaboratorName = window.selectedCollaboratorName || null;
@@ -1172,26 +1171,61 @@ class SIGEPApp { // ⭐ Batizado oficialmente como SIGEP
                 await PautaService.finishAttendance(this, window.assistedIdToHandle, atendenteFinal, []);
                 showNotification(`${window.assistedNameToHandle} marcado como atendido por ${atendenteFinal}.`, "success");
             } else { 
+                // 💡 FLUXO DE DELEGAÇÃO COMPLETO
                 let collaboratorData = null;
+                let emailDestino = null;
+                
+                // Gera a senha/token de segurança obrigatória
+                const novoToken = Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
+
                 if (collaboratorName) {
-                    collaboratorData = { id: collaboratorId, name: collaboratorName };
+                    // Tenta puxar o e-mail cadastrado
+                    const selectedCollab = this.colaboradores?.find(c => c.nome === collaboratorName);
+                    emailDestino = selectedCollab?.email || null;
+                    
+                    collaboratorData = { id: collaboratorId, name: collaboratorName, email: emailDestino };
                     showNotification(`${window.assistedNameToHandle} atribuído a ${collaboratorName}.`, "success");
                 } else {
-                    showNotification(`${window.assistedNameToHandle} movido para 'Em Atendimento' sem colaborador atribuído.`, "success");
+                    showNotification(`${window.assistedNameToHandle} movido para 'Em Atendimento' sem atribuição.`, "success");
+                }
+
+                const updatePayload = {
+                    status: 'emAtendimento',
+                    assignedCollaborator: collaboratorData,
+                    inAttendanceTime: new Date().toISOString()
+                };
+
+                if (collaboratorName) {
+                    updatePayload.delegationToken = novoToken; // Salva o token gerado no banco de dados!
                 }
 
                 await PautaService.updateStatus(
                     this.db,
                     this.currentPauta.id,
                     window.assistedIdToHandle,
-                    {
-                        status: 'emAtendimento',
-                        assignedCollaborator: collaboratorData,
-                        inAttendanceTime: new Date().toISOString()
-                    },
+                    updatePayload,
                     this.currentUserName
                 );
-                showNotification(`${window.assistedNameToHandle} delegado para ${collaboratorName || 'ninguém (aguardando atribuição)'}.`, "success"); 
+                
+                // 💡 GATILHO AUTOMÁTICO DE E-MAIL
+                if (emailDestino) {
+                    showNotification(`Disparando notificação para o e-mail cadastrado...`, "info");
+                    try {
+                        await EmailService.sendDelegationEmail(
+                            emailDestino, 
+                            collaboratorName, 
+                            window.assistedNameToHandle, 
+                            this.currentUserName,
+                            this.currentPauta.id, 
+                            window.assistedIdToHandle, 
+                            novoToken // Passa o token exato para injetar no link do e-mail
+                        );
+                    } catch(e) {
+                        console.error("Erro no envio auto:", e);
+                    }
+                }
+
+                showNotification(`${window.assistedNameToHandle} delegado com sucesso.`, "success"); 
             }
             
             document.getElementById('select-collaborator-modal')?.classList.add('hidden');
@@ -1369,6 +1403,7 @@ class SIGEPApp { // ⭐ Batizado oficialmente como SIGEP
             document.getElementById('edit-pauta-modal')?.classList.add('hidden');
         });
 
+        // ⭐ CORREÇÃO AQUI: BLINDAGEM DO BOTÃO MANUAL DE ENVIAR E-MAIL (GERANDO TOKEN SEGURO) ⭐
         document.getElementById('send-delegate-email-btn')?.addEventListener('click', async () => {
             const emailInput = document.getElementById('collaborator-email-input');
             const emailDestino = emailInput?.value.trim();
@@ -1386,14 +1421,28 @@ class SIGEPApp { // ⭐ Batizado oficialmente como SIGEP
                 nomeColega = "Colega Colaborador";
             }
 
+            // Cria o token seguro para garantir a permissão na tela externa
+            const novoToken = Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
+
             try {
+                // 1. Atualiza o banco com o novo token antes de enviar o e-mail!
+                const docRef = doc(this.db, "pautas", this.currentPauta.id, "attendances", window.assistedIdForDelegation);
+                await updateDoc(docRef, { delegationToken: novoToken });
+
+                // 2. Dispara o e-mail entregando a chave gerada acima
                 await EmailService.sendDelegationEmail(
-                    emailDestino, nomeColega, window.assistedNameForDelegation, this.currentUserName,
-                    this.currentPauta.id, window.assistedIdForDelegation
+                    emailDestino, 
+                    nomeColega, 
+                    window.assistedNameForDelegation, 
+                    this.currentUserName,
+                    this.currentPauta.id, 
+                    window.assistedIdForDelegation,
+                    novoToken
                 );
 
                 document.getElementById('delegate-email-modal')?.classList.add('hidden');
                 if (emailInput) emailInput.value = '';
+                showNotification("E-mail enviado e acesso liberado!", "success");
             } catch (error) {
                 showNotification("Falha no envio do e-mail.", "error");
             } finally {
@@ -2030,7 +2079,7 @@ window.sortColaboradores = function(criterio) {
     }
 };
 
-window.app = new SIGEPApp(); // ⭐ Instanciação oficial do SIGEP
+window.app = new SIGEPApp(); 
 
 setTimeout(() => {
     if (window.app && typeof window.app.deletePauta === 'function') {
@@ -2075,17 +2124,4 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
-    document.getElementById('btn-painel-geral-externo')?.addEventListener('click', () => {
-        if (typeof PainelGeralService !== 'undefined') {
-            PainelGeralService.abrirPainel(window.app);
-            const actionsPanel = document.getElementById('actions-panel');
-            if (actionsPanel) {
-                actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                document.getElementById('actions-arrow')?.classList.remove('rotate-180');
-            }
-        } else {
-            showNotification("Erro: Módulo do painel não carregado", "error");
-        }
-    });
 });
