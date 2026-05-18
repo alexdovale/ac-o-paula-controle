@@ -1,4 +1,4 @@
-// js/pdfService.js - VERSÃO DEFINITIVA (SIGEP + Checklist Textual + Preview Ata + Blindagem Anti-Erros)
+// js/pdfService.js - VERSÃO DEFINITIVA (SIGEP + Checklist Textual + Preview Ata + Logo Blindada)
 
 const ensureJsPDF = async () => {
     if (typeof window.jspdf === 'undefined') {
@@ -75,8 +75,25 @@ const getAttendantNameForPDF = (item) => {
     return 'N/A';
 };
 
-// Lógica principal de geração da Ata (usada pelo preview e pelo generate)
-const buildAtaAcaoSocialPDF = (doc, pautaName, colaboradores, atendidos, dadosExtras = {}) => {
+// ⭐ FUNÇÃO NOVA: Transforma o link da logo em Base64 para nunca falhar no jsPDF
+const loadImageBase64 = (url) => {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = () => resolve(null);
+        img.src = url;
+    });
+};
+
+// Lógica principal de geração da Ata (agora aguardando a imagem)
+const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, dadosExtras = {}) => {
     const dataInput = dadosExtras.data ? new Date(dadosExtras.data + 'T12:00:00') : new Date();
     const dia = dataInput.getDate();
     const mesExtenso = dataInput.toLocaleString('pt-BR', { month: 'long' });
@@ -89,8 +106,12 @@ const buildAtaAcaoSocialPDF = (doc, pautaName, colaboradores, atendidos, dadosEx
         ? dadosExtras.totalAtendimentos 
         : atendidos.length;
 
+    // Garante que a logo seja carregada corretamente
     const logoUrl = "https://raw.githubusercontent.com/alexdovale/calculo-mensuracao-codoc/main/logo.png";
-    try { doc.addImage(logoUrl, 'PNG', 52, 8, 106, 25); } catch(e) {}
+    const base64Logo = await loadImageBase64(logoUrl);
+    if (base64Logo) {
+        try { doc.addImage(base64Logo, 'PNG', 52, 8, 106, 25); } catch(e) { console.warn("Erro ao inserir logo no PDF", e); }
+    }
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(13);
@@ -287,7 +308,7 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
             
-            buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
+            await buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
 
             doc.save(`Ata_Social_${(dadosExtras.acao || pautaName).replace(/\s+/g, '_')}.pdf`);
             return true;
@@ -298,16 +319,14 @@ export const PDFService = {
         }
     },
 
-    // ⭐ NOVO: FUNÇÃO DE PREVIEW DA ATA NA NOVA ABA ⭐
     async previewAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
             
-            buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
+            await buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
 
-            // Em vez de baixar, gera uma URL BLOB e abre em nova aba
             const pdfBlob = doc.output('blob');
             const pdfUrl = URL.createObjectURL(pdfBlob);
             window.open(pdfUrl, '_blank');
@@ -325,7 +344,6 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
 
-            // Identifica qual variável é o Array de pessoas e qual é a string de Pauta
             const atendidosList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
             const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : 'Geral');
 
