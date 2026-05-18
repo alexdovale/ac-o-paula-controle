@@ -2095,6 +2095,7 @@ class SIGEPApp {
             UIService.renderAssistedLists(this); 
         }
     }
+}
     
 window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
