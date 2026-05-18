@@ -47,7 +47,7 @@ export const PautaService = {
     },
 
     injectRoomSearches(app) {
-        // Função mantida por compatibilidade estrutural
+        // Função mantida por compatibilidade estrutural do SIGAP
     },
 
     populateRoomSelects(app) {
@@ -218,6 +218,11 @@ export const PautaService = {
             
         } catch (error) {
             let mensagem = "Erro ao adicionar assistido. Verifique sua conexão e permissões.";
+            if (error.code === 'permission-denied') {
+                mensagem = "Permissão negada. Você não tem acesso para adicionar assistidos.";
+            } else if (error.code === 'unavailable') {
+                mensagem = "Serviço indisponível. Verifique sua conexão com a internet.";
+            }
             showNotification(mensagem, "error");
             playSound('error');
         }
@@ -421,6 +426,7 @@ export const PautaService = {
 
             if (colab && colab.email) {
                 showNotification(`Enviando e-mail para ${collaboratorName}...`, "info");
+                
                 await EmailService.sendDelegationEmail(
                     colab.email,          
                     collaboratorName,     
@@ -829,8 +835,8 @@ export const PautaService = {
                 const agendado = new Date();
                 agendado.setHours(h, m, 0, 0);
 
-                const chegada = new Date(assisted.arrivalTime);
-                const diffMinutos = (chegada - agendado) / (1000 * 60);
+                const llegada = new Date(assisted.arrivalTime);
+                const diffMinutos = (llegada - agendado) / (1000 * 60);
 
                 if (diffMinutos <= 5) return 'Máxima'; 
                 if (diffMinutos <= 30) return 'Média'; 
@@ -1275,6 +1281,10 @@ export const PautaService = {
                     assistedId: id, pautaId: app.currentPauta?.id, allAssisted: app.allAssisted
                 });
             }
+        }
+
+        if (button.classList.contains('view-checklist-btn')) {
+            // Mapeia abertura direta se houver integração de checklist externa
         }
 
         if (button.classList.contains('return-from-atendido-btn')) {
