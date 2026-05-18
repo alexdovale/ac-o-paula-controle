@@ -1,3 +1,5 @@
+// js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (PADRÃO SIGEP)
+
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
 import { PautaService } from './pauta.js';
 import { PainelGeralService } from './painelGeralService.js';
@@ -180,6 +182,87 @@ export const UIService = {
         }
     },
 
+    togglePautaLock(app) {
+        const isOwner = app.auth?.currentUser?.uid === app.currentPautaOwnerId;
+        const isClosed = app.isPautaClosed;
+
+        const buttonsToDisable = [
+            'form-agendamento', 'file-upload', 'add-assisted-btn',
+            'download-pdf-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento'
+        ];
+
+        buttonsToDisable.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                if (isClosed) {
+                    element.classList.add('pointer-events-none', 'opacity-50');
+                    element.querySelectorAll('input, button, a, select, textarea').forEach(el => el.disabled = true);
+                } else {
+                    element.classList.remove('pointer-events-none', 'opacity-50');
+                    element.querySelectorAll('input, button, a, select, textarea').forEach(el => el.disabled = false);
+                }
+            }
+        });
+
+        const actionPanelButtons = document.querySelectorAll('#actions-panel button');
+        actionPanelButtons.forEach(btn => {
+            if (btn.id === 'reopen-pauta-btn') {
+                btn.disabled = false;
+            } else {
+                btn.disabled = isClosed;
+            }
+        });
+        
+        const cardActionButtons = document.querySelectorAll('.assisted-card button:not(.quick-action-toggle), .assisted-card select');
+        cardActionButtons.forEach(btn => {
+            btn.disabled = isClosed;
+        });
+
+        if (isClosed) {
+            document.getElementById('closed-pauta-alert').classList.remove('hidden');
+            document.getElementById('close-pauta-btn').classList.add('hidden');
+            document.getElementById('reopen-pauta-btn').classList.remove('hidden');
+        } else {
+            document.getElementById('closed-pauta-alert').classList.add('hidden');
+            document.getElementById('close-pauta-btn').classList.remove('hidden');
+            document.getElementById('reopen-pauta-btn').classList.add('hidden');
+        }
+
+        if (!isOwner) {
+            document.getElementById('close-pauta-btn').classList.add('hidden');
+            document.getElementById('reopen-pauta-btn').classList.add('hidden');
+        }
+    },
+
+    toggleFaltosos() {
+        const btn = document.getElementById('toggle-faltosos-btn');
+        const pautaColumn = document.getElementById('pauta-column');
+        const faltososColumn = document.getElementById('faltosos-column');
+
+        pautaColumn.classList.toggle('hidden');
+        faltososColumn.classList.toggle('hidden');
+
+        if (faltososColumn.classList.contains('hidden')) {
+            btn.textContent = 'Ver Faltosos';
+            btn.classList.remove('bg-blue-600');
+            btn.classList.add('bg-purple-600');
+        } else {
+            btn.textContent = 'Ver Pauta';
+            btn.classList.remove('bg-purple-600');
+            btn.classList.add('bg-blue-600');
+        }
+    },
+
+    toggleActionsPanel() {
+        const panel = document.getElementById('actions-panel');
+        const arrow = document.getElementById('actions-arrow');
+        
+        panel.classList.toggle('opacity-0');
+        panel.classList.toggle('scale-95');
+        panel.classList.toggle('pointer-events-none');
+        arrow.classList.toggle('rotate-180');
+    },
+
     toggleAuthTabs(tab) {
         const loginTab = document.getElementById('login-tab-btn');
         const registerTab = document.getElementById('register-tab-btn');
@@ -273,91 +356,9 @@ export const UIService = {
         }
     },
 
-    togglePautaLock(app) {
-        const isOwner = app.auth?.currentUser?.uid === app.currentPautaOwnerId;
-        const isClosed = app.isPautaClosed;
-
-        const buttonsToDisable = [
-            'form-agendamento', 'file-upload', 'add-assisted-btn',
-            'download-pdf-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento'
-        ];
-
-        buttonsToDisable.forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                if (isClosed) {
-                    element.classList.add('pointer-events-none', 'opacity-50');
-                    element.querySelectorAll('input, button, a, select, textarea').forEach(el => el.disabled = true);
-                } else {
-                    element.classList.remove('pointer-events-none', 'opacity-50');
-                    element.querySelectorAll('input, button, a, select, textarea').forEach(el => el.disabled = false);
-                }
-            }
-        });
-
-        const actionPanelButtons = document.querySelectorAll('#actions-panel button');
-        actionPanelButtons.forEach(btn => {
-            if (btn.id === 'reopen-pauta-btn') {
-                btn.disabled = false;
-            } else {
-                btn.disabled = isClosed;
-            }
-        });
-        
-        const cardActionButtons = document.querySelectorAll('.assisted-card button:not(.quick-action-toggle), .assisted-card select');
-        cardActionButtons.forEach(btn => {
-            btn.disabled = isClosed;
-        });
-
-        if (isClosed) {
-            document.getElementById('closed-pauta-alert').classList.remove('hidden');
-            document.getElementById('close-pauta-btn').classList.add('hidden');
-            document.getElementById('reopen-pauta-btn').classList.remove('hidden');
-        } else {
-            document.getElementById('closed-pauta-alert').classList.add('hidden');
-            document.getElementById('close-pauta-btn').classList.remove('hidden');
-            document.getElementById('reopen-pauta-btn').classList.add('hidden');
-        }
-
-        if (!isOwner) {
-            document.getElementById('close-pauta-btn').classList.add('hidden');
-            document.getElementById('reopen-pauta-btn').classList.add('hidden');
-        }
-    },
-
-    toggleFaltosos() {
-        const btn = document.getElementById('toggle-faltosos-btn');
-        const pautaColumn = document.getElementById('pauta-column');
-        const faltososColumn = document.getElementById('faltosos-column');
-
-        pautaColumn.classList.toggle('hidden');
-        faltososColumn.classList.toggle('hidden');
-
-        if (faltososColumn.classList.contains('hidden')) {
-            btn.textContent = 'Ver Faltosos';
-            btn.classList.remove('bg-blue-600');
-            btn.classList.add('bg-purple-600');
-        } else {
-            btn.textContent = 'Ver Pauta';
-            btn.classList.remove('bg-purple-600');
-            btn.classList.add('bg-blue-600');
-        }
-    },
-
-    toggleActionsPanel() {
-        const panel = document.getElementById('actions-panel');
-        const arrow = document.getElementById('actions-arrow');
-        
-        panel.classList.toggle('opacity-0');
-        panel.classList.toggle('scale-95');
-        panel.classList.toggle('pointer-events-none');
-        arrow.classList.toggle('rotate-180');
-    },
-
     renderAssistedLists(app) {
         if (!app) return;
         
-        // Atualiza o painel geral flutuante, se estiver aberto
         if (typeof PainelGeralService !== 'undefined') {
             const painelModal = document.getElementById('painel-geral-externo-modal'); 
             if (painelModal && !painelModal.classList.contains('hidden')) {
@@ -410,7 +411,7 @@ export const UIService = {
         };
 
         lists.pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
-        lists.atendidos.sort((a, b) => new Date(b.attendedTime) - new Date(a.attendedTime)); 
+        lists.atendidos.sort((a, b) => new Date(b.attendedAt || b.lastActionTimestamp) - new Date(a.attendedAt || a.lastActionTimestamp)); 
         lists.faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00')); 
         lists.emAtendimento.sort((a, b) => new Date(a.inAttendanceTime) - new Date(b.inAttendanceTime)); 
         
@@ -461,8 +462,8 @@ export const UIService = {
         const arrivalTimeFormatted = assisted.arrivalTime ? 
             new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
         
-        const attendedTimeFormatted = assisted.attendedTime ? 
-            new Date(assisted.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+        const attendedTimeFormatted = assisted.attendedAt ? 
+            new Date(assisted.attendedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
 
         const inAttendanceTimeFormatted = assisted.inAttendanceTime ? 
             new Date(assisted.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
@@ -471,7 +472,7 @@ export const UIService = {
         const demandsText = assisted.demandas?.descricoes ? assisted.demandas.descricoes.join(' ') : '';
         
         const searchableString = normalizeText(`
-            ${assisted.numeroAgendamento || ''}
+            ${assisted.numeroAgendamento || assisted.assistedManualNumAgendamento || ''}
             ${assisted.name || ''} 
             ${assisted.cpf || ''} 
             ${assisted.subject || ''} 
@@ -538,11 +539,13 @@ export const UIService = {
         });
     },
 
+    // ⭐ CORRIGIDO: SUPORTE COMPLETO E DESTACADO PARA EXIBIR O NÚMERO DE AGENDAMENTO NA COLUNA PAUTA ⭐
     createPautaCard(item) {
         const currentUserRole = window.app?.currentUser?.role;
         const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
         const canEdit = currentUserRole !== 'apoio'; 
         const isOwner = window.app?.auth?.currentUser?.uid === item.owner;
+        const numAgendamento = item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
         const card = document.createElement('div');
         card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3';
@@ -556,24 +559,24 @@ export const UIService = {
                 </svg>
             </button>` : ''}
 
-            <p class="font-bold text-xl text-gray-800 leading-tight pr-6">${escapeHTML(item.name || '').toUpperCase()}</p>
+            <p class="font-bold text-lg text-gray-800 leading-tight pr-6">${escapeHTML(item.name || '').toUpperCase()}</p>
             
-            <div class="mt-2 space-y-0.5 text-sm text-gray-700">
-                ${item.numeroAgendamento ? `<p>Nº Agend.: <span class="font-bold">${escapeHTML(item.numeroAgendamento)}</span></p>` : ''}
-                <p>Assunto: <span class="font-bold uppercase">${escapeHTML(item.subject || 'Não informado')}</span></p>
-                <p>Agendado: <span class="font-bold">${item.scheduledTime || '--:--'}</span></p>
+            <div class="mt-2 space-y-0.5 text-xs text-gray-700">
+                ${numAgendamento ? `<p class="text-blue-700 font-bold mb-1 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max">📅 Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
+                <p>Assunto: <span class="font-bold uppercase text-slate-700">${escapeHTML(item.subject || 'Não informado')}</span></p>
+                <p>Agendado: <span class="font-bold text-slate-800">${item.scheduledTime || '--:--'}</span></p>
             </div>
 
             <div class="mt-4 space-y-2">
                 <div class="grid grid-cols-2 gap-2">
-                    <button data-id="${item.id}" class="check-in-btn bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm">
+                    <button data-id="${item.id}" class="check-in-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide">
                         Marcar Chegada
                     </button>
-                    <button data-id="${item.id}" class="faltou-btn bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm" ${canEdit ? '' : 'disabled'}>
+                    <button data-id="${item.id}" class="faltou-btn bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide" ${canEdit ? '' : 'disabled'}>
                         Faltou
                     </button>
                 </div>
-                <button data-id="${item.id}" class="edit-assisted-btn w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm" ${canEdit ? '' : 'disabled'}>
+                <button data-id="${item.id}" class="edit-assisted-btn w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide" ${canEdit ? '' : 'disabled'}>
                     Editar Dados
                 </button>
             </div>
@@ -659,6 +662,7 @@ export const UIService = {
         }
     },
 
+    // ⭐ CORRIGIDO: NÚMERO DE AGENDAMENTO EXIBIDO VISIVELMENTE NO TOPO DO CARD EM AGUARDANDO ⭐
     createAguardandoCard(item, currentPautaData, colaboradores, index) {
         try {
             if (!item || !item.id) return null;
@@ -667,6 +671,7 @@ export const UIService = {
             const canEditPriority = currentUserRole === 'apoio' || currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canAttend = currentUserRole !== 'apoio';
             const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
+            const numAgendamento = item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
             const card = document.createElement('div');
             const priorityClass = PautaService.getPriorityClass(item.priority);
@@ -778,9 +783,9 @@ export const UIService = {
                 </div>
             `;
 
-            const atenderButton = currentPautaData?.useDelegationFlow
-                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`
-                : `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="attend-directly-from-aguardando-btn bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 text-sm w-full">Atender</button>`;
+            const atenderButton = canAttend
+                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="${currentPautaData?.useDelegationFlow ? 'select-collaborator-btn' : 'attend-directly-from-aguardando-btn'} bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700 text-xs shadow-sm uppercase tracking-wide">Atender</button>`
+                : `<button disabled class="w-full bg-gray-300 text-gray-700 font-semibold py-2 rounded-lg text-sm">Sem Permissão</button>`;
 
             const actionButtonsHTML = `
                 <div class="absolute top-2 right-10 flex items-center">
@@ -791,24 +796,12 @@ export const UIService = {
                             </svg>
                         </button>
                         <div id="quick-menu-${item.id}" class="quick-menu hidden absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 z-30 py-1" role="menu" aria-orientation="vertical" aria-labelledby="quick-toggle-${item.id}">
-                            <button data-id="${item.id}" data-tipo="reagendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2" role="menuitem">
-                                <span>🔄</span> Reagendar
-                            </button>
-                            <button data-id="${item.id}" data-tipo="agendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2" role="menuitem">
-                                <span>📅</span> Agendar
-                            </button>
-                            <button data-id="${item.id}" data-tipo="consulta" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2" role="menuitem">
-                                <span>🔍</span> Consulta
-                            </button>
-                            <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem">
-                                <span>⚙️</span> Outros
-                            </button>
-                            <button data-id="${item.id}" class="edit-assisted-btn quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem">
-                                <span>✏️</span> Editar Assistido
-                            </button>
-                            <button data-id="${item.id}" class="view-details-btn quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem">
-                                <span>👁️</span> Ver Detalhes
-                            </button>
+                            <button data-id="${item.id}" data-tipo="reagendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2" role="menuitem"><span>🔄</span> Reagendar</button>
+                            <button data-id="${item.id}" data-tipo="agendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2" role="menuitem"><span>📅</span> Agendar</button>
+                            <button data-id="${item.id}" data-tipo="consulta" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2" role="menuitem"><span>🔍</span> Consulta</button>
+                            <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem"><span>⚙️</span> Outros</button>
+                            <button data-id="${item.id}" class="edit-assisted-btn quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem"><span>✏️</span> Editar Assistido</button>
+                            <button data-id="${item.id}" class="view-details-btn quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem"><span>👁️</span> Ver Detalhes</button>
                         </div>
                     </div>
                 </div>
@@ -818,15 +811,17 @@ export const UIService = {
                 ${numeroBadge}
                 ${canAttend ? actionButtonsHTML : ''} 
                 ${canDelete ? `
-                <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 rounded-full transition-colors">
+                <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500 p-1 rounded-full transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
                     </svg>
                 </button>` : ''}
                 <div class="flex flex-col h-full">
                     ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
-                    <p class="font-bold text-lg text-gray-800 leading-tight mb-1">${escapeHTML(nomeSeguro)}</p>
-                    ${item.numeroAgendamento ? `<p class="text-xs text-blue-700 font-bold mb-1 tracking-wide">Nº Agend.: ${escapeHTML(item.numeroAgendamento)}</p>` : ''}
+                    <p class="font-bold text-lg text-gray-800 leading-tight mb-1 truncate pr-14">${escapeHTML(nomeSeguro)}</p>
+                    
+                    ${numAgendamento ? `<p class="text-xs text-blue-700 font-bold mb-1.5 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm">📅 Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
+                    
                     <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
                     <div class="flex items-end justify-between w-full mb-2 gap-2">
                         <div class="flex flex-wrap items-center gap-2">
@@ -836,9 +831,9 @@ export const UIService = {
                     </div>
                     ${docStatusHtml}
                     <div class="mt-4 grid grid-cols-2 gap-2">
-                        ${canAttend ? atenderButton : '<button disabled class="w-full bg-gray-300 text-gray-700 font-semibold py-2 rounded-lg text-sm">Sem Permissão</button>'}
-                        <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs" ${canEditPriority ? '' : 'disabled'}>${item.priority === 'URGENTE' ? 'Urgência' : 'Prioridade'}</button>
-                        <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-semibold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase" ${canAttend ? '' : 'disabled'}>Voltar</button>
+                        ${atenderButton}
+                        <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs uppercase shadow-sm" ${canEditPriority ? '' : 'disabled'}>${item.priority === 'URGENTE' ? 'Urgência' : 'Prioridade'}</button>
+                        <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-bold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase tracking-wide" ${canAttend ? '' : 'disabled'}>Voltar para Pauta</button>
                     </div>
                     <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
                 </div>
@@ -872,11 +867,6 @@ export const UIService = {
         const container = document.getElementById('em-atendimento-list');
         if (!container) return;
 
-        const columnHeader = container.parentElement?.querySelector('h2');
-        if (columnHeader && columnHeader.innerHTML.includes('Em Atend.')) {
-            columnHeader.innerHTML = columnHeader.innerHTML.replace('Em Atend.', 'Em Atendimento');
-        }
-
         if (items.length === 0) {
             container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém em atendimento</p>';
             return;
@@ -909,6 +899,7 @@ export const UIService = {
             const linkDireto = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(userName)}&token=${item.delegationToken || ''}`;
 
             const atendenteNome = this.getAttendantName(item);
+            const numAgendamento = item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
             const historicoTransferenciaHtml = item.historicoTransferencia 
                 ? `<div class="mt-2 bg-orange-50 border border-orange-200 text-orange-800 text-[10px] p-2 rounded flex items-center gap-1 font-medium shadow-sm">
@@ -960,26 +951,25 @@ export const UIService = {
                 </button>` : ''}
 
                 <p class="font-bold text-lg text-gray-800 leading-tight">${index + 1}. ${escapeHTML(item.name || '')}</p>
-                ${item.numeroAgendamento ? `<p class="text-xs text-blue-700 font-bold mt-1 tracking-wide">Nº Agend.: ${escapeHTML(item.numeroAgendamento)}</p>` : ''}
+                ${numAgendamento ? `<p class="text-xs text-blue-700 font-bold mt-1 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm">📅 Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
                 <p class="text-xs text-gray-600 mt-1">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
                 <p class="text-xs text-gray-600 mt-1">Colaborador: ${escapeHTML(atendenteNome)}</p>
                 <p class="text-xs text-gray-400 mt-1">Início do Tempo: ${startTime}</p>
 
                 ${historicoTransferenciaHtml}
-
                 ${docStatusHtml}
 
                 <div class="mt-4 flex flex-col gap-2">
                     <div class="grid grid-cols-2 gap-2">
-                        <button data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(atendenteNome)}" class="delegate-finalization-btn ${delegateBtnClass} text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95" ${canDelegate ? '' : 'disabled'}>
+                        <button id="btn-delegar-card" data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(atendenteNome)}" class="delegate-finalization-btn ${delegateBtnClass} text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegate ? '' : 'disabled'}>
                             Delegar
                         </button>
-                        <button onclick="window.open('${linkDireto}', '_blank')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
-                            Finalizar / Encaminhar
+                        <button onclick="window.open('${linkDireto}', '_blank')" class="bg-green-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegateOrFinalize ? '' : 'disabled'}>
+                            Finalizar / Assinar
                         </button>
                     </div>
-                    <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 hover:bg-slate-500 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95" ${canDelegateOrFinalize ? '' : 'disabled'}>
-                        Voltar p/ Aguardando
+                    <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 hover:bg-slate-500 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegateOrFinalize ? '' : 'disabled'}>
+                        Mover para Fila
                     </button>
                     <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-1 text-center underline w-full">
                         Ver Detalhes
@@ -1026,10 +1016,11 @@ export const UIService = {
             
             const arrivalT = item.arrivalTime ? 
                 new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
-            const attendedT = item.attendedTime ? 
-                new Date(item.attendedTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+            const attendedT = item.attendedAt ? 
+                new Date(item.attendedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
             
             const atendenteNome = this.getAttendantName(item);
+            const numAgendamento = item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
             const confirmButton = item.isConfirmed 
                 ? 'bg-green-500 border-green-500 text-white' 
@@ -1045,7 +1036,7 @@ export const UIService = {
                     </button>
                 </div>
                 
-                ${item.numeroAgendamento ? `<p class="text-xs md:text-sm mt-1 text-blue-700 font-bold tracking-wide">Nº Agend.: ${escapeHTML(item.numeroAgendamento)}</p>` : ''}
+                ${numAgendamento ? `<p class="text-xs md:text-sm mt-1 text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide">Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
                 <p class="text-xs md:text-sm mt-1 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
                 
                 ${item.tipoAcaoRapida ? (() => {
@@ -1056,8 +1047,7 @@ export const UIService = {
                         'Outros Assuntos':     { icon: '⚙️', bg: '#f0f9ff', border: '#0ea5e9', text: '#0c4a6e', label: 'OUTROS' }
                     }[item.tipoAcaoRapida] || { icon: '⚡', bg: '#f0fdf4', border: '#22c55e', text: '#14532d', label: item.tipoAcaoRapida };
                     return `<div class="mt-1 mb-2">
-                        <span style="background:${acaoCfg.bg};border:1.5px solid ${acaoCfg.border};color:${acaoCfg.text}" 
-                              class="inline-flex items-center gap-1 text-[10px] md:text-xs font-black px-2 py-1 rounded-lg">
+                        <span style="background:${acaoCfg.bg};border:1.5px solid ${acaoCfg.border};color:${acaoCfg.text}" class="inline-flex items-center gap-1 text-[10px] md:text-xs font-black px-2 py-1 rounded-lg">
                             ${acaoCfg.icon} ${acaoCfg.label}
                         </span>
                     </div>`;
@@ -1080,8 +1070,7 @@ export const UIService = {
                 </div>
 
                 ${item.arquivoPdfConteudo ? `
-                    <a href="${item.arquivoPdfConteudo}" download="${item.nomeArquivoPdf || 'protocolo.pdf'}" 
-                       class="mb-4 flex items-center justify-center gap-2 w-full bg-blue-50 text-blue-600 font-bold py-2 rounded-lg md:py-2.5 md:rounded-xl text-[8px] md:text-[10px] uppercase border border-blue-100 hover:bg-blue-100 transition">
+                    <a href="${item.arquivoPdfConteudo}" download="${item.nomeArquivoPdf || 'protocolo.pdf'}" class="mb-4 flex items-center justify-center gap-2 w-full bg-blue-50 text-blue-600 font-bold py-2 rounded-lg md:py-2.5 md:rounded-xl text-[8px] md:text-[10px] uppercase border border-blue-100 hover:bg-blue-100 transition">
                         📄 Baixar Protocolo
                     </a>
                 ` : ''}
@@ -1090,7 +1079,7 @@ export const UIService = {
                     <div class="flex flex-col sm:flex-row justify-between items-center gap-2 md:gap-3">
                         <p class="text-[7px] md:text-[9px] text-gray-400 uppercase italic">Última: ${escapeHTML(item.lastActionBy || 'Sistema')}</p>
                         <button data-id="${item.id}" class="return-from-atendido-btn w-full sm:w-auto bg-orange-500 text-white font-black py-2 md:py-3 px-4 md:px-8 rounded-lg md:rounded-xl text-[8px] md:text-[10px] uppercase shadow-md active:scale-95 transition-all" ${canRevert ? '' : 'disabled'}>
-                            Voltar
+                            Mover de Volta
                         </button>
                     </div>
                 </div>
@@ -1118,9 +1107,9 @@ export const UIService = {
             const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canRevert = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
+            const numAgendamento = item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
             const card = document.createElement('div');
-            const priorityClass = PautaService.getPriorityClass(PautaService.getPriorityLevel(item));
             const isConfirmed = item.isConfirmed || false;
 
             card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4 opacity-90';
@@ -1144,7 +1133,7 @@ export const UIService = {
                     </button>
                 </div>
                 
-                ${item.numeroAgendamento ? `<p class="text-xs md:text-sm mt-2 text-blue-700 font-bold tracking-wide">Nº Agend.: ${escapeHTML(item.numeroAgendamento)}</p>` : ''}
+                ${numAgendamento ? `<p class="text-xs md:text-sm mt-2 text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide">Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
                 <p class="text-xs md:text-sm mt-2 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
                 
                 <div class="grid grid-cols-2 gap-2 text-center border-t border-b py-2 my-3 text-[9px] md:text-[10px] text-gray-400 uppercase font-bold tracking-wider">
@@ -1177,6 +1166,11 @@ export const UIService = {
     renderDistribuicaoColumn(items, pautaId, userName) {
         const container = document.getElementById('distribuicao-list');
         if (!container) return;
+
+        const columnHeader = container.parentElement?.querySelector('h2');
+        if (columnHeader && columnHeader.innerHTML.includes('Distribuição')) {
+            columnHeader.innerHTML = columnHeader.innerHTML.replace('Distribuição', 'Distribuição / Assinatura');
+        }
 
         if (items.length === 0) {
             container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum aguardando distribuição/correção</p>';
@@ -1221,6 +1215,7 @@ export const UIService = {
                 const currentUserRole = window.app?.currentUser?.role;
                 const canManageDistribution = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
                 const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
+                const numAgendamento = item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
                 const card = document.createElement('div');
                 card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-cyan-200 mb-3 transition-all hover:shadow-md';
@@ -1284,8 +1279,8 @@ export const UIService = {
                     <button data-id="${item.id}" class="delete-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 transition-colors z-10">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                        </svg>
-                    </button>` : '';
+                    </svg>
+                </button>` : '';
 
                 card.innerHTML = `
                     ${numeroBadge}
@@ -1297,7 +1292,7 @@ export const UIService = {
                     </div>
 
                     <div class="mt-2 space-y-1">
-                        ${item.numeroAgendamento ? `<p class="text-xs text-blue-700 font-bold tracking-wide">Nº Agend.: ${escapeHTML(item.numeroAgendamento)}</p>` : ''}
+                        ${numAgendamento ? `<p class="text-xs text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide">Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
                         <p class="text-xs text-gray-600">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
                         ${item.numeroProcesso ? `<p class="text-xs text-blue-700 font-bold">Nº Proc: ${escapeHTML(item.numeroProcesso)}</p>` : ''}
                     </div>
@@ -1314,7 +1309,7 @@ export const UIService = {
                     
                     <div class="mt-4 flex flex-col gap-2">
                         <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white font-bold py-2.5 rounded-lg text-xs shadow-sm hover:bg-cyan-700 transition active:scale-95 uppercase tracking-wide" ${canManageDistribution ? '' : 'disabled'}>
-                            🔍 Abrir Protocolo Fixo
+                            🔍 Abrir Processo Ativo
                         </button>
                         <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-slate-100 text-slate-600 border border-slate-200 font-bold py-2 rounded-lg text-xs shadow-sm hover:bg-slate-200 transition active:scale-95 uppercase tracking-wide" ${canManageDistribution ? '' : 'disabled'}>
                             Reverter para Fila
@@ -1385,10 +1380,10 @@ export const UIService = {
 
                     <ul class="list-disc list-inside space-y-2 text-sm mb-6">
                         <li>A primeira linha (cabeçalho) é <strong>opcional</strong>. O sistema a ignorará se presente.</li>
-                        <li>O campo <strong>Nº Agend</strong> é opcional. Se não houver, deixe o espaço em branco (ou use o formato antigo de 4 colunas).</li>
-                        <li>O campo <strong>CPF</strong> é opcional. Se não houver CPF, deixe o espaço em branco (ou não coloque nada após o último ponto e vírgula).</li>
+                        <li>O campo <strong>Nº Agend</strong> é opcional. Se não houver, deixe o espaço em branco.</li>
+                        <li>O campo <strong>CPF</strong> é opcional. Se não houver CPF, deixe o espaço em branco.</li>
                         <li>O <strong>horário</strong> deve estar no formato <strong>HH:MM</strong> (Ex: 09:00, 14:30).</li>
-                        <li>Salve o arquivo com a extensão <strong>.csv</strong>.</li>
+                        <li>Save o arquivo com a extensão <strong>.csv</strong>.</li>
                     </ul>
 
                     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2 pt-4 border-t border-gray-200">
