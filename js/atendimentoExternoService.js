@@ -1,4 +1,4 @@
-// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (PREMIUM: REAL-TIME, LOGIN SALVO E PWA)
+// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (PREMIUM: REAL-TIME, LOGIN SALVO, CORES E PWA)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -43,10 +43,10 @@ export const AtendimentoExternoService = {
     isProcessing: false, 
     todosAtendimentosPauta: [], 
     demandasAdicionaisLocais: [], 
-    unsubscribeDashboard: null, // ⭐ NOVO: Controle de Atualização em Tempo Real
+    unsubscribeDashboard: null, // Motor de Tempo Real
 
     async init() {
-        console.log("⚡ Atendimento Externo Inicializado (Premium Real-time - SIGEP)");
+        console.log("⚡ Atendimento Externo Inicializado (Real-time Mode - SIGEP)");
 
         // BLINDAGEM MÁXIMA CONTRA PROVEDORES DE E-MAIL
         const searchLimpa = window.location.search.replace(/&amp;/g, '&');
@@ -75,7 +75,7 @@ export const AtendimentoExternoService = {
                 return;
             }
 
-            // ⭐ BARREIRA DE SEGURANÇA (LOGIN) COM "LEMBRAR ACESSO" ⭐
+            // ⭐ BARREIRA DE SEGURANÇA (LOGIN) ⭐
             if (telaAtual === 'dashboard') {
                 const sessionKey = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
                 if (!sessionStorage.getItem(sessionKey) && !localStorage.getItem(sessionKey)) {
@@ -140,7 +140,7 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ⭐ ESCUTA EM TEMPO REAL PARA ATUALIZAR CONTADORES E LISTAS ⭐
+    // ⭐ ESCUTA EM TEMPO REAL PARA ATUALIZAR CONTADORES SOZINHO ⭐
     setupRealtimeListenerDashboard() {
         if (this.unsubscribeDashboard) this.unsubscribeDashboard();
         
@@ -148,7 +148,7 @@ export const AtendimentoExternoService = {
         this.unsubscribeDashboard = onSnapshot(q, (snap) => {
             this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             
-            // Só atualiza a tela se o container do dashboard estiver visível (não for a tela do assistido)
+            // Só atualiza a tela se o container do dashboard estiver visível
             if (document.getElementById('lista-dashboard-conteudo')) {
                 this.atualizarListasDoDashboard();
             }
@@ -743,7 +743,10 @@ export const AtendimentoExternoService = {
             const btnVoltar = document.createElement('button');
             btnVoltar.className = "bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 px-8 rounded-xl shadow transition w-full sm:w-auto uppercase text-xs tracking-widest";
             btnVoltar.innerText = textoBotaoVoltar;
-            btnVoltar.onclick = () => this.renderizarDashboardUnificado();
+            btnVoltar.onclick = () => {
+                // Ao clicar em voltar, apenas muda a view, o onSnapshot cuida do resto
+                this.renderizarDashboardUnificado();
+            };
             document.getElementById('btn-voltar-container').appendChild(btnVoltar);
 
             const headerBg = document.getElementById('header-bg');
@@ -910,7 +913,7 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ⭐ DASHBOARD EXCLUSIVO DO COLABORADOR COM ABAS INTELIGENTES ⭐
+    // ⭐ DASHBOARD EXCLUSIVO DO COLABORADOR (COM REAL-TIME ON) ⭐
     async renderizarDashboardUnificado() {
         // Inicializa o Listener do Dashboard para tempo real na primeira renderização
         if (!this.unsubscribeDashboard) {
@@ -1056,7 +1059,7 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ⭐ NOVO: FUNÇÃO EXCLUSIVA PARA ATUALIZAR AS LISTAS E CONTADORES EM TEMPO REAL ⭐
+    // ⭐ FUNÇÃO EXCLUSIVA PARA ATUALIZAR AS LISTAS E CONTADORES EM TEMPO REAL ⭐
     atualizarListasDoDashboard() {
         const container = document.getElementById('lista-dashboard-conteudo');
         const tabsDiv = document.getElementById('tabs-dashboard');
