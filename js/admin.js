@@ -1,3 +1,5 @@
+// js/admin.js - MÓDULO DE AUDITORIA, SEGURANÇA E GRÁFICOS DO BI (SIGEP)
+
 import { 
     collection, addDoc, getDocs, updateDoc, deleteDoc, doc, 
     query, orderBy, limit, where, writeBatch, Timestamp 
@@ -206,7 +208,6 @@ export const loadAuditLogs = async (db) => {
         const startDate = document.getElementById('filter-log-start')?.value;
         const endDate = document.getElementById('filter-log-end')?.value;
 
-        // BURLA DE ÍNDICES DO FIREBASE: Puxa os dados por data e filtra no Javascript
         const q = query(logsRef, orderBy("timestamp", "desc"), limit(1500));
         const snapshot = await getDocs(q);
 
@@ -216,7 +217,6 @@ export const loadAuditLogs = async (db) => {
             const log = docSnap.data();
             if (!log.timestamp) return;
 
-            // Filtros feitos no Navegador (Evita failed-precondition do Firestore)
             if (userFilter && userFilter !== 'all' && log.userEmail !== userFilter) return;
             if (actionFilter && actionFilter !== 'all' && log.action !== actionFilter) return;
             if (startDate && log.timestamp < startDate) return;
@@ -233,7 +233,6 @@ export const loadAuditLogs = async (db) => {
         tableBody.innerHTML = '';
         if (pdfBtn) pdfBtn.classList.remove('hidden');
 
-        // Limita a exibição na tela para não travar o navegador
         filteredLogs.slice(0, 200).forEach((log) => {
             let formattedDate = 'Data inválida';
             try {
@@ -311,7 +310,6 @@ export const exportAuditLogsPDF = async (db) => {
         const startDate = document.getElementById('filter-log-start')?.value;
         const endDate = document.getElementById('filter-log-end')?.value;
 
-        // BURLA DE ÍNDICES DO FIREBASE PARA PDF
         const q = query(logsRef, orderBy("timestamp", "desc"), limit(1500));
         const snapshot = await getDocs(q);
 
@@ -414,9 +412,14 @@ export const cleanupOldData = async (db) => {
                     const data = d.data();
                     const sub = data.subject || 'Não informado';
                     stats.assuntos[sub] = (stats.assuntos[sub] || 0) + 1;
+                    
+                    // ⭐ CORREÇÃO DE LOG DE VARIÁVEIS DO BANCO REAL ⭐
                     if (data.scheduledTime) stats.horarios[data.scheduledTime] = (stats.horarios[data.scheduledTime] || 0) + 1;
                     if (data.room) stats.salas[data.room] = (stats.salas[data.room] || 0) + 1;
-                    if (data.priority) stats.prioridades[data.priority] = (stats.prioridades[data.priority] || 0) + 1;
+                    if (data.priorityReason || data.priority) {
+                        const prioLabel = data.priorityReason ? data.priorityReason.split(' | ')[0] : (data.priority || 'Comum');
+                        stats.prioridades[prioLabel] = (stats.prioridades[prioLabel] || 0) + 1;
+                    }
                     
                     if (data.arrivalTime && data.inAttendanceTime) {
                         const diffMins = Math.round((new Date(data.inAttendanceTime) - new Date(data.arrivalTime)) / 60000);
@@ -442,35 +445,58 @@ export const cleanupOldData = async (db) => {
 };
 
 export const generateTestData = async (db) => {
-    if (!confirm("Gerar dados de teste para visualizar o BI?")) return;
+    if (!confirm("Gerar dados de teste simulados para o BI sem misturar com dados de produção?")) return;
     try {
         const testData = [];
-        const assuntosPool = ["Divórcio", "Alimentos", "Guarda", "Curatela", "Inventário"];
-        const salasPool = ["Vara de Família", "1ª Vara Cível", "Triagem"];
+        const assuntosPool = ["ALIMENTOS PARA FILHOS", "DIVÓRCIO LITIGIOSO - SEM BENS", "DIVÓRCIO CONSENSUAL", "CURATELA", "URGÊNCIA MÉDICA"];
+        const salasPool = ["Vara de Família", "1ª Vara Cível", "Triagem Geral"];
+        const prioridadesPool = ["Idoso (60+)", "Idoso (80+)", "Deficiência (PCD)", "Comum"];
+        const horasPool = ["09:00", "09:30", "10:00", "10:30", "11:00", "13:00", "14:00"];
 
-        for(let i=0; i<5; i++) {
-            let totalDias = Math.floor(Math.random() * 20) + 10;
-            let atendidos = Math.floor(totalDias * 0.8);
+        for(let i=0; i<6; i++) {
+            let totalCasos = Math.floor(Math.random() * 40) + 30;
+            let atendidos = Math.floor(totalCasos * 0.85);
+            
+            const localAssuntos = {};
+            const localHorarios = {};
+            const localPrioridades = {};
+            const localSalas = {};
+
+            // Distribui aleatoriamente para simular gráficos realistas
+            for(let j=0; j<totalCasos; j++) {
+                const ass = assuntosPool[Math.floor(Math.random() * assuntosPool.length)];
+                localAssuntos[ass] = (localAssuntos[ass] || 0) + 1;
+
+                const hr = horasPool[Math.floor(Math.random() * horasPool.length)];
+                localHorarios[hr] = (localHorarios[hr] || 0) + 1;
+
+                const pri = j % 4 === 0 ? prioridadesPool[Math.floor(Math.random() * (prioridadesPool.length - 1))] : "Comum";
+                localPrioridades[pri] = (localPrioridades[pri] || 0) + 1;
+
+                const sl = salasPool[Math.floor(Math.random() * salasPool.length)];
+                localSalas[sl] = (localSalas[sl] || 0) + 1;
+            }
             
             testData.push({
-                pautaName: `Pauta de Teste Arquivada ${i+1}`,
-                creatorEmail: "teste@dperj.rj.gov.br",
-                dataReferencia: new Date(Date.now() - (i*5)*24*60*60*1000).toISOString(),
-                diaSemana: i,
-                total: totalDias,
+                pautaName: `Pauta Simulada de Mutirão ${i+1}`,
+                creatorEmail: i % 2 === 0 ? "alex.silva@defensoria.rj.def.br" : "mariana.xavier@defensoria.rj.def.br",
+                dataReferencia: new Date(Date.now() - (i*3)*24*60*60*1000).toISOString(),
+                diaSemana: i + 1,
+                total: totalCasos,
                 atendidos: atendidos,
-                faltosos: totalDias - atendidos,
-                tempoEsperaTotalMinutos: atendidos * (Math.floor(Math.random() * 40) + 10),
+                faltosos: totalCasos - atendidos,
+                tempoEsperaTotalMinutos: atendidos * (Math.floor(Math.random() * 25) + 15),
                 countTempoEspera: atendidos,
-                assuntos: { [assuntosPool[0]]: 10, [assuntosPool[1]]: 5 },
-                horarios: { "09:00": 8, "10:00": 7, "11:00": 5 },
-                salas: { [salasPool[i%3]]: 15, "Triagem": 5 },
-                prioridades: { "Idoso (60+)": 4, "Comum": 16 }
+                assuntos: localAssuntos,
+                horarios: localHorarios,
+                salas: localSalas,
+                prioridades: localPrioridades
             });
         }
+        
         for (const data of testData) { await addDoc(collection(db, "estatisticas_permanentes"), data); }
-        showNotification("✅ Dados gerados com sucesso!");
-        loadDashboardData(db);
+        showNotification("✅ Dados simulados criados! Atualizando gráficos...");
+        await loadDashboardData(db);
     } catch (error) { showNotification("Erro ao gerar dados", "error"); }
 };
 
@@ -525,6 +551,8 @@ export const loadDashboardData = async (db) => {
             totalEsperaMins += d.tempoEsperaTotalMinutos || 0; countEspera += d.countTempoEspera || 0;
             
             if (d.assuntos) for (let [k, v] of Object.entries(d.assuntos)) mapAssuntos[k] = (mapAssuntos[k] || 0) + v;
+            
+            // ⭐ CORREÇÃO CRUCIAL AQUI: Mudado "horaMarcada" para "horaAgendada" mapeado do banco permanente
             if (d.horarios) for (let [k, v] of Object.entries(d.horarios)) mapHorarios[k] = (mapHorarios[k] || 0) + v;
             if (d.prioridades) for (let [k, v] of Object.entries(d.prioridades)) mapPrioridades[k] = (mapPrioridades[k] || 0) + v;
             
