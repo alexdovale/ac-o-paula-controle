@@ -1,4 +1,5 @@
-// js/emailService.js
+// js/emailService.js - MOTOR DE DISPARO DE E-MAILS (SIGEP)
+
 export const EmailService = {
     // SUAS CREDENCIAIS DO EMAILJS
     publicKey: 'aGL-Q2UJcD2tDpUKq',
@@ -13,7 +14,6 @@ export const EmailService = {
             const script = document.createElement('script');
             script.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js";
             script.onload = () => {
-                // ⭐ Correção 1: Inicializa explicitamente na biblioteca global assim que carrega
                 window.emailjs.init(this.publicKey);
                 resolve();
             };
@@ -46,15 +46,17 @@ export const EmailService = {
             
             console.log("🔗 Link gerado para e-mail:", delegationLink);
 
+            // ⭐ BLINDAGEM: Se alguma variável vier nula do banco, injetamos um texto padrão
+            // para evitar o erro "One or more dynamic variables are corrupted" no EmailJS
             const templateParams = {
                 to_email: toEmail,
-                to_name: toName,
-                sender_name: senderName,
-                assisted_name: assistedName,
-                link_atendimento: delegationLink
+                to_name: toName || 'Colaborador(a)',
+                sender_name: senderName || 'Equipe SIGEP',
+                assisted_name: assistedName || 'Assistido(a)',
+                link_atendimento: delegationLink,
+                system_name: 'SIGEP' // Variável de apoio para o Remetente
             };
 
-            // ⭐ Correção 2: Passa a publicKey como o 4º parâmetro para blindar contra qualquer falha de escopo
             await window.emailjs.send(this.serviceId, this.templateId, templateParams, this.publicKey);
             console.log(`✅ Notificação entregue com sucesso para o e-mail: ${toEmail}`);
             return true;
