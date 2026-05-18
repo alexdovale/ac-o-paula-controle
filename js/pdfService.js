@@ -94,6 +94,7 @@ const getAttendantNameForPDF = (item) => {
 
 export const PDFService = {
     
+    // 1. PLANILHA ISOLADA DE GASTOS (COM TOTALIZADOR EXECUTIVO)
     async generatePlanilhaGastosPDF(assistedName, expenseData) {
         try {
             await ensureJsPDF(); 
@@ -138,8 +139,8 @@ export const PDFService = {
             } else {
                  const totalFormatted = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                  body.push([
-                     { content: 'TOTAL', styles: { fontStyle: 'bold', halign: 'center' } },
-                     { content: totalFormatted, styles: { fontStyle: 'bold', halign: 'center' } }
+                     { content: 'TOTAL DAS NECESSIDADES MENSAL', styles: { fontStyle: 'bold', halign: 'center', fillColor: [240, 253, 244] } },
+                     { content: totalFormatted, styles: { fontStyle: 'bold', halign: 'center', fillColor: [220, 252, 231], textColor: [21, 128, 61] } }
                  ]);
             }
 
@@ -164,6 +165,7 @@ export const PDFService = {
         }
     },
 
+    // 2. RELATÓRIO GLOBAL DE ATENDIDOS
     async generateAtendidosPDF(atendidosList, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
@@ -234,6 +236,7 @@ export const PDFService = {
         }
     },
 
+    // 3. RELATÓRIO DE AUSÊNCIAS
     async generateFaltososPDF(faltososList, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
@@ -293,6 +296,7 @@ export const PDFService = {
         }
     },
 
+    // 4. RELATÓRIO DE PRODUTIVIDADE DA EQUIPE
     async generateCollaboratorsPDF(colaboradoresList, todosAtendimentos, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
@@ -350,87 +354,126 @@ export const PDFService = {
         }
     },
 
-    // ⭐ CORRIGIDO: Correção do ReferenceError na montagem das cores da tabela unificada ⭐
+    // 5. EXTRATO DE VER DETALHES / TRIAGEM UNIFICADA (LAYOUT LIMPO RESTAURADO + TOTALIZADOR)
     async generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos) {
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
+            // Cabeçalho Institucional
             doc.setFont("helvetica", "bold");
             doc.setFontSize(14);
             doc.text("EXTRATO DE TRIAGEM E DOCUMENTAÇÃO", doc.internal.pageSize.getWidth() / 2, 45, { align: "center" });
 
-            doc.setFontSize(10);
+            // Quadro Informativo do Registro
+            doc.setFontSize(9);
             doc.setFont("helvetica", "normal");
             doc.text(`Sistema: SIGEP  |  Emissão: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}`, 40, 70);
-            doc.text(`Assistido(a): ${assistedName.toUpperCase()}`, 40, 85);
-            doc.text(`Ação Selecionada: ${actionTitle.toUpperCase()}`, 40, 100);
+            
+            doc.setFont("helvetica", "bold");
+            doc.text(`ASSISTIDO(A):`, 40, 88);
+            doc.setFont("helvetica", "normal");
+            doc.text(assistedName.toUpperCase(), 120, 88);
+            
+            doc.setFont("helvetica", "bold");
+            doc.text(`AÇÃO SELECIONADA:`, 40, 102);
+            doc.setFont("helvetica", "normal");
+            doc.text(actionTitle.toUpperCase(), 150, 102);
 
             const body = [];
+            let contadorLinha = 1;
             
-            documentosTextos.forEach((item, index) => {
-                if (item.id.startsWith('reu-') || item.id.startsWith('gasto-')) return; 
+            // Seção A: Documentos Obrigatórios do Checklist Principal
+            documentosTextos.forEach((item) => {
+                if (item.id.startsWith('reu-') || item.id.startsWith('gastos-') || item.id.startsWith('gasto-')) return;
                 
                 const tipoEntrega = checklistData.docTypes && checklistData.docTypes[item.id] ? checklistData.docTypes[item.id] : 'Físico';
                 body.push([
-                    index + 1,
+                    contadorLinha++,
                     item.text,
                     `CONFERIDO (${tipoEntrega.toUpperCase()})`
                 ]);
             });
 
+            // Seção B: Casos Acumulados / Demandas Adicionais
             if (checklistData.demandasAdicionais && checklistData.demandasAdicionais.length > 0) {
-                body.push([{ content: "⚖️ CASOS ACUMULADOS / DEMANDAS ADICIONAIS RESOLVIDAS", colSpan: 3, styles: { fontStyle: 'bold', fillColor: [243, 244, 246] } }]);
-                checklistData.demandasAdicionais.forEach((demanda, dIdx) => {
+                body.push([
+                    { content: "DEMANDAS ADICIONAIS / CASOS ACUMULADOS", colSpan: 3, styles: { fontStyle: 'bold', fillColor: [243, 244, 246], textColor: [79, 70, 229], halign: 'left' } }
+                ]);
+                
+                checklistData.demandasAdicionais.forEach((demanda) => {
                     body.push([
-                        `+${dIdx + 1}`,
-                        `Demanda Extra: ${demanda}`,
+                        "+",
+                        `Caso Associado: ${demanda}`,
                         "CONFERIDO E ATENDIDO"
                     ]);
                 });
             }
 
+            // Seção C: Qualificação da Parte Contrária (Réu)
             if (checklistData.reuData && checklistData.reuData.checkReuUnico) {
                 const r = checklistData.reuData;
-                // Lógica de cores corrigida adicionando as aspas textuais para evitar o ReferenceError
-                body.push([{ content: "👤 QUALIFICAÇÃO DA PARTE CONTRÁRIA (RÉU)", colSpan: 3, styles: { fontStyle: 'bold', fillColor: [254, 226, 226], textColor: [185, 28, 28] } }]);
-                if (r.nome) body.push(["•", `Nome do Réu: ${r.nome}`, "CITAÇÃO"]);
-                if (r.cpf) body.push(["•", `CPF do Réu: ${r.cpf}`, "CITAÇÃO"]);
-                if (r.telefone) body.push(["•", `WhatsApp/Contato: ${r.telefone}`, "CITAÇÃO"]);
+                body.push([
+                    { content: "DADOS DA PARTE CONTRÁRIA (RÉU) PARA CITAÇÃO", colSpan: 3, styles: { fontStyle: 'bold', fillColor: [254, 226, 226], textColor: [185, 28, 28], halign: 'left' } }
+                ]);
+                
+                if (r.nome) body.push(["•", `Nome do Réu: ${r.nome}`, "QUALIFICAÇÃO"]);
+                if (r.cpf) body.push(["•", `CPF do Réu: ${r.cpf}`, "QUALIFICAÇÃO"]);
+                if (r.telefone) body.push(["•", `WhatsApp / Contato: ${r.telefone}`, "QUALIFICAÇÃO"]);
                 if (r.rua) body.push(["•", `Endereço Residencial: ${r.rua}, nº ${r.numero} ${r.complemento ? '- '+r.complemento : ''} - ${r.bairro}, ${r.cidade}/${r.uf}`, "CITAÇÃO PRINCIPAL"]);
-                if (r.empresa) body.push(["•", `Endereço Comercial/Trabalho: ${r.empresa} - ${r.rua_comercial}, nº ${r.numero_comercial} - ${r.bairro_comercial}`, "CITAÇÃO ALTERNATIVA"]);
+                if (r.empresa) body.push(["•", `Endereço Comercial: ${r.empresa} - ${r.rua_comercial}, nº ${r.numero_comercial} - ${r.bairro_comercial}`, "CITAÇÃO ALTERNATIVA"]);
             }
 
+            // Seção D: Planilha de Gastos Mensais Calculados com Totalizador Integrado
             if (checklistData.expenseData && checklistData.expenseData.checkExibirGastos) {
                 const g = checklistData.expenseData;
-                body.push([{ content: "💰 EXTRATO DE GASTOS / NECESSIDADES MENSAIS", colSpan: 3, styles: { fontStyle: 'bold', fillColor: [220, 252, 231], textColor: [21, 128, 61] } }]);
+                body.push([
+                    { content: "PLANILHA DE GASTOS / NECESSIDADES MENSAIS CALCULADAS", colSpan: 3, styles: { fontStyle: 'bold', fillColor: [220, 252, 231], textColor: [21, 128, 61], halign: 'left' } }
+                ]);
                 
                 const categoriasNome = [
-                    {id: 'moradia', label: 'Moradia/Habitação'}, {id: 'alimentacao', label: 'Alimentação'},
-                    {id: 'educacao', label: 'Educação/Escola'}, {id: 'saude', label: 'Saúde/Medicamentos'},
-                    {id: 'vestuario', label: 'Vestuário/Higiene'}, {id: 'lazer', label: 'Lazer/Combustível'},
-                    {id: 'outras', label: 'Outras Despesas'}
+                    { id: 'moradia', label: 'Moradia (Aluguel, Luz, Água, Gás)' },
+                    { id: 'alimentacao', label: 'Alimentação / Supermercado' },
+                    { id: 'educacao', label: 'Educação / Escola / Cursos' },
+                    { id: 'saude', label: 'Saúde / Plano / Medicamentos' },
+                    { id: 'vestuario', label: 'Vestuário e Higiene Pessoal' },
+                    { id: 'lazer', label: 'Lazer e Transporte / Combustível' },
+                    { id: 'outras', label: 'Outras Despesas Declaradas' }
                 ];
 
+                let totalGastos = 0;
                 categoriasNome.forEach(c => {
                     if (g[c.id] && g[c.id] !== 'R$ 0,00') {
                         body.push(["$", c.label, g[c.id]]);
+                        // Realiza o parse limpo da string de Real BRL para float de cálculo
+                        const num = parseFloat(String(g[c.id]).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+                        totalGastos += num;
                     }
                 });
+
+                // Injeta a linha de somatório total se houver valores
+                if (totalGastos > 0) {
+                    const totalFormatado = totalGastos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                    body.push([
+                        { content: "TOTAL DAS NECESSIDADES MENSAIS:", colSpan: 2, styles: { fontStyle: 'bold', halign: 'right', fillColor: [240, 253, 244] } },
+                        { content: totalFormatado, styles: { fontStyle: 'bold', halign: 'center', fillColor: [220, 252, 231], textColor: [21, 128, 61] } }
+                    ]);
+                }
             }
 
+            // Renderização da tabela do Extrato
             doc.autoTable({
-                startY: 120,
+                startY: 125,
                 head: [['Nº', 'DOCUMENTO / ESPECIFICAÇÃO DE TRIAGEM', 'ESTADO DE ENTREGA']],
                 body: body,
                 theme: 'grid',
                 headStyles: { fillColor: [22, 163, 74], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' },
-                styles: { fontSize: 8.5, cellPadding: 5, valign: 'middle', overflow: 'linebreak' },
+                styles: { fontSize: 8.5, cellPadding: 6, valign: 'middle', overflow: 'linebreak', lineColor: [226, 232, 240], lineWidth: 0.5 },
                 columnStyles: {
-                    0: { halign: 'center', cellWidth: 30 },
-                    1: { cellWidth: 380 },
-                    2: { halign: 'center', cellWidth: 110, fontStyle: 'bold' }
+                    0: { halign: 'center', cellWidth: 30, fontStyle: 'bold' },
+                    1: { cellWidth: 370 },
+                    2: { halign: 'center', cellWidth: 120 }
                 }
             });
 
@@ -442,9 +485,10 @@ export const PDFService = {
         }
     },
 
+    // 6. FUNÇÕES EXTRA DE ESCOPO DE ATA E ESTATÍSTICA (PREPARADAS PARA DESENVOLVIMENTO FUTURO)
     async generateAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
         await ensureJsPDF();
-        console.log("Função Ata Social");
+        console.log("Módulo Ata Social Carregado.");
     },
     async previewAtaAcaoSocial() { await ensureJsPDF(); },
     async generateStatisticsPDF() { await ensureJsPDF(); }
