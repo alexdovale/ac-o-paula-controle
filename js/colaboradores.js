@@ -99,6 +99,24 @@ const CollaboratorService = {
         if (window.app) this.renderTable(window.app);
     },
 
+    // ⭐ NOVO: GERA O LINK FIXO DA MESA DE TRABALHO PARA O WHATSAPP ⭐
+    copyDashboardLink(nomeColab) {
+        if (!window.app || !window.app.currentPauta) return;
+        let baseUrl = window.location.href.split('?')[0]; 
+        baseUrl = baseUrl.substring(0, baseUrl.lastIndexOf('/')); 
+        if(!baseUrl) baseUrl = window.location.origin; 
+        
+        const link = `${baseUrl}/atendimento_externo.html?pautaId=${window.app.currentPauta.id}&colab=${encodeURIComponent(nomeColab)}&view=dashboard`;
+        
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(link).then(() => {
+                showNotification(`Link da mesa de ${nomeColab} copiado!`, "success");
+            }).catch(() => { prompt("Copie o link abaixo para enviar:", link); });
+        } else {
+            prompt("Copie o link abaixo para enviar ao colaborador:", link);
+        }
+    },
+
     async saveAtaData(app) {
         if (!app?.currentPauta?.id) {
             showNotification("Selecione uma pauta primeiro", "error");
@@ -320,7 +338,8 @@ const CollaboratorService = {
                 </td>
                 <td class="p-3 hidden md:table-cell text-xs font-semibold text-slate-600">${escapeHTML(colab.cargo)}</td>
                 <td class="p-3 text-center text-xs font-black text-slate-400">${colab.horario || '--:--'}</td>
-                <td class="p-3 text-center flex justify-center gap-2 mt-1 sm:mt-2">
+                <td class="p-3 text-center flex justify-center gap-1.5 mt-1 sm:mt-2">
+                    <button onclick="CollaboratorService.copyDashboardLink('${escapeHTML(colab.nome)}')" class="text-emerald-600 hover:text-white hover:bg-emerald-500 bg-emerald-50 p-2 sm:p-1.5 rounded-lg transition-colors shadow-sm" title="Copiar Link da Mesa Silenciosa">🔗</button>
                     <button onclick="CollaboratorService.editCollaborator(window.app, '${colab.id}')" class="text-blue-600 hover:text-white hover:bg-blue-500 bg-blue-50 p-2 sm:p-1.5 rounded-lg transition-colors shadow-sm" title="Editar">✏️</button>
                     <button onclick="CollaboratorService.deleteCollaborator(window.app, '${colab.id}')" class="text-red-500 hover:text-white hover:bg-red-500 bg-red-50 p-2 sm:p-1.5 rounded-lg transition-colors shadow-sm" title="Excluir">🗑️</button>
                 </td>
@@ -381,8 +400,6 @@ const CollaboratorService = {
             btnSaveAta.onclickBackup = handler;
         }
 
-        // ⭐ O GATILHO DA ATA OFICIAL É SEGURO ⭐
-        // O main.js dispara a abertura do modal. O JS dos colaboradores intercepta de forma não destrutiva para carregar os dados.
         const btnOpenAtaModal = document.getElementById('btn-gerar-ata-social');
         if (btnOpenAtaModal) {
             btnOpenAtaModal.addEventListener('click', () => {
