@@ -214,7 +214,7 @@ export const AtendimentoExternoService = {
                 errorMsg.classList.remove('hidden');
             }
         };
-    }
+    }, // <-- A VÍRGULA QUE FALTAVA ESTÁ AQUI!!!
 
     renderizarInterface(assistido, pautaData) {
         const url = new URL(window.location.href);
