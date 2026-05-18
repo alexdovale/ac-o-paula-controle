@@ -1575,19 +1575,39 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
     </div>
 
     <div id="ata-social-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[200] p-2 sm:p-4" onclick="this.classList.add('hidden')">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
-            <div class="p-5 sm:p-6 border-b bg-gray-50 rounded-t-xl">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[95vh] flex flex-col" onclick="event.stopPropagation()">
+            <div class="p-5 sm:p-6 border-b bg-gray-50 rounded-t-xl shrink-0">
                 <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Ata de Ação Social</h2>
+                <p class="text-xs text-gray-500 mt-1">Preencha os dados do evento</p>
             </div>
-            <div class="p-5 sm:p-6 space-y-4">
+            <div class="p-5 sm:p-6 space-y-4 overflow-y-auto scrollable-content">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">🏷️ Nome da Ação Social</label>
-                    <input type="text" id="ata-acao-nome" class="w-full p-3 border border-gray-300 rounded-lg text-sm sm:text-base" placeholder="Ex: Ação de Cidadania">
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">🏷️ Nome da Ação / Projeto</label>
+                    <input type="text" id="ata-acao-nome" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="Ex: Mutirão de Documentação">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">📍 Endereço do Evento</label>
+                    <input type="text" id="ata-endereco" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="Ex: Praça do Pacificador, Centro, Caxias">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">📅 Data</label>
+                        <input type="date" id="ata-data" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">🔢 Total Assistidos</label>
+                        <input type="number" id="ata-total" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-gray-50 font-bold" min="0" title="Calculado automaticamente ou manual">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">🏢 Órgão de Atendimento (SIGEP)</label>
+                    <input type="text" id="ata-orgao" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="Ex: Defensoria Pública - Duque de Caxias">
                 </div>
             </div>
-            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 p-5 sm:p-6 border-t bg-gray-50 rounded-b-xl">
-                <button id="cancel-ata-modal-btn" class="w-full sm:w-auto bg-gray-300 text-gray-800 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400 transition">Cancelar</button>
-                <button id="confirm-ata-modal-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-green-700 transition">Gerar Ata</button>
+            <div class="flex flex-col sm:flex-row justify-end gap-3 p-5 border-t bg-gray-50 rounded-b-xl shrink-0">
+                <button id="save-ata-data-btn" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-blue-700 transition uppercase text-xs tracking-wider shadow-sm hidden">Salvar Memória</button>
+                <button id="cancel-ata-modal-btn" class="w-full sm:w-auto bg-gray-300 text-gray-800 font-bold py-2.5 px-4 rounded-lg hover:bg-gray-400 transition uppercase text-xs tracking-wider">Cancelar</button>
+                <button id="confirm-ata-modal-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-green-700 transition uppercase text-xs tracking-wider shadow-sm">Gerar Ata Oficial</button>
             </div>
         </div>
     </div>
