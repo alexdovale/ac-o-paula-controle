@@ -1,4 +1,4 @@
-// js/main.js - VERSÃO COMPLETA CORRIGIDA CONTRA CONFLITO DE EXPORTS (SIGEP)
+// js/main.js - VERSÃO COM PERFIL DE APOIO TRAVADO (SIGEP)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -8,7 +8,7 @@ import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
 import { PautaService } from './pauta.js';
 import { UIService } from './ui.js';
-import { CollaboratorService } from './colaboradores.js';
+import CollaboratorService from './colaboradores.js';         
 import { ModalService } from './modal.js?v=20260313';
 import { NotesService } from './notes.js?v=20260313';
 import { StatisticsService } from './estatisticas.js?v=20260313';
@@ -19,8 +19,7 @@ import { setupDetailsModal, openDetailsModal } from './detalhes.js';
 import { DashboardService } from './dashboardService.js';
 import { subjectTree, flatSubjects } from './assuntos.js';
 import { showConfirmModal } from './confirmModal.js';
-// ⭐ CORREÇÃO DE BINDING: logAction renomeado para logAdminAction para evitar colisão no motor do Safari/Chrome iOS
-import { logAction as logAdminAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser, loadAuditLogs, exportAuditLogsPDF, loadDashboardData, populateUserFilter } from './admin.js';
+import { logAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser, loadAuditLogs, exportAuditLogsPDF, loadDashboardData, populateUserFilter } from './admin.js';
 import { parsePautaCSV } from './csvHandler.js';
 import { getChecklistHTML } from './checklist.js';
 import { PainelGeralService } from './painelGeralService.js'; 
@@ -151,7 +150,7 @@ class SIGEPApp {
             AuthService.login(this);
         });
 
-        document.getElementById('form-register')?.addEventListener('submit', (e) => {
+        document.getElementById('register-form')?.addEventListener('submit', (e) => {
             e.preventDefault();
             AuthService.register(this);
         });
@@ -752,7 +751,7 @@ class SIGEPApp {
                 
                 this.loadColumnPreferences();
                 
-                showNotification("Configurações updated com sucesso!", "success");
+                showNotification("Configurações atualizadas com sucesso!", "success");
                 document.getElementById('edit-pauta-config-modal').classList.add('hidden');
                 
             } catch (error) {
@@ -1133,7 +1132,7 @@ class SIGEPApp {
             );
             
             document.getElementById('edit-attendant-modal')?.classList.add('hidden');
-            showNotification("Atendente updated com sucesso!", "success");
+            showNotification("Atendente atualizado com sucesso!", "success");
         });
 
         document.getElementById('cancel-edit-attendant-btn')?.addEventListener('click', () => {
@@ -1229,7 +1228,7 @@ class SIGEPApp {
                         console.error("Erro no envio auto:", e);
                     }
                 } else if (emailDestino && isSilentMode) {
-                    showNotification("Card movido silenciosamente.", "info");
+                    showNotification(`Card movido para ${collaboratorName} silenciosamente.`, "info");
                 } else {
                     showNotification(`${nomeAssistidoAtual} delegado com sucesso.`, "success"); 
                 }
@@ -1391,7 +1390,7 @@ class SIGEPApp {
         });
 
         document.getElementById('cancel-reset-btn')?.addEventListener('click', () => {
-            document.getElementById('reset-confirm-modal').classList.add('hidden');
+            document.getElementById('reset-confirm-modal')?.classList.add('hidden');
         });
 
         document.getElementById('confirm-edit-pauta-btn')?.addEventListener('click', async () => {
@@ -2063,6 +2062,7 @@ class SIGEPApp {
         if (manageCollaboratorsBtn) manageCollaboratorsBtn.classList.toggle('hidden', !canManagePauta);
         if (viewStatsBtn) viewStatsBtn.classList.toggle('hidden', !canAccessAdminPanel);
 
+        // ⭐ TRAVA DO PERFIL DE APOIO: O botão de "Chamar Próximo" some completamente da tela para o Apoio ⭐
         const callNextBtn = document.getElementById('call-next-assisted-btn');
         if (callNextBtn) {
             if (isApoio || !isAuthenticated) {
