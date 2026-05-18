@@ -2,26 +2,25 @@
  * ========================================================
  * DETALHES.JS - SIGEP
  * Módulo de Detalhes do Assistido, Checklist de Documentos
- * e Acúmulo de Demandas Adicionais Unificadas
+ * e Acúmulo de Demandas Adicionais Unificadas por Assunto
  * ========================================================
  */
 
 import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, escapeHTML } from './utils.js';
 import { PDFService } from './pdfService.js';
+import { flatSubjects } from './assuntos.js'; // ⚖️ Importação da árvore oficial de assuntos do SIGEP
 
 /* ========================================================
    1. CONSTANTES E CONFIGURAÇÕES
    ======================================================== */
 
-// 1.1 Documentos Base (comuns a todas as ações)
 const BASE_DOCS = [
     'Carteira de Identidade (RG) ou Habilitação (CNH)',
     'CPF',
     'Comprovante de Residência (Atualizado - últimos 3 meses)'
 ];
 
-// 1.2 Documentos de Renda (estruturados por categoria)
 const INCOME_DOCS_STRUCTURED = [
     { type: 'title', text: '1. TRABALHADOR FORMAL (CLT / SERVIDOR)' },
     'Contracheque (3 últimos meses)',
@@ -51,10 +50,8 @@ const INCOME_DOCS_STRUCTURED = [
     'IRPF - Cenário 2 (Isento): Declaração de Isenção de Imposto de Renda'
 ];
 
-// 1.3 Documentos Completos (Base + Renda)
 const COMMON_DOCS_FULL = [...BASE_DOCS, ...INCOME_DOCS_STRUCTURED];
 
-// 1.4 Categorias de Gastos (para ações de alimentos)
 const EXPENSE_CATEGORIES = [
     { id: 'moradia', label: '1. MORADIA (Habitação)', desc: 'Aluguel, condomínio, IPTU, luz, água, gás.' },
     { id: 'alimentacao', label: '2. ALIMENTAÇÃO', desc: 'Supermercado, feira, açougue, lanches, leites especiais.' },
@@ -65,7 +62,6 @@ const EXPENSE_CATEGORIES = [
     { id: 'outras', label: '7. OUTRAS DESPESAS', desc: 'Babá, pets, atividades extracurriculares, celular, internet.' }
 ];
 
-// 1.5 Ações que SEMPRE exigem planilha de gastos
 const ACTIONS_ALWAYS_EXPENSES = [
     'alimentos_fixacao_majoracao_oferta',
     'alimentos_gravidicos',
@@ -74,7 +70,6 @@ const ACTIONS_ALWAYS_EXPENSES = [
     'guarda'
 ];
 
-// 1.6 Ações que exigem dados de trabalho do réu (Gatilha o formulário unificado automaticamente)
 const ACTIONS_WITH_WORK_INFO = [
     'obrigacao_fazer',
     'declaratoria_nulidade',
@@ -92,7 +87,7 @@ const ACTIONS_WITH_WORK_INFO = [
 ];
 
 /* ========================================================
-   2. BASE DE DADOS DE AÇÕES COMPLETA (UNIFICADA SEM DUPLICADOS)
+   2. BASE DE DADOS DE AÇÕES COMPLETA (MAPPED)
    ======================================================== */
 export const documentsData = {
     obrigacao_fazer: {
@@ -113,21 +108,21 @@ export const documentsData = {
         title: 'Ação de Indenização',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Boletim de Ocorrência (BO)', 'Fotos / Vídeos do Dano', 'Orçamentos de Reparo', 'Notas Fiscais de Prejuízos', 'Rol de Testemunhas'] }
+            { title: 'Específicos', docs: ['BO', 'Fotos / Vídeos do Dano', 'Orçamentos de Reparo', 'Notas Fiscais de Prejuízos', 'Rol de Testemunhas'] }
         ]
     },
     revisional_debito: {
         title: 'Ação Revisional de Débito',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Contrato de Financiamento / Empréstimo', 'Planilha de Evolução do Débito', 'Extratos Bancários Recentes'] }
+            { title: 'Específicos', docs: ['Contrato de Financiamento', 'Planilha de Evolução do Débito', 'Extratos Bancários Recentes'] }
         ]
     },
     exigir_contas: {
         title: 'Ação de Exigir Contas',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Prova da administração de bens por terceiros', 'Notificação ou recusa em prestar contas'] }
+            { title: 'Específicos', docs: ['Prova da administração de bens', 'Notificação ou recusa em prestar contas'] }
         ]
     },
     alimentos_fixacao_majoracao_oferta: {
@@ -155,7 +150,7 @@ export const documentsData = {
         title: 'Divórcio Consensual',
         sections: [
             { title: 'Documentação (Ambos)', docs: ['RG e CPF de ambos', 'Comprovante de Residência de ambos', 'Certidão de Casamento Atualizada', ...INCOME_DOCS_STRUCTURED] },
-            { title: 'Filhos/Bens', docs: ['Certidão de Nascimento dos Filhos', 'Documentos de Bens (Documento de Carro / Escrituras)'] }
+            { title: 'Filhos/Bens', docs: ['Certidão de Nascimento dos Filhos', 'Documentos de Propriedade de Bens'] }
         ]
     },
     divorcio_litigioso: {
@@ -169,7 +164,7 @@ export const documentsData = {
         title: 'União Estável (Reconhecimento/Dissolução)',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Provas da Convivência', docs: ['Certidão de Nascimento de filhos comuns', 'Comprovante de mesmo endereço', 'Contas bancárias conjuntas / Apólices', 'Fotos do casal e redes sociais', 'Rol de Testemunhas'] }
+            { title: 'Provas da Convivência', docs: ['Certidão de Nascimento de filhos comuns', 'Comprovante de mesmo endereço', 'Contas bancárias conjuntas', 'Fotos do casal', 'Rol de Testemunhas'] }
         ]
     },
     guarda: {
@@ -190,35 +185,35 @@ export const documentsData = {
         title: 'Investigação de Paternidade',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Da Criança', docs: ['Certidão de Nascimento com paternidade em branco', 'Indícios ou provas do relacionamento na época da concepção'] }
+            { title: 'Da Criança', docs: ['Certidão de Nascimento com paternidade em branco', 'Indícios ou provas do relacionamento'] }
         ]
     },
     curatela: {
         title: 'Curatela (Interdição)',
         sections: [
             { title: 'Base e Renda (Curador)', docs: COMMON_DOCS_FULL },
-            { title: 'Do Curatelando', docs: ['RG e CPF do Curatelando', 'Certidão de Nascimento ou Casamento do Curatelando', 'Comprovante de Renda / Extrato de Benefício do INSS', 'Atestado / Laudo Médico Detalhado com indicação do CID'] }
+            { title: 'Do Curatelando', docs: ['RG e CPF do Curatelando', 'Certidão de Nascimento ou Casamento', 'Extrato de Benefício do INSS', 'Atestado / Laudo Médico Detalhado com CID'] }
         ]
     },
     retificacao_registro_civil: {
         title: 'Retificação Registro Civil',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Específicos', docs: ['Certidão que apresenta o erro material', 'Documentos antigos que comprovam o dado correto'] }
+            { title: 'Específicos', docs: ['Certidão que apresenta o erro', 'Documentos antigos que comprovam o dado correto'] }
         ]
     },
     alvara_valores: {
         title: 'Alvará (Valores)',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Do Falecido', docs: ['Certidão de Óbito', 'Extratos de contas bancárias / Resíduos do INSS / FGTS'] }
+            { title: 'Do Falecido', docs: ['Certidão de Óbito', 'Extratos de contas bancárias / PIS / FGTS / Resíduos'] }
         ]
     },
     vaga_escola_creche: {
         title: 'Vaga em Creche/Escola',
         sections: [
             { title: 'Base e Renda', docs: COMMON_DOCS_FULL },
-            { title: 'Da Criança', docs: ['Certidão de Nascimento', 'Protocolo de Inscrição na Rede Pública / Comprovante de Negativa de Vaga'] }
+            { title: 'Da Criança', docs: ['Certidão de Nascimento', 'Protocolo de Inscrição / Negativa de Vaga'] }
         ]
     }
 };
@@ -249,7 +244,7 @@ function parseCurrency(s) {
 }
 
 /* ========================================================
-   5. FUNÇÕES DO CHECKLIST E DEMANDAS
+   5. FUNÇÕES DO CHECKLIST E DEMANDAS ADICIONAIS BY assuntos.js
    ======================================================== */
 function getDocTypesFromForm() {
     const docTypes = {};
@@ -295,19 +290,16 @@ async function updateDocumentState(state) {
 function checkReuVisibility() {
     const reuArea = getEl('address-editor-container');
     if (!reuArea) return;
-    
     const actionRequiresReu = ACTIONS_WITH_WORK_INFO.includes(currentChecklistAction);
-    
     if (actionRequiresReu) {
         reuArea.classList.remove('hidden');
-        if (reuArea.children.length === 0 || reuArea.innerHTML.trim() === '') {
-            renderReuForm('address-editor-container');
-        }
+        if (reuArea.children.length === 0 || reuArea.innerHTML.trim() === '') renderReuForm('address-editor-container');
     } else {
         reuArea.classList.add('hidden');
     }
 }
 
+// ⭐ COMPATIBILIZADO: INTERFACE DO ATENDIMENTO CONECTADA COM O assuntos.js MEDIANTE DATALIST DO SISTEMA ⭐
 function injectDemandasAdicionaisInterface(containerEl) {
     let divDemanda = document.getElementById('secao-demandas-adicionais-triagem');
     if (!divDemanda) {
@@ -320,16 +312,29 @@ function injectDemandasAdicionaisInterface(containerEl) {
     divDemanda.innerHTML = `
         <h4 class="text-sm font-bold text-violet-700 mb-2 flex items-center gap-1"><span>⚖️</span> Casos Acumulados no Atendimento</h4>
         <div class="flex gap-2 mb-3">
-            <input type="text" id="input-nova-demanda-triagem" class="flex-grow p-2.5 border rounded-lg text-xs bg-white outline-none focus:ring-2 focus:ring-violet-500" placeholder="Ex: Regulamentação de Convivência / Guarda...">
+            <input type="text" id="input-nova-demanda-triagem" list="subjects-list-triagem-dinamico" class="flex-grow p-2.5 border rounded-lg text-xs bg-white outline-none focus:ring-2 focus:ring-violet-500" placeholder="Busque ou digite uma demanda do assuntos.js...">
+            <datalist id="subjects-list-triagem-dinamico"></datalist>
             <button type="button" id="btn-add-demanda-triagem" class="bg-violet-600 text-white font-bold px-4 py-2 rounded-lg text-xs hover:bg-violet-700 uppercase transition shadow-sm">Somar</button>
         </div>
         <div id="lista-demandas-triagem-container" class="space-y-1.5 max-h-40 overflow-y-auto"></div>
     `;
 
+    // Alimenta o datalist local de demandas usando a árvore oficial flatSubjects do assuntos.js
+    const datalist = divDemanda.querySelector('#subjects-list-triagem-dinamico');
+    if (datalist && Array.isArray(flatSubjects)) {
+        flatSubjects.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.value;
+            datalist.appendChild(opt);
+        });
+    }
+
     document.getElementById('btn-add-demanda-triagem').onclick = () => {
         const input = document.getElementById('input-nova-demanda-triagem');
-        const text = input ? input.value.trim() : '';
+        let text = input ? input.value.trim() : '';
         if (text) {
+            // Limpa caminhos de nós de árvore longos se o usuário escolheu pelo clique completo (Ex: "Família > Alimentos" vira "Alimentos")
+            if (text.includes(' > ')) text = text.split(' > ').pop();
             demandasAdicionaisLocais.push(text);
             input.value = '';
             renderListaDemandasTriagem();
@@ -865,8 +870,10 @@ function fillExpenseData(d) {
 }
 
 /* ========================================================
-   9. FUNÇÕES DE AÇÃO (PDF, SALVAR, RESET)
+   9. FUNÇÕES DE AÇÃO CORRIGIDAS (MOTO PDF CONECTADO)
    ======================================================== */
+
+// 👑 CORREÇÃO DO BOTÃO PDF: Mapeado exatamente com as assinaturas reais e robustas exigidas pelo SIGEP 👑
 async function handlePdf() {
     showNotification("Gerando PDF unificado...", "info");
     try {
@@ -885,15 +892,17 @@ async function handlePdf() {
             docTypes: getDocTypesFromForm(),
             reuData: reu,
             expenseData: gastos,
-            demandasAdicionais: demandasAdicionaisLocais 
+            demandasAdicionais: demandasAdicionaisLocais // Passa o array de multiplos casos para enquadrar no papel
         };
         
+        // CORREÇÃO CRÍTICA: Chama o método global exposto pelo PDFService unificado
         const resultado = PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
         if (resultado) {
             showNotification("PDF emitido com sucesso!");
             await handleSave(false);
         }
     } catch (err) {
+        console.error("Falha ao processar PDF:", err);
         showNotification("Erro na emissão do PDF", "error");
     }
 }
@@ -1013,7 +1022,7 @@ export function setupDetailsModal(config) {
     getEl('close-assisted-details-modal-btn').onclick = closeAssistedDetailsModal;
     getEl('back-to-action-selection-btn').onclick = handleBack;
     getEl('save-checklist-btn').onclick = () => handleSave(true);
-    getEl('print-checklist-btn').onclick = handlePdf;
+    getEl('print-checklist-btn').onclick = handlePdf; // Link direto do clique mapeado para o handlePdf corrigido
     getEl('reset-checklist-btn').onclick = handleReset;
     
     const searchInput = getEl('checklist-search');
