@@ -527,7 +527,7 @@ export const AtendimentoExternoService = {
         const numeroProcessoSalvo = inputNumeroCaso ? inputNumeroCaso.value.trim() : '';
 
         const numProcessoSeguro = numeroProcessoSalvo || '';
-        const colabSeguro = this.colaboradorNome || 'Sistema'; // Nome real limpo do profissional ativo
+        const colabSeguro = this.colaboradorNome || 'Sistema';
         const pautaIdSeguro = this.pautaId || '';
         const assistidoIdSeguro = this.assistidoId || '';
 
@@ -546,15 +546,15 @@ export const AtendimentoExternoService = {
             const novoToken = this._gerarTokenSeguro();
             const timestampIso = new Date().toISOString();
 
-            // ⭐ RASTREAMENTO DUPLO DE PRODUTIVIDADE COM CORREÇÃO DE NOMES REALIZADO AQUI ⭐
+            // ⭐ COORDENAÇÃO DE SINCRO E PROD ENGENHARIA DE METAS DUPLAS ATIVADA ⭐
             if (this.fluxoSelecionado === 'direto') {
                 const enviadoPorServidor = this.assistidoData?.enviadoPor || null;
                 
                 await updateDoc(docRef, {
                     status: numProcessoSeguro ? 'atendido' : 'aguardandoNumero',
-                    attendedBy: colabSeguro,                      // Grava o Nome do Defensor para o BI (+1)
-                    enviadoPor: enviadoPorServidor,               // Mantém intacto o Nome do Servidor para o BI (+1)
-                    creatorEmail: enviadoPorServidor ? null : (this.colaboradorAtual?.email || null), // Rastro institucional apenas se for mesa direta do defensor
+                    attendedBy: colabSeguro,                      // Registra Defensor Ativo (+1 BI)
+                    enviadoPor: enviadoPorServidor,               // Mantém Servidor Intacto de Origem (+1 BI)
+                    creatorEmail: enviadoPorServidor ? null : (this.colaboradorAtual?.email || null), 
                     attendedAt: timestampIso,
                     finalizadoPeloColaborador: !!numProcessoSeguro,
                     numeroProcesso: numProcessoSeguro,
@@ -587,7 +587,7 @@ export const AtendimentoExternoService = {
                     defensorResponsavel: def,
                     notasRevisao: nota,
                     numeroProcesso: numProcessoSeguro,
-                    enviadoPor: colabSeguro, // Salva o nome limpo do Servidor que instruiu a peça
+                    enviadoPor: colabSeguro, // Trava e blinda o Nome do Servidor que trabalhou
                     delegationToken: novoToken,
                     demandas: objetoDemandasFinal, 
                     history: arrayUnion({
@@ -618,7 +618,7 @@ export const AtendimentoExternoService = {
                     defensorResponsavel: def, 
                     notasRevisao: nota, 
                     reviewMotivoDevolucao: nota,
-                    enviadoPor: colabSeguro, // Salva o nome limpo do Servidor
+                    enviadoPor: colabSeguro, // Trava e blinda o Nome do Servidor
                     delegationToken: novoToken,
                     demandas: objetoDemandasFinal,
                     history: arrayUnion({
@@ -732,7 +732,7 @@ export const AtendimentoExternoService = {
                 btnFinalizar.disabled = false;
                 btnFinalizar.textContent = "EXECUTAR AÇÃO";
             }
-        } catch(e) {
+        } finally {
             this.isProcessing = false; 
         }
     },
@@ -1128,7 +1128,7 @@ export const AtendimentoExternoService = {
                 const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-pendentes';
                 
                 tabsDiv.innerHTML = `
-                    <button id="tab-pendentes" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-pendentes' ? 'bg-slate-800 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Fazer / Assinar / Corrigir <span class="${abaAtivaId === 'tab-pendentes' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
+                    <button id="tab-pendentes" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-pendentes' ? 'bg-slate-800 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Para Fazer / Assinar / Corrigir <span class="${abaAtivaId === 'tab-pendentes' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
                     <button id="tab-assinados" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-assinados' ? 'bg-emerald-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Distribuições (Equipe) <span class="${abaAtivaId === 'tab-assinados' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-2 px-2 py-0.5 rounded text-[10px]">${distribuidos.length}</span></button>
                     <button id="tab-historico-busca" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-historico-busca' ? 'bg-indigo-600 text-white shadow mode-btn-active' : 'bg-white text-indigo-500 hover:bg-indigo-50'}">🔍 Buscar Tudo</button>
                 `;
@@ -1171,7 +1171,7 @@ export const AtendimentoExternoService = {
             const emAndamento = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
             const enviados = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
             
-            // ⭐ ATUALIZADO: Filtro unificado de produtividade baseado rigorosamente no Nome Limpo do Profissional ⭐
+            // ⭐ CORREÇÃO DE FILTRAGEM ESTREITA AQUI ⭐
             const finalizados = this.todosAtendimentosPauta.filter(a => 
                 (a.status === 'atendido' && a.attendedBy === this.colaboradorNome) || 
                 (a.status === 'atendido' && a.enviadoPor === this.colaboradorNome)
