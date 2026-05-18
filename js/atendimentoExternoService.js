@@ -546,10 +546,15 @@ export const AtendimentoExternoService = {
             const novoToken = this._gerarTokenSeguro();
             const timestampIso = new Date().toISOString();
 
+            // ⭐ CONTA PRODUTIVIDADE RECONHECENDO QUEM INSTRUIU PRIMEIRO ⭐
             if (this.fluxoSelecionado === 'direto') {
+                const enviadoPorServidor = this.assistidoData?.enviadoPor || null;
+                
                 await updateDoc(docRef, {
                     status: numProcessoSeguro ? 'atendido' : 'aguardandoNumero',
-                    attendedBy: colabSeguro,
+                    attendedBy: colabSeguro,                     // Defensor que assinou/concluiu
+                    creatorEmail: enviadoPorServidor ? null : this.colaboradorAtual?.email, // Garante rastro estrito de mesa direta se for o caso
+                    enviadoPor: enviadoPorServidor,               // Mantém o Servidor que preparou a peça original para o BI
                     attendedAt: timestampIso,
                     finalizadoPeloColaborador: !!numProcessoSeguro,
                     numeroProcesso: numProcessoSeguro,
@@ -582,7 +587,7 @@ export const AtendimentoExternoService = {
                     defensorResponsavel: def,
                     notasRevisao: nota,
                     numeroProcesso: numProcessoSeguro,
-                    enviadoPor: colabSeguro,
+                    enviadoPor: colabSeguro, // Servidor que enviou para assinatura fica gravado aqui fixo
                     delegationToken: novoToken,
                     demandas: objetoDemandasFinal, 
                     history: arrayUnion({
@@ -613,7 +618,7 @@ export const AtendimentoExternoService = {
                     defensorResponsavel: def, 
                     notasRevisao: nota, 
                     reviewMotivoDevolucao: nota,
-                    enviadoPor: colabSeguro,
+                    enviadoPor: colabSeguro, // Servidor fica gravado aqui fixo
                     delegationToken: novoToken,
                     demandas: objetoDemandasFinal,
                     history: arrayUnion({
@@ -798,7 +803,7 @@ export const AtendimentoExternoService = {
 
         if (chk.expenseData && chk.expenseData.checkExibirGastos) {
             const g = chk.expenseData;
-            const categorias = [
+            const cafeterias = [
                 { id: 'moradia', label: 'Moradia' }, { id: 'alimentacao', label: 'Alimentação' },
                 { id: 'educacao', label: 'Educação' }, { id: 'saude', label: 'Saúde' },
                 { id: 'vestuario', label: 'Vestuário' }, { id: 'lazer', label: 'Lazer' },
@@ -808,7 +813,7 @@ export const AtendimentoExternoService = {
             let totalGastos = 0;
             let gastosHtml = '';
             
-            categorias.forEach(c => {
+            cafeterias.forEach(c => {
                 if (g[c.id] && g[c.id] !== 'R$ 0,00') {
                     gastosHtml += `<div class="flex justify-between text-xs mb-1.5"><span class="text-emerald-700 font-bold uppercase tracking-wider">${c.label}</span><span class="font-black text-emerald-900">${g[c.id]}</span></div>`;
                     const num = parseFloat(String(g[c.id]).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
@@ -1018,7 +1023,6 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ⭐ ATUALIZADO: FILTROS INTELIGENTES PARA TRATAMENTO COMPLETO DE CASOS DO SERVIDOR E DEFENSOR ⭐
     atualizarListasDoDashboard() {
         const container = document.getElementById('lista-dashboard-conteudo');
         const tabsDiv = document.getElementById('tabs-dashboard');
@@ -1107,14 +1111,16 @@ export const AtendimentoExternoService = {
         };
 
         if (isDefensor) {
-            // O Defensor analisa tudo que foi enviado para a mesa dele (atribuição direta ou revisão)
-            const pendentes = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome);
+            const pendentes = this.todosAtendimentosPauta.filter(a => 
+                ((a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome) ||
+                (a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome)
+            );
             const distribuidos = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' && (a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
             const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
 
             if (prefs.mode === 'list') {
                 container.innerHTML = 
-                    desenharSecao('Para Assinar / Corrigir', '⚖️', pendentes, true) + 
+                    desenharSecao('Para Fazer / Assinar / Corrigir', '⚖️', pendentes, true) + 
                     desenharSecao('Distribuições (Minha Equipe)', '✅', distribuidos, false);
                 if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
             } else {
@@ -1122,7 +1128,7 @@ export const AtendimentoExternoService = {
                 const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-pendentes';
                 
                 tabsDiv.innerHTML = `
-                    <button id="tab-pendentes" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-pendentes' ? 'bg-slate-800 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Para Assinar / Corrigir <span class="${abaAtivaId === 'tab-pendentes' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
+                    <button id="tab-pendentes" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-pendentes' ? 'bg-slate-800 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Fazer / Assinar / Corrigir <span class="${abaAtivaId === 'tab-pendentes' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
                     <button id="tab-assinados" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-assinados' ? 'bg-emerald-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Distribuições (Equipe) <span class="${abaAtivaId === 'tab-assinados' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-2 px-2 py-0.5 rounded text-[10px]">${distribuidos.length}</span></button>
                     <button id="tab-historico-busca" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-historico-busca' ? 'bg-indigo-600 text-white shadow mode-btn-active' : 'bg-white text-indigo-500 hover:bg-indigo-50'}">🔍 Buscar Tudo</button>
                 `;
@@ -1162,14 +1168,14 @@ export const AtendimentoExternoService = {
             }
 
         } else {
-            // ⭐ SERVIDORES: ENXERGAM RIGOROSAMENTE APENAS O QUE ELES TRATARAM/ESTÃO TRATANDO ⭐
             const emAndamento = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
-            
-            // "No Defensor": Casos que o Servidor preparou e encaminhou para distribuição/revisão, mas que ainda aguardam validação
             const enviados = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
             
-            // "Concluídos": Casos finalizados diretamente por ele
-            const finalizados = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' && a.attendedBy === this.colaboradorNome);
+            // ⭐ CONTA CASOS FECHADOS DIRETO OU QUE PASSARAM POR VOCÊ E O DEFENSOR ASSINOU DEPOIS ⭐
+            const finalizados = this.todosAtendimentosPauta.filter(a => 
+                (a.status === 'atendido' && a.attendedBy === this.colaboradorNome) || 
+                (a.status === 'atendido' && a.enviadoPor === this.colaboradorNome)
+            );
             
             const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome || a.assignedCollaborator?.name === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
 
@@ -1177,7 +1183,7 @@ export const AtendimentoExternoService = {
                 container.innerHTML = 
                     desenharSecao('Para Fazer / Corrigir', '👩‍💻', emAndamento, true) + 
                     desenharSecao('No Defensor (Avaliando)', '⏳', enviados, true) + 
-                    desenharSecao('Concluídos Hoje', '✅', finalizados, false);
+                    desenharSecao('Concluídos Hoje (Minha Produção)', '✅', finalizados, false);
                 if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
             } else {
                 if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
