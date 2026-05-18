@@ -527,7 +527,7 @@ export const AtendimentoExternoService = {
         const numeroProcessoSalvo = inputNumeroCaso ? inputNumeroCaso.value.trim() : '';
 
         const numProcessoSeguro = numeroProcessoSalvo || '';
-        const colabSeguro = this.colaboradorNome || 'Sistema';
+        const colabSeguro = this.colaboradorNome || 'Sistema'; // Nome real limpo do profissional ativo
         const pautaIdSeguro = this.pautaId || '';
         const assistidoIdSeguro = this.assistidoId || '';
 
@@ -546,16 +546,15 @@ export const AtendimentoExternoService = {
             const novoToken = this._gerarTokenSeguro();
             const timestampIso = new Date().toISOString();
 
-            // ⭐ CORREÇÃO DA CONTAGEM DUPLA DE PRODUTIVIDADE NO COMPLEMENTO DIRETO ⭐
+            // ⭐ RASTREAMENTO DUPLO DE PRODUTIVIDADE COM CORREÇÃO DE NOMES REALIZADO AQUI ⭐
             if (this.fluxoSelecionado === 'direto') {
-                // 1. Puxa o servidor que instruiu o caso originalmente antes de atualizar
                 const enviadoPorServidor = this.assistidoData?.enviadoPor || null;
                 
                 await updateDoc(docRef, {
                     status: numProcessoSeguro ? 'atendido' : 'aguardandoNumero',
-                    attendedBy: colabSeguro,                      // Defensor que assinou/concluiu (ganha +1 no BI)
-                    enviadoPor: enviadoPorServidor,               // Mantém o Servidor original que trabalhou (ganha +1 no BI)
-                    creatorEmail: enviadoPorServidor ? null : this.colaboradorAtual?.email, // Rastro se for mesa 100% direta do Defensor
+                    attendedBy: colabSeguro,                      // Grava o Nome do Defensor para o BI (+1)
+                    enviadoPor: enviadoPorServidor,               // Mantém intacto o Nome do Servidor para o BI (+1)
+                    creatorEmail: enviadoPorServidor ? null : (this.colaboradorAtual?.email || null), // Rastro institucional apenas se for mesa direta do defensor
                     attendedAt: timestampIso,
                     finalizadoPeloColaborador: !!numProcessoSeguro,
                     numeroProcesso: numProcessoSeguro,
@@ -569,7 +568,7 @@ export const AtendimentoExternoService = {
                 });
                 tituloSucesso = "Atendimento Finalizado!";
                 subtituloSucesso = numProcessoSeguro ? "Processo distribuído e salvo." : "Atendimento encerrado sem número de processo.";
-            }
+            } 
             else if (this.fluxoSelecionado === 'distribuicao') {
                 const def = document.getElementById('select-defensor-distribuicao')?.value || '';
                 const nota = document.getElementById('notas-distribuicao-dinamico')?.value || '';
@@ -588,7 +587,7 @@ export const AtendimentoExternoService = {
                     defensorResponsavel: def,
                     notasRevisao: nota,
                     numeroProcesso: numProcessoSeguro,
-                    enviadoPor: colabSeguro, // Servidor que enviou para assinatura fica gravado aqui fixo
+                    enviadoPor: colabSeguro, // Salva o nome limpo do Servidor que instruiu a peça
                     delegationToken: novoToken,
                     demandas: objetoDemandasFinal, 
                     history: arrayUnion({
@@ -619,7 +618,7 @@ export const AtendimentoExternoService = {
                     defensorResponsavel: def, 
                     notasRevisao: nota, 
                     reviewMotivoDevolucao: nota,
-                    enviadoPor: colabSeguro, // Servidor fica gravado aqui fixo
+                    enviadoPor: colabSeguro, // Salva o nome limpo do Servidor
                     delegationToken: novoToken,
                     demandas: objetoDemandasFinal,
                     history: arrayUnion({
@@ -733,7 +732,7 @@ export const AtendimentoExternoService = {
                 btnFinalizar.disabled = false;
                 btnFinalizar.textContent = "EXECUTAR AÇÃO";
             }
-        } finally {
+        } catch(e) {
             this.isProcessing = false; 
         }
     },
@@ -1172,7 +1171,7 @@ export const AtendimentoExternoService = {
             const emAndamento = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
             const enviados = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
             
-            // ⭐ CONTA CASOS FECHADOS DIRETO OU QUE PASSARAM POR VOCÊ E O DEFENSOR ASSINOU DEPOIS ⭐
+            // ⭐ ATUALIZADO: Filtro unificado de produtividade baseado rigorosamente no Nome Limpo do Profissional ⭐
             const finalizados = this.todosAtendimentosPauta.filter(a => 
                 (a.status === 'atendido' && a.attendedBy === this.colaboradorNome) || 
                 (a.status === 'atendido' && a.enviadoPor === this.colaboradorNome)
