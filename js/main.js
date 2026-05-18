@@ -1,4 +1,4 @@
-// js/main.js - VERSÃO COM MEMÓRIA SEGURA PARA LINKS DE DELEGAÇÃO (SIGEP)
+// js/main.js - VERSÃO COM MEMÓRIA SEGURA E MONITOR DE EQUIPE LIVRE (SIGEP)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -40,6 +40,7 @@ class SIGEPApp {
         this.unsubscribeFromAttendances = null;
         this.unsubscribeFromCollaborators = null;
         this.currentPautaFilter = 'all';
+        this.monitorInterval = null; 
         
         this.init();
     }
@@ -556,6 +557,8 @@ class SIGEPApp {
             localStorage.removeItem('lastPautaId');
             localStorage.removeItem('lastPautaName');
             localStorage.removeItem('lastPautaType');
+
+            if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
 
             UIService.showScreen('pautaSelection');
             if (this.auth?.currentUser) {
@@ -1132,7 +1135,7 @@ class SIGEPApp {
             document.getElementById('edit-attendant-modal')?.classList.add('hidden');
         });
 
-        // ⭐ CORREÇÃO DE SEGURANÇA E DISPARO DE E-MAIL AQUI (DELEGAÇÃO PELA COLUNA AGUARDANDO) ⭐
+        // ⭐ NOVO: GATILHO COM MODO MUTIRÃO SILENCIOSO E MEMÓRIA SEGURA ⭐
         document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
             const collaboratorId = window.selectedCollaboratorId;
             const collaboratorName = window.selectedCollaboratorName || null;
@@ -1144,7 +1147,10 @@ class SIGEPApp {
                 return;
             }
 
-            // 🛡️ BLINDAGEM MÁXIMA: Salva na memória o ID exato antes que qualquer função apague
+            // Verifica se o Modo Mutirão (Silencioso) está ligado
+            const isSilentMode = document.getElementById('toggle-silent-mode')?.checked || false;
+
+            // Salva na memória o ID exato antes de qualquer coisa
             const idAssistidoAtual = window.assistedIdToHandle;
             const nomeAssistidoAtual = window.assistedNameToHandle;
 
@@ -1185,9 +1191,6 @@ class SIGEPApp {
                     emailDestino = selectedCollab?.email || null;
                     
                     collaboratorData = { id: collaboratorId, name: collaboratorName, email: emailDestino };
-                    showNotification(`${nomeAssistidoAtual} atribuído a ${collaboratorName}.`, "success");
-                } else {
-                    showNotification(`${nomeAssistidoAtual} movido para 'Em Atendimento' sem atribuição.`, "success");
                 }
 
                 const updatePayload = {
@@ -1196,21 +1199,21 @@ class SIGEPApp {
                     inAttendanceTime: new Date().toISOString()
                 };
 
-                if (collaboratorName) {
+                // Se o modo silencioso NÃO estiver ativo, salva o token
+                if (collaboratorName && !isSilentMode) {
                     updatePayload.delegationToken = novoToken; 
                 }
 
-                // Salva no banco de dados primeiro
                 await PautaService.updateStatus(
                     this.db,
                     this.currentPauta.id,
-                    idAssistidoAtual, // Usa o ID protegido
+                    idAssistidoAtual, 
                     updatePayload,
                     this.currentUserName
                 );
                 
-                // 💡 DISPARO DO E-MAIL APÓS SALVAR, GARANTINDO QUE O ID NÃO FOI PERDIDO
-                if (emailDestino) {
+                // Só dispara o e-mail se o Modo Silencioso estiver DESLIGADO
+                if (emailDestino && !isSilentMode) {
                     showNotification(`Disparando notificação para o e-mail cadastrado...`, "info");
                     try {
                         await EmailService.sendDelegationEmail(
@@ -1219,15 +1222,18 @@ class SIGEPApp {
                             nomeAssistidoAtual, 
                             this.currentUserName,
                             this.currentPauta.id, 
-                            idAssistidoAtual, // ID seguro para o e-mail montar o link correto
+                            idAssistidoAtual, 
                             novoToken 
                         );
                     } catch(e) {
                         console.error("Erro no envio auto:", e);
                     }
+                } else if (emailDestino && isSilentMode) {
+                    // Aviso apenas visual de que o modo silencioso agiu
+                    showNotification(`Card movido para ${collaboratorName} silenciosamente.`, "info");
+                } else {
+                    showNotification(`${nomeAssistidoAtual} delegado com sucesso.`, "success"); 
                 }
-
-                showNotification(`${nomeAssistidoAtual} delegado com sucesso.`, "success"); 
             }
             
             document.getElementById('select-collaborator-modal')?.classList.add('hidden');
@@ -1405,7 +1411,6 @@ class SIGEPApp {
             document.getElementById('edit-pauta-modal')?.classList.add('hidden');
         });
 
-        // ⭐ CORREÇÃO AQUI: BLINDAGEM DO BOTÃO MANUAL DE ENVIAR E-MAIL NA COLUNA "EM ATENDIMENTO" ⭐
         document.getElementById('send-delegate-email-btn')?.addEventListener('click', async () => {
             const emailInput = document.getElementById('collaborator-email-input');
             const emailDestino = emailInput?.value.trim();
@@ -1423,7 +1428,6 @@ class SIGEPApp {
                 nomeColega = "Colega Colaborador";
             }
 
-            // ID blindado salvo antes de qualquer manipulação
             const idAssistidoAtual = window.assistedIdForDelegation;
             const novoToken = Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
 
@@ -1437,7 +1441,7 @@ class SIGEPApp {
                     window.assistedNameForDelegation, 
                     this.currentUserName,
                     this.currentPauta.id, 
-                    idAssistidoAtual, // ID seguro repassado para formar o link correto
+                    idAssistidoAtual, 
                     novoToken
                 );
 
@@ -1891,6 +1895,9 @@ class SIGEPApp {
                 CollaboratorService.setupListener(this, pautaId);
             }
             
+            // ⭐ INICIA O MONITOR DE ENVELOPES
+            this.iniciarMonitorEnvelopes();
+
             UIService.showScreen('app');
         } catch (error) {
             console.error("Erro ao carregar pauta:", error);
@@ -1898,7 +1905,51 @@ class SIGEPApp {
         }
     }
 
+    // ⭐ NOVO: MONITOR DE DISPONIBILIDADE DA EQUIPE ⭐
+    iniciarMonitorEnvelopes() {
+        if (this.monitorInterval) clearInterval(this.monitorInterval);
+        
+        const verificarDisponibilidade = () => {
+            if (!this.currentPautaData?.useDelegationFlow || !this.colaboradores || this.colaboradores.length === 0) return;
+
+            const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
+            
+            const colabsLivres = colabsAtivos.filter(c => {
+                const casosDesteColab = this.allAssisted.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome);
+                return casosDesteColab.length === 0;
+            });
+
+            const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end');
+            if (!headerActions) return;
+
+            let btnEnvelope = document.getElementById('btn-colabs-disponiveis');
+
+            if (colabsLivres.length > 0) {
+                if (!btnEnvelope) {
+                    btnEnvelope = document.createElement('button');
+                    btnEnvelope.id = 'btn-colabs-disponiveis';
+                    btnEnvelope.onclick = () => {
+                        const nomes = colabsLivres.map(c => `• ${c.nome}`).join('\n');
+                        alert(`Equipe livre no momento:\n\n${nomes}`);
+                    };
+                    headerActions.insertBefore(btnEnvelope, headerActions.firstChild);
+                }
+                
+                btnEnvelope.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-black rounded-lg transition-colors border border-emerald-300 shadow-sm animate-pulse cursor-pointer shrink-0';
+                btnEnvelope.title = `${colabsLivres.length} Colaborador(es) Livre(s)`;
+                btnEnvelope.innerHTML = `<span class="text-sm">✉️</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
+            } else {
+                if (btnEnvelope) btnEnvelope.remove();
+            }
+        };
+
+        verificarDisponibilidade();
+        this.monitorInterval = setInterval(verificarDisponibilidade, 2500);
+    }
+
     async showPautaSelectionScreen() {
+        if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
+        
         UIService.showScreen('pautaSelection');
         this.currentPautaFilter = this.currentPautaFilter || 'all';
         UIService.renderPautaFilters('filters-container', this.currentPautaFilter, async (filter) => {
