@@ -1,4 +1,4 @@
-// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (BLINDAGEM TOTAL ANTI-ERROS NO IOS)
+// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (PREMIUM: CORES, LAYOUT E PWA)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -25,6 +25,13 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// Variável global para capturar o evento de instalação do celular (PWA)
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+});
+
 export const AtendimentoExternoService = {
     pautaId: null,
     assistidoId: null,
@@ -40,13 +47,15 @@ export const AtendimentoExternoService = {
     async init() {
         console.log("⚡ Atendimento Externo Inicializado (Premium Mode - SIGEP)");
 
-        const urlParams = new URLSearchParams(window.location.search);
-        this.pautaId = urlParams.get('pautaId');
-        this.assistidoId = urlParams.get('assistidoId'); 
-        const tokenRecebido = urlParams.get('token');
-        this.colaboradorNome = urlParams.get('colab') || "Colaborador";
+        // BLINDAGEM MÁXIMA CONTRA PROVEDORES DE E-MAIL
+        const searchLimpa = window.location.search.replace(/&amp;/g, '&');
+        const urlParams = new URLSearchParams(searchLimpa);
         
-        const telaAtual = urlParams.get('view'); 
+        this.pautaId = urlParams.get('pautaId') || urlParams.get('amp;pautaId');
+        this.assistidoId = urlParams.get('assistidoId') || urlParams.get('amp;assistidoId'); 
+        const tokenRecebido = urlParams.get('token') || urlParams.get('amp;token');
+        this.colaboradorNome = urlParams.get('colab') || urlParams.get('amp;colab') || "Colaborador";
+        const telaAtual = urlParams.get('view') || urlParams.get('amp;view'); 
 
         if (!this.pautaId || !this.colaboradorNome) {
             this.showError("Link Incompleto", "Faltam parâmetros de Pauta ou Colaborador na URL.");
@@ -76,7 +85,7 @@ export const AtendimentoExternoService = {
             const docSnap = await getDoc(docRef);
 
             if (!docSnap.exists()) {
-                this.showError("Processo não encontrado", "Este assistido não está mais na pauta.");
+                this.showError("Processo não encontrado", "Este assistido não está mais na pauta ou o link está quebrado.");
                 return;
             }
 
@@ -110,7 +119,6 @@ export const AtendimentoExternoService = {
             this.todosColaboradores = snap.docs.map(d => d.data());
             this.colaboradorAtual = this.todosColaboradores.find(c => c.nome === this.colaboradorNome);
         } catch (error) {
-            console.error("Erro ao carregar lista da equipe", error);
             this.todosColaboradores = [];
         }
     },
@@ -232,7 +240,7 @@ export const AtendimentoExternoService = {
 
         optionsHtml += `
             <div id="secao-demandas-adicionais-externo" class="bg-indigo-50 p-5 rounded-xl border border-indigo-200 mb-6 shadow-inner">
-                <label class="block text-[10px] font-black text-indigo-700 uppercase tracking-widest mb-2 flex items-center gap-1"><span>📋</span> Acumular Demandas Resolvidas (Múltiplos Casos)</label>
+                <label class="block text-[10px] font-black text-indigo-700 uppercase tracking-widest mb-2 flex items-center gap-1"><span>📋</span> Acumular Demandas Resolvidas</label>
                 <div class="flex gap-2 mb-3">
                     <input type="text" id="input-nova-demanda-externo" class="flex-grow p-2.5 border border-indigo-300 rounded-lg text-xs outline-none bg-white focus:ring-2 focus:ring-indigo-500" placeholder="Ex: Regulamentação de Guarda...">
                     <button type="button" id="btn-add-demanda-externo" class="bg-indigo-600 text-white font-bold px-4 py-2 rounded-lg text-xs hover:bg-indigo-700 transition shadow-sm uppercase tracking-wider">Somar</button>
@@ -293,11 +301,9 @@ export const AtendimentoExternoService = {
 
         const setAtivo = (btnClicado, fluxo) => {
             this.fluxoSelecionado = fluxo;
-            
             botoesFluxo.forEach(b => {
                 b.className = 'fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 group';
             });
-            
             const coresAvas = {
                 'direto': 'bg-emerald-50 border-2 border-emerald-400 ring-2 ring-emerald-100',
                 'distribuicao': 'bg-cyan-50 border-2 border-cyan-400 ring-2 ring-cyan-100',
@@ -602,9 +608,7 @@ export const AtendimentoExternoService = {
                 const q = query(collection(db, "pautas", pautaIdSeguro, "attendances"));
                 const snap = await getDocs(q);
                 this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            } catch (err) {
-                console.warn("Falha silenciosa ao sincronizar cache local pós-envio:", err);
-            }
+            } catch (err) {}
 
             const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
             const textoBotaoVoltar = isDefensor ? '⚖️ Voltar ao Painel Judicial' : '📊 Voltar à Minha Mesa';
@@ -648,7 +652,6 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ⭐ CORRIGIDO: RENDERIZANDO A PLANILHA DE GASTOS NA TELA E ATIVANDO O BOTÃO PDF ⭐
     renderizarHistorico(assistido) {
         const lista = document.getElementById('lista-historico');
         if (!lista) return;
@@ -713,7 +716,6 @@ export const AtendimentoExternoService = {
             `;
         }
 
-        // DESENHANDO A PLANILHA DE GASTOS
         if (chk.expenseData && chk.expenseData.checkExibirGastos) {
             const g = chk.expenseData;
             const categorias = [
@@ -795,6 +797,7 @@ export const AtendimentoExternoService = {
         }
     },
 
+    // ⭐ NOVO: DASHBOARD COM PWA, CORES E LAYOUT CUSTOMIZÁVEL ⭐
     async renderizarDashboardUnificado() {
         const corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl');
         if (!corpo) return;
@@ -808,36 +811,137 @@ export const AtendimentoExternoService = {
         const tituloPainel = isDefensor ? 'Painel Judicial' : 'Minha Mesa de Trabalho';
         const subtituloPainel = isDefensor ? 'Fluxo de Assinaturas e Petições' : 'Atendimentos Repassados a Você';
 
-        corpo.className = "w-full max-w-4xl mx-auto my-4"; 
+        // Puxa as preferências salvas no navegador da pessoa
+        const prefs = JSON.parse(localStorage.getItem('dashboard_prefs')) || { mode: 'tabs', color: 'slate' };
+        
+        const colorMap = {
+            'slate': 'bg-slate-800',
+            'indigo': 'bg-indigo-700',
+            'emerald': 'bg-emerald-700',
+            'rose': 'bg-rose-700',
+            'blue': 'bg-blue-700'
+        };
+        const headerColorClass = colorMap[prefs.color] || colorMap['slate'];
+
+        corpo.className = "w-full max-w-4xl mx-auto my-4 transition-all"; 
+        
         corpo.innerHTML = `
-            <div id="header-bg" class="bg-slate-800 p-6 sm:p-8 rounded-t-2xl shadow-xl flex items-center justify-between relative overflow-hidden border-b border-slate-700">
-                <div class="absolute top-0 right-0 w-64 h-64 bg-${isDefensor ? 'cyan' : 'indigo'}-500 opacity-20 rounded-full blur-3xl -mr-10 -mt-20 pointer-events-none"></div>
-                <div class="flex items-center gap-4 relative z-10">
-                    <div class="bg-white/10 p-2.5 rounded-xl border border-white/20 shadow-inner flex-shrink-0">
-                        <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" class="h-10 w-auto object-contain">
+            <div id="header-bg" class="${headerColorClass} p-6 sm:p-8 rounded-t-2xl shadow-xl flex items-center justify-between relative overflow-visible border-b border-white/10 transition-colors duration-500">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl -mr-10 -mt-20 pointer-events-none"></div>
+                
+                <div class="flex items-center gap-4 relative z-10 w-full justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="bg-white/10 p-2.5 rounded-xl border border-white/20 shadow-inner flex-shrink-0">
+                            <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" class="h-10 w-auto object-contain">
+                        </div>
+                        <div>
+                            <h1 class="text-white font-black text-xl sm:text-2xl uppercase tracking-widest flex items-center gap-2">
+                                ${tituloPainel}
+                            </h1>
+                            <p class="text-white/70 text-xs sm:text-sm font-semibold mt-1 tracking-wide">${subtituloPainel}</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 class="text-white font-black text-xl sm:text-2xl uppercase tracking-widest flex items-center gap-2">
-                            ${tituloPainel}
-                        </h1>
-                        <p class="text-slate-300 text-xs sm:text-sm font-semibold mt-1 tracking-wide">${subtituloPainel}</p>
+                    
+                    <div class="flex gap-2 relative">
+                        <button id="btn-install-pwa" class="hidden bg-white/20 hover:bg-white/30 text-white p-2 sm:px-4 sm:py-2 rounded-lg transition font-bold text-xs shadow-sm flex items-center gap-2" title="Instalar no Celular/PC">
+                            <span>📱</span><span class="hidden sm:inline">Instalar App</span>
+                        </button>
+                        <button id="btn-dash-settings" class="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg transition shadow-sm" title="Configurações da Mesa">
+                            ⚙️
+                        </button>
+                        
+                        <div id="dash-settings-menu" class="hidden absolute top-full right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border p-4 z-[999] origin-top-right">
+                            <h4 class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest border-b pb-1">Layout da Tela</h4>
+                            <div class="flex gap-2 mb-5 bg-gray-50 p-1.5 rounded-lg border">
+                                <button data-mode="tabs" class="mode-btn flex-1 py-2 text-xs font-bold rounded shadow-sm transition-all ${prefs.mode === 'tabs' ? 'bg-white text-gray-800 border' : 'text-gray-400 hover:bg-gray-100'}">Abas</button>
+                                <button data-mode="list" class="mode-btn flex-1 py-2 text-xs font-bold rounded shadow-sm transition-all ${prefs.mode === 'list' ? 'bg-white text-gray-800 border' : 'text-gray-400 hover:bg-gray-100'}">Tudo na Tela</button>
+                            </div>
+                            
+                            <h4 class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest border-b pb-1">Cor do Cabeçalho</h4>
+                            <div class="flex gap-2 justify-between px-1">
+                                <button data-color="slate" class="color-btn w-6 h-6 rounded-full bg-slate-800 ring-offset-2 transition-transform hover:scale-110 ${prefs.color === 'slate' ? 'ring-2 ring-slate-800 scale-110 shadow-md' : ''}"></button>
+                                <button data-color="blue" class="color-btn w-6 h-6 rounded-full bg-blue-700 ring-offset-2 transition-transform hover:scale-110 ${prefs.color === 'blue' ? 'ring-2 ring-blue-700 scale-110 shadow-md' : ''}"></button>
+                                <button data-color="indigo" class="color-btn w-6 h-6 rounded-full bg-indigo-700 ring-offset-2 transition-transform hover:scale-110 ${prefs.color === 'indigo' ? 'ring-2 ring-indigo-700 scale-110 shadow-md' : ''}"></button>
+                                <button data-color="emerald" class="color-btn w-6 h-6 rounded-full bg-emerald-700 ring-offset-2 transition-transform hover:scale-110 ${prefs.color === 'emerald' ? 'ring-2 ring-emerald-700 scale-110 shadow-md' : ''}"></button>
+                                <button data-color="rose" class="color-btn w-6 h-6 rounded-full bg-rose-700 ring-offset-2 transition-transform hover:scale-110 ${prefs.color === 'rose' ? 'ring-2 ring-rose-700 scale-110 shadow-md' : ''}"></button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
             
-            <div class="bg-slate-50 p-4 sm:p-6 rounded-b-2xl shadow-lg border border-slate-300 min-h-[500px]">
+            <div id="dash-body" class="bg-slate-50 p-4 sm:p-6 rounded-b-2xl shadow-lg border border-slate-300 min-h-[500px] transition-colors duration-500">
                 <div id="wrapper-busca-historico" class="hidden mb-4 animate-fade-in">
                     <input type="text" id="input-busca-local" class="w-full p-3 border border-slate-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner font-sans" placeholder="🔍 Digite o nome do assistido ou assunto para buscar no seu histórico...">
                 </div>
 
-                <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 mb-6">
+                <div id="tabs-container-wrapper" class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 mb-6 ${prefs.mode === 'list' ? 'hidden' : ''}">
                     <div id="tabs-dashboard" class="flex gap-2 overflow-x-auto custom-scrollbar"></div>
                 </div>
-                <div id="lista-dashboard-conteudo" class="space-y-3 sm:space-y-4">
+                
+                <div id="lista-dashboard-conteudo" class="${prefs.mode === 'list' ? 'space-y-8' : 'space-y-3 sm:space-y-4'}">
                     <div class="flex justify-center py-20"><div class="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div></div>
                 </div>
             </div>
         `;
+
+        // Lógica de Instalação (PWA)
+        if (deferredPrompt) {
+            const installBtn = document.getElementById('btn-install-pwa');
+            installBtn.classList.remove('hidden');
+            installBtn.addEventListener('click', async () => {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    installBtn.classList.add('hidden');
+                    showNotification("App instalado com sucesso!", "success");
+                }
+                deferredPrompt = null;
+            });
+        }
+
+        // Lógica do Menu de Configurações
+        const btnSettings = document.getElementById('btn-dash-settings');
+        const menuSettings = document.getElementById('dash-settings-menu');
+        
+        btnSettings.addEventListener('click', (e) => {
+            e.stopPropagation();
+            menuSettings.classList.toggle('hidden');
+        });
+        document.addEventListener('click', (e) => {
+            if (!menuSettings.contains(e.target) && !btnSettings.contains(e.target)) {
+                menuSettings.classList.add('hidden');
+            }
+        });
+
+        // Troca de Cores
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const c = e.target.dataset.color;
+                prefs.color = c;
+                localStorage.setItem('dashboard_prefs', JSON.stringify(prefs));
+                
+                document.getElementById('header-bg').className = `${colorMap[c]} p-6 sm:p-8 rounded-t-2xl shadow-xl flex items-center justify-between relative overflow-visible border-b border-white/10 transition-colors duration-500`;
+                
+                document.querySelectorAll('.color-btn').forEach(b => {
+                    b.className = b.className.replace(/ring-2 ring-\w+-700 ring-\w+-800 scale-110 shadow-md/g, '').trim();
+                });
+                e.target.classList.add('ring-2', `ring-${c === 'slate' ? 'slate-800' : c+'-700'}`, 'scale-110', 'shadow-md');
+            });
+        });
+
+        // Troca de Layout
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const m = e.target.dataset.mode;
+                prefs.mode = m;
+                localStorage.setItem('dashboard_prefs', JSON.stringify(prefs));
+                menuSettings.classList.add('hidden');
+                
+                // Recarrega a tela para aplicar o novo modo limpo
+                this.renderizarDashboardUnificado(); 
+            });
+        });
 
         try {
             const q = query(collection(db, "pautas", this.pautaId, "attendances"));
@@ -872,7 +976,7 @@ export const AtendimentoExternoService = {
                 if (isCardAberto) {
                     const linkIndividual = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken || ''}`;
                     return `
-                        <div class="border-2 ${bgColorCard} p-5 rounded-2xl shadow-sm hover:shadow-lg transition-all relative group flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div class="border-2 ${bgColorCard} p-5 rounded-2xl shadow-sm hover:shadow-lg transition-all relative group flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
                             <div class="flex-grow w-full sm:w-auto">
                                 <div class="flex items-center gap-2 mb-2">
                                     ${badgeTopo}
@@ -894,7 +998,7 @@ export const AtendimentoExternoService = {
                 } else {
                     const horaStr = item.attendedAt ? new Date(item.attendedAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '';
                     return `
-                        <div class="border border-emerald-200 bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div class="border border-emerald-200 bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
                             <div>
                                 <div class="mb-1">${badgeTopo}</div>
                                 <h3 class="font-black text-slate-800 text-sm truncate">${escapeHTML(item.name)}</h3>
@@ -914,140 +1018,108 @@ export const AtendimentoExternoService = {
             const tabsDiv = document.getElementById('tabs-dashboard');
             const wrapperBusca = document.getElementById('wrapper-busca-historico');
 
+            const desenharSecao = (titulo, emoji, lista, isAberto) => {
+                let html = `<div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6">
+                                <h2 class="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 border-b pb-2 flex items-center gap-2"><span>${emoji}</span> ${titulo} <span class="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md text-[10px] ml-2">${lista.length}</span></h2>`;
+                if (lista.length === 0) {
+                    html += `<p class="text-center text-xs text-gray-400 italic py-4">Nenhum processo nesta etapa.</p>`;
+                } else {
+                    html += lista.map(item => desenharCard(item, isAberto)).join('');
+                }
+                html += `</div>`;
+                return html;
+            };
+
             if (isDefensor) {
                 const pendentes = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome);
                 const finalizados = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' && a.attendedBy === this.colaboradorNome);
-                
-                const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => 
-                    a.defensorResponsavel === this.colaboradorNome || 
-                    a.attendedBy === this.colaboradorNome ||
-                    (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome))
-                );
+                const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
 
-                tabsDiv.innerHTML = `
-                    <button id="tab-pendentes" class="flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap">Aguardando Avaliação <span class="bg-white/20 text-white ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
-                    <button id="tab-assinados" class="flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap">Já Protocolados <span class="bg-slate-200 text-slate-700 ml-2 px-2 py-0.5 rounded text-[10px]">${finalizados.length}</span></button>
-                    <button id="tab-historico-busca" class="flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-indigo-500 hover:bg-indigo-50 rounded-lg transition whitespace-nowrap">🔍 Buscar Tudo</button>
-                `;
+                if (prefs.mode === 'list') {
+                    container.innerHTML = 
+                        desenharSecao('Aguardando Avaliação', '⚖️', pendentes, true) + 
+                        desenharSecao('Já Protocolados', '✅', finalizados, false);
+                } else {
+                    tabsDiv.innerHTML = `
+                        <button id="tab-pendentes" class="flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap">Aguardando Avaliação <span class="bg-white/20 text-white ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
+                        <button id="tab-assinados" class="flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap">Já Protocolados <span class="bg-slate-200 text-slate-700 ml-2 px-2 py-0.5 rounded text-[10px]">${finalizados.length}</span></button>
+                        <button id="tab-historico-busca" class="flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-indigo-500 hover:bg-indigo-50 rounded-lg transition whitespace-nowrap">🔍 Buscar Tudo</button>
+                    `;
 
-                const renderDefensorList = (lista, isAberto) => {
-                    if (lista.length === 0) {
-                        container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">🙌</span><p class="text-base font-black uppercase tracking-widest text-slate-500">NENHUM PROCESSO LOCALIZADO.</p></div>`;
-                        return;
-                    }
-                    container.innerHTML = lista.map(item => desenharCard(item, isAberto)).join('');
-                };
-
-                const btnPend = document.getElementById('tab-pendentes');
-                const btnAssi = document.getElementById('tab-assinados');
-                const btnHist = document.getElementById('tab-historico-busca');
-
-                const limparEstilosAbas = () => {
-                    wrapperBusca.classList.add('hidden');
-                    btnPend.className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap";
-                    btnAssi.className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap";
-                    btnHist.className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-indigo-500 hover:bg-indigo-50 rounded-lg transition whitespace-nowrap";
-                };
-
-                btnPend.onclick = () => {
-                    limparEstilosAbas();
-                    btnPend.className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap";
-                    renderDefensorList(pendentes, true);
-                };
-                btnAssi.onclick = () => {
-                    limparEstilosAbas();
-                    btnAssi.className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-emerald-600 text-white rounded-lg shadow transition whitespace-nowrap";
-                    renderDefensorList(finalizados, false);
-                };
-                btnHist.onclick = () => {
-                    limparEstilosAbas();
-                    wrapperBusca.classList.remove('hidden');
-                    btnHist.className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-indigo-600 text-white rounded-lg shadow transition whitespace-nowrap";
-                    renderDefensorList(meuHistoricoCompleto, true);
-                    
-                    document.getElementById('input-busca-local').oninput = (e) => {
-                        const termo = e.target.value.toLowerCase().trim();
-                        const filtrados = meuHistoricoCompleto.filter(i => 
-                            (i.name && i.name.toLowerCase().includes(termo)) || 
-                            (i.subject && i.subject.toLowerCase().includes(termo)) ||
-                            (i.numeroProcesso && i.numeroProcesso.includes(termo))
-                        );
-                        renderDefensorList(filtrados, true);
+                    const renderDefensorList = (lista, isAberto) => {
+                        if (lista.length === 0) {
+                            container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">🙌</span><p class="text-base font-black uppercase tracking-widest text-slate-500">NENHUM PROCESSO LOCALIZADO.</p></div>`;
+                            return;
+                        }
+                        container.innerHTML = lista.map(item => desenharCard(item, isAberto)).join('');
                     };
-                };
 
-                renderDefensorList(pendentes, true);
+                    const limparEstilosAbas = () => {
+                        wrapperBusca.classList.add('hidden');
+                        document.getElementById('tab-pendentes').className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap";
+                        document.getElementById('tab-assinados').className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap";
+                        document.getElementById('tab-historico-busca').className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-indigo-500 hover:bg-indigo-50 rounded-lg transition whitespace-nowrap";
+                    };
+
+                    document.getElementById('tab-pendentes').onclick = () => { limparEstilosAbas(); document.getElementById('tab-pendentes').className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap"; renderDefensorList(pendentes, true); };
+                    document.getElementById('tab-assinados').onclick = () => { limparEstilosAbas(); document.getElementById('tab-assinados').className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-emerald-600 text-white rounded-lg shadow transition whitespace-nowrap"; renderDefensorList(finalizados, false); };
+                    document.getElementById('tab-historico-busca').onclick = () => {
+                        limparEstilosAbas(); wrapperBusca.classList.remove('hidden');
+                        document.getElementById('tab-historico-busca').className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-indigo-600 text-white rounded-lg shadow transition whitespace-nowrap";
+                        renderDefensorList(meuHistoricoCompleto, true);
+                        document.getElementById('input-busca-local').oninput = (e) => {
+                            const termo = e.target.value.toLowerCase().trim();
+                            renderDefensorList(meuHistoricoCompleto.filter(i => (i.name && i.name.toLowerCase().includes(termo)) || (i.subject && i.subject.toLowerCase().includes(termo)) || (i.numeroProcesso && i.numeroProcesso.includes(termo))), true);
+                        };
+                    };
+                    renderDefensorList(pendentes, true);
+                }
 
             } else {
                 const emAndamento = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
                 const enviados = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
                 const finalizados = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' && a.attendedBy === this.colaboradorNome);
-                
-                const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => 
-                    a.enviadoPor === this.colaboradorNome || 
-                    a.attendedBy === this.colaboradorNome || 
-                    a.assignedCollaborator?.name === this.colaboradorNome ||
-                    (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome))
-                );
+                const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome || a.assignedCollaborator?.name === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
 
-                tabsDiv.innerHTML = `
-                    <button id="tab-em-mesa" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap">Em Mesa <span class="bg-white/20 text-white ml-1 px-1.5 py-0.5 rounded text-[9px]">${emAndamento.length}</span></button>
-                    <button id="tab-enviados" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap">No Defensor <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${enviados.length}</span></button>
-                    <button id="tab-finalizados" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap">Concluídos <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${finalizados.length}</span></button>
-                    <button id="tab-historico-busca" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-indigo-500 hover:bg-indigo-50 rounded-lg transition whitespace-nowrap">🔍 Buscar</button>
-                `;
+                if (prefs.mode === 'list') {
+                    container.innerHTML = 
+                        desenharSecao('Em Mesa (Meus Atendimentos)', '👩‍💻', emAndamento, true) + 
+                        desenharSecao('No Defensor (Pendentes)', '⏳', enviados, true) + 
+                        desenharSecao('Concluídos Hoje', '✅', finalizados, false);
+                } else {
+                    tabsDiv.innerHTML = `
+                        <button id="tab-em-mesa" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap">Em Mesa <span class="bg-white/20 text-white ml-1 px-1.5 py-0.5 rounded text-[9px]">${emAndamento.length}</span></button>
+                        <button id="tab-enviados" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap">No Defensor <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${enviados.length}</span></button>
+                        <button id="tab-finalizados" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap">Concluídos <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${finalizados.length}</span></button>
+                        <button id="tab-historico-busca" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-indigo-500 hover:bg-indigo-50 rounded-lg transition whitespace-nowrap">🔍 Buscar</button>
+                    `;
 
-                const renderServidorList = (lista, isAberto, isEmptyAviso) => {
-                    if (lista.length === 0) {
-                        container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">📭</span><p class="text-sm font-black uppercase tracking-widest text-slate-500">${isEmptyAviso}</p></div>`;
-                        return;
-                    }
-                    container.innerHTML = lista.map(item => desenharCard(item, isAberto)).join('');
-                };
-
-                const btnMesa = document.getElementById('tab-em-mesa');
-                const btnEnv = document.getElementById('tab-enviados');
-                const btnFin = document.getElementById('tab-finalizados');
-                const btnHist = document.getElementById('tab-historico-busca');
-
-                const resetTabs = () => {
-                    wrapperBusca.classList.add('hidden');
-                    [btnMesa, btnEnv, btnFin, btnHist].forEach(b => b.className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap");
-                };
-
-                btnMesa.onclick = () => {
-                    resetTabs();
-                    btnMesa.className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap";
-                    renderServidorList(emAndamento, true, "Sua mesa está limpa.");
-                };
-                btnEnv.onclick = () => {
-                    resetTabs();
-                    btnEnv.className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-indigo-600 text-white rounded-lg shadow transition whitespace-nowrap";
-                    renderServidorList(enviados, true, "Nenhum documento seu no Defensor.");
-                };
-                btnFin.onclick = () => {
-                    resetTabs();
-                    btnFin.className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-emerald-600 text-white rounded-lg shadow transition whitespace-nowrap";
-                    renderServidorList(finalizados, false, "Você ainda não finalizou nada hoje.");
-                };
-                btnHist.onclick = () => {
-                    resetTabs();
-                    wrapperBusca.classList.remove('hidden');
-                    btnHist.className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-indigo-600 text-white rounded-lg shadow transition whitespace-nowrap";
-                    renderServidorList(meuHistoricoCompleto, true, "Nenhum histórico encontrado.");
-
-                    document.getElementById('input-busca-local').oninput = (e) => {
-                        const termo = e.target.value.toLowerCase().trim();
-                        const filtrados = meuHistoricoCompleto.filter(i => 
-                            (i.name && i.name.toLowerCase().includes(termo)) || 
-                            (i.subject && i.subject.toLowerCase().includes(termo)) ||
-                            (i.numeroProcesso && i.numeroProcesso.includes(termo))
-                        );
-                        renderServidorList(filtrados, true, "Nenhum processo corresponde aos termos.");
+                    const renderServidorList = (lista, isAberto, isEmptyAviso) => {
+                        if (lista.length === 0) {
+                            container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">📭</span><p class="text-sm font-black uppercase tracking-widest text-slate-500">${isEmptyAviso}</p></div>`;
+                            return;
+                        }
+                        container.innerHTML = lista.map(item => desenharCard(item, isAberto)).join('');
                     };
-                };
 
-                renderServidorList(emAndamento, true, "Sua mesa está limpa.");
+                    const resetTabs = () => {
+                        wrapperBusca.classList.add('hidden');
+                        ['tab-em-mesa', 'tab-enviados', 'tab-finalizados', 'tab-historico-busca'].forEach(id => document.getElementById(id).className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap");
+                    };
+
+                    document.getElementById('tab-em-mesa').onclick = () => { resetTabs(); document.getElementById('tab-em-mesa').className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap"; renderServidorList(emAndamento, true, "Sua mesa está limpa."); };
+                    document.getElementById('tab-enviados').onclick = () => { resetTabs(); document.getElementById('tab-enviados').className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-indigo-600 text-white rounded-lg shadow transition whitespace-nowrap"; renderServidorList(enviados, true, "Nenhum documento seu no Defensor."); };
+                    document.getElementById('tab-finalizados').onclick = () => { resetTabs(); document.getElementById('tab-finalizados').className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-emerald-600 text-white rounded-lg shadow transition whitespace-nowrap"; renderServidorList(finalizados, false, "Você ainda não finalizou nada hoje."); };
+                    document.getElementById('tab-historico-busca').onclick = () => {
+                        resetTabs(); wrapperBusca.classList.remove('hidden'); document.getElementById('tab-historico-busca').className = "flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-indigo-600 text-white rounded-lg shadow transition whitespace-nowrap";
+                        renderServidorList(meuHistoricoCompleto, true, "Nenhum histórico encontrado.");
+                        document.getElementById('input-busca-local').oninput = (e) => {
+                            const termo = e.target.value.toLowerCase().trim();
+                            renderServidorList(meuHistoricoCompleto.filter(i => (i.name && i.name.toLowerCase().includes(termo)) || (i.subject && i.subject.toLowerCase().includes(termo)) || (i.numeroProcesso && i.numeroProcesso.includes(termo))), true, "Nada encontrado.");
+                        };
+                    };
+                    renderServidorList(emAndamento, true, "Sua mesa está limpa.");
+                }
             }
 
         } catch (error) {
