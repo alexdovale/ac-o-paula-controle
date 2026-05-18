@@ -2038,6 +2038,7 @@ class SIGEPApp {
         const currentUserRole = currentUser?.role; 
         const isAuthenticated = this.auth?.currentUser != null;
         const isUserApproved = currentUser?.status === 'approved'; 
+        const isApoio = currentUserRole === 'apoio'; // Identifica se é perfil de Apoio
         
         const adminPanelBtnMain = document.getElementById('admin-btn-main');
         const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
@@ -2062,7 +2063,16 @@ class SIGEPApp {
         if (manageCollaboratorsBtn) manageCollaboratorsBtn.classList.toggle('hidden', !canManagePauta);
         if (viewStatsBtn) viewStatsBtn.classList.toggle('hidden', !canAccessAdminPanel);
 
-        const isApoio = currentUserRole === 'apoio'; 
+        // ⭐ TRAVA EXCLUSIVA: O botão de "Chamar Próximo" some completamente para o perfil de Apoio
+        const callNextBtn = document.getElementById('call-next-assisted-btn');
+        if (callNextBtn) {
+            if (isApoio || !isAuthenticated) {
+                callNextBtn.classList.add('hidden');
+            } else {
+                callNextBtn.classList.remove('hidden');
+            }
+        }
+
         const addAssistedBtn = document.getElementById('add-assisted-btn');
         const fileUpload = document.getElementById('file-upload');
         const btnSyncVerde = document.getElementById('btn-sync-verde');
@@ -2074,7 +2084,6 @@ class SIGEPApp {
         const btnMonitor = document.getElementById('btn-painel-geral-externo');
         if (btnMonitor) {
             const liberadoApoio = this.currentPautaData?.liberarPainelGeralApoio === true;
-            // ⭐ CORREÇÃO DA VARIÁVEL REALIZADA AQUI (!liberadoApoio) ⭐
             if (isApoio && !liberadoApoio) { 
                 btnMonitor.classList.add('hidden');
             } else {
@@ -2086,8 +2095,7 @@ class SIGEPApp {
             UIService.renderAssistedLists(this); 
         }
     }
-}
-
+    
 window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
 
