@@ -2079,13 +2079,15 @@ class SIGEPApp {
 
         const btnMonitor = document.getElementById('btn-painel-geral-externo');
         if (btnMonitor) {
-            const liberadoApoio = this.currentPautaData?.liberarPainelGeralApoio === true;
-            if (isApoio && !liberarApoio) {
-                btnMonitor.classList.add('hidden');
-            } else {
-                btnMonitor.classList.remove('hidden');
+            const btnMonitor = document.getElementById('btn-painel-geral-externo');
+            if (btnMonitor) {
+                const liberadoApoio = this.currentPautaData?.liberarPainelGeralApoio === true;
+                if (isApoio && !liberadoApoio) {  //  Corrigido para "liberadoApoio"
+                    btnMonitor.classList.add('hidden');
+                } else {
+                    btnMonitor.classList.remove('hidden');
+                }
             }
-        }
         
         if (typeof UIService !== 'undefined' && typeof UIService.renderAssistedLists === 'function') {
             UIService.renderAssistedLists(this); 
