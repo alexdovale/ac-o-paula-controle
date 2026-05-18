@@ -1912,11 +1912,17 @@ class SIGEPApp {
         const verificarDisponibilidade = () => {
             if (!this.currentPautaData?.useDelegationFlow || !this.colaboradores || this.colaboradores.length === 0) return;
 
+            // Filtra quem bateu o ponto (Presente)
             const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
             
+            // Filtra quem está realmente LIVRE (sem nada na mesa e sem assinaturas pendentes)
             const colabsLivres = colabsAtivos.filter(c => {
-                const casosDesteColab = this.allAssisted.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome);
-                return casosDesteColab.length === 0;
+                const casosOcupando = this.allAssisted.filter(a => {
+                    const emAtendimentoNormal = a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome;
+                    const pendenteAssinatura = (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === c.nome;
+                    return emAtendimentoNormal || pendenteAssinatura;
+                });
+                return casosOcupando.length === 0;
             });
 
             const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end');
@@ -1929,7 +1935,8 @@ class SIGEPApp {
                     btnEnvelope = document.createElement('button');
                     btnEnvelope.id = 'btn-colabs-disponiveis';
                     btnEnvelope.onclick = () => {
-                        const nomes = colabsLivres.map(c => `• ${c.nome}`).join('\n');
+                        // Mostra o nome e o cargo pra ficar mais fácil de identificar se é Defensor ou Servidor
+                        const nomes = colabsLivres.map(c => `• ${c.nome} (${c.cargo || 'Membro'})`).join('\n');
                         alert(`Equipe livre no momento:\n\n${nomes}`);
                     };
                     headerActions.insertBefore(btnEnvelope, headerActions.firstChild);
