@@ -248,6 +248,24 @@
                                         Anotações
                                     </button>
                                     <div class="h-px bg-slate-100 my-1 mx-3"></div>
+                                    
+                                    <div class="px-4 py-2 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors cursor-pointer" onclick="document.getElementById('toggle-silent-mode').click()">
+                                        <div class="flex items-center gap-3 pointer-events-none">
+                                            <div class="w-7 h-7 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600 shadow-sm shrink-0">
+                                                🔕
+                                            </div>
+                                            <div>
+                                                <span class="text-sm font-bold text-gray-700 block">Modo Silencioso</span>
+                                                <span class="text-[9px] text-gray-500 block leading-tight mt-0.5">Bloquear e-mails</span>
+                                            </div>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer pointer-events-none">
+                                            <input type="checkbox" id="toggle-silent-mode" class="sr-only peer">
+                                            <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500 shadow-inner"></div>
+                                        </label>
+                                    </div>
+                                    <div class="h-px bg-slate-100 my-1 mx-3"></div>
+                                    
                                     <button id="close-pauta-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-amber-700 hover:bg-amber-50 flex items-center gap-3 transition-colors">
                                         <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-sm shadow-sm shrink-0">🔒</span>
                                         Fechar Pauta
@@ -285,12 +303,6 @@
                                     <label class="flex items-center text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-1 rounded">
                                         <input type="checkbox" id="toggle-faltosos" class="h-4 w-4 text-purple-600 rounded">
                                         <span class="ml-2">Faltosos</span>
-                                    </label>
-                                    
-                                    <hr class="my-2 border-slate-200">
-                                    <label class="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer p-2 hover:bg-rose-50 rounded-lg transition-colors group" title="Desativa o disparo de e-mails. Ideal para mutirões.">
-                                        <input type="checkbox" id="toggle-silent-mode" class="rounded text-rose-600 focus:ring-rose-500 w-4 h-4 cursor-pointer">
-                                        <span class="group-hover:text-rose-700 font-semibold text-xs">🔕 Modo Silencioso</span>
                                     </label>
                                 </div>
                             </div>
