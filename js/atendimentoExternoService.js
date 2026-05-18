@@ -109,7 +109,7 @@ export const AtendimentoExternoService = {
             this.demandasAdicionaisLocais = (assistido.demandas && assistido.demandas.descricoes) ? [...assistido.demandas.descricoes] : [];
 
             if (assistido.delegationToken && assistido.delegationToken !== tokenRecebido) {
-                this.showError("Acesso Secure Necessário", "O token de segurança é inválido ou expirou.");
+                this.showError("Acesso Seguro Necessário", "O token de segurança é inválido ou expirou.");
                 return;
             }
 
@@ -294,14 +294,14 @@ export const AtendimentoExternoService = {
         if (assistido.status === 'atendido') {
             const abaEncerramento = document.getElementById('aba-encerramento');
             if (abaEncerramento) {
-                // Se o caso já tem número CNJ, exibe um atalho direto de consulta na trava do Verde
-                const cnjRef = assistido.numeroProcesso ? `<p class="mt-3 font-mono font-bold text-xs bg-white text-slate-700 px-3 py-2 rounded border inline-block select-all">📄 CNJ: ${escapeHTML(item.numeroProcesso)}</p>` : '';
+                // Trava exibe o número CNP preenchido de forma manual
+                const cnpRef = assistido.numeroProcesso ? `<p class="mt-3 font-mono font-bold text-xs bg-white text-slate-700 px-3 py-2 rounded border inline-block select-all">🟢 Nº CNP: ${escapeHTML(assistido.numeroProcesso)}</p>` : '';
                 abaEncerramento.innerHTML = `
                     <div id="banner-atendido-trava" class="text-center p-8 bg-emerald-50 rounded-2xl border-2 border-emerald-200 shadow-sm animate-fade-in mt-2">
                         <div class="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center text-3xl text-white mx-auto shadow-sm mb-4">✓</div>
                         <h2 class="text-xl font-black text-emerald-800 uppercase tracking-wider">Protocolo Encerrado</h2>
                         <p class="text-emerald-600 mt-1 text-xs font-medium">Este atendimento já foi finalizado e distribuído. Nenhuma operação adicional é permitida.</p>
-                        ${cnjRef}
+                        ${cnpRef}
                     </div>
                 `;
             }
@@ -322,27 +322,26 @@ export const AtendimentoExternoService = {
 
         let optionsHtml = ``;
 
-        // ⭐ NOVO ATALHO EXECUTIVO: Painel de Conexão direta com o Verde / Solar para o Defensor ⭐
+        // ⭐ NOVO PAINEL MANUAL: O Defensor abre o link e vê o CNP que o Servidor preencheu manualmente no SIGEP ⭐
         if (isDefensor) {
-            // Se o processo já tiver número de distribuição prévio ou CNJ, gera o link amigável, caso contrário abre a busca geral
-            const urlVerdeSolar = assistido.numeroProcesso 
-                ? `https://verde.defensoria.rj.def.br/#/atendimento/pesquisa?termo=${encodeURIComponent(assistido.numeroProcesso)}`
-                : `https://verde.defensoria.rj.def.br/#/atendimento/pesquisa?termo=${encodeURIComponent(assistido.name)}`;
+            // Usa o link manual inserido pelo servidor no banco (ou o link padrão do Verde caso esteja em branco)
+            const linkManualVerde = assistido.linkVerdeManualmente || assistido.linkVerde || `https://verde.defensoria.rj.def.br/#/atendimento/pesquisa?termo=${encodeURIComponent(assistido.numeroProcesso || assistido.name)}`;
+            const cnpManual = assistido.numeroProcesso || null;
 
             optionsHtml += `
                 <div class="bg-slate-900 text-white p-5 rounded-xl border border-slate-700 shadow-xl mb-6 animate-fade-in flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <h4 class="text-[10px] font-black uppercase text-emerald-400 tracking-widest mb-1">Integração Exclusiva Verde / Solar</h4>
-                        <p class="text-xs font-bold text-slate-300">Acesse a mesa de distribuição oficial com um clique:</p>
-                        ${assistido.numeroProcesso ? `<span class="inline-block mt-2 font-mono font-bold text-[11px] bg-slate-800 border border-slate-700 text-slate-200 px-2.5 py-1 rounded">CNJ: ${escapeHTML(assistido.numeroProcesso)}</span>` : '<span class="inline-block mt-2 text-[10px] bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded border border-amber-500/30 uppercase tracking-wider">Aguardando numeração final</span>'}
+                    <div class="min-w-0 flex-1">
+                        <h4 class="text-[10px] font-black uppercase text-emerald-400 tracking-widest mb-1">Link de Acesso Manual - Verde</h4>
+                        <p class="text-xs font-bold text-slate-300 truncate">Clique ao lado para abrir o procedimento/caso não processual:</p>
+                        ${cnpManual ? `<span class="inline-block mt-2 font-mono font-bold text-[11px] bg-slate-800 border border-slate-700 text-slate-200 px-2.5 py-1 rounded">Nº CNP: ${escapeHTML(cnpManual)}</span>` : '<span class="inline-block mt-2 text-[10px] bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded border border-amber-500/30 uppercase tracking-wider">Procedimento sem CNP cadastrado</span>'}
                     </div>
                     <div class="flex gap-2 w-full sm:w-auto shrink-0">
-                        ${assistido.numeroProcesso ? `
-                        <button type="button" onclick="navigator.clipboard.writeText('${assistido.numeroProcesso}'); alert('Nº CNJ copiado para a área de transferência!');" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs uppercase tracking-wider transition border border-slate-700 active:scale-95">
-                            📋 Copiar CNJ
+                        ${cnpManual ? `
+                        <button type="button" onclick="navigator.clipboard.writeText('${cnpManual}'); alert('Nº CNP copiado com sucesso!');" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs uppercase tracking-wider transition border border-slate-700 active:scale-95">
+                            📋 Copiar CNP
                         </button>` : ''}
-                        <a href="${urlVerdeSolar}" target="_blank" class="text-center flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 px-5 rounded-lg text-xs uppercase tracking-widest transition shadow-md active:scale-95 flex items-center justify-center gap-1.5">
-                            <span>⚖️</span> Abrir no Verde
+                        <a href="${linkManualVerde}" target="_blank" class="text-center flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 px-5 rounded-lg text-xs uppercase tracking-widest transition shadow-md active:scale-95 flex items-center justify-center gap-1.5">
+                            <span>⚖️</span> Abrir Link do Verde
                         </a>
                     </div>
                 </div>
@@ -409,8 +408,8 @@ export const AtendimentoExternoService = {
             </div>
 
             <div id="config-numero-processo" class="bg-slate-50 p-5 rounded-xl border border-slate-200 mb-6 transition-all shadow-inner">
-                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1"><span>📄</span> Nº Processo / Protocolo CNJ (Opcional)</label>
-                <input type="text" id="input-numero-caso" value="${assistido.numeroProcesso || ''}" class="w-full p-3.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono placeholder:font-sans" placeholder="Ex: 0001234-56.2026.8.19.0021">
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1"><span>📄</span> Nº Processo / Protocolo CNP (Opcional)</label>
+                <input type="text" id="input-numero-caso" value="${assistido.numeroProcesso || ''}" class="w-full p-3.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono placeholder:font-sans" placeholder="Ex: 1045239">
             </div>
 
             <div id="config-distribuicao" class="hidden bg-cyan-50 p-5 rounded-xl border border-cyan-200 mb-6 shadow-inner">
@@ -459,8 +458,8 @@ export const AtendimentoExternoService = {
             'pausar': document.getElementById('config-numero-processo')
         };
 
-        const setAtivo = (btnClicado, fluxo) => {
-            this.fluxoSelecionado = fluxo;
+        const setAtivo = (btnClicado, fluxes) => {
+            this.fluxoSelecionado = fluxes;
             botoesFluxo.forEach(b => {
                 b.className = 'fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 group';
             });
@@ -472,12 +471,12 @@ export const AtendimentoExternoService = {
                 'transferir': 'bg-indigo-50 border-2 border-indigo-400 ring-2 ring-indigo-100',
                 'pausar': 'bg-slate-100 border-2 border-slate-400 ring-2 ring-slate-200'
             };
-            btnClicado.className = `fluxo-opt-btn ${coresAvas[fluxo]} p-4 rounded-xl text-left transition-all shadow-md group`;
+            btnClicado.className = `fluxo-opt-btn ${coresAvas[fluxes]} p-4 rounded-xl text-left transition-all shadow-md group`;
 
             Object.keys(configBoxes).forEach(key => {
                 if(configBoxes[key]) configBoxes[key].classList.add('hidden');
             });
-            if(configBoxes[fluxo]) configBoxes[fluxo].classList.remove('hidden');
+            if(configBoxes[fluxes]) configBoxes[fluxes].classList.remove('hidden');
         };
 
         document.getElementById('btn-opt-direto')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'direto'));
@@ -607,12 +606,12 @@ export const AtendimentoExternoService = {
                     history: arrayUnion({
                         action: numProcessoSeguro ? 'APROVADO_E_DISTRIBUIDO' : 'APROVADO_AGUARDANDO_NUMERO',
                         by: colabSeguro,
-                        msg: numProcessoSeguro ? `Nº Processo: ${numProcessoSeguro}` : 'Aprovado e protocolado pelo Defensor(a)',
+                        msg: numProcessoSeguro ? `Nº CNP: ${numProcessoSeguro}` : 'Aprovado e protocolado pelo Defensor(a)',
                         at: timestampIso
                     })
                 });
                 tituloSucesso = "Atendimento Finalizado!";
-                subtituloSucesso = numProcessoSeguro ? "Processo distribuído e salvo." : "Atendimento encerrado sem número de processo.";
+                subtituloSucesso = numProcessoSeguro ? "Processo distribuído e salvo no Verde." : "Atendimento encerrado sem número de processo.";
             } 
             else if (this.fluxoSelecionado === 'distribuicao') {
                 const def = document.getElementById('select-defensor-distribuicao')?.value || '';
@@ -927,7 +926,7 @@ export const AtendimentoExternoService = {
         }
     },
 
-    async renderizarDashboardUnificado() {
+    renderizarDashboardUnificado() {
         if (!this.unsubscribeDashboard) {
             this.setupRealtimeListenerDashboard();
         }
@@ -1081,7 +1080,7 @@ export const AtendimentoExternoService = {
 
         const desenharCard = (item, isCardAberto) => {
             const notas = item.notasRevisao ? `<div class="mt-3 bg-yellow-50 p-3 rounded-lg text-xs text-yellow-900 border border-yellow-300 font-semibold shadow-sm leading-snug">⚠️ <b>Nota Anexada:</b> ${escapeHTML(item.notasRevisao)}</div>` : '';
-            const numProcessoHtml = item.numeroProcesso ? `<span class="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 font-mono text-[10px] font-bold border border-slate-300 mt-2">Nº ${escapeHTML(item.numeroProcesso)}</span>` : '';
+            const numProcessoHtml = item.numeroProcesso ? `<span class="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 font-mono text-[10px] font-bold border border-slate-300 mt-2">Nº CNP: ${escapeHTML(item.numeroProcesso)}</span>` : '';
             const bannerTransf = item.historicoTransferencia ? `<div class="mt-3 bg-orange-50 p-2.5 rounded-lg text-[11px] text-orange-900 border border-orange-300 font-bold flex items-start gap-1 shadow-sm leading-snug"><span class="text-sm">🔄</span> <span>${escapeHTML(item.historicoTransferencia)}</span></div>` : '';
             
             let badgeTopo = '';
@@ -1126,10 +1125,11 @@ export const AtendimentoExternoService = {
                 `;
             } else {
                 const horaStr = item.attendedAt ? new Date(item.attendedAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '';
-                // Atalho clicável do Verde direto no card do Dashboard Principal do Defensor
+                // Atalho manual do Verde direto no card do Dashboard Principal do Defensor usando o link manual salvo
+                const linkManualCard = item.linkVerdeManualmente || item.linkVerde || `https://verde.defensoria.rj.def.br/#/atendimento/pesquisa?termo=${encodeURIComponent(item.numeroProcesso || item.name)}`;
                 const atalhoVerdeCard = isDefensor ? `
-                    <a href="https://verde.defensoria.rj.def.br/#/atendimento/pesquisa?termo=${encodeURIComponent(item.numeroProcesso || item.name)}" target="_blank" class="mt-2 inline-flex items-center gap-1 text-[10px] font-black text-emerald-600 hover:text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded shadow-sm uppercase tracking-wider transition active:scale-95">
-                        <span>⚖️</span> Ver no Verde
+                    <a href="${linkManualCard}" target="_blank" class="mt-2 inline-flex items-center gap-1 text-[10px] font-black text-emerald-600 hover:text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded shadow-sm uppercase tracking-wider transition active:scale-95">
+                        <span>⚖️</span> Abrir Link no Verde
                     </a>` : '';
 
                 return `
