@@ -50,7 +50,7 @@
                             <span class="animate-ping absolute h-full w-full rounded-full bg-green-400 opacity-75"></span>
                             <span class="relative rounded-full h-2 w-2 bg-green-500"></span>
                         </span>
-                        <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Painel Público de Acompanhamento • Atualização ao vivo</p>
+                        <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Painel Público de Acompanhamento • Atendimento ao vivo</p>
                     </div>
                 </div>
             </div>
@@ -135,14 +135,13 @@
             }).join(' '));
         }
 
-        // ⭐ NOVO: GERAÇÃO DO CARD INJETANDO HORÁRIO E NÚMERO DE AGENDAMENTO EXIGIDOS ⭐
         const createCardHTML = (a, i, color, type, data) => {
             const numAgendamento = a.numeroAgendamento || a.numAgendamento || '';
             const horaAgendada = a.scheduledTime || '';
             
-            // Constrói os metadados de identificação de agendamento solicitados
+            // ⭐ CORREÇÃO AQUI: Mudado "horaMarcada" para "horaAgendada" para evitar erro de referência
             let blocosAgendamento = '';
-            if (numAgendamento || horaMarcada) {
+            if (numAgendamento || horaAgendada) {
                 blocosAgendamento = `<div class="flex flex-wrap gap-1 mt-1.5">`;
                 if (numAgendamento) {
                     blocosAgendamento += `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-50 text-blue-600 border border-blue-100">📅 Nº Agend: ${escapeHTML(numAgendamento)}</span>`;
@@ -207,7 +206,6 @@
                         document.getElementById('count-distribuicao').textContent = dist.length;
                         document.getElementById('total-atendidos-count').textContent = done.length;
 
-                        // RENDERIZAÇÃO FILA MULTISALAS
                         const elAg = document.getElementById('list-aguardando');
                         if (ag.length === 0) {
                             elAg.innerHTML = '<div class="flex items-center justify-center py-20"><p class="text-gray-300 text-[10px] font-black uppercase tracking-widest">Fila Limpa</p></div>';
