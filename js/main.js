@@ -287,7 +287,7 @@ class SIGEPApp { // ⭐ Batizado oficialmente como SIGEP
                 }
 
                 document.getElementById('manage-rooms-modal')?.classList.add('hidden');
-                showNotification("Salas atualizadas com sucesso!", "success");
+                showNotification("Salas updated com sucesso!", "success");
                 
                 if (typeof UIService.renderAssistedLists === 'function') {
                     UIService.renderAssistedLists(this);
@@ -858,7 +858,7 @@ class SIGEPApp { // ⭐ Batizado oficialmente como SIGEP
             }
         });
 
-        // ⭐ CORREÇÃO E ATIVAÇÃO DOS BOTÕES DE PDF INTERNOS DO PAINEL PRINCIPAL ⭐
+        // Botões de PDF internos do painel principal
         document.getElementById('download-pdf-btn')?.addEventListener('click', () => {
             const atendidosArray = (this.allAssisted || []).filter(a => a.status === 'atendido');
             const nomePauta = this.currentPauta?.name || 'Pauta';
@@ -1018,48 +1018,13 @@ class SIGEPApp { // ⭐ Batizado oficialmente como SIGEP
             document.getElementById('assisted-details-modal').classList.add('hidden');
         });
         
+        // ⭐ CONSOLIDADO: O botão PDF do ver detalhes agora executa a rotina nativa e correta do detalhes.js ⭐
         document.getElementById('print-checklist-btn')?.addEventListener('click', async () => {
-            showNotification("Gerando PDF...", "info");
-            try {
-                const assistedName = document.getElementById('documents-assisted-name')?.textContent || 'Assistido';
-                const actionTitle = document.getElementById('checklist-title')?.textContent || '';
-
-                const documentosTextos = [];
-                document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
-                    let text = '';
-                    const label = cb.closest('label');
-                    if (label) {
-                        const span = label.querySelector('span:not(.sr-only)');
-                        if (span) text = span.textContent;
-                    }
-                    documentosTextos.push({ id: cb.id, text: (text || cb.id || 'Documento').trim() });
-                });
-
-                const docTypes = {};
-                document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
-                    const typeRadio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
-                    docTypes[cb.id] = typeRadio ? typeRadio.value : 'Fisico';
-                });
-
-                const reu = getReuDataFromForm();
-                const gastos = getExpenseDataFromForm();
-
-                const checklistData = {
-                    checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
-                    docTypes: docTypes,
-                    reuData: reu,
-                    expenseData: gastos
-                };
-
-                const resultado = PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
-                if (resultado) {
-                    showNotification("PDF gerado com sucesso!", "success");
-                } else {
-                    showNotification("Erro ao gerar PDF", "error");
-                }
-            } catch (err) {
-                console.error("Erro PDF:", err);
-                showNotification("Erro ao gerar PDF: " + err.message, "error");
+            const { handlePdf } = await import('./detalhes.js');
+            if (typeof handlePdf === 'function') {
+                await handlePdf();
+            } else {
+                showNotification("Erro: Motor de emissão do checklist não carregado.", "error");
             }
         });
         
@@ -1162,7 +1127,7 @@ class SIGEPApp { // ⭐ Batizado oficialmente como SIGEP
             );
             
             document.getElementById('edit-attendant-modal')?.classList.add('hidden');
-            showNotification("Atendente atualizado com sucesso!", "success");
+            showNotification("Atendente updated com sucesso!", "success");
         });
 
         document.getElementById('cancel-edit-attendant-btn')?.addEventListener('click', () => {
