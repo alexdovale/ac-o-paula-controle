@@ -1,5 +1,4 @@
-
-// js/colaboradores.js - EQUIPE E PRESENÇA (OTIMIZADO PARA MOBILE E IPHONE)
+// js/colaboradores.js - EQUIPE E PRESENÇA (OTIMIZADO E BLINDADO PARA SIGEP)
 
 import { 
     collection, 
@@ -34,11 +33,20 @@ const CollaboratorService = {
             if (snap.exists()) {
                 const dados = snap.data();
                 
-                document.getElementById('collaborator-name-modal').value = dados.nome || '';
-                document.getElementById('collaborator-role-modal').value = dados.cargo || 'Defensor(a)';
-                document.getElementById('collaborator-team-modal').value = dados.equipe || '1';
-                document.getElementById('collaborator-phone-modal').value = dados.telefone || '';
-                document.getElementById('collaborator-email-modal').value = dados.email || '';
+                const nomeEl = document.getElementById('collaborator-name-modal');
+                if (nomeEl) nomeEl.value = dados.nome || '';
+                
+                const roleEl = document.getElementById('collaborator-role-modal');
+                if (roleEl) roleEl.value = dados.cargo || 'Defensor(a)';
+                
+                const teamEl = document.getElementById('collaborator-team-modal');
+                if (teamEl) teamEl.value = dados.equipe || '1';
+                
+                const phoneEl = document.getElementById('collaborator-phone-modal');
+                if (phoneEl) phoneEl.value = dados.telefone || '';
+                
+                const emailEl = document.getElementById('collaborator-email-modal');
+                if (emailEl) emailEl.value = dados.email || '';
                 
                 const rTransp = document.querySelector(`input[name="transporte-colaborador"][value="${dados.transporte || 'Meios Próprios'}"]`);
                 if (rTransp) rTransp.checked = true;
@@ -101,11 +109,11 @@ const CollaboratorService = {
         if (btnSave) btnSave.disabled = true;
 
         const data = {
-            ataAcaoNome: document.getElementById('ata-acao-nome').value.trim(),
-            ataEndereco: document.getElementById('ata-endereco').value.trim(),
-            ataData: document.getElementById('ata-data').value,
-            ataTotalManual: document.getElementById('ata-total').value,
-            ataOrgao: document.getElementById('ata-orgao').value.trim(),
+            ataAcaoNome: document.getElementById('ata-acao-nome')?.value?.trim() || '',
+            ataEndereco: document.getElementById('ata-endereco')?.value?.trim() || '',
+            ataData: document.getElementById('ata-data')?.value || '',
+            ataTotalManual: document.getElementById('ata-total')?.value || '',
+            ataOrgao: document.getElementById('ata-orgao')?.value?.trim() || '',
             ataLastUpdate: new Date().toISOString()
         };
 
@@ -134,13 +142,20 @@ const CollaboratorService = {
             if (pautaDoc.exists()) {
                 const data = pautaDoc.data();
                 
-                if (data.ataAcaoNome) document.getElementById('ata-acao-nome').value = data.ataAcaoNome;
-                else document.getElementById('ata-acao-nome').value = app.currentPauta.name || '';
+                const acaoEl = document.getElementById('ata-acao-nome');
+                if (acaoEl) acaoEl.value = data.ataAcaoNome || app.currentPauta.name || '';
                 
-                if (data.ataEndereco) document.getElementById('ata-endereco').value = data.ataEndereco;
-                if (data.ataData) document.getElementById('ata-data').value = data.ataData;
-                if (data.ataTotalManual) document.getElementById('ata-total').value = data.ataTotalManual;
-                if (data.ataOrgao) document.getElementById('ata-orgao').value = data.ataOrgao;
+                const endEl = document.getElementById('ata-endereco');
+                if (endEl && data.ataEndereco) endEl.value = data.ataEndereco;
+                
+                const dataEl = document.getElementById('ata-data');
+                if (dataEl && data.ataData) dataEl.value = data.ataData;
+                
+                const totalEl = document.getElementById('ata-total');
+                if (totalEl && data.ataTotalManual) totalEl.value = data.ataTotalManual;
+                
+                const orgaoEl = document.getElementById('ata-orgao');
+                if (orgaoEl && data.ataOrgao) orgaoEl.value = data.ataOrgao;
             }
         } catch (error) {
             console.error("Erro ao carregar dados da ata:", error);
@@ -267,7 +282,6 @@ const CollaboratorService = {
         ordenados.forEach(colab => {
             if (colab.transporte === 'Meios Próprios') selfT++; else compT++;
             
-            // ⭐ SOLUÇÃO SAFARI/IOS ⭐ colspan="5" forçado para ocupar toda a largura.
             if (this.ordemAtual === 'grupo' && ultimoGrupo !== colab.equipe) {
                 ultimoGrupo = colab.equipe;
                 const trGrupo = document.createElement('tr');
@@ -325,9 +339,15 @@ const CollaboratorService = {
             document.head.appendChild(style);
         }
 
-        document.getElementById('total-participants-count').textContent = app.colaboradores.length;
-        document.getElementById('self-transport-count').textContent = selfT;
-        document.getElementById('company-transport-count').textContent = compT;
+        const totalParts = document.getElementById('total-participants-count');
+        if (totalParts) totalParts.textContent = app.colaboradores.length;
+        
+        const selfCount = document.getElementById('self-transport-count');
+        if (selfCount) selfCount.textContent = selfT;
+        
+        const compCount = document.getElementById('company-transport-count');
+        if (compCount) compCount.textContent = compT;
+        
         this.addEventListeners(app);
     },
 
@@ -351,22 +371,25 @@ const CollaboratorService = {
 
         const btnSaveAta = document.getElementById('save-ata-data-btn');
         if (btnSaveAta) {
-            btnSaveAta.onclick = null; 
-            btnSaveAta.onclick = (e) => {
+            // Remove o listener anterior de forma segura e adiciona o novo (Substituição de onclick para evitar stack leak)
+            btnSaveAta.removeEventListener('click', btnSaveAta.onclickBackup);
+            const handler = (e) => {
                 e.preventDefault();
                 this.saveAtaData(app);
             };
+            btnSaveAta.addEventListener('click', handler);
+            btnSaveAta.onclickBackup = handler;
         }
 
+        // ⭐ O GATILHO DA ATA OFICIAL É SEGURO ⭐
+        // O main.js dispara a abertura do modal. O JS dos colaboradores intercepta de forma não destrutiva para carregar os dados.
         const btnOpenAtaModal = document.getElementById('btn-gerar-ata-social');
         if (btnOpenAtaModal) {
-            const oldHandler = btnOpenAtaModal.onclick;
-            btnOpenAtaModal.onclick = (e) => {
+            btnOpenAtaModal.addEventListener('click', () => {
                 this.loadAtaData(app);
                 const modal = document.getElementById('ata-social-modal');
                 if (modal) modal.classList.remove('hidden');
-                if (oldHandler) oldHandler(e);
-            };
+            }, { once: false });
         }
 
         const btnBuscarMaster = document.getElementById('buscar-master-btn');
@@ -383,10 +406,18 @@ const CollaboratorService = {
         if (snap.exists()) {
             const c = snap.data();
             this.editId = id;
-            document.getElementById('collaborator-name-modal').value = c.nome || '';
-            document.getElementById('collaborator-role-modal').value = c.cargo || '';
-            document.getElementById('collaborator-identificador-modal').value = c.identificador || '';
-            document.getElementById('collaborator-team-modal').value = c.equipe || '';
+            
+            const n = document.getElementById('collaborator-name-modal');
+            if (n) n.value = c.nome || '';
+            
+            const r = document.getElementById('collaborator-role-modal');
+            if (r) r.value = c.cargo || '';
+            
+            const i = document.getElementById('collaborator-identificador-modal');
+            if (i) i.value = c.identificador || '';
+            
+            const t = document.getElementById('collaborator-team-modal');
+            if (t) t.value = c.equipe || '';
             
             const phoneInput = document.getElementById('collaborator-phone-modal');
             if (phoneInput) phoneInput.value = c.telefone || '';
@@ -401,7 +432,8 @@ const CollaboratorService = {
             }
             this.configurarLogicaCargo();
             
-            document.getElementById('collaborators-modal').querySelector('.scrollable-content').scrollTo({ top: 0, behavior: 'smooth' });
+            const scrollArea = document.getElementById('collaborators-modal')?.querySelector('.scrollable-content');
+            if (scrollArea) scrollArea.scrollTo({ top: 0, behavior: 'smooth' });
         }
     },
 
@@ -416,19 +448,21 @@ const CollaboratorService = {
         const filtrados = this.filtrarParaAta(app.colaboradores);
         if (filtrados.length === 0) return null;
 
-        let html = `<div style="font-family: sans-serif;"><h3>LISTA DE PRESENÇA - SIGAP</h3><table border="1" style="width:100%; border-collapse: collapse;">`;
+        let html = `<div style="font-family: sans-serif;"><h3>LISTA DE PRESENÇA - SIGEP</h3><table border="1" style="width:100%; border-collapse: collapse;">`;
         html += `<thead><tr><th>Nome</th><th>Cargo</th><th>Equipe</th><th>Horário</th></tr></thead><tbody>`;
         
         this.ordenarColaboradores(filtrados).forEach(c => {
             html += `<tr><td>${c.nome}</td><td>${c.cargo}</td><td>${c.equipe}</td><td>${c.horario}</td></tr>`;
         });
         
-        html += `</tbody></table><p style="font-size:10px; text-align:center;">Gerado automaticamente pelo SIGAP</p></div>`;
+        html += `</tbody></table><p style="font-size:10px; text-align:center;">Gerado automaticamente pelo SIGEP</p></div>`;
         return html;
     },
 
     resetForm() {
-        document.getElementById('collaborator-form-modal')?.reset();
+        const form = document.getElementById('collaborator-form-modal');
+        if (form) form.reset();
+        
         this.editId = null;
         const btnSubmit = document.getElementById('add-collaborator-btn-modal');
         if (btnSubmit) {
@@ -441,5 +475,3 @@ const CollaboratorService = {
 
 export default CollaboratorService;
 window.CollaboratorService = CollaboratorService;
-
-
