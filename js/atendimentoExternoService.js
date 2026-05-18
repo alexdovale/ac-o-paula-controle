@@ -25,7 +25,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Variável global para capturar o evento de instalação do celular (PWA)
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
@@ -43,12 +42,11 @@ export const AtendimentoExternoService = {
     isProcessing: false, 
     todosAtendimentosPauta: [], 
     demandasAdicionaisLocais: [], 
-    unsubscribeDashboard: null, // Motor de Tempo Real
+    unsubscribeDashboard: null,
 
     async init() {
         console.log("⚡ Atendimento Externo Inicializado (Real-time Mode - SIGEP)");
 
-        // BLINDAGEM MÁXIMA CONTRA PROVEDORES DE E-MAIL
         const searchLimpa = window.location.search.replace(/&amp;/g, '&');
         const urlParams = new URLSearchParams(searchLimpa);
         
@@ -75,7 +73,6 @@ export const AtendimentoExternoService = {
                 return;
             }
 
-            // ⭐ BARREIRA DE SEGURANÇA (LOGIN) ⭐
             if (telaAtual === 'dashboard') {
                 const sessionKey = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
                 if (!sessionStorage.getItem(sessionKey) && !localStorage.getItem(sessionKey)) {
@@ -140,7 +137,6 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ⭐ ESCUTA EM TEMPO REAL PARA ATUALIZAR CONTADORES SOZINHO ⭐
     setupRealtimeListenerDashboard() {
         if (this.unsubscribeDashboard) this.unsubscribeDashboard();
         
@@ -148,7 +144,6 @@ export const AtendimentoExternoService = {
         this.unsubscribeDashboard = onSnapshot(q, (snap) => {
             this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             
-            // Só atualiza a tela se o container do dashboard estiver visível
             if (document.getElementById('lista-dashboard-conteudo')) {
                 this.atualizarListasDoDashboard();
             }
@@ -723,38 +718,7 @@ export const AtendimentoExternoService = {
                 );
             }
 
-            const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
-            const textoBotaoVoltar = isDefensor ? '⚖️ Voltar ao Painel Judicial' : '📊 Voltar à Minha Mesa';
-
-            let areaColaborador = document.getElementById('area-colaborador');
-            if (!areaColaborador) {
-                areaColaborador = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl') || document.body;
-            }
-
-            areaColaborador.innerHTML = `
-                <div class="text-center p-8 sm:p-12 bg-emerald-50 rounded-2xl border-2 border-emerald-200 shadow-lg mt-6 animate-fade-in">
-                    <div class="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center text-4xl text-white mx-auto shadow-md mb-6">✓</div>
-                    <h2 class="text-2xl font-black text-emerald-800 uppercase tracking-widest">${tituloSucesso}</h2>
-                    <p class="text-emerald-600 mt-2 font-medium">${subtituloSucesso}</p>
-                    <div id="btn-voltar-container" class="mt-8"></div>
-                </div>
-            `;
-
-            const btnVoltar = document.createElement('button');
-            btnVoltar.className = "bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 px-8 rounded-xl shadow transition w-full sm:w-auto uppercase text-xs tracking-widest";
-            btnVoltar.innerText = textoBotaoVoltar;
-            btnVoltar.onclick = () => {
-                // Ao clicar em voltar, apenas muda a view, o onSnapshot cuida do resto
-                this.renderizarDashboardUnificado();
-            };
-            document.getElementById('btn-voltar-container').appendChild(btnVoltar);
-
-            const headerBg = document.getElementById('header-bg');
-            if (headerBg) {
-                headerBg.classList.replace('bg-slate-800', 'bg-emerald-600');
-                const circuloAzul = headerBg.querySelector('.bg-blue-500');
-                if (circuloAzul) circuloAzul.remove(); 
-            }
+            this.renderizarDashboardUnificado();
 
         } catch (error) {
             console.error("Erro no processamento:", error);
@@ -913,9 +877,7 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ⭐ DASHBOARD EXCLUSIVO DO COLABORADOR (COM REAL-TIME ON) ⭐
     async renderizarDashboardUnificado() {
-        // Inicializa o Listener do Dashboard para tempo real na primeira renderização
         if (!this.unsubscribeDashboard) {
             this.setupRealtimeListenerDashboard();
         }
@@ -1047,25 +1009,22 @@ export const AtendimentoExternoService = {
                 prefs.mode = m;
                 localStorage.setItem('dashboard_prefs', JSON.stringify(prefs));
                 menuSettings.classList.add('hidden');
-                
-                // Força a re-renderização das listas com o novo layout
                 this.atualizarListasDoDashboard(); 
             });
         });
 
-        // Se já temos dados cacheados do onSnapshot, podemos renderizar direto
         if (this.todosAtendimentosPauta && this.todosAtendimentosPauta.length > 0) {
             this.atualizarListasDoDashboard();
         }
     },
 
-    // ⭐ FUNÇÃO EXCLUSIVA PARA ATUALIZAR AS LISTAS E CONTADORES EM TEMPO REAL ⭐
+    // ⭐ ATUALIZADO: FILTROS INTELIGENTES PARA TRATAMENTO COMPLETO DE CASOS DO SERVIDOR E DEFENSOR ⭐
     atualizarListasDoDashboard() {
         const container = document.getElementById('lista-dashboard-conteudo');
         const tabsDiv = document.getElementById('tabs-dashboard');
         const wrapperBusca = document.getElementById('wrapper-busca-historico');
         
-        if (!container) return; // Só atualiza se a tela do dashboard estiver ativa
+        if (!container) return;
 
         const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
         const prefs = JSON.parse(localStorage.getItem('dashboard_prefs')) || { mode: 'tabs', color: 'slate' };
@@ -1148,6 +1107,7 @@ export const AtendimentoExternoService = {
         };
 
         if (isDefensor) {
+            // O Defensor analisa tudo que foi enviado para a mesa dele (atribuição direta ou revisão)
             const pendentes = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome);
             const distribuidos = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' && (a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
             const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
@@ -1156,12 +1116,9 @@ export const AtendimentoExternoService = {
                 container.innerHTML = 
                     desenharSecao('Para Assinar / Corrigir', '⚖️', pendentes, true) + 
                     desenharSecao('Distribuições (Minha Equipe)', '✅', distribuidos, false);
-                // No modo lista as abas ficam invisiveis
                 if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
             } else {
                 if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
-                
-                // Cria ou atualiza as abas preservando qual estava ativa
                 const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-pendentes';
                 
                 tabsDiv.innerHTML = `
@@ -1199,17 +1156,21 @@ export const AtendimentoExternoService = {
                     };
                 };
 
-                // Executa a renderização baseada na aba ativa
                 if (abaAtivaId === 'tab-assinados') renderDefensorList(distribuidos, false);
                 else if (abaAtivaId === 'tab-historico-busca') { wrapperBusca.classList.remove('hidden'); renderDefensorList(meuHistoricoCompleto, true); }
                 else renderDefensorList(pendentes, true);
             }
 
         } else {
-            // SERVIDORES
+            // ⭐ SERVIDORES: ENXERGAM RIGOROSAMENTE APENAS O QUE ELES TRATARAM/ESTÃO TRATANDO ⭐
             const emAndamento = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
+            
+            // "No Defensor": Casos que o Servidor preparou e encaminhou para distribuição/revisão, mas que ainda aguardam validação
             const enviados = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
+            
+            // "Concluídos": Casos finalizados diretamente por ele
             const finalizados = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' && a.attendedBy === this.colaboradorNome);
+            
             const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome || a.assignedCollaborator?.name === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
 
             if (prefs.mode === 'list') {
@@ -1250,8 +1211,7 @@ export const AtendimentoExternoService = {
                 document.getElementById('tab-enviados').onclick = () => { resetTabs(); const btn = document.getElementById('tab-enviados'); btn.classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100'); btn.querySelector('span').className = 'bg-white/20 text-white ml-1 px-1.5 py-0.5 rounded text-[9px]'; renderServidorList(enviados, true, "Nenhum documento seu no Defensor."); };
                 document.getElementById('tab-finalizados').onclick = () => { resetTabs(); const btn = document.getElementById('tab-finalizados'); btn.classList.add('bg-emerald-600', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100'); btn.querySelector('span').className = 'bg-white/20 text-white ml-1 px-1.5 py-0.5 rounded text-[9px]'; renderServidorList(finalizados, false, "Você ainda não finalizou nada hoje."); };
                 document.getElementById('tab-historico-busca').onclick = () => {
-                    resetTabs(); wrapperBusca.classList.remove('hidden');
-                    const btn = document.getElementById('tab-historico-busca'); btn.classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-indigo-500', 'hover:bg-indigo-50', 'text-slate-500', 'hover:text-slate-800');
+                    resetTabs(); wrapperBusca.classList.remove('hidden'); const btn = document.getElementById('tab-historico-busca'); btn.classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-indigo-500', 'hover:bg-indigo-50', 'text-slate-500', 'hover:text-slate-800');
                     renderServidorList(meuHistoricoCompleto, true, "Nenhum histórico encontrado.");
                     document.getElementById('input-busca-local').oninput = (e) => {
                         const termo = e.target.value.toLowerCase().trim();
@@ -1259,7 +1219,6 @@ export const AtendimentoExternoService = {
                     };
                 };
 
-                // Executa a renderização baseada na aba ativa
                 if (abaAtivaId === 'tab-enviados') renderServidorList(enviados, true, "Nenhum documento seu no Defensor.");
                 else if (abaAtivaId === 'tab-finalizados') renderServidorList(finalizados, false, "Você ainda não finalizou nada hoje.");
                 else if (abaAtivaId === 'tab-historico-busca') { wrapperBusca.classList.remove('hidden'); renderServidorList(meuHistoricoCompleto, true, "Nenhum histórico encontrado."); }
