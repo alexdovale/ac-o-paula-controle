@@ -203,9 +203,9 @@ export const AtendimentoExternoService = {
                 const lembrar = document.getElementById('lembrar-login-colab').checked;
                 
                 if (lembrar) {
-                    localStorage.setItem(sessionKey, 'true'); // Fica salvo mesmo fechando o navegador
+                    localStorage.setItem(sessionKey, 'true'); 
                 } else {
-                    sessionStorage.setItem(sessionKey, 'true'); // Limpa ao fechar a aba
+                    sessionStorage.setItem(sessionKey, 'true'); 
                 }
                 
                 this.renderizarDashboardUnificado();
@@ -288,7 +288,6 @@ export const AtendimentoExternoService = {
 
         let optionsHtml = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">`;
 
-        // Se for Defensor, o nome muda um pouco
         const textoConcluir = isDefensor ? "Concluir e Distribuir" : "Finalizar Protocolo";
 
         optionsHtml += `
@@ -299,7 +298,6 @@ export const AtendimentoExternoService = {
             </button>
         `;
 
-        // Botões EXCLUSIVOS para Servidores/Apoio
         if (showDistribuicao) {
             optionsHtml += `
                 <button id="btn-opt-dist" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 hover:border-cyan-300 group">
@@ -315,7 +313,6 @@ export const AtendimentoExternoService = {
             `;
         }
 
-        // Botão EXCLUSIVO para o Defensor(a)
         if (isDefensor) {
             optionsHtml += `
                 <button id="btn-opt-devolver" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 hover:border-orange-300 group">
