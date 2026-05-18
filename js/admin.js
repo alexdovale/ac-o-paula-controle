@@ -6,7 +6,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
-// Armazena instâncias dos gráficos se necessário (atualmente limpo de gráficos inúteis)
 let chartInstances = {};
 
 /**
@@ -121,7 +120,7 @@ export const updateUserRole = async (db, userId) => {
     try {
         const role = document.getElementById(`role-select-${userId}`)?.value || 'user';
         await updateDoc(doc(db, "users", userId), { role: role, status: role === 'suspended' ? 'suspended' : 'approved' });
-        showNotification(`Cargo updated!`); loadUsersList(db);
+        showNotification(`Cargo atualizado!`); loadUsersList(db);
     } catch (e) { showNotification("Erro ao atualizar.", "error"); }
 };
 
@@ -347,7 +346,7 @@ export const cleanupOldData = async (db) => {
                     atendidos: snapshot.docs.filter(d => d.data().status === 'atendido').length,
                     faltosos: snapshot.docs.filter(d => d.data().status === 'faltoso').length,
                     assuntos: {},
-                    trabalhosPorUsuario: {}, // ⭐ NOVO CONTEINER: Registra a produção por NOME LIMPO de forma isolada
+                    trabalhosPorUsuario: {}, 
                     tempoEsperaTotalMinutos: 0, countTempoEspera: 0
                 };
 
@@ -357,14 +356,12 @@ export const cleanupOldData = async (db) => {
                     stats.assuntos[sub] = (stats.assuntos[sub] || 0) + 1;
                     
                     if (data.status === 'atendido') {
-                        // ⭐ INTELIGÊNCIA COMPLETA: Mapeia o Servidor que produziu E o Defensor que revisou ao mesmo tempo
                         if (data.enviadoPor) {
                             stats.trabalhosPorUsuario[data.enviadoPor] = (stats.trabalhosPorUsuario[data.enviadoPor] || 0) + 1;
                         }
                         if (data.attendedBy) {
                             stats.trabalhosPorUsuario[data.attendedBy] = (stats.trabalhosPorUsuario[data.attendedBy] || 0) + 1;
                         }
-                        // Se for um atendimento direto sem trâmite, computa o criador primário
                         if (!data.enviadoPor && !data.attendedBy && data.attendant?.nome) {
                             stats.trabalhosPorUsuario[data.attendant.nome] = (stats.trabalhosPorUsuario[data.attendant.nome] || 0) + 1;
                         }
@@ -411,7 +408,6 @@ export const generateTestData = async (db) => {
                 const ass = assuntosPool[Math.floor(Math.random() * assuntosPool.length)];
                 localAssuntos[ass] = (localAssuntos[ass] || 0) + 1;
 
-                // Simula o trâmite: Servidor monta e Defensor caneta (+1 ponto para cada)
                 const serv = usuariosPool[j % 2 === 0 ? 0 : 2];
                 const def = usuariosPool[j % 2 === 0 ? 1 : 3];
                 
@@ -447,7 +443,7 @@ export const loadDashboardData = async (db) => {
     if (!resultsArea) return;
     
     resultsArea.classList.remove('hidden');
-    resultsArea.innerHTML = '<div class="text-center py-8"><div class="loader-small mx-auto"></div><p class="text-gray-600 mt-2">Processando Métricas de BI Avançadas...</p></div>';
+    resultsArea.innerHTML = '<div class="text-center py-8"><div class="loader-small mx-auto"></div><p class="text-gray-600 mt-2">Processando BI Avançado...</p></div>';
 
     try {
         const snapshot = await getDocs(collection(db, "estatisticas_permanentes"));
@@ -489,7 +485,6 @@ export const loadDashboardData = async (db) => {
             
             if (d.assuntos) for (let [k, v] of Object.entries(d.assuntos)) mapAssuntos[k] = (mapAssuntos[k] || 0) + v;
             
-            // ⭐ CONTA PRODUTIVIDADE REAL ACUMULADA POR NOME LIMPO NO GRÁFICO ⭐
             if (d.trabalhosPorUsuario) {
                 for (let [user, pontos] of Object.entries(d.trabalhosPorUsuario)) {
                     mapUsers[user] = (mapUsers[user] || 0) + pontos;
@@ -585,4 +580,9 @@ window.populateUserFilter = () => populateUserFilter(window.app?.db);
 window.generateTestData = () => generateTestData(window.app?.db);
 window.loadAuditLogs = () => loadAuditLogs(window.app?.db);
 window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
+
+// 🔥 SOLUÇÃO DA TRAVA DO SAFARI: Export default nulo para o "star export" do iOS não quebrar
+const AdminModule = { name: "SIGEP Admin Module" };
+export default AdminModule;
+
 console.log("✅ Módulo admin.js totalmente reestruturado com faturamento duplo ativo.");
