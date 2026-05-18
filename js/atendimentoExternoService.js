@@ -1,4 +1,4 @@
-// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (PREMIUM: LOGIN, CORES, LAYOUT E PWA)
+// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (PREMIUM: LOGIN SALVO, CORES, LAYOUT E PWA)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -74,11 +74,11 @@ export const AtendimentoExternoService = {
                 return;
             }
 
-            // ⭐ NOVO: BARREIRA DE SEGURANÇA (LOGIN) PARA O DASHBOARD (MESA SILENCIOSA) ⭐
+            // ⭐ BARREIRA DE SEGURANÇA (LOGIN) COM "LEMBRAR ACESSO" ⭐
             if (telaAtual === 'dashboard') {
                 const sessionKey = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
-                // Se a pessoa não tiver a chave de sessão aprovada no navegador, força o login
-                if (!sessionStorage.getItem(sessionKey)) {
+                // Verifica se tem sessão temporária (aba) ou persistente (Lembrar Login)
+                if (!sessionStorage.getItem(sessionKey) && !localStorage.getItem(sessionKey)) {
                     this.renderizarTelaLoginColaborador();
                     return;
                 }
@@ -140,7 +140,7 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ⭐ TELA DE LOGIN EXCLUSIVA PARA A MESA DO COLABORADOR ⭐
+    // ⭐ TELA DE LOGIN COM OPÇÃO DE MANTER CONECTADO ⭐
     renderizarTelaLoginColaborador() {
         let corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl');
         if (!corpo) corpo = document.body;
@@ -155,7 +155,7 @@ export const AtendimentoExternoService = {
                     </div>
                 </div>
                 <h2 class="text-2xl font-black text-center text-slate-800 mb-2 uppercase tracking-widest">Acesso Restrito</h2>
-                <p class="text-center text-sm text-slate-500 mb-8 leading-relaxed">Olá, <strong class="text-indigo-600">${escapeHTML(this.colaboradorNome)}</strong>! Confirme sua identidade para acessar sua mesa de trabalho do SIGEP.</p>
+                <p class="text-center text-sm text-slate-500 mb-6 leading-relaxed">Olá, <strong class="text-indigo-600">${escapeHTML(this.colaboradorNome)}</strong>! Confirme sua identidade para acessar sua mesa de trabalho do SIGEP.</p>
                 
                 <form id="form-login-colaborador" class="space-y-5">
                     <div id="login-error-msg" class="hidden bg-red-50 text-red-700 p-4 rounded-xl text-xs font-bold border border-red-200 text-center shadow-inner leading-relaxed"></div>
@@ -170,7 +170,12 @@ export const AtendimentoExternoService = {
                         <input type="password" id="login-colab-matricula" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition-all shadow-sm" required placeholder="Digite sua matrícula">
                     </div>
                     
-                    <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-lg hover:shadow-xl transition-all text-sm uppercase tracking-widest mt-6">
+                    <div class="flex items-center pt-2">
+                        <input type="checkbox" id="lembrar-login-colab" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer">
+                        <label for="lembrar-login-colab" class="ml-2 block text-xs text-gray-600 font-semibold cursor-pointer">Lembrar meu acesso neste dispositivo</label>
+                    </div>
+
+                    <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-lg hover:shadow-xl transition-all text-sm uppercase tracking-widest mt-2">
                         Acessar Minha Mesa
                     </button>
                 </form>
@@ -194,8 +199,15 @@ export const AtendimentoExternoService = {
             }
 
             if (inputEmail === realEmail && inputMatricula === realMatricula) {
-                // Login aprovado! Salva na sessão e carrega o painel
-                sessionStorage.setItem(`sigep_session_${this.pautaId}_${this.colaboradorNome}`, 'true');
+                const sessionKey = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
+                const lembrar = document.getElementById('lembrar-login-colab').checked;
+                
+                if (lembrar) {
+                    localStorage.setItem(sessionKey, 'true'); // Fica salvo mesmo fechando o navegador
+                } else {
+                    sessionStorage.setItem(sessionKey, 'true'); // Limpa ao fechar a aba
+                }
+                
                 this.renderizarDashboardUnificado();
             } else {
                 errorMsg.textContent = "E-mail ou Matrícula incorretos. Tente novamente.";
@@ -250,7 +262,7 @@ export const AtendimentoExternoService = {
 
         if (!document.getElementById('btn-atalho-painel')) {
             const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
-            const tituloBotao = isDefensor ? 'Ver Minhas Assinaturas Pendentes' : 'Ir para Meus Atendimentos';
+            const tituloBotao = isDefensor ? 'Ir para Minha Mesa de Distribuição' : 'Ir para Meus Atendimentos';
             const btnHtml = `
                 <button id="btn-atalho-painel" class="w-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 font-bold py-3.5 px-4 rounded-xl shadow-sm transition-all text-xs flex items-center justify-center gap-2 mb-6 uppercase tracking-wider">
                     <span>${isDefensor ? '⚖️' : '📊'}</span> ${tituloBotao}
@@ -258,7 +270,6 @@ export const AtendimentoExternoService = {
             `;
             areaColaborador.insertAdjacentHTML('afterbegin', btnHtml);
             document.getElementById('btn-atalho-painel').onclick = () => {
-                // Ao clicar para ir à mesa pelo card individual, gera a sessão automática para não pedir senha de novo
                 sessionStorage.setItem(`sigep_session_${this.pautaId}_${this.colaboradorNome}`, 'true');
                 this.renderizarDashboardUnificado();
             };
@@ -277,34 +288,39 @@ export const AtendimentoExternoService = {
 
         let optionsHtml = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">`;
 
+        // Se for Defensor, o nome muda um pouco
+        const textoConcluir = isDefensor ? "Concluir e Distribuir" : "Finalizar Protocolo";
+
         optionsHtml += `
             <button id="btn-opt-direto" class="fluxo-opt-btn bg-emerald-50 border-2 border-emerald-400 ring-2 ring-emerald-100 p-4 rounded-xl text-left transition-all hover:shadow-md group">
                 <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">✅</span>
-                <span class="block font-bold text-slate-800">Finalizar Protocolo</span>
-                <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Concluir atendimento definitivo</span>
+                <span class="block font-bold text-slate-800">${textoConcluir}</span>
+                <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Encerrar atendimento definitivo</span>
             </button>
         `;
 
+        // Botões EXCLUSIVOS para Servidores/Apoio
         if (showDistribuicao) {
             optionsHtml += `
                 <button id="btn-opt-dist" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 hover:border-cyan-300 group">
                     <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">⚖️</span>
-                    <span class="block font-bold text-slate-800">Distribuir (Assinatura)</span>
-                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Enviar para Defensor(a)</span>
+                    <span class="block font-bold text-slate-800">Enviar para Assinatura</span>
+                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Encaminhar para Defensor(a)</span>
                 </button>
                 <button id="btn-opt-correcao" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 hover:border-amber-300 group">
                     <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">📝</span>
                     <span class="block font-bold text-slate-800">Pedir Avaliação</span>
-                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Dúvidas ou revisão de petição</span>
+                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Dúvidas ou revisão da petição</span>
                 </button>
             `;
         }
 
+        // Botão EXCLUSIVO para o Defensor(a)
         if (isDefensor) {
             optionsHtml += `
                 <button id="btn-opt-devolver" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 hover:border-orange-300 group">
                     <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">🔙</span>
-                    <span class="block font-bold text-slate-800">Devolver (Com Erro)</span>
+                    <span class="block font-bold text-slate-800">Devolver p/ Correção</span>
                     <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Retornar à mesa do Servidor</span>
                 </button>
             `;
@@ -356,7 +372,7 @@ export const AtendimentoExternoService = {
                 <label class="block text-[10px] font-black text-orange-700 uppercase tracking-widest mb-2">Devolver para qual Servidor(a)?</label>
                 <select id="select-servidor-devolver" class="w-full p-3.5 border border-orange-300 rounded-lg text-sm bg-white mb-4 outline-none focus:ring-2 focus:ring-orange-500 font-semibold text-slate-700 cursor-pointer"></select>
                 <label class="block text-[10px] font-black text-orange-700 uppercase tracking-widest mb-2">Motivo / Correção Exigida</label>
-                <textarea id="notas-devolver-dinamico" rows="2" class="w-full p-3.5 border border-orange-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-orange-500 resize-none" placeholder="Ex: Faltou qualificar a testemunha. Corrigir."></textarea>
+                <textarea id="notas-devolver-dinamico" rows="2" class="w-full p-3.5 border border-orange-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-orange-500 resize-none" placeholder="Ex: Faltou qualificar a testemunha. Favor corrigir."></textarea>
             </div>
 
             <div id="config-transferencia" class="hidden bg-indigo-50 p-5 rounded-xl border border-indigo-200 mb-6 shadow-inner">
@@ -590,7 +606,7 @@ export const AtendimentoExternoService = {
                     history: arrayUnion({
                         action: 'ENVIADO_PARA_CORRECAO',
                         by: colabSeguro,
-                        msg: nota || `Avaliação de petição solicitada ao Defensor(a) ${def}`,
+                        msg: nota || `Avaliação solicitada ao Defensor(a) ${def}`,
                         at: timestampIso
                     })
                 });
@@ -615,7 +631,7 @@ export const AtendimentoExternoService = {
                     assignedCollaborator: { name: serv, email: colaboradorDestinoObj?.email || '' },
                     inAttendanceTime: timestampIso, 
                     delegationToken: novoToken,
-                    historicoTransferencia: `Devolvido (Correção) por ${colabSeguro}. Msg: ${nota}`,
+                    historicoTransferencia: `Devolvido p/ Correção por ${colabSeguro}. Msg: ${nota}`,
                     demandas: objetoDemandasFinal,
                     history: arrayUnion({
                         action: 'DEVOLVIDO_COM_ERRO',
@@ -882,6 +898,7 @@ export const AtendimentoExternoService = {
         }
     },
 
+    // ⭐ DASHBOARD EXCLUSIVO DO COLABORADOR COM ABAS INTELIGENTES ⭐
     async renderizarDashboardUnificado() {
         const corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl') || document.body;
         
@@ -891,8 +908,8 @@ export const AtendimentoExternoService = {
         window.history.pushState({}, '', url);
 
         const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
-        const tituloPainel = isDefensor ? 'Painel Judicial' : 'Mesa de Trabalho';
-        const subtituloPainel = `Colaborador(a): ${escapeHTML(this.colaboradorNome)} • ${escapeHTML(this.colaboradorAtual?.cargo || 'Membro')}`;
+        const tituloPainel = isDefensor ? 'Mesa do Defensor' : 'Mesa de Trabalho';
+        const subtituloPainel = `${escapeHTML(this.colaboradorNome)} • ${escapeHTML(this.colaboradorAtual?.cargo || 'Membro')}`;
 
         const prefs = JSON.parse(localStorage.getItem('dashboard_prefs')) || { mode: 'tabs', color: 'slate' };
         const colorMap = {
@@ -900,7 +917,7 @@ export const AtendimentoExternoService = {
         };
         const headerColorClass = colorMap[prefs.color] || colorMap['slate'];
 
-        corpo.className = "w-full max-w-4xl mx-auto my-4 transition-all"; 
+        corpo.className = "w-full max-w-4xl mx-auto my-4 transition-all animate-fade-in"; 
         
         corpo.innerHTML = `
             <div id="header-bg" class="${headerColorClass} p-6 sm:p-8 rounded-t-2xl shadow-xl flex items-center justify-between relative overflow-visible border-b border-white/10 transition-colors duration-500">
@@ -1101,25 +1118,29 @@ export const AtendimentoExternoService = {
                 return html;
             };
 
+            // LÓGICA DE ABAS COM NOMES AJUSTADOS (DEFENSOR VS SERVIDOR)
             if (isDefensor) {
                 const pendentes = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome);
-                const finalizados = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' && a.attendedBy === this.colaboradorNome);
+                
+                // Distribuições: mostra todos os processos "atendidos" onde ele foi o responsável pela assinatura OU ele mesmo que atendeu
+                const distribuidos = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' && (a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
+                
                 const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
 
                 if (prefs.mode === 'list') {
                     container.innerHTML = 
-                        desenharSecao('Aguardando Avaliação', '⚖️', pendentes, true) + 
-                        desenharSecao('Já Protocolados', '✅', finalizados, false);
+                        desenharSecao('Para Assinar / Corrigir', '⚖️', pendentes, true) + 
+                        desenharSecao('Distribuições (Minha Equipe)', '✅', distribuidos, false);
                 } else {
                     tabsDiv.innerHTML = `
-                        <button id="tab-pendentes" class="flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap">Aguardando Avaliação <span class="bg-white/20 text-white ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
-                        <button id="tab-assinados" class="flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap">Já Protocolados <span class="bg-slate-200 text-slate-700 ml-2 px-2 py-0.5 rounded text-[10px]">${finalizados.length}</span></button>
+                        <button id="tab-pendentes" class="flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap">Para Assinar / Corrigir <span class="bg-white/20 text-white ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
+                        <button id="tab-assinados" class="flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap">Distribuições (Equipe) <span class="bg-slate-200 text-slate-700 ml-2 px-2 py-0.5 rounded text-[10px]">${distribuidos.length}</span></button>
                         <button id="tab-historico-busca" class="flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-white text-indigo-500 hover:bg-indigo-50 rounded-lg transition whitespace-nowrap">🔍 Buscar Tudo</button>
                     `;
 
                     const renderDefensorList = (lista, isAberto) => {
                         if (lista.length === 0) {
-                            container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">🙌</span><p class="text-base font-black uppercase tracking-widest text-slate-500">NENHUM PROCESSO LOCALIZADO.</p></div>`;
+                            container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">🙌</span><p class="text-base font-black uppercase tracking-widest text-slate-500">MESA LIMPA.</p></div>`;
                             return;
                         }
                         container.innerHTML = lista.map(item => desenharCard(item, isAberto)).join('');
@@ -1133,7 +1154,7 @@ export const AtendimentoExternoService = {
                     };
 
                     document.getElementById('tab-pendentes').onclick = () => { limparEstilosAbas(); document.getElementById('tab-pendentes').className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap"; renderDefensorList(pendentes, true); };
-                    document.getElementById('tab-assinados').onclick = () => { limparEstilosAbas(); document.getElementById('tab-assinados').className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-emerald-600 text-white rounded-lg shadow transition whitespace-nowrap"; renderDefensorList(finalizados, false); };
+                    document.getElementById('tab-assinados').onclick = () => { limparEstilosAbas(); document.getElementById('tab-assinados').className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-emerald-600 text-white rounded-lg shadow transition whitespace-nowrap"; renderDefensorList(distribuidos, false); };
                     document.getElementById('tab-historico-busca').onclick = () => {
                         limparEstilosAbas(); wrapperBusca.classList.remove('hidden');
                         document.getElementById('tab-historico-busca').className = "flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest bg-indigo-600 text-white rounded-lg shadow transition whitespace-nowrap";
@@ -1147,6 +1168,7 @@ export const AtendimentoExternoService = {
                 }
 
             } else {
+                // SERVIDORES
                 const emAndamento = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
                 const enviados = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
                 const finalizados = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' && a.attendedBy === this.colaboradorNome);
@@ -1154,12 +1176,12 @@ export const AtendimentoExternoService = {
 
                 if (prefs.mode === 'list') {
                     container.innerHTML = 
-                        desenharSecao('Em Mesa (Meus Atendimentos)', '👩‍💻', emAndamento, true) + 
-                        desenharSecao('No Defensor (Pendentes)', '⏳', enviados, true) + 
+                        desenharSecao('Para Fazer / Corrigir', '👩‍💻', emAndamento, true) + 
+                        desenharSecao('No Defensor (Avaliando)', '⏳', enviados, true) + 
                         desenharSecao('Concluídos Hoje', '✅', finalizados, false);
                 } else {
                     tabsDiv.innerHTML = `
-                        <button id="tab-em-mesa" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap">Em Mesa <span class="bg-white/20 text-white ml-1 px-1.5 py-0.5 rounded text-[9px]">${emAndamento.length}</span></button>
+                        <button id="tab-em-mesa" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-slate-800 text-white rounded-lg shadow transition whitespace-nowrap">Fazer/Corrigir <span class="bg-white/20 text-white ml-1 px-1.5 py-0.5 rounded text-[9px]">${emAndamento.length}</span></button>
                         <button id="tab-enviados" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap">No Defensor <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${enviados.length}</span></button>
                         <button id="tab-finalizados" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition whitespace-nowrap">Concluídos <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${finalizados.length}</span></button>
                         <button id="tab-historico-busca" class="flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-white text-indigo-500 hover:bg-indigo-50 rounded-lg transition whitespace-nowrap">🔍 Buscar</button>
