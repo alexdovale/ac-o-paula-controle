@@ -546,15 +546,16 @@ export const AtendimentoExternoService = {
             const novoToken = this._gerarTokenSeguro();
             const timestampIso = new Date().toISOString();
 
-            // ⭐ CONTA PRODUTIVIDADE RECONHECENDO QUEM INSTRUIU PRIMEIRO ⭐
+            // ⭐ CORREÇÃO DA CONTAGEM DUPLA DE PRODUTIVIDADE NO COMPLEMENTO DIRETO ⭐
             if (this.fluxoSelecionado === 'direto') {
+                // 1. Puxa o servidor que instruiu o caso originalmente antes de atualizar
                 const enviadoPorServidor = this.assistidoData?.enviadoPor || null;
                 
                 await updateDoc(docRef, {
                     status: numProcessoSeguro ? 'atendido' : 'aguardandoNumero',
-                    attendedBy: colabSeguro,                     // Defensor que assinou/concluiu
-                    creatorEmail: enviadoPorServidor ? null : this.colaboradorAtual?.email, // Garante rastro estrito de mesa direta se for o caso
-                    enviadoPor: enviadoPorServidor,               // Mantém o Servidor que preparou a peça original para o BI
+                    attendedBy: colabSeguro,                      // Defensor que assinou/concluiu (ganha +1 no BI)
+                    enviadoPor: enviadoPorServidor,               // Mantém o Servidor original que trabalhou (ganha +1 no BI)
+                    creatorEmail: enviadoPorServidor ? null : this.colaboradorAtual?.email, // Rastro se for mesa 100% direta do Defensor
                     attendedAt: timestampIso,
                     finalizadoPeloColaborador: !!numProcessoSeguro,
                     numeroProcesso: numProcessoSeguro,
@@ -562,13 +563,13 @@ export const AtendimentoExternoService = {
                     history: arrayUnion({
                         action: numProcessoSeguro ? 'APROVADO_E_DISTRIBUIDO' : 'APROVADO_AGUARDANDO_NUMERO',
                         by: colabSeguro,
-                        msg: numProcessoSeguro ? `Nº Processo: ${numProcessoSeguro}` : 'Aprovado e protocolado internamente',
+                        msg: numProcessoSeguro ? `Nº Processo: ${numProcessoSeguro}` : 'Aprovado e protocolado pelo Defensor(a)',
                         at: timestampIso
                     })
                 });
                 tituloSucesso = "Atendimento Finalizado!";
                 subtituloSucesso = numProcessoSeguro ? "Processo distribuído e salvo." : "Atendimento encerrado sem número de processo.";
-            } 
+            }
             else if (this.fluxoSelecionado === 'distribuicao') {
                 const def = document.getElementById('select-defensor-distribuicao')?.value || '';
                 const nota = document.getElementById('notas-distribuicao-dinamico')?.value || '';
