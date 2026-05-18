@@ -350,31 +350,27 @@ export const PDFService = {
         }
     },
 
-    // ⭐ NOVO E COMPLETO: MOTOR DE MONTAGEM DO PDF DA TRIAGEM / DETALHES (CONECTADO COM demandasAdicionais) ⭐
+    // ⭐ CORRIGIDO: Correção do ReferenceError na montagem das cores da tabela unificada ⭐
     async generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos) {
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
-            // 1. TÍTULO PRINCIPAL DO SIGEP
             doc.setFont("helvetica", "bold");
             doc.setFontSize(14);
             doc.text("EXTRATO DE TRIAGEM E DOCUMENTAÇÃO", doc.internal.pageSize.getWidth() / 2, 45, { align: "center" });
 
-            // 2. QUADRO DE INFORMAÇÕES DO ASSISTIDO
             doc.setFontSize(10);
             doc.setFont("helvetica", "normal");
             doc.text(`Sistema: SIGEP  |  Emissão: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}`, 40, 70);
             doc.text(`Assistido(a): ${assistedName.toUpperCase()}`, 40, 85);
             doc.text(`Ação Selecionada: ${actionTitle.toUpperCase()}`, 40, 100);
 
-            // 3. CONSTRUÇÃO DA TABELA DO CHECKLIST
             const body = [];
             
-            // Filtra e empilha os documentos normais coletados do checklist
             documentosTextos.forEach((item, index) => {
-                if (item.id.startsWith('reu-') || item.id.startsWith('gasto-')) return; // Pula os metadados do réu/gastos pois eles ganham blocos dedicados abaixo
+                if (item.id.startsWith('reu-') || item.id.startsWith('gasto-')) return; 
                 
                 const tipoEntrega = checklistData.docTypes && checklistData.docTypes[item.id] ? checklistData.docTypes[item.id] : 'Físico';
                 body.push([
@@ -384,7 +380,6 @@ export const PDFService = {
                 ]);
             });
 
-            // Se o colaborador anexou múltiplos assuntos/demandas adicionais (via assuntos.js)
             if (checklistData.demandasAdicionais && checklistData.demandasAdicionais.length > 0) {
                 body.push([{ content: "⚖️ CASOS ACUMULADOS / DEMANDAS ADICIONAIS RESOLVIDAS", colSpan: 3, styles: { fontStyle: 'bold', fillColor: [243, 244, 246] } }]);
                 checklistData.demandasAdicionais.forEach((demanda, dIdx) => {
@@ -396,10 +391,10 @@ export const PDFService = {
                 });
             }
 
-            // Se o checkbox unificado de qualificação do réu estiver preenchido
             if (checklistData.reuData && checklistData.reuData.checkReuUnico) {
                 const r = checklistData.reuData;
-                body.push([{ content: "👤 QUALIFICAÇÃO DA PARTE CONTRÁRIA (RÉU)", colSpan: 3, styles: { fontStyle: 'bold', fillColor: [fee2e2 || 254, 226, 226], textColor: [185, 28, 28] } }]);
+                // Lógica de cores corrigida adicionando as aspas textuais para evitar o ReferenceError
+                body.push([{ content: "👤 QUALIFICAÇÃO DA PARTE CONTRÁRIA (RÉU)", colSpan: 3, styles: { fontStyle: 'bold', fillColor: [254, 226, 226], textColor: [185, 28, 28] } }]);
                 if (r.nome) body.push(["•", `Nome do Réu: ${r.nome}`, "CITAÇÃO"]);
                 if (r.cpf) body.push(["•", `CPF do Réu: ${r.cpf}`, "CITAÇÃO"]);
                 if (r.telefone) body.push(["•", `WhatsApp/Contato: ${r.telefone}`, "CITAÇÃO"]);
@@ -407,10 +402,9 @@ export const PDFService = {
                 if (r.empresa) body.push(["•", `Endereço Comercial/Trabalho: ${r.empresa} - ${r.rua_comercial}, nº ${r.numero_comercial} - ${r.bairro_comercial}`, "CITAÇÃO ALTERNATIVA"]);
             }
 
-            // Se houver planilha de despesas/gastos cadastrada
             if (checklistData.expenseData && checklistData.expenseData.checkExibirGastos) {
                 const g = checklistData.expenseData;
-                body.push([{ content: "💰 EXTRACTO DE GASTOS / NECESSIDADES MENSAIS", colSpan: 3, styles: { fontStyle: 'bold', fillColor: [220, 252, 231], textColor: [21, 128, 61] } }]);
+                body.push([{ content: "💰 EXTRATO DE GASTOS / NECESSIDADES MENSAIS", colSpan: 3, styles: { fontStyle: 'bold', fillColor: [220, 252, 231], textColor: [21, 128, 61] } }]);
                 
                 const categoriasNome = [
                     {id: 'moradia', label: 'Moradia/Habitação'}, {id: 'alimentacao', label: 'Alimentação'},
@@ -426,7 +420,6 @@ export const PDFService = {
                 });
             }
 
-            // Desenha a tabela com controle estrito de quebra automática de linha
             doc.autoTable({
                 startY: 120,
                 head: [['Nº', 'DOCUMENTO / ESPECIFICAÇÃO DE TRIAGEM', 'ESTADO DE ENTREGA']],
