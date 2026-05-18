@@ -21,6 +21,8 @@ const ensureJsPDF = async () => {
     }
 };
 
+const cleanString = (str) => String(str || '').replace(/"/g, '');
+
 const getSafeDate = (timeValue) => {
     if (!timeValue) return null;
     if (typeof timeValue === 'object' && timeValue.seconds) {
@@ -30,6 +32,7 @@ const getSafeDate = (timeValue) => {
     return isNaN(date.getTime()) ? null : date;
 };
 
+// Auxiliar para calcular a duração entre duas marcas de tempo em minutos textuais
 const getDuracaoMinutos = (dataInicialStr, dataFinalStr) => {
     if (!dataInicialStr || !dataFinalStr) return 'N/A';
     const inicio = new Date(dataInicialStr);
@@ -46,6 +49,7 @@ const getDuracaoMinutos = (dataInicialStr, dataFinalStr) => {
     return `${totalMinutos} min`;
 };
 
+// Auxiliar para calcular o atraso a partir de um horário HH:MM de agendamento e a data/hora da falta
 const getDiferencaAgendamento = (scheduledTime, lastActionTimestamp) => {
     if (!scheduledTime || !lastActionTimestamp) return 'N/A';
     const dataFalta = new Date(lastActionTimestamp);
@@ -161,7 +165,7 @@ export const PDFService = {
         }
     },
 
-    // 2. RELATÓRIO GLOBAL DE ATENDIDOS
+    // 2. RELATÓRIO GLOBAL DE ATENDIDOS (MÉTRICAS)
     async generateAtendidosPDF(atendidosList, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
@@ -232,7 +236,7 @@ export const PDFService = {
         }
     },
 
-    // 3. RELATÓRIO DE AUSÊNCIAS
+    // 3. RELATÓRIO DE AUSÊNCIAS (MÉTRICAS)
     async generateFaltososPDF(faltososList, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
@@ -292,7 +296,7 @@ export const PDFService = {
         }
     },
 
-    // 4. RELATÓRIO DE PRODUTIVIDADE DA EQUIPE
+    // 4. RELATÓRIO DE PRODUTIVIDADE DA EQUIPE (MÉTRICAS)
     async generateCollaboratorsPDF(colaboradoresList, todosAtendimentos, pautaNome = "Geral") {
         try {
             await ensureJsPDF();
@@ -350,123 +354,161 @@ export const PDFService = {
         }
     },
 
-    // ⭐ 5. EXTRATO INDIVIDUAL TEXTUAL (FORMATO DOCUMENTO - IGUAL AO ANEXO) ⭐
+    // ⭐ 5. EXTRATO INDIVIDUAL TEXTUAL (FORMATO IDÊNTICO À IMAGEM DE REFERÊNCIA) ⭐
     async generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos) {
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
             
-            // Criando PDF em formato retrato
+            // Criando PDF em formato retrato (A4)
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
-            let y = 50; // Cursor Vertical Y
+            let y = 60; // Cursor Vertical Y inicial
             const marginX = 50; // Margem Esquerda
             const maxWidth = doc.internal.pageSize.getWidth() - (marginX * 2);
             const pageHeight = doc.internal.pageSize.getHeight();
 
-            // Função auxiliar que gerencia a quebra de página automática
+            // Função auxiliar para quebra de página
             const checkPage = (heightToAdd = 20) => {
                 if (y + heightToAdd >= pageHeight - 50) {
                     doc.addPage();
-                    y = 50;
+                    y = 60; // Reseta o Y na nova página
                 }
             };
 
-            // Função auxiliar para injetar textos limpos com quebra de linha (Word Style)
-            const addText = (text, isBold = false, size = 11, indent = 0) => {
+            // Função auxiliar para injetar textos
+            const addText = (text, isBold = false, size = 10, indent = 0) => {
                 doc.setFont("helvetica", isBold ? "bold" : "normal");
                 doc.setFontSize(size);
                 
-                // Quebra o texto se ele ultrapassar a largura máxima da folha A4
                 const textLines = doc.splitTextToSize(text, maxWidth - indent);
-                
                 checkPage(textLines.length * (size * 1.2));
-                doc.text(textLines, marginX + indent, y);
                 
-                // Desce o cursor Y para a próxima linha
+                doc.text(textLines, marginX + indent, y);
                 y += (textLines.length * (size * 1.2)) + 5;
             };
 
-            const addSpacing = (space = 15) => { 
-                y += space; 
-                checkPage(0); 
-            };
-
             // --- CABEÇALHO ---
-            addText("CHECKLIST DE ATENDIMENTO - SIGEP", true, 14);
-            addSpacing(10);
-            
-            addText(`Assistido: ${assistedName.toUpperCase()}`, false, 11);
-            addText(`Ação: ${actionTitle.toUpperCase()}`, false, 11);
-            addText(`Emissão: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}`, false, 10);
-            
-            addSpacing(20);
+            // Título centralizado
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("Checklist de Atendimento - SIGEP", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
+            y += 40;
 
-            // --- 1. DOCUMENTOS APRESENTADOS ---
-            addText("DOCUMENTOS APRESENTADOS:", true, 11);
+            // Dados do assistido
+            addText(`Assistido: ${assistedName.toUpperCase()}`, false, 11);
+            addText(`Ação: ${actionTitle}`, false, 11);
+            y += 30; // Espaçamento antes da próxima seção
+
+            // --- 1. DOCUMENTAÇÃO ENTREGUE ---
+            addText("DOCUMENTAÇÃO ENTREGUE:", true, 11);
+            y += 10;
+            
             documentosTextos.forEach((item) => {
                 if (item.id.startsWith('reu-') || item.id.startsWith('gastos-') || item.id.startsWith('gasto-')) return;
-                
                 const tipoEntrega = checklistData.docTypes && checklistData.docTypes[item.id] ? checklistData.docTypes[item.id] : 'Físico';
-                addText(`[ X ] ${item.text} - (${tipoEntrega.toUpperCase()})`, false, 11, 10);
+                addText(`[X] ${item.text} - [${tipoEntrega.toUpperCase()}]`, false, 10, 20); // Recuo de 20pt
             });
-            addSpacing(10);
+            y += 20;
 
-            // --- 2. DEMANDAS ADICIONAIS ---
+            // --- 2. DEMANDAS ADICIONAIS (Se houver) ---
             if (checklistData.demandasAdicionais && checklistData.demandasAdicionais.length > 0) {
-                addText("DEMANDAS ADICIONAIS / CASOS ACUMULADOS:", true, 11);
+                addText("DEMANDAS ADICIONAIS:", true, 11);
+                y += 10;
                 checklistData.demandasAdicionais.forEach((demanda) => {
-                    addText(`• ${demanda}`, false, 11, 10);
+                    addText(`• ${demanda}`, false, 10, 20);
                 });
-                addSpacing(10);
+                y += 20;
             }
 
-            // --- 3. DADOS DA PARTE CONTRÁRIA (RÉU) ---
-            if (checklistData.reuData && checklistData.reuData.checkReuUnico) {
-                const r = checklistData.reuData;
-                addText("QUALIFICAÇÃO DA PARTE CONTRÁRIA (RÉU):", true, 11);
-                
-                if (r.nome) addText(`Nome: ${r.nome}`, false, 11, 10);
-                if (r.cpf) addText(`CPF: ${r.cpf}`, false, 11, 10);
-                if (r.telefone) addText(`Contato: ${r.telefone}`, false, 11, 10);
-                if (r.rua) addText(`Residência: ${r.rua}, nº ${r.numero} ${r.complemento ? '- '+r.complemento : ''} - ${r.bairro}, ${r.cidade}/${r.uf} (CEP: ${r.cep})`, false, 11, 10);
-                if (r.empresa) addText(`Trabalho: ${r.empresa} - ${r.rua_comercial}, nº ${r.numero_comercial} ${r.complemento_comercial ? '- '+r.complemento_comercial : ''} - ${r.bairro_comercial}, ${r.cidade_comercial}/${r.uf_comercial} (CEP: ${r.cep_comercial})`, false, 11, 10);
-                
-                addSpacing(10);
-            }
-
-            // --- 4. PLANILHA DE GASTOS MENSAL ---
+            // --- 3. PLANILHA DE GASTOS ---
             if (checklistData.expenseData && checklistData.expenseData.checkExibirGastos) {
                 const g = checklistData.expenseData;
-                addText("PLANILHA DE GASTOS / NECESSIDADES MENSAIS:", true, 11);
+                addText("PLANILHA DE GASTOS:", true, 11);
+                y += 10;
                 
                 const categoriasNome = [
-                    { id: 'moradia', label: 'Moradia (Aluguel, Luz, Água, Gás)' },
-                    { id: 'alimentacao', label: 'Alimentação / Supermercado' },
-                    { id: 'educacao', label: 'Educação / Escola / Cursos' },
-                    { id: 'saude', label: 'Saúde / Plano / Medicamentos' },
-                    { id: 'vestuario', label: 'Vestuário e Higiene Pessoal' },
-                    { id: 'lazer', label: 'Lazer e Transporte / Combustível' },
-                    { id: 'outras', label: 'Outras Despesas Declaradas' }
+                    { id: 'moradia', label: '1. MORADIA (Habitação)' },
+                    { id: 'alimentacao', label: '2. ALIMENTAÇÃO' },
+                    { id: 'educacao', label: '3. EDUCAÇÃO' },
+                    { id: 'saude', label: '4. SAÚDE' },
+                    { id: 'vestuario', label: '5. VESTUÁRIO E HIGIENE' },
+                    { id: 'lazer', label: '6. LAZER E TRANSPORTE' },
+                    { id: 'outras', label: '7. OUTRAS DESPESAS' }
                 ];
 
                 let totalGastos = 0;
                 categoriasNome.forEach(c => {
-                    if (g[c.id] && g[c.id] !== 'R$ 0,00') {
-                        addText(`• ${c.label}: ${g[c.id]}`, false, 11, 10);
-                        const num = parseFloat(String(g[c.id]).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
-                        totalGastos += num;
-                    }
+                    const valorStr = g[c.id] || 'R$ 0,00';
+                    addText(`${c.label}: ${valorStr}`, false, 10, 20); // Recuo de 20pt
+                    
+                    const num = parseFloat(String(valorStr).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+                    totalGastos += num;
                 });
 
                 if (totalGastos > 0) {
-                    addSpacing(5);
+                    y += 5; // Pequeno espaço antes do total
                     const totalFormatado = totalGastos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                    addText(`TOTAL MENSAL ESTIMADO: ${totalFormatado}`, true, 11, 10);
+                    addText(`${totalFormatado}`, true, 10, 20); // Negrito, recuado
+                }
+                y += 20;
+            }
+
+            // --- 4. DADOS DA PARTE CONTRÁRIA (RÉU) ---
+            if (checklistData.reuData && checklistData.reuData.checkReuUnico) {
+                const r = checklistData.reuData;
+                addText("DADOS DA PARTE CONTRÁRIA (RÉU):", true, 11);
+                y += 10;
+                
+                if (r.nome) addText(`Nome: ${r.nome.toUpperCase()}`, false, 10, 20);
+                
+                let contatoStr = '';
+                if (r.cpf) contatoStr += `CPF: ${r.cpf}`;
+                if (r.telefone) {
+                    if (contatoStr) contatoStr += ` | `;
+                    contatoStr += `WhatsApp: ${r.telefone}`;
+                }
+                if (contatoStr) addText(contatoStr, false, 10, 20);
+                
+                if (r.rua) {
+                    let endStr = `Endereço: ${r.rua}`;
+                    if(r.numero) endStr += `, ${r.numero}`;
+                    if(r.complemento) endStr += ` - ${r.complemento}`;
+                    if(r.bairro) endStr += ` - ${r.bairro}`;
+                    addText(endStr, false, 10, 20);
+                    
+                    let cidStr = '';
+                    if(r.cidade) cidStr += `Cidade: ${r.cidade}`;
+                    if(r.uf) cidStr += `/${r.uf}`;
+                    if(r.cep) {
+                        if (cidStr) cidStr += ` | `;
+                        cidStr += `CEP: ${r.cep}`;
+                    }
+                    if (cidStr) addText(cidStr, false, 10, 20);
+                }
+
+                if (r.empresa) {
+                    y += 5;
+                    addText(`Empresa (Trabalho): ${r.empresa.toUpperCase()}`, false, 10, 20);
+                    
+                    let endComStr = `End. Comercial: ${r.rua_comercial}`;
+                    if(r.numero_comercial) endComStr += `, ${r.numero_comercial}`;
+                    if(r.complemento_comercial) endComStr += ` - ${r.complemento_comercial}`;
+                    if(r.bairro_comercial) endComStr += ` - ${r.bairro_comercial}`;
+                    addText(endComStr, false, 10, 20);
+
+                    let cidComStr = '';
+                    if(r.cidade_comercial) cidComStr += `Cidade: ${r.cidade_comercial}`;
+                    if(r.uf_comercial) cidComStr += `/${r.uf_comercial}`;
+                    if(r.cep_comercial) {
+                        if (cidComStr) cidComStr += ` | `;
+                        cidComStr += `CEP: ${r.cep_comercial}`;
+                    }
+                    if (cidComStr) addText(cidComStr, false, 10, 20);
                 }
             }
 
-            // Efetua o download do arquivo em formato limpo/textual
+            // Efetua o download do arquivo
             doc.save(`Checklist_SIGEP_${assistedName.replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (err) {
@@ -475,6 +517,7 @@ export const PDFService = {
         }
     },
 
+    // 6. STUBS PARA EXPANSÕES FUTURAS
     async generateAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
         await ensureJsPDF();
         console.log("Função Ata Social");
