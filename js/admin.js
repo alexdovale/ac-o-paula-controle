@@ -1,4 +1,4 @@
-// js/admin.js - MÓDULO ADMINISTRATIVO, AUDITORIA E PRODUTIVIDADE DO BI (SIGEP)
+// js/admin.js - MÓDULO DE AUDITORIA, SEGURANÇA E GRÁFICOS DO BI (SIGEP)
 
 import { 
     collection, addDoc, getDocs, updateDoc, deleteDoc, doc, 
@@ -6,6 +6,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
+// Armazena instâncias dos gráficos para destruí-las antes de recriar
 let chartInstances = {};
 
 /**
@@ -282,16 +283,26 @@ export const loadAuditLogs = async (db) => {
 
     } catch (error) {
         console.error("❌ Erro detalhado ao carregar logs:", error);
-        tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500 text-xs font-bold border border-red-200 bg-red-50">❌ Erro ao carregar logs de auditoria</td></tr>`;
+        
+        let errorMessage = "Erro ao carregar registros.";
+        if (error.code === 'permission-denied') errorMessage = "Permissão negada. Você precisa ser admin.";
+        else if (error.message) errorMessage = error.message;
+        
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500 text-xs font-bold border border-red-200 bg-red-50">
+            ❌ ${errorMessage}
+        </td></tr>`;
     }
 };
 
 export const exportAuditLogsPDF = async (db) => {
     showNotification("Gerando PDF da Auditoria...", "info");
+    
     try {
         if (!window.jspdf || !window.jspdf.jsPDF) throw new Error("Biblioteca jsPDF não carregada");
+        
         const { jsPDF } = window.jspdf;
         const docPDF = new jsPDF({ orientation: 'landscape' });
+
         const logsRef = collection(db, "audit_logs");
         
         const userFilter = document.getElementById('filter-log-user')?.value;
@@ -301,24 +312,75 @@ export const exportAuditLogsPDF = async (db) => {
 
         const q = query(logsRef, orderBy("timestamp", "desc"), limit(1500));
         const snapshot = await getDocs(q);
-        let filteredLogs = [];
 
+        let filteredLogs = [];
         snapshot.forEach((docSnap) => {
             const log = docSnap.data();
+            if (!log.timestamp) return;
+
             if (userFilter && userFilter !== 'all' && log.userEmail !== userFilter) return;
             if (actionFilter && actionFilter !== 'all' && log.action !== actionFilter) return;
             if (startDate && log.timestamp < startDate) return;
             if (endDate && log.timestamp > endDate + "T23:59:59") return;
+
             filteredLogs.push(log);
         });
 
-        docPDF.setFontSize(18); docPDF.text("Relatorio de Auditoria e Seguranca", 14, 20);
-        docPDF.save("Auditoria_SIGEP.pdf");
-    } catch (e) { showNotification("Erro ao exportar PDF", "error"); }
+        if (filteredLogs.length === 0) {
+            showNotification("Nenhum log para exportar nestas datas.", "warning");
+            return;
+        }
+
+        docPDF.setFontSize(18); docPDF.setTextColor(126, 34, 206);
+        docPDF.text("Relatorio de Auditoria, Erros e Seguranca - SIGAP", 14, 20);
+        
+        docPDF.setFontSize(10); docPDF.setTextColor(100, 100, 100);
+        docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
+        docPDF.text(`Total de registros exportados: ${filteredLogs.length}`, 14, 34);
+        
+        let yOffset = 40;
+        if (userFilter && userFilter !== 'all') { docPDF.text(`Filtro Usuario: ${userFilter}`, 14, yOffset); yOffset += 6; }
+        if (actionFilter && actionFilter !== 'all') { docPDF.text(`Filtro Acao: ${actionFilter}`, 14, yOffset); yOffset += 6; }
+        if (startDate) { docPDF.text(`Periodo: ${startDate} ate ${endDate || 'hoje'}`, 14, yOffset); yOffset += 6; }
+
+        const head = [['Data/Hora', 'Usuario', 'Acao', 'Detalhes']];
+        const body = [];
+
+        filteredLogs.forEach(log => {
+            let dateStr = log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : 'Invalida';
+            body.push([
+                dateStr,
+                `${log.userName || log.userEmail || 'Desconhecido'}`,
+                log.action || '-',
+                log.details || '-'
+            ]);
+        });
+
+        docPDF.autoTable({
+            head: head,
+            body: body,
+            startY: yOffset + 5,
+            theme: 'striped',
+            headStyles: { fillColor: [126, 34, 206], fontSize: 8, halign: 'center' },
+            styles: { fontSize: 7, cellPadding: 2 },
+            columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 55 }, 2: { cellWidth: 45 }, 3: { cellWidth: 'auto' } }
+        });
+
+        docPDF.save(`Auditoria_SIGAP_${new Date().toISOString().slice(0,10)}.pdf`);
+        showNotification("PDF gerado com sucesso!");
+        
+    } catch (error) {
+        console.error("Erro ao gerar PDF:", error);
+        showNotification("Erro ao gerar PDF: " + error.message, "error");
+    }
 };
 
+// =========================================================================
+// MÓDULO DE LIMPEZA E BI (OBSERVATÓRIO)
+// =========================================================================
+
 export const cleanupOldData = async (db) => {
-    if (!confirm("Isso apagará dados com mais de 7 dias e gerará estatísticas permanentes de faturamento. Confirmar?")) return;
+    if (!confirm("Isso apagará dados com mais de 7 dias e gerará estatísticas. Confirmar?")) return;
 
     try {
         const limitDate = new Date();
@@ -336,13 +398,13 @@ export const cleanupOldData = async (db) => {
             if (!snapshot.empty) {
                 const stats = {
                     pautaName: pautaData.name || 'Sem nome',
+                    creatorEmail: pautaData.ownerEmail || 'Desconhecido',
                     dataReferencia: limitDate.toISOString(),
                     diaSemana: limitDate.getDay(),
                     total: snapshot.size,
                     atendidos: snapshot.docs.filter(d => d.data().status === 'atendido').length,
                     faltosos: snapshot.docs.filter(d => d.data().status === 'faltoso').length,
-                    assuntos: {},
-                    trabalhosPorUsuario: {}, 
+                    assuntos: {}, horarios: {}, prioridades: {}, salas: {},
                     tempoEsperaTotalMinutos: 0, countTempoEspera: 0
                 };
 
@@ -351,18 +413,14 @@ export const cleanupOldData = async (db) => {
                     const sub = data.subject || 'Não informado';
                     stats.assuntos[sub] = (stats.assuntos[sub] || 0) + 1;
                     
-                    if (data.status === 'atendido') {
-                        if (data.enviadoPor) {
-                            stats.trabalhosPorUsuario[data.enviadoPor] = (stats.trabalhosPorUsuario[data.enviadoPor] || 0) + 1;
-                        }
-                        if (data.attendedBy) {
-                            stats.trabalhosPorUsuario[data.attendedBy] = (stats.trabalhosPorUsuario[data.attendedBy] || 0) + 1;
-                        }
-                        if (!data.enviadoPor && !data.attendedBy && data.attendant?.nome) {
-                            stats.trabalhosPorUsuario[data.attendant.nome] = (stats.trabalhosPorUsuario[data.attendant.nome] || 0) + 1;
-                        }
+                    // ⭐ CORREÇÃO DE LOG DE VARIÁVEIS DO BANCO REAL ⭐
+                    if (data.scheduledTime) stats.horarios[data.scheduledTime] = (stats.horarios[data.scheduledTime] || 0) + 1;
+                    if (data.room) stats.salas[data.room] = (stats.salas[data.room] || 0) + 1;
+                    if (data.priorityReason || data.priority) {
+                        const prioLabel = data.priorityReason ? data.priorityReason.split(' | ')[0] : (data.priority || 'Comum');
+                        stats.prioridades[prioLabel] = (stats.prioridades[prioLabel] || 0) + 1;
                     }
-
+                    
                     if (data.arrivalTime && data.inAttendanceTime) {
                         const diffMins = Math.round((new Date(data.inAttendanceTime) - new Date(data.arrivalTime)) / 60000);
                         if (diffMins >= 0 && diffMins < 600) { 
@@ -381,59 +439,71 @@ export const cleanupOldData = async (db) => {
                 count += snapshot.size;
             }
         }
-        showNotification(`Sucesso! ${count} limpos e ${statsCount} estatísticas computadas.`);
+        showNotification(`Sucesso! ${count} limpos e ${statsCount} stats salvas.`);
         loadDashboardData(db);
-    } catch (error) { showNotification("Erro na consolidação: " + error.message, "error"); }
+    } catch (error) { showNotification("Erro: " + error.message, "error"); }
 };
 
 export const generateTestData = async (db) => {
-    if (!confirm("Gerar dados de teste realistas com contagem casada para testar o BI?")) return;
+    if (!confirm("Gerar dados de teste simulados para o BI sem misturar com dados de produção?")) return;
     try {
         const testData = [];
-        const assuntosPool = ["ALIMENTOS", "DIVÓRCIO LITIGIOSO", "CURATELA", "INVENTÁRIO"];
-        const usuariosPool = ["Alex do Vale", "Dr. Alexandre Defensor", "Mariana Servidora", "Dra. Sileide Defensora"];
+        const assuntosPool = ["ALIMENTOS PARA FILHOS", "DIVÓRCIO LITIGIOSO - SEM BENS", "DIVÓRCIO CONSENSUAL", "CURATELA", "URGÊNCIA MÉDICA"];
+        const salasPool = ["Vara de Família", "1ª Vara Cível", "Triagem Geral"];
+        const prioridadesPool = ["Idoso (60+)", "Idoso (80+)", "Deficiência (PCD)", "Comum"];
+        const horasPool = ["09:00", "09:30", "10:00", "10:30", "11:00", "13:00", "14:00"];
 
-        for(let i=0; i<5; i++) {
-            let totalCasos = Math.floor(Math.random() * 30) + 20;
+        for(let i=0; i<6; i++) {
+            let totalCasos = Math.floor(Math.random() * 40) + 30;
             let atendidos = Math.floor(totalCasos * 0.85);
             
             const localAssuntos = {};
-            const localUsuarios = {};
+            const localHorarios = {};
+            const localPrioridades = {};
+            const localSalas = {};
 
-            for(let j=0; j<atendidos; j++) {
+            // Distribui aleatoriamente para simular gráficos realistas
+            for(let j=0; j<totalCasos; j++) {
                 const ass = assuntosPool[Math.floor(Math.random() * assuntosPool.length)];
                 localAssuntos[ass] = (localAssuntos[ass] || 0) + 1;
 
-                const serv = usuariosPool[j % 2 === 0 ? 0 : 2];
-                const def = usuariosPool[j % 2 === 0 ? 1 : 3];
-                
-                localUsuarios[serv] = (localUsuarios[serv] || 0) + 1;
-                localUsuarios[def] = (localUsuarios[def] || 0) + 1;
+                const hr = horasPool[Math.floor(Math.random() * horasPool.length)];
+                localHorarios[hr] = (localHorarios[hr] || 0) + 1;
+
+                const pri = j % 4 === 0 ? prioridadesPool[Math.floor(Math.random() * (prioridadesPool.length - 1))] : "Comum";
+                localPrioridades[pri] = (localPrioridades[pri] || 0) + 1;
+
+                const sl = salasPool[Math.floor(Math.random() * salasPool.length)];
+                localSalas[sl] = (localSalas[sl] || 0) + 1;
             }
             
             testData.push({
-                pautaName: `Mutirão de Teste Executivo ${i+1}`,
-                dataReferencia: new Date(Date.now() - (i*4)*24*60*60*1000).toISOString(),
+                pautaName: `Pauta Simulada de Mutirão ${i+1}`,
+                creatorEmail: i % 2 === 0 ? "alex.silva@defensoria.rj.def.br" : "mariana.xavier@defensoria.rj.def.br",
+                dataReferencia: new Date(Date.now() - (i*3)*24*60*60*1000).toISOString(),
                 diaSemana: i + 1,
                 total: totalCasos,
                 atendidos: atendidos,
                 faltosos: totalCasos - atendidos,
-                tempoEsperaTotalMinutos: atendidos * 20,
+                tempoEsperaTotalMinutos: atendidos * (Math.floor(Math.random() * 25) + 15),
                 countTempoEspera: atendidos,
                 assuntos: localAssuntos,
-                trabalhosPorUsuario: localUsuarios
+                horarios: localHorarios,
+                salas: localSalas,
+                prioridades: localPrioridades
             });
         }
         
         for (const data of testData) { await addDoc(collection(db, "estatisticas_permanentes"), data); }
-        showNotification("✅ Dados de simulação injetados com sucesso!");
+        showNotification("✅ Dados simulados criados! Atualizando gráficos...");
         await loadDashboardData(db);
-    } catch (error) { showNotification("Erro ao simular dados", "error"); }
+    } catch (error) { showNotification("Erro ao gerar dados", "error"); }
 };
 
 export const loadDashboardData = async (db) => {
     const start = document.getElementById('stats-filter-start')?.value;
     const end = document.getElementById('stats-filter-end')?.value;
+    const userFilter = document.getElementById('stats-filter-user')?.value;
     const resultsArea = document.getElementById('dashboard-results');
 
     if (!resultsArea) return;
@@ -450,11 +520,11 @@ export const loadDashboardData = async (db) => {
                     <div class="text-5xl mb-4">📊</div>
                     <h3 class="text-xl font-bold text-gray-800 mb-2">Seu BI ainda está vazio!</h3>
                     <p class="text-gray-500 mb-6 text-sm max-w-lg mx-auto leading-relaxed">
-                        O Painel de Inteligência (BI) constrói relatórios usando o histórico consolidado de longo prazo.<br><br>
-                        Execute o botão <b>"Limpar Pautas Antigas"</b> para rodar os motores de faturamento de metas.
+                        O Painel de Inteligência (BI) constrói gráficos usando apenas o seu <b>histórico de longo prazo</b>.<br><br>
+                        Quando uma Pauta fica velha, você deve clicar no botão <b>"Limpar Pautas Antigas (7+ dias)"</b> lá em cima. Ao fazer isso, o sistema empacota os dados e joga aqui para o BI analisar o seu desempenho!
                     </p>
                     <button id="generate-test-data-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg text-sm font-bold shadow-md transition-all">
-                        Inserir Dados de Teste para o BI
+                        Inserir Dados Fictícios para Testar o BI
                     </button>
                 </div>`;
             document.getElementById('generate-test-data-btn')?.addEventListener('click', () => generateTestData(db));
@@ -465,6 +535,7 @@ export const loadDashboardData = async (db) => {
 
         if (start) filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia >= start);
         if (end) filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia <= end + "T23:59:59");
+        if (userFilter && userFilter !== 'all') filteredData = filteredData.filter(d => d.creatorEmail === userFilter);
 
         if (filteredData.length === 0) {
             resultsArea.innerHTML = '<div class="text-center py-8 text-gray-500 font-semibold bg-white rounded-lg border">Nenhum dado encontrado para os filtros selecionados.</div>';
@@ -472,7 +543,7 @@ export const loadDashboardData = async (db) => {
         }
 
         let totalGeral = 0; let totalAtendidos = 0; let totalFaltosos = 0;
-        let mapAssuntos = {}; let mapUsers = {};
+        let mapAssuntos = {}; let mapUsers = {}; let mapHorarios = {}; let mapPrioridades = {};
         let totalEsperaMins = 0; let countEspera = 0;
 
         filteredData.forEach(d => {
@@ -481,11 +552,12 @@ export const loadDashboardData = async (db) => {
             
             if (d.assuntos) for (let [k, v] of Object.entries(d.assuntos)) mapAssuntos[k] = (mapAssuntos[k] || 0) + v;
             
-            if (d.trabalhosPorUsuario) {
-                for (let [user, pontos] of Object.entries(d.trabalhosPorUsuario)) {
-                    mapUsers[user] = (mapUsers[user] || 0) + pontos;
-                }
-            }
+            // ⭐ CORREÇÃO CRUCIAL AQUI: Mudado "horaMarcada" para "horaAgendada" mapeado do banco permanente
+            if (d.horarios) for (let [k, v] of Object.entries(d.horarios)) mapHorarios[k] = (mapHorarios[k] || 0) + v;
+            if (d.prioridades) for (let [k, v] of Object.entries(d.prioridades)) mapPrioridades[k] = (mapPrioridades[k] || 0) + v;
+            
+            const userKey = d.creatorEmail || 'Desconhecido';
+            mapUsers[userKey] = (mapUsers[userKey] || 0) + (d.atendidos || 0);
         });
 
         const taxa = totalGeral > 0 ? ((totalFaltosos / totalGeral) * 100).toFixed(1) : 0;
@@ -499,9 +571,14 @@ export const loadDashboardData = async (db) => {
                 <div class="p-4 bg-purple-50 rounded-lg text-center border border-purple-100 shadow-sm"><p class="text-[9px] text-purple-600 font-bold uppercase">Espera Média</p><h4 class="text-xl sm:text-2xl font-black text-purple-800">${tempoMedio} <span class="text-xs font-normal">min</span></h4></div>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="border border-gray-200 rounded-xl p-4 bg-white shadow-sm"><h5 class="text-[10px] font-black mb-3 uppercase text-slate-400 tracking-widest border-b pb-2 flex items-center gap-1">📊 Top Assuntos</h5><div id="dash-subjects-list" class="space-y-2 text-xs"></div></div>
-                <div class="border border-gray-200 rounded-xl p-4 bg-white shadow-sm"><h5 class="text-[10px] font-black mb-3 uppercase text-slate-400 tracking-widest border-b pb-2 flex items-center gap-1">🧑‍💻 Produtividade por Usuário (Contagem Cruzada)</h5><div id="dash-users-list" class="space-y-2 text-xs"></div></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="border rounded-lg p-4 bg-white shadow-sm"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500">Picos de Horário</h5><div class="relative h-48 w-full"><canvas id="chart-horarios"></canvas></div></div>
+                <div class="border rounded-lg p-4 bg-white shadow-sm"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500">Perfil Legal (Prioridades)</h5><div class="relative h-48 w-full flex justify-center"><canvas id="chart-prioridades"></canvas></div></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                <div class="border rounded-lg p-4 bg-white shadow-sm"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500 border-b pb-2">Top Assuntos</h5><div id="dash-subjects-list" class="space-y-2 text-xs"></div></div>
+                <div class="border rounded-lg p-4 bg-white shadow-sm"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500 border-b pb-2">Produtividade por Usuário</h5><div id="dash-users-list" class="space-y-2 text-xs"></div></div>
             </div>
             
             <div class="flex justify-end gap-3 mt-6 border-t pt-4">
@@ -512,11 +589,11 @@ export const loadDashboardData = async (db) => {
 
         const renderRanking = (elementId, dataMap) => {
             const el = document.getElementById(elementId);
-            const sorted = Object.entries(dataMap).sort((a,b) => b[1] - a[1]).slice(0, 8);
-            if (sorted.length === 0) { el.innerHTML = '<p class="text-center text-gray-400 py-4 text-xs">Sem dados consolidados.</p>'; return; }
+            const sorted = Object.entries(dataMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            if (sorted.length === 0) { el.innerHTML = '<p class="text-center text-gray-400 py-4 text-xs">Sem dados.</p>'; return; }
             el.innerHTML = sorted.map(([name, count]) => `
-                <div class="flex justify-between items-center border-b border-dashed border-gray-200 pb-1.5 pt-1.5 hover:bg-gray-50">
-                    <span class="truncate pr-2 font-medium text-gray-700 uppercase text-[11px]">${escapeHTML(name)}</span>
+                <div class="flex justify-between items-center border-b border-dashed border-gray-200 pb-1 pt-1 hover:bg-gray-50">
+                    <span class="truncate pr-2 font-medium text-gray-700">${escapeHTML(name)}</span>
                     <span class="font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-md border border-green-200">${count}</span>
                 </div>
             `).join('');
@@ -524,13 +601,62 @@ export const loadDashboardData = async (db) => {
         renderRanking('dash-subjects-list', mapAssuntos);
         renderRanking('dash-users-list', mapUsers);
 
-        document.getElementById('export-bi-pdf-btn')?.addEventListener('click', () => exportBIDashboardPDF(totalGeral, totalAtendidos, taxa, tempoMedio, mapAssuntos));
-        document.getElementById('export-csv-btn')?.addEventListener('click', () => exportCSV(totalGeral, totalAtendidos, taxa, tempoMedio, mapAssuntos, {}));
+        if (window.Chart) {
+            ['chart-horarios', 'chart-prioridades'].forEach(id => { if (chartInstances[id]) chartInstances[id].destroy(); });
+            
+            const ctxHorarios = document.getElementById('chart-horarios').getContext('2d');
+            let horSorted = Object.entries(mapHorarios).sort((a,b) => a[0].localeCompare(b[0]));
+            if (horSorted.length === 0) horSorted = [["Não informado", 0]]; 
 
-        showNotification("Painel Executivo atualizado com sucesso!", "success");
+            chartInstances['chart-horarios'] = new Chart(ctxHorarios, {
+                type: 'line', 
+                data: { 
+                    labels: horSorted.map(i => i[0]), 
+                    datasets: [{ 
+                        label: 'Volume', 
+                        data: horSorted.map(i => i[1]), 
+                        borderColor: '#8b5cf6', 
+                        backgroundColor: 'rgba(139, 92, 246, 0.2)', 
+                        tension: 0.3, 
+                        fill: true 
+                    }] 
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            const ctxPrio = document.getElementById('chart-prioridades').getContext('2d');
+            const prioSorted = Object.entries(mapPrioridades);
+            
+            let prioLabels = prioSorted.map(i => i[0]);
+            let prioData = prioSorted.map(i => i[1]);
+            let prioColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#64748b'];
+
+            if (prioSorted.length === 0) {
+                prioLabels = ["Não informado"];
+                prioData = [1];
+                prioColors = ['#e2e8f0']; 
+            }
+
+            chartInstances['chart-prioridades'] = new Chart(ctxPrio, {
+                type: 'doughnut', 
+                data: { 
+                    labels: prioLabels, 
+                    datasets: [{ 
+                        data: prioData, 
+                        backgroundColor: prioColors 
+                    }] 
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels:{boxWidth:10, font:{size:10}} } } }
+            });
+        }
+
+        document.getElementById('export-bi-pdf-btn')?.addEventListener('click', () => exportBIDashboardPDF(totalGeral, totalAtendidos, taxa, tempoMedio, mapAssuntos));
+        document.getElementById('export-csv-btn')?.addEventListener('click', () => exportCSV(totalGeral, totalAtendidos, taxa, tempoMedio, mapAssuntos, mapHorarios));
+
+        showNotification("Painel Executivo atualizado!", "success");
 
     } catch (error) {
-        resultsArea.innerHTML = `<div class="text-center py-8 text-red-500 font-bold">Erro de Processamento: ${error.message}</div>`;
+        resultsArea.innerHTML = `<div class="text-center py-8 text-red-500 font-bold">Erro: ${error.message}</div>`;
     }
 };
 
@@ -538,6 +664,8 @@ const exportCSV = (totalGeral, totalAtendidos, taxa, tempoMedio, mapAssuntos, ma
     let csvContent = "data:text/csv;charset=utf-8,RELATORIO EXECUTIVO - SIGAP\n\nMETRICA;VALOR\n";
     csvContent += `Total Demandado;${totalGeral}\nTotal Atendido;${totalAtendidos}\nTaxa Absenteismo;${taxa}%\nTempo Medio Espera (min);${tempoMedio}\n\nASSUNTO;QUANTIDADE\n`;
     Object.entries(mapAssuntos).sort((a,b)=>b[1]-a[1]).forEach(([k,v]) => { csvContent += `${k};${v}\n`; });
+    csvContent += "\nHORARIO;VOLUME\n";
+    Object.entries(mapHorarios).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([k,v]) => { csvContent += `${k};${v}\n`; });
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -551,16 +679,25 @@ export const exportBIDashboardPDF = (totalGeral, totalAtendidos, taxaFalta, temp
         const docPDF = new window.jspdf.jsPDF();
         docPDF.setFontSize(18); docPDF.setTextColor(22, 163, 74); docPDF.text("Relatorio Executivo de BI - SIGAP", 14, 20);
         docPDF.setFontSize(10); docPDF.setTextColor(100, 100, 100); docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
-        docPDF.setFontSize(14); docPDF.text("Resumo Geral", 14, 45);
-        docPDF.setFontSize(11);
+        docPDF.setFontSize(14); docPDF.setTextColor(0, 0, 0); docPDF.text("Resumo Geral", 14, 45);
+        docPDF.setFontSize(11); docPDF.setTextColor(50, 50, 50);
         docPDF.text(`Total Demandado: ${totalGeral}`, 14, 55); docPDF.text(`Atendimentos Efetivos: ${totalAtendidos}`, 14, 62);
         docPDF.text(`Taxa de Faltas: ${taxaFalta}`, 14, 69); docPDF.text(`Tempo Medio de Espera: ${tempoMedio} min`, 14, 76);
+        docPDF.setFontSize(14); docPDF.setTextColor(0, 0, 0); docPDF.text("Principais Demandas", 14, 90);
+        let y = 100; docPDF.setFontSize(10); docPDF.setTextColor(80, 80, 80);
+        Object.entries(mapAssuntos).sort((a,b) => b[1] - a[1]).slice(0,10).forEach(([k,v]) => { docPDF.text(`${k}: ${v} atendimentos`, 14, y); y += 7; });
         docPDF.save(`Relatorio_BI_SIGAP_${new Date().toISOString().slice(0,10)}.pdf`);
     } catch(e) { showNotification("Erro ao gerar PDF", "error"); }
 };
 
 export const populateUserFilter = async (db) => {
-    // Mantido para compatibilidade estrutural
+    const select = document.getElementById('stats-filter-user');
+    if (!select) return;
+    try {
+        const snapshot = await getDocs(collection(db, "users"));
+        select.innerHTML = '<option value="all">Todos os Usuários</option>';
+        snapshot.forEach(d => { if (d.data().email) select.appendChild(new Option(d.data().name || d.data().email, d.data().email)); });
+    } catch (e) {}
 };
 
 // Listeners dinâmicos
@@ -569,15 +706,11 @@ document.getElementById('filter-log-action')?.addEventListener('change', () => l
 document.getElementById('filter-log-start')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
 document.getElementById('filter-log-end')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
 
-// Globais vinculadas ao escopo da Janela Principal do SIGEP
+// Globais
 window.cleanupOldData = () => cleanupOldData(window.app?.db);
 window.loadDashboardData = () => loadDashboardData(window.app?.db);
 window.populateUserFilter = () => populateUserFilter(window.app?.db);
 window.generateTestData = () => generateTestData(window.app?.db);
 window.loadAuditLogs = () => loadAuditLogs(window.app?.db);
 window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
-
-// 🔥 COMPATIBILIDADE DEFINITIVA PARA SAFARI iOS EM PRODUÇÃO: Export nomeado padrão limpo que sana o erro de árvore do WebKit
-export default { name: "SIGEP Admin Module Container" };
-
-console.log("✅ Módulo admin.js totalmente reestruturado com faturamento duplo ativo.");
+console.log("✅ Módulo admin.js carregado com sucesso (Auditoria e BI Corrigidos)");
