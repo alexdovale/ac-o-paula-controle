@@ -1,4 +1,4 @@
-// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (PREMIUM: CORES, LAYOUT E PWA)
+// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (PREMIUM: LOGIN, CORES, LAYOUT E PWA)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -54,7 +54,7 @@ export const AtendimentoExternoService = {
         this.pautaId = urlParams.get('pautaId') || urlParams.get('amp;pautaId');
         this.assistidoId = urlParams.get('assistidoId') || urlParams.get('amp;assistidoId'); 
         const tokenRecebido = urlParams.get('token') || urlParams.get('amp;token');
-        this.colaboradorNome = urlParams.get('colab') || urlParams.get('amp;colab') || "Colaborador";
+        this.colaboradorNome = urlParams.get('colab') || urlParams.get('amp;colab');
         const telaAtual = urlParams.get('view') || urlParams.get('amp;view'); 
 
         if (!this.pautaId || !this.colaboradorNome) {
@@ -69,8 +69,25 @@ export const AtendimentoExternoService = {
             
             await this.carregarColaboradoresGerais();
 
-            if (telaAtual === 'dashboard' || !this.assistidoId) {
+            if (!this.colaboradorAtual) {
+                this.showError("Acesso Negado", "Seu nome não foi encontrado na lista de colaboradores desta pauta.");
+                return;
+            }
+
+            // ⭐ NOVO: BARREIRA DE SEGURANÇA (LOGIN) PARA O DASHBOARD (MESA SILENCIOSA) ⭐
+            if (telaAtual === 'dashboard') {
+                const sessionKey = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
+                // Se a pessoa não tiver a chave de sessão aprovada no navegador, força o login
+                if (!sessionStorage.getItem(sessionKey)) {
+                    this.renderizarTelaLoginColaborador();
+                    return;
+                }
                 this.renderizarDashboardUnificado();
+                return;
+            }
+
+            if (!this.assistidoId) {
+                this.showError("Link Inválido", "Nenhum processo foi especificado.");
                 return;
             }
 
@@ -122,6 +139,70 @@ export const AtendimentoExternoService = {
             this.todosColaboradores = [];
         }
     },
+
+    // ⭐ TELA DE LOGIN EXCLUSIVA PARA A MESA DO COLABORADOR ⭐
+    renderizarTelaLoginColaborador() {
+        let corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl');
+        if (!corpo) corpo = document.body;
+        
+        corpo.className = "w-full max-w-md mx-auto my-10 px-4 animate-fade-in";
+        
+        corpo.innerHTML = `
+            <div class="bg-white p-8 rounded-3xl shadow-2xl border border-gray-100">
+                <div class="flex justify-center mb-6">
+                    <div class="bg-indigo-50 p-5 rounded-full border-4 border-indigo-100">
+                        <span class="text-5xl">🔒</span>
+                    </div>
+                </div>
+                <h2 class="text-2xl font-black text-center text-slate-800 mb-2 uppercase tracking-widest">Acesso Restrito</h2>
+                <p class="text-center text-sm text-slate-500 mb-8 leading-relaxed">Olá, <strong class="text-indigo-600">${escapeHTML(this.colaboradorNome)}</strong>! Confirme sua identidade para acessar sua mesa de trabalho do SIGEP.</p>
+                
+                <form id="form-login-colaborador" class="space-y-5">
+                    <div id="login-error-msg" class="hidden bg-red-50 text-red-700 p-4 rounded-xl text-xs font-bold border border-red-200 text-center shadow-inner leading-relaxed"></div>
+                    
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 pl-1">E-mail Institucional</label>
+                        <input type="email" id="login-colab-email" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition-all shadow-sm" required placeholder="Seu e-mail cadastrado">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 pl-1">Matrícula / ID (Senha)</label>
+                        <input type="password" id="login-colab-matricula" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition-all shadow-sm" required placeholder="Digite sua matrícula">
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-lg hover:shadow-xl transition-all text-sm uppercase tracking-widest mt-6">
+                        Acessar Minha Mesa
+                    </button>
+                </form>
+                <p class="text-center text-[10px] text-gray-400 mt-6 font-semibold">SIGEP - Sistema de Gerenciamento de Pauta</p>
+            </div>
+        `;
+
+        document.getElementById('form-login-colaborador').onsubmit = (e) => {
+            e.preventDefault();
+            const inputEmail = document.getElementById('login-colab-email').value.trim().toLowerCase();
+            const inputMatricula = document.getElementById('login-colab-matricula').value.trim();
+            const errorMsg = document.getElementById('login-error-msg');
+
+            const realEmail = (this.colaboradorAtual?.email || '').trim().toLowerCase();
+            const realMatricula = (this.colaboradorAtual?.identificador || '').trim();
+
+            if (!realEmail || !realMatricula) {
+                errorMsg.innerHTML = "Seu cadastro está incompleto!<br><br>Peça ao administrador da pauta para preencher seu E-mail e Matrícula no botão 'Colaboradores'.";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            if (inputEmail === realEmail && inputMatricula === realMatricula) {
+                // Login aprovado! Salva na sessão e carrega o painel
+                sessionStorage.setItem(`sigep_session_${this.pautaId}_${this.colaboradorNome}`, 'true');
+                this.renderizarDashboardUnificado();
+            } else {
+                errorMsg.textContent = "E-mail ou Matrícula incorretos. Tente novamente.";
+                errorMsg.classList.remove('hidden');
+            }
+        };
+    }
 
     renderizarInterface(assistido, pautaData) {
         const url = new URL(window.location.href);
@@ -176,7 +257,11 @@ export const AtendimentoExternoService = {
                 </button>
             `;
             areaColaborador.insertAdjacentHTML('afterbegin', btnHtml);
-            document.getElementById('btn-atalho-painel').onclick = () => this.renderizarDashboardUnificado();
+            document.getElementById('btn-atalho-painel').onclick = () => {
+                // Ao clicar para ir à mesa pelo card individual, gera a sessão automática para não pedir senha de novo
+                sessionStorage.setItem(`sigep_session_${this.pautaId}_${this.colaboradorNome}`, 'true');
+                this.renderizarDashboardUnificado();
+            };
         }
 
         this.renderizarHistorico(assistido);
@@ -797,29 +882,21 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ⭐ NOVO: DASHBOARD COM PWA, CORES E LAYOUT CUSTOMIZÁVEL ⭐
     async renderizarDashboardUnificado() {
-        const corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl');
-        if (!corpo) return;
-
+        const corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl') || document.body;
+        
         const url = new URL(window.location.href);
         url.searchParams.set('view', 'dashboard');
         url.searchParams.delete('assistidoId'); 
         window.history.pushState({}, '', url);
 
         const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
-        const tituloPainel = isDefensor ? 'Painel Judicial' : 'Minha Mesa de Trabalho';
-        const subtituloPainel = isDefensor ? 'Fluxo de Assinaturas e Petições' : 'Atendimentos Repassados a Você';
+        const tituloPainel = isDefensor ? 'Painel Judicial' : 'Mesa de Trabalho';
+        const subtituloPainel = `Colaborador(a): ${escapeHTML(this.colaboradorNome)} • ${escapeHTML(this.colaboradorAtual?.cargo || 'Membro')}`;
 
-        // Puxa as preferências salvas no navegador da pessoa
         const prefs = JSON.parse(localStorage.getItem('dashboard_prefs')) || { mode: 'tabs', color: 'slate' };
-        
         const colorMap = {
-            'slate': 'bg-slate-800',
-            'indigo': 'bg-indigo-700',
-            'emerald': 'bg-emerald-700',
-            'rose': 'bg-rose-700',
-            'blue': 'bg-blue-700'
+            'slate': 'bg-slate-800', 'indigo': 'bg-indigo-700', 'emerald': 'bg-emerald-700', 'rose': 'bg-rose-700', 'blue': 'bg-blue-700'
         };
         const headerColorClass = colorMap[prefs.color] || colorMap['slate'];
 
@@ -829,7 +906,7 @@ export const AtendimentoExternoService = {
             <div id="header-bg" class="${headerColorClass} p-6 sm:p-8 rounded-t-2xl shadow-xl flex items-center justify-between relative overflow-visible border-b border-white/10 transition-colors duration-500">
                 <div class="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl -mr-10 -mt-20 pointer-events-none"></div>
                 
-                <div class="flex items-center gap-4 relative z-10 w-full justify-between">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 relative z-10 w-full justify-between">
                     <div class="flex items-center gap-4">
                         <div class="bg-white/10 p-2.5 rounded-xl border border-white/20 shadow-inner flex-shrink-0">
                             <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" class="h-10 w-auto object-contain">
@@ -838,11 +915,11 @@ export const AtendimentoExternoService = {
                             <h1 class="text-white font-black text-xl sm:text-2xl uppercase tracking-widest flex items-center gap-2">
                                 ${tituloPainel}
                             </h1>
-                            <p class="text-white/70 text-xs sm:text-sm font-semibold mt-1 tracking-wide">${subtituloPainel}</p>
+                            <p class="text-white/80 text-xs sm:text-sm font-bold mt-1 tracking-wide">${subtituloPainel}</p>
                         </div>
                     </div>
                     
-                    <div class="flex gap-2 relative">
+                    <div class="flex gap-2 relative mt-4 sm:mt-0 w-full sm:w-auto justify-end">
                         <button id="btn-install-pwa" class="hidden bg-white/20 hover:bg-white/30 text-white p-2 sm:px-4 sm:py-2 rounded-lg transition font-bold text-xs shadow-sm flex items-center gap-2" title="Instalar no Celular/PC">
                             <span>📱</span><span class="hidden sm:inline">Instalar App</span>
                         </button>
@@ -885,7 +962,6 @@ export const AtendimentoExternoService = {
             </div>
         `;
 
-        // Lógica de Instalação (PWA)
         if (deferredPrompt) {
             const installBtn = document.getElementById('btn-install-pwa');
             installBtn.classList.remove('hidden');
@@ -900,7 +976,6 @@ export const AtendimentoExternoService = {
             });
         }
 
-        // Lógica do Menu de Configurações
         const btnSettings = document.getElementById('btn-dash-settings');
         const menuSettings = document.getElementById('dash-settings-menu');
         
@@ -914,7 +989,6 @@ export const AtendimentoExternoService = {
             }
         });
 
-        // Troca de Cores
         document.querySelectorAll('.color-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const c = e.target.dataset.color;
@@ -930,15 +1004,12 @@ export const AtendimentoExternoService = {
             });
         });
 
-        // Troca de Layout
         document.querySelectorAll('.mode-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const m = e.target.dataset.mode;
                 prefs.mode = m;
                 localStorage.setItem('dashboard_prefs', JSON.stringify(prefs));
                 menuSettings.classList.add('hidden');
-                
-                // Recarrega a tela para aplicar o novo modo limpo
                 this.renderizarDashboardUnificado(); 
             });
         });
