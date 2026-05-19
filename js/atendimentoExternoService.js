@@ -57,7 +57,7 @@ export const AtendimentoExternoService = {
         const telaAtual = urlParams.get('view') || urlParams.get('amp;view'); 
 
         if (!this.pautaId || !this.colaboradorNome) {
-            this.showError("Link Incompleto", "Faltam parâmetros de Pauta ou Colaborador na URL.");
+            this.showError("Link InCompleto", "Faltam parâmetros de Pauta ou Colaborador na URL.");
             return;
         }
 
@@ -289,7 +289,7 @@ export const AtendimentoExternoService = {
             };
         }
 
-        this.renderizarHistorico(assistido);
+        this.renderHistorico(assistido);
 
         if (assistido.status === 'atendido') {
             const abaEncerramento = document.getElementById('aba-encerramento');
@@ -308,7 +308,7 @@ export const AtendimentoExternoService = {
                 headerBg.className = 'bg-emerald-600 p-5 sm:p-6 rounded-t-2xl shadow-lg flex items-center gap-4 relative overflow-hidden transition-colors duration-500';
             }
         } else {
-            this.renderizarAbaEncerramentoDinamica(assistido, pautaSnap.data());
+            this.renderizarAbaEncerramentoDinamica(assistido, pautaData);
         }
     },
 
@@ -557,7 +557,6 @@ export const AtendimentoExternoService = {
         return Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
     },
 
-    // ⭐ REESTRUTURADO: Agora monitora useDistributionFlow para desviar cards sem distribuição para Atendidos direto ⭐
     async finalizarProcesso() {
         if (!this.fluxoSelecionado || this.isProcessing) return;
 
@@ -689,7 +688,7 @@ export const AtendimentoExternoService = {
                     })
                 });
                 tituloSucesso = "Enviado p/ Avaliação!";
-                subtituloSucesso = `O Defensor(a) ${def} avaliará a dúvida inserida.`;
+                subtituloSucesso = `O Defensor(a) ${def avaliará a dúvida inserida.}`;
             }
             else if (this.fluxoSelecionado === 'devolver') {
                 const serv = document.getElementById('select-servidor-devolver')?.value || '';
@@ -797,7 +796,7 @@ export const AtendimentoExternoService = {
         }
     },
 
-    renderizarHistorico(assistido) {
+    renderHistorico(assistido) {
         const lista = document.getElementById('lista-historico');
         if (!lista) return;
 
@@ -1181,10 +1180,6 @@ export const AtendimentoExternoService = {
             }
         };
 
-        const desvincularEstilosSecao = (titulo, emoji, lista, isAberto) => {
-            return { html: lista.map(item => desenharCard(item, isAberto)).join('') };
-        };
-
         if (isDefensor) {
             const pendentes = this.todosAtendimentosPauta.filter(a => 
                 ((a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome) ||
@@ -1193,18 +1188,12 @@ export const AtendimentoExternoService = {
             const distribuidos = this.todosAtendimentosPauta.filter(a => (a.status === 'atendido' || a.status === 'aguardandoNumero') && (a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
             const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
 
-            if (prefs.mode === 'list') {
-                container.innerHTML = 
-                    desvincularEstilosSecao('Para Fazer / Assinar / Corrigir', '⚖️', pendentes, true).html + 
-                    desvincularEstilosSecao('Distribuições (Minha Equipe)', '✅', distribuidos, false).html;
-                if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
-            } else {
-                if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
+            container.innerHTML = pendentes.map(item => desenharCard(item, true)).join('');
+            if (tabsDiv) {
                 const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-pendentes';
-                
                 tabsDiv.innerHTML = `
-                    <button id="tab-pendentes" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-pendentes' ? 'bg-slate-800 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Fazer / Assinar / Corrigir <span class="${abaAtivaId === 'tab-pendentes' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
-                    <button id="tab-assinados" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-assinados' ? 'bg-emerald-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Distribuições (Equipe) <span class="${abaAtivaId === 'tab-assinados' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-2 px-2 py-0.5 rounded text-[10px]">${distribuidos.length}</span></button>
+                    <button id="tab-pendentes" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-pendentes' ? 'bg-slate-800 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Fazer / Assinar / Corrigir <span class="bg-slate-200 text-slate-700 ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
+                    <button id="tab-assinados" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-assinados' ? 'bg-emerald-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Distribuições (Equipe) <span class="bg-slate-200 text-slate-700 ml-2 px-2 py-0.5 rounded text-[10px]">${distribuidos.length}</span></button>
                     <button id="tab-historico-busca" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-historico-busca' ? 'bg-indigo-600 text-white shadow mode-btn-active' : 'bg-white text-indigo-500 hover:bg-indigo-50'}">🔍 Buscar Tudo</button>
                 `;
 
@@ -1222,14 +1211,12 @@ export const AtendimentoExternoService = {
                         btn.className = btn.className.replace(/bg-slate-800|bg-emerald-600|bg-indigo-600|text-white|shadow|mode-btn-active/g, '').trim();
                         btn.classList.add('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100', 'tab-btn');
                     });
-                    document.getElementById('tab-historico-busca').classList.replace('text-slate-500', 'text-indigo-500');
                 };
 
-                document.getElementById('tab-pendentes').onclick = () => { limparEstilosAbas(); const btn = document.getElementById('tab-pendentes'); btn.classList.add('bg-slate-800', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100'); btn.querySelector('span').className = 'bg-white/20 text-white ml-2 px-2 py-0.5 rounded text-[10px]'; renderDefensorList(pendentes, true); };
-                document.getElementById('tab-assinados').onclick = () => { limparEstilosAbas(); const btn = document.getElementById('tab-assinados'); btn.classList.add('bg-emerald-600', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100'); btn.querySelector('span').className = 'bg-white/20 text-white ml-2 px-2 py-0.5 rounded text-[10px]'; renderDefensorList(distribuidos, false); };
+                document.getElementById('tab-pendentes').onclick = () => { limparEstilosAbas(); document.getElementById('tab-pendentes').classList.add('bg-slate-800', 'text-white', 'shadow', 'mode-btn-active'); renderDefensorList(pendentes, true); };
+                document.getElementById('tab-assinados').onclick = () => { limparEstilosAbas(); document.getElementById('tab-assinados').classList.add('bg-emerald-600', 'text-white', 'shadow', 'mode-btn-active'); renderDefensorList(distribuidos, false); };
                 document.getElementById('tab-historico-busca').onclick = () => {
-                    limparEstilosAbas(); wrapperBusca.classList.remove('hidden');
-                    const btn = document.getElementById('tab-historico-busca'); btn.classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-indigo-500', 'hover:bg-indigo-50', 'text-slate-500', 'hover:text-slate-800');
+                    limparEstilosAbas(); wrapperBusca.classList.remove('hidden'); document.getElementById('tab-historico-busca').classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active');
                     renderDefensorList(meuHistoricoCompleto, true);
                     document.getElementById('input-busca-local').oninput = (e) => {
                         const termo = e.target.value.toLowerCase().trim();
@@ -1254,19 +1241,16 @@ export const AtendimentoExternoService = {
             const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome || a.assignedCollaborator?.name === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
 
             if (prefs.mode === 'list') {
-                container.innerHTML = 
-                    desvincularEstilosSecao('Para Fazer / Corrigir', '👩‍💻', emAndamento, true).html + 
-                    desvincularEstilosSecao('No Defensor (Avaliando)', '⏳', enviados, true).html + 
-                    desvincularEstilosSecao('Concluídos Hoje (Minha Produção)', '✅', finalizados, false).html;
+                container.innerHTML = emAndamento.map(item => desenharCard(item, true)).join('') + enviados.map(item => desenharCard(item, true)).join('') + finalizados.map(item => desenharCard(item, false)).join('');
                 if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
             } else {
                 if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
                 const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-em-mesa';
 
                 tabsDiv.innerHTML = `
-                    <button id="tab-em-mesa" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-em-mesa' ? 'bg-slate-800 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Fazer/Corrigir <span class="${abaAtivaId === 'tab-em-mesa' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-1 px-1.5 py-0.5 rounded text-[9px]">${emAndamento.length}</span></button>
-                    <button id="tab-enviados" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-enviados' ? 'bg-indigo-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">No Defensor <span class="${abaAtivaId === 'tab-enviados' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-1 px-1.5 py-0.5 rounded text-[9px]">${enviados.length}</span></button>
-                    <button id="tab-finalizados" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-finalizados' ? 'bg-emerald-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Concluídos <span class="${abaAtivaId === 'tab-finalizados' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'} ml-1 px-1.5 py-0.5 rounded text-[9px]">${finalizados.length}</span></button>
+                    <button id="tab-em-mesa" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-em-mesa' ? 'bg-slate-800 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Fazer/Corrigir <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${emAndamento.length}</span></button>
+                    <button id="tab-enviados" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-enviados' ? 'bg-indigo-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">No Defensor <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${enviados.length}</span></button>
+                    <button id="tab-finalizados" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-finalizados' ? 'bg-emerald-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Concluídos <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${finalizados.length}</span></button>
                     <button id="tab-historico-busca" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-historico-busca' ? 'bg-indigo-600 text-white shadow mode-btn-active' : 'bg-white text-indigo-500 hover:bg-indigo-50'}">🔍 Buscar</button>
                 `;
 
@@ -1284,14 +1268,13 @@ export const AtendimentoExternoService = {
                         btn.className = btn.className.replace(/bg-slate-800|bg-emerald-600|bg-indigo-600|text-white|shadow|mode-btn-active/g, '').trim();
                         btn.classList.add('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100', 'tab-btn');
                     });
-                    document.getElementById('tab-historico-busca').classList.replace('text-slate-500', 'text-indigo-500');
                 };
 
-                document.getElementById('tab-em-mesa').onclick = () => { resetTabs(); const btn = document.getElementById('tab-em-mesa'); btn.classList.add('bg-slate-800', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100'); btn.querySelector('span').className = 'bg-white/20 text-white ml-1 px-1.5 py-0.5 rounded text-[9px]'; renderServidorList(emAndamento, true, "Sua mesa está limpa."); };
-                document.getElementById('tab-enviados').onclick = () => { resetTabs(); const btn = document.getElementById('tab-enviados'); btn.classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100'); btn.querySelector('span').className = 'bg-white/20 text-white ml-1 px-1.5 py-0.5 rounded text-[9px]'; renderServidorList(enviados, true, "Nenhum documento seu no Defensor."); };
-                document.getElementById('tab-finalizados').onclick = () => { resetTabs(); const btn = document.getElementById('tab-finalizados'); btn.classList.add('bg-emerald-600', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100'); btn.querySelector('span').className = 'bg-white/20 text-white ml-1 px-1.5 py-0.5 rounded text-[9px]'; renderServidorList(finalizados, false, "Você ainda não finalizou nada hoje."); };
+                document.getElementById('tab-em-mesa').onclick = () => { resetTabs(); document.getElementById('tab-em-mesa').classList.add('bg-slate-800', 'text-white', 'shadow', 'mode-btn-active'); renderServidorList(emAndamento, true, "Sua mesa está limpa."); };
+                document.getElementById('tab-enviados').onclick = () => { resetTabs(); document.getElementById('tab-enviados').classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active'); renderServidorList(enviados, true, "Nenhum documento seu no Defensor."); };
+                document.getElementById('tab-finalizados').onclick = () => { resetTabs(); document.getElementById('tab-finalizados').classList.add('bg-emerald-600', 'text-white', 'shadow', 'mode-btn-active'); renderServidorList(finalizados, false, "Você ainda não finalizou nada hoje."); };
                 document.getElementById('tab-historico-busca').onclick = () => {
-                    resetTabs(); wrapperBusca.classList.remove('hidden'); const btn = document.getElementById('tab-historico-busca'); btn.classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active'); btn.classList.remove('bg-white', 'text-indigo-500', 'hover:bg-indigo-50', 'text-slate-500', 'hover:text-slate-800');
+                    resetTabs(); wrapperBusca.classList.remove('hidden'); document.getElementById('tab-historico-busca').classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active');
                     renderServidorList(meuHistoricoCompleto, true, "Nenhum histórico encontrado.");
                     document.getElementById('input-busca-local').oninput = (e) => {
                         const termo = e.target.value.toLowerCase().trim();
