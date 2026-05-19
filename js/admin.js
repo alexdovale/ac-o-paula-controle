@@ -1,13 +1,10 @@
-// js/admin.js - MÓDULO DE AUDITORIA, SEGURANÇA E GRÁFICOS DO BI (SIGEP)
+// js/admin.js - MÓDULO DE AUDITORIA, SEGURANÇA E REGISTROS DO BI (SIGEP)
 
 import { 
     collection, addDoc, getDocs, updateDoc, deleteDoc, doc, 
     query, orderBy, limit, where, writeBatch, Timestamp 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
-
-// Armazena instâncias dos gráficos para destruí-las antes de recriar
-let chartInstances = {};
 
 /**
  * Grava uma ação no log de auditoria
@@ -246,7 +243,7 @@ export const loadAuditLogs = async (db) => {
             } catch (e) {}
             
             const row = document.createElement('tr');
-            row.className = "border-b hover:bg-gray-50 transition-colors";
+            card.className = "border-b hover:bg-gray-50 transition-colors";
             
             let actionColor = 'bg-purple-100 text-purple-700 border border-purple-200';
             const action = (log.action || '').toLowerCase();
@@ -283,26 +280,17 @@ export const loadAuditLogs = async (db) => {
 
     } catch (error) {
         console.error("❌ Erro detalhado ao carregar logs:", error);
-        
         let errorMessage = "Erro ao carregar registros.";
         if (error.code === 'permission-denied') errorMessage = "Permissão negada. Você precisa ser admin.";
-        else if (error.message) errorMessage = error.message;
-        
-        tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500 text-xs font-bold border border-red-200 bg-red-50">
-            ❌ ${errorMessage}
-        </td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500 text-xs font-bold border border-red-200 bg-red-50">❌ ${errorMessage}</td></tr>`;
     }
 };
 
 export const exportAuditLogsPDF = async (db) => {
     showNotification("Gerando PDF da Auditoria...", "info");
-    
     try {
-        if (!window.jspdf || !window.jspdf.jsPDF) throw new Error("Biblioteca jsPDF não carregada");
-        
         const { jsPDF } = window.jspdf;
         const docPDF = new jsPDF({ orientation: 'landscape' });
-
         const logsRef = collection(db, "audit_logs");
         
         const userFilter = document.getElementById('filter-log-user')?.value;
@@ -317,12 +305,10 @@ export const exportAuditLogsPDF = async (db) => {
         snapshot.forEach((docSnap) => {
             const log = docSnap.data();
             if (!log.timestamp) return;
-
             if (userFilter && userFilter !== 'all' && log.userEmail !== userFilter) return;
             if (actionFilter && actionFilter !== 'all' && log.action !== actionFilter) return;
             if (startDate && log.timestamp < startDate) return;
             if (endDate && log.timestamp > endDate + "T23:59:59") return;
-
             filteredLogs.push(log);
         });
 
@@ -339,28 +325,16 @@ export const exportAuditLogsPDF = async (db) => {
         docPDF.text(`Total de registros exportados: ${filteredLogs.length}`, 14, 34);
         
         let yOffset = 40;
-        if (userFilter && userFilter !== 'all') { docPDF.text(`Filtro Usuario: ${userFilter}`, 14, yOffset); yOffset += 6; }
-        if (actionFilter && actionFilter !== 'all') { docPDF.text(`Filtro Acao: ${actionFilter}`, 14, yOffset); yOffset += 6; }
-        if (startDate) { docPDF.text(`Periodo: ${startDate} ate ${endDate || 'hoje'}`, 14, yOffset); yOffset += 6; }
-
         const head = [['Data/Hora', 'Usuario', 'Acao', 'Detalhes']];
         const body = [];
 
         filteredLogs.forEach(log => {
             let dateStr = log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : 'Invalida';
-            body.push([
-                dateStr,
-                `${log.userName || log.userEmail || 'Desconhecido'}`,
-                log.action || '-',
-                log.details || '-'
-            ]);
+            body.push([dateStr, `${log.userName || log.userEmail || 'Desconhecido'}`, log.action || '-', log.details || '-']);
         });
 
         docPDF.autoTable({
-            head: head,
-            body: body,
-            startY: yOffset + 5,
-            theme: 'striped',
+            head: head, body: body, startY: yOffset + 5, theme: 'striped',
             headStyles: { fillColor: [126, 34, 206], fontSize: 8, halign: 'center' },
             styles: { fontSize: 7, cellPadding: 2 },
             columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 55 }, 2: { cellWidth: 45 }, 3: { cellWidth: 'auto' } }
@@ -368,11 +342,7 @@ export const exportAuditLogsPDF = async (db) => {
 
         docPDF.save(`Auditoria_SIGAP_${new Date().toISOString().slice(0,10)}.pdf`);
         showNotification("PDF gerado com sucesso!");
-        
-    } catch (error) {
-        console.error("Erro ao gerar PDF:", error);
-        showNotification("Erro ao gerar PDF: " + error.message, "error");
-    }
+    } catch (error) { showNotification("Erro ao gerar PDF.", "error"); }
 };
 
 // =========================================================================
@@ -398,14 +368,13 @@ export const cleanupOldData = async (db) => {
             if (!snapshot.empty) {
                 const stats = {
                     pautaName: pautaData.name || 'Sem nome',
-                    creatorEmail: pautaData.ownerEmail || 'Desconhecido',
+                    creatorEmail: pautaData.ownerEmail || pautaData.memberEmails?.[0] || 'Desconhecido',
                     dataReferencia: limitDate.toISOString(),
                     diaSemana: limitDate.getDay(),
                     total: snapshot.size,
                     atendidos: snapshot.docs.filter(d => d.data().status === 'atendido').length,
                     faltosos: snapshot.docs.filter(d => d.data().status === 'faltoso').length,
-                    assuntos: {}, horarios: {}, prioridades: {}, salas: {},
-                    tempoEsperaTotalMinutos: 0, countTempoEspera: 0
+                    assuntos: {}, atendentes: {} // Armazena contagem estruturada de atendentes
                 };
 
                 snapshot.docs.forEach(d => {
@@ -413,20 +382,17 @@ export const cleanupOldData = async (db) => {
                     const sub = data.subject || 'Não informado';
                     stats.assuntos[sub] = (stats.assuntos[sub] || 0) + 1;
                     
-                    // ⭐ CORREÇÃO DE LOG DE VARIÁVEIS DO BANCO REAL ⭐
-                    if (data.scheduledTime) stats.horarios[data.scheduledTime] = (stats.horarios[data.scheduledTime] || 0) + 1;
-                    if (data.room) stats.salas[data.room] = (stats.salas[data.room] || 0) + 1;
-                    if (data.priorityReason || data.priority) {
-                        const prioLabel = data.priorityReason ? data.priorityReason.split(' | ')[0] : (data.priority || 'Comum');
-                        stats.prioridades[prioLabel] = (stats.prioridades[prioLabel] || 0) + 1;
+                    // Extrai e armazena os profissionais que canetaram os atendimentos no BI permanente
+                    let profissionalNome = 'Não atribuído';
+                    if (data.attendedBy) {
+                        profissionalNome = typeof data.attendedBy === 'object' ? (data.attendedBy.nome || data.attendedBy.name) : data.attendedBy;
+                    } else if (data.attendant) {
+                        profissionalNome = typeof data.attendant === 'object' ? (data.attendant.nome || data.attendant.name) : data.attendant;
+                    } else if (data.assignedCollaborator?.name) {
+                        profissionalNome = data.assignedCollaborator.name;
                     }
-                    
-                    if (data.arrivalTime && data.inAttendanceTime) {
-                        const diffMins = Math.round((new Date(data.inAttendanceTime) - new Date(data.arrivalTime)) / 60000);
-                        if (diffMins >= 0 && diffMins < 600) { 
-                            stats.tempoEsperaTotalMinutos += diffMins;
-                            stats.countTempoEspera++;
-                        }
+                    if (profissionalNome) {
+                        stats.atendentes[profissionalNome] = (stats.atendentes[profissionalNome] || 0) + 1;
                     }
                 });
 
@@ -449,32 +415,21 @@ export const generateTestData = async (db) => {
     try {
         const testData = [];
         const assuntosPool = ["ALIMENTOS PARA FILHOS", "DIVÓRCIO LITIGIOSO - SEM BENS", "DIVÓRCIO CONSENSUAL", "CURATELA", "URGÊNCIA MÉDICA"];
-        const salasPool = ["Vara de Família", "1ª Vara Cível", "Triagem Geral"];
-        const prioridadesPool = ["Idoso (60+)", "Idoso (80+)", "Deficiência (PCD)", "Comum"];
-        const horasPool = ["09:00", "09:30", "10:00", "10:30", "11:00", "13:00", "14:00"];
+        const atendentesPool = ["Dra. Roberta Santos", "Dr. Marcos Alencar", "Dra. Clarice Lisboa", "Dr. Alex do Vale"];
 
         for(let i=0; i<6; i++) {
             let totalCasos = Math.floor(Math.random() * 40) + 30;
             let atendidos = Math.floor(totalCasos * 0.85);
             
             const localAssuntos = {};
-            const localHorarios = {};
-            const localPrioridades = {};
-            const localSalas = {};
+            const localAtendentes = {};
 
-            // Distribui aleatoriamente para simular gráficos realistas
             for(let j=0; j<totalCasos; j++) {
                 const ass = assuntosPool[Math.floor(Math.random() * assuntosPool.length)];
                 localAssuntos[ass] = (localAssuntos[ass] || 0) + 1;
 
-                const hr = horasPool[Math.floor(Math.random() * horasPool.length)];
-                localHorarios[hr] = (localHorarios[hr] || 0) + 1;
-
-                const pri = j % 4 === 0 ? prioridadesPool[Math.floor(Math.random() * (prioridadesPool.length - 1))] : "Comum";
-                localPrioridades[pri] = (localPrioridades[pri] || 0) + 1;
-
-                const sl = salasPool[Math.floor(Math.random() * salasPool.length)];
-                localSalas[sl] = (localSalas[sl] || 0) + 1;
+                const atb = atendentesPool[Math.floor(Math.random() * atendentesPool.length)];
+                localAtendentes[atb] = (localAtendentes[atb] || 0) + 1;
             }
             
             testData.push({
@@ -485,12 +440,8 @@ export const generateTestData = async (db) => {
                 total: totalCasos,
                 atendidos: atendidos,
                 faltosos: totalCasos - atendidos,
-                tempoEsperaTotalMinutos: atendidos * (Math.floor(Math.random() * 25) + 15),
-                countTempoEspera: atendidos,
                 assuntos: localAssuntos,
-                horarios: localHorarios,
-                salas: localSalas,
-                prioridades: localPrioridades
+                atendentes: localAtendentes
             });
         }
         
@@ -500,10 +451,12 @@ export const generateTestData = async (db) => {
     } catch (error) { showNotification("Erro ao gerar dados", "error"); }
 };
 
+// ⭐ ATUALIZADO: Filtro estruturado com contagem e seletor de Atendentes ativo em tempo real ⭐
 export const loadDashboardData = async (db) => {
     const start = document.getElementById('stats-filter-start')?.value;
     const end = document.getElementById('stats-filter-end')?.value;
     const userFilter = document.getElementById('stats-filter-user')?.value;
+    const attendantFilter = document.getElementById('stats-filter-attendant')?.value;
     const resultsArea = document.getElementById('dashboard-results');
 
     if (!resultsArea) return;
@@ -520,8 +473,8 @@ export const loadDashboardData = async (db) => {
                     <div class="text-5xl mb-4">📊</div>
                     <h3 class="text-xl font-bold text-gray-800 mb-2">Seu BI ainda está vazio!</h3>
                     <p class="text-gray-500 mb-6 text-sm max-w-lg mx-auto leading-relaxed">
-                        O Painel de Inteligência (BI) constrói gráficos usando apenas o seu <b>histórico de longo prazo</b>.<br><br>
-                        Quando uma Pauta fica velha, você deve clicar no botão <b>"Limpar Pautas Antigas (7+ dias)"</b> lá em cima. Ao fazer isso, o sistema empacota os dados e joga aqui para o BI analisar o seu desempenho!
+                        O Painel de Inteligência (BI) constrói relatórios usando apenas o seu <b>histórico de longo prazo</b>.<br><br>
+                        Quando uma Pauta fica velha, clique em <b>"Executar Limpeza Manual de 7 Dias"</b>.
                     </p>
                     <button id="generate-test-data-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg text-sm font-bold shadow-md transition-all">
                         Inserir Dados Fictícios para Testar o BI
@@ -531,11 +484,22 @@ export const loadDashboardData = async (db) => {
             return;
         }
         
-        let filteredData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        let rawData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
+        // Alimenta o filtro de atendentes caso esteja vazio
+        if (document.getElementById('stats-filter-attendant')?.options.length <= 1) {
+            populateAttendantFilter(rawData);
+        }
+
+        let filteredData = [...rawData];
         if (start) filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia >= start);
         if (end) filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia <= end + "T23:59:59");
         if (userFilter && userFilter !== 'all') filteredData = filteredData.filter(d => d.creatorEmail === userFilter);
+        
+        // Injeção do filtro dinâmico de atendentes na matriz de dados
+        if (attendantFilter && attendantFilter !== 'all') {
+            filteredData = filteredData.filter(d => d.atendentes && d.atendentes[attendantFilter] !== undefined);
+        }
 
         if (filteredData.length === 0) {
             resultsArea.innerHTML = '<div class="text-center py-8 text-gray-500 font-semibold bg-white rounded-lg border">Nenhum dado encontrado para os filtros selecionados.</div>';
@@ -543,42 +507,45 @@ export const loadDashboardData = async (db) => {
         }
 
         let totalGeral = 0; let totalAtendidos = 0; let totalFaltosos = 0;
-        let mapAssuntos = {}; let mapUsers = {}; let mapHorarios = {}; let mapPrioridades = {};
-        let totalEsperaMins = 0; let countEspera = 0;
+        let mapAssuntos = {}; let mapUsers = {};
 
         filteredData.forEach(d => {
-            totalGeral += d.total || 0; totalAtendidos += d.atendidos || 0; totalFaltosos += d.faltosos || 0;
-            totalEsperaMins += d.tempoEsperaTotalMinutos || 0; countEspera += d.countTempoEspera || 0;
+            // Se houver um atendente específico selecionado, calcula a volumetria isolada dele
+            if (attendantFilter && attendantFilter !== 'all') {
+                const prodAtendente = d.atendentes[attendantFilter] || 0;
+                totalGeral += prodAtendente;
+                totalAtendidos += prodAtendente;
+            } else {
+                totalGeral += d.total || 0; 
+                totalAtendidos += d.atendidos || 0; 
+                totalFaltosos += d.faltosos || 0;
+            }
             
-            if (d.assuntos) for (let [k, v] of Object.entries(d.assuntos)) mapAssuntos[k] = (mapAssuntos[k] || 0) + v;
+            if (d.assuntos) {
+                for (let [k, v] of Object.entries(d.assuntos)) {
+                    mapAssuntos[k] = (mapAssuntos[k] || 0) + v;
+                }
+            }
             
-            // ⭐ CORREÇÃO CRUCIAL AQUI: Mudado "horaMarcada" para "horaAgendada" mapeado do banco permanente
-            if (d.horarios) for (let [k, v] of Object.entries(d.horarios)) mapHorarios[k] = (mapHorarios[k] || 0) + v;
-            if (d.prioridades) for (let [k, v] of Object.entries(d.prioridades)) mapPrioridades[k] = (mapPrioridades[k] || 0) + v;
-            
-            const userKey = d.creatorEmail || 'Desconhecido';
-            mapUsers[userKey] = (mapUsers[userKey] || 0) + (d.atendidos || 0);
+            if (d.atendentes) {
+                for (let [k, v] of Object.entries(d.atendentes)) {
+                    mapUsers[k] = (mapUsers[k] || 0) + v;
+                }
+            }
         });
 
         const taxa = totalGeral > 0 ? ((totalFaltosos / totalGeral) * 100).toFixed(1) : 0;
-        const tempoMedio = countEspera > 0 ? Math.round(totalEsperaMins / countEspera) : 0;
 
         resultsArea.innerHTML = `
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
                 <div class="p-4 bg-blue-50 rounded-lg text-center border border-blue-100 shadow-sm"><p class="text-[9px] text-blue-600 font-bold uppercase">Demandado</p><h4 class="text-xl sm:text-2xl font-black text-blue-800">${totalGeral}</h4></div>
                 <div class="p-4 bg-green-50 rounded-lg text-center border border-green-100 shadow-sm"><p class="text-[9px] text-green-600 font-bold uppercase">Atendidos</p><h4 class="text-xl sm:text-2xl font-black text-green-800">${totalAtendidos}</h4></div>
-                <div class="p-4 bg-orange-50 rounded-lg text-center border border-orange-100 shadow-sm"><p class="text-[9px] text-orange-600 font-bold uppercase">Absenteísmo</p><h4 class="text-xl sm:text-2xl font-black text-orange-800">${taxa}%</h4></div>
-                <div class="p-4 bg-purple-50 rounded-lg text-center border border-purple-100 shadow-sm"><p class="text-[9px] text-purple-600 font-bold uppercase">Espera Média</p><h4 class="text-xl sm:text-2xl font-black text-purple-800">${tempoMedio} <span class="text-xs font-normal">min</span></h4></div>
+                <div class="p-4 bg-orange-50 rounded-lg text-center border border-orange-100 shadow-sm"><p class="text-[9px] text-orange-600 font-bold uppercase">Absenteísmo</p><h4 class="text-xl sm:text-2xl font-black text-orange-800">${attendantFilter && attendantFilter !== 'all' ? '0.0' : taxa}%</h4></div>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div class="border rounded-lg p-4 bg-white shadow-sm"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500">Picos de Horário</h5><div class="relative h-48 w-full"><canvas id="chart-horarios"></canvas></div></div>
-                <div class="border rounded-lg p-4 bg-white shadow-sm"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500">Perfil Legal (Prioridades)</h5><div class="relative h-48 w-full flex justify-center"><canvas id="chart-prioridades"></canvas></div></div>
-            </div>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                 <div class="border rounded-lg p-4 bg-white shadow-sm"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500 border-b pb-2">Top Assuntos</h5><div id="dash-subjects-list" class="space-y-2 text-xs"></div></div>
-                <div class="border rounded-lg p-4 bg-white shadow-sm"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500 border-b pb-2">Produtividade por Usuário</h5><div id="dash-users-list" class="space-y-2 text-xs"></div></div>
+                <div class="border rounded-lg p-4 bg-white shadow-sm"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500 border-b pb-2">Produtividade por Atendente</h5><div id="dash-users-list" class="space-y-2 text-xs"></div></div>
             </div>
             
             <div class="flex justify-end gap-3 mt-6 border-t pt-4">
@@ -601,57 +568,8 @@ export const loadDashboardData = async (db) => {
         renderRanking('dash-subjects-list', mapAssuntos);
         renderRanking('dash-users-list', mapUsers);
 
-        if (window.Chart) {
-            ['chart-horarios', 'chart-prioridades'].forEach(id => { if (chartInstances[id]) chartInstances[id].destroy(); });
-            
-            const ctxHorarios = document.getElementById('chart-horarios').getContext('2d');
-            let horSorted = Object.entries(mapHorarios).sort((a,b) => a[0].localeCompare(b[0]));
-            if (horSorted.length === 0) horSorted = [["Não informado", 0]]; 
-
-            chartInstances['chart-horarios'] = new Chart(ctxHorarios, {
-                type: 'line', 
-                data: { 
-                    labels: horSorted.map(i => i[0]), 
-                    datasets: [{ 
-                        label: 'Volume', 
-                        data: horSorted.map(i => i[1]), 
-                        borderColor: '#8b5cf6', 
-                        backgroundColor: 'rgba(139, 92, 246, 0.2)', 
-                        tension: 0.3, 
-                        fill: true 
-                    }] 
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
-
-            const ctxPrio = document.getElementById('chart-prioridades').getContext('2d');
-            const prioSorted = Object.entries(mapPrioridades);
-            
-            let prioLabels = prioSorted.map(i => i[0]);
-            let prioData = prioSorted.map(i => i[1]);
-            let prioColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#64748b'];
-
-            if (prioSorted.length === 0) {
-                prioLabels = ["Não informado"];
-                prioData = [1];
-                prioColors = ['#e2e8f0']; 
-            }
-
-            chartInstances['chart-prioridades'] = new Chart(ctxPrio, {
-                type: 'doughnut', 
-                data: { 
-                    labels: prioLabels, 
-                    datasets: [{ 
-                        data: prioData, 
-                        backgroundColor: prioColors 
-                    }] 
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels:{boxWidth:10, font:{size:10}} } } }
-            });
-        }
-
-        document.getElementById('export-bi-pdf-btn')?.addEventListener('click', () => exportBIDashboardPDF(totalGeral, totalAtendidos, taxa, tempoMedio, mapAssuntos));
-        document.getElementById('export-csv-btn')?.addEventListener('click', () => exportCSV(totalGeral, totalAtendidos, taxa, tempoMedio, mapAssuntos, mapHorarios));
+        document.getElementById('export-bi-pdf-btn')?.addEventListener('click', () => exportBIDashboardPDF(totalGeral, totalAtendidos, taxa, mapAssuntos));
+        document.getElementById('export-csv-btn')?.addEventListener('click', () => exportCSV(totalGeral, totalAtendidos, taxa, mapAssuntos));
 
         showNotification("Painel Executivo atualizado!", "success");
 
@@ -660,12 +578,10 @@ export const loadDashboardData = async (db) => {
     }
 };
 
-const exportCSV = (totalGeral, totalAtendidos, taxa, tempoMedio, mapAssuntos, mapHorarios) => {
+const exportCSV = (totalGeral, totalAtendidos, taxa, mapAssuntos) => {
     let csvContent = "data:text/csv;charset=utf-8,RELATORIO EXECUTIVO - SIGAP\n\nMETRICA;VALOR\n";
-    csvContent += `Total Demandado;${totalGeral}\nTotal Atendido;${totalAtendidos}\nTaxa Absenteismo;${taxa}%\nTempo Medio Espera (min);${tempoMedio}\n\nASSUNTO;QUANTIDADE\n`;
+    csvContent += `Total Demandado;${totalGeral}\nTotal Atendido;${totalAtendidos}\nTaxa Absenteismo;${taxa}%\n\nASSUNTO;QUANTIDADE\n`;
     Object.entries(mapAssuntos).sort((a,b)=>b[1]-a[1]).forEach(([k,v]) => { csvContent += `${k};${v}\n`; });
-    csvContent += "\nHORARIO;VOLUME\n";
-    Object.entries(mapHorarios).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([k,v]) => { csvContent += `${k};${v}\n`; });
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -674,7 +590,7 @@ const exportCSV = (totalGeral, totalAtendidos, taxa, tempoMedio, mapAssuntos, ma
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
 };
 
-export const exportBIDashboardPDF = (totalGeral, totalAtendidos, taxaFalta, tempoMedio, mapAssuntos) => {
+export const exportBIDashboardPDF = (totalGeral, totalAtendidos, taxaFalta, mapAssuntos) => {
     try {
         const docPDF = new window.jspdf.jsPDF();
         docPDF.setFontSize(18); docPDF.setTextColor(22, 163, 74); docPDF.text("Relatorio Executivo de BI - SIGAP", 14, 20);
@@ -682,9 +598,9 @@ export const exportBIDashboardPDF = (totalGeral, totalAtendidos, taxaFalta, temp
         docPDF.setFontSize(14); docPDF.setTextColor(0, 0, 0); docPDF.text("Resumo Geral", 14, 45);
         docPDF.setFontSize(11); docPDF.setTextColor(50, 50, 50);
         docPDF.text(`Total Demandado: ${totalGeral}`, 14, 55); docPDF.text(`Atendimentos Efetivos: ${totalAtendidos}`, 14, 62);
-        docPDF.text(`Taxa de Faltas: ${taxaFalta}`, 14, 69); docPDF.text(`Tempo Medio de Espera: ${tempoMedio} min`, 14, 76);
-        docPDF.setFontSize(14); docPDF.setTextColor(0, 0, 0); docPDF.text("Principais Demandas", 14, 90);
-        let y = 100; docPDF.setFontSize(10); docPDF.setTextColor(80, 80, 80);
+        docPDF.text(`Taxa de Faltas: ${taxaFalta}%`, 14, 69);
+        docPDF.setFontSize(14); docPDF.setTextColor(0, 0, 0); docPDF.text("Principais Demandas", 14, 85);
+        let y = 95; docPDF.setFontSize(10); docPDF.setTextColor(80, 80, 80);
         Object.entries(mapAssuntos).sort((a,b) => b[1] - a[1]).slice(0,10).forEach(([k,v]) => { docPDF.text(`${k}: ${v} atendimentos`, 14, y); y += 7; });
         docPDF.save(`Relatorio_BI_SIGAP_${new Date().toISOString().slice(0,10)}.pdf`);
     } catch(e) { showNotification("Erro ao gerar PDF", "error"); }
@@ -700,6 +616,28 @@ export const populateUserFilter = async (db) => {
     } catch (e) {}
 };
 
+// 🟢 NOVO: Alimenta o seletor de atendentes com base nos registros armazenados no histórico 🟢
+const populateAttendantFilter = (rawData) => {
+    const select = document.getElementById('stats-filter-attendant');
+    if (!select) return;
+    
+    const atendentesUnicos = new Set();
+    rawData.forEach(d => {
+        if (d.atendentes) {
+            Object.keys(d.atendentes).forEach(nome => {
+                if (nome && nome !== 'Não informado' && nome !== 'Não atribuído') {
+                    atendentesUnicos.add(nome);
+                }
+            });
+        }
+    });
+
+    select.innerHTML = '<option value="all">Todos os Atendentes</option>';
+    Array.from(atendentesUnicos).sort().forEach(nome => {
+        select.appendChild(new Option(nome, nome));
+    });
+};
+
 // Listeners dinâmicos
 document.getElementById('filter-log-user')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
 document.getElementById('filter-log-action')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
@@ -713,4 +651,4 @@ window.populateUserFilter = () => populateUserFilter(window.app?.db);
 window.generateTestData = () => generateTestData(window.app?.db);
 window.loadAuditLogs = () => loadAuditLogs(window.app?.db);
 window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
-console.log("✅ Módulo admin.js carregado com sucesso (Auditoria e BI Corrigidos)");
+console.log("✅ Módulo admin.js carregado com sucesso (Auditoria e BI Otimizados)");
