@@ -294,7 +294,6 @@ export const AtendimentoExternoService = {
         if (assistido.status === 'atendido') {
             const abaEncerramento = document.getElementById('aba-encerramento');
             if (abaEncerramento) {
-                // Trava exibe o número CNP preenchido de forma manual
                 const cnpRef = assistido.numeroProcesso ? `<p class="mt-3 font-mono font-bold text-xs bg-white text-slate-700 px-3 py-2 rounded border inline-block select-all">🟢 Nº CNP: ${escapeHTML(assistido.numeroProcesso)}</p>` : '';
                 abaEncerramento.innerHTML = `
                     <div id="banner-atendido-trava" class="text-center p-8 bg-emerald-50 rounded-2xl border-2 border-emerald-200 shadow-sm animate-fade-in mt-2">
@@ -322,9 +321,7 @@ export const AtendimentoExternoService = {
 
         let optionsHtml = ``;
 
-        // ⭐ NOVO PAINEL MANUAL: O Defensor abre o link e vê o CNP que o Servidor preencheu manualmente no SIGEP ⭐
         if (isDefensor) {
-            // Usa o link manual inserido pelo servidor no banco (ou o link padrão do Verde caso esteja em branco)
             const linkManualVerde = assistido.linkVerdeManualmente || assistido.linkVerde || `https://verde.defensoria.rj.def.br/#/atendimento/pesquisa?termo=${encodeURIComponent(assistido.numeroProcesso || assistido.name)}`;
             const cnpManual = assistido.numeroProcesso || null;
 
@@ -594,10 +591,17 @@ export const AtendimentoExternoService = {
             if (this.fluxoSelecionado === 'direto') {
                 const enviadoPorServidor = this.assistidoData?.enviadoPor || null;
                 
+                const mapaProdutividadeBI = {};
+                if (enviadoPorServidor) {
+                    mapaProdutividadeBI[enviadoPorServidor] = 1; 
+                }
+                mapaProdutividadeBI[colabSeguro] = 1; 
+
                 await updateDoc(docRef, {
                     status: numProcessoSeguro ? 'atendido' : 'aguardandoNumero',
                     attendedBy: colabSeguro,                      
                     enviadoPor: enviadoPorServidor,               
+                    trabalhosPorUsuario: mapaProdutividadeBI,     
                     creatorEmail: enviadoPorServidor ? null : (this.colaboradorAtual?.email || null), 
                     attendedAt: timestampIso,
                     finalizadoPeloColaborador: !!numProcessoSeguro,
@@ -857,7 +861,7 @@ export const AtendimentoExternoService = {
             let totalGastos = 0;
             let gastosHtml = '';
             
-            cafeterias.forEach(c => {
+             cafeterias.forEach(c => {
                 if (g[c.id] && g[c.id] !== 'R$ 0,00') {
                     gastosHtml += `<div class="flex justify-between text-xs mb-1.5"><span class="text-emerald-700 font-bold uppercase tracking-wider">${c.label}</span><span class="font-black text-emerald-900">${g[c.id]}</span></div>`;
                     const num = parseFloat(String(g[c.id]).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
@@ -1078,12 +1082,19 @@ export const AtendimentoExternoService = {
         const prefs = JSON.parse(localStorage.getItem('dashboard_prefs')) || { mode: 'tabs', color: 'slate' };
         const baseUrl = window.location.href.substring(0, window.location.href.indexOf('?'));
 
+        // ⭐ REESTRUTURADO: Adicionado reflexo de prioridades legais da triagem e suporte anti-trava sem distribuição ⭐
         const desenharCard = (item, isCardAberto) => {
             const notas = item.notasRevisao ? `<div class="mt-3 bg-yellow-50 p-3 rounded-lg text-xs text-yellow-900 border border-yellow-300 font-semibold shadow-sm leading-snug">⚠️ <b>Nota Anexada:</b> ${escapeHTML(item.notasRevisao)}</div>` : '';
             const numProcessoHtml = item.numeroProcesso ? `<span class="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 font-mono text-[10px] font-bold border border-slate-300 mt-2">Nº CNP: ${escapeHTML(item.numeroProcesso)}</span>` : '';
             const bannerTransf = item.historicoTransferencia ? `<div class="mt-3 bg-orange-50 p-2.5 rounded-lg text-[11px] text-orange-900 border border-orange-300 font-bold flex items-start gap-1 shadow-sm leading-snug"><span class="text-sm">🔄</span> <span>${escapeHTML(item.historicoTransferencia)}</span></div>` : '';
             
+            // Lógica de Prioridades da recepção SIGEP
+            const temUrgencia = item.priority === 'URGENTE';
+            const motivoUrgencia = item.priorityReason ? `<div class="mt-1 text-[10px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200 w-max truncate">🚨 ${escapeHTML(item.priorityReason)}</div>` : '';
+            const badgeUrgencia = temUrgencia ? `<span class="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded border border-red-700 uppercase tracking-widest shadow-sm animate-pulse">🚨 PRIORIDADE</span>` : '';
+
             let badgeTopo = '';
+            let borderClasseUrgencia = temUrgencia ? 'border-l-[6px] border-l-red-500' : '';
             let bgColorCard = 'bg-white border-slate-200 hover:border-slate-400';
             
             if (item.status === 'aguardandoCorrecao') {
@@ -1100,18 +1111,26 @@ export const AtendimentoExternoService = {
             else if (item.status === 'atendido') {
                 badgeTopo = `<span class="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded border border-emerald-300 uppercase tracking-widest shadow-sm">Protocolado</span>`;
             }
+            // Trata visualmente se a pauta não usar fluxo de distribuição (Evita o limbo visual do card antigo)
+            else if (item.status === 'aguardandoNumero') {
+                badgeTopo = `<span class="bg-amber-100 text-amber-800 text-[9px] font-black px-2 py-0.5 rounded border border-amber-300 uppercase tracking-widest shadow-sm">Aguardando CNP</span>`;
+                bgColorCard = 'bg-amber-50/20 border-amber-200';
+            }
 
-            if (isCardAberto) {
+            // SEGURANÇA MÁXIMA: Se o status for 'atendido' ou 'aguardandoNumero' (concluído sem distribuição), oculta o botão de abrir peça!
+            if (isCardAberto && item.status !== 'atendido' && item.status !== 'aguardandoNumero') {
                 const linkIndividual = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken || ''}`;
                 return `
-                    <div class="border-2 ${bgColorCard} p-5 rounded-2xl shadow-sm hover:shadow-lg transition-all relative group flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
-                        <div class="flex-grow w-full sm:w-auto">
-                            <div class="flex items-center gap-2 mb-2">
+                    <div class="border-2 ${borderClasseUrgencia} ${bgColorCard} p-5 rounded-2xl shadow-sm hover:shadow-lg transition-all relative group flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
+                        <div class="flex-grow w-full sm:w-auto min-w-0">
+                            <div class="flex items-center gap-2 mb-2 flex-wrap">
                                 ${badgeTopo}
+                                ${badgeUrgencia}
                                 ${item.enviadoPor ? `<span class="text-[9px] text-slate-500 font-bold uppercase">Via: ${escapeHTML(item.enviadoPor)}</span>` : ''}
                             </div>
                             <h3 class="font-black text-slate-800 text-lg w-full truncate">${escapeHTML(item.name)}</h3>
-                            <p class="text-xs font-semibold text-slate-500 mt-1 uppercase tracking-wide">${escapeHTML(item.subject || 'Assunto não informado')}</p>
+                            <p class="text-xs font-semibold text-slate-500 mt-1 uppercase tracking-wide truncate">${escapeHTML(item.subject || 'Assunto não informado')}</p>
+                            ${motivoUrgencia}
                             ${numProcessoHtml}
                             ${notas}
                             ${bannerTransf}
@@ -1125,24 +1144,28 @@ export const AtendimentoExternoService = {
                 `;
             } else {
                 const horaStr = item.attendedAt ? new Date(item.attendedAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '';
-                // Atalho manual do Verde direto no card do Dashboard Principal do Defensor usando o link manual salvo
                 const linkManualCard = item.linkVerdeManualmente || item.linkVerde || `https://verde.defensoria.rj.def.br/#/atendimento/pesquisa?termo=${encodeURIComponent(item.numeroProcesso || item.name)}`;
                 const atalhoVerdeCard = isDefensor ? `
                     <a href="${linkManualCard}" target="_blank" class="mt-2 inline-flex items-center gap-1 text-[10px] font-black text-emerald-600 hover:text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded shadow-sm uppercase tracking-wider transition active:scale-95">
                         <span>⚖️</span> Abrir Link no Verde
                     </a>` : '';
 
+                const labelStatusFinal = item.status === 'aguardandoNumero' 
+                    ? `<span class="bg-amber-100 text-amber-800 text-[10px] font-black px-2.5 py-1 rounded border border-amber-300 uppercase tracking-widest shadow-sm inline-flex items-center gap-1"><span>⏳</span> Sem CNP</span>`
+                    : `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-1 rounded border border-emerald-300 uppercase tracking-widest shadow-sm inline-flex items-center gap-1"><span>✅</span> Finalizado</span>`;
+
                 return `
-                    <div class="border border-emerald-200 bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
-                        <div>
-                            <div class="mb-1">${badgeTopo}</div>
+                    <div class="border ${borderClasseUrgencia} border-slate-200 bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
+                        <div class="min-w-0 flex-1 w-full">
+                            <div class="mb-1 flex gap-1.5 flex-wrap">${badgeTopo} ${badgeUrgencia}</div>
                             <h3 class="font-black text-slate-800 text-sm truncate">${escapeHTML(item.name)}</h3>
-                            <p class="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-wide">${escapeHTML(item.subject)}</p>
+                            <p class="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-wide truncate">${escapeHTML(item.subject)}</p>
+                            ${motivoUrgencia}
                             ${numProcessoHtml}
                             ${atalhoVerdeCard}
                         </div>
-                        <div class="shrink-0 text-right">
-                            <span class="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-1 rounded border border-emerald-300 uppercase tracking-widest shadow-sm inline-flex items-center gap-1"><span>✅</span> Finalizado</span>
+                        <div class="shrink-0 text-right w-full sm:w-auto mt-2 sm:mt-0 flex sm:flex-col justify-between sm:justify-start items-center sm:items-end">
+                            ${labelStatusFinal}
                             <p class="text-[9px] text-slate-400 font-bold mt-1.5">${horaStr}</p>
                         </div>
                     </div>
@@ -1150,16 +1173,8 @@ export const AtendimentoExternoService = {
             }
         };
 
-        const desenharSecao = (titulo, emoji, lista, isAberto) => {
-            let html = `<div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6">
-                            <h2 class="text-sm font-black text-slate-700 uppercase tracking-widest mb-4 border-b pb-2 flex items-center gap-2"><span>${emoji}</span> ${titulo} <span class="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md text-[10px] ml-2">${lista.length}</span></h2>`;
-            if (lista.length === 0) {
-                html += `<p class="text-center text-xs text-gray-400 italic py-4">Nenhum processo nesta etapa.</p>`;
-            } else {
-                html += lista.map(item => desenharCard(item, isAberto)).join('');
-            }
-            html += `</div>`;
-            return html;
+        const desvincularEstilosSecao = (titulo, emoji, lista, isAberto) => {
+            return { html: lista.map(item => desenharCard(item, isAberto)).join('') };
         };
 
         if (isDefensor) {
@@ -1167,13 +1182,13 @@ export const AtendimentoExternoService = {
                 ((a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome) ||
                 (a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome)
             );
-            const distribuidos = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' && (a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
+            const distribuidos = this.todosAtendimentosPauta.filter(a => (a.status === 'atendido' || a.status === 'aguardandoNumero') && (a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
             const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
 
             if (prefs.mode === 'list') {
                 container.innerHTML = 
-                    desenharSecao('Para Fazer / Assinar / Corrigir', '⚖️', pendentes, true) + 
-                    desenharSecao('Distribuições (Minha Equipe)', '✅', distribuidos, false);
+                    desvincularEstilosSecao('Para Fazer / Assinar / Corrigir', '⚖️', pendentes, true).html + 
+                    desvincularEstilosSecao('Distribuições (Minha Equipe)', '✅', distribuidos, false).html;
                 if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
             } else {
                 if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
@@ -1222,19 +1237,19 @@ export const AtendimentoExternoService = {
         } else {
             const emAndamento = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
             const enviados = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
-            
             const finalizados = this.todosAtendimentosPauta.filter(a => 
                 (a.status === 'atendido' && a.attendedBy === this.colaboradorNome) || 
-                (a.status === 'atendido' && a.enviadoPor === this.colaboradorNome)
+                (a.status === 'atendido' && a.enviadoPor === this.colaboradorNome) ||
+                (a.status === 'aguardandoNumero' && a.attendedBy === this.colaboradorNome) || 
+                (a.status === 'aguardandoNumero' && a.enviadoPor === this.colaboradorNome)
             );
-            
             const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome || a.assignedCollaborator?.name === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
 
             if (prefs.mode === 'list') {
                 container.innerHTML = 
-                    desenharSecao('Para Fazer / Corrigir', '👩‍💻', emAndamento, true) + 
-                    desenharSecao('No Defensor (Avaliando)', '⏳', enviados, true) + 
-                    desenharSecao('Concluídos Hoje (Minha Produção)', '✅', finalizados, false);
+                    desvincularEstilosSecao('Para Fazer / Corrigir', '👩‍💻', emAndamento, true).html + 
+                    desvincularEstilosSecao('No Defensor (Avaliando)', '⏳', enviados, true).html + 
+                    desvincularEstilosSecao('Concluídos Hoje (Minha Produção)', '✅', finalizados, false).html;
                 if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
             } else {
                 if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
