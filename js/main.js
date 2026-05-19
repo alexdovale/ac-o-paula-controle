@@ -8,7 +8,7 @@ import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
 import { PautaService } from './pauta.js';
 import { UIService } from './ui.js';
-import CollaboratorService from './colaboradores.js';         
+import { CollaboratorService } from './colaboradores.js';         
 import { ModalService } from './modal.js?v=20260313';
 import { NotesService } from './notes.js?v=20260313';
 import { StatisticsService } from './estatisticas.js?v=20260313';
@@ -100,7 +100,6 @@ class SIGEPApp {
                 } else if (err.code == 'unimplemented') {
                     console.warn('⚠️ Navegador não suporta persistência offline.');
                 } else {
-                    // ⭐ BLINDAGEM ANTI-CORRUPÇÃO ATIVADA AQUI ⭐
                     console.error('⚠️ Falha de integridade ou corrupção no cache local IndexedDB. Forçando inicialização estritamente online.', err.message);
                 }
             });
@@ -132,7 +131,7 @@ class SIGEPApp {
 
                 if (lastPautaId) {
                     console.log("🔄 Restaurando sessão anterior SIGEP: ", lastPautaName);
-                    this.loadPauta(lastPautaId, lastPautaName || 'Pauta', lastPautaType || 'agendado');
+                    this.loadPauta(lastPautaId, lastPautaName || 'Pauta', lastPautaType || 'agendamento');
                 } else {
                     this.showPautaSelectionScreen();
                 }
@@ -430,8 +429,6 @@ class SIGEPApp {
                     roomConfig.classList.remove('hidden');
                     this.customRoomsList = [];
                     this.renderCustomRooms();
-                    input.value = '';
-                    input.focus();
                 } else {
                     roomConfig.classList.add('hidden');
                 }
@@ -493,6 +490,7 @@ class SIGEPApp {
             document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
         });
 
+        // ⭐ CORREÇÃO AQUI: Captura os valores de delegação e distribuição e salva as chaves corretas no Firebase ⭐
         document.getElementById('confirm-create-pauta-final-btn')?.addEventListener('click', async () => {
             const pautaName = document.getElementById('create-pauta-name-input').value.trim();
             const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
@@ -513,7 +511,10 @@ class SIGEPApp {
                     memberEmails: [user.email],
                     isClosed: false,
                     createdAt: new Date().toISOString(),
-                    ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || 'padrao'
+                    ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || 'padrao',
+                    // Vincula com os inputs corretos do seu HTML para que os fluxos funcionem de fábrica
+                    useDelegationFlow: document.querySelector('input[name="is-delegation"]:checked')?.value === 'yes',
+                    useDistributionFlow: document.getElementById('check-distribution-flow')?.checked || false
                 };
 
                 if (pautaType === 'multisala') {
@@ -525,6 +526,7 @@ class SIGEPApp {
         
                 if (orgaoId) {
                     showNotification("Sincronizando com base de dados Solar/Verde...", "info");
+                    const { ApiIntegration } = await import('./apiIntegration.js');
                     const assistidosOficiais = await ApiIntegration.buscarDadosPautaOficial(orgaoId);
                     
                     for (const ast of assistidosOficiais) {
@@ -664,7 +666,7 @@ class SIGEPApp {
                 const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
                 await updateDoc(pautaRef, { maskNames: mask });
                 this.currentPautaData.maskNames = mask;
-                showNotification("Configuração de privacidade atualizada.", "success");
+                showNotification("Configuração de privacidade updated.", "success");
             } catch (error) {
                 showNotification("Erro ao salvar configuração.", "error");
             }
@@ -1094,11 +1096,26 @@ class SIGEPApp {
                 }
             }
 
+            // ⭐ INJETADO: Faturamento cruzado para encerramentos executados de dentro do SIGAP (+1 para o Servidor que atendeu e +1 para o Defensor)
+            const mapaProdutividadeBI = {};
+            const servidorResponsavel = this.currentUserName || "Servidor";
+            if (novoStatus === 'atendido') {
+                mapaProdutividadeBI[servidorResponsavel] = 1; 
+                if (nomeFinal) mapaProdutividadeBI[nomeFinal] = 1;
+            }
+
             await PautaService.updateStatus(
                 this.db,
                 this.currentPauta.id,
                 window.assistedIdToHandle,
-                { status: novoStatus, attendant: attendantData, attendedTime: new Date().toISOString() },
+                { 
+                    status: novoStatus, 
+                    attendant: attendantData, 
+                    enviadoPor: servidorResponsavel,
+                    attendedBy: nomeFinal,
+                    trabalhosPorUsuario: novoStatus === 'atendido' ? mapaProdutividadeBI : null,
+                    attendedTime: new Date().toISOString() 
+                },
                 this.currentUserName
             );
             
@@ -1167,6 +1184,7 @@ class SIGEPApp {
                     {
                         status: 'atendido',
                         attendedBy: atendenteFinal,
+                        enviadoPor: this.currentUserName || 'Sistema',
                         attendedAt: new Date().toISOString(),
                         inAttendanceTime: new Date().toISOString(),
                         isConfirmed: false,
@@ -1198,6 +1216,7 @@ class SIGEPApp {
                 const updatePayload = {
                     status: 'emAtendimento',
                     assignedCollaborator: collaboratorData,
+                    enviadoPor: this.currentUserName || 'Sistema',
                     inAttendanceTime: new Date().toISOString()
                 };
 
@@ -1214,7 +1233,7 @@ class SIGEPApp {
                 );
                 
                 if (emailDestino && !isSilentMode) {
-                    showNotification(`Disparando notificação para o e-mail cadastrado...`, "info");
+                    showNotification("Disparando notificação para o e-mail cadastrado...", "info");
                     try {
                         await EmailService.sendDelegationEmail(
                             emailDestino, 
@@ -1814,7 +1833,7 @@ class SIGEPApp {
                 await loadAuditLogs(this.db);
             } catch (error) {
                 showNotification("Erro ao carregar logs de auditoria", "error");
-            } finally {
+            } filll: {
                 btn.textContent = originalText;
                 btn.disabled = false;
             }
@@ -2038,7 +2057,7 @@ class SIGEPApp {
         const currentUserRole = currentUser?.role; 
         const isAuthenticated = this.auth?.currentUser != null;
         const isUserApproved = currentUser?.status === 'approved'; 
-        const isApoio = currentUserRole === 'apoio'; // Identifica se é perfil de Apoio
+        const isApoio = currentUserRole === 'apoio'; 
         
         const adminPanelBtnMain = document.getElementById('admin-btn-main');
         const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
@@ -2063,7 +2082,6 @@ class SIGEPApp {
         if (manageCollaboratorsBtn) manageCollaboratorsBtn.classList.toggle('hidden', !canManagePauta);
         if (viewStatsBtn) viewStatsBtn.classList.toggle('hidden', !canAccessAdminPanel);
 
-        // ⭐ TRAVA EXCLUSIVA: O botão de "Chamar Próximo" some completamente para o perfil de Apoio
         const callNextBtn = document.getElementById('call-next-assisted-btn');
         if (callNextBtn) {
             if (isApoio || !isAuthenticated) {
@@ -2096,7 +2114,7 @@ class SIGEPApp {
         }
     }
 }
-    
+
 window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
 
