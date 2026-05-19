@@ -430,9 +430,11 @@ export const UIService = {
 
         this.togglePautaLock(app);
         
+        // ⭐ TRAVA EXCLUSIVA DE ENTRADA: Oculta o botão Chamar Próximo de fábrica para o perfil de Apoio ⭐
         const callNextBtn = document.getElementById('call-next-assisted-btn');
+        const isApoio = app.currentUser?.role === 'apoio';
         if (callNextBtn) {
-            if (currentPautaData?.type === 'multisala') {
+            if (currentPautaData?.type === 'multisala' || isApoio) {
                 callNextBtn.classList.add('hidden');
             } else {
                 callNextBtn.classList.remove('hidden');
@@ -780,9 +782,10 @@ export const UIService = {
                 </div>
             `;
 
+            // Oculta completamente o botão de avançar para a triagem / Apoio
             const atenderButton = canAttend
                 ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="${currentPautaData?.useDelegationFlow ? 'select-collaborator-btn' : 'attend-directly-from-aguardando-btn'} bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700 text-xs shadow-sm uppercase tracking-wide">Atender</button>`
-                : `<button disabled class="w-full bg-gray-300 text-gray-700 font-semibold py-2 rounded-lg text-sm">Sem Permissão</button>`;
+                : '';
 
             const actionButtonsHTML = `
                 <div class="absolute top-2 right-10 flex items-center">
@@ -828,9 +831,9 @@ export const UIService = {
                     </div>
                     ${docStatusHtml}
                     <div class="mt-4 grid grid-cols-2 gap-2">
-                        ${atenderButton}
-                        <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs uppercase shadow-sm" ${canEditPriority ? '' : 'disabled'}>${item.priority === 'URGENTE' ? 'Urgência' : 'Prioridade'}</button>
-                        <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-bold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase tracking-wide" ${canAttend ? '' : 'disabled'}>Voltar para Pauta</button>
+                        ${atenderButton ? atenderButton : ''}
+                        <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs uppercase shadow-sm ${atenderButton ? '' : 'col-span-2'}" ${canEditPriority ? '' : 'disabled'}>${item.priority === 'URGENTE' ? 'Urgência' : 'Prioridade'}</button>
+                        <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-bold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase tracking-wide">Voltar para Pauta</button>
                     </div>
                     <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
                 </div>
@@ -875,7 +878,7 @@ export const UIService = {
         });
     },
 
-    // ⭐ RENDERIZADO: Ativado o botão dinâmico de avanço na mesa principal do SIGEP para faturamento direto ⭐
+    // ⭐ TRAVADO PARA APOIO: Oculta visualmente os botões de avançar no card de Em Atendimento ⭐
     createEmAtendimentoCard(item, currentPautaData, pautaId, userName, index) {
         try {
             const currentUserRole = window.app?.currentUser?.role;
@@ -893,9 +896,6 @@ export const UIService = {
             const startTime = item.inAttendanceTime ? 
                 new Date(item.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
             
-            const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-            const linkDireto = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(userName)}&token=${item.delegationToken || ''}`;
-
             const atendenteNome = this.getAttendantName(item);
             const numAgendamento = item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
@@ -940,6 +940,29 @@ export const UIService = {
                     </div>`;
             }
 
+            const buttonsContainerHtml = canDelegateOrFinalize 
+                ? `<div class="mt-4 flex flex-col gap-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="btn-delegar-card" data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(atendenteNome)}" class="delegate-finalization-btn ${delegateBtnClass} text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegate ? '' : 'disabled'}>
+                                Delegar
+                            </button>
+                            <button data-id="${item.id}" class="attend-directly-from-aguardando-btn bg-green-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide">
+                                Finalizar / Avançar
+                            </button>
+                        </div>
+                        <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 hover:bg-slate-500 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide">
+                            Mover para Fila
+                        </button>
+                        <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-1 text-center underline w-full">
+                            Ver Detalhes
+                        </button>
+                   </div>`
+                : `<div class="mt-4 flex flex-col gap-2">
+                        <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-xs font-bold mt-1 text-center border p-2 rounded-lg bg-gray-50 hover:bg-gray-100">
+                            👁️ Ver Detalhes / Checklist
+                        </button>
+                   </div>`;
+
             card.innerHTML = `
                 ${canDelete ? `
                 <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500">
@@ -956,23 +979,7 @@ export const UIService = {
 
                 ${historicoTransferenciaHtml}
                 ${docStatusHtml}
-
-                <div class="mt-4 flex flex-col gap-2">
-                    <div class="grid grid-cols-2 gap-2">
-                        <button id="btn-delegar-card" data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(atendenteNome)}" class="delegate-finalization-btn ${delegateBtnClass} text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegate ? '' : 'disabled'}>
-                            Delegar
-                        </button>
-                        <button data-id="${item.id}" class="attend-directly-from-aguardando-btn bg-green-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegateOrFinalize ? '' : 'disabled'}>
-                            Finalizar / Avançar
-                        </button>
-                    </div>
-                    <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 hover:bg-slate-500 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegateOrFinalize ? '' : 'disabled'}>
-                        Mover para Fila
-                    </button>
-                    <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-1 text-center underline w-full">
-                        Ver Detalhes
-                    </button>
-                </div>
+                ${buttonsContainerHtml}
 
                 ${this._getStandardizedFooterHtml(item)}
             `;
@@ -1161,7 +1168,7 @@ export const UIService = {
         });
     },
     
-    // ⭐ RENDERIZADO: Adicionado botão explícito de "Concluir Protocolo (CNP)" nos cards de Distribuição/Assinatura ⭐
+    // ⭐ TRAVADO PARA PERFIL APOIO: Oculta visualmente os botões administrativos no card de Distribuição ⭐
     renderDistribuicaoColumn(items, pautaId, userName) {
         const container = document.getElementById('distribuicao-list');
         if (!container) return;
@@ -1212,12 +1219,12 @@ export const UIService = {
 
             groups[defensor].forEach((item, index) => {
                 const currentUserRole = window.app?.currentUser?.role;
-                const canManageDistribution = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
+                const canManageDistribution = currentUserRole !== 'apoio';
                 const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
                 const numAgendamento = item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
                 const card = document.createElement('div');
-                card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-cyan-200 mb-3 transition-all hover:shadow-md';
+                card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-cyan-200 mb-3';
                 card.setAttribute('data-id', item.id);
                 
                 const linkExterno = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(userName)}&token=${item.delegationToken || ''}`;
@@ -1281,6 +1288,26 @@ export const UIService = {
                     </svg>
                 </button>` : '';
 
+                const actionControlsHtml = canManageDistribution
+                    ? `<div class="mt-4 flex flex-col gap-2">
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white font-bold py-2.5 rounded-lg text-xs shadow-sm hover:bg-cyan-700 transition active:scale-95 uppercase tracking-wide">
+                                    Abrir Link
+                                </button>
+                                <button data-id="${item.id}" class="delegate-finalization-btn bg-green-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm hover:bg-green-700 transition active:scale-95 uppercase tracking-wide">
+                                    Concluir Protocolo
+                                </button>
+                            </div>
+                            <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-slate-100 text-slate-600 border border-slate-200 font-bold py-2 rounded-lg text-xs shadow-sm hover:bg-slate-200 transition active:scale-95 uppercase tracking-wide">
+                                Reverter para Fila
+                            </button>
+                       </div>`
+                    : `<div class="mt-4">
+                            <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-xs font-bold w-full border p-2 rounded-lg bg-gray-50 hover:bg-gray-100">
+                                👁️ Ver Detalhes / Checklist
+                            </button>
+                       </div>`;
+
                 card.innerHTML = `
                     ${numeroBadge}
                     ${badgeStatus}
@@ -1306,19 +1333,7 @@ export const UIService = {
                         </div>` 
                     : ''}
                     
-                    <div class="mt-4 flex flex-col gap-2">
-                        <div class="grid grid-cols-2 gap-2">
-                            <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm hover:bg-cyan-700 transition active:scale-95 uppercase tracking-wide" ${canManageDistribution ? '' : 'disabled'}>
-                                Abrir Link
-                            </button>
-                            <button data-id="${item.id}" class="delegate-finalization-btn bg-green-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm hover:bg-green-700 transition active:scale-95 uppercase tracking-wide" ${canManageDistribution ? '' : 'disabled'}>
-                                Concluir Protocolo
-                            </button>
-                        </div>
-                        <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-slate-100 text-slate-600 border border-slate-200 font-bold py-2 rounded-lg text-xs shadow-sm hover:bg-slate-200 transition active:scale-95 uppercase tracking-wide" ${canManageDistribution ? '' : 'disabled'}>
-                            Reverter para Fila
-                        </button>
-                    </div>
+                    ${actionControlsHtml}
                     
                     ${this._getStandardizedFooterHtml(item)}
                 `;
@@ -1532,7 +1547,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             card.innerHTML = `
                 ${isOwner ? `
                 <button class="delete-pauta-btn absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors z-20">
-                    <svg xmlns="http://www.w3.org/2000/xl" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
                     </svg>
                 </button>` : ''}
