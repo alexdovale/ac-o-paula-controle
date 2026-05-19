@@ -57,7 +57,7 @@ export const AtendimentoExternoService = {
         const telaAtual = urlParams.get('view') || urlParams.get('amp;view'); 
 
         if (!this.pautaId || !this.colaboradorNome) {
-            this.showError("Link Incompleto", "Faltam parâmetros de Pauta ou Colaborador na URL.");
+            this.showError("Link Incomplete", "Faltam parâmetros de Pauta ou Colaborador na URL.");
             return;
         }
 
@@ -168,12 +168,12 @@ export const AtendimentoExternoService = {
                     
                     <div>
                         <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 pl-1">E-mail Institucional</label>
-                        <input type="email" id="login-colab-email" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 p-4 w-full text-sm border border-gray-300" required placeholder="Seu e-mail cadastrado">
+                        <input type="email" id="login-colab-email" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm" required placeholder="Seu e-mail cadastrado">
                     </div>
                     
                     <div>
                         <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 pl-1">Matrícula / ID (Senha)</label>
-                        <input type="password" id="login-colab-matricula" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 p-4 w-full text-sm border border-gray-300" required placeholder="Digite sua matrícula">
+                        <input type="password" id="login-colab-matricula" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm" required placeholder="Digite sua matrícula">
                     </div>
                     
                     <div class="flex items-center pt-2">
@@ -404,9 +404,15 @@ export const AtendimentoExternoService = {
                 <div id="container-lista-demandas-externo" class="space-y-1.5 max-h-36 overflow-y-auto pr-1"></div>
             </div>
 
-            <div id="config-numero-processo" class="bg-slate-50 p-5 rounded-xl border border-slate-200 mb-6 transition-all shadow-inner">
-                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1"><span>📄</span> Nº Processo / Protocolo CNP (Opcional)</label>
-                <input type="text" id="input-numero-caso" value="${assistido.numeroProcesso || ''}" class="w-full p-3.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono placeholder:font-sans" placeholder="Ex: 1045239">
+            <div id="config-numero-processo" class="bg-slate-50 p-5 rounded-xl border border-slate-200 mb-6 transition-all shadow-inner space-y-4">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><span>📄</span> Nº Processo / Protocolo CNP (Opcional)</label>
+                    <input type="text" id="input-numero-caso" value="${assistido.numeroProcesso || ''}" class="w-full p-3.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono placeholder:font-sans" placeholder="Ex: 1045239">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><span>🔗</span> Link Direto do Procedimento no Verde (Manual)</label>
+                    <input type="url" id="input-link-verde-manual" value="${assistido.linkVerdeManualmente || ''}" class="w-full p-3.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono placeholder:font-sans text-blue-600 underline" placeholder="https://verde.defensoria.rj.def.br/#/atendimento/...">
+                </div>
             </div>
 
             <div id="config-distribuicao" class="hidden bg-cyan-50 p-5 rounded-xl border border-cyan-200 mb-6 shadow-inner">
@@ -420,14 +426,14 @@ export const AtendimentoExternoService = {
                 <label class="block text-[10px] font-black text-amber-700 uppercase tracking-widest mb-2">Defensor(a) Avaliador</label>
                 <select id="select-defensor-correcao" class="w-full p-3.5 border border-gray-300 rounded-lg text-sm bg-white mb-4 outline-none focus:ring-2 focus:ring-amber-500 font-semibold text-slate-700 cursor-pointer"></select>
                 <label class="block text-[10px] font-black text-amber-700 uppercase tracking-widest mb-2">Qual a dúvida?</label>
-                <textarea id="notas-correcao-dinamico" rows="2" class="w-full p-3.5 border border-amber-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-amber-500 resize-none" placeholder="Ex: Favor conferir se cabe pedido de liminar..."></textarea>
+                <textarea id="notas-correcao-dinamico" rows="2" class="w-full p-3.5 border border-gray-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-amber-500 resize-none" placeholder="Ex: Favor conferir se cabe pedido de liminar..."></textarea>
             </div>
 
             <div id="config-devolver" class="hidden bg-orange-50 p-5 rounded-xl border border-orange-200 mb-6 shadow-inner">
                 <label class="block text-[10px] font-black text-orange-700 uppercase tracking-widest mb-2">Devolver para qual Servidor(a)?</label>
                 <select id="select-servidor-devolver" class="w-full p-3.5 border border-gray-300 rounded-lg text-sm bg-white mb-4 outline-none focus:ring-2 focus:ring-orange-500 font-semibold text-slate-700 cursor-pointer"></select>
                 <label class="block text-[10px] font-black text-orange-700 uppercase tracking-widest mb-2">Motivo / Correção Exigida</label>
-                <textarea id="notas-devolver-dinamico" rows="2" class="w-full p-3.5 border border-orange-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-orange-500 resize-none" placeholder="Ex: Faltou qualificar a testemunha. Favor corrigir."></textarea>
+                <textarea id="notas-devolver-dinamico" rows="2" class="w-full p-3.5 border border-gray-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-orange-500 resize-none" placeholder="Ex: Faltou qualificar a testemunha. Favor corrigir."></textarea>
             </div>
 
             <div id="config-transferencia" class="hidden bg-indigo-50 p-5 rounded-xl border border-indigo-200 mb-6 shadow-inner">
@@ -557,7 +563,6 @@ export const AtendimentoExternoService = {
         return Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
     },
 
-    // ⭐ REESTRUTURADO: Agora monitora useDistributionFlow de forma nativa e segura resolvendo o bug de pautaSnap ⭐
     async finalizarProcesso() {
         if (!this.fluxoSelecionado || this.isProcessing) return;
 
@@ -568,6 +573,10 @@ export const AtendimentoExternoService = {
 
         const inputNumeroCaso = document.getElementById('input-numero-caso');
         const numeroProcessoSalvo = inputNumeroCaso ? inputNumeroCaso.value.trim() : '';
+
+        // Captura o link inserido manualmente
+        const inputLinkManual = document.getElementById('input-link-verde-manual');
+        const linkManualSalvo = inputLinkManual ? inputLinkManual.value.trim() : '';
 
         const numProcessoSeguro = numeroProcessoSalvo || '';
         const colabSeguro = this.colaboradorNome || 'Sistema'; 
@@ -585,7 +594,6 @@ export const AtendimentoExternoService = {
         };
 
         try {
-            // ⭐ CORREÇÃO DE ESCOPO: Resolve o travamento buscando a pauta de forma assíncrona blindada ⭐
             const pautaDoc = await getDoc(doc(db, "pautas", pautaIdSeguro));
             const pautaConfigAtiva = pautaDoc.exists() ? pautaDoc.data() : { useDistributionFlow: false };
             const temDistribuicaoAtiva = pautaConfigAtiva.useDistributionFlow === true;
@@ -603,7 +611,6 @@ export const AtendimentoExternoService = {
                 }
                 mapaProdutividadeBI[colabSeguro] = 1; 
 
-                // SELETOR INTELIGENTE: Se a pauta NÃO tiver distribuição ativa, o card vai direto para a coluna final de Atendidos
                 let statusDestinoFinal = 'aguardandoNumero';
                 if (numProcessoSeguro || !temDistribuicaoAtiva) {
                     statusDestinoFinal = 'atendido';
@@ -618,6 +625,7 @@ export const AtendimentoExternoService = {
                     attendedAt: timestampIso,
                     finalizadoPeloColaborador: statusDestinoFinal === 'atendido',
                     numeroProcesso: numProcessoSeguro,
+                    linkVerdeManualmente: linkManualSalvo || null, // ⭐ GRAVAÇÃO FIXA DO LINK MANUAL DO VERDE NO FIREBASE ⭐
                     demandas: objetoDemandasFinal, 
                     history: arrayUnion({
                         action: statusDestinoFinal === 'atendido' ? 'APROVADO_E_CONCLUIDO' : 'APROVADO_AGUARDANDO_NUMERO',
@@ -645,8 +653,9 @@ export const AtendimentoExternoService = {
                 await updateDoc(docRef, {
                     status: 'aguardandoDistribuicao',
                     defensorResponsavel: def,
-                    notesRevisao: nota,
+                    notasRevisao: nota,
                     numeroProcesso: numProcessoSeguro,
+                    linkVerdeManualmente: linkManualSalvo || null, // Salva o link no histórico de trâmite também
                     enviadoPor: colabSeguro, 
                     delegationToken: novoToken,
                     demandas: objetoDemandasFinal, 
@@ -771,7 +780,7 @@ export const AtendimentoExternoService = {
             }
 
             if (colaboradorDestinoObj && colaboradorDestinoObj.email) {
-                console.log(`✉️ Iniciando disparo de e-mail para: ${colaboradorDestinoObj.email}`);
+                console.log(`✉️ Disparando e-mail para: ${colaboradorDestinoObj.email}`);
                 await EmailService.sendDelegationEmail(
                     colaboradorDestinoObj.email,
                     colaboradorDestinoObj.nome,
@@ -1152,7 +1161,10 @@ export const AtendimentoExternoService = {
                 `;
             } else {
                 const horaStr = item.attendedAt ? new Date(item.attendedAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '';
+                
+                // ⭐ NOVO: O redirecionamento agora prioriza o link colado de forma manual no Firebase, evitando o limbo! ⭐
                 const linkManualCard = item.linkVerdeManualmente || item.linkVerde || `https://verde.defensoria.rj.def.br/#/atendimento/pesquisa?termo=${encodeURIComponent(item.numeroProcesso || item.name)}`;
+                
                 const atalhoVerdeCard = isDefensor ? `
                     <a href="${linkManualCard}" target="_blank" class="mt-2 inline-flex items-center gap-1 text-[10px] font-black text-emerald-600 hover:text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded shadow-sm uppercase tracking-wider transition active:scale-95">
                         <span>⚖️</span> Abrir Link no Verde
