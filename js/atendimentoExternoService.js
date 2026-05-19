@@ -57,7 +57,7 @@ export const AtendimentoExternoService = {
         const telaAtual = urlParams.get('view') || urlParams.get('amp;view'); 
 
         if (!this.pautaId || !this.colaboradorNome) {
-            this.showError("Link InCompleto", "Faltam parâmetros de Pauta ou Colaborador na URL.");
+            this.showError("Link Incompleto", "Faltam parâmetros de Pauta ou Colaborador na URL.");
             return;
         }
 
@@ -89,8 +89,8 @@ export const AtendimentoExternoService = {
             }
 
             const pautaRef = doc(db, "pautas", this.pautaId);
-            const pautaSnap = await getDoc(pautaRef);
-            if (!pautaSnap.exists()) {
+            const pautaDoc = await getDoc(pautaRef);
+            if (!pautaDoc.exists()) {
                 this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
                 return;
             }
@@ -113,7 +113,7 @@ export const AtendimentoExternoService = {
                 return;
             }
 
-            this.renderizarInterface(assistido, pautaSnap.data());
+            this.renderizarInterface(assistido, pautaDoc.data());
             this.setupListeners();
 
         } catch (error) {
@@ -168,12 +168,12 @@ export const AtendimentoExternoService = {
                     
                     <div>
                         <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 pl-1">E-mail Institucional</label>
-                        <input type="email" id="login-colab-email" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition-all shadow-sm" required placeholder="Seu e-mail cadastrado">
+                        <input type="email" id="login-colab-email" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 p-4 w-full text-sm border border-gray-300" required placeholder="Seu e-mail cadastrado">
                     </div>
                     
                     <div>
                         <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 pl-1">Matrícula / ID (Senha)</label>
-                        <input type="password" id="login-colab-matricula" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition-all shadow-sm" required placeholder="Digite sua matrícula">
+                        <input type="password" id="login-colab-matricula" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 p-4 w-full text-sm border border-gray-300" required placeholder="Digite sua matrícula">
                     </div>
                     
                     <div class="flex items-center pt-2">
@@ -411,28 +411,28 @@ export const AtendimentoExternoService = {
 
             <div id="config-distribuicao" class="hidden bg-cyan-50 p-5 rounded-xl border border-cyan-200 mb-6 shadow-inner">
                 <label class="block text-[10px] font-black text-cyan-700 uppercase tracking-widest mb-2">Selecione o Defensor(a)</label>
-                <select id="select-defensor-distribuicao" class="w-full p-3.5 border border-cyan-300 rounded-lg text-sm bg-white mb-4 outline-none focus:ring-2 focus:ring-cyan-500 font-semibold text-slate-700 cursor-pointer"></select>
+                <select id="select-defensor-distribuicao" class="w-full p-3.5 border border-gray-300 rounded-lg text-sm bg-white mb-4 outline-none focus:ring-2 focus:ring-cyan-500 font-semibold text-slate-700 cursor-pointer"></select>
                 <label class="block text-[10px] font-black text-cyan-700 uppercase tracking-widest mb-2">Nota Interna (Opcional)</label>
                 <textarea id="notas-distribuicao-dinamico" rows="2" class="w-full p-3.5 border border-cyan-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-cyan-500 resize-none" placeholder="Ex: Peça inicial finalizada."></textarea>
             </div>
 
             <div id="config-correcao" class="hidden bg-amber-50 p-5 rounded-xl border border-amber-200 mb-6 shadow-inner">
                 <label class="block text-[10px] font-black text-amber-700 uppercase tracking-widest mb-2">Defensor(a) Avaliador</label>
-                <select id="select-defensor-correcao" class="w-full p-3.5 border border-amber-300 rounded-lg text-sm bg-white mb-4 outline-none focus:ring-2 focus:ring-amber-500 font-semibold text-slate-700 cursor-pointer"></select>
+                <select id="select-defensor-correcao" class="w-full p-3.5 border border-gray-300 rounded-lg text-sm bg-white mb-4 outline-none focus:ring-2 focus:ring-amber-500 font-semibold text-slate-700 cursor-pointer"></select>
                 <label class="block text-[10px] font-black text-amber-700 uppercase tracking-widest mb-2">Qual a dúvida?</label>
                 <textarea id="notas-correcao-dinamico" rows="2" class="w-full p-3.5 border border-amber-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-amber-500 resize-none" placeholder="Ex: Favor conferir se cabe pedido de liminar..."></textarea>
             </div>
 
             <div id="config-devolver" class="hidden bg-orange-50 p-5 rounded-xl border border-orange-200 mb-6 shadow-inner">
                 <label class="block text-[10px] font-black text-orange-700 uppercase tracking-widest mb-2">Devolver para qual Servidor(a)?</label>
-                <select id="select-servidor-devolver" class="w-full p-3.5 border border-orange-300 rounded-lg text-sm bg-white mb-4 outline-none focus:ring-2 focus:ring-orange-500 font-semibold text-slate-700 cursor-pointer"></select>
+                <select id="select-servidor-devolver" class="w-full p-3.5 border border-gray-300 rounded-lg text-sm bg-white mb-4 outline-none focus:ring-2 focus:ring-orange-500 font-semibold text-slate-700 cursor-pointer"></select>
                 <label class="block text-[10px] font-black text-orange-700 uppercase tracking-widest mb-2">Motivo / Correção Exigida</label>
                 <textarea id="notas-devolver-dinamico" rows="2" class="w-full p-3.5 border border-orange-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-orange-500 resize-none" placeholder="Ex: Faltou qualificar a testemunha. Favor corrigir."></textarea>
             </div>
 
             <div id="config-transferencia" class="hidden bg-indigo-50 p-5 rounded-xl border border-indigo-200 mb-6 shadow-inner">
                 <label class="block text-[10px] font-black text-indigo-700 uppercase tracking-widest mb-2">Colega de Destino</label>
-                <select id="select-transferir-colega" class="w-full p-3.5 border border-indigo-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-700 cursor-pointer"></select>
+                <select id="select-transferir-colega" class="w-full p-3.5 border border-gray-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-700 cursor-pointer"></select>
             </div>
 
             <button id="btn-finalizar-dinamico" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-lg hover:shadow-xl transition-all text-sm uppercase tracking-widest">
@@ -455,8 +455,8 @@ export const AtendimentoExternoService = {
             'pausar': document.getElementById('config-numero-processo')
         };
 
-        const setAtivo = (btnClicado, fluxes) => {
-            this.fluxoSelecionado = fluxes;
+        const setAtivo = (btnClicado, fluxo) => {
+            this.fluxoSelecionado = fluxo;
             botoesFluxo.forEach(b => {
                 b.className = 'fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 group';
             });
@@ -468,12 +468,12 @@ export const AtendimentoExternoService = {
                 'transferir': 'bg-indigo-50 border-2 border-indigo-400 ring-2 ring-indigo-100',
                 'pausar': 'bg-slate-100 border-2 border-slate-400 ring-2 ring-slate-200'
             };
-            btnClicado.className = `fluxo-opt-btn ${coresAvas[fluxes]} p-4 rounded-xl text-left transition-all shadow-md group`;
+            btnClicado.className = `fluxo-opt-btn ${coresAvas[fluxo]} p-4 rounded-xl text-left transition-all shadow-md group`;
 
             Object.keys(configBoxes).forEach(key => {
                 if(configBoxes[key]) configBoxes[key].classList.add('hidden');
             });
-            if(configBoxes[fluxes]) configBoxes[fluxes].classList.remove('hidden');
+            if(configBoxes[fluxo]) configBoxes[fluxo].classList.remove('hidden');
         };
 
         document.getElementById('btn-opt-direto')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'direto'));
@@ -557,6 +557,7 @@ export const AtendimentoExternoService = {
         return Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
     },
 
+    // ⭐ REESTRUTURADO: Agora monitora useDistributionFlow de forma nativa e segura resolvendo o bug de pautaSnap ⭐
     async finalizarProcesso() {
         if (!this.fluxoSelecionado || this.isProcessing) return;
 
@@ -584,9 +585,9 @@ export const AtendimentoExternoService = {
         };
 
         try {
-            // Puxa as configurações em tempo real da pauta ativa
-            const pautaSnap = await getDoc(doc(db, "pautas", pautaIdSeguro));
-            const pautaConfigAtiva = pautaSnap.exists() ? pautaSnap.data() : { useDistributionFlow: false };
+            // ⭐ CORREÇÃO DE ESCOPO: Resolve o travamento buscando a pauta de forma assíncrona blindada ⭐
+            const pautaDoc = await getDoc(doc(db, "pautas", pautaIdSeguro));
+            const pautaConfigAtiva = pautaDoc.exists() ? pautaDoc.data() : { useDistributionFlow: false };
             const temDistribuicaoAtiva = pautaConfigAtiva.useDistributionFlow === true;
 
             const docRef = doc(db, "pautas", pautaIdSeguro, "attendances", assistidoIdSeguro);
@@ -602,7 +603,7 @@ export const AtendimentoExternoService = {
                 }
                 mapaProdutividadeBI[colabSeguro] = 1; 
 
-                // LÓGICA INTELIGENTE: Caso tenha CNP ou a pauta NÃO use distribuição, fecha em 'atendido' (Atendidos)
+                // SELETOR INTELIGENTE: Se a pauta NÃO tiver distribuição ativa, o card vai direto para a coluna final de Atendidos
                 let statusDestinoFinal = 'aguardandoNumero';
                 if (numProcessoSeguro || !temDistribuicaoAtiva) {
                     statusDestinoFinal = 'atendido';
@@ -621,12 +622,12 @@ export const AtendimentoExternoService = {
                     history: arrayUnion({
                         action: statusDestinoFinal === 'atendido' ? 'APROVADO_E_CONCLUIDO' : 'APROVADO_AGUARDANDO_NUMERO',
                         by: colabSeguro,
-                        msg: numProcessoSeguro ? `Nº CNP: ${numProcessoSeguro}` : 'Aprovado e protocolado pelo Defensor(a)',
+                        msg: numProcessoSeguro ? `Nº CNP: ${numProcessoSeguro}` : 'Aprovado e protocolado internamente',
                         at: timestampIso
                     })
                 });
                 tituloSucesso = "Atendimento Finalizado!";
-                subtituloSucesso = statusDestinoFinal === 'atendido' ? "Processo concluído e salvo em Atendidos." : "Atendimento encerrado sem número de processo.";
+                subtituloSucesso = statusDestinoFinal === 'atendido' ? "Processo concluído e salvo." : "Atendimento encerrado sem número de processo.";
             } 
             else if (this.fluxoSelecionado === 'distribuicao') {
                 const def = document.getElementById('select-defensor-distribuicao')?.value || '';
@@ -644,7 +645,7 @@ export const AtendimentoExternoService = {
                 await updateDoc(docRef, {
                     status: 'aguardandoDistribuicao',
                     defensorResponsavel: def,
-                    notasRevisao: nota,
+                    notesRevisao: nota,
                     numeroProcesso: numProcessoSeguro,
                     enviadoPor: colabSeguro, 
                     delegationToken: novoToken,
@@ -688,7 +689,7 @@ export const AtendimentoExternoService = {
                     })
                 });
                 tituloSucesso = "Enviado p/ Avaliação!";
-                subtituloSucesso = `O Defensor(a) ${def avaliará a dúvida inserida.}`;
+                subtituloSucesso = `O Defensor(a) ${def} avaliará a dúvida inserida.`;
             }
             else if (this.fluxoSelecionado === 'devolver') {
                 const serv = document.getElementById('select-servidor-devolver')?.value || '';
@@ -1188,9 +1189,13 @@ export const AtendimentoExternoService = {
             const distribuidos = this.todosAtendimentosPauta.filter(a => (a.status === 'atendido' || a.status === 'aguardandoNumero') && (a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
             const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
 
-            container.innerHTML = pendentes.map(item => desenharCard(item, true)).join('');
-            if (tabsDiv) {
+            if (prefs.mode === 'list') {
+                container.innerHTML = pendentes.map(item => desenharCard(item, true)).join('') + distribuidos.map(item => desenharCard(item, false)).join('');
+                if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
+            } else {
+                if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
                 const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-pendentes';
+                
                 tabsDiv.innerHTML = `
                     <button id="tab-pendentes" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-pendentes' ? 'bg-slate-800 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Fazer / Assinar / Corrigir <span class="bg-slate-200 text-slate-700 ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
                     <button id="tab-assinados" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-assinados' ? 'bg-emerald-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Distribuições (Equipe) <span class="bg-slate-200 text-slate-700 ml-2 px-2 py-0.5 rounded text-[10px]">${distribuidos.length}</span></button>
