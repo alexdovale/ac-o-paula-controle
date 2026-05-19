@@ -308,7 +308,7 @@ export const AtendimentoExternoService = {
                 headerBg.className = 'bg-emerald-600 p-5 sm:p-6 rounded-t-2xl shadow-lg flex items-center gap-4 relative overflow-hidden transition-colors duration-500';
             }
         } else {
-            this.renderizarAbaEncerramentoDinamica(assistido, pautaData);
+            this.renderizarAbaEncerramentoDinamica(assistido, pautaSnap.data());
         }
     },
 
@@ -557,6 +557,7 @@ export const AtendimentoExternoService = {
         return Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
     },
 
+    // ⭐ REESTRUTURADO: Agora monitora useDistributionFlow para desviar cards sem distribuição para Atendidos direto ⭐
     async finalizarProcesso() {
         if (!this.fluxoSelecionado || this.isProcessing) return;
 
@@ -584,6 +585,11 @@ export const AtendimentoExternoService = {
         };
 
         try {
+            // Puxa as configurações em tempo real da pauta ativa
+            const pautaSnap = await getDoc(doc(db, "pautas", pautaIdSeguro));
+            const pautaConfigAtiva = pautaSnap.exists() ? pautaSnap.data() : { useDistributionFlow: false };
+            const temDistribuicaoAtiva = pautaConfigAtiva.useDistributionFlow === true;
+
             const docRef = doc(db, "pautas", pautaIdSeguro, "attendances", assistidoIdSeguro);
             const novoToken = this._gerarTokenSeguro();
             const timestampIso = new Date().toISOString();
@@ -597,25 +603,31 @@ export const AtendimentoExternoService = {
                 }
                 mapaProdutividadeBI[colabSeguro] = 1; 
 
+                // LÓGICA INTELIGENTE: Caso tenha CNP ou a pauta NÃO use distribuição, fecha em 'atendido' (Atendidos)
+                let statusDestinoFinal = 'aguardandoNumero';
+                if (numProcessoSeguro || !temDistribuicaoAtiva) {
+                    statusDestinoFinal = 'atendido';
+                }
+
                 await updateDoc(docRef, {
-                    status: numProcessoSeguro ? 'atendido' : 'aguardandoNumero',
+                    status: statusDestinoFinal,
                     attendedBy: colabSeguro,                      
                     enviadoPor: enviadoPorServidor,               
                     trabalhosPorUsuario: mapaProdutividadeBI,     
                     creatorEmail: enviadoPorServidor ? null : (this.colaboradorAtual?.email || null), 
                     attendedAt: timestampIso,
-                    finalizadoPeloColaborador: !!numProcessoSeguro,
+                    finalizadoPeloColaborador: statusDestinoFinal === 'atendido',
                     numeroProcesso: numProcessoSeguro,
                     demandas: objetoDemandasFinal, 
                     history: arrayUnion({
-                        action: numProcessoSeguro ? 'APROVADO_E_DISTRIBUIDO' : 'APROVADO_AGUARDANDO_NUMERO',
+                        action: statusDestinoFinal === 'atendido' ? 'APROVADO_E_CONCLUIDO' : 'APROVADO_AGUARDANDO_NUMERO',
                         by: colabSeguro,
                         msg: numProcessoSeguro ? `Nº CNP: ${numProcessoSeguro}` : 'Aprovado e protocolado pelo Defensor(a)',
                         at: timestampIso
                     })
                 });
                 tituloSucesso = "Atendimento Finalizado!";
-                subtituloSucesso = numProcessoSeguro ? "Processo distribuído e salvo no Verde." : "Atendimento encerrado sem número de processo.";
+                subtituloSucesso = statusDestinoFinal === 'atendido' ? "Processo concluído e salvo em Atendidos." : "Atendimento encerrado sem número de processo.";
             } 
             else if (this.fluxoSelecionado === 'distribuicao') {
                 const def = document.getElementById('select-defensor-distribuicao')?.value || '';
@@ -1082,13 +1094,11 @@ export const AtendimentoExternoService = {
         const prefs = JSON.parse(localStorage.getItem('dashboard_prefs')) || { mode: 'tabs', color: 'slate' };
         const baseUrl = window.location.href.substring(0, window.location.href.indexOf('?'));
 
-        // ⭐ REESTRUTURADO: Adicionado reflexo de prioridades legais da triagem e suporte anti-trava sem distribuição ⭐
         const desenharCard = (item, isCardAberto) => {
             const notas = item.notasRevisao ? `<div class="mt-3 bg-yellow-50 p-3 rounded-lg text-xs text-yellow-900 border border-yellow-300 font-semibold shadow-sm leading-snug">⚠️ <b>Nota Anexada:</b> ${escapeHTML(item.notasRevisao)}</div>` : '';
             const numProcessoHtml = item.numeroProcesso ? `<span class="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 font-mono text-[10px] font-bold border border-slate-300 mt-2">Nº CNP: ${escapeHTML(item.numeroProcesso)}</span>` : '';
             const bannerTransf = item.historicoTransferencia ? `<div class="mt-3 bg-orange-50 p-2.5 rounded-lg text-[11px] text-orange-900 border border-orange-300 font-bold flex items-start gap-1 shadow-sm leading-snug"><span class="text-sm">🔄</span> <span>${escapeHTML(item.historicoTransferencia)}</span></div>` : '';
             
-            // Lógica de Prioridades da recepção SIGEP
             const temUrgencia = item.priority === 'URGENTE';
             const motivoUrgencia = item.priorityReason ? `<div class="mt-1 text-[10px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200 w-max truncate">🚨 ${escapeHTML(item.priorityReason)}</div>` : '';
             const badgeUrgencia = temUrgencia ? `<span class="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded border border-red-700 uppercase tracking-widest shadow-sm animate-pulse">🚨 PRIORIDADE</span>` : '';
@@ -1111,13 +1121,11 @@ export const AtendimentoExternoService = {
             else if (item.status === 'atendido') {
                 badgeTopo = `<span class="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded border border-emerald-300 uppercase tracking-widest shadow-sm">Protocolado</span>`;
             }
-            // Trata visualmente se a pauta não usar fluxo de distribuição (Evita o limbo visual do card antigo)
             else if (item.status === 'aguardandoNumero') {
                 badgeTopo = `<span class="bg-amber-100 text-amber-800 text-[9px] font-black px-2 py-0.5 rounded border border-amber-300 uppercase tracking-widest shadow-sm">Aguardando CNP</span>`;
                 bgColorCard = 'bg-amber-50/20 border-amber-200';
             }
 
-            // SEGURANÇA MÁXIMA: Se o status for 'atendido' ou 'aguardandoNumero' (concluído sem distribuição), oculta o botão de abrir peça!
             if (isCardAberto && item.status !== 'atendido' && item.status !== 'aguardandoNumero') {
                 const linkIndividual = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken || ''}`;
                 return `
