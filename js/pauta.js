@@ -339,7 +339,7 @@ export const PautaService = {
             
             if (updates.isConfirmed !== undefined) {
                 const textoConfirmacao = updates.isConfirmed ? "Confirmado" : "Não Confirmado";
-                showNotification(`Status de Marcado Presença no Verde atualizado para ${textoConfirmacao}.`, 'info');
+                showNotification(`Status de Marcado Presença no Verde updated para ${textoConfirmacao}.`, 'info');
             } else if (updates.status === 'aguardando' && currentData.status !== 'aguardando') {
                 const currentAssisted = window.app.allAssisted.find(a => a.id === assistedId) || { name: 'Assistido' };
                 const name = currentAssisted.name || currentData.name;
@@ -370,7 +370,7 @@ export const PautaService = {
                     ]
                 );
             } else {
-                const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados updated';
+                const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados atualizados';
                 showNotification(action, "success");
             }
 
@@ -491,7 +491,7 @@ export const PautaService = {
             const quemAtendeu = attendedBy || app.currentUserName;
             const quemDelegou = assisted.delegatedBy ? ` (delegado por ${assisted.delegatedBy})` : '';
             
-            showNotification(`Atendimento finalizado por ${quemAtendeu}${quemDelegou}`, "success");
+            showNotification(`Atendimento finalizado com sucesso!`, "success");
             
             await logAction(
                 app.db,
@@ -1122,13 +1122,11 @@ export const PautaService = {
         }
     },
 
-    // ⭐ SINCRO DE INTERFACE CORRIGIDO: Abre forçadamente as colunas ocultadas pelo cache do navegador ⭐
     loadColumnPreferences() {
         const savedPreferences = localStorage.getItem('sigap_column_preferences');
         let preferences = { showEmAtendimento: true, showDistribuicao: true, showFaltosos: false };
         if (savedPreferences) preferences = JSON.parse(savedPreferences);
 
-        // Se a pauta exige os fluxos, anula o cache e força a exibição ativa
         if (this.currentPautaData?.useDelegationFlow === true) {
             preferences.showEmAtendimento = true;
         }
@@ -1176,12 +1174,43 @@ export const PautaService = {
         }
     },
 
+    // ⭐ REESTRUTURADO: Adicionado travas rigorosas para o perfil de Apoio (Somente Check-in e Prioridades) ⭐
     handleCardActions(e, app) {
         const button = e.target.closest('button');
         if (!button) return;
 
         const id = button.dataset.id;
         if (!id) return;
+
+        // Monitor de perfil do usuário ativo
+        const currentUserRole = app.currentUser?.role;
+        const isApoio = currentUserRole === 'apoio';
+
+        // Mapeia todas as ações administrativas proibidas para a triagem/apoio
+        const acoesProibidasApoio = [
+            'return-to-pauta-btn',
+            'return-to-pauta-from-faltoso-btn',
+            'return-to-aguardando-btn',
+            'return-to-aguardando-from-emAtendimento-btn',
+            'return-to-aguardando-from-dist-btn',
+            'return-from-atendido-btn',
+            'delete-btn',
+            'select-collaborator-btn',
+            'attend-directly-from-aguardando-btn',
+            'delegate-finalization-btn',
+            'edit-assisted-btn',
+            'edit-attendant-btn',
+            'manage-demands-btn',
+            'toggle-confirmed-atendido',
+            'toggle-confirmed-faltoso'
+        ];
+
+        const acaoAtual = acoesProibidasApoio.find(classe => button.classList.contains(classe));
+        if (isApoio && acaoAtual) {
+            showNotification("Acesso restrito: Seu perfil de Apoio não tem permissão para esta ação administrativa.", "warning");
+            playSound('warning');
+            return;
+        }
 
         if (button.classList.contains('quick-action-toggle')) {
             e.stopPropagation();
@@ -1220,6 +1249,12 @@ export const PautaService = {
         if (button.classList.contains('quick-action-item')) {
             e.stopPropagation();
             
+            // Segunda barreira contra trapaça de cliques em menus flutuantes (Ações Rápidas)
+            if (isApoio) {
+                showNotification("Acesso restrito: Ações rápidas de encerramento são bloqueadas para Apoio.", "warning");
+                return;
+            }
+
             const actionKey = `${id}-${button.dataset.tipo}`;
             if (!this.canPerformAction(actionKey)) return;
             
@@ -1271,6 +1306,7 @@ export const PautaService = {
             }
         }
 
+        // 🟢 LIBERADO PARA APOIO: Marcar entrada física de assistidos agendados na recepção
         if (button.classList.contains('check-in-btn')) {
             window.assistedIdToHandle = id;
             const modal = document.getElementById('arrival-modal');
@@ -1339,6 +1375,7 @@ export const PautaService = {
             }
         }
 
+        // 🟢 LIBERADO PARA APOIO: Sinalizar e categorizar as prioridades por lei (Idoso, PCD, Gestante)
         if (button.classList.contains('priority-btn')) {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             if (assisted && assisted.priority === 'URGENTE') {
@@ -1388,24 +1425,20 @@ export const PautaService = {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             if (!assisted) return;
             
-            window.assistedIdToHandle = id;
-            window.assistedNameToHandle = assisted.name || '';
-            window.assistedTipoAcao = 'atender_direto'; 
-            
-            const nameElement = document.getElementById('assisted-to-attend-name');
-            if (nameElement) {
-                nameElement.textContent = assisted.name || '';
-            }
-            
-            this.preencherListaColaboradoresModal(app);
-            
-            const modal = document.getElementById('select-collaborator-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                setTimeout(() => {
-                    const searchInput = document.getElementById('collaborator-search-input');
-                    if (searchInput) searchInput.focus();
-                }, 100);
+            const useDist = app.currentPautaData?.useDistributionFlow === true;
+            const timestampIso = new Date().toISOString();
+
+            if (useDist) {
+                this.updateStatus(app.db, app.currentPauta.id, id, {
+                    status: 'aguardandoDistribuicao',
+                    distributionStatus: 'pending',
+                    inAttendanceTime: timestampIso
+                }, app.currentUserName);
+                showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
+            } else {
+                window.assistedIdToHandle = id;
+                this.preencherSelectColaboradores(app, 'attendant-select');
+                document.getElementById('attendant-modal')?.classList.remove('hidden');
             }
         }
 
@@ -1413,14 +1446,37 @@ export const PautaService = {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             if (!assisted) return;
             
-            window.assistedIdForDelegation = id;
-            window.assistedNameForDelegation = assisted.name || '';
-            window.collaboratorNameForDelegation = (assisted.assignedCollaborator && assisted.assignedCollaborator.name) || '';
-            document.getElementById('delegate-assisted-name').textContent = assisted.name || '';
+            window.assistedIdToHandle = id;
+            const processInput = document.getElementById('dist-process-number');
+            if (processInput) processInput.value = assisted.numeroProcesso || '';
             
-            const modal = document.getElementById('delegate-email-modal');
+            const modal = document.getElementById('distribution-finish-modal');
             if (modal) {
                 modal.classList.remove('hidden');
+                
+                document.getElementById('confirm-dist-finish-btn').onclick = async () => {
+                    const cnpDigitado = processInput.value.trim();
+                    const timestampIso = new Date().toISOString();
+                    
+                    const servidorResponsavel = assisted.enviadoPor || app.currentUserName || "Servidor";
+                    const defensorResponsavel = assisted.attendedBy || assisted.defensorResponsavel || app.currentUserName || "Defensor";
+
+                    const mapaProdutividadeBI = {};
+                    mapaProdutividadeBI[servidorResponsavel] = 1;
+                    mapaProdutividadeBI[defensorResponsavel] = 1;
+
+                    await updateDoc(doc(app.db, "pautas", app.currentPauta.id, "attendances", id), {
+                        status: 'atendido',
+                        numeroProcesso: cnpDigitado,
+                        trabalhosPorUsuario: mapaProdutividadeBI,
+                        finalizadoPeloColaborador: true,
+                        distributionStatus: 'completed',
+                        attendedAt: timestampIso
+                    });
+                    
+                    modal.classList.add('hidden');
+                    showNotification("Distribuição concluída e faturamento do BI gravado! ✅", "success");
+                };
             }
         }
 
@@ -1530,6 +1586,7 @@ export const PautaService = {
             }
         }
 
+        // 🟢 LIBERADO PARA APOIO: Abrir o modal de checklist de documentação para instruir as petições
         if (button.classList.contains('view-details-btn')) {
             if (window.openDetailsModal) {
                 window.openDetailsModal({
@@ -1545,15 +1602,7 @@ export const PautaService = {
         if (button.classList.contains('return-from-atendido-btn')) {
             const currentAssisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             let updateData = {
-                status: 'aguardando',
-                attendant: null,
-                attendedTime: null,
-                attendedBy: null,
-                attendedAt: null,
-                finalizadoPeloColaborador: false,
-                isConfirmed: false,
-                confirmationDetails: null,
-                distributionStatus: 'pending'
+                status: 'aguardando', attendant: null, attendedTime: null, attendedBy: null, attendedAt: null, finalizadoPeloColaborador: false, isConfirmed: false, confirmationDetails: null, distributionStatus: 'pending'
             };
 
             if (currentAssisted && currentAssisted.assignedCollaborator) {
@@ -1561,7 +1610,6 @@ export const PautaService = {
                 updateData.attendant = currentAssisted.assignedCollaborator.name;
                 updateData.distributionStatus = 'distributed';
             }
-            
             this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
         }
 
@@ -1571,10 +1619,7 @@ export const PautaService = {
 
             this.updateStatus(app.db, app.currentPauta.id, id, {
                 isConfirmed: newConfirmedState,
-                confirmationDetails: newConfirmedState ? { 
-                    confirmedBy: app.currentUserName, 
-                    confirmedAt: new Date().toISOString() 
-                } : null
+                confirmationDetails: newConfirmedState ? { confirmedBy: app.currentUserName, confirmedAt: new Date().toISOString() } : null
             }, app.currentUserName);
         }
     }
