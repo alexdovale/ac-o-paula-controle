@@ -12,7 +12,6 @@ export const UIService = {
         document.getElementById('app-container').classList.toggle('hidden', screenName !== 'app');
         document.getElementById('dashboard-container').classList.toggle('hidden', screenName !== 'dashboard');
 
-        // ⭐ SALVA A TELA ATUAL NA MEMÓRIA (Para não perder no F5) ⭐
         if (screenName !== 'loading' && screenName !== 'login') {
             localStorage.setItem('lastScreen', screenName);
         }
@@ -183,7 +182,6 @@ export const UIService = {
     },
 
     togglePautaLock(app) {
-        const isOwner = app.auth?.currentUser?.uid === app.currentPautaOwnerId;
         const isClosed = app.isPautaClosed;
 
         const buttonsToDisable = [
@@ -228,9 +226,10 @@ export const UIService = {
             document.getElementById('reopen-pauta-btn').classList.add('hidden');
         }
 
+        const isOwner = app.auth?.currentUser?.uid === app.currentPautaOwnerId;
         if (!isOwner) {
-            document.getElementById('close-pauta-btn').classList.add('hidden');
-            document.getElementById('reopen-pauta-btn').classList.add('hidden');
+            document.getElementById('close-pauta-btn')?.classList.add('hidden');
+            document.getElementById('reopen-pauta-btn')?.classList.add('hidden');
         }
     },
 
@@ -407,7 +406,7 @@ export const UIService = {
             emAtendimento: allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode && this.searchFilter(a, searchTerms.emAtendimento)),
             atendidos: allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode && this.searchFilter(a, searchTerms.atendidos)),
             faltosos: allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento' && this.searchFilter(a, searchTerms.faltosos)),
-            distribuicao: allAssisted.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && this.searchFilter(a, searchTerms.distribuicao))
+            distribuicao: allAssisted.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao' || a.status === 'aguardandoNumero') && this.searchFilter(a, searchTerms.distribuicao))
         };
 
         lists.pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
@@ -539,7 +538,6 @@ export const UIService = {
         });
     },
 
-    // ⭐ CORRIGIDO: SUPORTE COMPLETO E DESTACADO PARA EXIBIR O NÚMERO DE AGENDAMENTO NA COLUNA PAUTA ⭐
     createPautaCard(item) {
         const currentUserRole = window.app?.currentUser?.role;
         const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
@@ -591,7 +589,7 @@ export const UIService = {
         if (!container) return;
 
         if (items.length === 0) {
-            container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém aguardando</p>';
+            container.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum agendamento aguardando</p>';
             return;
         }
 
@@ -662,7 +660,6 @@ export const UIService = {
         }
     },
 
-    // ⭐ CORRIGIDO: NÚMERO DE AGENDAMENTO EXIBIDO VISIVELMENTE NO TOPO DO CARD EM AGUARDANDO ⭐
     createAguardandoCard(item, currentPautaData, colaboradores, index) {
         try {
             if (!item || !item.id) return null;
@@ -878,6 +875,7 @@ export const UIService = {
         });
     },
 
+    // ⭐ RENDERIZADO: Ativado o botão dinâmico de avanço na mesa principal do SIGEP para faturamento direto ⭐
     createEmAtendimentoCard(item, currentPautaData, pautaId, userName, index) {
         try {
             const currentUserRole = window.app?.currentUser?.role;
@@ -964,8 +962,8 @@ export const UIService = {
                         <button id="btn-delegar-card" data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(atendenteNome)}" class="delegate-finalization-btn ${delegateBtnClass} text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegate ? '' : 'disabled'}>
                             Delegar
                         </button>
-                        <button onclick="window.open('${linkDireto}', '_blank')" class="bg-green-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegateOrFinalize ? '' : 'disabled'}>
-                            Finalizar / Assinar
+                        <button data-id="${item.id}" class="attend-directly-from-aguardando-btn bg-green-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegateOrFinalize ? '' : 'disabled'}>
+                            Finalizar / Avançar
                         </button>
                     </div>
                     <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 hover:bg-slate-500 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegateOrFinalize ? '' : 'disabled'}>
@@ -1163,6 +1161,7 @@ export const UIService = {
         });
     },
     
+    // ⭐ RENDERIZADO: Adicionado botão explícito de "Concluir Protocolo (CNP)" nos cards de Distribuição/Assinatura ⭐
     renderDistribuicaoColumn(items, pautaId, userName) {
         const container = document.getElementById('distribuicao-list');
         if (!container) return;
@@ -1308,9 +1307,14 @@ export const UIService = {
                     : ''}
                     
                     <div class="mt-4 flex flex-col gap-2">
-                        <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white font-bold py-2.5 rounded-lg text-xs shadow-sm hover:bg-cyan-700 transition active:scale-95 uppercase tracking-wide" ${canManageDistribution ? '' : 'disabled'}>
-                            🔍 Abrir Processo Ativo
-                        </button>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm hover:bg-cyan-700 transition active:scale-95 uppercase tracking-wide" ${canManageDistribution ? '' : 'disabled'}>
+                                Abrir Link
+                            </button>
+                            <button data-id="${item.id}" class="delegate-finalization-btn bg-green-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm hover:bg-green-700 transition active:scale-95 uppercase tracking-wide" ${canManageDistribution ? '' : 'disabled'}>
+                                Concluir Protocolo
+                            </button>
+                        </div>
                         <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-slate-100 text-slate-600 border border-slate-200 font-bold py-2 rounded-lg text-xs shadow-sm hover:bg-slate-200 transition active:scale-95 uppercase tracking-wide" ${canManageDistribution ? '' : 'disabled'}>
                             Reverter para Fila
                         </button>
@@ -1528,7 +1532,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             card.innerHTML = `
                 ${isOwner ? `
                 <button class="delete-pauta-btn absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors z-20">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                    <svg xmlns="http://www.w3.org/2000/xl" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
                     </svg>
                 </button>` : ''}
