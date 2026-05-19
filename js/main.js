@@ -8,7 +8,7 @@ import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
 import { PautaService } from './pauta.js';
 import { UIService } from './ui.js';
-import CollaboratorService from './colaboradores.js';
+import CollaboratorService from './colaboradores.js';         
 import { ModalService } from './modal.js?v=20260313';
 import { NotesService } from './notes.js?v=20260313';
 import { StatisticsService } from './estatisticas.js?v=20260313';
@@ -490,7 +490,7 @@ class SIGEPApp {
             document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
         });
 
-        // ⭐ CORREÇÃO AQUI: Captura os valores de delegação e distribuição e salva as chaves corretas no Firebase ⭐
+        // ⭐ CORREÇÃO ESTRUTURAL: Ajustado os seletores para ler exatamente os IDs do seu index.html ⭐
         document.getElementById('confirm-create-pauta-final-btn')?.addEventListener('click', async () => {
             const pautaName = document.getElementById('create-pauta-name-input').value.trim();
             const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
@@ -512,9 +512,9 @@ class SIGEPApp {
                     isClosed: false,
                     createdAt: new Date().toISOString(),
                     ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || 'padrao',
-                    // Vincula com os inputs corretos do seu HTML para que os fluxos funcionem de fábrica
-                    useDelegationFlow: document.querySelector('input[name="is-delegation"]:checked')?.value === 'yes',
-                    useDistributionFlow: document.getElementById('check-distribution-flow')?.checked || false
+                    // Sincronização explícita com os elementos do modal de criação
+                    useDelegationFlow: document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true',
+                    useDistributionFlow: document.getElementById('check-use-distribution')?.checked || false
                 };
 
                 if (pautaType === 'multisala') {
@@ -1096,7 +1096,6 @@ class SIGEPApp {
                 }
             }
 
-            // ⭐ INJETADO: Faturamento cruzado para encerramentos executados de dentro do SIGAP (+1 para o Servidor que atendeu e +1 para o Defensor)
             const mapaProdutividadeBI = {};
             const servidorResponsavel = this.currentUserName || "Servidor";
             if (novoStatus === 'atendido') {
@@ -1833,7 +1832,7 @@ class SIGEPApp {
                 await loadAuditLogs(this.db);
             } catch (error) {
                 showNotification("Erro ao carregar logs de auditoria", "error");
-            } filll: {
+            } finally {
                 btn.textContent = originalText;
                 btn.disabled = false;
             }
