@@ -562,10 +562,10 @@
 
     </div> 
     
-    <footer id="main-footer" class="hidden w-full py-6 bg-white border-t border-gray-300 mt-auto">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+    <footer id="main-footer" class="w-full py-6 bg-white border-t border-gray-300 mt-auto">
+        <div id="footer-inner-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-center items-center gap-6">
             
-            <div class="flex flex-wrap justify-center md:justify-start gap-4 text-sm text-gray-600 font-semibold">
+            <div id="footer-links" class="hidden flex-wrap justify-center md:justify-start gap-4 text-sm text-gray-600 font-semibold w-full md:w-auto">
                 <button id="btn-footer-manual" class="hover:text-green-600 transition-colors">Manual do Utilizador</button>
                 <button id="btn-footer-termos" class="hover:text-green-600 transition-colors">Termos de Uso</button>
                 <button id="btn-footer-politica" class="hover:text-green-600 transition-colors">Política de Privacidade</button>
@@ -1665,17 +1665,24 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
             document.getElementById('close-terms-modal-x')?.addEventListener('click', () => fecharModal('terms-modal'));
             document.getElementById('close-policy-modal-btn-x')?.addEventListener('click', () => fecharModal('privacy-policy-modal'));
             
-            // Controle de visibilidade do Footer baseado no Container de Login
+            // Controle de visibilidade dos Links do Footer baseado no Container de Login
             const loginContainer = document.getElementById('login-container');
-            const mainFooter = document.getElementById('main-footer');
+            const footerLinks = document.getElementById('footer-links');
+            const footerInner = document.getElementById('footer-inner-container');
             
-            if (loginContainer && mainFooter) {
+            if (loginContainer && footerLinks && footerInner) {
                 const updateFooterVisibility = () => {
-                    // O footer só aparece se o login estiver oculto (usuário dentro do sistema)
+                    // Os links só aparecem se o login estiver oculto (usuário dentro do sistema)
                     if (loginContainer.classList.contains('hidden')) {
-                        mainFooter.classList.remove('hidden');
+                        footerLinks.classList.remove('hidden');
+                        footerLinks.classList.add('flex');
+                        footerInner.classList.remove('justify-center');
+                        footerInner.classList.add('justify-between');
                     } else {
-                        mainFooter.classList.add('hidden');
+                        footerLinks.classList.add('hidden');
+                        footerLinks.classList.remove('flex');
+                        footerInner.classList.remove('justify-between');
+                        footerInner.classList.add('justify-center');
                     }
                 };
                 
