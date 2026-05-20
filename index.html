@@ -58,7 +58,10 @@
         .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track, #statistics-content::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
         .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb, #statistics-content::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
         input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
-        .tab-active { border-color: #16a34a; background-color: #f0fdf4; color: #16a34a; font-weight: 600; }
+        
+        /* Garantir sobreposição de exclusividade da aba ativa */
+        .tab-active { border-color: #16a34a !important; background-color: #f0fdf4 !important; color: #16a34a !important; font-weight: 600 !important; }
+        
         .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
         .loader { border: 6px solid #f3f3f3; border-top: 6px solid #16a34a; border-radius: 50%; width: 50px; height: 50px; animation: spin 1.5s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -1692,6 +1695,68 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                 // Observador de mutações para reagir à navegação via JS/Firebase
                 const observer = new MutationObserver(updateFooterVisibility);
                 observer.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
+            }
+
+            // ==========================================
+            // CORREÇÃO: Exclusividade das Abas (Agendado x Avulso)
+            // ==========================================
+            const tabAgendamento = document.getElementById('tab-agendamento');
+            const tabAvulso = document.getElementById('tab-avulso');
+            const isScheduledContainer = document.getElementById('is-scheduled-container');
+            const radioScheduledNo = document.querySelector('input[name="is-scheduled"][value="no"]');
+            const scheduledTimeWrapper = document.getElementById('scheduled-time-wrapper');
+
+            const toggleExclusiveTabs = (activeTab, inactiveTab) => {
+                if(!activeTab || !inactiveTab) return;
+                
+                // Força ativação visual da selecionada
+                activeTab.classList.add('tab-active');
+                activeTab.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
+                
+                // Força desativação da inativa
+                inactiveTab.classList.remove('tab-active');
+                inactiveTab.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
+            };
+
+            if (tabAgendamento && tabAvulso) {
+                // Eventos de Clique
+                tabAgendamento.addEventListener('click', () => {
+                    toggleExclusiveTabs(tabAgendamento, tabAvulso);
+                    if(isScheduledContainer) isScheduledContainer.classList.remove('hidden');
+                });
+                
+                tabAvulso.addEventListener('click', () => {
+                    toggleExclusiveTabs(tabAvulso, tabAgendamento);
+                    // Oculta/reseta campo de horários (opcional na lógica de avulso)
+                    if(isScheduledContainer) isScheduledContainer.classList.add('hidden');
+                    if(radioScheduledNo) radioScheduledNo.checked = true;
+                    if(scheduledTimeWrapper) scheduledTimeWrapper.classList.add('hidden');
+                });
+
+                // Prevenção extra via MutationObserver caso main.js adicione active na errada.
+                const observerTabs = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.target === tabAgendamento && tabAgendamento.classList.contains('tab-active')) {
+                            if (tabAvulso.classList.contains('tab-active')) {
+                                tabAvulso.classList.remove('tab-active');
+                                tabAvulso.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
+                            }
+                        } else if (mutation.target === tabAvulso && tabAvulso.classList.contains('tab-active')) {
+                            if (tabAgendamento.classList.contains('tab-active')) {
+                                tabAgendamento.classList.remove('tab-active');
+                                tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
+                            }
+                        }
+                    });
+                });
+
+                observerTabs.observe(tabAgendamento, { attributes: true, attributeFilter: ['class'] });
+                observerTabs.observe(tabAvulso, { attributes: true, attributeFilter: ['class'] });
+                
+                // Limpeza inicial na inicialização
+                if (tabAgendamento.classList.contains('tab-active') && tabAvulso.classList.contains('tab-active')) {
+                    toggleExclusiveTabs(tabAgendamento, tabAvulso);
+                }
             }
         });
     </script>
