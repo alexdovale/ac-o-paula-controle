@@ -10,7 +10,6 @@
         .custom-checkbox:checked + div { background-color: #059669; border-color: #059669; }
         .custom-checkbox:checked + div svg { display: block; }
         
-        /* Ocultar input number arrows */
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
@@ -67,14 +66,14 @@
                 
                 <div class="bg-red-50 p-4 rounded-xl border border-red-200 mb-4 cursor-pointer" onclick="document.getElementById('check-reu-unico').click()">
                     <div class="flex items-center gap-3">
-                        <input type="checkbox" id="check-reu-unico" class="h-5 w-5 text-red-600 rounded border-gray-300 focus:ring-red-500 pointer-events-none" checked>
+                        <input type="checkbox" id="check-reu-unico" class="h-5 w-5 text-red-600 rounded border-gray-300 focus:ring-red-500 pointer-events-none">
                         <label class="text-xs font-bold text-red-800 cursor-pointer pointer-events-none">
                             TENHO DADOS DE ENDEREÇO DO RÉU
                         </label>
                     </div>
                 </div>
 
-                <div id="content-reu-completo" class="space-y-6">
+                <div id="content-reu-completo" class="space-y-6" style="display: none;">
                     <div class="space-y-3">
                         <h3 class="text-[10px] font-black text-slate-400 uppercase border-b pb-1">Identificação</h3>
                         <input type="text" id="nome-reu" placeholder="Nome Completo do Réu" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
@@ -135,14 +134,14 @@
                 
                 <div class="bg-green-50 p-4 rounded-xl border border-green-200 mb-4 cursor-pointer" onclick="document.getElementById('check-exibir-gastos').click()">
                     <div class="flex items-center gap-3">
-                        <input type="checkbox" id="check-exibir-gastos" class="h-5 w-5 text-green-600 rounded border-gray-300 focus:ring-green-500 pointer-events-none" checked>
+                        <input type="checkbox" id="check-exibir-gastos" class="h-5 w-5 text-green-600 rounded border-gray-300 focus:ring-green-500 pointer-events-none">
                         <label class="text-xs font-bold text-green-800 cursor-pointer pointer-events-none">
                             PREENCHER DESPESAS
                         </label>
                     </div>
                 </div>
 
-                <div id="content-planilha-gastos" class="space-y-4">
+                <div id="content-planilha-gastos" class="space-y-4" style="display: none;">
                     <div id="gastos-container" class="space-y-3"></div>
                     <div class="flex justify-between items-center bg-slate-800 text-white p-4 rounded-xl shadow-inner mt-4">
                         <span class="text-xs font-black uppercase tracking-wider">Total Calculado:</span>
@@ -183,12 +182,12 @@
         const maskPhone = (v) => v.replace(/\D/g, "").replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d{4})$/, "$1-$2");
         const maskCEP = (v) => v.replace(/\D/g, "").replace(/(\d{5})(\d)/, "$1-$2");
 
-        document.getElementById('cpf-assistido').addEventListener('input', (e) => e.target.value = maskCPF(e.target.value));
-        document.getElementById('telefone-assistido').addEventListener('input', (e) => e.target.value = maskPhone(e.target.value));
-        document.getElementById('cpf-reu').addEventListener('input', (e) => e.target.value = maskCPF(e.target.value));
-        document.getElementById('telefone-reu').addEventListener('input', (e) => e.target.value = maskPhone(e.target.value));
-        document.getElementById('cep-reu').addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
-        document.getElementById('cep-comercial-reu').addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
+        document.getElementById('cpf-assistido')?.addEventListener('input', (e) => e.target.value = maskCPF(e.target.value));
+        document.getElementById('telefone-assistido')?.addEventListener('input', (e) => e.target.value = maskPhone(e.target.value));
+        document.getElementById('cpf-reu')?.addEventListener('input', (e) => e.target.value = maskCPF(e.target.value));
+        document.getElementById('telefone-reu')?.addEventListener('input', (e) => e.target.value = maskPhone(e.target.value));
+        document.getElementById('cep-reu')?.addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
+        document.getElementById('cep-comercial-reu')?.addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
 
         // Inicialização
         async function init() {
@@ -203,17 +202,19 @@
 
             // Renderizar Planilha de Gastos
             const containerGastos = document.getElementById('gastos-container');
-            EXPENSE_CATEGORIES.forEach(cat => {
-                containerGastos.innerHTML += `
-                    <div class="flex justify-between items-center bg-white p-2 border border-slate-100 rounded-lg">
-                        <div>
-                            <p class="text-[11px] font-bold text-green-800 uppercase">${cat.label}</p>
-                            <p class="text-[9px] text-slate-400">${cat.desc}</p>
+            if (containerGastos && EXPENSE_CATEGORIES) {
+                EXPENSE_CATEGORIES.forEach(cat => {
+                    containerGastos.innerHTML += `
+                        <div class="flex justify-between items-center bg-white p-2 border border-slate-100 rounded-lg">
+                            <div>
+                                <p class="text-[11px] font-bold text-green-800 uppercase">${cat.label}</p>
+                                <p class="text-[9px] text-slate-400">${cat.desc}</p>
+                            </div>
+                            <input type="text" id="gasto-${cat.id}" class="gasto-input w-24 p-2 border border-green-200 rounded-lg text-right text-xs font-bold text-slate-700 outline-none focus:border-green-500" placeholder="R$ 0,00" inputmode="numeric">
                         </div>
-                        <input type="text" id="gasto-${cat.id}" class="gasto-input w-24 p-2 border border-green-200 rounded-lg text-right text-xs font-bold text-slate-700 outline-none focus:border-green-500" placeholder="R$ 0,00" inputmode="numeric">
-                    </div>
-                `;
-            });
+                    `;
+                });
+            }
 
             // Lógica de Soma dos Gastos
             document.querySelectorAll('.gasto-input').forEach(inp => {
@@ -224,7 +225,10 @@
                     document.querySelectorAll('.gasto-input').forEach(i => {
                         total += parseFloat(i.value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
                     });
-                    document.getElementById('gasto-total').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total);
+                    const gastoTotal = document.getElementById('gasto-total');
+                    if (gastoTotal) {
+                        gastoTotal.textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total);
+                    }
                 });
             });
 
@@ -241,11 +245,14 @@
                         actionKey = data.documentChecklist.action;
                         renderChecklist(actionKey, data.documentChecklist.checkedIds || [], data.documentChecklist.docTypes || {});
                     } else {
-                        document.getElementById('checklist-area').innerHTML = `<div class="p-3 bg-orange-50 text-orange-800 text-xs rounded-lg text-center">Assunto ainda não definido pela Defensoria. Siga para o próximo passo.</div>`;
+                        const checklistArea = document.getElementById('checklist-area');
+                        if (checklistArea) {
+                            checklistArea.innerHTML = `<div class="p-3 bg-orange-50 text-orange-800 text-xs rounded-lg text-center">Assunto ainda não definido pela Defensoria. Siga para o próximo passo.</div>`;
+                        }
                     }
 
-                    document.getElementById('loading-screen').classList.add('hidden');
-                    document.getElementById('app-content').classList.remove('hidden');
+                    document.getElementById('loading-screen')?.classList.add('hidden');
+                    document.getElementById('app-content')?.classList.remove('hidden');
                 }
             } catch (error) {
                 console.error("Erro:", error);
@@ -257,7 +264,9 @@
         function renderChecklist(key, savedIds, savedTypes) {
             const data = documentsData[key];
             const container = document.getElementById('checklist-area');
-            if (!data) return;
+            if (!data || !container) return;
+
+            container.innerHTML = '';
 
             data.sections.forEach((section, sIdx) => {
                 const sectionDiv = document.createElement('div');
@@ -276,7 +285,7 @@
                         sectionDiv.innerHTML += `
                             <div class="flex flex-col border border-slate-100 rounded-xl mb-2 bg-white overflow-hidden transition-all">
                                 <label class="flex items-start gap-3 p-3 cursor-pointer hover:bg-slate-50">
-                                    <input type="checkbox" id="${id}" class="custom-checkbox sr-only doc-checkbox" ${isChecked ? 'checked' : ''} onchange="toggleDocType('${id}')">
+                                    <input type="checkbox" id="${id}" class="custom-checkbox sr-only doc-checkbox" ${isChecked ? 'checked' : ''} onchange="window.toggleDocType('${id}')">
                                     <div class="w-5 h-5 border-2 border-slate-300 rounded bg-white mt-0.5 flex-shrink-0 flex items-center justify-center transition-colors">
                                         <svg class="w-3 h-3 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                                     </div>
@@ -316,24 +325,36 @@
 
         function updateDocCounter() {
             const count = document.querySelectorAll('.doc-checkbox:checked').length;
-            document.getElementById('doc-counter').textContent = `${count} marcados`;
+            const docCounter = document.getElementById('doc-counter');
+            if (docCounter) docCounter.textContent = `${count} marcados`;
         }
 
         // Controle de Visibilidade das Seções Opcionais
-        document.getElementById('check-reu-unico').addEventListener('change', function() {
-            document.getElementById('content-reu-completo').style.display = this.checked ? 'block' : 'none';
-        });
+        const checkReuUnico = document.getElementById('check-reu-unico');
+        const contentReu = document.getElementById('content-reu-completo');
+        if (checkReuUnico && contentReu) {
+            checkReuUnico.addEventListener('change', function() {
+                contentReu.style.display = this.checked ? 'block' : 'none';
+            });
+        }
 
-        document.getElementById('check-exibir-gastos').addEventListener('change', function() {
-            document.getElementById('content-planilha-gastos').style.display = this.checked ? 'block' : 'none';
-        });
+        const checkExibirGastos = document.getElementById('check-exibir-gastos');
+        const contentGastos = document.getElementById('content-planilha-gastos');
+        if (checkExibirGastos && contentGastos) {
+            checkExibirGastos.addEventListener('change', function() {
+                contentGastos.style.display = this.checked ? 'block' : 'none';
+            });
+        }
 
         // Buscador de CEP via API (ViaCEP)
         async function buscarCepAPI(cepInputId, isComercial = false) {
-            const cep = document.getElementById(cepInputId).value.replace(/\D/g, '');
+            const cepInput = document.getElementById(cepInputId);
+            if (!cepInput) return;
+            const cep = cepInput.value.replace(/\D/g, '');
             if (cep.length !== 8) return alert("CEP inválido");
             
             const btn = isComercial ? document.getElementById('btn-buscar-cep-com') : document.getElementById('btn-buscar-cep-reu');
+            if (!btn) return;
             const originalText = btn.textContent;
             btn.textContent = "...";
             btn.disabled = true;
@@ -343,15 +364,23 @@
                 const data = await res.json();
                 if (!data.erro) {
                     if (isComercial) {
-                        document.getElementById('rua-comercial-reu').value = data.logradouro || '';
-                        document.getElementById('bairro-comercial-reu').value = data.bairro || '';
-                        document.getElementById('cidade-comercial-reu').value = data.localidade || '';
-                        document.getElementById('estado-comercial-reu').value = data.uf || '';
+                        const ruaComercial = document.getElementById('rua-comercial-reu');
+                        const bairroComercial = document.getElementById('bairro-comercial-reu');
+                        const cidadeComercial = document.getElementById('cidade-comercial-reu');
+                        const estadoComercial = document.getElementById('estado-comercial-reu');
+                        if (ruaComercial) ruaComercial.value = data.logradouro || '';
+                        if (bairroComercial) bairroComercial.value = data.bairro || '';
+                        if (cidadeComercial) cidadeComercial.value = data.localidade || '';
+                        if (estadoComercial) estadoComercial.value = data.uf || '';
                     } else {
-                        document.getElementById('rua-reu').value = data.logradouro || '';
-                        document.getElementById('bairro-reu').value = data.bairro || '';
-                        document.getElementById('cidade-reu').value = data.localidade || '';
-                        document.getElementById('estado-reu').value = data.uf || '';
+                        const rua = document.getElementById('rua-reu');
+                        const bairro = document.getElementById('bairro-reu');
+                        const cidade = document.getElementById('cidade-reu');
+                        const estado = document.getElementById('estado-reu');
+                        if (rua) rua.value = data.logradouro || '';
+                        if (bairro) bairro.value = data.bairro || '';
+                        if (cidade) cidade.value = data.localidade || '';
+                        if (estado) estado.value = data.uf || '';
                     }
                 } else {
                     alert("CEP não encontrado.");
@@ -362,80 +391,94 @@
             btn.disabled = false;
         }
 
-        document.getElementById('btn-buscar-cep-reu').onclick = () => buscarCepAPI('cep-reu', false);
-        document.getElementById('btn-buscar-cep-com').onclick = () => buscarCepAPI('cep-comercial-reu', true);
+        const btnBuscarCep = document.getElementById('btn-buscar-cep-reu');
+        if (btnBuscarCep) btnBuscarCep.onclick = () => buscarCepAPI('cep-reu', false);
+        
+        const btnBuscarCepCom = document.getElementById('btn-buscar-cep-com');
+        if (btnBuscarCepCom) btnBuscarCepCom.onclick = () => buscarCepAPI('cep-comercial-reu', true);
 
         // SALVAR DADOS (SUBMIT)
-        document.getElementById('form-captacao').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('btn-enviar');
-            btn.innerHTML = `<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> SALVANDO...`;
-            btn.disabled = true;
+        const form = document.getElementById('form-captacao');
+        if (form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('btn-enviar');
+                if (!btn) return;
+                
+                btn.innerHTML = `<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> SALVANDO...`;
+                btn.disabled = true;
 
-            // Coleta Docs
-            const checkedIds = [];
-            const docTypes = {};
-            document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
-                checkedIds.push(cb.id);
-                const radio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
-                docTypes[cb.id] = radio ? radio.value : 'Físico';
+                // Coleta Docs
+                const checkedIds = [];
+                const docTypes = {};
+                document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
+                    checkedIds.push(cb.id);
+                    const radio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
+                    docTypes[cb.id] = radio ? radio.value : 'Físico';
+                });
+
+                // Coleta Gastos
+                const gastos = { checkExibirGastos: document.getElementById('check-exibir-gastos')?.checked || false };
+                if (EXPENSE_CATEGORIES) {
+                    EXPENSE_CATEGORIES.forEach(c => {
+                        let input = document.getElementById(`gasto-${c.id}`);
+                        gastos[c.id] = input ? (input.value || 'R$ 0,00') : 'R$ 0,00';
+                    });
+                }
+
+                // Coleta Réu - CORRIGIDO com os IDs corretos
+                const reuData = {
+                    checkReuUnico: document.getElementById('check-reu-unico')?.checked || false,
+                    nome: document.getElementById('nome-reu')?.value || '',
+                    cpf: document.getElementById('cpf-reu')?.value || '',
+                    telefone: document.getElementById('telefone-reu')?.value || '',
+                    cep: document.getElementById('cep-reu')?.value || '',
+                    rua: document.getElementById('rua-reu')?.value || '',
+                    numero: document.getElementById('numero-reu')?.value || '',
+                    complemento: document.getElementById('complemento-reu')?.value || '',
+                    bairro: document.getElementById('bairro-reu')?.value || '',
+                    cidade: document.getElementById('cidade-reu')?.value || '',
+                    uf: document.getElementById('estado-reu')?.value || '',
+                    referencia: document.getElementById('referencia-reu')?.value || '',
+                    empresa: document.getElementById('empresa-reu')?.value || '',
+                    cep_comercial: document.getElementById('cep-comercial-reu')?.value || '',
+                    rua_comercial: document.getElementById('rua-comercial-reu')?.value || '',
+                    numero_comercial: document.getElementById('numero-comercial-reu')?.value || '',
+                    complemento_comercial: document.getElementById('complemento-comercial-reu')?.value || '',
+                    bairro_comercial: document.getElementById('bairro-comercial-reu')?.value || '',
+                    cidade_comercial: document.getElementById('cidade-comercial-reu')?.value || '',
+                    uf_comercial: document.getElementById('estado-comercial-reu')?.value || ''
+                };
+
+                // Payload CORRIGIDO
+                const payload = {
+                    name: document.getElementById('nome-assistido')?.value || '',
+                    cpf: document.getElementById('cpf-assistido')?.value || '',
+                    telefone: document.getElementById('telefone-assistido')?.value || '',
+                    documentChecklist: {
+                        action: actionKey,
+                        checkedIds: checkedIds,
+                        docTypes: docTypes,
+                        reuData: reuData,
+                        expenseData: gastos
+                    },
+                    documentState: 'pre_triagem_concluida',
+                    lastActionBy: 'Cidadão (App Web)',
+                    lastActionTimestamp: new Date().toISOString()
+                };
+
+                try {
+                    await updateDoc(doc(db, "pautas", pautaId, "attendances", assistedId), payload);
+                    document.getElementById('app-content')?.classList.add('hidden');
+                    document.getElementById('success-screen')?.classList.remove('hidden');
+                } catch (error) {
+                    console.error("Erro ao salvar:", error);
+                    alert("Erro ao enviar dados. Tente novamente.");
+                    btn.innerHTML = `ENVIAR DADOS`;
+                    btn.disabled = false;
+                }
             });
-
-            // Coleta Gastos
-            const gastos = { checkExibirGastos: document.getElementById('check-exibir-gastos').checked };
-            EXPENSE_CATEGORIES.forEach(c => {
-                let v = document.getElementById(`gasto-${c.id}`).value;
-                gastos[c.id] = v ? v : 'R$ 0,00';
-            });
-
-            // Coleta Réu
-            const reuData = {
-                checkReuUnico: document.getElementById('check-reu-unico').checked,
-                nome: document.getElementById('reu-nome').value,
-                cpf: document.getElementById('reu-cpf').value,
-                telefone: document.getElementById('telefone-reu').value,
-                cep: document.getElementById('cep-reu').value,
-                rua: document.getElementById('rua-reu').value,
-                numero: document.getElementById('reu-numero').value,
-                complemento: document.getElementById('complemento-reu').value,
-                bairro: document.getElementById('reu-bairro').value,
-                cidade: document.getElementById('cidade-reu').value,
-                uf: document.getElementById('estado-reu').value,
-                referencia: document.getElementById('referencia-reu').value,
-                empresa: document.getElementById('reu-empresa').value,
-                cep_comercial: document.getElementById('cep-comercial-reu').value,
-                rua_comercial: document.getElementById('rua-comercial-reu').value,
-                numero_comercial: document.getElementById('numero-comercial-reu').value,
-                complemento_comercial: document.getElementById('complemento-comercial-reu').value,
-                bairro_comercial: document.getElementById('bairro-comercial-reu').value,
-                cidade_comercial: document.getElementById('cidade-comercial-reu').value,
-                uf_comercial: document.getElementById('estado-comercial-reu').value
-            };
-
-            const payload = {
-                name: document.getElementById('nome-assistido').value,
-                cpf: document.getElementById('cpf-assistido').value,
-                telefone: document.getElementById('telefone-assistido').value,
-                "documentChecklist.checkedIds": checkedIds,
-                "documentChecklist.docTypes": docTypes,
-                "documentChecklist.reuData": reuData,
-                "documentChecklist.expenseData": gastos,
-                documentState: 'pre_triagem_concluida', 
-                lastActionBy: 'Cidadão (App Web)',
-                lastActionTimestamp: new Date().toISOString()
-            };
-
-            try {
-                await updateDoc(doc(db, "pautas", pautaId, "attendances", assistedId), payload);
-                document.getElementById('app-content').classList.add('hidden');
-                document.getElementById('success-screen').classList.remove('hidden');
-            } catch (error) {
-                console.error("Erro ao salvar:", error);
-                alert("Erro ao enviar dados. Tente novamente.");
-                btn.innerHTML = `ENVIAR DADOS`;
-                btn.disabled = false;
-            }
-        });
+        }
 
         window.addEventListener('DOMContentLoaded', init);
     </script>
