@@ -1520,14 +1520,14 @@ class SIGEPApp {
         if (adminPanelBtnPautaSelection && adminModal) {
             adminPanelBtnPautaSelection.addEventListener('click', () => {
                 adminModal.classList.remove('hidden');
-                this.setupAdminPanel(); 
+                //this.setupAdminPanel(); 
             });
         }
         
         if (adminPanelBtnMain && adminModal) {
             adminPanelBtnMain.addEventListener('click', () => {
                 adminModal.classList.remove('hidden');
-                this.setupAdminPanel();
+                //this.setupAdminPanel();
             });
         }
 
@@ -1566,7 +1566,7 @@ class SIGEPApp {
             }
         });
 
-        this.setupAdminPanel();
+        //this.setupAdminPanel();
     }
 
     async loadUserPreferences() {
