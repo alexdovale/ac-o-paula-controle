@@ -168,7 +168,7 @@
             <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
         </div>
         <h2 class="text-3xl font-black mb-2">TUDO CERTO!</h2>
-        <p class="text-green-100 text-sm mb-4">Seus dados e documentos foram enviados com sucesso.</p>
+        <p class="text-green-100 text-sm mb-4">Seus dados foram enviados com sucesso.</p>
         <p class="text-white font-bold bg-green-800/40 px-6 py-3 rounded-full text-sm">Você já pode fechar esta tela e aguardar ser chamado(a).</p>
     </div>
 
@@ -250,7 +250,6 @@
                     if (data.cpf) document.getElementById('cpf-assistido').value = data.cpf;
                     if (data.telefone) document.getElementById('telefone-assistido').value = data.telefone;
 
-                    // EXIBIR O ASSUNTO DA DEMANDA NA PARTE SUPERIOR (estilo preto e cinza)
                     if (data.selectedAction || data.documentChecklist?.action) {
                         const assuntoTexto = data.selectedAction || (documentsData[data.documentChecklist?.action]?.title) || 'Não informado';
                         const assuntoContainer = document.getElementById('assunto-demanda-container');
