@@ -1,6 +1,6 @@
 /**
  * ========================================================
- * DETALHES.JS - SIGEP
+ * DETALHES.JS - SIGEP (VERSÃO COMPLETA E INTEGRAL)
  * Módulo de Detalhes do Assistido, Checklist de Documentos,
  * Acúmulo de Demandas e Captação Direta do Cidadão
  * ========================================================
@@ -9,12 +9,11 @@
 import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, escapeHTML } from './utils.js';
 import { PDFService } from './pdfService.js';
-import { flatSubjects } from './assuntos.js'; // ⚖️ Importação da árvore oficial de assuntos do SIGEP
+import { flatSubjects } from './assuntos.js';
 
 /* ========================================================
    1. CONSTANTES E CONFIGURAÇÕES
    ======================================================== */
-
 const BASE_DOCS = [
     'Carteira de Identidade (RG) ou Habilitação (CNH)',
     'CPF',
@@ -52,7 +51,7 @@ const INCOME_DOCS_STRUCTURED = [
 
 const COMMON_DOCS_FULL = [...BASE_DOCS, ...INCOME_DOCS_STRUCTURED];
 
-const EXPENSE_CATEGORIES = [
+export const EXPENSE_CATEGORIES = [
     { id: 'moradia', label: '1. MORADIA (Habitação)', desc: 'Aluguel, condomínio, IPTU, luz, água, gás.' },
     { id: 'alimentacao', label: '2. ALIMENTAÇÃO', desc: 'Supermercado, feira, açougue, lanches, leites especiais.' },
     { id: 'educacao', label: '3. EDUCAÇÃO', desc: 'Mensalidade escolar, material, uniforme, transporte escolar, cursos.' },
@@ -87,7 +86,7 @@ const ACTIONS_WITH_WORK_INFO = [
 ];
 
 /* ========================================================
-   2. BASE DE DADOS DE AÇÕES COMPLETA (MAPPED)
+   2. BASE DE DADOS DE AÇÕES COMPLETA
    ======================================================== */
 export const documentsData = {
     obrigacao_fazer: {
@@ -1018,12 +1017,12 @@ export function gerarLinkCaptacao() {
         return;
     }
 
-    // 1. Busca os dados do assistido atual para pegar o Telefone
+    // Busca os dados do assistido atual para pegar o Telefone
     const assisted = allAssisted.find(a => a.id === currentAssistedId);
     const telefoneRaw = assisted?.telefone || '';
-    const telefoneLimpo = telefoneRaw.replace(/\D/g, ''); // Remove tudo que não for número
+    const telefoneLimpo = telefoneRaw.replace(/\D/g, '');
 
-    // 2. Lógica blindada para URL (Garante que a pasta do GitHub Pages seja mantida)
+    // Lógica blindada para URL (Garante que a pasta do GitHub Pages seja mantida)
     let path = window.location.pathname; 
     path = path.replace('index.html', ''); // Tira o index.html se estiver na URL
     if (!path.endsWith('/')) path += '/';  // Garante a barra no final
@@ -1031,7 +1030,7 @@ export function gerarLinkCaptacao() {
     // Monta o link absoluto
     const link = `${window.location.origin}${path}captacao.html?pid=${currentPautaId}&aid=${currentAssistedId}`;
 
-    // 3. Monta a Mensagem Padrão
+    // Monta a Mensagem Padrão
     const nome = assisted?.name ? assisted.name.split(' ')[0] : 'assistido(a)';
     const mensagem = encodeURIComponent(`Olá, ${nome}! Por favor, clique no link abaixo para preencher seus dados preliminares e adiantar seu atendimento na Defensoria Pública:\n\n🔗 ${link}`);
 
@@ -1040,11 +1039,13 @@ export function gerarLinkCaptacao() {
         showNotification("Link copiado para a área de transferência!", "success");
     }).catch(err => console.error(err));
 
-    // 4. Exibe o Modal e gerencia QR Code e Botões
+    // Exibe o Modal e gerencia QR Code e Botões
     const modalQr = document.getElementById('modal-captacao-qr');
     const qrContainer = document.getElementById('qrcode-display');
     const btnWa = document.getElementById('btn-share-wa');
     const btnSms = document.getElementById('btn-share-sms');
+    const btnCopy = document.getElementById('btn-copy-link');
+    const phoneInput = document.getElementById('captacao-phone-input');
     
     if (modalQr && qrContainer) {
         modalQr.classList.remove('hidden');
@@ -1059,28 +1060,32 @@ export function gerarLinkCaptacao() {
             correctLevel : QRCode.CorrectLevel.H
         });
 
-        // Evento: Botão do WhatsApp
-        if (btnWa) {
-            btnWa.onclick = () => {
-                if (telefoneLimpo.length >= 10) {
-                    const prefixo = telefoneLimpo.startsWith('55') ? '' : '55';
-                    window.open(`https://wa.me/${prefixo}${telefoneLimpo}?text=${mensagem}`, '_blank');
-                } else {
-                    window.open(`https://wa.me/?text=${mensagem}`, '_blank');
-                }
+        if (phoneInput) {
+            phoneInput.value = assisted?.telefone || '';
+            phoneInput.oninput = (e) => {
+                let v = e.target.value.replace(/\D/g, "");
+                if (v.length > 2) v = `(${v.substring(0,2)}) ${v.substring(2)}`;
+                if (v.length > 10) v = `${v.substring(0,10)}-${v.substring(10,14)}`;
+                e.target.value = v;
             };
         }
 
-        // Evento: Botão do SMS
-        if (btnSms) {
-            btnSms.onclick = () => {
-                if (telefoneLimpo.length >= 10) {
-                    window.open(`sms:+55${telefoneLimpo}?body=${mensagem}`, '_self');
-                } else {
-                    showNotification("Telefone do assistido está em branco ou é inválido.", "warning");
-                }
-            };
-        }
+        const handleShare = async (platform) => {
+            const telefoneLimpoFinal = (phoneInput ? phoneInput.value : '').replace(/\D/g, '');
+            if (telefoneLimpoFinal !== (assisted?.telefone || '').replace(/\D/g, '')) {
+                await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), { telefone: phoneInput.value });
+                if (assisted) assisted.telefone = phoneInput.value;
+            }
+            if (platform === 'wa') {
+                window.open(`https://wa.me/${telefoneLimpoFinal.length >= 10 ? '55' + telefoneLimpoFinal : ''}?text=${mensagem}`, '_blank');
+            } else if (platform === 'sms') {
+                window.open(`sms:+55${telefoneLimpoFinal}?body=${mensagem}`, '_self');
+            }
+        };
+
+        if (btnWa) btnWa.onclick = () => handleShare('wa');
+        if (btnSms) btnSms.onclick = () => handleShare('sms');
+        if (btnCopy) btnCopy.onclick = () => { navigator.clipboard.writeText(link); showNotification("Link copiado!"); };
     }
 }
 
@@ -1095,7 +1100,7 @@ export function setupDetailsModal(config) {
     getEl('print-checklist-btn').onclick = handlePdf; 
     getEl('reset-checklist-btn').onclick = handleReset;
     
-    // Novo bind para o botão de Captação Direta
+    // Bind para o botão de Captação Direta
     const btnCaptacao = getEl('btn-gerar-captacao');
     if (btnCaptacao) {
         btnCaptacao.onclick = gerarLinkCaptacao;
