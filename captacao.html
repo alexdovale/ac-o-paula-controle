@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -58,49 +59,34 @@
                 </div>
             </section>
 
-            <!-- NOVA SEÇÃO: DADOS SOCIOECONÔMICOS -->
+            <!-- SEÇÃO DE DADOS SOCIOECONÔMICOS DO ASSISTIDO (sem "Não sei informar") -->
             <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                 <h2 class="text-xs font-black text-blue-700 uppercase mb-4 border-b pb-2">2. PERFIL SOCIOECONÔMICO</h2>
                 <div class="space-y-4">
                     <!-- PROFISSÃO -->
                     <div>
                         <label class="text-[10px] font-black text-gray-500 uppercase">PROFISSÃO / OCUPAÇÃO</label>
-                        <div class="flex flex-wrap gap-2 items-center mt-1">
-                            <input type="text" id="socio-profissao" placeholder="Digite sua profissão" class="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                            <label class="flex items-center gap-1 text-[10px] font-bold text-gray-400 cursor-pointer whitespace-nowrap">
-                                <input type="checkbox" id="socio-profissao-nao-sei" class="h-4 w-4"> NÃO SEI INFORMAR
-                            </label>
-                        </div>
+                        <input type="text" id="socio-profissao" placeholder="Digite sua profissão" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
 
                     <!-- ESTADO CIVIL -->
                     <div>
                         <label class="text-[10px] font-black text-gray-500 uppercase">ESTADO CIVIL</label>
-                        <div class="flex flex-wrap gap-2 items-center mt-1">
-                            <select id="socio-estado-civil" class="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="">Selecione</option>
-                                <option value="Solteiro(a)">Solteiro(a)</option>
-                                <option value="Casado(a)">Casado(a)</option>
-                                <option value="União Estável">União Estável</option>
-                                <option value="Divorciado(a)">Divorciado(a)</option>
-                                <option value="Viúvo(a)">Viúvo(a)</option>
-                                <option value="Separado(a)">Separado(a)</option>
-                            </select>
-                            <label class="flex items-center gap-1 text-[10px] font-bold text-gray-400 cursor-pointer whitespace-nowrap">
-                                <input type="checkbox" id="socio-estado-civil-nao-sei" class="h-4 w-4"> NÃO SEI INFORMAR
-                            </label>
-                        </div>
+                        <select id="socio-estado-civil" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Selecione</option>
+                            <option value="Solteiro(a)">Solteiro(a)</option>
+                            <option value="Casado(a)">Casado(a)</option>
+                            <option value="União Estável">União Estável</option>
+                            <option value="Divorciado(a)">Divorciado(a)</option>
+                            <option value="Viúvo(a)">Viúvo(a)</option>
+                            <option value="Separado(a)">Separado(a)</option>
+                        </select>
                     </div>
 
                     <!-- GANHOS LÍQUIDOS -->
                     <div>
                         <label class="text-[10px] font-black text-gray-500 uppercase">GANHOS LÍQUIDOS MENSAIS (R$)</label>
-                        <div class="flex flex-wrap gap-2 items-center mt-1">
-                            <input type="text" id="socio-ganhos" placeholder="R$ 0,00" class="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500" inputmode="numeric">
-                            <label class="flex items-center gap-1 text-[10px] font-bold text-gray-400 cursor-pointer whitespace-nowrap">
-                                <input type="checkbox" id="socio-ganhos-nao-sei" class="h-4 w-4"> NÃO SEI INFORMAR
-                            </label>
-                        </div>
+                        <input type="text" id="socio-ganhos" placeholder="R$ 0,00" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500" inputmode="numeric">
                         <!-- FONTE DE RENDA -->
                         <div class="flex flex-wrap gap-3 mt-3">
                             <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
@@ -200,6 +186,75 @@
                             <option value="RJ">RJ</option><option value="SP">SP</option><option value="MG">MG</option><option value="ES">ES</option><option value="PR">PR</option><option value="SC">SC</option><option value="RS">RS</option>
                         </select>
                     </div>
+
+                    <!-- PERFIL SOCIOECONÔMICO DO RÉU (com "Não sei informar") -->
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                        <h3 class="text-[10px] font-black text-blue-700 uppercase mb-3 flex items-center gap-2">
+                            <span class="w-1 h-4 bg-blue-600 rounded"></span> PERFIL SOCIOECONÔMICO DO RÉU
+                        </h3>
+                        <div class="space-y-3">
+                            <!-- PROFISSÃO -->
+                            <div>
+                                <label class="text-[9px] font-black text-gray-600 uppercase">PROFISSÃO / OCUPAÇÃO</label>
+                                <div class="flex flex-wrap gap-2 items-center mt-1">
+                                    <input type="text" id="reu-profissao" placeholder="Digite a profissão" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white">
+                                    <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer whitespace-nowrap">
+                                        <input type="checkbox" id="reu-profissao-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- ESTADO CIVIL -->
+                            <div>
+                                <label class="text-[9px] font-black text-gray-600 uppercase">ESTADO CIVIL</label>
+                                <div class="flex flex-wrap gap-2 items-center mt-1">
+                                    <select id="reu-estado-civil" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white">
+                                        <option value="">Selecione</option>
+                                        <option value="Solteiro(a)">Solteiro(a)</option>
+                                        <option value="Casado(a)">Casado(a)</option>
+                                        <option value="União Estável">União Estável</option>
+                                        <option value="Divorciado(a)">Divorciado(a)</option>
+                                        <option value="Viúvo(a)">Viúvo(a)</option>
+                                        <option value="Separado(a)">Separado(a)</option>
+                                    </select>
+                                    <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer whitespace-nowrap">
+                                        <input type="checkbox" id="reu-estado-civil-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- GANHOS LÍQUIDOS -->
+                            <div>
+                                <label class="text-[9px] font-black text-gray-600 uppercase">GANHOS LÍQUIDOS MENSAIS (R$)</label>
+                                <div class="flex flex-wrap gap-2 items-center mt-1">
+                                    <input type="text" id="reu-ganhos" placeholder="R$ 0,00" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white" inputmode="numeric">
+                                    <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer whitespace-nowrap">
+                                        <input type="checkbox" id="reu-ganhos-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
+                                    </label>
+                                </div>
+                                <div class="flex flex-wrap gap-3 mt-2">
+                                    <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
+                                        <input type="radio" name="reu-fonte-renda" value="CLT"> CLT
+                                    </label>
+                                    <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
+                                        <input type="radio" name="reu-fonte-renda" value="Autônomo"> AUTÔNOMO
+                                    </label>
+                                    <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
+                                        <input type="radio" name="reu-fonte-renda" value="Aposentadoria"> APOSENTADORIA
+                                    </label>
+                                    <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
+                                        <input type="radio" name="reu-fonte-renda" value="Bolsa Família"> BOLSA FAMÍLIA
+                                    </label>
+                                    <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
+                                        <input type="radio" name="reu-fonte-renda" value="Desempregado"> DESEMPREGADO
+                                    </label>
+                                    <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
+                                        <input type="radio" name="reu-fonte-renda" value="Outros"> OUTROS
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -270,56 +325,12 @@
         document.getElementById('cep-reu')?.addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
         document.getElementById('cep-comercial-reu')?.addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
 
-        // Máscara para ganhos
+        // Máscara para ganhos do assistido
         const ganhosInput = document.getElementById('socio-ganhos');
         if (ganhosInput) {
             ganhosInput.addEventListener('input', (e) => {
                 let v = e.target.value.replace(/\D/g, '');
                 e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
-            });
-        }
-
-        // Lógica "Não sei informar" para Profissão
-        const profNaoSei = document.getElementById('socio-profissao-nao-sei');
-        const profInput = document.getElementById('socio-profissao');
-        if (profNaoSei && profInput) {
-            profNaoSei.addEventListener('change', (e) => {
-                if (e.target.checked) {
-                    profInput.disabled = true;
-                    profInput.value = 'Não informado';
-                } else {
-                    profInput.disabled = false;
-                    profInput.value = '';
-                }
-            });
-        }
-
-        // Lógica "Não sei informar" para Estado Civil
-        const civilNaoSei = document.getElementById('socio-estado-civil-nao-sei');
-        const civilSelect = document.getElementById('socio-estado-civil');
-        if (civilNaoSei && civilSelect) {
-            civilNaoSei.addEventListener('change', (e) => {
-                if (e.target.checked) {
-                    civilSelect.disabled = true;
-                    civilSelect.value = 'Não informado';
-                } else {
-                    civilSelect.disabled = false;
-                    civilSelect.value = '';
-                }
-            });
-        }
-
-        // Lógica "Não sei informar" para Ganhos
-        const ganhosNaoSei = document.getElementById('socio-ganhos-nao-sei');
-        if (ganhosNaoSei && ganhosInput) {
-            ganhosNaoSei.addEventListener('change', (e) => {
-                if (e.target.checked) {
-                    ganhosInput.disabled = true;
-                    ganhosInput.value = 'Não informado';
-                } else {
-                    ganhosInput.disabled = false;
-                    ganhosInput.value = '';
-                }
             });
         }
 
@@ -374,15 +385,12 @@
                     if (data.cpf) document.getElementById('cpf-assistido').value = data.cpf;
                     if (data.telefone) document.getElementById('telefone-assistido').value = data.telefone;
 
-                    // Carregar dados socioeconômicos salvos
+                    // Carregar dados socioeconômicos do assistido
                     if (data.documentChecklist?.socioData) {
                         const socio = data.documentChecklist.socioData;
                         if (socio.profissao) document.getElementById('socio-profissao').value = socio.profissao;
-                        if (socio.profissaoNaoSei) document.getElementById('socio-profissao-nao-sei').checked = true;
                         if (socio.estadoCivil) document.getElementById('socio-estado-civil').value = socio.estadoCivil;
-                        if (socio.estadoCivilNaoSei) document.getElementById('socio-estado-civil-nao-sei').checked = true;
                         if (socio.ganhos) document.getElementById('socio-ganhos').value = socio.ganhos;
-                        if (socio.ganhosNaoSei) document.getElementById('socio-ganhos-nao-sei').checked = true;
                         if (socio.fonteRenda) {
                             const radio = document.querySelector(`input[name="socio-fonte-renda"][value="${socio.fonteRenda}"]`);
                             if (radio) radio.checked = true;
@@ -580,17 +588,15 @@
                     });
                 }
 
-                // Coletar dados socioeconômicos
+                // Dados socioeconômicos do assistido (sem "Não sei informar")
                 const socioData = {
                     profissao: document.getElementById('socio-profissao')?.value || '',
-                    profissaoNaoSei: document.getElementById('socio-profissao-nao-sei')?.checked || false,
                     estadoCivil: document.getElementById('socio-estado-civil')?.value || '',
-                    estadoCivilNaoSei: document.getElementById('socio-estado-civil-nao-sei')?.checked || false,
                     ganhos: document.getElementById('socio-ganhos')?.value || '',
-                    ganhosNaoSei: document.getElementById('socio-ganhos-nao-sei')?.checked || false,
                     fonteRenda: document.querySelector('input[name="socio-fonte-renda"]:checked')?.value || ''
                 };
 
+                // Dados do Réu (com "Não sei informar")
                 const reuData = {
                     checkReuUnico: document.getElementById('check-reu-unico')?.checked || false,
                     nome: document.getElementById('nome-reu')?.value || '',
@@ -611,7 +617,15 @@
                     complemento_comercial: document.getElementById('complemento-comercial-reu')?.value || '',
                     bairro_comercial: document.getElementById('bairro-comercial-reu')?.value || '',
                     cidade_comercial: document.getElementById('cidade-comercial-reu')?.value || '',
-                    uf_comercial: document.getElementById('estado-comercial-reu')?.value || ''
+                    uf_comercial: document.getElementById('estado-comercial-reu')?.value || '',
+                    // Socioeconômicos do Réu
+                    profissao: document.getElementById('reu-profissao')?.value || '',
+                    profissaoNaoSei: document.getElementById('reu-profissao-nao-sei')?.checked || false,
+                    estadoCivil: document.getElementById('reu-estado-civil')?.value || '',
+                    estadoCivilNaoSei: document.getElementById('reu-estado-civil-nao-sei')?.checked || false,
+                    ganhos: document.getElementById('reu-ganhos')?.value || '',
+                    ganhosNaoSei: document.getElementById('reu-ganhos-nao-sei')?.checked || false,
+                    fonteRenda: document.querySelector('input[name="reu-fonte-renda"]:checked')?.value || ''
                 };
 
                 const payload = {
