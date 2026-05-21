@@ -1018,27 +1018,70 @@ export function gerarLinkCaptacao() {
         return;
     }
 
-    const baseUrl = window.location.origin; 
-    const link = `${baseUrl}/captacao.html?pid=${currentPautaId}&aid=${currentAssistedId}`;
+    // 1. Busca os dados do assistido atual para pegar o Telefone
+    const assisted = allAssisted.find(a => a.id === currentAssistedId);
+    const telefoneRaw = assisted?.telefone || '';
+    const telefoneLimpo = telefoneRaw.replace(/\D/g, ''); // Remove tudo que não for número
 
-    navigator.clipboard.writeText(link).then(() => {
-        showNotification("Link de captação copiado para a área de transferência!", "success");
-    }).catch(err => {
-        console.error("Erro ao copiar o link:", err);
-    });
-
-    console.log("Link gerado para Captação:", link);
+    // 2. Lógica blindada para URL (Garante que a pasta do GitHub Pages seja mantida)
+    let path = window.location.pathname; 
+    path = path.replace('index.html', ''); // Tira o index.html se estiver na URL
+    if (!path.endsWith('/')) path += '/';  // Garante a barra no final
     
-    // Descomente e ajuste se você possuir um elemento modal específico para mostrar o QR Code
-    /*
-    const modalQr = getEl('modal-captacao-qr');
-    const qrContainer = getEl('qrcode-display');
+    // Monta o link absoluto
+    const link = `${window.location.origin}${path}captacao.html?pid=${currentPautaId}&aid=${currentAssistedId}`;
+
+    // 3. Monta a Mensagem Padrão
+    const nome = assisted?.name ? assisted.name.split(' ')[0] : 'assistido(a)';
+    const mensagem = encodeURIComponent(`Olá, ${nome}! Por favor, clique no link abaixo para preencher seus dados preliminares e adiantar seu atendimento na Defensoria Pública:\n\n🔗 ${link}`);
+
+    // Copia para área de transferência
+    navigator.clipboard.writeText(link).then(() => {
+        showNotification("Link copiado para a área de transferência!", "success");
+    }).catch(err => console.error(err));
+
+    // 4. Exibe o Modal e gerencia QR Code e Botões
+    const modalQr = document.getElementById('modal-captacao-qr');
+    const qrContainer = document.getElementById('qrcode-display');
+    const btnWa = document.getElementById('btn-share-wa');
+    const btnSms = document.getElementById('btn-share-sms');
+    
     if (modalQr && qrContainer) {
         modalQr.classList.remove('hidden');
-        qrContainer.innerHTML = ""; // Limpa QR Codes anteriores
-        new QRCode(qrContainer, link); // Necessita do qrcode.js carregado no HTML
+        qrContainer.innerHTML = ""; 
+        
+        new QRCode(qrContainer, {
+            text: link,
+            width: 220,
+            height: 220,
+            colorDark : "#0f172a", 
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+
+        // Evento: Botão do WhatsApp
+        if (btnWa) {
+            btnWa.onclick = () => {
+                if (telefoneLimpo.length >= 10) {
+                    const prefixo = telefoneLimpo.startsWith('55') ? '' : '55';
+                    window.open(`https://wa.me/${prefixo}${telefoneLimpo}?text=${mensagem}`, '_blank');
+                } else {
+                    window.open(`https://wa.me/?text=${mensagem}`, '_blank');
+                }
+            };
+        }
+
+        // Evento: Botão do SMS
+        if (btnSms) {
+            btnSms.onclick = () => {
+                if (telefoneLimpo.length >= 10) {
+                    window.open(`sms:+55${telefoneLimpo}?body=${mensagem}`, '_self');
+                } else {
+                    showNotification("Telefone do assistido está em branco ou é inválido.", "warning");
+                }
+            };
+        }
     }
-    */
 }
 
 /* ========================================================
