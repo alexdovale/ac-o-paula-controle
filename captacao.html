@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -23,14 +24,9 @@
 
     <div class="max-w-md mx-auto p-4 hidden" id="app-content">
         <div class="text-center py-6">
-            <div class="flex items-center justify-center gap-3 mb-3">
-                <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/assets/logo/imagem%20(4).png" 
-                     alt="Logo SIGEP" 
-                     class="h-14 w-auto object-contain">
-                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center shadow-inner">
-                    <span class="text-2xl">⚖️</span>
-                </div>
-            </div>
+            <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/assets/logo/imagem%20(4).png" 
+                 alt="Logo SIGEP" 
+                 class="h-20 w-auto mx-auto mb-3 object-contain">
             <h1 class="text-2xl font-black text-slate-800 tracking-tight">Triagem Digital</h1>
             <p class="text-sm text-slate-500 mt-1">Preencha os dados abaixo para adiantar seu atendimento na Defensoria.</p>
         </div>
@@ -175,7 +171,15 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { firebaseConfig } from './js/config.js';
-        import { documentsData, EXPENSE_CATEGORIES } from './js/detalhes.js';
+        import { EXPENSE_CATEGORIES } from './js/detalhes.js';
+
+        // documentsData vem do window (definido no detalhes.js)
+        const documentsData = window.documentsData;
+
+        if (!documentsData) {
+            console.error("documentsData não carregado! Verifique o detalhes.js");
+            alert("Erro ao carregar o sistema. Recarregue a página.");
+        }
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -265,7 +269,7 @@
             }
         }
 
-        // Renderizar Checklist Dinâmico com opção Físico/Digital
+        // Renderizar Checklist Dinâmico
         function renderChecklist(key, savedIds, savedTypes) {
             const data = documentsData[key];
             const container = document.getElementById('checklist-area');
@@ -313,7 +317,6 @@
             updateDocCounter();
         }
 
-        // Função global para mostrar/ocultar os radio buttons e atualizar contador
         window.toggleDocType = function(id) {
             const cb = document.getElementById(id);
             const box = document.getElementById(`type-box-${id}`);
@@ -334,7 +337,7 @@
             if (docCounter) docCounter.textContent = `${count} marcados`;
         }
 
-        // Controle de Visibilidade das Seções Opcionais
+        // Controle de Visibilidade
         const checkReuUnico = document.getElementById('check-reu-unico');
         const contentReu = document.getElementById('content-reu-completo');
         if (checkReuUnico && contentReu) {
@@ -351,7 +354,7 @@
             });
         }
 
-        // Buscador de CEP via API (ViaCEP)
+        // Buscador de CEP
         async function buscarCepAPI(cepInputId, isComercial = false) {
             const cepInput = document.getElementById(cepInputId);
             if (!cepInput) return;
@@ -402,7 +405,7 @@
         const btnBuscarCepCom = document.getElementById('btn-buscar-cep-com');
         if (btnBuscarCepCom) btnBuscarCepCom.onclick = () => buscarCepAPI('cep-comercial-reu', true);
 
-        // SALVAR DADOS (SUBMIT)
+        // SALVAR DADOS
         const form = document.getElementById('form-captacao');
         if (form) {
             form.addEventListener('submit', async (e) => {
@@ -413,7 +416,6 @@
                 btn.innerHTML = `<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> SALVANDO...`;
                 btn.disabled = true;
 
-                // Coleta Docs
                 const checkedIds = [];
                 const docTypes = {};
                 document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
@@ -422,7 +424,6 @@
                     docTypes[cb.id] = radio ? radio.value : 'Físico';
                 });
 
-                // Coleta Gastos
                 const gastos = { checkExibirGastos: document.getElementById('check-exibir-gastos')?.checked || false };
                 if (EXPENSE_CATEGORIES) {
                     EXPENSE_CATEGORIES.forEach(c => {
@@ -431,7 +432,6 @@
                     });
                 }
 
-                // Coleta Réu - CORRIGIDO com os IDs corretos
                 const reuData = {
                     checkReuUnico: document.getElementById('check-reu-unico')?.checked || false,
                     nome: document.getElementById('nome-reu')?.value || '',
@@ -455,7 +455,6 @@
                     uf_comercial: document.getElementById('estado-comercial-reu')?.value || ''
                 };
 
-                // Payload CORRIGIDO
                 const payload = {
                     name: document.getElementById('nome-assistido')?.value || '',
                     cpf: document.getElementById('cpf-assistido')?.value || '',
@@ -489,3 +488,4 @@
     </script>
 </body>
 </html>
+```
