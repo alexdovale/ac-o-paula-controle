@@ -545,7 +545,8 @@ export const UIService = {
         const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
         const canEdit = currentUserRole !== 'apoio'; 
         const isOwner = window.app?.auth?.currentUser?.uid === item.owner;
-        const numAgendamento = item.numeroAgendamento || item.assistedManualNumAgendamento || '';
+
+        const numAgendamento = item.numeroAgendamento || item.numAgendamento || item.assistedManualNumAgendamento || '';
 
         const card = document.createElement('div');
         card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3';
