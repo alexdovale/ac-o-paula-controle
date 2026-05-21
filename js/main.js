@@ -490,7 +490,6 @@ class SIGEPApp {
             document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
         });
 
-        // ⭐ CORREÇÃO ESTRUTURAL: Ajustado os seletores para ler exatamente os IDs do seu index.html ⭐
         document.getElementById('confirm-create-pauta-final-btn')?.addEventListener('click', async () => {
             const pautaName = document.getElementById('create-pauta-name-input').value.trim();
             const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
@@ -512,7 +511,6 @@ class SIGEPApp {
                     isClosed: false,
                     createdAt: new Date().toISOString(),
                     ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || 'padrao',
-                    // Sincronização explícita com os elementos do modal de criação
                     useDelegationFlow: document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true',
                     useDistributionFlow: document.getElementById('check-use-distribution')?.checked || false
                 };
@@ -947,7 +945,7 @@ class SIGEPApp {
 
         document.getElementById('confirm-priority-reason-btn')?.addEventListener('click', async () => {
             const selectedChips = Array.from(document.querySelectorAll('.p-chip.selected'))
-                                       .map(chip => chip.dataset.value);
+                                        .map(chip => chip.dataset.value);
             const customReason = document.getElementById('priority-reason-input')?.value.trim() || '';
             
             let finalReason = selectedChips.join(', ');
@@ -1521,14 +1519,14 @@ class SIGEPApp {
         if (adminPanelBtnPautaSelection && adminModal) {
             adminPanelBtnPautaSelection.addEventListener('click', () => {
                 adminModal.classList.remove('hidden');
-                //this.setupAdminPanel(); 
+                this.setupAdminPanel(); 
             });
         }
         
         if (adminPanelBtnMain && adminModal) {
             adminPanelBtnMain.addEventListener('click', () => {
                 adminModal.classList.remove('hidden');
-                //this.setupAdminPanel();
+                this.setupAdminPanel();
             });
         }
 
@@ -1537,7 +1535,7 @@ class SIGEPApp {
             const adminPanelToggle = document.getElementById('pauta-settings-toggle'); 
             const adminActionsToggle = document.getElementById('actions-toggle');     
             const adminPanelBtn = document.getElementById('admin-panel-btn');          
-            const adminBtnMain = document.getElementById('admin-btn-main');            
+            const adminBtnMain = document.getElementById('admin-btn-main');             
 
             if ((adminModal && adminModal.contains(e.target)) ||
                 (adminPanelToggle && adminPanelToggle.contains(e.target)) ||
@@ -1567,7 +1565,7 @@ class SIGEPApp {
             }
         });
 
-        //this.setupAdminPanel();
+        this.setupAdminPanel();
     }
 
     async loadUserPreferences() {
@@ -1796,10 +1794,9 @@ class SIGEPApp {
         });
     }
 
-     setupAdminPanel() {
+    setupAdminPanel() {
         const adminModal = document.getElementById('admin-modal');
-        // Só carrega a lista se realmente o usuário estiver logado e autorizado.
-        if (adminModal && this.auth?.currentUser) {
+        if (adminModal) {
             loadUsersList(this.db);
             populateUserFilter(this.db);
         }
