@@ -671,7 +671,7 @@ export const UIService = {
             const canEditPriority = currentUserRole === 'apoio' || currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canAttend = currentUserRole !== 'apoio';
             const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            const numAgendamento = item.numeroAgendamento || item.assistedManualNumAgendamento || '';
+            const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
             const card = document.createElement('div');
             const priorityClass = PautaService.getPriorityClass(item.priority);
@@ -898,7 +898,7 @@ export const UIService = {
                 new Date(item.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
             
             const atendenteNome = this.getAttendantName(item);
-            const numAgendamento = item.numeroAgendamento || item.assistedManualNumAgendamento || '';
+            const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
             const historicoTransferenciaHtml = item.historicoTransferencia 
                 ? `<div class="mt-2 bg-orange-50 border border-orange-200 text-orange-800 text-[10px] p-2 rounded flex items-center gap-1 font-medium shadow-sm">
@@ -1026,7 +1026,7 @@ export const UIService = {
                 new Date(item.attendedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
             
             const atendenteNome = this.getAttendantName(item);
-            const numAgendamento = item.numeroAgendamento || item.assistedManualNumAgendamento || '';
+            const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
             const confirmButton = item.isConfirmed 
                 ? 'bg-green-500 border-green-500 text-white' 
@@ -1113,7 +1113,7 @@ export const UIService = {
             const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canRevert = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            const numAgendamento = item.numeroAgendamento || item.assistedManualNumAgendamento || '';
+            const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
             const card = document.createElement('div');
             const isConfirmed = item.isConfirmed || false;
@@ -1222,7 +1222,7 @@ export const UIService = {
                 const currentUserRole = window.app?.currentUser?.role;
                 const canManageDistribution = currentUserRole !== 'apoio';
                 const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
-                const numAgendamento = item.numeroAgendamento || item.assistedManualNumAgendamento || '';
+                const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
                 const card = document.createElement('div');
                 card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-cyan-200 mb-3';
