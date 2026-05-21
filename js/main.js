@@ -1309,6 +1309,7 @@ class SIGEPApp {
             const updatedData = {
                 name: name,
                 cpf: document.getElementById('edit-assisted-cpf')?.value.trim() || '',
+                numAgendamento: document.getElementById('edit-assisted-num-agendamento')?.value.trim() || '',
                 subject: document.getElementById('edit-assisted-subject')?.value.trim() || '',
                 scheduledTime: document.getElementById('edit-scheduled-time')?.value || null,
             };
