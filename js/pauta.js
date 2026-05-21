@@ -47,7 +47,6 @@ export const PautaService = {
     },
 
     injectRoomSearches(app) {
-        // Função mantida por segurança. A renderização das barras agora é feita nativamente pelo ui.js
     },
 
     populateRoomSelects(app) {
@@ -93,9 +92,10 @@ export const PautaService = {
 
         const nameInput = document.getElementById('assisted-name');
         const cpfInput = document.getElementById('assisted-cpf');
+        const numAgendamentoInput = document.getElementById('assisted-num-agendamento');
         const subjectInput = document.getElementById('assisted-subject');
         
-        if (!nameInput || !cpfInput || !subjectInput) { 
+        if (!nameInput || !cpfInput || !subjectInput || !numAgendamentoInput) { 
             showNotification("Erro interno: Campos de formulário não encontrados no HTML.", "error");
             playSound('error');
             return;
@@ -103,6 +103,7 @@ export const PautaService = {
         
         const name = nameInput.value.trim();
         const subject = subjectInput.value.trim(); 
+        const numAgendamento = numAgendamentoInput.value.trim();
 
         const tabAgendamento = document.getElementById('tab-agendamento');
         const currentMode = (tabAgendamento && tabAgendamento.classList.contains('tab-active')) ? 'agendamento' : 'avulso';
@@ -149,6 +150,7 @@ export const PautaService = {
         const newAssisted = {
             name: name || 'Assistido sem nome',
             cpf: (cpfInput && cpfInput.value.trim()) || '',
+            numAgendamento: numAgendamento || '',
             subject: subject || 'Não informado',
             type: currentMode,
             status: hasArrived ? 'aguardando' : 'pauta',
@@ -192,13 +194,14 @@ export const PautaService = {
             
             if (nameInput) nameInput.value = '';
             if (cpfInput) cpfInput.value = '';
+            if (numAgendamentoInput) numAgendamentoInput.value = '';
             if (subjectInput) subjectInput.value = '';
             
             if (currentMode === 'agendamento') {
                 if (document.getElementById('scheduled-time-wrapper')) document.getElementById('scheduled-time-wrapper').classList.add('hidden');
                 if (document.getElementById('arrival-time-wrapper')) document.getElementById('arrival-time-wrapper').classList.add('hidden');
                 document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
-                document.querySelector('input[name="has-arrived"][value="no"]').checked = true;     
+                document.querySelector('input[name="has-arrived"][value="no"]').checked = true;      
             } else {
                 if (document.getElementById('arrival-time-wrapper')) document.getElementById('arrival-time-wrapper').classList.remove('hidden');
                 document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
@@ -414,13 +417,13 @@ export const PautaService = {
                 showNotification(`Enviando e-mail para ${collaboratorName}...`, "info");
                 
                 await EmailService.sendDelegationEmail(
-                    colab.email,          
+                    colab.email,        
                     collaboratorName,     
                     assisted.name,        
                     app.currentUserName,  
                     app.currentPauta.id,  
-                    assistedId,           
-                    tokenSeguro           
+                    assistedId,            
+                    tokenSeguro            
                 );
             } else {
                 console.warn("⚠️ Colaborador sem e-mail cadastrado. Status updated apenas no painel.");
@@ -1174,7 +1177,6 @@ export const PautaService = {
         }
     },
 
-    // ⭐ REESTRUTURADO: Adicionado travas rigorosas para o perfil de Apoio (Somente Check-in e Prioridades) ⭐
     handleCardActions(e, app) {
         const button = e.target.closest('button');
         if (!button) return;
@@ -1182,11 +1184,9 @@ export const PautaService = {
         const id = button.dataset.id;
         if (!id) return;
 
-        // Monitor de perfil do usuário ativo
         const currentUserRole = app.currentUser?.role;
         const isApoio = currentUserRole === 'apoio';
 
-        // Mapeia todas as ações administrativas proibidas para a triagem/apoio
         const acoesProibidasApoio = [
             'return-to-pauta-btn',
             'return-to-pauta-from-faltoso-btn',
@@ -1249,7 +1249,6 @@ export const PautaService = {
         if (button.classList.contains('quick-action-item')) {
             e.stopPropagation();
             
-            // Segunda barreira contra trapaça de cliques em menus flutuantes (Ações Rápidas)
             if (isApoio) {
                 showNotification("Acesso restrito: Ações rápidas de encerramento são bloqueadas para Apoio.", "warning");
                 return;
@@ -1288,7 +1287,9 @@ export const PautaService = {
             window.assistedTipoDescricao = tipoDescricao;
             
             const nameElement = document.getElementById('assisted-to-attend-name');
-            if (nameElement) nameElement.textContent = assisted.name || '';
+            if (nameElement) {
+                nameElement.textContent = assisted.name || '';
+            }
             
             showNotification(`${tipoDescricao} para ${assisted.name}`, "info");
             
@@ -1306,7 +1307,6 @@ export const PautaService = {
             }
         }
 
-        // 🟢 LIBERADO PARA APOIO: Marcar entrada física de assistidos agendados na recepção
         if (button.classList.contains('check-in-btn')) {
             window.assistedIdToHandle = id;
             const modal = document.getElementById('arrival-modal');
@@ -1375,7 +1375,6 @@ export const PautaService = {
             }
         }
 
-        // 🟢 LIBERADO PARA APOIO: Sinalizar e categorizar as prioridades por lei (Idoso, PCD, Gestante)
         if (button.classList.contains('priority-btn')) {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             if (assisted && assisted.priority === 'URGENTE') {
@@ -1485,6 +1484,7 @@ export const PautaService = {
             if (assisted) {
                 document.getElementById('edit-assisted-name').value = assisted.name || '';
                 document.getElementById('edit-assisted-cpf').value = assisted.cpf || '';
+                document.getElementById('edit-assisted-num-agendamento').value = assisted.numAgendamento || '';
                 document.getElementById('edit-assisted-subject').value = assisted.subject || '';
                 document.getElementById('edit-scheduled-time').value = assisted.scheduledTime || '';
                 
@@ -1586,7 +1586,6 @@ export const PautaService = {
             }
         }
 
-        // 🟢 LIBERADO PARA APOIO: Abrir o modal de checklist de documentação para instruir as petições
         if (button.classList.contains('view-details-btn')) {
             if (window.openDetailsModal) {
                 window.openDetailsModal({
