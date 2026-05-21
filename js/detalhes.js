@@ -1,8 +1,8 @@
 /**
  * ========================================================
  * DETALHES.JS - SIGEP
- * Módulo de Detalhes do Assistido, Checklist de Documentos
- * e Acúmulo de Demandas Adicionais Unificadas por Assunto
+ * Módulo de Detalhes do Assistido, Checklist de Documentos,
+ * Acúmulo de Demandas e Captação Direta do Cidadão
  * ========================================================
  */
 
@@ -244,7 +244,7 @@ function parseCurrency(s) {
 }
 
 /* ========================================================
-   5. FUNÇÕES DO CHECKLIST E DEMANDAS ADICIONAIS BY assuntos.js
+   4. FUNÇÕES DO CHECKLIST E DEMANDAS ADICIONAIS
    ======================================================== */
 function getDocTypesFromForm() {
     const docTypes = {};
@@ -299,7 +299,6 @@ function checkReuVisibility() {
     }
 }
 
-// ⭐ COMPATIBILIZADO: INTERFACE DO ATENDIMENTO CONECTADA COM O assuntos.js MEDIANTE DATALIST DO SISTEMA ⭐
 function injectDemandasAdicionaisInterface(containerEl) {
     let divDemanda = document.getElementById('secao-demandas-adicionais-triagem');
     if (!divDemanda) {
@@ -319,7 +318,6 @@ function injectDemandasAdicionaisInterface(containerEl) {
         <div id="lista-demandas-triagem-container" class="space-y-1.5 max-h-40 overflow-y-auto"></div>
     `;
 
-    // Alimenta o datalist local de demandas usando a árvore oficial flatSubjects do assuntos.js
     const datalist = divDemanda.querySelector('#subjects-list-triagem-dinamico');
     if (datalist && Array.isArray(flatSubjects)) {
         flatSubjects.forEach(s => {
@@ -333,7 +331,6 @@ function injectDemandasAdicionaisInterface(containerEl) {
         const input = document.getElementById('input-nova-demanda-triagem');
         let text = input ? input.value.trim() : '';
         if (text) {
-            // Limpa caminhos de nós de árvore longos se o usuário escolheu pelo clique completo (Ex: "Família > Alimentos" vira "Alimentos")
             if (text.includes(' > ')) text = text.split(' > ').pop();
             demandasAdicionaisLocais.push(text);
             input.value = '';
@@ -512,7 +509,7 @@ function setupCheckboxEvents(containerEl) {
 }
 
 /* ========================================================
-   6. FORMULÁRIO DO RÉU
+   5. FORMULÁRIO DO RÉU
    ======================================================== */
 function renderReuForm(containerId) {
     const container = getEl(containerId);
@@ -704,7 +701,7 @@ function initReuSaveButton() {
 }
 
 /* ========================================================
-   7. PLANILHA DE GASTOS
+   6. PLANILHA DE GASTOS
    ======================================================== */
 function renderExpenseTable() {
     const div = document.createElement('div');
@@ -775,7 +772,7 @@ function initExpenseTableEvents(div) {
 }
 
 /* ========================================================
-   8. FUNÇÕES DE DADOS (GET/SET)
+   7. FUNÇÕES DE DADOS (GET/SET)
    ======================================================== */
 function getReuDataFromForm() {
     return {
@@ -870,10 +867,9 @@ function fillExpenseData(d) {
 }
 
 /* ========================================================
-   9. FUNÇÕES DE AÇÃO CORRIGIDAS (MOTO PDF CONECTADO)
+   8. FUNÇÕES DE AÇÃO DE PDF E SALVAMENTO
    ======================================================== */
 
-// 👑 CORREÇÃO DO BOTÃO PDF: Mapeado exatamente com as assinaturas reais e robustas exigidas pelo SIGEP 👑
 async function handlePdf() {
     showNotification("Gerando PDF unificado...", "info");
     try {
@@ -892,10 +888,9 @@ async function handlePdf() {
             docTypes: getDocTypesFromForm(),
             reuData: reu,
             expenseData: gastos,
-            demandasAdicionais: demandasAdicionaisLocais // Passa o array de multiplos casos para enquadrar no papel
+            demandasAdicionais: demandasAdicionaisLocais 
         };
         
-        // CORREÇÃO CRÍTICA: Chama o método global exposto pelo PDFService unificado
         const resultado = PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
         if (resultado) {
             showNotification("PDF emitido com sucesso!");
@@ -1015,15 +1010,53 @@ function closeAssistedDetailsModal() {
 }
 
 /* ========================================================
-   11. EXPORTS E INICIALIZAÇÃO
+   9. CAPTAÇÃO DIRETA (GERADOR DE LINK E QR CODE)
+   ======================================================== */
+export function gerarLinkCaptacao() {
+    if (!currentAssistedId || !currentPautaId) {
+        showNotification("Erro: Selecione um assistido primeiro!", "error");
+        return;
+    }
+
+    const baseUrl = window.location.origin; 
+    const link = `${baseUrl}/captacao.html?pid=${currentPautaId}&aid=${currentAssistedId}`;
+
+    navigator.clipboard.writeText(link).then(() => {
+        showNotification("Link de captação copiado para a área de transferência!", "success");
+    }).catch(err => {
+        console.error("Erro ao copiar o link:", err);
+    });
+
+    console.log("Link gerado para Captação:", link);
+    
+    // Descomente e ajuste se você possuir um elemento modal específico para mostrar o QR Code
+    /*
+    const modalQr = getEl('modal-captacao-qr');
+    const qrContainer = getEl('qrcode-display');
+    if (modalQr && qrContainer) {
+        modalQr.classList.remove('hidden');
+        qrContainer.innerHTML = ""; // Limpa QR Codes anteriores
+        new QRCode(qrContainer, link); // Necessita do qrcode.js carregado no HTML
+    }
+    */
+}
+
+/* ========================================================
+   10. EXPORTS E INICIALIZAÇÃO
    ======================================================== */
 export function setupDetailsModal(config) {
     db = config.db;
     getEl('close-assisted-details-modal-btn').onclick = closeAssistedDetailsModal;
     getEl('back-to-action-selection-btn').onclick = handleBack;
     getEl('save-checklist-btn').onclick = () => handleSave(true);
-    getEl('print-checklist-btn').onclick = handlePdf; // Link direto do clique mapeado para o handlePdf corrigido
+    getEl('print-checklist-btn').onclick = handlePdf; 
     getEl('reset-checklist-btn').onclick = handleReset;
+    
+    // Novo bind para o botão de Captação Direta
+    const btnCaptacao = getEl('btn-gerar-captacao');
+    if (btnCaptacao) {
+        btnCaptacao.onclick = gerarLinkCaptacao;
+    }
     
     const searchInput = getEl('checklist-search');
     if (searchInput) {
