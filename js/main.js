@@ -1795,9 +1795,10 @@ class SIGEPApp {
         });
     }
 
-    setupAdminPanel() {
+     setupAdminPanel() {
         const adminModal = document.getElementById('admin-modal');
-        if (adminModal) {
+        // Só carrega a lista se realmente o usuário estiver logado e autorizado.
+        if (adminModal && this.auth?.currentUser) {
             loadUsersList(this.db);
             populateUserFilter(this.db);
         }
